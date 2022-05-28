@@ -2,8 +2,6 @@ use serde_derive::{ Serialize, Deserialize };
 use toml;
 use std::fs;
 
-use crate::module::connection::authentication_details;
-
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
@@ -23,6 +21,7 @@ pub struct Authentication {
 pub struct Host {
     pub name: String,
     pub address: String,
+    pub monitors: Vec<String>,
 }
 
 impl Configuration {

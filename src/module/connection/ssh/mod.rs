@@ -18,9 +18,7 @@ pub struct Ssh2 {
 impl Module for Ssh2 {
     fn get_metadata() -> Metadata {
         Metadata {
-            name: String::from("ssh"),
-            version: String::from("1.0.0"),
-            interface_version: String::from("1.0.0"),
+            module_spec: ModuleSpecification::new(String::from("ssh"), String::from("0.0.1")),
             display_name: String::from("SSH"),
             description: String::from(""),
             url: String::from(""),
@@ -40,10 +38,6 @@ impl Module for Ssh2 {
 }
 
 impl ConnectionModule for Ssh2 {
-    fn get_module_spec(&self) -> ModuleSpecification {
-        ModuleSpecification::new(String::from("ssh"), String::from("1.0.0"))
-    }
-
     fn connect(&mut self, address: &SocketAddr, authentication: Option<AuthenticationDetails>) -> Result<(), String> {
         // TODO: support ipv6
 

@@ -1,9 +1,8 @@
+use super::ModuleSpecification;
 
 pub struct Metadata {
-    pub name: String,
-    pub interface_version: String,
+    pub module_spec: ModuleSpecification,
     pub display_name: String,
-    pub version: String,
     pub description: String,
     pub url: String,
 }

@@ -5,3 +5,4 @@ password = ""
 [[hosts]]
 name = "examplehost"
 address = "0.0.0.0:22"
+monitors = [ "uptime-0.0.1" ]

@@ -8,6 +8,7 @@ use crate::module::{
     monitoring::MonitoringData,
     connection::ConnectionModule,
     connection::AuthenticationDetails,
+    ModuleSpecification,
 };
 
 use super::host::Host;
@@ -47,27 +48,27 @@ impl<'a> HostManager<'a> {
         self.hosts.remove(name);
     }
 
-    pub fn get_connector(&mut self, host_name: &String, connector_name: &String, authentication: Option<AuthenticationDetails>)
+    pub fn get_connector(&mut self, host_name: &String, module_spec: &ModuleSpecification, authentication: Option<AuthenticationDetails>)
         -> Result<&mut Box<dyn ConnectionModule>, String>
     {
-        if let Some(host_state) = self.hosts.get_mut(host_name) {
-            log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.socket_address, connector_name);
+        if let Some(host_state) = self.hosts.get_mut(&host_name.clone()) {
 
-            if host_state.connections.contains_key(connector_name) {
-                return Ok(host_state.connections.get_mut(connector_name).unwrap());
+            log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.socket_address, module_spec.id);
+
+            if host_state.connections.contains_key(&module_spec.id) {
+                return Ok(host_state.connections.get_mut(&module_spec.id).unwrap());
             }
             else {
-                let mut connection = self.module_manager.new_connection_module(&connector_name);
+                let mut connection = self.module_manager.new_connection_module(&module_spec);
                 connection.connect(&host_state.host.socket_address, authentication)?;
 
-                host_state.connections.insert(connector_name.clone(), connection);
-                return Ok(host_state.connections.get_mut(connector_name).unwrap());
+                host_state.connections.insert(module_spec.id.clone(), connection);
+                return Ok(host_state.connections.get_mut(&module_spec.id).unwrap());
             }
         }
         else {
             return Err(String::from("No such host"));
         }
-
     }
 
 }

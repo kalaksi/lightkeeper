@@ -14,9 +14,7 @@ pub struct Uptime {
 impl Module for Uptime {
     fn get_metadata() -> Metadata {
         Metadata {
-            name: String::from("uptime"),
-            version: String::from("0.0.1"),
-            interface_version: String::from("0.0.1"),
+            module_spec: ModuleSpecification::new(String::from("uptime"), String::from("0.0.1")),
             display_name: String::from("Uptime"),
             description: String::from(""),
             url: String::from(""),
@@ -29,6 +27,10 @@ impl Module for Uptime {
 }
 
 impl MonitoringModule for Uptime {
+    fn get_connector_spec(&self) -> ModuleSpecification {
+        ModuleSpecification::new(String::from("ssh"), String::from("0.0.1"))
+    }
+
     fn refresh(&self, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
         let output = match connection.send_message("uptime") {
             Ok(output) => output,
@@ -40,9 +42,5 @@ impl MonitoringModule for Uptime {
             unit: String::from("d"),
             retention: Duration::from_secs(1),
         })
-    }
-
-    fn get_connector_spec(&self) -> ModuleSpecification {
-        ModuleSpecification::new(String::from("ssh"), String::from("1.0.0"))
     }
 }
