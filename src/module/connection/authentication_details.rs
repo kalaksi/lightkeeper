@@ -5,12 +5,12 @@ pub struct AuthenticationDetails {
     pub password: String,
 }
 
-impl AuthenticationDetails {
-    pub fn new(username: Option<String>, password: Option<String>) -> Self {
+impl<'a> AuthenticationDetails {
+    pub fn new(username: &String, password: &String) -> Self {
         AuthenticationDetails {
             use_authentication: true,
-            username: username.unwrap_or_default(),
-            password: password.unwrap_or_default(),
+            username: username.clone(),
+            password: password.clone(),
         }
     }
 }

@@ -1,9 +1,5 @@
-use crate::module::{
-    module::Module,
-    connection::AuthenticationDetails,
-};
-
 use std::net::SocketAddr;
+use crate::module::{ module::Module, connection::AuthenticationDetails };
 
 pub trait ConnectionModule : Module {
     fn connect(&mut self, address: &SocketAddr, authentication: Option<AuthenticationDetails>) -> Result<(), String>;

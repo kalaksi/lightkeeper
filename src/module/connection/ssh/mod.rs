@@ -1,21 +1,12 @@
+use std::{ net::TcpStream, net::SocketAddr, io::Read };
+use ssh2::{ Session, Agent };
+
 use crate::module::{
     module::Module,
     metadata::Metadata,
     connection::ConnectionModule,
+    connection::AuthenticationDetails,
 };
-
-use std::{
-    net::TcpStream,
-    net::SocketAddr,
-    io::Read
-};
-
-use ssh2::{
-    Session,
-    Agent
-};
-
-use super::AuthenticationDetails;
 
 
 pub struct Ssh2 {
@@ -71,12 +62,6 @@ impl ConnectionModule for Ssh2 {
         if let Err(error) = self.session.handshake() {
             return Err(format!("Handshake error: {}", error));
         };
-
-        /*
-        for identity in self.agent.identities().unwrap() {
-            let pubkey = identity.blob();
-        }
-        */
 
         if let Err(error) = self.session.userauth_agent(authentication.username.as_str()) {
             return Err(format!("Error when communicating with authentication agent: {}", error));

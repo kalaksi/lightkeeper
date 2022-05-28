@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    time::Duration, hash::Hash,
+    time::Duration,
 };
 
 use crate::module::{

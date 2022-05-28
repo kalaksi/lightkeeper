@@ -1,5 +1,4 @@
-use crate::module::Module;
-use crate::module::connection::ConnectionModule;
+use crate::module::{ Module, connection::ConnectionModule };
 
 pub trait CommandModule : Module {
     fn execute(&self, connection: &mut dyn ConnectionModule);

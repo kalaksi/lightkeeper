@@ -1,10 +1,8 @@
+use std::time::Duration;
+
 use crate::module::{
     module::Module,
     connection::ConnectionModule
-};
-
-use std::{
-    time::Duration,
 };
 
 pub trait MonitoringModule : Module {
