@@ -2,11 +2,27 @@ use serde_derive::{ Serialize, Deserialize };
 use toml;
 use std::fs;
 
+use crate::module::connection::authentication_details;
+
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
+    pub authentication: Authentication,
+    pub hosts: Vec<Host>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Authentication {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Host {
+    pub name: String,
+    pub address: String,
 }
 
 impl Configuration {

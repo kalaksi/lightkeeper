@@ -25,7 +25,12 @@ impl<'a> Host<'a> {
         }
     }
 
-    pub fn set_address(&mut self, ip_address: &str, port: u16) {
+    pub fn set_address(&mut self, socket_address: &str) {
+        self.socket_address = SocketAddr::from_str(socket_address)
+                              .expect(format!("Invalid socket address '{}'", socket_address).as_str());
+    }
+
+    pub fn set_address_and_port(&mut self, ip_address: &str, port: u16) {
         self.socket_address = match IpAddr::from_str(ip_address) {
             Ok(value) => SocketAddr::new(value, port),
             Err(_) => { log::error!("Invalid IP address \"{}\"", ip_address); return; }

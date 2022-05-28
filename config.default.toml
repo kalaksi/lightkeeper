@@ -1,2 +1,7 @@
+[authentication]
 username = "exampleuser"
 password = ""
+
+[[hosts]]
+name = "examplehost"
+address = "0.0.0.0:22"

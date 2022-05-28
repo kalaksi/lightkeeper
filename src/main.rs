@@ -36,14 +36,16 @@ fn main() {
         }
     };
 
-    let authentication = AuthenticationDetails::new(&config.username, &config.password);
+    let authentication = AuthenticationDetails::new(&config.authentication.username, &config.authentication.password);
     let module_manager = ModuleManager::new();
     let mut host_manager = HostManager::new(&module_manager);
 
-    let mut host = Host::new(&String::from("test"));
-    host.set_address("10.4.0.2", 22);
-    host_manager.add_host(host);
-
+    for host_details in config.hosts {
+        let mut host = Host::new(&host_details.name);
+        host.set_address(&host_details.address);
+        host_manager.add_host(host);
+        log::info!("Found configuration for host {}", host_details.name)
+    }
 
     let connector = match host_manager.get_connector(&String::from("test"), &String::from("ssh"), Some(authentication)) {
         Ok(connector) => connector,
