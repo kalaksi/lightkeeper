@@ -5,6 +5,7 @@ use crate::module::{
     Metadata,
     connection::ConnectionModule,
     monitoring::{MonitoringModule, MonitoringData},
+    ModuleSpecification,
 };
 
 pub struct Uptime {
@@ -25,10 +26,6 @@ impl Module for Uptime {
     fn new() -> Self {
         Uptime { }
     }
-
-    fn unload(&self) {
-
-    }
 }
 
 impl MonitoringModule for Uptime {
@@ -43,5 +40,9 @@ impl MonitoringModule for Uptime {
             unit: String::from("d"),
             retention: Duration::from_secs(1),
         })
+    }
+
+    fn get_connector_spec(&self) -> ModuleSpecification {
+        ModuleSpecification::new(String::from("ssh"), String::from("1.0.0"))
     }
 }

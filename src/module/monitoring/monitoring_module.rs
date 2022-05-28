@@ -2,11 +2,13 @@ use std::time::Duration;
 
 use crate::module::{
     module::Module,
+    ModuleSpecification,
     connection::ConnectionModule
 };
 
 pub trait MonitoringModule : Module {
     fn refresh(&self, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String>;
+    fn get_connector_spec(&self) -> ModuleSpecification;
 
     fn new_monitoring_module() -> Box<dyn MonitoringModule> where Self: Sized + 'static {
         Box::new(Self::new())

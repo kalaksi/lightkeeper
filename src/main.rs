@@ -50,8 +50,14 @@ fn main() {
         Err(error) => { log::error!("Error while connecting: {}", error); return }
     };
 
-
     let monitor = Uptime::new_monitoring_module();
+    let connector_spec = monitor.get_connector_spec();
+
+    if !connector_spec.is_acceptable(connector) {
+        log::error!("Connector module not found or version incompatible ({})", connector_spec);
+        return;
+    }
+
     match monitor.refresh(connector) {
         Ok(data) => {
             log::info!("Got {}", data.value);

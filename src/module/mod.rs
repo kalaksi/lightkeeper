@@ -10,3 +10,6 @@ pub use module::Module;
 pub mod connection;
 pub mod command;
 pub mod monitoring;
+
+pub mod module_specification;
+pub use module_specification::ModuleSpecification;
