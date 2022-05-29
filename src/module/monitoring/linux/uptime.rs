@@ -1,4 +1,3 @@
-use std::time::Duration;
 
 use crate::module::{
     module::Module,
@@ -37,10 +36,6 @@ impl MonitoringModule for Uptime {
             Err(error) => return Err(error)
         };
 
-        Ok(MonitoringData {
-            value: output,
-            unit: String::from("d"),
-            retention: Duration::from_secs(1),
-        })
+        Ok(MonitoringData::new(output, String::from("d")))
     }
 }

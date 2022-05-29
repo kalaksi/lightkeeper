@@ -1,5 +1,5 @@
 use std::{ net::TcpStream, net::SocketAddr, io::Read };
-use ssh2::{ Session, Agent };
+use ssh2::Session;
 
 use crate::module::{
     module::Module,
@@ -11,7 +11,6 @@ use crate::module::{
 
 
 pub struct Ssh2 {
-    agent: Agent,
     session: Session,
 }
 
@@ -30,7 +29,6 @@ impl Module for Ssh2 {
         let session = Session::new().unwrap();
 
         Ssh2 {
-            agent: session.agent().unwrap(),
             session: session,
         }
     }

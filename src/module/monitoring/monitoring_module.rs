@@ -1,4 +1,4 @@
-use std::time::Duration;
+use chrono::{ DateTime, Utc };
 
 use crate::module::{
     module::Module,
@@ -13,12 +13,24 @@ pub trait MonitoringModule : Module {
     fn new_monitoring_module() -> Box<dyn MonitoringModule> where Self: Sized + 'static {
         Box::new(Self::new())
     }
+
 }
 
 pub struct MonitoringData {
     pub value: String,
     pub unit: String,
-    pub retention: Duration,
+    // TODO: check how memory hungry this type is
+    pub time: DateTime<Utc>,
+}
+
+impl MonitoringData {
+    pub fn new(value: String, unit: String) -> Self {
+        MonitoringData {
+            value: value,
+            unit: unit,
+            time: Utc::now(),
+        }
+    }
 }
 
 impl Default for MonitoringData {
@@ -26,7 +38,7 @@ impl Default for MonitoringData {
         MonitoringData {
             value: String::new(),
             unit: String::new(),
-            retention: Duration::from_secs(0),
+            time: Utc::now(),
         }
     }
 }

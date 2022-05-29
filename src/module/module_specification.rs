@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::fmt::Display;
 
 // TODO: custom equality comparer for versions
 #[derive(Default, Hash, PartialEq, Eq)]
@@ -20,17 +20,13 @@ impl ModuleSpecification {
         let id = parts.next().unwrap_or_default();
         let version = parts.next().unwrap_or_default();
 
-        if (id.is_empty() || version.is_empty())
+        if id.is_empty() || version.is_empty()
         {
             return Err(String::from("Invalid specification string"));
         }
         else {
             return Ok(ModuleSpecification::new(String::from(id), String::from(version)))
         }
-    }
-
-    pub fn empty() -> Self {
-        Self::default()
     }
 }
 

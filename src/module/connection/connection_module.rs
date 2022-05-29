@@ -1,7 +1,6 @@
 use std::net::SocketAddr;
 use crate::module::{
     module::Module,
-    ModuleSpecification,
     connection::AuthenticationDetails,
 };
 

@@ -11,7 +11,6 @@ use host::Host;
 
 use crate::{module::{
     ModuleManager,
-    monitoring::linux::Uptime,
     monitoring::MonitoringModule,
     connection::AuthenticationDetails, ModuleSpecification,
 }, configuration::Configuration};
@@ -74,11 +73,11 @@ fn main() {
 
         match monitor.refresh(connector) {
             Ok(data) => {
-                log::info!("Got {}", data.value);
+                host_manager.insert_monitoring_data(&host.name, data)
+                            .expect("Failed to store monitoring data");
             }
             Err(error) => {
                 log::error!("Error while refreshing monitoring data: {}", error);
-                Default::default()
             }
         };
     }

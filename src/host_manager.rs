@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    time::Duration,
-};
+use std::collections::HashMap;
 
 use crate::module::{
     ModuleManager,
@@ -31,28 +28,17 @@ impl<'a> HostManager<'a> {
         let host_name = host.name.clone();
         let host_state = HostState {
             host: host,
-            authentication_details: HashMap::new(),
             connections: HashMap::new(),
-            data: MonitoringData {
-                value: String::from(""),
-                unit: String::from(""),
-                retention: Duration::from_secs(1),
-            },
+            data: Vec::new(),
         };
 
         self.hosts.insert(host_name, host_state);
     }
 
-    pub fn remove_host(&mut self, name: &String)
-    {
-        self.hosts.remove(name);
-    }
-
     pub fn get_connector(&mut self, host_name: &String, module_spec: &ModuleSpecification, authentication: Option<AuthenticationDetails>)
         -> Result<&mut Box<dyn ConnectionModule>, String>
     {
-        if let Some(host_state) = self.hosts.get_mut(&host_name.clone()) {
-
+        if let Some(host_state) = self.hosts.get_mut(host_name) {
             log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.socket_address, module_spec.id);
 
             if host_state.connections.contains_key(&module_spec.id) {
@@ -71,11 +57,22 @@ impl<'a> HostManager<'a> {
         }
     }
 
+    pub fn insert_monitoring_data(&mut self, host_name: &String, data: MonitoringData) -> Result<(), String> {
+        match self.hosts.get_mut(host_name) {
+            Some(host) =>  {
+                host.data.push(data);
+                return Ok(());
+            },
+            None => {
+                return Err(String::from("No such host"));
+            }
+        }
+    }
+
 }
 
 struct HostState<'a> {
     host: Host<'a>,
     connections: HashMap<String, Box<dyn ConnectionModule>>,
-    data: MonitoringData,
-    authentication_details: HashMap<String, AuthenticationDetails>,
+    data: Vec<MonitoringData>,
 }
