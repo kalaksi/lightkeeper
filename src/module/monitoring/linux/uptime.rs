@@ -1,6 +1,9 @@
 
 use chrono::{ NaiveDateTime, Utc };
-use crate::utils::strip_newline;
+use crate::{
+    utils::strip_newline,
+    Host,
+};
 use crate::module::{
     module::Module,
     Metadata,
@@ -36,7 +39,7 @@ impl MonitoringModule for Uptime {
         ModuleSpecification::new(String::from("ssh"), String::from("0.0.1"))
     }
 
-    fn refresh(&self, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
+    fn refresh(&self, host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
         let output = strip_newline(&connection.send_message("uptime -s")?);
         let boot_datetime = NaiveDateTime::parse_from_str(&output, "%Y-%m-%d %H:%M:%S").map_err(|e| e.to_string())?;
         let uptime = Utc::now().naive_utc() - boot_datetime;

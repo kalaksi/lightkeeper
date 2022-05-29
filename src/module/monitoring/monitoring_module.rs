@@ -1,5 +1,6 @@
 use chrono::{ DateTime, Utc };
 
+use crate::Host;
 use crate::module::{
     module::Module,
     ModuleSpecification,
@@ -7,8 +8,10 @@ use crate::module::{
 };
 
 pub trait MonitoringModule : Module {
-    fn refresh(&self, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String>;
-    fn get_connector_spec(&self) -> ModuleSpecification;
+    fn refresh(&self, host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String>;
+    fn get_connector_spec(&self) -> ModuleSpecification {
+        ModuleSpecification::empty()
+    }
 
     fn new_monitoring_module() -> Box<dyn MonitoringModule> where Self: Sized + 'static {
         Box::new(Self::new())

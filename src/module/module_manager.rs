@@ -4,9 +4,11 @@ use super::{
     Module,
     ModuleSpecification,
     connection::ConnectionModule,
+    connection::Empty,
     connection::ssh::Ssh2,
     monitoring::MonitoringModule,
     monitoring::linux::Uptime,
+    monitoring::network::Ping,
 };
 
 
@@ -43,8 +45,10 @@ impl ModuleManager {
 
     fn load_modules(&mut self) {
         log::info!("Loading modules");
+        self.connection_constructors.insert(Empty::get_metadata().module_spec, Empty::new_connection_module);
         self.connection_constructors.insert(Ssh2::get_metadata().module_spec, Ssh2::new_connection_module);
         self.monitoring_constructors.insert(Uptime::get_metadata().module_spec, Uptime::new_monitoring_module);
+        self.monitoring_constructors.insert(Ping::get_metadata().module_spec, Ping::new_monitoring_module);
     }
 
 

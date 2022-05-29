@@ -42,7 +42,7 @@ fn main() {
     let module_manager = ModuleManager::new();
     let mut host_manager = HostManager::new(&module_manager);
 
-    let mut monitors: HashMap<String, Box<dyn MonitoringModule>> = HashMap::new();
+    let mut host_monitors: HashMap<String, Vec<Box<dyn MonitoringModule>>> = HashMap::new();
 
     for host_details in &config.hosts {
         log::info!("Found configuration for host {}", host_details.name);
@@ -51,36 +51,35 @@ fn main() {
         host.set_address(&host_details.address);
         host_manager.add_host(host);
 
+        host_monitors.insert(host_details.name.clone(), Vec::new());
+
         for monitor in &host_details.monitors {
-            match ModuleSpecification::from_string(&monitor) {
-                Ok(module_spec) => {
-                    match monitors.insert(host_details.name.clone(), module_manager.new_monitoring_module(&module_spec)) {
-                        Some(_) => log::error!("Duplicated monitor found"),
-                        None => (),
-                    }
-                },
-                Err(error) => log::error!("{}", error)
-            }
+            let module_spec = ModuleSpecification::from_string(&monitor).unwrap();
+            host_monitors.get_mut(&host_details.name).unwrap().push(module_manager.new_monitoring_module(&module_spec));
         }
     }
 
     for host in &config.hosts {
-        let monitor = monitors.get(&host.name).unwrap();
-        let authentication = AuthenticationDetails::new(&config.authentication.username, &config.authentication.password);
-        let connector = match host_manager.get_connector(&host.name, &monitor.get_connector_spec(), Some(authentication)) {
-            Ok(connector) => connector,
-            Err(error) => { log::error!("Error while connecting: {}", error); return }
-        };
+        let monitors = host_monitors.get(&host.name).unwrap();
+        let host = host_manager.get_host(&host.name).unwrap();
+        
+        for monitor in monitors {
+            let authentication = AuthenticationDetails::new(&config.authentication.username, &config.authentication.password);
+            let connector = match host_manager.get_connector(&host.name, &monitor.get_connector_spec(), Some(authentication)) {
+                Ok(connector) => connector,
+                Err(error) => { log::error!("Error while connecting: {}", error); return }
+            };
 
-        match monitor.refresh(connector) {
-            Ok(data) => {
-                host_manager.insert_monitoring_data(&host.name, &monitor.get_module_spec().id, data)
-                            .expect("Failed to store monitoring data");
-            }
-            Err(error) => {
-                log::error!("Error while refreshing monitoring data: {}", error);
-            }
-        };
+            match monitor.refresh(&host, connector) {
+                Ok(data) => {
+                    host_manager.insert_monitoring_data(&host.name, &monitor.get_module_spec().id, data)
+                                .expect("Failed to store monitoring data");
+                }
+                Err(error) => {
+                    log::error!("Error while refreshing monitoring data: {}", error);
+                }
+            };
+        }
     }
     
 }

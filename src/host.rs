@@ -6,6 +6,7 @@ use std::net:: {
 
 use std::str::FromStr;
 
+#[derive(Clone)]
 pub struct Host {
     pub name: String,
     pub domain_name: String,

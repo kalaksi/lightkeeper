@@ -27,10 +27,18 @@ impl<'a> HostManager<'a> {
         self.hosts.add(host)
     }
 
+    pub fn get_host(&self, host_name: &String) -> Result<Host, String> {
+        self.hosts.get(host_name).and_then(|host_state| Ok(host_state.host.clone()))
+    }
+
+    pub fn try_get_host(&self, host_name: &String) -> Option<Host> {
+        self.hosts.hosts.get(host_name).and_then(|host_state| Some(host_state.host.clone()))
+    }
+
     pub fn get_connector(&mut self, host_name: &String, module_spec: &ModuleSpecification, authentication: Option<AuthenticationDetails>)
         -> Result<&mut Box<dyn ConnectionModule>, String>
     {
-        let host_state = self.hosts.get(&host_name)?;
+        let host_state = self.hosts.get_mut(&host_name)?;
         log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.socket_address, module_spec.id);
 
         if host_state.connections.contains_key(&module_spec.id) {
@@ -47,7 +55,7 @@ impl<'a> HostManager<'a> {
 
     pub fn insert_monitoring_data(&mut self, host_name: &String, monitor_id: &String, data: MonitoringData) -> Result<(), String> {
         log::debug!("{}: {}: {} {}", host_name, monitor_id, data.value, data.unit);
-        let host = self.hosts.get(host_name)?;
+        let host = self.hosts.get_mut(host_name)?;
 
         if let Some(monitoring_data) = host.data.get_mut(monitor_id) {
             monitoring_data.push(data);
@@ -84,9 +92,14 @@ impl HostCollection {
         Ok(())
     }
 
-    fn get(&mut self, host_name: &String) -> Result<&mut HostState, String> {
+    fn get(&self, host_name: &String) -> Result<&HostState, String> {
+        self.hosts.get(host_name).ok_or(String::from("No such host"))
+    }
+
+    fn get_mut(&mut self, host_name: &String) -> Result<&mut HostState, String> {
         self.hosts.get_mut(host_name).ok_or(String::from("No such host"))
     }
+
 }
 
 

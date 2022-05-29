@@ -203,6 +203,7 @@ dependencies = [
  "clap",
  "env_logger",
  "log",
+ "oping",
  "serde",
  "serde_derive",
  "ssh2",
@@ -264,6 +265,17 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "oping"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4422f85745475dbd50b5c99b7df256b6a8b36badd222b401583ac8718d13bd56"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
 ]
 
 [[package]]
