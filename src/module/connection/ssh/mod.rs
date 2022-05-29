@@ -2,7 +2,7 @@ use std::{ net::TcpStream, net::SocketAddr, io::Read };
 use ssh2::Session;
 
 use crate::module::{
-    module::Module,
+    Module,
     metadata::Metadata,
     connection::ConnectionModule,
     connection::AuthenticationDetails,

@@ -5,7 +5,7 @@ use crate::{
     Host,
 };
 use crate::module::{
-    module::Module,
+    Module,
     Metadata,
     connection::ConnectionModule,
     monitoring::{MonitoringModule, MonitoringData},
