@@ -1,4 +1,5 @@
 
+use chrono;
 use crate::module::{
     module::Module,
     Metadata,
@@ -22,6 +23,10 @@ impl Module for Uptime {
 
     fn new() -> Self {
         Uptime { }
+    }
+
+    fn get_module_spec(&self) -> ModuleSpecification {
+        Self::get_metadata().module_spec
     }
 }
 

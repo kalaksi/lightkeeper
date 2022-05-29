@@ -33,6 +33,10 @@ impl Module for Ssh2 {
         }
     }
 
+    fn get_module_spec(&self) -> ModuleSpecification {
+        Self::get_metadata().module_spec
+    }
+
 }
 
 impl ConnectionModule for Ssh2 {
