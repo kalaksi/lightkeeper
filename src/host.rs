@@ -6,18 +6,18 @@ use std::net:: {
 
 use std::str::FromStr;
 
-pub struct Host<'a> {
+pub struct Host {
     pub name: String,
-    pub domain_name: &'a str,
+    pub domain_name: String,
     pub socket_address: SocketAddr,
 }
 
-impl<'a> Host<'a> {
+impl Host {
     pub fn new(name: &String) -> Self
     {
         Host {
             name: name.clone(),
-            domain_name: "",
+            domain_name: String::new(),
             socket_address: SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
                 0,
@@ -37,7 +37,7 @@ impl<'a> Host<'a> {
         }
     }
 
-    pub fn set_domain_name(&mut self, domain_name: &'a str) {
-        self.domain_name = domain_name;
+    pub fn set_domain_name(&mut self, domain_name: &String) {
+        self.domain_name = domain_name.clone();
     }
 }

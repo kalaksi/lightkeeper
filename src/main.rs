@@ -73,7 +73,7 @@ fn main() {
 
         match monitor.refresh(connector) {
             Ok(data) => {
-                host_manager.insert_monitoring_data(&host.name, data)
+                host_manager.insert_monitoring_data(&host.name, &monitor.get_module_spec().id, data)
                             .expect("Failed to store monitoring data");
             }
             Err(error) => {
