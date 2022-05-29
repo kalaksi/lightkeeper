@@ -46,6 +46,7 @@ impl<'a> HostManager<'a> {
     }
 
     pub fn insert_monitoring_data(&mut self, host_name: &String, monitor_id: &String, data: MonitoringData) -> Result<(), String> {
+        log::debug!("{}: {}: {} {}", host_name, monitor_id, data.value, data.unit);
         let host = self.hosts.get(host_name)?;
 
         if let Some(monitoring_data) = host.data.get_mut(monitor_id) {

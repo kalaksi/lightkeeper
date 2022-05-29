@@ -1,5 +1,6 @@
 
-use chrono;
+use chrono::{ NaiveDateTime, Utc };
+use crate::utils::strip_newline;
 use crate::module::{
     module::Module,
     Metadata,
@@ -36,11 +37,10 @@ impl MonitoringModule for Uptime {
     }
 
     fn refresh(&self, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
-        let output = match connection.send_message("uptime") {
-            Ok(output) => output,
-            Err(error) => return Err(error)
-        };
+        let output = strip_newline(&connection.send_message("uptime -s")?);
+        let boot_datetime = NaiveDateTime::parse_from_str(&output, "%Y-%m-%d %H:%M:%S").map_err(|e| e.to_string())?;
+        let uptime = Utc::now().naive_utc() - boot_datetime;
 
-        Ok(MonitoringData::new(output, String::from("d")))
+        Ok(MonitoringData::new(uptime.num_days().to_string(), String::from("d")))
     }
 }

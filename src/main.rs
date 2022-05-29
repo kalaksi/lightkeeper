@@ -2,6 +2,7 @@ mod module;
 mod host_manager;
 mod host;
 mod configuration;
+mod utils;
 
 use std::collections::HashMap;
 
