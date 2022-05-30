@@ -9,12 +9,14 @@ use std::collections::HashMap;
 use clap::Parser;
 use host_manager::HostManager;
 use host::Host;
+use configuration::Configuration;
 
-use crate::{module::{
+use crate::module::{
     ModuleManager,
+    ModuleSpecification,
     monitoring::MonitoringModule,
-    connection::AuthenticationDetails, ModuleSpecification,
-}, configuration::Configuration};
+    connection::AuthenticationDetails,
+};
 
 #[derive(Parser)]
 #[clap()]
@@ -49,7 +51,13 @@ fn main() {
 
         let mut host = Host::new(&host_details.name);
         host.set_address(&host_details.address);
-        host_manager.add_host(host);
+        match host_manager.add_host(host) {
+            Ok(()) => (),
+            Err(error) => {
+                log::error!("{}", error.to_string());
+                continue;
+            }
+        };
 
         host_monitors.insert(host_details.name.clone(), Vec::new());
 
@@ -67,7 +75,10 @@ fn main() {
             let authentication = AuthenticationDetails::new(&config.authentication.username, &config.authentication.password);
             let connector = match host_manager.get_connector(&host.name, &monitor.get_connector_spec(), Some(authentication)) {
                 Ok(connector) => connector,
-                Err(error) => { log::error!("Error while connecting: {}", error); return }
+                Err(error) => {
+                    log::error!("Error while connecting: {}", error);
+                    continue;
+                }
             };
 
             match monitor.refresh(&host, connector) {
@@ -81,5 +92,4 @@ fn main() {
             };
         }
     }
-    
 }

@@ -31,11 +31,11 @@ impl Module for Empty {
 }
 
 impl ConnectionModule for Empty {
-    fn connect(&mut self, address: &SocketAddr, authentication: Option<AuthenticationDetails>) -> Result<(), String> {
+    fn connect(&mut self, _address: &SocketAddr, _authentication: Option<AuthenticationDetails>) -> Result<(), String> {
         Ok(())
     }
 
-    fn send_message(&self, message: &str) -> Result<String, String>
+    fn send_message(&self, _message: &str) -> Result<String, String>
     {
         Ok(String::new())
     }
