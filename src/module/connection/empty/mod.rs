@@ -1,5 +1,5 @@
 
-use std::net::SocketAddr;
+use std::net::IpAddr;
 use crate::module::{
     Module,
     metadata::Metadata,
@@ -31,7 +31,7 @@ impl Module for Empty {
 }
 
 impl ConnectionModule for Empty {
-    fn connect(&mut self, _address: &SocketAddr, _authentication: Option<AuthenticationDetails>) -> Result<(), String> {
+    fn connect(&mut self, _address: &IpAddr, _authentication: Option<AuthenticationDetails>) -> Result<(), String> {
         Ok(())
     }
 

@@ -1,4 +1,4 @@
-use std::{ net::TcpStream, net::SocketAddr, io::Read };
+use std::{ net::TcpStream, net::IpAddr, io::Read };
 use ssh2::Session;
 
 use crate::module::{
@@ -12,6 +12,7 @@ use crate::module::{
 
 pub struct Ssh2 {
     session: Session,
+    port: u16,
 }
 
 impl Module for Ssh2 {
@@ -30,6 +31,7 @@ impl Module for Ssh2 {
 
         Ssh2 {
             session: session,
+            port: 22,
         }
     }
 
@@ -40,7 +42,7 @@ impl Module for Ssh2 {
 }
 
 impl ConnectionModule for Ssh2 {
-    fn connect(&mut self, address: &SocketAddr, authentication: Option<AuthenticationDetails>) -> Result<(), String> {
+    fn connect(&mut self, address: &IpAddr, authentication: Option<AuthenticationDetails>) -> Result<(), String> {
         // TODO: support ipv6
 
         let authentication = authentication.unwrap_or_default();
@@ -50,7 +52,7 @@ impl ConnectionModule for Ssh2 {
         };
 
 
-        let stream = match TcpStream::connect(address.to_string()) {
+        let stream = match TcpStream::connect(format!("{}:{}", address, self.port)) {
             Ok(stream) => stream,
             Err(error) => return Err(format!("Connection error: {}", error))
         };

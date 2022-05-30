@@ -5,8 +5,9 @@ mod configuration;
 mod utils;
 
 use std::collections::HashMap;
-
 use clap::Parser;
+use tabled::{ Table, Style };
+
 use host_manager::HostManager;
 use host::Host;
 use configuration::Configuration;
@@ -67,9 +68,9 @@ fn main() {
         }
     }
 
-    for host in &config.hosts {
-        let monitors = host_monitors.get(&host.name).unwrap();
-        let host = host_manager.get_host(&host.name).unwrap();
+    for host_config in &config.hosts {
+        let monitors = host_monitors.get(&host_config.name).unwrap();
+        let host = host_manager.get_host(&host_config.name).unwrap();
         
         for monitor in monitors {
             let authentication = AuthenticationDetails::new(&config.authentication.username, &config.authentication.password);
@@ -92,4 +93,5 @@ fn main() {
             };
         }
     }
+
 }

@@ -39,14 +39,14 @@ impl<'a> HostManager<'a> {
         -> Result<&mut Box<dyn ConnectionModule>, String>
     {
         let host_state = self.hosts.get_mut(&host_name)?;
-        log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.socket_address, module_spec.id);
+        log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.ip_address, module_spec.id);
 
         if host_state.connections.contains_key(&module_spec.id) {
             return Ok(host_state.get_connection(&module_spec.id)?);
         }
         else {
             let mut connection = self.module_manager.new_connection_module(&module_spec);
-            connection.connect(&host_state.host.socket_address, authentication)?;
+            connection.connect(&host_state.host.ip_address, authentication)?;
 
             host_state.connections.insert(module_spec.id.clone(), connection);
             return Ok(host_state.get_connection(&module_spec.id)?);

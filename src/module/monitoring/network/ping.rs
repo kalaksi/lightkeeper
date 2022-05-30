@@ -37,7 +37,7 @@ impl MonitoringModule for Ping {
         let mut ping = oping::Ping::new();
         ping.set_timeout(5.0)
             .map_err(|e| e.to_string())?;
-        ping.add_host(host.socket_address.ip().to_string().as_str())
+        ping.add_host(host.ip_address.to_string().as_str())
             .map_err(|e| e.to_string())?;
 
         let mut responses = ping.send()
