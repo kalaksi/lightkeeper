@@ -1,13 +1,11 @@
 
-use tabled::Tabled;
-
 use std::{
     net::IpAddr,
     net::Ipv4Addr,
     str::FromStr,
 };
 
-#[derive(Clone, Tabled)]
+#[derive(Clone)]
 pub struct Host {
     pub name: String,
     pub domain_name: String,

@@ -8,7 +8,10 @@ use crate::module::{
     ModuleSpecification,
 };
 
-use super::host::Host;
+use crate::{
+    host::Host,
+    frontend,
+};
 
 pub struct HostManager<'a> {
     hosts: HostCollection,
@@ -67,6 +70,20 @@ impl<'a> HostManager<'a> {
         Ok(())
     }
 
+    pub fn get_display_data(&self) -> frontend::DisplayData {
+        let mut display_data = frontend::DisplayData::new();
+
+        for (name, state) in self.hosts.hosts.iter() {
+            display_data.hosts.insert(name.clone(), frontend::HostDisplayData {
+                name: &state.host.name,
+                domain_name: &state.host.domain_name,
+                ip_address: &state.host.ip_address,
+                monitoring_data: &state.data,
+            });
+        }
+
+        display_data
+    }
 
 }
 

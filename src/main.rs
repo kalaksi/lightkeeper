@@ -3,14 +3,15 @@ mod host_manager;
 mod host;
 mod configuration;
 mod utils;
+mod frontend;
 
 use std::collections::HashMap;
 use clap::Parser;
-use tabled::{ Table, Style };
 
 use host_manager::HostManager;
 use host::Host;
 use configuration::Configuration;
+use frontend::Frontend;
 
 use crate::module::{
     ModuleManager,
@@ -47,24 +48,25 @@ fn main() {
 
     let mut host_monitors: HashMap<String, Vec<Box<dyn MonitoringModule>>> = HashMap::new();
 
-    for host_details in &config.hosts {
-        log::info!("Found configuration for host {}", host_details.name);
+    for host_config in &config.hosts {
+        log::info!("Found configuration for host {}", host_config.name);
 
-        let mut host = Host::new(&host_details.name);
-        host.set_address(&host_details.address);
-        match host_manager.add_host(host) {
-            Ok(()) => (),
-            Err(error) => {
-                log::error!("{}", error.to_string());
-                continue;
-            }
+        let mut host = Host::new(&host_config.name);
+        if let Err(error) = host.set_address(&host_config.address) {
+            log::error!("{}", error.to_string());
+            continue;
+        }
+
+        if let Err(error) = host_manager.add_host(host) {
+            log::error!("{}", error.to_string());
+            continue;
         };
 
-        host_monitors.insert(host_details.name.clone(), Vec::new());
+        host_monitors.insert(host_config.name.clone(), Vec::new());
 
-        for monitor in &host_details.monitors {
+        for monitor in &host_config.monitors {
             let module_spec = ModuleSpecification::from_string(&monitor).unwrap();
-            host_monitors.get_mut(&host_details.name).unwrap().push(module_manager.new_monitoring_module(&module_spec));
+            host_monitors.get_mut(&host_config.name).unwrap().push(module_manager.new_monitoring_module(&module_spec));
         }
     }
 
@@ -93,5 +95,7 @@ fn main() {
             };
         }
     }
+
+    frontend::cli::Cli::draw(&host_manager.get_display_data());
 
 }
