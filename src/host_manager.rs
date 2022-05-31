@@ -76,6 +76,7 @@ impl<'a> HostManager<'a> {
         for (name, state) in self.hosts.hosts.iter() {
             display_data.hosts.insert(name.clone(), frontend::HostDisplayData {
                 name: &state.host.name,
+                status: frontend::HostStatus::Up,
                 domain_name: &state.host.domain_name,
                 ip_address: &state.host.ip_address,
                 monitoring_data: &state.data,

@@ -34,6 +34,10 @@ impl MonitoringData {
             time: Utc::now(),
         }
     }
+
+    pub fn empty(value: String, unit: String) -> Self {
+        Default::default()
+    }
 }
 
 impl Default for MonitoringData {
