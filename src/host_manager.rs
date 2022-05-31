@@ -77,7 +77,7 @@ impl<'a> HostManager<'a> {
             display_data.hosts.insert(name.clone(), frontend::HostDisplayData {
                 name: &state.host.name,
                 status: frontend::HostStatus::Up,
-                domain_name: &state.host.domain_name,
+                domain_name: &state.host.fqdn,
                 ip_address: &state.host.ip_address,
                 monitoring_data: &state.data,
             });

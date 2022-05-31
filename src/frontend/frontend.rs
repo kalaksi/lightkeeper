@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::fmt;
 
 use crate::{ module::monitoring::MonitoringData };
 
@@ -32,13 +31,4 @@ pub struct HostDisplayData<'a> {
 pub enum HostStatus {
     Up,
     Down,
-}
-
-impl fmt::Display for HostStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            HostStatus::Up => write!(f, "Up"),
-            HostStatus::Down => write!(f, "Up"),
-        }
-    }
 }

@@ -20,7 +20,8 @@ pub struct Authentication {
 #[serde(deny_unknown_fields)]
 pub struct Host {
     pub name: String,
-    pub address: String,
+    pub address: Option<String>,
+    pub fqdn: Option<String>,
     pub monitors: Vec<String>,
 }
 

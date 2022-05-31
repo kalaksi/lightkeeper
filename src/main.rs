@@ -5,7 +5,12 @@ mod configuration;
 mod utils;
 mod frontend;
 
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    net,
+    str::FromStr,
+};
+
 use clap::Parser;
 
 use host_manager::HostManager;
@@ -50,12 +55,19 @@ fn main() {
 
     for host_config in &config.hosts {
         log::info!("Found configuration for host {}", host_config.name);
-
         let mut host = Host::new(&host_config.name);
-        if let Err(error) = host.set_address(&host_config.address) {
-            log::error!("{}", error.to_string());
-            continue;
-        }
+
+        // 0.0.0.0 is the value for "unspecified".
+        let ip_address_str = host_config.address.clone().unwrap_or(String::from("0.0.0.0"));
+        host.ip_address = match net::Ipv4Addr::from_str(&ip_address_str) {
+            Ok(address) => net::IpAddr::V4(address),
+            Err(error) => {
+                log::error!("{}", error.to_string());
+                continue;
+            }
+        };
+
+        host.fqdn = host_config.fqdn.clone().unwrap_or(String::from(""));
 
         if let Err(error) = host_manager.add_host(host) {
             log::error!("{}", error.to_string());
