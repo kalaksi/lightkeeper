@@ -23,6 +23,7 @@ pub struct Host {
     pub address: Option<String>,
     pub fqdn: Option<String>,
     pub monitors: Vec<String>,
+    pub critical: Option<bool>,
 }
 
 impl Configuration {

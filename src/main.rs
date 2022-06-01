@@ -83,7 +83,7 @@ fn main() {
     }
 
     for host_config in &config.hosts {
-        let monitors = host_monitors.get(&host_config.name).unwrap();
+        let monitors = host_monitors.get_mut(&host_config.name).unwrap();
         let host = host_manager.get_host(&host_config.name).unwrap();
         
         for monitor in monitors {

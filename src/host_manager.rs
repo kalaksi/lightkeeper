@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::frontend::HostStatus;
+use crate::module::monitoring::Criticality;
 use crate::module::{
     ModuleManager,
     monitoring::MonitoringData,
@@ -74,12 +76,21 @@ impl<'a> HostManager<'a> {
         let mut display_data = frontend::DisplayData::new();
 
         for (name, state) in self.hosts.hosts.iter() {
+            let critical_monitor = &state.data.iter().find(|(_, data)| {
+                data.last().unwrap().criticality == Criticality::Critical
+            });
+
+            let status = match critical_monitor {
+                Some(_) => HostStatus::Down,
+                None => HostStatus::Up,
+            };
+
             display_data.hosts.insert(name.clone(), frontend::HostDisplayData {
                 name: &state.host.name,
-                status: frontend::HostStatus::Up,
                 domain_name: &state.host.fqdn,
                 ip_address: &state.host.ip_address,
                 monitoring_data: &state.data,
+                status: status,
             });
         }
 

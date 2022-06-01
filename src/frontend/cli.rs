@@ -3,6 +3,7 @@ use owo_colors::OwoColorize;
 use std::net::IpAddr;
 use tabled::{ Tabled, Table, Modify, Format, Style, object::Columns };
 use super::{ Frontend, DisplayData, HostStatus };
+use crate::{module::monitoring::Criticality, configuration::Host};
 
 pub struct Cli;
 
@@ -11,14 +12,14 @@ impl Frontend for Cli {
         let mut table = Vec::new();
 
         for (_, data) in display_data.hosts.iter() {
-            let status = match data.status {
+            let status_text = match &data.status {
                 HostStatus::Up => "Up".green().to_string(),
-                HostStatus::Down  => "Down".red().to_string(),
+                HostStatus::Down => "Down".red().to_string(),
             };
 
             table.push(TableEntry {
                 name: &data.name,
-                status: status.to_string(),
+                status: status_text,
                 domain_name: &data.domain_name,
                 ip_address: &data.ip_address,
             });

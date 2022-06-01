@@ -33,7 +33,7 @@ impl Module for Ping {
 }
 
 impl MonitoringModule for Ping {
-    fn refresh(&self, host: &Host, _connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
+    fn refresh(&mut self, host: &Host, _connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
         let mut ping = oping::Ping::new();
         ping.set_timeout(5.0)
             .map_err(|e| e.to_string())?;

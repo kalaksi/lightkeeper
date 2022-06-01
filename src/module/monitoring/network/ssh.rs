@@ -4,7 +4,7 @@ use crate::module::{
     Module,
     Metadata,
     connection::ConnectionModule,
-    monitoring::{MonitoringModule, MonitoringData},
+    monitoring::{MonitoringModule, MonitoringData, Criticality},
     ModuleSpecification,
 };
 
@@ -21,7 +21,8 @@ impl Module for Ssh {
     }
 
     fn new() -> Self {
-        Ssh { }
+        Ssh {
+        }
     }
 
     fn get_module_spec(&self) -> ModuleSpecification {
@@ -34,10 +35,14 @@ impl MonitoringModule for Ssh {
         ModuleSpecification::new(String::from("ssh"), String::from("0.0.1"))
     }
 
-    fn refresh(&self, _host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
+    fn refresh(&mut self, _host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
         match &connection.is_connected() {
-            true => Ok(MonitoringData::new(String::from("up"), String::from(""))),
-            false => Ok(MonitoringData::new(String::from("down"), String::from(""))),
+            true => {
+                Ok(MonitoringData::new_with_level(String::from("up"), String::from(""), Criticality::Normal))
+            },
+            false => {
+                Ok(MonitoringData::new_with_level(String::from("down"), String::from(""), Criticality::Critical))
+            },
         }
     }
 }
