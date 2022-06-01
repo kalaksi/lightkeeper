@@ -7,6 +7,7 @@ use crate::module::{
     connection::ConnectionModule,
     monitoring::MonitoringModule,
     monitoring::MonitoringData,
+    monitoring::Criticality,
     ModuleSpecification,
 };
 
@@ -44,6 +45,12 @@ impl MonitoringModule for Ping {
                                 .map_err(|e| e.to_string())?;
 
         let response = responses.next().unwrap();
-        Ok(MonitoringData::new(response.latency_ms.to_string(), String::from("ms")))
+
+        if response.latency_ms < 0.0 {
+            Ok(MonitoringData::new_with_level(response.latency_ms.to_string(), String::from("ms"), Criticality::Critical))
+        }
+        else {
+            Ok(MonitoringData::new_with_level(response.latency_ms.to_string(), String::from("ms"), Criticality::Normal))
+        }
     }
 }
