@@ -9,6 +9,7 @@ use super::{
     monitoring::MonitoringModule,
     monitoring::linux::Uptime,
     monitoring::network::Ping,
+    monitoring::network::Ssh,
 };
 
 
@@ -49,6 +50,7 @@ impl ModuleManager {
         self.connection_constructors.insert(Ssh2::get_metadata().module_spec, Ssh2::new_connection_module);
         self.monitoring_constructors.insert(Uptime::get_metadata().module_spec, Uptime::new_monitoring_module);
         self.monitoring_constructors.insert(Ping::get_metadata().module_spec, Ping::new_monitoring_module);
+        self.monitoring_constructors.insert(Ssh::get_metadata().module_spec, Ssh::new_monitoring_module);
     }
 
 

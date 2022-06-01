@@ -28,8 +28,8 @@ impl<'a> HostManager<'a> {
         }
     }
 
-    pub fn add_host(&mut self, host: Host) -> Result<(), String> {
-        self.hosts.add(host)
+    pub fn add_host(&mut self, host: Host, critical_monitors: Vec<String>) -> Result<(), String> {
+        self.hosts.add(host, critical_monitors)
     }
 
     pub fn get_host(&self, host_name: &String) -> Result<Host, String> {
@@ -75,9 +75,9 @@ impl<'a> HostManager<'a> {
     pub fn get_display_data(&self) -> frontend::DisplayData {
         let mut display_data = frontend::DisplayData::new();
 
-        for (name, state) in self.hosts.hosts.iter() {
-            let critical_monitor = &state.data.iter().find(|(_, data)| {
-                data.last().unwrap().criticality == Criticality::Critical
+        for (host_name, state) in self.hosts.hosts.iter() {
+            let critical_monitor = &state.data.iter().find(|(monitor_name, data)| {
+                state.critical_monitors.contains(&monitor_name) && data.last().unwrap().criticality == Criticality::Critical
             });
 
             let status = match critical_monitor {
@@ -85,7 +85,7 @@ impl<'a> HostManager<'a> {
                 None => HostStatus::Up,
             };
 
-            display_data.hosts.insert(name.clone(), frontend::HostDisplayData {
+            display_data.hosts.insert(host_name.clone(), frontend::HostDisplayData {
                 name: &state.host.name,
                 domain_name: &state.host.fqdn,
                 ip_address: &state.host.ip_address,
@@ -111,13 +111,13 @@ impl HostCollection {
         }
     }
 
-    fn add(&mut self, host: Host) -> Result<(), String> {
+    fn add(&mut self, host: Host, critical_monitors: Vec<String>) -> Result<(), String> {
         if self.hosts.contains_key(&host.name) {
             return Err(String::from("Host already exists"));
         }
 
         let host_name = host.name.clone();
-        self.hosts.insert(host_name, HostState::from_host(host));
+        self.hosts.insert(host_name, HostState::from_host(host, critical_monitors));
         Ok(())
     }
 
@@ -136,14 +136,16 @@ struct HostState {
     host: Host,
     connections: HashMap<String, Box<dyn ConnectionModule>>,
     data: HashMap<String, Vec<MonitoringData>>,
+    critical_monitors: Vec<String>,
 }
 
 impl HostState {
-    fn from_host(host: Host) -> Self {
+    fn from_host(host: Host, critical_monitors: Vec<String>) -> Self {
         HostState {
             host: host,
             connections: HashMap::new(),
             data: HashMap::new(),
+            critical_monitors: critical_monitors,
         }
     }
 

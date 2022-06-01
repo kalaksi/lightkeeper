@@ -7,7 +7,7 @@ mod frontend;
 
 use std::{
     collections::HashMap,
-    net,
+    net::{self, ToSocketAddrs},
     str::FromStr,
 };
 
@@ -28,7 +28,7 @@ use crate::module::{
 #[derive(Parser)]
 #[clap()]
 struct Args {
-    #[clap(short, long, default_value = "config.toml")]
+    #[clap(short, long, default_value = "config.yml")]
     config_file: String,
     host: String,
 }
@@ -69,17 +69,33 @@ fn main() {
 
         host.fqdn = host_config.fqdn.clone().unwrap_or(String::from(""));
 
-        if let Err(error) = host_manager.add_host(host) {
+        if host.ip_address.is_unspecified() {
+            if host.fqdn == "" {
+                log::error!("Host {} does not have FQDN or IP address defined.", host.name);
+                continue;
+            }
+            else {
+                // Resolve FQDN and get the first IP address. Panic if nothing found.
+                host.ip_address = format!("{}:0", host.fqdn).to_socket_addrs().unwrap().next().unwrap().ip();
+            }
+        }
+
+        host_monitors.insert(host_config.name.clone(), Vec::new());
+        let mut critical_monitors: Vec<String> = Vec::new();
+
+        for monitor in &host_config.monitors {
+            let module_spec = ModuleSpecification::new(monitor.name.clone(), monitor.version.clone());
+            host_monitors.get_mut(&host_config.name).unwrap().push(module_manager.new_monitoring_module(&module_spec));
+
+            if monitor.is_critical.unwrap_or(false) {
+                critical_monitors.push(monitor.name.clone());
+            }
+        }
+
+        if let Err(error) = host_manager.add_host(host, critical_monitors) {
             log::error!("{}", error.to_string());
             continue;
         };
-
-        host_monitors.insert(host_config.name.clone(), Vec::new());
-
-        for monitor in &host_config.monitors {
-            let module_spec = ModuleSpecification::from_string(&monitor).unwrap();
-            host_monitors.get_mut(&host_config.name).unwrap().push(module_manager.new_monitoring_module(&module_spec));
-        }
     }
 
     for host_config in &config.hosts {

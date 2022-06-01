@@ -4,14 +4,14 @@ use std::fmt::Display;
 #[derive(Default, Hash, PartialEq, Eq)]
 pub struct ModuleSpecification {
     pub id: String,
-    pub version_spec: String,
+    pub version: String,
 }
 
 impl ModuleSpecification {
-    pub fn new(id: String, version_spec: String) -> Self {
+    pub fn new(id: String, version: String) -> Self {
         ModuleSpecification {
             id: id,
-            version_spec: version_spec,
+            version: version,
         }
     }
 
@@ -36,6 +36,6 @@ impl ModuleSpecification {
 
 impl Display for ModuleSpecification {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-{}", self.id, self.version_spec)
+        write!(f, "{}-{}", self.id, self.version)
     }
 }

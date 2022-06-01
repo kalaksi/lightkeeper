@@ -1,8 +1,0 @@
-[authentication]
-username = "exampleuser"
-password = ""
-
-[[hosts]]
-name = "examplehost"
-address = "0.0.0.0"
-monitors = [ "uptime-0.0.1" ]
