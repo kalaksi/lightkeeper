@@ -36,8 +36,10 @@ impl Module for Ping {
 impl MonitoringModule for Ping {
     fn refresh(&mut self, host: &Host, _connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
         let mut ping = oping::Ping::new();
+
         ping.set_timeout(5.0)
             .map_err(|e| e.to_string())?;
+
         ping.add_host(host.ip_address.to_string().as_str())
             .map_err(|e| e.to_string())?;
 
@@ -47,7 +49,7 @@ impl MonitoringModule for Ping {
         let response = responses.next().unwrap();
 
         if response.latency_ms < 0.0 {
-            Ok(MonitoringData::new_with_level(response.latency_ms.to_string(), String::from("ms"), Criticality::Critical))
+            Ok(MonitoringData::empty_and_critical())
         }
         else {
             Ok(MonitoringData::new_with_level(response.latency_ms.to_string(), String::from("ms"), Criticality::Normal))

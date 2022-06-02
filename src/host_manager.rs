@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use crate::frontend::HostStatus;
+use crate::module::Module;
 use crate::module::monitoring::Criticality;
 use crate::module::{
     ModuleManager,
     monitoring::MonitoringData,
-    connection::ConnectionModule,
-    connection::AuthenticationDetails,
     ModuleSpecification,
+    connection,
 };
 
 use crate::{
@@ -40,18 +40,22 @@ impl<'a> HostManager<'a> {
         self.hosts.hosts.get(host_name).and_then(|host_state| Some(host_state.host.clone()))
     }
 
-    pub fn get_connector(&mut self, host_name: &String, module_spec: &ModuleSpecification, authentication: Option<AuthenticationDetails>)
-        -> Result<&mut Box<dyn ConnectionModule>, String>
+    pub fn get_connector(&mut self, host_name: &String, module_spec: &ModuleSpecification, authentication: Option<connection::Credentials>)
+        -> Result<&mut Box<dyn connection::ConnectionModule>, String>
     {
         let host_state = self.hosts.get_mut(&host_name)?;
-        log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.ip_address, module_spec.id);
 
         if host_state.connections.contains_key(&module_spec.id) {
             return Ok(host_state.get_connection(&module_spec.id)?);
         }
         else {
             let mut connection = self.module_manager.new_connection_module(&module_spec);
-            connection.connect(&host_state.host.ip_address, authentication)?;
+
+            // If module does not have a connection dependency, it will be empty and a no-op.
+            if connection.get_module_spec() != connection::Empty::get_metadata().module_spec {
+                log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.ip_address, module_spec.id);
+                connection.connect(&host_state.host.ip_address, authentication)?;
+            }
 
             host_state.connections.insert(module_spec.id.clone(), connection);
             return Ok(host_state.get_connection(&module_spec.id)?);
@@ -59,7 +63,7 @@ impl<'a> HostManager<'a> {
     }
 
     pub fn insert_monitoring_data(&mut self, host_name: &String, monitor_id: &String, data: MonitoringData) -> Result<(), String> {
-        log::debug!("{}: {}: {} {}", host_name, monitor_id, data.value, data.unit);
+        log::debug!("New monitoring data for {}: {}: {}", host_name, monitor_id, data);
         let host = self.hosts.get_mut(host_name)?;
 
         if let Some(monitoring_data) = host.data.get_mut(monitor_id) {
@@ -77,8 +81,12 @@ impl<'a> HostManager<'a> {
 
         for (host_name, state) in self.hosts.hosts.iter() {
             let critical_monitor = &state.data.iter().find(|(monitor_name, data)| {
-                state.critical_monitors.contains(&monitor_name) && data.last().unwrap().criticality == Criticality::Critical
+                data.last().unwrap().criticality == Criticality::Critical && state.critical_monitors.contains(&monitor_name)
             });
+
+            if let Some((name, _)) = critical_monitor {
+                log::debug!("Host is down since monitor {} is at critical level", name);
+            }
 
             let status = match critical_monitor {
                 Some(_) => HostStatus::Down,
@@ -134,7 +142,7 @@ impl HostCollection {
 
 struct HostState {
     host: Host,
-    connections: HashMap<String, Box<dyn ConnectionModule>>,
+    connections: HashMap<String, Box<dyn connection::ConnectionModule>>,
     data: HashMap<String, Vec<MonitoringData>>,
     critical_monitors: Vec<String>,
 }
@@ -153,7 +161,7 @@ impl HostState {
         self.data.get_mut(monitor_id).ok_or(String::from("No such monitor"))
     }
 
-    fn get_connection(&mut self, connection_id: &String) -> Result<&mut Box<dyn ConnectionModule>, String> {
+    fn get_connection(&mut self, connection_id: &String) -> Result<&mut Box<dyn connection::ConnectionModule>, String> {
         self.connections.get_mut(connection_id).ok_or(String::from("No such connection"))
     }
 

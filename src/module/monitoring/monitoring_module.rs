@@ -1,3 +1,5 @@
+
+use std::fmt;
 use chrono::{ DateTime, Utc };
 
 use crate::Host;
@@ -53,8 +55,18 @@ impl MonitoringData {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.value.is_empty() && self.unit.is_empty()
+    }
+
     pub fn empty() -> Self {
         Default::default()
+    }
+
+    pub fn empty_and_critical() -> Self {
+        let mut empty = Self::empty();
+        empty.criticality = Criticality::Critical;
+        empty
     }
 }
 
@@ -65,6 +77,17 @@ impl Default for MonitoringData {
             unit: String::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
+        }
+    }
+}
+
+impl fmt::Display for MonitoringData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_empty() {
+            write!(f, "(empty)")
+        }
+        else {
+            write!(f, "{} {}", self.value, self.unit)
         }
     }
 }

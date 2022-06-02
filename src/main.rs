@@ -21,8 +21,8 @@ use frontend::Frontend;
 use crate::module::{
     ModuleManager,
     ModuleSpecification,
-    monitoring::MonitoringModule,
-    connection::AuthenticationDetails,
+    monitoring::{MonitoringModule, MonitoringData},
+    connection::Credentials,
 };
 
 #[derive(Parser)]
@@ -53,6 +53,7 @@ fn main() {
 
     let mut host_monitors: HashMap<String, Vec<Box<dyn MonitoringModule>>> = HashMap::new();
 
+    // Configure hosts and modules.
     for host_config in &config.hosts {
         log::info!("Found configuration for host {}", host_config.name);
         let mut host = Host::new(&host_config.name);
@@ -88,6 +89,7 @@ fn main() {
             host_monitors.get_mut(&host_config.name).unwrap().push(module_manager.new_monitoring_module(&module_spec));
 
             if monitor.is_critical.unwrap_or(false) {
+                log::debug!("Adding critical monitor {}", monitor.name);
                 critical_monitors.push(monitor.name.clone());
             }
         }
@@ -98,29 +100,29 @@ fn main() {
         };
     }
 
+    // Refresh monitoring data.
     for host_config in &config.hosts {
         let monitors = host_monitors.get_mut(&host_config.name).unwrap();
         let host = host_manager.get_host(&host_config.name).unwrap();
+
+        log::info!("Refreshing monitoring data for host {}", host.name);
         
         for monitor in monitors {
-            let authentication = AuthenticationDetails::new(&config.authentication.username, &config.authentication.password);
-            let connector = match host_manager.get_connector(&host.name, &monitor.get_connector_spec(), Some(authentication)) {
-                Ok(connector) => connector,
-                Err(error) => {
-                    log::error!("Error while connecting: {}", error);
-                    continue;
-                }
+            let credentials = Credentials::new(&config.authentication.username, &config.authentication.password);
+
+            let new_data_result = match host_manager.get_connector(&host.name, &monitor.get_connector_spec(), Some(credentials)) {
+                Ok(connector) => monitor.refresh(&host, connector),
+                Err(error) => Err(format!("Error while connecting: {}", error))
             };
 
-            match monitor.refresh(&host, connector) {
-                Ok(data) => {
-                    host_manager.insert_monitoring_data(&host.name, &monitor.get_module_spec().id, data)
-                                .expect("Failed to store monitoring data");
-                }
-                Err(error) => {
-                    log::error!("Error while refreshing monitoring data: {}", error);
-                }
-            };
+            let new_data = new_data_result.unwrap_or_else(|error| {
+                log::info!("Error while refreshing monitoring data: {}", error);
+                MonitoringData::empty_and_critical()
+            });
+
+            host_manager.insert_monitoring_data(&host.name, &monitor.get_module_spec().id, new_data)
+                        .expect("Failed to store monitoring data");
+
         }
     }
 

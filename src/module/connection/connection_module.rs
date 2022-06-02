@@ -1,11 +1,11 @@
 use std::net::IpAddr;
 use crate::module::{
     module::Module,
-    connection::AuthenticationDetails,
+    connection::Credentials,
 };
 
 pub trait ConnectionModule : Module {
-    fn connect(&mut self, address: &IpAddr, authentication: Option<AuthenticationDetails>) -> Result<(), String>;
+    fn connect(&mut self, address: &IpAddr, authentication: Option<Credentials>) -> Result<(), String>;
 
     // Send message over the established connection.
     fn send_message(&self, message: &str) -> Result<String, String>;

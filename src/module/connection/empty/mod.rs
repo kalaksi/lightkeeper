@@ -4,7 +4,7 @@ use crate::module::{
     Module,
     metadata::Metadata,
     connection::ConnectionModule,
-    connection::AuthenticationDetails,
+    connection::Credentials,
     ModuleSpecification,
 };
 
@@ -31,7 +31,7 @@ impl Module for Empty {
 }
 
 impl ConnectionModule for Empty {
-    fn connect(&mut self, _address: &IpAddr, _authentication: Option<AuthenticationDetails>) -> Result<(), String> {
+    fn connect(&mut self, _address: &IpAddr, _authentication: Option<Credentials>) -> Result<(), String> {
         Ok(())
     }
 
@@ -39,6 +39,5 @@ impl ConnectionModule for Empty {
     {
         Ok(String::new())
     }
-
 }
 

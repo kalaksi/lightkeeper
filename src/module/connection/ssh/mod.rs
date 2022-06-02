@@ -5,7 +5,7 @@ use crate::module::{
     Module,
     metadata::Metadata,
     connection::ConnectionModule,
-    connection::AuthenticationDetails,
+    connection::Credentials,
     ModuleSpecification,
 };
 
@@ -42,7 +42,7 @@ impl Module for Ssh2 {
 }
 
 impl ConnectionModule for Ssh2 {
-    fn connect(&mut self, address: &IpAddr, authentication: Option<AuthenticationDetails>) -> Result<(), String> {
+    fn connect(&mut self, address: &IpAddr, authentication: Option<Credentials>) -> Result<(), String> {
         // TODO: support ipv6
 
         let authentication = authentication.unwrap_or_default();

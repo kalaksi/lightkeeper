@@ -1,13 +1,13 @@
 
-pub struct AuthenticationDetails {
+pub struct Credentials {
     pub use_authentication: bool,
     pub username: String,
     pub password: String,
 }
 
-impl<'a> AuthenticationDetails {
+impl<'a> Credentials {
     pub fn new(username: &String, password: &String) -> Self {
-        AuthenticationDetails {
+        Credentials {
             use_authentication: true,
             username: username.clone(),
             password: password.clone(),
@@ -15,9 +15,9 @@ impl<'a> AuthenticationDetails {
     }
 }
 
-impl Default for AuthenticationDetails {
+impl Default for Credentials {
     fn default() -> Self {
-        AuthenticationDetails {
+        Credentials {
             use_authentication: false,
             username: String::new(),
             password: String::new()
