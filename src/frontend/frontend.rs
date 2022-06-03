@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
 
-use crate::{ module::monitoring::MonitoringData };
+use crate::{ module::monitoring::MonitoringData, utils::enums::HostStatus };
 
 pub trait Frontend {
     fn draw(display_data: &DisplayData);
@@ -26,9 +26,4 @@ pub struct HostDisplayData<'a> {
     pub status: HostStatus,
     pub ip_address: &'a IpAddr,
     pub monitoring_data: &'a HashMap<String, Vec<MonitoringData>>,
-}
-
-pub enum HostStatus {
-    Up,
-    Down,
 }

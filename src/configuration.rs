@@ -1,12 +1,29 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
 use std::fs;
+use crate::utils::enums::HostStatus;
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
+    pub general: General,
     pub authentication: Authentication,
+    pub display_options: DisplayOptions,
     pub hosts: Vec<Host>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct General {
+    pub default_host_status: HostStatus,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DisplayOptions {
+    pub included_monitors: Vec<String>,
+    pub excluded_monitors: Vec<String>,
+    pub group_multivalue: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -39,3 +56,4 @@ impl Configuration {
         serde_yaml::from_str::<Configuration>(contents.as_str()).map_err(|e| e.to_string())
     }
 }
+

@@ -94,7 +94,7 @@ fn main() {
             }
         }
 
-        if let Err(error) = host_manager.add_host(host, critical_monitors) {
+        if let Err(error) = host_manager.add_host(host, critical_monitors, config.general.default_host_status) {
             log::error!("{}", error.to_string());
             continue;
         };

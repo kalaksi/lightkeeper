@@ -2,8 +2,8 @@
 use owo_colors::OwoColorize;
 use std::net::IpAddr;
 use tabled::{ Tabled, Table, Modify, Format, Style, object::Columns };
-use super::{ Frontend, DisplayData, HostStatus };
-use crate::{module::monitoring::Criticality, configuration::Host};
+use super::{ Frontend, DisplayData };
+use crate::{module::monitoring::Criticality, configuration::Host, utils::enums::HostStatus };
 
 pub struct Cli;
 
