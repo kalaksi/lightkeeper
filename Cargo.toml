@@ -11,6 +11,7 @@ ssh2 = "0.9.3"
 serde = "1.0.137"
 serde_derive = "1.0.137"
 serde_yaml = "0.8.24"
+serde_json = "1.0.81"
 chrono = "0.4.0"
 oping = "0.4.0"
 tabled = { version = "0.6.1", features = ["color"] }
