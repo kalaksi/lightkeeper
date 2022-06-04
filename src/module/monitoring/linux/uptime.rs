@@ -1,4 +1,5 @@
 
+use std::collections::HashMap;
 use chrono::{ NaiveDateTime, Utc };
 use crate::{
     utils::strip_newline,
@@ -25,7 +26,7 @@ impl Module for Uptime {
         }
     }
 
-    fn new() -> Self {
+    fn new(_settings: &HashMap<String, String>) -> Self {
         Uptime { }
     }
 

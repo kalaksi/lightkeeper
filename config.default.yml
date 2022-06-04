@@ -1,19 +1,28 @@
-authentication:
-  username: exampleuser
-  password: ""
+general:
+  # Assume hosts are down (or up) until a critical monitor says otherwise.
+  default_host_status: "down"
+
+display_options:
+  excluded_monitors: []
+  # Group monitors with multiple values into one column (or similar) or display everything separately.
+  group_multivalue: true
+
+defaults:
+  monitors:
+    ssh:
+      username: exampleuser
+      password: ""
 
 hosts:
-  - name: examplehost1
-    address: 10.4.0.2
+  test1:
+    fqdn: test.domain.invalid
     monitors:
-      - name: uptime
-        version: 0.0.1
-      - name: ping
-        version: 0.0.1
-  - name: examplehost2
-    fqdn: examplehost2.invalid
-    monitors:
-      - name: ssh
+      ping:
         version: 0.0.1
         is_critical: true
-
+  test2:
+    address: 10.0.20.2
+    monitors:
+      ssh:
+        version: 0.0.1
+        is_critical: true

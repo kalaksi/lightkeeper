@@ -1,5 +1,6 @@
 
 use std::fmt;
+use std::collections::HashMap;
 use chrono::{ DateTime, Utc };
 
 use crate::Host;
@@ -15,8 +16,8 @@ pub trait MonitoringModule : Module {
         ModuleSpecification::empty()
     }
 
-    fn new_monitoring_module() -> Box<dyn MonitoringModule> where Self: Sized + 'static {
-        Box::new(Self::new())
+    fn new_monitoring_module(settings: &HashMap<String, String>) -> Box<dyn MonitoringModule> where Self: Sized + 'static {
+        Box::new(Self::new(settings))
     }
 }
 

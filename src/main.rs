@@ -22,7 +22,6 @@ use crate::module::{
     ModuleManager,
     ModuleSpecification,
     monitoring::{MonitoringModule, MonitoringData},
-    connection::Credentials,
 };
 
 #[derive(Parser)]
@@ -51,12 +50,13 @@ fn main() {
     let module_manager = ModuleManager::new();
     let mut host_manager = HostManager::new(&module_manager);
 
-    let mut host_monitors: HashMap<String, Vec<Box<dyn MonitoringModule>>> = HashMap::new();
+    // Host name as first key, monitor name as second.
+    let mut host_monitors: HashMap<String, HashMap<String, Box<dyn MonitoringModule>>> = HashMap::new();
 
     // Configure hosts and modules.
-    for host_config in &config.hosts {
-        log::info!("Found configuration for host {}", host_config.name);
-        let mut host = Host::new(&host_config.name);
+    for (host_name, host_config) in config.hosts.iter() {
+        log::info!("Found configuration for host {}", host_name);
+        let mut host = Host::new(&host_name);
 
         // 0.0.0.0 is the value for "unspecified".
         let ip_address_str = host_config.address.clone().unwrap_or(String::from("0.0.0.0"));
@@ -81,16 +81,18 @@ fn main() {
             }
         }
 
-        host_monitors.insert(host_config.name.clone(), Vec::new());
+        host_monitors.insert(host_name.clone(), HashMap::new());
         let mut critical_monitors: Vec<String> = Vec::new();
 
-        for monitor in &host_config.monitors {
-            let module_spec = ModuleSpecification::new(monitor.name.clone(), monitor.version.clone());
-            host_monitors.get_mut(&host_config.name).unwrap().push(module_manager.new_monitoring_module(&module_spec));
+        for (monitor_name, monitor) in host_config.monitors.iter() {
+            let module_spec = ModuleSpecification::new(monitor_name.clone(), monitor.version.clone());
+            let module_instance = module_manager.new_monitoring_module(&module_spec, &monitor.settings);
+
+            host_monitors.get_mut(host_name).unwrap().insert(monitor_name.clone(), module_instance);
 
             if monitor.is_critical.unwrap_or(false) {
-                log::debug!("Adding critical monitor {}", monitor.name);
-                critical_monitors.push(monitor.name.clone());
+                log::debug!("Adding critical monitor {}", monitor_name);
+                critical_monitors.push(monitor_name.clone());
             }
         }
 
@@ -101,16 +103,16 @@ fn main() {
     }
 
     // Refresh monitoring data.
-    for host_config in &config.hosts {
-        let monitors = host_monitors.get_mut(&host_config.name).unwrap();
-        let host = host_manager.get_host(&host_config.name).unwrap();
+    for (host_name, host_config) in config.hosts.iter() {
+        let monitors = host_monitors.get_mut(host_name).unwrap();
+        let host = host_manager.get_host(host_name).unwrap();
 
         log::info!("Refreshing monitoring data for host {}", host.name);
         
-        for monitor in monitors {
-            let credentials = Credentials::new(&config.authentication.username, &config.authentication.password);
+        for (monitor_name, monitor) in monitors.iter_mut() {
+            let monitor_settings = &host_config.monitors.get(monitor_name).unwrap().settings;
 
-            let new_data_result = match host_manager.get_connector(&host.name, &monitor.get_connector_spec(), Some(credentials)) {
+            let new_data_result = match host_manager.get_connector(&host.name, &monitor.get_connector_spec(), monitor_settings) {
                 Ok(connector) => monitor.refresh(&host, connector),
                 Err(error) => Err(format!("Error while connecting: {}", error))
             };

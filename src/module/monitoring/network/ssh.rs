@@ -1,4 +1,5 @@
 
+use std::collections::HashMap;
 use crate::Host;
 use crate::module::{
     Module,
@@ -20,9 +21,8 @@ impl Module for Ssh {
         }
     }
 
-    fn new() -> Self {
-        Ssh {
-        }
+    fn new(settings: &HashMap<String, String>) -> Self {
+        Ssh { }
     }
 
     fn get_module_spec(&self) -> ModuleSpecification {

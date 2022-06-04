@@ -41,7 +41,7 @@ impl<'a> HostManager<'a> {
         self.hosts.hosts.get(host_name).and_then(|host_state| Some(host_state.host.clone()))
     }
 
-    pub fn get_connector(&mut self, host_name: &String, module_spec: &ModuleSpecification, authentication: Option<connection::Credentials>)
+    pub fn get_connector(&mut self, host_name: &String, module_spec: &ModuleSpecification, settings: &HashMap<String, String>)
         -> Result<&mut Box<dyn connection::ConnectionModule>, String>
     {
         let host_state = self.hosts.get_mut(&host_name)?;
@@ -50,12 +50,12 @@ impl<'a> HostManager<'a> {
             return Ok(host_state.get_connection(&module_spec.id)?);
         }
         else {
-            let mut connection = self.module_manager.new_connection_module(&module_spec);
+            let mut connection = self.module_manager.new_connection_module(module_spec, settings);
 
             // If module does not have a connection dependency, it will be empty and a no-op.
             if connection.get_module_spec() != connection::Empty::get_metadata().module_spec {
                 log::info!("Connecting to {} ({}) with {}", host_name, host_state.host.ip_address, module_spec.id);
-                connection.connect(&host_state.host.ip_address, authentication)?;
+                connection.connect(&host_state.host.ip_address)?;
             }
 
             host_state.connections.insert(module_spec.id.clone(), connection);

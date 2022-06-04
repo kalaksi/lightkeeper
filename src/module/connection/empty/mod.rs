@@ -1,10 +1,9 @@
 
-use std::net::IpAddr;
+use std::{ collections::HashMap, net::IpAddr };
 use crate::module::{
     Module,
     metadata::Metadata,
     connection::ConnectionModule,
-    connection::Credentials,
     ModuleSpecification,
 };
 
@@ -21,7 +20,7 @@ impl Module for Empty {
         }
     }
 
-    fn new() -> Self {
+    fn new(_settings: &HashMap<String, String>) -> Self {
         Empty { }
     }
 
@@ -31,7 +30,7 @@ impl Module for Empty {
 }
 
 impl ConnectionModule for Empty {
-    fn connect(&mut self, _address: &IpAddr, _authentication: Option<Credentials>) -> Result<(), String> {
+    fn connect(&mut self, _address: &IpAddr) -> Result<(), String> {
         Ok(())
     }
 

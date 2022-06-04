@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 
+use std::collections::HashMap;
 use super::{
     Module,
     ModuleSpecification,
@@ -14,8 +14,8 @@ use super::{
 
 
 pub struct ModuleManager {
-    connection_constructors: HashMap<ModuleSpecification, fn() -> Box<dyn ConnectionModule>>,
-    monitoring_constructors: HashMap<ModuleSpecification, fn() -> Box<dyn MonitoringModule>>,
+    connection_constructors: HashMap<ModuleSpecification, fn(&HashMap<String, String>) -> Box<dyn ConnectionModule>>,
+    monitoring_constructors: HashMap<ModuleSpecification, fn(&HashMap<String, String>) -> Box<dyn MonitoringModule>>,
 }
 
 impl ModuleManager {
@@ -30,16 +30,16 @@ impl ModuleManager {
         manager
     }
 
-    pub fn new_connection_module(&self, module_spec: &ModuleSpecification) -> Box<dyn ConnectionModule> {
+    pub fn new_connection_module(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Box<dyn ConnectionModule> {
         match self.connection_constructors.get(&module_spec)  {
-            Some(constructor) => return constructor(),
+            Some(constructor) => return constructor(settings),
             None => panic!("Required connection module '{}' not found", module_spec)
         }
     }
 
-    pub fn new_monitoring_module(&self, module_spec: &ModuleSpecification) -> Box<dyn MonitoringModule> {
+    pub fn new_monitoring_module(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Box<dyn MonitoringModule> {
         match self.monitoring_constructors.get(&module_spec)  {
-            Some(constructor) => return constructor(),
+            Some(constructor) => return constructor(settings),
             None => panic!("Required monitoring module '{}' not found", module_spec)
         }
     }

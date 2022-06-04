@@ -1,4 +1,5 @@
 
+use std::collections::HashMap;
 use oping;
 use crate::Host;
 use crate::module::{
@@ -24,7 +25,7 @@ impl Module for Ping {
         }
     }
 
-    fn new() -> Self {
+    fn new(_settings: &HashMap<String, String>) -> Self {
         Ping { }
     }
 

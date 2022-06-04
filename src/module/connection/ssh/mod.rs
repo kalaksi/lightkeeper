@@ -1,11 +1,11 @@
-use std::{ net::TcpStream, net::IpAddr, io::Read };
+use std::{ net::TcpStream, net::IpAddr, io::Read, collections::HashMap };
 use ssh2::Session;
 
+use crate::utils::clone_or_default;
 use crate::module::{
     Module,
     metadata::Metadata,
     connection::ConnectionModule,
-    connection::Credentials,
     ModuleSpecification,
 };
 
@@ -13,6 +13,8 @@ use crate::module::{
 pub struct Ssh2 {
     session: Session,
     port: u16,
+    username: String,
+    password: String,
 }
 
 impl Module for Ssh2 {
@@ -25,13 +27,16 @@ impl Module for Ssh2 {
         }
     }
 
-    fn new() -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         // TODO: error handling?
         let session = Session::new().unwrap();
+        let empty = String::from("");
 
         Ssh2 {
             session: session,
             port: 22,
+            username: settings.get("username").and_then(|value| Some(value.clone())).unwrap_or_else(|| String::from("")),
+            password: settings.get("password").and_then(|value| Some(value.clone())).unwrap_or_else(|| String::from("")),
         }
     }
 
@@ -42,15 +47,8 @@ impl Module for Ssh2 {
 }
 
 impl ConnectionModule for Ssh2 {
-    fn connect(&mut self, address: &IpAddr, authentication: Option<Credentials>) -> Result<(), String> {
+    fn connect(&mut self, address: &IpAddr) -> Result<(), String> {
         // TODO: support ipv6
-
-        let authentication = authentication.unwrap_or_default();
-
-        if !authentication.use_authentication {
-            return Err(String::from("Enabling authentication is required for SSH"));
-        };
-
 
         let stream = match TcpStream::connect(format!("{}:{}", address, self.port)) {
             Ok(stream) => stream,
@@ -64,7 +62,7 @@ impl ConnectionModule for Ssh2 {
             return Err(format!("Handshake error: {}", error));
         };
 
-        if let Err(error) = self.session.userauth_agent(authentication.username.as_str()) {
+        if let Err(error) = self.session.userauth_agent(self.username.as_str()) {
             return Err(format!("Error when communicating with authentication agent: {}", error));
         };
 
