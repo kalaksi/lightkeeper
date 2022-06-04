@@ -118,7 +118,7 @@ fn main() {
             };
 
             let new_data = new_data_result.unwrap_or_else(|error| {
-                log::info!("Error while refreshing monitoring data: {}", error);
+                log::info!("Error while refreshing monitoring data: {}: {}", monitor_name, error);
                 MonitoringData::empty_and_critical()
             });
 
