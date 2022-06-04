@@ -21,7 +21,6 @@ pub struct General {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
-    pub included_monitors: Vec<String>,
     pub excluded_monitors: Vec<String>,
     pub group_multivalue: bool,
 }

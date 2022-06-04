@@ -97,8 +97,8 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn is_connected(&self) -> bool {
-        // TODO: better way for this (there wasn't anything obvious)
-        match self.session.banner() {
+        // There didn't seem to be a better way to check the connection status.
+        match self.session.banner_bytes() {
             Some(_) => true,
             None => false,
         }

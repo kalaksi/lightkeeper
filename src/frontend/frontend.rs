@@ -25,5 +25,5 @@ pub struct HostDisplayData<'a> {
     pub domain_name: &'a String,
     pub status: HostStatus,
     pub ip_address: &'a IpAddr,
-    pub monitoring_data: &'a HashMap<String, Vec<MonitoringData>>,
+    pub monitoring_data: HashMap<String, &'a Vec<MonitoringData>>,
 }

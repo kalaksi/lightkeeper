@@ -126,6 +126,6 @@ fn main() {
         }
     }
 
-    frontend::cli::Cli::draw(&host_manager.get_display_data());
+    frontend::cli::Cli::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
 
 }

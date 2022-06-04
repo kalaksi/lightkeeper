@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 
 use crate::utils::enums::HostStatus;
 use crate::module::Module;
@@ -77,15 +78,23 @@ impl<'a> HostManager<'a> {
         Ok(())
     }
 
-    pub fn get_display_data(&self) -> frontend::DisplayData {
+    pub fn get_display_data(&self, excluded_monitors: &Vec<String>) -> frontend::DisplayData {
         let mut display_data = frontend::DisplayData::new();
 
         for (host_name, state) in self.hosts.hosts.iter() {
+
+            let mut monitoring_data: HashMap<String, &Vec<MonitoringData>> = HashMap::new();
+            for (monitor_name, data) in state.data.iter() {
+                if !excluded_monitors.contains(monitor_name) {
+                    monitoring_data.insert(monitor_name.clone(), &data);
+                }
+            }
+
             display_data.hosts.insert(host_name.clone(), frontend::HostDisplayData {
                 name: &state.host.name,
                 domain_name: &state.host.fqdn,
                 ip_address: &state.host.ip_address,
-                monitoring_data: &state.data,
+                monitoring_data: monitoring_data,
                 status: state.status,
             });
         }
