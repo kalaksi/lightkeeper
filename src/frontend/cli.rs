@@ -10,10 +10,7 @@ pub struct Cli;
 
 impl Frontend for Cli {
     fn draw(display_data: &DisplayData) {
-        let mut headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
-        headers.extend(display_data.all_monitor_names.clone());
-
-        let mut table = Builder::default().set_header(headers);
+        let mut table = Builder::default().set_header(display_data.table_headers.clone());
 
         for (_, host_data) in display_data.hosts.iter() {
 
@@ -45,16 +42,9 @@ impl Frontend for Cli {
 
 #[derive(Tabled)]
 struct TableEntry<'a> {
-    #[tabled(rename = "Name")]
     pub name: &'a String,
-
-    #[tabled(rename = "FQDN")]
     pub fqdn: &'a String,
-
-    #[tabled(rename = "IP address")]
     pub ip_address: &'a IpAddr,
-
-    #[tabled(rename = "Status")]
     pub status: String,
 }
 

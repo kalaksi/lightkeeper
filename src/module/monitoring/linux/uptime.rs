@@ -9,7 +9,7 @@ use crate::module::{
     Module,
     Metadata,
     connection::ConnectionModule,
-    monitoring::{MonitoringModule, MonitoringData, DataPoint},
+    monitoring::{MonitoringModule, DisplayStyle, DisplayOptions, DataPoint},
     ModuleSpecification,
 };
 
@@ -20,7 +20,6 @@ impl Module for Uptime {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from("uptime"), String::from("0.0.1")),
-            display_name: String::from("Uptime"),
             description: String::from(""),
             url: String::from(""),
         }
@@ -36,6 +35,15 @@ impl Module for Uptime {
 }
 
 impl MonitoringModule for Uptime {
+    fn get_display_options(&self) -> DisplayOptions {
+        DisplayOptions {
+            display_style: DisplayStyle::String,
+            display_name: String::from("Uptime"),
+            use_multivalue: false,
+            unit: String::from("d"),
+        }
+    }
+
     fn get_connector_spec(&self) -> ModuleSpecification {
         ModuleSpecification::new(String::from("ssh"), String::from("0.0.1"))
     }

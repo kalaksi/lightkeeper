@@ -8,7 +8,8 @@ use crate::module::{
     connection::ConnectionModule,
     monitoring::MonitoringModule,
     monitoring::DataPoint,
-    monitoring::MonitoringData,
+    monitoring::DisplayOptions,
+    monitoring::DisplayStyle,
     monitoring::Criticality,
     ModuleSpecification,
 };
@@ -20,7 +21,6 @@ impl Module for Ping {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from("ping"), String::from("0.0.1")),
-            display_name: String::from("Ping"),
             description: String::from(""),
             url: String::from(""),
         }
@@ -36,6 +36,15 @@ impl Module for Ping {
 }
 
 impl MonitoringModule for Ping {
+    fn get_display_options(&self) -> DisplayOptions {
+        DisplayOptions {
+            display_style: DisplayStyle::String,
+            display_name: String::from("Ping"),
+            use_multivalue: false,
+            unit: String::from("ms"),
+        }
+    }
+
     fn refresh(&mut self, host: &Host, _connection: &mut Box<dyn ConnectionModule>) -> Result<DataPoint, String> {
         let mut ping = oping::Ping::new();
 

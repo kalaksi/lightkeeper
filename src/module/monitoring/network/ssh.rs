@@ -15,7 +15,6 @@ impl Module for Ssh {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from("ssh"), String::from("0.0.1")),
-            display_name: String::from("SSH"),
             description: String::from(""),
             url: String::from(""),
         }
@@ -38,6 +37,7 @@ impl MonitoringModule for Ssh {
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
             display_style: DisplayStyle::StatusUpDown,
+            display_name: String::from("SSH"),
             use_multivalue: false,
             unit: String::from(""),
         }

@@ -87,12 +87,16 @@ impl<'a> HostManager<'a> {
 
     pub fn get_display_data(&self, excluded_monitors: &Vec<String>) -> frontend::DisplayData {
         let mut display_data = frontend::DisplayData::new();
+        display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 
-        display_data.all_monitor_names = self.hosts.hosts.iter().flat_map(|(_, host_state)| {
-            host_state.monitor_data.iter().map(|(monitor_id, _)| monitor_id.clone())
-        }).collect();
-        display_data.all_monitor_names.sort();
-        display_data.all_monitor_names.dedup();
+        for (_, host_state) in self.hosts.hosts.iter() {
+            for (monitor_id, monitor_data) in host_state.monitor_data.iter() {
+                if !display_data.all_monitor_names.contains(monitor_id) {
+                    display_data.all_monitor_names.push(monitor_id.clone());
+                    display_data.table_headers.push(monitor_data.display_options.display_name.clone());
+                }
+            }
+        }
 
         for (host_name, state) in self.hosts.hosts.iter() {
             let mut monitoring_data: HashMap<String, &MonitoringData> = HashMap::new();

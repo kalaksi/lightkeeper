@@ -17,7 +17,6 @@ impl Module for Docker {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from("docker"), String::from("0.0.1")),
-            display_name: String::from("Docker containers"),
             description: String::from("Tested with API version 1.41"),
             url: String::from(""),
         }
@@ -43,6 +42,7 @@ impl MonitoringModule for Docker {
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
             display_style: DisplayStyle::CriticalityLevel,
+            display_name: String::from("Docker containers"),
             use_multivalue: true,
             unit: String::from(""),
         }

@@ -22,6 +22,7 @@ pub trait MonitoringModule : Module {
 
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
+            display_name: self.get_connector_spec().id,
             display_style: DisplayStyle::String,
             use_multivalue: false,
             unit: String::from(""),
@@ -31,6 +32,7 @@ pub trait MonitoringModule : Module {
 
 pub struct DisplayOptions {
     pub unit: String,
+    pub display_name: String,
     pub display_style: DisplayStyle,
     pub use_multivalue: bool,
 }
@@ -39,6 +41,7 @@ impl DisplayOptions {
     pub fn just_style(display_style: DisplayStyle) -> Self {
         DisplayOptions {
             unit: String::from(""),
+            display_name: String::from(""),
             display_style: display_style,
             use_multivalue: false
         }

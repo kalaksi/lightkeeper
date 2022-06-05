@@ -14,7 +14,6 @@ impl Module for Empty {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from(""), String::from("")),
-            display_name: String::from(""),
             description: String::from(""),
             url: String::from(""),
         }
