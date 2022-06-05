@@ -21,7 +21,7 @@ pub trait MonitoringModule : Module {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum Criticality {
     Normal,
     Warning,
@@ -31,9 +31,9 @@ pub enum Criticality {
 
 pub struct MonitoringData {
     pub value: String,
+    pub multivalue: Vec<MonitoringData>,
     pub unit: String,
     pub criticality: Criticality,
-    // TODO: check how memory hungry this type is
     pub time: DateTime<Utc>,
 }
 
@@ -41,6 +41,7 @@ impl MonitoringData {
     pub fn new(value: String, unit: String) -> Self {
         MonitoringData {
             value: value,
+            multivalue: Vec::new(),
             unit: unit,
             criticality: Criticality::Normal,
             time: Utc::now(),
@@ -50,6 +51,7 @@ impl MonitoringData {
     pub fn new_with_level(value: String, unit: String, criticality: Criticality) -> Self {
         MonitoringData {
             value: value,
+            multivalue: Vec::new(),
             unit: unit,
             criticality: criticality,
             time: Utc::now(),
@@ -57,7 +59,7 @@ impl MonitoringData {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.value.is_empty() && self.unit.is_empty()
+        self.value.is_empty() && self.unit.is_empty() && self.multivalue.is_empty()
     }
 
     pub fn empty() -> Self {
@@ -75,6 +77,7 @@ impl Default for MonitoringData {
     fn default() -> Self {
         MonitoringData {
             value: String::new(),
+            multivalue: Vec::new(),
             unit: String::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
@@ -87,8 +90,12 @@ impl fmt::Display for MonitoringData {
         if self.is_empty() {
             write!(f, "(empty)")
         }
+        else if !self.multivalue.is_empty() {
+            let values: Vec<String> = self.multivalue.iter().map(|m| format!("{} ({})", m.value, m.unit)).collect();
+            write!(f, "{}", values.join(", "))
+        }
         else {
-            write!(f, "{} {}", self.value, self.unit)
+            write!(f, "{} ({})", self.value, self.unit)
         }
     }
 }

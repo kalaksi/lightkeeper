@@ -1,16 +1,15 @@
 
 use std::collections::HashMap;
-use std::str::FromStr;
+use std::fmt;
 use serde_derive::Deserialize;
 use serde_json;
-use chrono::{ NaiveDateTime, Utc };
 use crate::Host;
 
 use crate::module::{
     Module,
     Metadata,
     connection::ConnectionModule,
-    monitoring::{MonitoringModule, MonitoringData},
+    monitoring::{ MonitoringModule, MonitoringData, Criticality},
     ModuleSpecification,
 };
 
@@ -23,7 +22,7 @@ impl Module for Docker {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from("docker"), String::from("0.0.1")),
-            display_name: String::from("Docker"),
+            display_name: String::from("Docker containers"),
             description: String::from("Tested with API version 1.41"),
             url: String::from(""),
         }
@@ -56,22 +55,18 @@ impl MonitoringModule for Docker {
 
         let output = &connection.send_message(command.as_str())?;
 
-        let mut containers: Vec<ContainerDetails> = serde_json::from_str(&output.as_str()).map_err(|e| e.to_string())?;
-        containers.retain(|container| container.state != ContainerState::Running);
-        let not_running_names: Vec<String> = containers.iter().map(|value| value.id.clone()).collect();
-        
-        if not_running_names.len() > 0 {
-            return Ok(MonitoringData::new_with_level(
-                not_running_names.join(", "),
-                String::from("IDs"),
-                crate::module::monitoring::Criticality::Error
-            ));
-        }
-        Ok(MonitoringData::new_with_level(
-            String::from(""),
-            String::from("IDs"),
-            crate::module::monitoring::Criticality::Normal
-        ))
+        let containers: Vec<ContainerDetails> = serde_json::from_str(&output.as_str()).map_err(|e| e.to_string())?;
+
+        let mut parent_data = MonitoringData::empty();
+        let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
+        parent_data.criticality = most_critical_container.state.to_criticality();
+        parent_data.multivalue = containers.iter().map(|container| {
+            MonitoringData::new_with_level(container.state.to_string(),
+                                           container.names.first().unwrap().clone(),
+                                           container.state.to_criticality())
+        }).collect();
+
+        Ok(parent_data)
     }
 }
 
@@ -79,6 +74,7 @@ impl MonitoringModule for Docker {
 #[serde(rename_all = "PascalCase")]
 struct ContainerDetails {
     id: String,
+    names: Vec<String>,
     state: ContainerState,
 }
 
@@ -92,4 +88,32 @@ enum ContainerState {
     Removing,
     Exited,
     Dead,
+}
+
+impl ContainerState {
+    fn to_criticality(&self) -> Criticality {
+        match self {
+            ContainerState::Created => Criticality::Normal,
+            ContainerState::Running => Criticality::Normal,
+            ContainerState::Paused => Criticality::Warning,
+            ContainerState::Restarting => Criticality::Error,
+            ContainerState::Removing => Criticality::Warning,
+            ContainerState::Exited => Criticality::Error,
+            ContainerState::Dead => Criticality::Error,
+        }
+    }
+}
+
+impl fmt::Display for ContainerState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ContainerState::Created => write!(f, "created"),
+            ContainerState::Running => write!(f, "running"),
+            ContainerState::Paused => write!(f, "paused"),
+            ContainerState::Restarting => write!(f, "restarting"),
+            ContainerState::Removing => write!(f, "removing"),
+            ContainerState::Exited => write!(f, "exited"),
+            ContainerState::Dead => write!(f, "dead"),
+        }
+    }
 }
