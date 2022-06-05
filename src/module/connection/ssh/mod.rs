@@ -1,7 +1,6 @@
 use std::{ net::TcpStream, net::IpAddr, io::Read, collections::HashMap };
 use ssh2::Session;
 
-use crate::utils::clone_or_default;
 use crate::module::{
     Module,
     metadata::Metadata,
@@ -30,13 +29,12 @@ impl Module for Ssh2 {
     fn new(settings: &HashMap<String, String>) -> Self {
         // TODO: error handling?
         let session = Session::new().unwrap();
-        let empty = String::from("");
 
         Ssh2 {
             session: session,
             port: 22,
-            username: settings.get("username").and_then(|value| Some(value.clone())).unwrap_or_else(|| String::from("")),
-            password: settings.get("password").and_then(|value| Some(value.clone())).unwrap_or_else(|| String::from("")),
+            username: settings.get("username").unwrap_or(&String::from("")).clone(),
+            password: settings.get("password").unwrap_or(&String::from("")).clone(),
         }
     }
 
