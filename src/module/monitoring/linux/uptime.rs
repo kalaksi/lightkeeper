@@ -9,7 +9,7 @@ use crate::module::{
     Module,
     Metadata,
     connection::ConnectionModule,
-    monitoring::{MonitoringModule, MonitoringData},
+    monitoring::{MonitoringModule, MonitoringData, DataPoint},
     ModuleSpecification,
 };
 
@@ -40,11 +40,11 @@ impl MonitoringModule for Uptime {
         ModuleSpecification::new(String::from("ssh"), String::from("0.0.1"))
     }
 
-    fn refresh(&mut self, _host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
+    fn refresh(&mut self, _host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<DataPoint, String> {
         let output = strip_newline(&connection.send_message("uptime -s")?);
         let boot_datetime = NaiveDateTime::parse_from_str(&output, "%Y-%m-%d %H:%M:%S").map_err(|e| e.to_string())?;
         let uptime = Utc::now().naive_utc() - boot_datetime;
 
-        Ok(MonitoringData::new(uptime.num_days().to_string(), String::from("d")))
+        Ok(DataPoint::new(uptime.num_days().to_string()))
     }
 }

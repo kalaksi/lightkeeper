@@ -11,7 +11,7 @@ use crate::module::{
 };
 
 pub trait MonitoringModule : Module {
-    fn refresh(&mut self, host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String>;
+    fn refresh(&mut self, host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<DataPoint, String>;
     fn get_connector_spec(&self) -> ModuleSpecification {
         ModuleSpecification::empty()
     }
@@ -19,10 +19,32 @@ pub trait MonitoringModule : Module {
     fn new_monitoring_module(settings: &HashMap<String, String>) -> Box<dyn MonitoringModule> where Self: Sized + 'static {
         Box::new(Self::new(settings))
     }
+
+    fn get_display_options(&self) -> DisplayOptions {
+        DisplayOptions {
+            display_style: DisplayStyle::String,
+            use_multivalue: false,
+            unit: String::from(""),
+        }
+    }
+}
+
+pub struct DisplayOptions {
+    pub unit: String,
+    pub display_style: DisplayStyle,
+    pub use_multivalue: bool,
+}
+
+pub enum DisplayStyle {
+    String,
+    Numeric,
+    StatusUpDown,
+    CriticalityLevel,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum Criticality {
+    NoData,
     Normal,
     Warning,
     Error,
@@ -30,36 +52,49 @@ pub enum Criticality {
 }
 
 pub struct MonitoringData {
+    pub values: Vec<DataPoint>,
+    pub display_options: DisplayOptions,
+    pub is_critical: bool,
+}
+
+impl MonitoringData {
+    pub fn new(display_options: DisplayOptions) -> Self {
+        MonitoringData {
+            values: Vec::new(),
+            display_options: display_options,
+            is_critical: false,
+        }
+    }
+}
+
+pub struct DataPoint {
     pub value: String,
-    pub multivalue: Vec<MonitoringData>,
-    pub unit: String,
+    pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
 }
 
-impl MonitoringData {
-    pub fn new(value: String, unit: String) -> Self {
-        MonitoringData {
+impl DataPoint {
+    pub fn new(value: String) -> Self {
+        DataPoint {
             value: value,
             multivalue: Vec::new(),
-            unit: unit,
             criticality: Criticality::Normal,
             time: Utc::now(),
         }
     }
 
-    pub fn new_with_level(value: String, unit: String, criticality: Criticality) -> Self {
-        MonitoringData {
+    pub fn new_with_level(value: String, criticality: Criticality) -> Self {
+        DataPoint {
             value: value,
             multivalue: Vec::new(),
-            unit: unit,
             criticality: criticality,
             time: Utc::now(),
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.value.is_empty() && self.unit.is_empty() && self.multivalue.is_empty()
+        self.value.is_empty() && self.multivalue.is_empty()
     }
 
     pub fn empty() -> Self {
@@ -73,18 +108,33 @@ impl MonitoringData {
     }
 }
 
-impl Default for MonitoringData {
+impl Default for DataPoint {
     fn default() -> Self {
-        MonitoringData {
+        DataPoint {
             value: String::new(),
             multivalue: Vec::new(),
-            unit: String::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
         }
     }
 }
 
+impl fmt::Display for DataPoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_empty() {
+            write!(f, "(empty)")
+        }
+        else if !self.multivalue.is_empty() {
+            let values: Vec<String> = self.multivalue.iter().map(|m| format!("{}", m.value)).collect();
+            write!(f, "{}", values.join(", "))
+        }
+        else {
+            write!(f, "{}", self.value)
+        }
+    }
+}
+
+/*
 impl fmt::Display for MonitoringData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_empty() {
@@ -99,3 +149,4 @@ impl fmt::Display for MonitoringData {
         }
     }
 }
+*/

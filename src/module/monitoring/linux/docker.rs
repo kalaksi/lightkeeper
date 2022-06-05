@@ -5,13 +5,8 @@ use serde_derive::Deserialize;
 use serde_json;
 use crate::Host;
 
-use crate::module::{
-    Module,
-    Metadata,
-    connection::ConnectionModule,
-    monitoring::{ MonitoringModule, MonitoringData, Criticality},
-    ModuleSpecification,
-};
+use crate::module::{ Module, Metadata, connection::ConnectionModule, ModuleSpecification };
+use crate::module::monitoring::{ MonitoringModule, MonitoringData, Criticality, DisplayStyle, DisplayOptions, DataPoint };
 
 pub struct Docker {
     use_sudo: bool,
@@ -30,8 +25,8 @@ impl Module for Docker {
 
     fn new(settings: &HashMap<String, String>) -> Self {
         Docker {
-            use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or_else(|| false),
-            excluded_containers: settings.get("excluded_containers").and_then(|value| Some(value.clone())).unwrap_or_else(|| String::from("")),
+            use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(false),
+            excluded_containers: settings.get("excluded_containers").unwrap_or(&String::from("")).clone(),
         }
     }
 
@@ -45,7 +40,15 @@ impl MonitoringModule for Docker {
         ModuleSpecification::new(String::from("ssh"), String::from("0.0.1"))
     }
 
-    fn refresh(&mut self, _host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<MonitoringData, String> {
+    fn get_display_options(&self) -> DisplayOptions {
+        DisplayOptions {
+            display_style: DisplayStyle::CriticalityLevel,
+            use_multivalue: true,
+            unit: String::from(""),
+        }
+    }
+
+    fn refresh(&mut self, _host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<DataPoint, String> {
         // TODO: somehow connect directly to the unix socket instead of using curl?
         let mut command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
@@ -57,17 +60,16 @@ impl MonitoringModule for Docker {
 
         let containers: Vec<ContainerDetails> = serde_json::from_str(&output.as_str()).map_err(|e| e.to_string())?;
 
-        let mut parent_data = MonitoringData::empty();
+        let mut parent_data = DataPoint::empty();
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
         parent_data.criticality = most_critical_container.state.to_criticality();
         parent_data.multivalue = containers.iter().map(|container| {
-            MonitoringData::new_with_level(container.state.to_string(),
-                                           container.names.first().unwrap().clone(),
-                                           container.state.to_criticality())
+            DataPoint::new_with_level(container.state.to_string(), container.state.to_criticality())
         }).collect();
 
         Ok(parent_data)
     }
+
 }
 
 #[derive(Deserialize, Debug)]

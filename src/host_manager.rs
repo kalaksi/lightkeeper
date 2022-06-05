@@ -1,12 +1,14 @@
 use std::collections::HashMap;
-use std::hash::Hash;
 
+use crate::module::monitoring::MonitoringModule;
 use crate::utils::enums::HostStatus;
-use crate::module::Module;
-use crate::module::monitoring::Criticality;
 use crate::module::{
     ModuleManager,
+    Module,
     monitoring::MonitoringData,
+    monitoring::DataPoint,
+    monitoring::Criticality,
+    monitoring::DisplayOptions,
     ModuleSpecification,
     connection,
 };
@@ -63,15 +65,20 @@ impl<'a> HostManager<'a> {
         }
     }
 
-    pub fn insert_monitoring_data(&mut self, host_name: &String, monitor_id: &String, data: MonitoringData) -> Result<(), String> {
-        log::debug!("New monitoring data for {}: {}: {}", host_name, monitor_id, data);
+    pub fn insert_monitoring_data(&mut self, host_name: &String, monitor: &mut Box<dyn MonitoringModule>, data_point: DataPoint) -> Result<(), String> {
+        let spec = &monitor.get_module_spec();
+
+        log::debug!("New data point for {}: {}: {}", host_name, spec.id, data_point);
         let host_state = self.hosts.get_mut(&host_name)?;
 
-        if let Some(monitoring_data) = host_state.data.get_mut(monitor_id) {
-            monitoring_data.push(data);
-        }
-        else {
-            host_state.data.insert(monitor_id.clone(), vec![data]);
+        loop {
+            if let Some(monitoring_data) = host_state.monitor_data.get_mut(&spec.id) {
+                monitoring_data.values.push(data_point);
+                break;
+            }
+            else {
+                host_state.monitor_data.insert(spec.id.clone(), MonitoringData::new(monitor.get_display_options()));
+            }
         }
 
         host_state.update_status();
@@ -81,19 +88,25 @@ impl<'a> HostManager<'a> {
     pub fn get_display_data(&self, excluded_monitors: &Vec<String>) -> frontend::DisplayData {
         let mut display_data = frontend::DisplayData::new();
 
-        for (host_name, state) in self.hosts.hosts.iter() {
+        display_data.all_monitor_names = self.hosts.hosts.iter().flat_map(|(_, host_state)| {
+            host_state.monitor_data.iter().map(|(monitor_id, _)| monitor_id.clone())
+        }).collect();
+        display_data.all_monitor_names.sort();
+        display_data.all_monitor_names.dedup();
 
-            let mut monitoring_data: HashMap<String, &Vec<MonitoringData>> = HashMap::new();
-            for (monitor_name, data) in state.data.iter() {
-                if !excluded_monitors.contains(monitor_name) {
-                    monitoring_data.insert(monitor_name.clone(), &data);
+        for (host_name, state) in self.hosts.hosts.iter() {
+            let mut monitoring_data: HashMap<String, &MonitoringData> = HashMap::new();
+
+            for (monitor_id, data) in state.monitor_data.iter() {
+                if !excluded_monitors.contains(monitor_id) {
+                    monitoring_data.insert(monitor_id.clone(), &data);
                 }
             }
 
             display_data.hosts.insert(host_name.clone(), frontend::HostDisplayData {
-                name: &state.host.name,
-                domain_name: &state.host.fqdn,
-                ip_address: &state.host.ip_address,
+                name: state.host.name.clone(),
+                domain_name: state.host.fqdn.clone(),
+                ip_address: state.host.ip_address.clone(),
                 monitoring_data: monitoring_data,
                 status: state.status,
             });
@@ -122,7 +135,7 @@ impl HostCollection {
         }
 
         let host_name = host.name.clone();
-        self.hosts.insert(host_name, HostState::from_host(host, critical_monitors, default_status));
+        self.hosts.insert(host_name, HostState::from_host(host, default_status));
         Ok(())
     }
 
@@ -140,24 +153,22 @@ impl HostCollection {
 struct HostState {
     host: Host,
     status: HostStatus,
-    critical_monitors: Vec<String>,
     connections: HashMap<String, Box<dyn connection::ConnectionModule>>,
-    data: HashMap<String, Vec<MonitoringData>>,
+    monitor_data: HashMap<String, MonitoringData>,
 }
 
 impl HostState {
-    fn from_host(host: Host, critical_monitors: Vec<String>, status: HostStatus) -> Self {
+    fn from_host(host: Host, status: HostStatus) -> Self {
         HostState {
             host: host,
             connections: HashMap::new(),
-            data: HashMap::new(),
-            critical_monitors: critical_monitors,
+            monitor_data: HashMap::new(),
             status: status,
         }
     }
 
-    fn get_monitoring_data(&mut self, monitor_id: &String) -> Result<&mut Vec<MonitoringData>, String> {
-        self.data.get_mut(monitor_id).ok_or(String::from("No such monitor"))
+    fn get_monitor(&mut self, monitor_id: &String) -> Result<&mut MonitoringData, String> {
+        self.monitor_data.get_mut(monitor_id).ok_or(String::from("No such monitor"))
     }
 
     fn get_connection(&mut self, connection_id: &String) -> Result<&mut Box<dyn connection::ConnectionModule>, String> {
@@ -165,9 +176,9 @@ impl HostState {
     }
 
     fn update_status(&mut self) {
-        let critical_monitor = &self.data.iter().find(|(monitor_name, data)| {
+        let critical_monitor = &self.monitor_data.iter().find(|(monitor_name, data)| {
             // There should always be some monitoring data available at this point.
-            data.last().unwrap().criticality == Criticality::Critical && self.critical_monitors.contains(&monitor_name)
+            data.is_critical && data.values.last().unwrap().criticality == Criticality::Critical
         });
 
         if let Some((name, _)) = critical_monitor {

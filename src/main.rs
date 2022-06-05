@@ -5,11 +5,7 @@ mod configuration;
 mod utils;
 mod frontend;
 
-use std::{
-    collections::HashMap,
-    net::{self, ToSocketAddrs},
-    str::FromStr,
-};
+use std::{ collections::HashMap, net, net::ToSocketAddrs, str::FromStr, };
 
 use clap::Parser;
 
@@ -21,7 +17,8 @@ use frontend::Frontend;
 use crate::module::{
     ModuleManager,
     ModuleSpecification,
-    monitoring::{MonitoringModule, MonitoringData},
+    monitoring::MonitoringModule,
+    monitoring::DataPoint,
 };
 
 #[derive(Parser)]
@@ -119,10 +116,10 @@ fn main() {
 
             let new_data = new_data_result.unwrap_or_else(|error| {
                 log::info!("Error while refreshing monitoring data: {}: {}", monitor_name, error);
-                MonitoringData::empty_and_critical()
+                DataPoint::empty_and_critical()
             });
 
-            host_manager.insert_monitoring_data(&host.name, &monitor.get_module_spec().id, new_data)
+            host_manager.insert_monitoring_data(&host.name, monitor, new_data)
                         .expect("Failed to store monitoring data");
 
         }
