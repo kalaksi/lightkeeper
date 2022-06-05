@@ -35,6 +35,16 @@ pub struct DisplayOptions {
     pub use_multivalue: bool,
 }
 
+impl DisplayOptions {
+    pub fn just_style(display_style: DisplayStyle) -> Self {
+        DisplayOptions {
+            unit: String::from(""),
+            display_style: display_style,
+            use_multivalue: false
+        }
+    }
+}
+
 pub enum DisplayStyle {
     String,
     Numeric,

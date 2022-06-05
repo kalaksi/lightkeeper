@@ -6,7 +6,7 @@ use serde_json;
 use crate::Host;
 
 use crate::module::{ Module, Metadata, connection::ConnectionModule, ModuleSpecification };
-use crate::module::monitoring::{ MonitoringModule, MonitoringData, Criticality, DisplayStyle, DisplayOptions, DataPoint };
+use crate::module::monitoring::{ MonitoringModule, Criticality, DisplayStyle, DisplayOptions, DataPoint };
 
 pub struct Docker {
     use_sudo: bool,

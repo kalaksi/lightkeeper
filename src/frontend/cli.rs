@@ -10,15 +10,20 @@ pub struct Cli;
 
 impl Frontend for Cli {
     fn draw(display_data: &DisplayData) {
-        let mut headers = vec![String::from("Name"), String::from("FQDN"), String::from("IP address"), String::from("Status")];
+        let mut headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
         headers.extend(display_data.all_monitor_names.clone());
 
         let mut table = Builder::default().set_header(headers);
 
         for (_, host_data) in display_data.hosts.iter() {
 
-            let mut row: Vec<String> = vec![ host_data.name.clone(), host_data.status.to_string(),
-                                             host_data.domain_name.clone(), host_data.ip_address.to_string() ];
+            let host_status = convert_to_string(&DataPoint::new(host_data.status.to_string()),
+                                                &DisplayOptions::just_style(DisplayStyle::StatusUpDown));
+
+            let mut row: Vec<String> = vec![ host_status,
+                                             host_data.name.clone(),
+                                             host_data.domain_name.clone(),
+                                             host_data.ip_address.to_string() ];
 
             for monitor_id in &display_data.all_monitor_names {
                 match host_data.monitoring_data.get(monitor_id) {
