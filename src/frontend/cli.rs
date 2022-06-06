@@ -1,8 +1,8 @@
 
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 use owo_colors::OwoColorize;
 use std::net::IpAddr;
-use tabled::{ Tabled, Table, Modify, Format, Style, object::Columns, builder::Builder };
+use tabled::{ Tabled, Style, builder::Builder };
 use super::{ Frontend, DisplayData };
 use crate::{module::monitoring::{Criticality, DataPoint, DisplayOptions, DisplayStyle}, utils::enums::HostStatus };
 
@@ -50,7 +50,12 @@ struct TableEntry<'a> {
 
 fn convert_to_string(data_point: &DataPoint, display_options: &DisplayOptions) -> String {
     if data_point.is_empty() {
-        String::from("")
+        if data_point.criticality == Criticality::Critical {
+            "Error".red().to_string()
+        }
+        else {
+            String::from("")
+        }
     }
     else if display_options.use_multivalue {
         let mut separator = ", ";

@@ -93,7 +93,12 @@ impl<'a> HostManager<'a> {
             for (monitor_id, monitor_data) in host_state.monitor_data.iter() {
                 if !display_data.all_monitor_names.contains(monitor_id) {
                     display_data.all_monitor_names.push(monitor_id.clone());
-                    display_data.table_headers.push(monitor_data.display_options.display_name.clone());
+
+                    let header = match monitor_data.display_options.unit.is_empty() {
+                        true => format!("{}", monitor_data.display_options.display_name),
+                        false => format!("{} ({})", monitor_data.display_options.display_name, monitor_data.display_options.unit),
+                    };
+                    display_data.table_headers.push(header);
                 }
             }
         }
