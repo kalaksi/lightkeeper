@@ -55,7 +55,7 @@ pub enum DisplayStyle {
     CriticalityLevel,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Criticality {
     NoData,
     Normal,
