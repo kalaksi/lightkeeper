@@ -2,6 +2,8 @@
 use std::{
     net::IpAddr,
     net::Ipv4Addr,
+    net::ToSocketAddrs,
+    str::FromStr,
 };
 
 #[derive(Clone)]
@@ -12,12 +14,33 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(name: &String) -> Self
-    {
-        Host {
+    pub fn new(name: &String, ip_address: &String, fqdn: &String) -> Result<Self, String> {
+        let mut new = Host {
             name: name.clone(),
-            fqdn: String::new(),
-            ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            fqdn: fqdn.clone(),
+            ip_address: match Ipv4Addr::from_str(ip_address) {
+                Ok(address) => IpAddr::V4(address),
+                Err(error) => return Err(format!("{}", error)),
+            }
+        };
+
+        new.resolve_ip()?;
+        Ok(new)
+    }
+
+    // Make sure IP address is defined by resolving FQDN if IP address is missing.
+    pub fn resolve_ip(&mut self) -> Result<(), String> {
+        if self.ip_address.is_unspecified() {
+            if self.fqdn.is_empty() {
+                return Err(format!("Host {} does not have FQDN or IP address defined.", self.name));
+            }
+            else {
+                // Resolve FQDN and get the first IP address.
+                // TODO: get rid of unwraps.
+                self.ip_address = format!("{}:0", self.fqdn).to_socket_addrs().unwrap().next().unwrap().ip();
+                return Ok(());
+            }
         }
+        Ok(())
     }
 }

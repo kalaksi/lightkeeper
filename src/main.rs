@@ -5,7 +5,7 @@ mod configuration;
 mod utils;
 mod frontend;
 
-use std::{ collections::HashMap, net, net::ToSocketAddrs, str::FromStr, };
+use std::{ collections::HashMap };
 
 use clap::Parser;
 
@@ -52,30 +52,13 @@ fn main() {
     // Configure hosts and modules.
     for (host_name, host_config) in config.hosts.iter() {
         log::info!("Found configuration for host {}", host_name);
-        let mut host = Host::new(&host_name);
-
-        // 0.0.0.0 is the value for "unspecified".
-        let ip_address_str = host_config.address.clone().unwrap_or(String::from("0.0.0.0"));
-        host.ip_address = match net::Ipv4Addr::from_str(&ip_address_str) {
-            Ok(address) => net::IpAddr::V4(address),
+        let host = match Host::new(&host_name, &host_config.address, &host_config.fqdn) {
+            Ok(host) => host,
             Err(error) => {
-                log::error!("{}", error.to_string());
+                log::error!("{}", error);
                 continue;
             }
         };
-
-        host.fqdn = host_config.fqdn.clone().unwrap_or(String::from(""));
-
-        if host.ip_address.is_unspecified() {
-            if host.fqdn == "" {
-                log::error!("Host {} does not have FQDN or IP address defined.", host.name);
-                continue;
-            }
-            else {
-                // Resolve FQDN and get the first IP address. Panic if nothing found.
-                host.ip_address = format!("{}:0", host.fqdn).to_socket_addrs().unwrap().next().unwrap().ip();
-            }
-        }
 
         host_monitors.insert(host_name.clone(), HashMap::new());
         let mut critical_monitors: Vec<String> = Vec::new();

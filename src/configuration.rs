@@ -1,6 +1,6 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
-use std::{ fs, collections::HashMap };
+use std::{ fs, net, collections::HashMap };
 use crate::utils::enums::HostStatus;
 
 #[derive(Serialize, Deserialize)]
@@ -34,10 +34,22 @@ pub struct Defaults {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Host {
-    pub address: Option<String>,
-    pub fqdn: Option<String>,
+    #[serde(default = "Host::default_address")]
+    pub address: String,
+    #[serde(default = "Host::default_fqdn")]
+    pub fqdn: String,
     #[serde(default)]
     pub monitors: HashMap<String, MonitorConfig>,
+}
+
+impl Host {
+    pub fn default_address() -> String {
+        String::from("0.0.0.0")
+    }
+
+    pub fn default_fqdn() -> String {
+        String::from("")
+    }
 }
 
 #[derive(Serialize, Deserialize)]
