@@ -26,7 +26,6 @@ use crate::module::{
 struct Args {
     #[clap(short, long, default_value = "config.yml")]
     config_file: String,
-    host: String,
 }
 
 
