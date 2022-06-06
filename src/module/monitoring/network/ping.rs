@@ -60,7 +60,7 @@ impl MonitoringModule for Ping {
         let response = responses.next().unwrap();
 
         if response.latency_ms < 0.0 {
-            Ok(DataPoint::empty_and_critical())
+            Ok(DataPoint::new_with_level(String::from("-"), Criticality::Critical))
         }
         else {
             Ok(DataPoint::new_with_level(response.latency_ms.to_string(), Criticality::Normal))
