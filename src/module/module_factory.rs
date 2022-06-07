@@ -14,14 +14,14 @@ use super::{
 };
 
 
-pub struct ModuleManager {
+pub struct ModuleFactory {
     connection_constructors: HashMap<ModuleSpecification, fn(&HashMap<String, String>) -> Box<dyn ConnectionModule>>,
     monitoring_constructors: HashMap<ModuleSpecification, fn(&HashMap<String, String>) -> Box<dyn MonitoringModule>>,
 }
 
-impl ModuleManager {
+impl ModuleFactory {
     pub fn new() -> Self {
-        let mut manager = ModuleManager {
+        let mut manager = ModuleFactory {
             connection_constructors: HashMap::new(),
             monitoring_constructors: HashMap::new(),
         };

@@ -1,5 +1,5 @@
-pub mod module_manager;
-pub use module_manager::ModuleManager;
+pub mod module_factory;
+pub use module_factory::ModuleFactory;
 
 pub mod metadata;
 pub use metadata::Metadata;

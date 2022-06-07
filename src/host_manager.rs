@@ -3,12 +3,11 @@ use std::collections::HashMap;
 use crate::module::monitoring::MonitoringModule;
 use crate::utils::enums::HostStatus;
 use crate::module::{
-    ModuleManager,
+    ModuleFactory,
     Module,
     monitoring::MonitoringData,
     monitoring::DataPoint,
     monitoring::Criticality,
-    monitoring::DisplayOptions,
     ModuleSpecification,
     connection,
 };
@@ -20,14 +19,14 @@ use crate::{
 
 pub struct HostManager<'a> {
     hosts: HostCollection,
-    module_manager: &'a ModuleManager,
+    module_factory: &'a ModuleFactory,
 }
 
 impl<'a> HostManager<'a> {
-    pub fn new(module_manager: &ModuleManager) -> HostManager {
+    pub fn new(module_factory: &ModuleFactory) -> HostManager {
         HostManager {
             hosts: HostCollection::new(),
-            module_manager: &module_manager,
+            module_factory: &module_factory,
         }
     }
 
@@ -52,7 +51,7 @@ impl<'a> HostManager<'a> {
             return Ok(host_state.get_connection(&module_spec.id)?);
         }
         else {
-            let mut connection = self.module_manager.new_connection_module(module_spec, settings);
+            let mut connection = self.module_factory.new_connection_module(module_spec, settings);
 
             // If module does not have a connection dependency, it will be empty and a no-op.
             if connection.get_module_spec() != connection::Empty::get_metadata().module_spec {

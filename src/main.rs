@@ -15,7 +15,7 @@ use configuration::Configuration;
 use frontend::Frontend;
 
 use crate::module::{
-    ModuleManager,
+    ModuleFactory,
     ModuleSpecification,
     monitoring::MonitoringModule,
     monitoring::DataPoint,
@@ -43,8 +43,8 @@ fn main() {
         }
     };
 
-    let module_manager = ModuleManager::new();
-    let mut host_manager = HostManager::new(&module_manager);
+    let module_factory = ModuleFactory::new();
+    let mut host_manager = HostManager::new(&module_factory);
 
     // Host name as first key, monitor name as second.
     let mut host_monitors: HashMap<String, HashMap<String, Box<dyn MonitoringModule>>> = HashMap::new();
@@ -65,7 +65,7 @@ fn main() {
 
         for (monitor_name, monitor) in host_config.monitors.iter() {
             let module_spec = ModuleSpecification::new(monitor_name.clone(), monitor.version.clone());
-            let module_instance = module_manager.new_monitoring_module(&module_spec, &monitor.settings);
+            let module_instance = module_factory.new_monitoring_module(&module_spec, &monitor.settings);
 
             host_monitors.get_mut(host_name).unwrap().insert(monitor_name.clone(), module_instance);
 
