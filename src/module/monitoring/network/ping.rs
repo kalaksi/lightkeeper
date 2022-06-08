@@ -5,7 +5,6 @@ use crate::Host;
 use crate::module::{
     Module,
     Metadata,
-    connection::ConnectionModule,
     monitoring::MonitoringModule,
     monitoring::DataPoint,
     monitoring::DisplayOptions,
@@ -45,7 +44,11 @@ impl MonitoringModule for Ping {
         }
     }
 
-    fn refresh(&mut self, host: &Host, _connection: &mut Box<dyn ConnectionModule>) -> Result<DataPoint, String> {
+    fn get_connector_message(&self) -> String {
+        String::new()
+    }
+
+    fn process_response(&self, host: &Host, response: &String) -> Result<DataPoint, String> {
         let mut ping = oping::Ping::new();
 
         ping.set_timeout(5.0)
@@ -65,5 +68,6 @@ impl MonitoringModule for Ping {
         else {
             Ok(DataPoint::new_with_level(response.latency_ms.to_string(), Criticality::Normal))
         }
+
     }
 }

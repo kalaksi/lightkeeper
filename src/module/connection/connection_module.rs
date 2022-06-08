@@ -14,7 +14,7 @@ pub trait ConnectionModule : Module {
         false
     }
 
-    fn new_connection_module(settings: &HashMap<String, String>) -> Box<dyn ConnectionModule> where Self: Sized + 'static {
+    fn new_connection_module(settings: &HashMap<String, String>) -> Box<dyn ConnectionModule + Send> where Self: Sized + 'static + Send {
         Box::new(Self::new(settings))
     }
 }

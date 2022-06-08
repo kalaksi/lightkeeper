@@ -43,8 +43,12 @@ impl MonitoringModule for Ssh {
         }
     }
 
+    fn get_connector_message(&self) -> String {
+        String::from("")
+    }
 
-    fn refresh(&mut self, _host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<DataPoint, String> {
+    fn process_response(&self, host: &Host, response: &String) -> Result<DataPoint, String> {
+        /*
         match &connection.is_connected() {
             true => {
                 Ok(DataPoint::new_with_level(String::from("up"), Criticality::Normal))
@@ -53,5 +57,8 @@ impl MonitoringModule for Ssh {
                 Ok(DataPoint::new_with_level(String::from("down"), Criticality::Critical))
             },
         }
+        */
+        // TODO: fix
+        Ok(DataPoint::new_with_level(String::from("down"), Criticality::Critical))
     }
 }

@@ -4,6 +4,7 @@ use std::{
     net::Ipv4Addr,
     net::ToSocketAddrs,
     str::FromStr,
+    hash::Hash,
 };
 
 #[derive(Clone)]
@@ -13,6 +14,7 @@ pub struct Host {
     pub ip_address: IpAddr,
 }
 
+// TODO: rename to NetworkHost
 impl Host {
     pub fn new(name: &String, ip_address: &String, fqdn: &String) -> Result<Self, String> {
         let mut new = Host {
@@ -42,5 +44,19 @@ impl Host {
             }
         }
         Ok(())
+    }
+}
+
+impl PartialEq for Host {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for Host { }
+
+impl Hash for Host {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state)
     }
 }

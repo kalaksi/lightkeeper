@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use std::fmt;
 use serde_derive::Deserialize;
 use serde_json;
-use crate::Host;
 
-use crate::module::{ Module, Metadata, connection::ConnectionModule, ModuleSpecification };
+use crate::Host;
+use crate::module::{ Module, Metadata, ModuleSpecification };
 use crate::module::monitoring::{ MonitoringModule, Criticality, DisplayStyle, DisplayOptions, DataPoint };
 
 pub struct Docker {
@@ -48,7 +48,7 @@ impl MonitoringModule for Docker {
         }
     }
 
-    fn refresh(&mut self, _host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<DataPoint, String> {
+    fn get_connector_message(&self) -> String {
         // TODO: somehow connect directly to the unix socket instead of using curl?
         let mut command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
@@ -56,9 +56,11 @@ impl MonitoringModule for Docker {
             command = format!("sudo {}", command);
         }
 
-        let output = &connection.send_message(command.as_str())?;
+        command
+    }
 
-        let containers: Vec<ContainerDetails> = serde_json::from_str(&output.as_str()).map_err(|e| e.to_string())?;
+    fn process_response(&self, _host: &Host, response: &String) -> Result<DataPoint, String> {
+        let containers: Vec<ContainerDetails> = serde_json::from_str(response.as_str()).map_err(|e| e.to_string())?;
 
         let mut parent_data = DataPoint::empty();
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();

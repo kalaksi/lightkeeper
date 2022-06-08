@@ -7,11 +7,9 @@ use crate::Host;
 use crate::module::{
     module::Module,
     ModuleSpecification,
-    connection::ConnectionModule
 };
 
 pub trait MonitoringModule : Module {
-    fn refresh(&mut self, host: &Host, connection: &mut Box<dyn ConnectionModule>) -> Result<DataPoint, String>;
     fn get_connector_spec(&self) -> ModuleSpecification {
         ModuleSpecification::empty()
     }
@@ -28,6 +26,9 @@ pub trait MonitoringModule : Module {
             unit: String::from(""),
         }
     }
+
+    fn get_connector_message(&self) -> String;
+    fn process_response(&self, host: &Host, response: &String) -> Result<DataPoint, String>;
 }
 
 pub struct DisplayOptions {
@@ -146,20 +147,3 @@ impl fmt::Display for DataPoint {
         }
     }
 }
-
-/*
-impl fmt::Display for MonitoringData {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_empty() {
-            write!(f, "(empty)")
-        }
-        else if !self.multivalue.is_empty() {
-            let values: Vec<String> = self.multivalue.iter().map(|m| format!("{} ({})", m.value, m.unit)).collect();
-            write!(f, "{}", values.join(", "))
-        }
-        else {
-            write!(f, "{} ({})", self.value, self.unit)
-        }
-    }
-}
-*/

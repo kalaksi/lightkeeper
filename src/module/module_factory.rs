@@ -15,7 +15,7 @@ use super::{
 
 
 pub struct ModuleFactory {
-    connection_constructors: HashMap<ModuleSpecification, fn(&HashMap<String, String>) -> Box<dyn ConnectionModule>>,
+    connection_constructors: HashMap<ModuleSpecification, fn(&HashMap<String, String>) -> Box<dyn ConnectionModule + Send>>,
     monitoring_constructors: HashMap<ModuleSpecification, fn(&HashMap<String, String>) -> Box<dyn MonitoringModule>>,
 }
 
@@ -31,7 +31,7 @@ impl ModuleFactory {
         manager
     }
 
-    pub fn new_connection_module(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Box<dyn ConnectionModule> {
+    pub fn new_connection_module(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Box<dyn ConnectionModule + Send> {
         match self.connection_constructors.get(&module_spec)  {
             Some(constructor) => return constructor(settings),
             None => panic!("Required connection module '{}' not found", module_spec)
