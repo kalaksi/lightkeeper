@@ -68,14 +68,19 @@ fn main() {
         };
 
         for (monitor_id, monitor_config) in host_config.monitors.iter() {
-            let module_spec = ModuleSpecification::new(monitor_id.clone(), monitor_config.version.clone());
-            let monitor = module_factory.new_monitor(&module_spec, &monitor_config.settings);
+            let monitor_spec = ModuleSpecification::new(monitor_id.clone(), monitor_config.version.clone());
+            let monitor = module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
 
-            // TODO: connector settings
-
-            // Not all monitors use connectors.
+            // Initialize a connector if the monitors uses any.
             if !monitor.get_connector_spec().is_empty() {
-                let connector = module_factory.new_connector(&monitor.get_connector_spec(), &HashMap::new());
+                let connector_spec = monitor.get_connector_spec();
+                let connector_settings = match host_config.connectors.get(&connector_spec.id) {
+                    Some(config) => config.settings.clone(),
+                    None => HashMap::new(),
+                };
+
+                let connector = module_factory.new_connector(&monitor.get_connector_spec(), &connector_settings);
+
                 let message_sender = connection_manager.add_connector(&host, connector);
                 monitor_manager.add_monitor(&host, monitor, Some(message_sender));
             }

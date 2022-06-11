@@ -28,6 +28,7 @@ pub struct DisplayOptions {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Defaults {
+    pub connectors: HashMap<String, HashMap<String, String>>,
     pub monitors: HashMap<String, HashMap<String, String>>,
 }
 
@@ -40,6 +41,8 @@ pub struct Host {
     pub fqdn: String,
     #[serde(default)]
     pub monitors: HashMap<String, MonitorConfig>,
+    #[serde(default)]
+    pub connectors: HashMap<String, ConnectorConfig>,
 }
 
 impl Host {
@@ -61,6 +64,13 @@ pub struct MonitorConfig {
     pub settings: HashMap<String, String>,
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConnectorConfig {
+    #[serde(default)]
+    pub settings: HashMap<String, String>,
+}
+
 impl Configuration {
     pub fn read(filename: &String) -> Result<Configuration, String> {
         let contents = fs::read_to_string(filename).map_err(|e| e.to_string())?;
@@ -68,12 +78,17 @@ impl Configuration {
 
         // Apply defaults.
         for (_, host_config) in &mut config.hosts.iter_mut() {
-            for (monitor_name, monitor_data) in &mut host_config.monitors.iter_mut() {
-                if let Some(defaults) = config.defaults.monitors.get(monitor_name) {
+            for (monitor_id, monitor_config) in &mut host_config.monitors.iter_mut() {
+                if let Some(defaults) = config.defaults.monitors.get(monitor_id) {
                     let mut unified = defaults.clone();
-                    unified.extend(monitor_data.settings.clone());
-                    monitor_data.settings = unified;
+                    unified.extend(monitor_config.settings.clone());
+                    monitor_config.settings = unified;
                 }
+            }
+
+            for (connector_id, connector_config) in config.defaults.connectors.iter() {
+                host_config.connectors.insert(connector_id.clone(),
+                                              ConnectorConfig { settings: connector_config.clone()});
             }
         }
 
