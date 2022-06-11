@@ -12,8 +12,8 @@ use crate::module::{
 pub type Monitor = Box<dyn MonitoringModule + Send>;
 
 pub trait MonitoringModule : Module {
-    fn get_connector_spec(&self) -> ModuleSpecification {
-        ModuleSpecification::empty()
+    fn get_connector_spec(&self) -> Option<ModuleSpecification> {
+        None
     }
 
     fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor where Self: Sized + 'static + Send {
@@ -22,7 +22,7 @@ pub trait MonitoringModule : Module {
 
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
-            display_name: self.get_connector_spec().id,
+            display_name: self.get_module_spec().id,
             display_style: DisplayStyle::String,
             use_multivalue: false,
             unit: String::from(""),

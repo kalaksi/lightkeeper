@@ -15,14 +15,6 @@ impl ModuleSpecification {
         }
     }
 
-    pub fn empty() -> Self {
-        Default::default()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.id.is_empty() && self.version.is_empty()
-    }
-
     pub fn from_string(string: &String) -> Result<Self, String> {
         let mut parts = string.split('-');
         let id = parts.next().unwrap_or_default();

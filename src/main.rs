@@ -72,14 +72,13 @@ fn main() {
             let monitor = module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
 
             // Initialize a connector if the monitors uses any.
-            if !monitor.get_connector_spec().is_empty() {
-                let connector_spec = monitor.get_connector_spec();
+            if let Some(connector_spec) = monitor.get_connector_spec() {
                 let connector_settings = match host_config.connectors.get(&connector_spec.id) {
                     Some(config) => config.settings.clone(),
                     None => HashMap::new(),
                 };
 
-                let connector = module_factory.new_connector(&monitor.get_connector_spec(), &connector_settings);
+                let connector = module_factory.new_connector(&connector_spec, &connector_settings);
 
                 let message_sender = connection_manager.add_connector(&host, connector);
                 monitor_manager.add_monitor(&host, monitor, Some(message_sender));

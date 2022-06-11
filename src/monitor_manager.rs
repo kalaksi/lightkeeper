@@ -91,7 +91,7 @@ impl MonitorManager {
                         let connector_channel = connector_channel.lock().unwrap();
 
                         connector_channel.send(ConnectorRequest {
-                            connector_id: monitor_handler.monitor.get_connector_spec().id,
+                            connector_id: monitor_handler.monitor.get_connector_spec().unwrap().id,
                             monitor_id: monitor_id.clone(),
                             host: host.clone(),
                             message: monitor_handler.monitor.get_connector_message(),
@@ -136,7 +136,7 @@ impl MonitorManager {
 
                         let data_point: Result<DataPoint, String>;
 
-                        if handler.monitor.get_connector_spec().is_empty() {
+                        if let None = handler.monitor.get_connector_spec() {
                             // Monitor does not use a connector.
                             data_point = handler.monitor.run(&response.host);
                         }

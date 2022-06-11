@@ -43,8 +43,8 @@ impl MonitoringModule for Uptime {
         }
     }
 
-    fn get_connector_spec(&self) -> ModuleSpecification {
-        ModuleSpecification::new(String::from("ssh"), String::from("0.0.1"))
+    fn get_connector_spec(&self) -> Option<ModuleSpecification> {
+        Some(ModuleSpecification::new(String::from("ssh"), String::from("0.0.1")))
     }
 
     fn get_connector_message(&self) -> String {
