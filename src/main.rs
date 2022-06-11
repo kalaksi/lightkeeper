@@ -69,18 +69,20 @@ fn main() {
 
         for (monitor_id, monitor_config) in host_config.monitors.iter() {
             let module_spec = ModuleSpecification::new(monitor_id.clone(), monitor_config.version.clone());
-            let monitor = module_factory.new_monitoring_module(&module_spec, &monitor_config.settings);
+            let monitor = module_factory.new_monitor(&module_spec, &monitor_config.settings);
 
             // TODO: connector settings
-            let connector = module_factory.new_connection_module(&monitor.get_connector_spec(), &HashMap::new());
+            let connector = module_factory.new_connector(&monitor.get_connector_spec(), &HashMap::new());
             let message_sender = connection_manager.add_connector(&host, connector);
 
             monitor_manager.add_monitor(&host, monitor, message_sender);
         }
     }
 
-    monitor_manager.start();
 
     frontend::cli::Cli::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
+
+    monitor_manager.join();
+    connection_manager.join();
 
 }

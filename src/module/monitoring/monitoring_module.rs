@@ -9,12 +9,14 @@ use crate::module::{
     ModuleSpecification,
 };
 
+pub type Monitor = Box<dyn MonitoringModule + Send>;
+
 pub trait MonitoringModule : Module {
     fn get_connector_spec(&self) -> ModuleSpecification {
         ModuleSpecification::empty()
     }
 
-    fn new_monitoring_module(settings: &HashMap<String, String>) -> Box<dyn MonitoringModule> where Self: Sized + 'static {
+    fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor where Self: Sized + 'static + Send {
         Box::new(Self::new(settings))
     }
 

@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use crate::module::module::Module;
 
+pub type Connector = Box<dyn ConnectionModule + Send>;
+
 pub trait ConnectionModule : Module {
     fn connect(&mut self, address: &IpAddr) -> Result<(), String>;
 
@@ -14,7 +16,7 @@ pub trait ConnectionModule : Module {
         false
     }
 
-    fn new_connection_module(settings: &HashMap<String, String>) -> Box<dyn ConnectionModule + Send> where Self: Sized + 'static + Send {
+    fn new_connection_module(settings: &HashMap<String, String>) -> Connector where Self: Sized + 'static + Send {
         Box::new(Self::new(settings))
     }
 }

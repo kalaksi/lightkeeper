@@ -3,37 +3,35 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::Host;
-use crate::module::{
-    Module,
-    connection::Empty,
-    connection::ConnectionModule,
-    monitoring::DataPoint,
-};
+use crate::module::connection::{ ConnectionModule, Connector };
+
+type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
 
 pub struct ConnectionManager {
     // Collection of ConnectionModules that can be shared between threads.
     // Host as the first hashmap key, connector id as the second.
-    connectors: Arc<Mutex<HashMap<Host, HashMap<String, Box<dyn ConnectionModule + Send>>>>>,
-    message_sender: mpsc::Sender<ConnectorMessage>,
+    connectors: Arc<Mutex<HashMap<Host, ConnectorCollection>>>,
+    request_sender_prototype: mpsc::Sender<ConnectorRequest>,
+    receiver_handle: Option<thread::JoinHandle<()>>,
 }
 
 impl ConnectionManager {
     pub fn new() -> Self {
-        let (sender, receiver) = mpsc::channel::<ConnectorMessage>();
+        let (sender, receiver) = mpsc::channel::<ConnectorRequest>();
+        let connectors = Arc::new(Mutex::new(HashMap::new()));
 
-        let connection_manager = ConnectionManager {
-            connectors: Arc::new(Mutex::new(HashMap::new())),
-            message_sender: sender,
-        };
+        let handle = Self::process(connectors.clone(), receiver);
 
-        Self::process_messages(connection_manager.connectors.clone(), receiver);
-
-        connection_manager
+        ConnectionManager {
+            connectors: connectors,
+            request_sender_prototype: sender,
+            receiver_handle: Some(handle),
+        }
     }
 
     // Adds a connector but only if a connector with the same ID doesn't exist.
     // This call will block if process_messages() is currently handling a message.
-    pub fn add_connector(&mut self, host: &Host, connector: Box<dyn ConnectionModule + Send>) -> mpsc::Sender<ConnectorMessage> {
+    pub fn add_connector(&mut self, host: &Host, connector: Connector) -> mpsc::Sender<ConnectorRequest> {
         loop {
             let mut connectors = self.connectors.lock().unwrap();
 
@@ -44,7 +42,7 @@ impl ConnectionManager {
                     host_connections.insert(module_spec.id, connector);
                 }
 
-                return self.message_sender.clone();
+                return self.request_sender_prototype.clone();
             }
             else {
                 connectors.insert(host.clone(), HashMap::new());
@@ -52,40 +50,59 @@ impl ConnectionManager {
         }
     }
 
+    pub fn join(&mut self) {
+        self.receiver_handle.take().expect("Thread has already stopped.")
+                            .join().unwrap();
+    }
 
-    fn process_messages(
-        connectors: Arc<Mutex<HashMap<Host, HashMap<String, Box<dyn ConnectionModule + Send>>>>>,
-        receiver: mpsc::Receiver<ConnectorMessage>
-    ) {
+
+    fn process(
+        connectors: Arc<Mutex<HashMap<Host, ConnectorCollection>>>,
+        receiver: mpsc::Receiver<ConnectorRequest>
+    ) -> thread::JoinHandle<()> {
+
         thread::spawn(move || {
             loop {
-                let message = receiver.recv().unwrap();
+                let request = receiver.recv().unwrap();
 
                 let mut connectors = connectors.lock().unwrap();
-                let connector = connectors.get_mut(&message.destination)
-                                          .and_then(|connections| connections.get_mut(&message.connector_id)).unwrap();
+                let connector = connectors.get_mut(&request.host)
+                                          .and_then(|connections| connections.get_mut(&request.connector_id)).unwrap();
 
-                if let Err(error) = connector.connect(&message.destination.ip_address) {
+                if let Err(error) = connector.connect(&request.host.ip_address) {
                     log::error!("Error while connecting: {}", error);
                 }
 
-                let response = connector.send_message(&message.payload);
-
-                // send for processing?
-
-                let new_data = response.unwrap_or_else(|error| {
+                let response = connector.send_message(&request.message).unwrap_or_else(|error| {
                     log::error!("Error while refreshing monitoring data: {}", error);
-                    String::new()
-                    // DataPoint::empty_and_critical()
+                    String::from(error.to_string())
                 });
+
+                request.response_channel.send(
+                    ConnectorResponse {
+                        connector_id: request.connector_id,
+                        monitor_id: request.monitor_id,
+                        host: request.host,
+                        message: response,
+                    }
+                );
             }
-        });
+        })
     }
 
 }
 
-pub struct ConnectorMessage {
-    pub destination: Host,
+pub struct ConnectorRequest {
     pub connector_id: String,
-    pub payload: String,
+    pub monitor_id: String,
+    pub host: Host,
+    pub message: String,
+    pub response_channel: mpsc::Sender<ConnectorResponse>,
+}
+
+pub struct ConnectorResponse {
+    pub connector_id: String,
+    pub monitor_id: String,
+    pub host: Host,
+    pub message: String,
 }

@@ -15,8 +15,10 @@ use crate::{
 
 pub struct HostManager {
     hosts: HostCollection,
+    //TODO observers: Vec<
 }
 
+// TODO rename to state-something
 impl HostManager {
     pub fn new() -> HostManager {
         HostManager {
