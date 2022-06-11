@@ -55,7 +55,6 @@ impl ConnectionManager {
                             .join().unwrap();
     }
 
-
     fn process(
         connectors: Arc<Mutex<HashMap<Host, ConnectorCollection>>>,
         receiver: mpsc::Receiver<ConnectorRequest>

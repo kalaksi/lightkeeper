@@ -6,6 +6,7 @@ use crate::module::module::Module;
 pub type Connector = Box<dyn ConnectionModule + Send>;
 
 pub trait ConnectionModule : Module {
+    // Connect to the specified address. Should do nothing if already connected.
     fn connect(&mut self, address: &IpAddr) -> Result<(), String>;
 
     // Send message over the established connection.

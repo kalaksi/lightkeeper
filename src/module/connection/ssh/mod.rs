@@ -11,6 +11,7 @@ use crate::module::{
 
 pub struct Ssh2 {
     session: Session,
+    is_initialized: bool,
     port: u16,
     username: String,
     password: String,
@@ -31,6 +32,7 @@ impl Module for Ssh2 {
 
         Ssh2 {
             session: session,
+            is_initialized: false,
             port: 22,
             username: settings.get("username").unwrap_or(&String::from("")).clone(),
             password: settings.get("password").unwrap_or(&String::from("")).clone(),
@@ -46,6 +48,10 @@ impl Module for Ssh2 {
 impl ConnectionModule for Ssh2 {
     fn connect(&mut self, address: &IpAddr) -> Result<(), String> {
         // TODO: support ipv6
+
+        if self.is_initialized {
+            return Ok(())
+        }
 
         let stream = match TcpStream::connect(format!("{}:{}", address, self.port)) {
             Ok(stream) => stream,
@@ -63,6 +69,7 @@ impl ConnectionModule for Ssh2 {
             return Err(format!("Error when communicating with authentication agent: {}", error));
         };
 
+        self.is_initialized = true;
         Ok(())
     }
 
