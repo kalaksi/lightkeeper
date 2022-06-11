@@ -44,11 +44,7 @@ impl MonitoringModule for Ping {
         }
     }
 
-    fn get_connector_message(&self) -> String {
-        String::new()
-    }
-
-    fn process_response(&self, host: &Host, response: &String) -> Result<DataPoint, String> {
+    fn run(&self, host: &Host) -> Result<DataPoint, String> {
         let mut ping = oping::Ping::new();
 
         ping.set_timeout(5.0)

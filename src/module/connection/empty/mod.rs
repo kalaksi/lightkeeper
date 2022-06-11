@@ -30,12 +30,11 @@ impl Module for Empty {
 
 impl ConnectionModule for Empty {
     fn connect(&mut self, _address: &IpAddr) -> Result<(), String> {
-        Ok(())
+        panic!("No connect() implemented for empty connector");
     }
 
-    fn send_message(&self, _message: &str) -> Result<String, String>
-    {
-        Ok(String::new())
+    fn send_message(&self, _message: &str) -> Result<String, String> {
+        panic!("No send_message() implemented for empty connector");
     }
 }
 
