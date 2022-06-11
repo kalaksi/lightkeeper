@@ -65,27 +65,35 @@ impl ConnectionManager {
             loop {
                 let request = receiver.recv().unwrap();
 
+                log::debug!("Connector message received: {}", request.connector_id);
+
                 let mut connectors = connectors.lock().unwrap();
                 let connector = connectors.get_mut(&request.host)
                                           .and_then(|connections| connections.get_mut(&request.connector_id)).unwrap();
 
-                if let Err(error) = connector.connect(&request.host.ip_address) {
-                    log::error!("Error while connecting: {}", error);
-                }
-
-                let response = connector.send_message(&request.message).unwrap_or_else(|error| {
-                    log::error!("Error while refreshing monitoring data: {}", error);
-                    String::from(error.to_string())
-                });
-
-                request.response_channel.send(
-                    ConnectorResponse {
-                        connector_id: request.connector_id,
-                        monitor_id: request.monitor_id,
-                        host: request.host,
-                        message: response,
+                let output = match connector.connect(&request.host.ip_address) {
+                    Ok(()) => {
+                        connector.send_message(&request.message).unwrap_or_else(|error| {
+                            log::error!("Error while refreshing monitoring data: {}", error);
+                            String::from("")
+                        })
+                    },
+                    Err(error) => {
+                        log::error!("Error while connecting: {}", error);
+                        String::from("")
                     }
-                );
+                };
+
+                let response = ConnectorResponse {
+                    connector_id: request.connector_id,
+                    monitor_id: request.monitor_id,
+                    host: request.host,
+                    message: output,
+                };
+
+                if let Err(error) = request.response_channel.send(response) {
+                    log::error!("Failed to send response from connector: {}", error);
+                }
             }
         })
     }

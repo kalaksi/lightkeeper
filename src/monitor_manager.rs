@@ -13,7 +13,6 @@ type MonitorCollection = HashMap<String, MessageHandler>;
 
 pub struct MonitorManager {
     monitors: Arc<Mutex<HashMap<Host, MonitorCollection>>>,
-    state_update_channel: Sender<DataPointMessage>,
     response_sender_prototype: mpsc::Sender<ConnectorResponse>,
     receiver_handle: Option<thread::JoinHandle<()>>,
 }
@@ -23,11 +22,10 @@ impl MonitorManager {
         let (sender, receiver) = mpsc::channel::<ConnectorResponse>();
         let monitors = Arc::new(Mutex::new(HashMap::new()));
 
-        let handle = Self::process(monitors.clone(), receiver);
+        let handle = Self::process(monitors.clone(), receiver, state_update_channel.clone());
 
         MonitorManager {
             monitors: monitors,
-            state_update_channel: state_update_channel,
             response_sender_prototype: sender,
             receiver_handle: Some(handle),
         }
@@ -96,7 +94,8 @@ impl MonitorManager {
 
     fn process(
         monitors: Arc<Mutex<HashMap<Host, MonitorCollection>>>,
-        receiver: mpsc::Receiver<ConnectorResponse>
+        receiver: mpsc::Receiver<ConnectorResponse>,
+        state_update_channel: Sender<DataPointMessage>,
     ) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             loop {
@@ -105,14 +104,24 @@ impl MonitorManager {
                 let monitors = monitors.lock().unwrap();
                 if let Some(host_monitors) = monitors.get(&response.host) {
                     if let Some(handler) = host_monitors.get(&response.monitor_id) {
+
                         match handler.monitor.process_response(&response.host, &response.message) {
                             Ok(data_point) => {
                                 log::debug!("Data point received: {}", data_point);
+                                state_update_channel.send(DataPointMessage {
+                                    host_name: response.host.name,
+                                    display_options: handler.monitor.get_display_options(),
+                                    module_spec: handler.monitor.get_module_spec(),
+                                    data_point: data_point
+                                }).unwrap_or_else(|error| {
+                                    log::error!("Couldn't send message to state manager: {}", error);
+                                });
                             },
                             Err(error) => {
                                 log::error!("Error from monitor: {}", error);
                             }
                         }
+
                     }
                     else {
                         log::error!("Host monitor {} does not exist.", response.monitor_id);

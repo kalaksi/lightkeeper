@@ -76,9 +76,6 @@ fn convert_single(data_point: &DataPoint, display_options: &DisplayOptions) -> S
                 Criticality::Critical => String::from("Critical"),
             }
         },
-        DisplayStyle::Numeric => {
-            String::from("TODO")
-        },
         DisplayStyle::StatusUpDown => {
             match HostStatus::from_str(&data_point.value).unwrap_or_default() {
                 HostStatus::Up => "Up".green().to_string(),
@@ -109,9 +106,6 @@ fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) 
                     Criticality::Error => "▩".to_string(),
                     Criticality::Critical =>"▩".to_string(),
                 }
-            },
-            DisplayStyle::Numeric => {
-                String::from("TODO")
             },
             DisplayStyle::StatusUpDown => {
                 match HostStatus::from_str(&data_point.value).unwrap_or_default() {

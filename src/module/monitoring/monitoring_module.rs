@@ -55,7 +55,6 @@ impl DisplayOptions {
 #[derive(Clone)]
 pub enum DisplayStyle {
     String,
-    Numeric,
     StatusUpDown,
     CriticalityLevel,
 }

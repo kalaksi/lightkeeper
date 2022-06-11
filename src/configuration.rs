@@ -1,6 +1,6 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
-use std::{ fs, net, collections::HashMap };
+use std::{ fs, collections::HashMap };
 use crate::utils::enums::HostStatus;
 
 #[derive(Serialize, Deserialize)]
@@ -67,7 +67,7 @@ impl Configuration {
         let mut config = serde_yaml::from_str::<Configuration>(contents.as_str()).map_err(|e| e.to_string())?;
 
         // Apply defaults.
-        for (host_name, host_config) in &mut config.hosts.iter_mut() {
+        for (_, host_config) in &mut config.hosts.iter_mut() {
             for (monitor_name, monitor_data) in &mut host_config.monitors.iter_mut() {
                 if let Some(defaults) = config.defaults.monitors.get(monitor_name) {
                     let mut unified = defaults.clone();
