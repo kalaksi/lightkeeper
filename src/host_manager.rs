@@ -1,10 +1,15 @@
-use std::collections::HashMap;
 
-use crate::module::{
-    monitoring::MonitoringData,
-    monitoring::MonitoringModule,
-    monitoring::DataPoint,
-    monitoring::Criticality,
+use std::collections::HashMap;
+use std::sync::mpsc::{self, Sender};
+use std::thread;
+use std::sync::{Arc, Mutex};
+
+use crate::module::ModuleSpecification;
+use crate::module::monitoring::{
+    MonitoringData,
+    DataPoint,
+    Criticality,
+    DisplayOptions,
 };
 
 use crate::{
@@ -14,55 +19,72 @@ use crate::{
 };
 
 pub struct HostManager {
-    hosts: HostCollection,
-    //TODO observers: Vec<
+    hosts: Arc<Mutex<HostCollection>>,
+    data_sender_prototype: mpsc::Sender<DataPointMessage>,
+    receiver_handle: Option<thread::JoinHandle<()>>,
 }
 
 // TODO rename to state-something
 impl HostManager {
     pub fn new() -> HostManager {
+        let (sender, receiver) = mpsc::channel::<DataPointMessage>();
+        let shared_hosts = Arc::new(Mutex::new(HostCollection::new()));
+
+        let handle = Self::process(shared_hosts.clone(), receiver);
+
         HostManager {
-            hosts: HostCollection::new(),
+            hosts: shared_hosts,
+            data_sender_prototype: sender,
+            receiver_handle: Some(handle),
         }
     }
 
     pub fn add_host(&mut self, host: Host, default_status: HostStatus) -> Result<(), String> {
-        self.hosts.add(host, default_status)
+        let mut hosts = self.hosts.lock().unwrap();
+        hosts.add(host, default_status)
     }
 
-    pub fn get_host(&self, host_name: &String) -> Result<Host, String> {
-        self.hosts.get(host_name).and_then(|host_state| Ok(host_state.host.clone()))
+    pub fn join(&mut self) {
+        self.receiver_handle.take().expect("Thread has already stopped.")
+                            .join().unwrap();
     }
 
-    pub fn try_get_host(&self, host_name: &String) -> Option<Host> {
-        self.hosts.hosts.get(host_name).and_then(|host_state| Some(host_state.host.clone()))
+    pub fn get_state_udpate_channel(&self) -> Sender<DataPointMessage> {
+        self.data_sender_prototype.clone()
     }
 
-    pub fn insert_monitoring_data(&mut self, host_name: &String, monitor: &mut Box<dyn MonitoringModule>, data_point: DataPoint) -> Result<(), String> {
-        let spec = &monitor.get_module_spec();
+    fn process(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<DataPointMessage>) -> thread::JoinHandle<()> {
+        thread::spawn(move || {
+            loop {
+                let message = receiver.recv().unwrap();
 
-        log::debug!("New data point for {}: {}: {}", host_name, spec.id, data_point);
-        let host_state = self.hosts.get_mut(&host_name)?;
+                let mut hosts = hosts.lock().unwrap();
+                if let Some(host_state) = hosts.hosts.get_mut(&message.host_name) {
+                    if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
+                        monitoring_data.values.push(message.data_point);
+                    }
+                    else {
+                        let mut new_data = MonitoringData::new(message.display_options);
+                        new_data.values.push(message.data_point);
+                        host_state.monitor_data.insert(message.module_spec.id, new_data);
+                    }
 
-        loop {
-            if let Some(monitoring_data) = host_state.monitor_data.get_mut(&spec.id) {
-                monitoring_data.values.push(data_point);
-                break;
+                    host_state.update_status();
+                }
+                else {
+                    log::error!("Data for host {} does not exist.", message.host_name);
+                }
             }
-            else {
-                host_state.monitor_data.insert(spec.id.clone(), MonitoringData::new(monitor.get_display_options()));
-            }
-        }
-
-        host_state.update_status();
-        Ok(())
+        })
     }
 
     pub fn get_display_data(&self, excluded_monitors: &Vec<String>) -> frontend::DisplayData {
         let mut display_data = frontend::DisplayData::new();
         display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 
-        for (_, host_state) in self.hosts.hosts.iter() {
+
+        let hosts = self.hosts.lock().unwrap();
+        for (_, host_state) in hosts.hosts.iter() {
             for (monitor_id, monitor_data) in host_state.monitor_data.iter() {
                 if !display_data.all_monitor_names.contains(monitor_id) {
                     display_data.all_monitor_names.push(monitor_id.clone());
@@ -76,12 +98,12 @@ impl HostManager {
             }
         }
 
-        for (host_name, state) in self.hosts.hosts.iter() {
-            let mut monitoring_data: HashMap<String, &MonitoringData> = HashMap::new();
+        for (host_name, state) in hosts.hosts.iter() {
+            let mut monitoring_data: HashMap<String, MonitoringData> = HashMap::new();
 
             for (monitor_id, data) in state.monitor_data.iter() {
                 if !excluded_monitors.contains(monitor_id) {
-                    monitoring_data.insert(monitor_id.clone(), &data);
+                    monitoring_data.insert(monitor_id.clone(), data.clone());
                 }
             }
 
@@ -94,11 +116,18 @@ impl HostManager {
             });
         }
 
+
         display_data
     }
 
 }
 
+pub struct DataPointMessage {
+    pub host_name: String,
+    pub display_options: DisplayOptions,
+    pub module_spec: ModuleSpecification,
+    pub data_point: DataPoint,
+}
 
 struct HostCollection {
     hosts: HashMap<String, HostState>,
@@ -120,14 +149,6 @@ impl HostCollection {
         Ok(())
     }
 
-    fn get(&self, host_name: &String) -> Result<&HostState, String> {
-        self.hosts.get(host_name).ok_or(String::from("No such host"))
-    }
-
-    fn get_mut(&mut self, host_name: &String) -> Result<&mut HostState, String> {
-        self.hosts.get_mut(host_name).ok_or(String::from("No such host"))
-    }
-
 }
 
 
@@ -144,10 +165,6 @@ impl HostState {
             monitor_data: HashMap::new(),
             status: status,
         }
-    }
-
-    fn get_monitor(&mut self, monitor_id: &String) -> Result<&mut MonitoringData, String> {
-        self.monitor_data.get_mut(monitor_id).ok_or(String::from("No such monitor"))
     }
 
     fn update_status(&mut self) {

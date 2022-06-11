@@ -8,14 +8,14 @@ pub trait Frontend {
     fn draw(display_data: &DisplayData);
 }
 
-pub struct DisplayData<'a> {
+pub struct DisplayData {
     // Key is host name.
-    pub hosts: HashMap<String, HostDisplayData<'a>>,
+    pub hosts: HashMap<String, HostDisplayData>,
     pub all_monitor_names: Vec<String>,
     pub table_headers: Vec<String>,
 }
 
-impl<'a> DisplayData<'a> {
+impl DisplayData {
     pub fn new() -> Self {
         DisplayData {
             hosts: HashMap::new(),
@@ -26,12 +26,12 @@ impl<'a> DisplayData<'a> {
     }
 }
 
-pub struct HostDisplayData<'a> {
+pub struct HostDisplayData {
     pub name: String,
     pub domain_name: String,
     pub status: HostStatus,
     pub ip_address: IpAddr,
-    pub monitoring_data: HashMap<String, &'a MonitoringData>,
+    pub monitoring_data: HashMap<String, MonitoringData>,
 }
 
 

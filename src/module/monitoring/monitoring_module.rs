@@ -33,6 +33,7 @@ pub trait MonitoringModule : Module {
     fn process_response(&self, host: &Host, response: &String) -> Result<DataPoint, String>;
 }
 
+#[derive(Clone)]
 pub struct DisplayOptions {
     pub unit: String,
     pub display_name: String,
@@ -51,6 +52,7 @@ impl DisplayOptions {
     }
 }
 
+#[derive(Clone)]
 pub enum DisplayStyle {
     String,
     Numeric,
@@ -67,6 +69,7 @@ pub enum Criticality {
     Critical,
 }
 
+#[derive(Clone)]
 pub struct MonitoringData {
     pub values: Vec<DataPoint>,
     pub display_options: DisplayOptions,
@@ -83,6 +86,7 @@ impl MonitoringData {
     }
 }
 
+#[derive(Clone)]
 pub struct DataPoint {
     pub value: String,
     pub multivalue: Vec<DataPoint>,

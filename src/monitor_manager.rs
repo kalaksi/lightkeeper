@@ -4,7 +4,8 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 
 use crate::Host;
-use crate::module::monitoring::{MonitoringModule, Monitor};
+use crate::module::monitoring::Monitor;
+use crate::host_manager::DataPointMessage;
 use crate::connection_manager::{ ConnectorRequest, ConnectorResponse };
 
 // Monitor id is the key.
@@ -12,12 +13,13 @@ type MonitorCollection = HashMap<String, MessageHandler>;
 
 pub struct MonitorManager {
     monitors: Arc<Mutex<HashMap<Host, MonitorCollection>>>,
+    state_update_channel: Sender<DataPointMessage>,
     response_sender_prototype: mpsc::Sender<ConnectorResponse>,
     receiver_handle: Option<thread::JoinHandle<()>>,
 }
 
 impl MonitorManager {
-    pub fn new() -> Self {
+    pub fn new(state_update_channel: Sender<DataPointMessage>) -> Self {
         let (sender, receiver) = mpsc::channel::<ConnectorResponse>();
         let monitors = Arc::new(Mutex::new(HashMap::new()));
 
@@ -25,6 +27,7 @@ impl MonitorManager {
 
         MonitorManager {
             monitors: monitors,
+            state_update_channel: state_update_channel,
             response_sender_prototype: sender,
             receiver_handle: Some(handle),
         }
@@ -102,8 +105,14 @@ impl MonitorManager {
                 let monitors = monitors.lock().unwrap();
                 if let Some(host_monitors) = monitors.get(&response.host) {
                     if let Some(handler) = host_monitors.get(&response.monitor_id) {
-                        let data_point = handler.monitor.process_response(&response.host, &response.message).unwrap();
-                        log::debug!("Data point received: {}", data_point);
+                        match handler.monitor.process_response(&response.host, &response.message) {
+                            Ok(data_point) => {
+                                log::debug!("Data point received: {}", data_point);
+                            },
+                            Err(error) => {
+                                log::error!("Error from monitor: {}", error);
+                            }
+                        }
                     }
                     else {
                         log::error!("Host monitor {} does not exist.", response.monitor_id);

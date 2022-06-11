@@ -47,7 +47,7 @@ fn main() {
 
     let module_factory = ModuleFactory::new();
     let mut host_manager = HostManager::new();
-    let mut monitor_manager = MonitorManager::new();
+    let mut monitor_manager = MonitorManager::new(host_manager.get_state_udpate_channel());
     let mut connection_manager = ConnectionManager::new();
 
     // Configure hosts and modules.
@@ -80,9 +80,17 @@ fn main() {
     }
 
 
-    frontend::cli::Cli::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
+    monitor_manager.refresh_monitors();
 
-    monitor_manager.join();
+    use std::{thread, time};
+    let ten_millis = time::Duration::from_secs(10);
+    thread::sleep(ten_millis);
+
+    frontend::cli::Cli::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
     connection_manager.join();
+    monitor_manager.join();
+    host_manager.join();
+
+
 
 }
