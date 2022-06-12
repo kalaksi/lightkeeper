@@ -20,7 +20,7 @@ impl Module for Ssh {
         }
     }
 
-    fn new(settings: &HashMap<String, String>) -> Self {
+    fn new(_settings: &HashMap<String, String>) -> Self {
         Ssh { }
     }
 
@@ -43,11 +43,7 @@ impl MonitoringModule for Ssh {
         }
     }
 
-    fn get_connector_message(&self) -> String {
-        String::from("")
-    }
-
-    fn process_response(&self, host: &Host, response: &String) -> Result<DataPoint, String> {
+    fn process(&self, host: &Host, response: &String) -> Result<DataPoint, String> {
         /*
         match &connection.is_connected() {
             true => {

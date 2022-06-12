@@ -29,17 +29,11 @@ pub trait MonitoringModule : Module {
         }
     }
 
-    fn run(&self, _host: &Host) -> Result<DataPoint, String> {
-        panic!("No implementation for run()");
-    }
-
     fn get_connector_message(&self) -> String {
         panic!("No connector message configured");
     }
 
-    fn process_response(&self, _host: &Host, _response: &String) -> Result<DataPoint, String> {
-        panic!("No implementation for process_response()");
-    }
+    fn process(&self, host: &Host, response: &String) -> Result<DataPoint, String>;
 
 }
 

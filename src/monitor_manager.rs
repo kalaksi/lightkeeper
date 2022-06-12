@@ -101,7 +101,7 @@ impl MonitorManager {
                         });
                     }
                     else {
-                        let data_point = monitor_handler.monitor.run(&host);
+                        let data_point = monitor_handler.monitor.process(&host, &String::new());
                         match data_point {
                             Ok(data_point) => {
                                 state_update_channel.send(DataPointMessage {
@@ -134,16 +134,7 @@ impl MonitorManager {
                 if let Some(host_monitors) = monitors.get(&response.host) {
                     if let Some(handler) = host_monitors.get(&response.monitor_id) {
 
-                        let data_point: Result<DataPoint, String>;
-
-                        if let None = handler.monitor.get_connector_spec() {
-                            // Monitor does not use a connector.
-                            data_point = handler.monitor.run(&response.host);
-                        }
-                        else {
-                            data_point = handler.monitor.process_response(&response.host, &response.message);
-                        }
-
+                        let data_point = handler.monitor.process(&response.host, &response.message);
                         match data_point {
                             Ok(data_point) => {
                                 log::debug!("Data point received: {}", data_point);
