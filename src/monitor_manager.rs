@@ -4,7 +4,7 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 
 use crate::Host;
-use crate::module::monitoring::{ Monitor, DataPoint };
+use crate::module::monitoring::Monitor;
 use crate::host_manager::DataPointMessage;
 use crate::connection_manager::{ ConnectorRequest, ConnectorResponse };
 
@@ -101,7 +101,7 @@ impl MonitorManager {
                         });
                     }
                     else {
-                        let data_point = monitor_handler.monitor.process(&host, &String::new());
+                        let data_point = monitor_handler.monitor.process(&host, &String::new(), false);
                         match data_point {
                             Ok(data_point) => {
                                 state_update_channel.send(DataPointMessage {
@@ -134,7 +134,7 @@ impl MonitorManager {
                 if let Some(host_monitors) = monitors.get(&response.host) {
                     if let Some(handler) = host_monitors.get(&response.monitor_id) {
 
-                        let data_point = handler.monitor.process(&response.host, &response.message);
+                        let data_point = handler.monitor.process(&response.host, &response.message, response.connector_is_connected);
                         match data_point {
                             Ok(data_point) => {
                                 log::debug!("Data point received: {}", data_point);

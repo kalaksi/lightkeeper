@@ -70,10 +70,16 @@ impl ConnectionManager {
                 let connector = connectors.get_mut(&request.host)
                                           .and_then(|connections| connections.get_mut(&request.connector_id)).unwrap();
 
+                let mut connector_is_connected = false;
                 let output = match connector.connect(&request.host.ip_address) {
                     Ok(()) => {
+                        connector_is_connected = true;
+
                         connector.send_message(&request.message).unwrap_or_else(|error| {
                             log::error!("Error while refreshing monitoring data: {}", error);
+
+                            // Double check the connection status
+                            connector_is_connected = connector.is_connected();
                             String::from("")
                         })
                     },
@@ -88,6 +94,7 @@ impl ConnectionManager {
                     monitor_id: request.monitor_id,
                     host: request.host,
                     message: output,
+                    connector_is_connected: connector_is_connected,
                 };
 
                 if let Err(error) = request.response_channel.send(response) {
@@ -112,4 +119,5 @@ pub struct ConnectorResponse {
     pub monitor_id: String,
     pub host: Host,
     pub message: String,
+    pub connector_is_connected: bool,
 }

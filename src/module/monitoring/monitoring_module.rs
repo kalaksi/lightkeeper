@@ -33,7 +33,7 @@ pub trait MonitoringModule : Module {
         panic!("No connector message configured");
     }
 
-    fn process(&self, host: &Host, response: &String) -> Result<DataPoint, String>;
+    fn process(&self, host: &Host, response: &String, connector_is_connected: bool) -> Result<DataPoint, String>;
 
 }
 

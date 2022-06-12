@@ -44,7 +44,7 @@ impl MonitoringModule for Ping {
         }
     }
 
-    fn process(&self, host: &Host, _response: &String) -> Result<DataPoint, String> {
+    fn process(&self, host: &Host, _response: &String, _connector_is_connected: bool) -> Result<DataPoint, String> {
         let mut ping = oping::Ping::new();
 
         ping.set_timeout(5.0)

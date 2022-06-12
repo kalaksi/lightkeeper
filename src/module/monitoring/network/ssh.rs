@@ -4,7 +4,6 @@ use crate::Host;
 use crate::module::{
     Module,
     Metadata,
-    connection::ConnectionModule,
     monitoring::{ MonitoringModule, Criticality, DisplayStyle, DisplayOptions, DataPoint },
     ModuleSpecification,
 };
@@ -43,9 +42,8 @@ impl MonitoringModule for Ssh {
         }
     }
 
-    fn process(&self, host: &Host, response: &String) -> Result<DataPoint, String> {
-        /*
-        match &connection.is_connected() {
+    fn process(&self, _host: &Host, _response: &String, connector_is_connected: bool) -> Result<DataPoint, String> {
+        match connector_is_connected {
             true => {
                 Ok(DataPoint::new_with_level(String::from("up"), Criticality::Normal))
             },
@@ -53,8 +51,5 @@ impl MonitoringModule for Ssh {
                 Ok(DataPoint::new_with_level(String::from("down"), Criticality::Critical))
             },
         }
-        */
-        // TODO: fix
-        Ok(DataPoint::new_with_level(String::from("down"), Criticality::Critical))
     }
 }
