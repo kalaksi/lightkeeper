@@ -33,6 +33,10 @@ impl MonitoringModule for Ssh {
         Some(ModuleSpecification::new(String::from("ssh"), String::from("0.0.1")))
     }
 
+    fn get_connector_message(&self) -> String {
+        String::from("")
+    }
+
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
             display_style: DisplayStyle::StatusUpDown,

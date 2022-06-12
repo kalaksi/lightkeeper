@@ -77,6 +77,10 @@ impl ConnectionModule for Ssh2 {
     {
         // TODO: more elegant error system
 
+        if message.is_empty() {
+            return Ok(String::from(""));
+        }
+
         let mut channel = match self.session.channel_session() {
             Ok(channel) => channel,
             Err(error) => return Err(format!("Error opening'{}'", error))
@@ -99,6 +103,10 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn is_connected(&self) -> bool {
+        if !self.is_initialized {
+            return false;
+        }
+
         // There didn't seem to be a better way to check the connection status.
         match self.session.banner_bytes() {
             Some(_) => true,

@@ -30,7 +30,7 @@ pub trait MonitoringModule : Module {
     }
 
     fn get_connector_message(&self) -> String {
-        panic!("No connector message configured");
+        panic!("No connector message configured for {}", self.get_module_spec().id);
     }
 
     fn process(&self, host: &Host, response: &String, connector_is_connected: bool) -> Result<DataPoint, String>;
