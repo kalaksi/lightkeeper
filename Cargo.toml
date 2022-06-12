@@ -17,3 +17,4 @@ oping = "0.4.0"
 tabled = { version = "0.6.1", features = ["color"] }
 owo-colors = "3.4.0"
 qmetaobject = "0.2.3"
+cstr = "0.2.10"

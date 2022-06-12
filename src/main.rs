@@ -90,6 +90,7 @@ fn main() {
     }
 
 
+    /*
     monitor_manager.refresh_monitors();
 
     use std::{thread, time};
@@ -100,7 +101,9 @@ fn main() {
     connection_manager.join();
     monitor_manager.join();
     host_manager.join();
+    */
 
+    frontend::qt::QmlFrontend::draw();
 
 
 }
