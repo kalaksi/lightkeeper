@@ -1,8 +1,8 @@
-
 use std::str::FromStr;
-use owo_colors::OwoColorize;
-use std::net::IpAddr;
-use tabled::{ Tabled, Style, builder::Builder };
+use std::cell::RefCell;
+extern crate qmetaobject;
+use cstr::cstr;
+use qmetaobject::*;
 
 use crate::utils::enums::HostStatus;
 use super::{ Frontend, DisplayData };
@@ -13,50 +13,75 @@ use crate::module::monitoring::{
     DisplayStyle
 };
 
-pub struct Cli;
+pub struct QmlFrontend;
 
-impl Frontend for Cli {
-    fn draw(display_data: &DisplayData) {
-        let mut table = Builder::default().set_header(display_data.table_headers.clone());
+impl QmlFrontend {
+    pub fn draw(display_data: &DisplayData) {
+        let table_ref = RefCell::new(Table {
+            data: Vec::new(),
+            ..Default::default()
+        });
 
-        for (_, host_data) in display_data.hosts.iter() {
+        {
+            let mut table = table_ref.borrow_mut();
 
-            let host_status = convert_to_display_string(&DataPoint::new(host_data.status.to_string()),
-                                                        &DisplayOptions::just_style(DisplayStyle::StatusUpDown));
-
-            let mut row: Vec<String> = vec![ host_status,
-                                             host_data.name.clone(),
-                                             host_data.domain_name.clone(),
-                                             host_data.ip_address.to_string() ];
-
-            for monitor_id in &display_data.all_monitor_names {
-                match host_data.monitoring_data.get(monitor_id) {
-                    // There should always be some monitoring data if the key exists.
-                    Some(monitoring_data) => row.push(convert_to_display_string(monitoring_data.values.last().unwrap(),
-                                                                                &monitoring_data.display_options)),
-                    None => row.push(String::from(""))
-                }
+            for (_, host_data) in display_data.hosts.iter() {
+                table.data.push(TableEntry {
+                    name: host_data.name.clone().into(),
+                    fqdn: host_data.domain_name.clone().into(),
+                    ip_address: host_data.ip_address.to_string().into(),
+                    status: host_data.status.to_string().into(),
+                });
             }
-
-            table = table.add_row(row);
         }
 
-        print!("{}", table.build().with(Style::psql()));
+        // qml_register_type::<Table>(cstr!("Lightkeeper"), 0, 1, cstr!("Lightkeeper"));
+
+        let mut engine = QmlEngine::new();
+        engine.set_object_property("_model".into(), unsafe { QObjectPinned::new(&table_ref) });
+        engine.load_file(QString::from("src/frontend/qt/main.qml"));
+        engine.exec();
     }
 }
 
-#[derive(Tabled)]
-struct TableEntry<'a> {
-    pub name: &'a String,
-    pub fqdn: &'a String,
-    pub ip_address: &'a IpAddr,
-    pub status: String,
+
+
+#[derive(QObject, Default)]
+struct Table {
+    base: qt_base_class!(trait QAbstractListModel),
+    data: Vec<TableEntry>,
 }
+
+impl QAbstractListModel for Table {
+    fn row_count(&self) -> i32 {
+        self.data.len() as i32
+    }
+
+    fn data(&self, index: QModelIndex, role: i32) -> QVariant {
+        if role != USER_ROLE {
+            return QVariant::default();
+        }
+        self.data.get(index.row() as usize).map(|x| x.to_qvariant()).unwrap_or_default()
+    }
+
+    fn role_names(&self) -> std::collections::HashMap<i32, QByteArray> {
+        vec![(USER_ROLE, QByteArray::from("value"))].into_iter().collect()
+    }
+}
+
+#[derive(QGadget, Clone, Default)]
+struct TableEntry {
+    pub name: qt_property!(QString),
+    pub fqdn: qt_property!(QString),
+    pub ip_address: qt_property!(QString),
+    pub status: qt_property!(QString),
+}
+
 
 fn convert_to_display_string(data_point: &DataPoint, display_options: &DisplayOptions) -> String {
     if data_point.is_empty() {
         if data_point.criticality == Criticality::Critical {
-            "Error".red().to_string()
+            String::from("Error")
         }
         else {
             String::from("")
@@ -83,8 +108,8 @@ fn convert_single(data_point: &DataPoint, display_options: &DisplayOptions) -> S
         },
         DisplayStyle::StatusUpDown => {
             match HostStatus::from_str(&data_point.value).unwrap_or_default() {
-                HostStatus::Up => "Up".green().to_string(),
-                HostStatus::Down => "Down".red().to_string(),
+                HostStatus::Up => "Up".to_string(),
+                HostStatus::Down => "Down".to_string(),
             }
         },
         DisplayStyle::String => {
@@ -92,7 +117,7 @@ fn convert_single(data_point: &DataPoint, display_options: &DisplayOptions) -> S
         },
     };
 
-    color_by_level(single_value, data_point.criticality)
+    single_value
 }
 
 fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) -> String {
@@ -123,17 +148,6 @@ fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) 
             },
         };
 
-        color_by_level(single_value, data_point.criticality)
-
+        single_value
     }).collect::<Vec<String>>().join(separator)
-}
-
-fn color_by_level(text: String, criticality: Criticality) -> String {
-    match criticality {
-        Criticality::NoData => text.clone(),
-        Criticality::Normal => text.green().to_string(),
-        Criticality::Warning => text.yellow().to_string(),
-        Criticality::Error => text.red().to_string(),
-        Criticality::Critical => text.red().to_string(),
-    }
 }

@@ -1,5 +1,8 @@
 # Dependencies
-## Using Ubuntu packages
+## Requirements
+- Qt 5.15
+
+## Ubuntu 22.04 packages
 - liboping0
 - qtdeclarative5-dev
 

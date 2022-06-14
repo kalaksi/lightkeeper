@@ -103,7 +103,7 @@ fn main() {
     host_manager.join();
     */
 
-    frontend::qt::QmlFrontend::draw();
+    frontend::qt::QmlFrontend::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
 
 
 }
