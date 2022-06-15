@@ -101,6 +101,7 @@ impl MonitorManager {
                         });
                     }
                     else {
+                        // TODO: send to the start_receive-thread instead
                         let data_point = monitor_handler.monitor.process(&host, &String::new(), false);
                         match data_point {
                             Ok(data_point) => {

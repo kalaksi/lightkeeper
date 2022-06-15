@@ -7,11 +7,19 @@ Window {
     height: 400
     visible: true
 
-    ListView {
-        anchors.fill: parent;
-        model: _model;
-        delegate: Text {
-            text: value.name
+    TableView {
+        anchors.fill: parent
+        columnSpacing: 1
+        rowSpacing: 1
+        model: lightkeeper_data
+        delegate: Rectangle {
+            implicitWidth: 100
+            implicitHeight: 50
+            Text {
+                text: value
+            }
+
+            color: "#efefef"
         }
     }
 }
