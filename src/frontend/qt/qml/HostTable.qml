@@ -4,6 +4,7 @@ import Qt.labs.qmlmodels 1.0
 Item {
     id: table_container
     onWidthChanged: table.forceLayout()
+    property alias model: table.model
 
     TableView {
         id: table
@@ -27,10 +28,8 @@ Item {
             display: "IP"
         }
 
-        model: lightkeeper_data
-
         delegate: Rectangle {
-            implicitWidth: table_container.width * (1/4)
+            implicitWidth: table_container.width / table.model.columnCount()
             implicitHeight: 40
  
             Text {

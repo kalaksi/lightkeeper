@@ -90,20 +90,14 @@ fn main() {
     }
 
 
-    /*
     monitor_manager.refresh_monitors();
 
-    use std::{thread, time};
-    let ten_millis = time::Duration::from_secs(10);
-    thread::sleep(ten_millis);
+    let draw_thread = frontend::qt::QmlFrontend::draw(host_manager.get_display_data(&config.display_options.excluded_monitors));
+    // frontend::cli::Cli::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
 
-    frontend::cli::Cli::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
     connection_manager.join();
     monitor_manager.join();
     host_manager.join();
-    */
-
-    frontend::qt::QmlFrontend::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
-
+    draw_thread.join().unwrap();
 
 }

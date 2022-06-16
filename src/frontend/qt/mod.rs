@@ -1,7 +1,8 @@
-use std::{str::FromStr, default};
+use std::{str::FromStr, default, thread::JoinHandle};
 extern crate qmetaobject;
 use cstr::cstr;
 use qmetaobject::*;
+use std::thread;
 
 use crate::utils::enums::HostStatus;
 use super::{ Frontend, DisplayData };
@@ -15,17 +16,17 @@ use crate::module::monitoring::{
 pub struct QmlFrontend;
 
 impl QmlFrontend {
-    pub fn draw(display_data: &DisplayData) {
-        qmetaobject::log::init_qt_to_rust();
+    pub fn draw(display_data: DisplayData) -> JoinHandle<()> {
+        thread::spawn(move || {
+            qmetaobject::log::init_qt_to_rust();
 
-        let qt_data = QObjectBox::new(Table::from(&display_data));
+            let qt_data = QObjectBox::new(Table::from(&display_data));
 
-        // qml_register_type::<Table>(cstr!("Lightkeeper"), 0, 1, cstr!("Lightkeeper"));
-
-        let mut engine = QmlEngine::new();
-        engine.set_object_property("lightkeeper_data".into(), qt_data.pinned());
-        engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
-        engine.exec();
+            let mut engine = QmlEngine::new();
+            engine.set_object_property("lightkeeper_data".into(), qt_data.pinned());
+            engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
+            engine.exec();
+        })
     }
 }
 

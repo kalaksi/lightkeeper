@@ -20,6 +20,7 @@ ApplicationWindow {
 
         HostTable {
             anchors.fill: parent
+            model: lightkeeper_data
         }
     }
 
