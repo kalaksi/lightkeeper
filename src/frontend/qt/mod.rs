@@ -24,7 +24,7 @@ impl QmlFrontend {
 
         let mut engine = QmlEngine::new();
         engine.set_object_property("lightkeeper_data".into(), qt_data.pinned());
-        engine.load_file(QString::from("src/frontend/qt/main.qml"));
+        engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
         engine.exec();
     }
 }
