@@ -32,6 +32,11 @@ Item {
             implicitWidth: table_container.width / table.model.columnCount()
             implicitHeight: 40
  
+            HostStatus {
+                height: 0.9 * parent.height
+                width: 0.9 * parent.height
+                status: "up"
+            }
             Text {
                 text: value
                 anchors.centerIn: parent
