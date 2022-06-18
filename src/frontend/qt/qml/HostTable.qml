@@ -6,43 +6,28 @@ Item {
     onWidthChanged: table.forceLayout()
     property alias model: table.model
 
+    // For some reason, ListView delegate doesn't work as expected: doesn't see `value` as defined.
     TableView {
         id: table
-        columnSpacing: 1
-        rowSpacing: 1
         anchors.fill: parent
-
-        TableModelColumn {
-            display: "Status"
-        }
-
-        TableModelColumn {
-            display: "Name"
-        }
-
-        TableModelColumn {
-            display: "FQDN"
-        }
-
-        TableModelColumn {
-            display: "IP"
-        }
+        model: lightkeeper_data
 
         delegate: Rectangle {
-            implicitWidth: table_container.width / table.model.columnCount()
+            implicitWidth: parent.width
             implicitHeight: 40
  
             HostStatus {
-                height: 0.9 * parent.height
-                width: 0.9 * parent.height
-                status: "up"
+                id: host_status
+                status: value.status
             }
+
             Text {
-                text: value
+                id: host_name
+                text: value.name
                 anchors.centerIn: parent
             }
 
-            color: "#efefef"
+            color: model.row % 2 == 0 ? "#efefef" : "#e5e5e5"
         }
     }
 }

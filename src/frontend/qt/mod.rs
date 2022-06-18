@@ -20,7 +20,7 @@ impl QmlFrontend {
         thread::spawn(move || {
             qmetaobject::log::init_qt_to_rust();
 
-            let qt_data = QObjectBox::new(Table::from(&display_data));
+            let qt_data = QObjectBox::new(HostList::from(&display_data));
 
             let mut engine = QmlEngine::new();
             engine.set_object_property("lightkeeper_data".into(), qt_data.pinned());
@@ -32,15 +32,15 @@ impl QmlFrontend {
 
 
 #[derive(QObject, Default)]
-struct Table {
-    base: qt_base_class!(trait QAbstractTableModel),
+struct HostList {
+    base: qt_base_class!(trait QAbstractListModel),
     headers: Vec<QString>,
-    data: Vec<Vec<QString>>,
+    data: Vec<HostData>,
 }
 
-impl Table {
+impl HostList {
     pub fn new() -> Self {
-        Table {
+        HostList {
             headers: Vec::new(),
             data: Vec::new(),
             ..Default::default()
@@ -48,7 +48,7 @@ impl Table {
     }
 
     pub fn from(display_data: &DisplayData) -> Self {
-        let mut table_data = Table::new();
+        let mut table_data = HostList::new();
 
         for header in &display_data.table_headers {
             table_data.headers.push(header.clone().into());
@@ -57,22 +57,26 @@ impl Table {
         for (_, host_data) in display_data.hosts.iter() {
             let host_status = convert_to_display_string(&DataPoint::new(host_data.status.to_string()),
                                                         &DisplayOptions::just_style(DisplayStyle::StatusUpDown));
-
-            let mut row: Vec<QString> = vec![ host_status.to_string().into(),
-                                             host_data.name.clone().into(),
-                                             host_data.domain_name.clone().into(),
-                                             host_data.ip_address.to_string().into() ];
+            
+            let mut row_monitor_data: Vec<QString> = Vec::new();
 
             for monitor_id in &display_data.all_monitor_names {
                 match host_data.monitoring_data.get(monitor_id) {
                     // There should always be some monitoring data if the key exists.
-                    Some(monitoring_data) => row.push(convert_to_display_string(monitoring_data.values.last().unwrap(),
-                                                                                &monitoring_data.display_options)),
-                    None => row.push(QString::from(""))
+                    Some(monitoring_data) => row_monitor_data.push(
+                        convert_to_display_string(monitoring_data.values.last().unwrap(), &monitoring_data.display_options)
+                    ),
+                    None => row_monitor_data.push(QString::from(""))
                 }
             }
 
-            table_data.data.push(row);
+            table_data.data.push(HostData {
+                status: host_status.to_string().into(),
+                name: host_data.name.clone().into(),
+                fqdn: host_data.domain_name.clone().into(),
+                ip_address: host_data.ip_address.to_string().into(),
+                // monitor_data: row_monitor_data,
+            });
         }
 
         table_data
@@ -80,13 +84,9 @@ impl Table {
 }
 
 
-impl QAbstractTableModel for Table {
+impl QAbstractListModel for HostList {
     fn row_count(&self) -> i32 {
         self.data.len() as i32
-    }
-
-    fn column_count(&self) -> i32 {
-        self.headers.len() as i32
     }
 
     fn data(&self, index: QModelIndex, role: i32) -> QVariant {
@@ -94,8 +94,9 @@ impl QAbstractTableModel for Table {
             return QVariant::default();
         }
 
-        let row = self.data.get(index.row() as usize).unwrap();
-        row.get(index.column() as usize).map(|value| value.to_qvariant()).unwrap_or_default()
+        // let row = self.data.get(index.row() as usize).unwrap();
+        // row.get(index.column() as usize).map(|value| value.to_qvariant()).unwrap_or_default()
+        self.data.get(index.row() as usize).map(|item| item.to_qvariant()).unwrap_or_default()
     }
 
     fn role_names(&self) -> std::collections::HashMap<i32, QByteArray> {
@@ -103,10 +104,13 @@ impl QAbstractTableModel for Table {
     }
 }
 
-#[derive(QGadget, Clone, Default)]
-struct ColoredText {
-    pub text: qt_property!(QString),
-    pub color: qt_property!(QString),
+#[derive(QGadget, Default, Clone)]
+struct HostData {
+    status: qt_property!(QString),
+    name: qt_property!(QString),
+    fqdn: qt_property!(QString),
+    ip_address: qt_property!(QString),
+    // monitor_data: Vec<QString>,
 }
 
 fn color_by_level(text: String, criticality: Criticality) -> QString {
