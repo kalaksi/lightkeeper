@@ -3,19 +3,19 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 
 Item {
-    anchors.verticalCenter: parent.verticalCenter
-    height: 0.6 * parent.height
-    width: 0.6 * parent.height
+    anchors.fill: parent
     x: 0.2 * parent.height
 
     required property string status
     property var colors: {}
     property var icons: {}
 
+    FontLoader { id: font_status; source: "../fonts/PressStart2P/PressStart2P-vaV7.ttf" }
 
     Image {
         id: status_image
-        width: parent.width
+        x: 0.4 * parent.height
+        width: parent.height
         height: parent.height
         antialiasing: true
         source: getIcon()
@@ -28,11 +28,12 @@ Item {
         antialiasing: true
     }
 
-    FontLoader { id: font_status; source: "../fonts/PressStart2P/PressStart2P-vaV7.ttf" }
-
     Text {
+        anchors.left: status_image.right
+        anchors.leftMargin: 0.3 * width
+        anchors.rightMargin: 0.3 * width
         anchors.verticalCenter: parent.verticalCenter
-        x: status_image.width * 1.5
+
         text: status
         font.family: font_status.name
         color: getColor()
