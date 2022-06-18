@@ -30,7 +30,7 @@ impl HostManager {
         let (sender, receiver) = mpsc::channel::<DataPointMessage>();
         let shared_hosts = Arc::new(Mutex::new(HostCollection::new()));
 
-        let handle = Self::process(shared_hosts.clone(), receiver);
+        let handle = Self::start_receiving_updates(shared_hosts.clone(), receiver);
 
         HostManager {
             hosts: shared_hosts,
@@ -53,7 +53,7 @@ impl HostManager {
         self.data_sender_prototype.clone()
     }
 
-    fn process(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<DataPointMessage>) -> thread::JoinHandle<()> {
+    fn start_receiving_updates(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<DataPointMessage>) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             loop {
                 let message = receiver.recv().unwrap();

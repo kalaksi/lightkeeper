@@ -23,7 +23,7 @@ impl MonitorManager {
         let (sender, receiver) = mpsc::channel::<ConnectorResponse>();
         let monitors = Arc::new(Mutex::new(HashMap::new()));
 
-        let handle = Self::start_receive(monitors.clone(), receiver, state_update_channel.clone());
+        let handle = Self::start_receiving_datapoints(monitors.clone(), receiver, state_update_channel.clone());
 
         MonitorManager {
             monitors: monitors,
@@ -65,14 +65,14 @@ impl MonitorManager {
     }
 
     pub fn refresh_monitors(&self) {
-        Self::start_refresh_monitors(
+        Self::start_refreshing_monitors(
             self.monitors.clone(),
             self.response_sender_prototype.clone(),
             self.state_update_channel.clone(),
         );
     }
 
-    fn start_refresh_monitors(
+    fn start_refreshing_monitors(
         monitors: Arc<Mutex<HashMap<Host, MonitorCollection>>>,
         response_sender_prototype: mpsc::Sender<ConnectorResponse>,
         state_update_channel: Sender<DataPointMessage>,
@@ -122,7 +122,7 @@ impl MonitorManager {
         })
     }
 
-    fn start_receive(
+    fn start_receiving_datapoints(
         monitors: Arc<Mutex<HashMap<Host, MonitorCollection>>>,
         receiver: mpsc::Receiver<ConnectorResponse>,
         state_update_channel: Sender<DataPointMessage>,

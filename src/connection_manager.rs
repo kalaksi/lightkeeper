@@ -20,7 +20,7 @@ impl ConnectionManager {
         let (sender, receiver) = mpsc::channel::<ConnectorRequest>();
         let connectors = Arc::new(Mutex::new(HashMap::new()));
 
-        let handle = Self::process(connectors.clone(), receiver);
+        let handle = Self::start_receiving_messages(connectors.clone(), receiver);
 
         ConnectionManager {
             connectors: connectors,
@@ -55,7 +55,7 @@ impl ConnectionManager {
                             .join().unwrap();
     }
 
-    fn process(
+    fn start_receiving_messages(
         connectors: Arc<Mutex<HashMap<Host, ConnectorCollection>>>,
         receiver: mpsc::Receiver<ConnectorRequest>
     ) -> thread::JoinHandle<()> {
