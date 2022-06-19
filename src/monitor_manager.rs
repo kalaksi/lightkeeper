@@ -4,7 +4,7 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 
 use crate::Host;
-use crate::module::monitoring::Monitor;
+use crate::module::monitoring::{ Monitor, DataPoint };
 use crate::host_manager::DataPointMessage;
 use crate::connection_manager::{ ConnectorRequest, ConnectorResponse };
 
@@ -102,20 +102,19 @@ impl MonitorManager {
                     }
                     else {
                         // TODO: send to the start_receive-thread instead
-                        let data_point = monitor_handler.monitor.process(&host, &String::new(), false);
-                        match data_point {
-                            Ok(data_point) => {
-                                state_update_channel.send(DataPointMessage {
-                                    host_name: host.name.clone(),
-                                    display_options: monitor_handler.monitor.get_display_options(),
-                                    module_spec: monitor_handler.monitor.get_module_spec(),
-                                    data_point: data_point
-                                }).unwrap_or_else(|error| {
-                                    log::error!("Couldn't send message to state manager: {}", error);
-                                });
-                            },
-                            Err(error) => log::error!("Error while running monitor: {}", error),
-                        }
+                        let data_point = monitor_handler.monitor.process(&host, &String::new(), false).unwrap_or_else(|error| {
+                            log::error!("Error while running monitor: {}", error);
+                            DataPoint::empty_and_critical()
+                        });
+
+                        state_update_channel.send(DataPointMessage {
+                            host_name: host.name.clone(),
+                            display_options: monitor_handler.monitor.get_display_options(),
+                            module_spec: monitor_handler.monitor.get_module_spec(),
+                            data_point: data_point
+                        }).unwrap_or_else(|error| {
+                            log::error!("Couldn't send message to state manager: {}", error);
+                        });
                     }
                 }
             }

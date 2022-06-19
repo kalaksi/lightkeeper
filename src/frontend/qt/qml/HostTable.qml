@@ -44,9 +44,15 @@ Item {
                 }
 
                 RowComponent {
-                    Layout.fillWidth: true
                     Text {
                         text: value.ip_address
+                    }
+                }
+
+                RowComponent {
+                    Layout.fillWidth: true
+                    MonitorSummary {
+                        values: value.monitor_data
                     }
                 }
             }

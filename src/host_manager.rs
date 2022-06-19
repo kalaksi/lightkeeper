@@ -22,6 +22,7 @@ pub struct HostManager {
     hosts: Arc<Mutex<HostCollection>>,
     data_sender_prototype: mpsc::Sender<DataPointMessage>,
     receiver_handle: Option<thread::JoinHandle<()>>,
+    observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
 }
 
 // TODO rename to state-something
@@ -29,13 +30,15 @@ impl HostManager {
     pub fn new() -> HostManager {
         let (sender, receiver) = mpsc::channel::<DataPointMessage>();
         let shared_hosts = Arc::new(Mutex::new(HostCollection::new()));
+        let observers = Arc::new(Mutex::new(Vec::new()));
 
-        let handle = Self::process(shared_hosts.clone(), receiver);
+        let handle = Self::process(shared_hosts.clone(), receiver, observers.clone());
 
         HostManager {
             hosts: shared_hosts,
             data_sender_prototype: sender,
             receiver_handle: Some(handle),
+            observers: observers,
         }
     }
 
@@ -45,20 +48,24 @@ impl HostManager {
     }
 
     pub fn join(&mut self) {
-        self.receiver_handle.take().expect("Thread has already stopped.")
-                            .join().unwrap();
+        self.receiver_handle.take().unwrap().join().unwrap();
     }
 
     pub fn get_state_udpate_channel(&self) -> Sender<DataPointMessage> {
         self.data_sender_prototype.clone()
     }
 
-    fn process(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<DataPointMessage>) -> thread::JoinHandle<()> {
+    pub fn add_observer(&mut self, sender: Sender<frontend::HostDisplayData>) {
+        self.observers.lock().unwrap().push(sender);
+    }
+
+    fn process(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<DataPointMessage>,
+        observers: Arc<Mutex<Vec<Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             loop {
                 let message = receiver.recv().unwrap();
-
                 let mut hosts = hosts.lock().unwrap();
+
                 if let Some(host_state) = hosts.hosts.get_mut(&message.host_name) {
                     if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
                         monitoring_data.values.push(message.data_point);
@@ -70,6 +77,23 @@ impl HostManager {
                     }
 
                     host_state.update_status();
+
+                    let observers = observers.lock().unwrap();
+                    for observer in observers.iter() {
+                        let mut monitoring_data: HashMap<String, MonitoringData> = HashMap::new();
+
+                        for (monitor_id, data) in host_state.monitor_data.iter() {
+                            monitoring_data.insert(monitor_id.clone(), data.clone());
+                        }
+
+                        observer.send(frontend::HostDisplayData {
+                            name: host_state.host.name.clone(),
+                            domain_name: host_state.host.fqdn.clone(),
+                            ip_address: host_state.host.ip_address.clone(),
+                            monitoring_data: monitoring_data,
+                            status: host_state.status,
+                        }).unwrap();
+                    }
                 }
                 else {
                     log::error!("Data for host {} does not exist.", message.host_name);
@@ -78,7 +102,7 @@ impl HostManager {
         })
     }
 
-    pub fn get_display_data(&self, excluded_monitors: &Vec<String>) -> frontend::DisplayData {
+    pub fn get_display_data(&self) -> frontend::DisplayData {
         let mut display_data = frontend::DisplayData::new();
         display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 
@@ -102,9 +126,7 @@ impl HostManager {
             let mut monitoring_data: HashMap<String, MonitoringData> = HashMap::new();
 
             for (monitor_id, data) in state.monitor_data.iter() {
-                if !excluded_monitors.contains(monitor_id) {
-                    monitoring_data.insert(monitor_id.clone(), data.clone());
-                }
+                monitoring_data.insert(monitor_id.clone(), data.clone());
             }
 
             display_data.hosts.insert(host_name.clone(), frontend::HostDisplayData {
@@ -125,6 +147,7 @@ impl HostManager {
 pub struct DataPointMessage {
     pub host_name: String,
     pub display_options: DisplayOptions,
+    // TODO: rename to monitor_spec
     pub module_spec: ModuleSpecification,
     pub data_point: DataPoint,
 }
