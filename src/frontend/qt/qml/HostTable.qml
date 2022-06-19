@@ -37,7 +37,7 @@ Item {
                 }
 
                 RowComponent {
-                    PlaceholderText {
+                    OptionalText {
                         placeholder: "No FQDN defined"
                         textContent: value.fqdn
                     }
