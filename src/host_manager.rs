@@ -1,6 +1,6 @@
 
 use std::collections::HashMap;
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc;
 use std::thread;
 use std::sync::{Arc, Mutex};
 
@@ -51,16 +51,16 @@ impl HostManager {
         self.receiver_handle.take().unwrap().join().unwrap();
     }
 
-    pub fn get_state_udpate_channel(&self) -> Sender<DataPointMessage> {
+    pub fn get_state_udpate_channel(&self) -> mpsc::Sender<DataPointMessage> {
         self.data_sender_prototype.clone()
     }
 
-    pub fn add_observer(&mut self, sender: Sender<frontend::HostDisplayData>) {
+    pub fn add_observer(&mut self, sender: mpsc::Sender<frontend::HostDisplayData>) {
         self.observers.lock().unwrap().push(sender);
     }
 
     fn process(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<DataPointMessage>,
-        observers: Arc<Mutex<Vec<Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
+        observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             loop {
                 let message = receiver.recv().unwrap();

@@ -90,14 +90,13 @@ fn main() {
         }
     }
 
+    monitor_manager.refresh_monitors();
     let initial_display_data = host_manager.get_display_data();
-    let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data);
+
+    let mut frontend = frontend::qt::QmlFrontend::new(&initial_display_data);
     host_manager.add_observer(frontend.new_update_sender());
 
-
-    monitor_manager.refresh_monitors();
     frontend.start();
-    // frontend::cli::Cli::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
 
     connection_manager.join();
     monitor_manager.join();

@@ -1,10 +1,8 @@
 use std::str::FromStr;
-use std::cell::RefCell;
 use std::thread;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::mpsc;
 
 extern crate qmetaobject;
-use cstr::cstr;
 use qmetaobject::*;
 
 use crate::frontend;
@@ -15,37 +13,36 @@ use crate::module::monitoring::{
     DisplayStyle
 };
 
+use super::DisplayData;
+
 pub struct QmlFrontend {
-    data_sender_prototype: mpsc::Sender<frontend::HostDisplayData>,
-    receiver_handle: thread::JoinHandle<()>,
-    data_model: Option<HostList>,
+    update_sender_prototype: mpsc::Sender<frontend::HostDisplayData>,
+    model: Option<HostList>,
 }
 
 impl QmlFrontend {
-    pub fn new(display_data: frontend::DisplayData) -> Self {
-        let data_model = HostList::from(&display_data);
-        let (sender, receiver) = data_model.receive_updates();
+    pub fn new(display_data: &DisplayData) -> Self {
+        qmetaobject::log::init_qt_to_rust();
+
+        let (data_model, update_sender) = HostList::from(&display_data);
 
         QmlFrontend {
-            data_model: Some(data_model),
-            data_sender_prototype: sender,
-            receiver_handle: receiver,
+            update_sender_prototype: update_sender,
+            model: Some(data_model),
         }
     }
 
-    pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {
-        self.data_sender_prototype.clone()
-    }
-
     pub fn start(&mut self) {
-        qmetaobject::log::init_qt_to_rust();
-
-        let qt_data = QObjectBox::new(self.data_model.take().expect("Start must not be called more than once"));
-
+        let qt_data = QObjectBox::new(self.model.take().unwrap());
         let mut engine = QmlEngine::new();
         engine.set_object_property("lightkeeper_data".into(), qt_data.pinned());
+
         engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
         engine.exec();
+    }
+
+    pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {
+        self.update_sender_prototype.clone()
     }
 }
 
@@ -57,55 +54,64 @@ struct HostList {
     hosts: qt_property!(HostCollection; NOTIFY hosts_changed),
     hosts_changed: qt_signal!(),
 
-    receive_updates: qt_method!(fn(&self) -> (mpsc::Sender<frontend::HostDisplayData>, thread::JoinHandle<()>)),
+    receive_updates: qt_method!(fn(&self)),
+    update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
+    update_receiver_thread: Option<thread::JoinHandle<()>>,
 }
 
 impl HostList {
-    pub fn new() -> Self {
-        HostList {
+    pub fn new() -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
+        let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
+        let model = HostList {
             headers: Vec::new(),
             hosts: HostCollection::new(),
+            update_receiver: Some(receiver),
+            update_receiver_thread: None,
             ..Default::default()
-        }
+        };
+
+        (model, sender)
     }
 
-    pub fn from(display_data: &frontend::DisplayData) -> Self {
-        let mut table_data = HostList::new();
+    pub fn from(display_data: &frontend::DisplayData) -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
+        let (mut model, update_sender)= HostList::new();
 
         for header in &display_data.table_headers {
-            table_data.headers.push(header.clone().into());
+            model.headers.push(header.clone().into());
         }
 
         for (_, host_data) in display_data.hosts.iter() {
-            table_data.hosts.data.push(HostData::from(&host_data))
+            model.hosts.data.push(HostData::from(&host_data))
         }
 
-        table_data
+        (model, update_sender)
     }
 
-    fn receive_updates(&self) -> (mpsc::Sender<frontend::HostDisplayData>, thread::JoinHandle<()>) {
-        let qptr = QPointer::from(&*self);
-        let set_value = qmetaobject::queued_callback(move |host_data: HostData| {
-            qptr.as_pinned().map(|self_| {
-                let _old_value = std::mem::replace(
-                    self_.borrow_mut().hosts.data.iter_mut().find(|host| host.name == host_data.name).unwrap(),
-                    host_data,
-                );
-                self_.borrow().hosts_changed();
+    fn receive_updates(&mut self) {
+        // Shouldn't be run more than once.
+        if self.update_receiver_thread.is_none() {
+            let qptr = QPointer::from(&*self);
+            let set_value = qmetaobject::queued_callback(move |host_data: HostData| {
+                qptr.as_pinned().map(|self_| {
+                    let _old_value = std::mem::replace(
+                        self_.borrow_mut().hosts.data.iter_mut().find(|host| host.name == host_data.name).unwrap(),
+                        host_data,
+                    );
+                    self_.borrow().hosts_changed();
+                });
             });
-        });
 
-        let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
+            let receiver = self.update_receiver.take().unwrap();
+            let thread = std::thread::spawn(move || {
+                loop {
+                    let received_data = receiver.recv().unwrap();
+                    let host_data = HostData::from(&received_data);
+                    set_value(host_data);
+                }
+            });
 
-        let thread_handle = std::thread::spawn(move || {
-            loop {
-                let received_data = receiver.recv().unwrap();
-                let host_data = HostData::from(&received_data);
-                set_value(host_data);
-            }
-        });
-
-        (sender, thread_handle)
+            self.update_receiver_thread = Some(thread);
+        }
     }
 }
 

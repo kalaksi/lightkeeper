@@ -4,14 +4,14 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: table_container
-    property alias model: table.model
+    required property var model
 
-    // For some reason, ListView delegate doesn't work as expected: doesn't see `value` as defined.
     TableView {
         id: table
         anchors.fill: parent
         onWidthChanged: forceLayout()
-        model: lightkeeper_data
+        model: parent.model
+        Component.onCompleted: parent.model.receive_updates()
 
         delegate: Rectangle {
             implicitWidth: table_container.width
