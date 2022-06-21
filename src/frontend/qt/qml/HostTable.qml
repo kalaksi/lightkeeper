@@ -19,7 +19,7 @@ Item {
                 column: 0
                 delegate: TableItem {
                     firstItem: true
-                    implicitWidth: table.width * 0.18
+                    implicitWidth: table.width * 0.15
 
                     HostStatus {
                         implicitHeight: 40
@@ -31,7 +31,7 @@ Item {
             DelegateChoice {
                 column: 1
                 delegate: TableItem {
-                    implicitWidth: table.width * 0.12
+                    implicitWidth: table.width * 0.10
 
                     Text {
                         text: value
@@ -63,7 +63,7 @@ Item {
             DelegateChoice {
                 column: 4
                 delegate: TableItem {
-                    implicitWidth: table.width * 0.30
+                    implicitWidth: table.width * 0.35
 
                     OptionalText {
                         placeholder: ""

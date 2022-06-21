@@ -1,18 +1,11 @@
-use std::str::FromStr;
 use std::thread;
 use std::sync::mpsc;
 
+use serde_json;
 extern crate qmetaobject;
 use qmetaobject::*;
 
 use crate::frontend;
-use crate::module::monitoring::{
-    Criticality,
-    DataPoint,
-    DisplayOptions,
-    DisplayStyle
-};
-
 use super::DisplayData;
 
 pub struct QmlFrontend {
@@ -100,7 +93,10 @@ impl HostList {
                     // TODO:
                     // let index = self_pinned.borrow().hosts.data.iter().position(|&item| item.name == host_data.name).unwrap();
                     let top_left = self_pinned.borrow().index(0, 0);
-                    let bottom_right = self_pinned.borrow().index(self_pinned.borrow().hosts.data.len() as i32 - 1, 0);
+                    let bottom_right = self_pinned.borrow().index(
+                        self_pinned.borrow().hosts.data.len() as i32 - 1,
+                        self_pinned.borrow().column_count() as i32 - 1
+                    );
                     self_pinned.borrow_mut().data_changed(top_left, bottom_right);
                 });
             });
@@ -142,9 +138,7 @@ impl QAbstractTableModel for HostList {
             2 => row.fqdn.to_qvariant(),
             3 => row.ip_address.to_qvariant(),
             _ => {
-                // row.monitor_data.get(index.column() as usize).unwrap_or(&QString::from("")).to_qvariant()
-                // row.monitor_data.get(index.column() as usize).unwrap_or(&QString::from("")).to_qvariant()
-                QString::from("beeeee").to_qvariant()
+                row.monitor_data_json.to_qvariant()
             }
         }
     }
@@ -174,98 +168,18 @@ struct HostData {
     name: qt_property!(QString),
     fqdn: qt_property!(QString),
     ip_address: qt_property!(QString),
-    monitor_data: Vec<QString>,
+    monitor_data_json: qt_property!(QString),
 }
 
 impl HostData {
     pub fn from(host_display_data: &frontend::HostDisplayData) -> Self {
-        let mut monitor_data: Vec<QString> = host_display_data.monitoring_data.iter().map(|(_, data)| {
-                convert_to_display_string(data.values.last().unwrap(), &data.display_options)
-        }).collect();
-
         HostData {
             status: host_display_data.status.clone().to_string().into(),
             name: host_display_data.name.clone().into(),
             fqdn: host_display_data.domain_name.clone().into(),
             ip_address: host_display_data.ip_address.to_string().into(),
-            monitor_data: monitor_data,
+            monitor_data_json: serde_json::to_string(&host_display_data.monitoring_data).unwrap().into(),
         }
     }
 
-}
-
-fn convert_to_display_string(data_point: &DataPoint, display_options: &DisplayOptions) -> QString {
-    if data_point.is_empty() {
-        if data_point.criticality == Criticality::Critical {
-            QString::from("Error")
-        }
-        else {
-            QString::from("TODO")
-        }
-    }
-    else if display_options.use_multivalue {
-        convert_multivalue(data_point, display_options)
-    }
-    else {
-        convert_single(data_point, display_options)
-    }
-}
-
-fn convert_single(data_point: &DataPoint, display_options: &DisplayOptions) -> QString {
-    let single_value = match display_options.display_style {
-        DisplayStyle::CriticalityLevel => {
-            match data_point.criticality {
-                Criticality::NoData => QString::from("No data"),
-                Criticality::Normal => QString::from("Normal"),
-                Criticality::Warning => QString::from("Warning"),
-                Criticality::Error => QString::from("Error"),
-                Criticality::Critical => QString::from("Critical"),
-            }
-        },
-        DisplayStyle::StatusUpDown => {
-            match crate::utils::enums::HostStatus::from_str(&data_point.value).unwrap_or_default() {
-                crate::utils::enums::HostStatus::Up => QString::from("Up"),
-                crate::utils::enums::HostStatus::Down => QString::from("Down"),
-            }
-        },
-        DisplayStyle::String => {
-            QString::from(data_point.value.clone())
-        },
-    };
-
-    single_value
-}
-
-fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) -> QString {
-    let mut separator = ", ";
-
-    // Process all values and join them into string in the end.
-    let display_value = data_point.multivalue.iter().map(|data_point| {
-        let single_value = match display_options.display_style {
-            DisplayStyle::CriticalityLevel => {
-                separator = "";
-
-                match data_point.criticality {
-                    Criticality::NoData => "No data".to_string(),
-                    Criticality::Normal => "▩".to_string(),
-                    Criticality::Warning =>"▩".to_string(),
-                    Criticality::Error => "▩".to_string(),
-                    Criticality::Critical =>"▩".to_string(),
-                }
-            },
-            DisplayStyle::StatusUpDown => {
-                match crate::utils::enums::HostStatus::from_str(&data_point.value).unwrap_or_default() {
-                    crate::utils::enums::HostStatus::Up => String::from("Up"),
-                    crate::utils::enums::HostStatus::Down => String::from("Down"),
-                }
-            },
-            DisplayStyle::String => {
-                data_point.value.to_string()
-            },
-        };
-
-        single_value
-    }).collect::<Vec<String>>();
-
-    QString::from(display_value.join(separator))
 }

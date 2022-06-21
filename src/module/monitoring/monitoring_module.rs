@@ -1,7 +1,8 @@
-
 use std::fmt;
 use std::collections::HashMap;
-use chrono::{ DateTime, Utc };
+use chrono::{DateTime, Utc};
+
+use serde_derive::Serialize;
 
 use crate::Host;
 use crate::module::{
@@ -37,7 +38,7 @@ pub trait MonitoringModule : Module {
 
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct DisplayOptions {
     pub unit: String,
     pub display_name: String,
@@ -56,14 +57,14 @@ impl DisplayOptions {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub enum DisplayStyle {
     String,
     StatusUpDown,
     CriticalityLevel,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize)]
 pub enum Criticality {
     NoData,
     Normal,
@@ -72,7 +73,7 @@ pub enum Criticality {
     Critical,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct MonitoringData {
     pub values: Vec<DataPoint>,
     pub display_options: DisplayOptions,
@@ -89,7 +90,7 @@ impl MonitoringData {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct DataPoint {
     pub value: String,
     pub multivalue: Vec<DataPoint>,
