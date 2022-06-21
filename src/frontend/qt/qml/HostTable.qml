@@ -13,46 +13,61 @@ Item {
         model: parent.model
         Component.onCompleted: parent.model.receive_updates()
 
-        delegate: Rectangle {
-            implicitWidth: table_container.width
-            implicitHeight: 40
-            radius: 8
-            color: model.row % 2 == 0 ? "#efefef" : "#e5e5e5"
+        delegate: DelegateChooser {
 
-            RowLayout {
-                anchors.fill: parent
-                spacing: 20
+            DelegateChoice {
+                column: 0
+                delegate: TableItem {
+                    firstItem: true
+                    implicitWidth: table.width * 0.18
 
-                RowComponent {
                     HostStatus {
+                        implicitHeight: 40
                         id: host_status
-                        status: value.status
+                        status: value
                     }
                 }
+            }
+            DelegateChoice {
+                column: 1
+                delegate: TableItem {
+                    implicitWidth: table.width * 0.12
 
-                RowComponent {
                     Text {
-                        text: value.name
+                        text: value
                     }
                 }
+            }
+            DelegateChoice {
+                column: 2
+                delegate: TableItem {
+                    implicitWidth: table.width * 0.20
 
-                RowComponent {
                     OptionalText {
                         placeholder: "No FQDN defined"
-                        textContent: value.fqdn
+                        text: value
                     }
                 }
+            }
+            DelegateChoice {
+                column: 3
+                delegate: TableItem {
+                    implicitWidth: table.width * 0.20
 
-                RowComponent {
-                    Text {
-                        text: value.ip_address
+                    OptionalText {
+                        placeholder: "IP address not available"
+                        text: value
                     }
                 }
+            }
+            DelegateChoice {
+                column: 4
+                delegate: TableItem {
+                    implicitWidth: table.width * 0.30
 
-                RowComponent {
-                    Layout.fillWidth: true
-                    MonitorSummary {
-                        values: value.monitor_data
+                    OptionalText {
+                        placeholder: ""
+                        text: value
                     }
                 }
             }

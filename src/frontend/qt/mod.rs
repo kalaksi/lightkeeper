@@ -49,10 +49,9 @@ impl QmlFrontend {
 
 #[derive(QObject, Default)]
 struct HostList {
-    base: qt_base_class!(trait QAbstractListModel),
+    base: qt_base_class!(trait QAbstractTableModel),
     headers: Vec<QString>,
-    hosts: qt_property!(HostCollection; NOTIFY hosts_changed),
-    hosts_changed: qt_signal!(),
+    hosts: qt_property!(HostCollection),
 
     receive_updates: qt_method!(fn(&self)),
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
@@ -90,14 +89,19 @@ impl HostList {
     fn receive_updates(&mut self) {
         // Shouldn't be run more than once.
         if self.update_receiver_thread.is_none() {
-            let qptr = QPointer::from(&*self);
-            let set_value = qmetaobject::queued_callback(move |host_data: HostData| {
-                qptr.as_pinned().map(|self_| {
+            let self_ptr = QPointer::from(&*self);
+            let set_data = qmetaobject::queued_callback(move |host_data: HostData| {
+                self_ptr.as_pinned().map(|self_pinned| {
                     let _old_value = std::mem::replace(
-                        self_.borrow_mut().hosts.data.iter_mut().find(|host| host.name == host_data.name).unwrap(),
+                        self_pinned.borrow_mut().hosts.data.iter_mut().find(|host| host.name == host_data.name).unwrap(),
                         host_data,
                     );
-                    self_.borrow().hosts_changed();
+
+                    // TODO:
+                    // let index = self_pinned.borrow().hosts.data.iter().position(|&item| item.name == host_data.name).unwrap();
+                    let top_left = self_pinned.borrow().index(0, 0);
+                    let bottom_right = self_pinned.borrow().index(self_pinned.borrow().hosts.data.len() as i32 - 1, 0);
+                    self_pinned.borrow_mut().data_changed(top_left, bottom_right);
                 });
             });
 
@@ -106,7 +110,7 @@ impl HostList {
                 loop {
                     let received_data = receiver.recv().unwrap();
                     let host_data = HostData::from(&received_data);
-                    set_value(host_data);
+                    set_data(host_data);
                 }
             });
 
@@ -116,9 +120,13 @@ impl HostList {
 }
 
 
-impl QAbstractListModel for HostList {
+impl QAbstractTableModel for HostList {
     fn row_count(&self) -> i32 {
         self.hosts.data.len() as i32
+    }
+
+    fn column_count(&self) -> i32 {
+        5
     }
 
     fn data(&self, index: QModelIndex, role: i32) -> QVariant {
@@ -126,7 +134,19 @@ impl QAbstractListModel for HostList {
             return QVariant::default();
         }
 
-        self.hosts.data.get(index.row() as usize).map(|item| item.to_qvariant()).unwrap_or_default()
+        let row = self.hosts.data.get(index.row() as usize).unwrap();
+
+        match index.column() {
+            0 => row.status.to_qvariant(),
+            1 => row.name.to_qvariant(),
+            2 => row.fqdn.to_qvariant(),
+            3 => row.ip_address.to_qvariant(),
+            _ => {
+                // row.monitor_data.get(index.column() as usize).unwrap_or(&QString::from("")).to_qvariant()
+                // row.monitor_data.get(index.column() as usize).unwrap_or(&QString::from("")).to_qvariant()
+                QString::from("beeeee").to_qvariant()
+            }
+        }
     }
 
     fn role_names(&self) -> std::collections::HashMap<i32, QByteArray> {

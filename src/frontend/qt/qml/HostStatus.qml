@@ -3,9 +3,6 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 
 Item {
-    anchors.fill: parent
-    x: 0.2 * parent.height
-
     required property string status
     property var colors: {}
     property var icons: {}
@@ -15,8 +12,9 @@ Item {
     Image {
         id: status_image
         x: 0.4 * parent.height
-        width: parent.height
-        height: parent.height
+        width: 0.8 * parent.height
+        height: 0.8 * parent.height
+        anchors.verticalCenter: parent.verticalCenter
         antialiasing: true
         source: getIcon()
     }
@@ -30,8 +28,8 @@ Item {
 
     Text {
         anchors.left: status_image.right
-        anchors.leftMargin: 0.3 * width
-        anchors.rightMargin: 0.3 * width
+        anchors.leftMargin: 0.4 * parent.height
+        anchors.rightMargin: 0.4 * parent.height
         anchors.verticalCenter: parent.verticalCenter
 
         text: status
