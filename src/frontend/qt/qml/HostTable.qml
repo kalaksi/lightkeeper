@@ -3,7 +3,7 @@ import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
 
 Item {
-    id: table_container
+    id: root
     required property var model
 
     TableView {
@@ -14,7 +14,6 @@ Item {
         Component.onCompleted: parent.model.receive_updates()
 
         delegate: DelegateChooser {
-
             DelegateChoice {
                 column: 0
                 delegate: TableItem {
@@ -65,10 +64,17 @@ Item {
                 delegate: TableItem {
                     implicitWidth: table.width * 0.35
 
-                    OptionalText {
-                        placeholder: ""
-                        text: value
+                    Repeater {
+                        model: root.model.get_monitor_data(value)
+
+                    Text {
+                        // text: JSON.stringify(value)
+                        // text: root.model.get_monitor_data(value).toString()
+                        // text: root.model.get_monitor_data(value)
+                        text: modelData
                     }
+                    }
+
                 }
             }
         }
