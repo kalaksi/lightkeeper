@@ -64,17 +64,9 @@ Item {
                 delegate: TableItem {
                     implicitWidth: table.width * 0.35
 
-                    Repeater {
+                    MonitorSummary {
                         model: root.model.get_monitor_data(value)
-
-                    Text {
-                        // text: JSON.stringify(value)
-                        // text: root.model.get_monitor_data(value).toString()
-                        // text: root.model.get_monitor_data(value)
-                        text: modelData
                     }
-                    }
-
                 }
             }
         }
