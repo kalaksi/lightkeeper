@@ -32,7 +32,7 @@ impl HostManager {
         let shared_hosts = Arc::new(Mutex::new(HostCollection::new()));
         let observers = Arc::new(Mutex::new(Vec::new()));
 
-        let handle = Self::start_receiving_updates(shared_hosts.clone(), receiver);
+        let handle = Self::start_receiving_updates(shared_hosts.clone(), receiver, observers.clone());
 
         HostManager {
             hosts: shared_hosts,
@@ -59,7 +59,7 @@ impl HostManager {
         self.observers.lock().unwrap().push(sender);
     }
 
-    fn start_receiving_updates(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<DataPointMessage>) -> thread::JoinHandle<()> {
+    fn start_receiving_updates(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<DataPointMessage>,
         observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             loop {
