@@ -46,6 +46,7 @@ fn main() {
     };
 
     let module_factory = ModuleFactory::new();
+
     let mut host_manager = HostManager::new();
     let mut monitor_manager = MonitorManager::new(host_manager.get_state_udpate_channel());
     let mut connection_manager = ConnectionManager::new();
@@ -89,15 +90,16 @@ fn main() {
         }
     }
 
-
     monitor_manager.refresh_monitors();
+    let initial_display_data = host_manager.get_display_data();
 
-    let draw_thread = frontend::qt::QmlFrontend::draw(host_manager.get_display_data(&config.display_options.excluded_monitors));
-    // frontend::cli::Cli::draw(&host_manager.get_display_data(&config.display_options.excluded_monitors));
+    let mut frontend = frontend::qt::QmlFrontend::new(&initial_display_data);
+    host_manager.add_observer(frontend.new_update_sender());
+
+    frontend.start();
 
     connection_manager.join();
     monitor_manager.join();
     host_manager.join();
-    draw_thread.join().unwrap();
 
 }

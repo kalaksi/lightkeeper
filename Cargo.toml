@@ -12,9 +12,9 @@ serde = "1.0.137"
 serde_derive = "1.0.137"
 serde_yaml = "0.8.24"
 serde_json = "1.0.81"
-chrono = "0.4.0"
+chrono = { version = "0.4.0", features = ["serde"]}
 oping = "0.4.0"
 tabled = { version = "0.6.1", features = ["color"] }
 owo-colors = "3.4.0"
-qmetaobject = "0.2.3"
+qmetaobject = "0.2.7"
 cstr = "0.2.10"
