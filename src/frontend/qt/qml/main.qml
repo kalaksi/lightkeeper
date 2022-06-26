@@ -13,7 +13,7 @@ ApplicationWindow {
     width: 1024
     height: 600
 
-    Material.theme: Material.Dark
+    Material.theme: Material.Light
 
     Item {
         anchors.fill: parent

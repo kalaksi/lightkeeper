@@ -9,9 +9,8 @@ Item {
     implicitWidth: parent.width
     required property var model 
     property var colors: {}
-    property var icons: {}
 
-    FontLoader { id: font_label; source: "../fonts/Pixeloid/PixeloidSans-nR3g1.ttf" }
+    FontLoader { id: font_label; source: "qrc:/main/fonts/pixeloid" }
 
     Row {
         Repeater {
@@ -24,12 +23,12 @@ Item {
                 width: 0.7 * root.height
 
                 states: State {
-                    name: "show"
+                    name: "show_label"
                     when: mouseArea.containsMouse
 
                     PropertyChanges {
                         target: label
-                        opacity: 1
+                        opacity: 0.8
                     }
                 }
 
@@ -40,7 +39,7 @@ Item {
                     width: 0.45 * root.height
                     height: 0.45 * root.height
                     antialiasing: true
-                    source: getIcon(criticality)
+                    source: "qrc:/main/images/criticality/" + criticality
 
                     MouseArea {
                         id: mouseArea
@@ -64,7 +63,6 @@ Item {
                     font.pointSize: 6
                     opacity: 0
                 }
-
             }
         }
     }
@@ -77,22 +75,35 @@ Item {
             normal: "green",
             _: "orange",
         }
-
-        icons = {
-            critical: "../images/fontawesome/circle-exclamation.svg",
-            error: "../images/fontawesome/circle-exclamation.svg",
-            warning: "../images/fontawesome/circle-exclamation.svg",
-            normal: "../images/fontawesome/circle-check.svg",
-            _: "../images/fontawesome/circle-question.svg",
-        }
     }
 
-    function getIcon(criticality) {
-        let icon = icons[criticality]
-        if (typeof icon !== "undefined") {
-            return icon 
+    function getLast(monitorData) {
+        let lastIndex = monitorData.values.length - 1;
+        if (lastIndex < 0) {
+            return null
         }
-        return icons["_"]
+        return monitorData.values[lastIndex];
+    }
+
+    function getDisplayValue(monitorData) {
+        let last = getLast(monitorData)
+        if (last === null) {
+            return "Error"
+        }
+        else if (last.value === "") {
+            if (["error", "critical"].includes(last.criticality.toLowerCase())) {
+                return "Error"
+            }
+            else {
+                return ""
+            }
+        }
+
+        if (last.value !== "-") {
+            return last.value + " " + monitorData.display_options.unit
+        }
+
+        return last.value
     }
 
     function getColor(criticality) {

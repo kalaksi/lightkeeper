@@ -5,9 +5,8 @@ import QtGraphicalEffects 1.15
 Item {
     required property string status
     property var colors: {}
-    property var icons: {}
 
-    FontLoader { id: font_status; source: "../fonts/PressStart2P/PressStart2P-vaV7.ttf" }
+    FontLoader { id: font_status; source: "qrc:/main/fonts/pressstart2p" }
 
     Image {
         id: status_image
@@ -16,7 +15,7 @@ Item {
         height: 0.8 * parent.height
         anchors.verticalCenter: parent.verticalCenter
         antialiasing: true
-        source: getIcon()
+        source: "qrc:/main/images/status/" + parent.status
     }
 
     ColorOverlay {
@@ -43,24 +42,10 @@ Item {
             down: "#b22222",
             _: "orange",
         }
-
-        icons = {
-            up: "../images/fontawesome/circle-arrow-up.svg",
-            down: "../images/fontawesome/circle-arrow-down.svg",
-            _: "../images/fontawesome/circle-question.svg",
-        }
-    }
-
-    function getIcon() {
-        let icon = icons[status.toLowerCase()]
-        if (typeof icon !== "undefined") {
-            return icon 
-        }
-        return icons["_"]
     }
 
     function getColor() {
-        let color = colors[status.toLowerCase()]
+        let color = colors[status]
         if (typeof color !== "undefined") {
             return color
         }

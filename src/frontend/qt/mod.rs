@@ -3,6 +3,8 @@ mod monitor_data_model;
 mod host_list_model;
 use host_list_model::HostListModel;
 
+mod resources;
+
 use std::sync::mpsc;
 // use cstr::cstr;
 extern crate qmetaobject;
@@ -19,6 +21,7 @@ pub struct QmlFrontend {
 impl QmlFrontend {
     pub fn new(display_data: &DisplayData) -> Self {
         qmetaobject::log::init_qt_to_rust();
+        resources::init_resources();
 
         let (data_model, update_sender) = HostListModel::new(&display_data);
 
