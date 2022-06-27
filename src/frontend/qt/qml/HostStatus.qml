@@ -5,17 +5,19 @@ import QtGraphicalEffects 1.15
 Item {
     required property string status
     property var colors: {}
+    property bool showIcon: true
 
     FontLoader { id: font_status; source: "qrc:/main/fonts/pressstart2p" }
 
     Image {
         id: status_image
         x: 0.4 * parent.height
-        width: 0.8 * parent.height
-        height: 0.8 * parent.height
+        width: showIcon ? 0.7 * parent.height : 0
+        height: showIcon ? 0.7 * parent.height : 0
         anchors.verticalCenter: parent.verticalCenter
         antialiasing: true
         source: "qrc:/main/images/status/" + parent.status
+        visible: showIcon
     }
 
     ColorOverlay {
@@ -23,6 +25,7 @@ Item {
         source: status_image
         color: getColor()
         antialiasing: true
+        visible: showIcon
     }
 
     Text {
@@ -31,14 +34,14 @@ Item {
         anchors.rightMargin: 0.4 * parent.height
         anchors.verticalCenter: parent.verticalCenter
 
-        text: status
+        text: status.toUpperCase()
         font.family: font_status.name
         color: getColor()
     }
 
     Component.onCompleted: function() {
         colors = {
-            up: "green",
+            up: "#059033",
             down: "#b22222",
             _: "orange",
         }
