@@ -5,15 +5,15 @@ import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
 Item {
+    id: root
     required property var model
-    required property string selectedHost
 
     Rectangle {
         anchors.fill: parent
         color: Material.background
 
         Text {
-            text: selectedHost
+            text: root.model.selected_row
         }
     }
 }
