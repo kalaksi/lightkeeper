@@ -19,11 +19,35 @@ ApplicationWindow {
         id: body
         anchors.fill: parent
         property string selectedHost
-        property bool showDetails: false
         property real splitSize: 0.0
+        property bool showDetails: false
+
+        SplitView {
+            anchors.fill: parent
+            orientation: Qt.Vertical
+
+            HostTable {
+                id: table
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                ScrollBar.vertical: ScrollBar { }
+
+                model: lightkeeper_data
+            }
+
+            HostDetails {
+                id: details
+                SplitView.fillWidth: true
+                SplitView.minimumHeight: 0.5 * body.splitSize * parent.height
+                SplitView.preferredHeight: body.splitSize * parent.height
+                SplitView.maximumHeight: 1.5 * body.splitSize * parent.height
+
+                model: lightkeeper_data
+            }
+        }
 
         onShowDetailsChanged: function() {
-            if (body.showDetails === true) {
+            if (showDetails === true) {
                 animateShowDetails.start()
             }
             else {
@@ -31,49 +55,48 @@ ApplicationWindow {
             }
         }
 
-        PropertyAnimation {
+        NumberAnimation {
             id: animateShowDetails
             target: body
-            properties: "splitSize"
+            property: "splitSize"
             to: 0.5
             duration: 150
         }
 
-        PropertyAnimation {
+        NumberAnimation {
             id: animateHideDetails
             target: body
-            properties: "splitSize"
+            property: "splitSize"
             to: 0.0
             duration: 150
         }
 
-        states: State {
-            name: "show_details"
-            when: lightkeeper_data.selected_row >= 0
+        Binding { 
+            target: body
+            property: "showDetails"
+            value: lightkeeper_data.selected_row >= 0
+        }
 
-            PropertyChanges {
-                target: body
-                showDetails: true
+        states: [
+            State {
+                name: "detailsShownVisibility"
+                when: body.splitSize > 0.01
+
+                PropertyChanges {
+                    target: details
+                    visible: true
+                }
+            },
+            State {
+                name: "detailsHiddenVisibility"
+                when: body.splitSize < 0.01
+
+                PropertyChanges {
+                    target: details
+                    visible: false
+                }
             }
-        }
+        ]
 
-        HostTable {
-            id: table
-            anchors.top: parent.top
-            width: parent.width
-            height: (1.0 - parent.splitSize) * parent.height
-            ScrollBar.vertical: ScrollBar { }
-
-            model: lightkeeper_data
-        }
-
-        HostDetails {
-            id: details
-            width: root.width
-            height: parent.splitSize * parent.height
-            anchors.bottom: parent.bottom
-
-            model: lightkeeper_data
-        }
     }
 }
