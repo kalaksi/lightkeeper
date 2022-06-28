@@ -8,7 +8,6 @@ Item {
     anchors.fill: parent
 
     Text {
-        // anchors.fill: parent
         anchors.verticalCenter: parent.verticalCenter
         text: parent.text.length === 0 ? placeholder : parent.text
         color: Material.foreground

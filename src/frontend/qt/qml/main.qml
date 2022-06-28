@@ -13,7 +13,7 @@ ApplicationWindow {
     width: 1024
     height: 600
 
-    Material.theme: Material.Light
+    Material.theme: Material.System
 
     Item {
         id: body
@@ -28,7 +28,8 @@ ApplicationWindow {
 
             HostTable {
                 id: table
-                SplitView.fillWidth: true
+                width: parent.width
+                SplitView.minimumWidth: body.width
                 SplitView.fillHeight: true
                 ScrollBar.vertical: ScrollBar { }
 
@@ -37,7 +38,7 @@ ApplicationWindow {
 
             HostDetails {
                 id: details
-                SplitView.fillWidth: true
+                width: parent.width
                 SplitView.minimumHeight: 0.5 * body.splitSize * parent.height
                 SplitView.preferredHeight: body.splitSize * parent.height
                 SplitView.maximumHeight: 1.5 * body.splitSize * parent.height

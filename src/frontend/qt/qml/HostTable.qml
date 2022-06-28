@@ -8,9 +8,7 @@ TableView {
     id: table
     property int rowHeight: 40
 
-    // Disables flick but also mouse scrolling
-    // interactive: false
-
+    boundsBehavior: Flickable.StopAtBounds
     onWidthChanged: forceLayout()
     Component.onCompleted: model.receive_updates()
 
@@ -24,8 +22,9 @@ TableView {
                 selected: table.model.selected_row === row
                 onClickedChanged: selectRow(row)
                 implicitWidth: table.width * 0.15
+                implicitHeight: table.rowHeight
 
-                HostStatus { implicitHeight: table.rowHeight
+                HostStatus {
                     id: host_status
                     status: value.toLowerCase()
                 }
@@ -37,7 +36,6 @@ TableView {
                 selected: table.model.selected_row === row
                 onClickedChanged: selectRow(row)
                 implicitWidth: table.width * 0.10
-                implicitHeight: table.rowHeight
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
@@ -90,8 +88,6 @@ TableView {
             delegate: TableCell {
                 selected: table.model.selected_row === row
                 onClickedChanged: selectRow(row)
-                ActionButtons {
-                }
             }
         }
     }
