@@ -6,7 +6,6 @@ use host_list_model::HostListModel;
 mod resources;
 
 use std::sync::mpsc;
-// use cstr::cstr;
 extern crate qmetaobject;
 use qmetaobject::*;
 
@@ -33,7 +32,6 @@ impl QmlFrontend {
 
     pub fn start(&mut self) {
         let qt_data = QObjectBox::new(self.model.take().unwrap());
-        // qml_register_type::<MonitorDataModel>(cstr!("MonitorDataModel"), 1, 0, cstr!("MonitorDataModel"));
 
         let mut engine = QmlEngine::new();
         engine.set_object_property("lightkeeper_data".into(), qt_data.pinned());

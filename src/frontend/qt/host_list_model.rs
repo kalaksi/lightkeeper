@@ -23,6 +23,7 @@ pub struct HostListModel {
     // Couldn't get custom types to work for return types,
     // so for now methods are used to get the monitoring data.
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_host_data: qt_method!(fn(&self, index: i32) -> QVariantList),
 
     // For table row selection.
     selected_row: qt_property!(i32; NOTIFY selected_row_changed),
@@ -94,6 +95,20 @@ impl HostListModel {
     fn get_monitor_data(&self, host_id: QString) -> QVariantList {
         let host = self.hosts.get(&host_id.to_string()).unwrap();
         host.monitor_data.clone().data
+    }
+
+    fn get_host_data(&self, index: i32) -> QVariantList {
+        let mut list = QVariantList::default();
+
+        if let Some(host_id) = self.hosts_index.get(&(index as usize)) {
+            let host = self.hosts.get(&host_id.to_string()).unwrap();
+            list.push(host.status.to_qvariant());
+            list.push(host.name.to_qvariant());
+            list.push(host.fqdn.to_qvariant());
+            list.push(host.ip_address.to_qvariant());
+        }
+
+        list
     }
 }
 

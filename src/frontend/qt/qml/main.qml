@@ -18,7 +18,6 @@ ApplicationWindow {
     Item {
         id: body
         anchors.fill: parent
-        property string selectedHost
         property real splitSize: 0.0
         property bool showDetails: false
 
@@ -43,7 +42,7 @@ ApplicationWindow {
                 SplitView.preferredHeight: body.splitSize * parent.height
                 SplitView.maximumHeight: 1.5 * body.splitSize * parent.height
 
-                model: lightkeeper_data
+                model: lightkeeper_data.get_host_data(lightkeeper_data.selected_row)
             }
         }
 
