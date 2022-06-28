@@ -69,10 +69,10 @@ Item {
 
     Component.onCompleted: function() {
         colors = {
-            critical: "#b22222",
-            error: "#b22222",
+            critical: "firebrick",
+            error: "firebrick",
             warning: "orange",
-            normal: "green",
+            normal: "forestgreen",
             _: "orange",
         }
     }

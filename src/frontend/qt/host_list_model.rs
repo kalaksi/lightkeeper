@@ -13,8 +13,8 @@ use super::monitor_data_model::MonitorDataModel;
 pub struct HostListModel {
     base: qt_base_class!(trait QAbstractTableModel),
     headers: Vec<QString>,
-    hosts: Vec<HostData>,
-    host_id_index: HashMap<String, usize>,
+    hosts: HashMap<String, HostData>,
+    hosts_index: HashMap<usize, String>,
 
     receive_updates: qt_method!(fn(&self)),
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
@@ -22,7 +22,11 @@ pub struct HostListModel {
 
     // Couldn't get custom types to work for return types,
     // so for now methods are used to get the monitoring data.
-    get_monitor_data: qt_method!(fn(&self, host_index: i32) -> QVariantList),
+    get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+
+    // For table row selection.
+    selected_row: qt_property!(i32; NOTIFY selected_row_changed),
+    selected_row_changed: qt_signal!(),
 }
 
 impl HostListModel {
@@ -30,10 +34,11 @@ impl HostListModel {
         let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
         let mut model = HostListModel {
             headers: Vec::new(),
-            hosts: Vec::new(),
-            host_id_index: HashMap::new(),
+            hosts: HashMap::new(),
+            hosts_index: HashMap::new(),
             update_receiver: Some(receiver),
             update_receiver_thread: None,
+            selected_row: -1,
             ..Default::default()
         };
 
@@ -42,8 +47,8 @@ impl HostListModel {
         }
 
         for (host_id, host_data) in display_data.hosts.iter() {
-            model.host_id_index.insert(host_id.clone(), model.hosts.len());
-            model.hosts.push(HostData::from(&host_data));
+            model.hosts_index.insert(model.hosts.len(), host_id.clone());
+            model.hosts.insert(host_id.clone(), HostData::from(&host_data));
         }
 
         (model, sender)
@@ -57,10 +62,9 @@ impl HostListModel {
                 self_ptr.as_pinned().map(|self_pinned| {
                     // HostData cannot be passed between threads so parsing happens in set_data().
                     let host_data = HostData::from(&host_display_data);
-                    let host_index = self_pinned.borrow().host_id_index.get(&host_data.name.to_string()).unwrap().clone();
 
                     let _old_value = std::mem::replace(
-                        self_pinned.borrow_mut().hosts.get_mut(host_index).unwrap(),
+                        self_pinned.borrow_mut().hosts.get_mut(&host_data.name.to_string()).unwrap(),
                         host_data,
                     );
 
@@ -87,8 +91,8 @@ impl HostListModel {
         }
     }
 
-    fn get_monitor_data(&self, host_index: i32) -> QVariantList {
-        let host = self.hosts.get(host_index as usize).unwrap();
+    fn get_monitor_data(&self, host_id: QString) -> QVariantList {
+        let host = self.hosts.get(&host_id.to_string()).unwrap();
         host.monitor_data.clone().data
     }
 }
@@ -100,23 +104,25 @@ impl QAbstractTableModel for HostListModel {
     }
 
     fn column_count(&self) -> i32 {
-        5
+        6
     }
 
     fn data(&self, index: QModelIndex, role: i32) -> QVariant {
         if role != USER_ROLE {
-            return QVariant::default();
+            return QString::from(format!("Unknown role: {}", role)).to_qvariant();
         }
 
-        let row = self.hosts.get(index.row() as usize).unwrap();
+        let host_id = self.hosts_index.get(&(index.row() as usize)).unwrap();
+        let row = self.hosts.get(host_id).unwrap();
 
         match index.column() {
             0 => row.status.to_qvariant(),
             1 => row.name.to_qvariant(),
             2 => row.fqdn.to_qvariant(),
             3 => row.ip_address.to_qvariant(),
-            // Return index to use with get_monitor_data().
-            4 => index.row().to_qvariant(),
+            // Return host id to use with get_monitor_data().
+            4 => row.name.to_qvariant(),
+            5 => row.name.to_qvariant(),
             _ => panic!(),
         }
     }

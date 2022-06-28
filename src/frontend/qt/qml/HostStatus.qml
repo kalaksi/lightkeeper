@@ -41,8 +41,8 @@ Item {
 
     Component.onCompleted: function() {
         colors = {
-            up: "#059033",
-            down: "#b22222",
+            up: "forestgreen",
+            down: "firebrick",
             _: "orange",
         }
     }
