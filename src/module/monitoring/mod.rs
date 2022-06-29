@@ -8,4 +8,8 @@ pub use monitoring_module::DisplayOptions;
 pub use monitoring_module::Criticality;
 
 pub mod linux;
+pub use linux::Uptime;
+pub use linux::Docker;
 pub mod network;
+pub use network::Ping;
+pub use network::Ssh;
