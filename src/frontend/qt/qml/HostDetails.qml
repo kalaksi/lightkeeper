@@ -5,10 +5,13 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
+import "js/TextTransform.js" as TextTransform
+
 Item {
     id: root
     required property var model
-    property var hostData: lightkeeper_data.get_host_data(lightkeeper_data.selected_row)
+    property var hostData: model.get_host_data(model.selected_row)
+    property int columnMaximumWidth: 500
 
     Rectangle {
         anchors.fill: parent
@@ -18,20 +21,19 @@ Item {
     GridLayout {
         id: grid
         anchors.fill: parent
-        flow: GridLayout.TopToBottom
-        rows: 3
+        columns: 6
+        rows: 2
 
         GroupBox {
             title: "Host"
-            Layout.fillHeight: true
-            Layout.preferredWidth: 0.3 * parent.width
-            Layout.maximumWidth: 600
-            Layout.rowSpan: 3
+            Layout.minimumWidth: 0.5 * root.columnMaximumWidth
+            Layout.maximumWidth: root.columnMaximumWidth
             Layout.alignment: Qt.AlignTop
-            
+
             ColumnLayout {
+                id: column
                 anchors.top: parent.top
-                implicitWidth: parent.width
+                width: parent.width
 
                 // TODO: get rid of the manual indexing and length checking
                 PropertyRow {
@@ -58,19 +60,54 @@ Item {
         }
  
         Repeater {
-            model: root.hostData.length > 0 ? root.model.get_monitor_data(root.hostData[1]) : 0
+            model: root.hostData.length > 0 ? groupByCategory(root.model.get_monitor_data(root.hostData[1])) : 0
  
-            Item {
-                property var monitorData: JSON.parse(modelData)
-                Layout.rowSpan: 2
-                Layout.preferredWidth: 0.2 * grid.width
+            GroupBox {
+                title: modelData.category
+                Layout.minimumWidth: 0.5 * root.columnMaximumWidth
+                Layout.maximumWidth: root.columnMaximumWidth
+                Layout.alignment: Qt.AlignTop
 
-                PropertyRow {
-                    label: monitorData.display_options.display_name
-                    value: monitorData.values[0].value + " " + monitorData.display_options.unit
+                ColumnLayout {
+                    anchors.top: parent.top
+                    implicitWidth: parent.width
+
+                    Repeater {
+                        model: modelData.monitors
+
+                        PropertyRow {
+                            id: propertyRow
+                            label: modelData.display_options.display_name
+                            value: modelData.values[0].value + " " + modelData.display_options.unit
+                        }
+                    }
                 }
             }
         }
+    }
+
+    function groupByCategory(monitorDataJsons) {
+        let categories = [];
+        let categorized = {};
+
+        monitorDataJsons.forEach(json => {
+            let data = JSON.parse(json)
+            let category = data.display_options.category
+
+            if (!categories.includes(category)) {
+                categories.push(category)
+                categorized[category] = [ data ]
+            }
+            else {
+                categorized[category].push(data)
+            }
+        })
+
+        // Essentially a list of key-value pairs.
+        return categories.map(category => ({
+            category: TextTransform.capitalize(category),
+            monitors: categorized[category]
+        }))
     }
 
 }
