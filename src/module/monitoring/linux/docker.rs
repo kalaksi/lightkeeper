@@ -16,7 +16,7 @@ pub struct Docker {
 impl Module for Docker {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new(String::from("docker"), "0.0.1"),
+            module_spec: ModuleSpecification::new("docker", "0.0.1"),
             category: String::from("containers"),
             description: String::from("Tested with API version 1.41"),
             url: String::from(""),
@@ -37,7 +37,7 @@ impl Module for Docker {
 
 impl MonitoringModule for Docker {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new(String::from("ssh"), "0.0.1"))
+        Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
     fn get_display_options(&self) -> DisplayOptions {

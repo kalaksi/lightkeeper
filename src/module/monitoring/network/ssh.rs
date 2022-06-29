@@ -13,7 +13,7 @@ pub struct Ssh;
 impl Module for Ssh {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new(String::from("ssh"), "0.0.1"),
+            module_spec: ModuleSpecification::new("ssh", "0.0.1"),
             category: String::from("network"),
             description: String::from(""),
             url: String::from(""),
@@ -31,7 +31,7 @@ impl Module for Ssh {
 
 impl MonitoringModule for Ssh {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new(String::from("ssh"), "0.0.1"))
+        Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
     fn get_connector_message(&self) -> String {
