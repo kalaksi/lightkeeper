@@ -42,7 +42,7 @@ ApplicationWindow {
                 SplitView.preferredHeight: body.splitSize * parent.height
                 SplitView.maximumHeight: 1.5 * body.splitSize * parent.height
 
-                model: lightkeeper_data.get_host_data(lightkeeper_data.selected_row)
+                model: lightkeeper_data
             }
         }
 

@@ -8,6 +8,7 @@ import QtQuick.Controls.Material 2.15
 Item {
     id: root
     required property var model
+    property var hostData: lightkeeper_data.get_host_data(lightkeeper_data.selected_row)
 
     Rectangle {
         anchors.fill: parent
@@ -15,7 +16,7 @@ Item {
     }
 
     GridLayout {
-        id: gridLayout
+        id: grid
         anchors.fill: parent
         flow: GridLayout.TopToBottom
         rows: 3
@@ -23,7 +24,8 @@ Item {
         GroupBox {
             title: "Host"
             Layout.fillHeight: true
-            Layout.preferredWidth: 0.4 * parent.width
+            Layout.preferredWidth: 0.3 * parent.width
+            Layout.maximumWidth: 600
             Layout.rowSpan: 3
             Layout.alignment: Qt.AlignTop
             
@@ -31,27 +33,43 @@ Item {
                 anchors.top: parent.top
                 implicitWidth: parent.width
 
+                // TODO: get rid of the manual indexing and length checking
                 PropertyRow {
                     label: "Status"
-                    value: root.model.length > 0 ? root.model[0] : ""
+                    value: root.hostData.length > 0 ? root.hostData[0] : ""
                 }
 
                 PropertyRow {
                     label: "Name"
-                    value: root.model.length > 0 ? root.model[1] : ""
+                    value: root.hostData.length > 0 ? root.hostData[1] : ""
                 }
 
                 PropertyRow {
                     label: "FQDN"
-                    value: root.model.length > 0 ? root.model[2] : ""
+                    value: root.hostData.length > 0 ? root.hostData[2] : ""
                 }
 
                 PropertyRow {
                     label: "IP address"
-                    value: root.model.length > 0 ? root.model[3] : ""
+                    value: root.hostData.length > 0 ? root.hostData[3] : ""
                 }
             }
 
+        }
+ 
+        Repeater {
+            model: root.hostData.length > 0 ? root.model.get_monitor_data(root.hostData[1]) : 0
+ 
+            Item {
+                property var monitorData: JSON.parse(modelData)
+                Layout.rowSpan: 2
+                Layout.preferredWidth: 0.2 * grid.width
+
+                PropertyRow {
+                    label: monitorData.display_options.display_name
+                    value: monitorData.values[0].value + " " + monitorData.display_options.unit
+                }
+            }
         }
     }
 
