@@ -5,10 +5,7 @@ use chrono::{DateTime, Utc};
 use serde_derive::Serialize;
 
 use crate::Host;
-use crate::module::{
-    module::Module,
-    ModuleSpecification,
-};
+use crate::module::{ module::Module, ModuleSpecification };
 
 pub type Monitor = Box<dyn MonitoringModule + Send>;
 
@@ -32,7 +29,7 @@ pub trait MonitoringModule : Module {
     }
 
     fn get_connector_message(&self) -> String {
-        panic!("No connector message configured for {}", self.get_module_spec().id);
+        String::from("")
     }
 
     fn process(&self, host: &Host, response: &String, connector_is_connected: bool) -> Result<DataPoint, String>;

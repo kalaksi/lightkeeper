@@ -51,13 +51,14 @@ impl MonitoringModule for Docker {
 
     fn get_connector_message(&self) -> String {
         // TODO: somehow connect directly to the unix socket instead of using curl?
-        let mut command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
+        let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
         if self.use_sudo {
-            command = format!("sudo {}", command);
+            format!("sudo {}", command)
         }
-
-        command
+        else {
+            command
+        }
     }
 
     fn process(&self, _host: &Host, response: &String, _connector_is_connected: bool) -> Result<DataPoint, String> {

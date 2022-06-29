@@ -87,8 +87,8 @@ Item {
     }
 
     function groupByCategory(monitorDataJsons) {
-        let categories = [];
-        let categorized = {};
+        let categories = []
+        let categorized = {}
 
         monitorDataJsons.forEach(json => {
             let data = JSON.parse(json)
