@@ -19,6 +19,7 @@ impl Module for Uptime {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from("uptime"), "0.0.1"),
+            category: String::from("host"),
             description: String::from(""),
             url: String::from(""),
         }

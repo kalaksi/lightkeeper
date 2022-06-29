@@ -20,6 +20,7 @@ impl Module for Ping {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from("ping"), "0.0.1"),
+            category: String::from("network"),
             description: String::from(""),
             url: String::from(""),
         }

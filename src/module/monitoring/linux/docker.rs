@@ -17,6 +17,7 @@ impl Module for Docker {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new(String::from("docker"), "0.0.1"),
+            category: String::from("containers"),
             description: String::from("Tested with API version 1.41"),
             url: String::from(""),
         }
