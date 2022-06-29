@@ -1,74 +1,103 @@
 import QtQuick 2.15
+import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
+import QtQuick.Controls.Material 2.15
 
-Item {
-    id: root
-    required property var model
+TableView {
+    id: table
+    property int rowHeight: 40
 
-    TableView {
-        id: table
-        anchors.fill: parent
-        onWidthChanged: forceLayout()
-        model: parent.model
-        Component.onCompleted: parent.model.receive_updates()
+    boundsBehavior: Flickable.StopAtBounds
+    onWidthChanged: forceLayout()
+    Component.onCompleted: model.receive_updates()
 
-        delegate: DelegateChooser {
-            DelegateChoice {
-                column: 0
-                delegate: TableItem {
-                    firstItem: true
-                    implicitWidth: table.width * 0.15
+    delegate: DelegateChooser {
+        id: delegateChooser
 
-                    HostStatus {
-                        implicitHeight: 40
-                        id: host_status
-                        status: value
-                    }
+        DelegateChoice {
+            column: 0
+            delegate: TableCell {
+                firstItem: true
+                selected: table.model.selected_row === row
+                onClickedChanged: selectRow(row)
+                implicitWidth: table.width * 0.15
+                implicitHeight: table.rowHeight
+
+                HostStatus {
+                    id: host_status
+                    status: value.toLowerCase()
                 }
             }
-            DelegateChoice {
-                column: 1
-                delegate: TableItem {
-                    implicitWidth: table.width * 0.10
+        }
+        DelegateChoice {
+            column: 1
+            delegate: TableCell {
+                selected: table.model.selected_row === row
+                onClickedChanged: selectRow(row)
+                implicitWidth: table.width * 0.10
 
-                    Text {
-                        text: value
-                    }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: value
+                    color: Material.foreground
                 }
             }
-            DelegateChoice {
-                column: 2
-                delegate: TableItem {
-                    implicitWidth: table.width * 0.20
+        }
+        DelegateChoice {
+            column: 2
+            delegate: TableCell {
+                selected: table.model.selected_row === row
+                onClickedChanged: selectRow(row)
+                implicitWidth: table.width * 0.20
 
-                    OptionalText {
-                        placeholder: "No FQDN defined"
-                        text: value
-                    }
+                OptionalText {
+                    placeholder: "No FQDN defined"
+                    text: value
                 }
             }
-            DelegateChoice {
-                column: 3
-                delegate: TableItem {
-                    implicitWidth: table.width * 0.20
+        }
+        DelegateChoice {
+            column: 3
+            delegate: TableCell {
+                selected: table.model.selected_row === row
+                onClickedChanged: selectRow(row)
+                implicitWidth: table.width * 0.20
 
-                    OptionalText {
-                        placeholder: "IP address not available"
-                        text: value
-                    }
+                OptionalText {
+                    placeholder: "IP address not available"
+                    text: value
                 }
             }
-            DelegateChoice {
-                column: 4
-                delegate: TableItem {
-                    implicitWidth: table.width * 0.35
+        }
+        DelegateChoice {
+            column: 4
+            delegate: TableCell {
+                selected: table.model.selected_row === row
+                onClickedChanged: selectRow(row)
+                implicitWidth: table.width * 0.3
 
-                    MonitorSummary {
-                        model: root.model.get_monitor_data(value)
-                    }
+                MonitorSummary {
+                    model: table.model.get_monitor_data(value)
                 }
             }
+        }
+
+        DelegateChoice {
+            column: 5
+            delegate: TableCell {
+                selected: table.model.selected_row === row
+                onClickedChanged: selectRow(row)
+            }
+        }
+    }
+
+    function selectRow(row) {
+        if (table.model.selected_row === row) {
+            table.model.selected_row = -1
+        }
+        else {
+            table.model.selected_row = row
         }
     }
 }

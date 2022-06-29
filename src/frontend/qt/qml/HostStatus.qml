@@ -1,66 +1,62 @@
 import QtQuick 2.15
 import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
+import QtQuick.Layouts 1.15
 
 Item {
+    id: root
     required property string status
     property var colors: {}
-    property var icons: {}
+    property bool showIcon: true
+    anchors.fill: parent
 
-    FontLoader { id: font_status; source: "../fonts/PressStart2P/PressStart2P-vaV7.ttf" }
+    FontLoader { id: font_status; source: "qrc:/main/fonts/pressstart2p" }
 
-    Image {
-        id: status_image
-        x: 0.4 * parent.height
-        width: 0.8 * parent.height
-        height: 0.8 * parent.height
-        anchors.verticalCenter: parent.verticalCenter
-        antialiasing: true
-        source: getIcon()
+    RowLayout {
+        anchors.fill: parent
+
+        Image {
+            id: status_image
+            antialiasing: true
+            source: "qrc:/main/images/status/" + root.status
+            visible: showIcon
+
+            Layout.leftMargin: showIcon ? 0.4 * parent.height : 0
+            Layout.rightMargin: showIcon ? 0.4 * parent.height : 0
+            Layout.preferredWidth: showIcon ? 0.7 * parent.height : 0
+            Layout.preferredHeight: showIcon ? 0.7 * parent.height : 0
+            Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+
+            ColorOverlay {
+                anchors.fill: status_image
+                source: status_image
+                color: getColor()
+                antialiasing: true
+                visible: showIcon
+            }
+        }
+
+        Text {
+            text: status.toUpperCase()
+            font.family: font_status.name
+            color: getColor()
+
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+        }
     }
 
-    ColorOverlay {
-        anchors.fill: status_image
-        source: status_image
-        color: getColor()
-        antialiasing: true
-    }
-
-    Text {
-        anchors.left: status_image.right
-        anchors.leftMargin: 0.4 * parent.height
-        anchors.rightMargin: 0.4 * parent.height
-        anchors.verticalCenter: parent.verticalCenter
-
-        text: status
-        font.family: font_status.name
-        color: getColor()
-    }
 
     Component.onCompleted: function() {
         colors = {
-            up: "green",
-            down: "#b22222",
+            up: "forestgreen",
+            down: "firebrick",
             _: "orange",
         }
-
-        icons = {
-            up: "../images/fontawesome/circle-arrow-up.svg",
-            down: "../images/fontawesome/circle-arrow-down.svg",
-            _: "../images/fontawesome/circle-question.svg",
-        }
-    }
-
-    function getIcon() {
-        let icon = icons[status.toLowerCase()]
-        if (typeof icon !== "undefined") {
-            return icon 
-        }
-        return icons["_"]
     }
 
     function getColor() {
-        let color = colors[status.toLowerCase()]
+        let color = colors[status]
         if (typeof color !== "undefined") {
             return color
         }

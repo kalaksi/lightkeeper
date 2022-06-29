@@ -18,7 +18,7 @@ pub struct Uptime {
 impl Module for Uptime {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new(String::from("uptime"), String::from("0.0.1")),
+            module_spec: ModuleSpecification::new("uptime", "0.0.1"),
             description: String::from(""),
             url: String::from(""),
         }
@@ -36,15 +36,16 @@ impl Module for Uptime {
 impl MonitoringModule for Uptime {
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
-            display_style: DisplayStyle::String,
             display_name: String::from("Uptime"),
-            use_multivalue: false,
+            display_style: DisplayStyle::String,
+            category: String::from("host"),
             unit: String::from("d"),
+            use_multivalue: false,
         }
     }
 
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new(String::from("ssh"), String::from("0.0.1")))
+        Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
     fn get_connector_message(&self) -> String {

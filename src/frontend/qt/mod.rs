@@ -3,8 +3,9 @@ mod monitor_data_model;
 mod host_list_model;
 use host_list_model::HostListModel;
 
+mod resources;
+
 use std::sync::mpsc;
-// use cstr::cstr;
 extern crate qmetaobject;
 use qmetaobject::*;
 
@@ -19,6 +20,7 @@ pub struct QmlFrontend {
 impl QmlFrontend {
     pub fn new(display_data: &DisplayData) -> Self {
         qmetaobject::log::init_qt_to_rust();
+        resources::init_resources();
 
         let (data_model, update_sender) = HostListModel::new(&display_data);
 
@@ -30,7 +32,6 @@ impl QmlFrontend {
 
     pub fn start(&mut self) {
         let qt_data = QObjectBox::new(self.model.take().unwrap());
-        // qml_register_type::<MonitorDataModel>(cstr!("MonitorDataModel"), 1, 0, cstr!("MonitorDataModel"));
 
         let mut engine = QmlEngine::new();
         engine.set_object_property("lightkeeper_data".into(), qt_data.pinned());

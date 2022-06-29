@@ -8,10 +8,10 @@ pub struct ModuleSpecification {
 }
 
 impl ModuleSpecification {
-    pub fn new(id: String, version: String) -> Self {
+    pub fn new(id: &str, version: &str) -> Self {
         ModuleSpecification {
-            id: id,
-            version: version,
+            id: id.to_string(),
+            version: version.to_string(),
         }
     }
 
@@ -25,7 +25,7 @@ impl ModuleSpecification {
             return Err(String::from("Invalid specification string"));
         }
         else {
-            return Ok(ModuleSpecification::new(String::from(id), String::from(version)))
+            return Ok(ModuleSpecification::new(id, version))
         }
     }
 }

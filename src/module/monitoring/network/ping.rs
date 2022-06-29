@@ -19,7 +19,7 @@ pub struct Ping;
 impl Module for Ping {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new(String::from("ping"), String::from("0.0.1")),
+            module_spec: ModuleSpecification::new("ping", "0.0.1"),
             description: String::from(""),
             url: String::from(""),
         }
@@ -37,10 +37,11 @@ impl Module for Ping {
 impl MonitoringModule for Ping {
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
-            display_style: DisplayStyle::String,
             display_name: String::from("Ping"),
-            use_multivalue: false,
+            display_style: DisplayStyle::String,
+            category: String::from("network"),
             unit: String::from("ms"),
+            use_multivalue: false,
         }
     }
 
