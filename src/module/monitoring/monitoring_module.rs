@@ -25,8 +25,9 @@ pub trait MonitoringModule : Module {
         DisplayOptions {
             display_name: self.get_module_spec().id,
             display_style: DisplayStyle::String,
-            use_multivalue: false,
+            category: String::from(""),
             unit: String::from(""),
+            use_multivalue: false,
         }
     }
 
@@ -40,18 +41,20 @@ pub trait MonitoringModule : Module {
 
 #[derive(Clone, Serialize)]
 pub struct DisplayOptions {
-    pub unit: String,
     pub display_name: String,
     pub display_style: DisplayStyle,
+    pub category: String,
+    pub unit: String,
     pub use_multivalue: bool,
 }
 
 impl DisplayOptions {
     pub fn just_style(display_style: DisplayStyle) -> Self {
         DisplayOptions {
-            unit: String::from(""),
             display_name: String::from(""),
             display_style: display_style,
+            category: String::from(""),
+            unit: String::from(""),
             use_multivalue: false
         }
     }

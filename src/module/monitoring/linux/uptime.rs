@@ -19,7 +19,6 @@ impl Module for Uptime {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new("uptime", "0.0.1"),
-            category: String::from("host"),
             description: String::from(""),
             url: String::from(""),
         }
@@ -37,10 +36,11 @@ impl Module for Uptime {
 impl MonitoringModule for Uptime {
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
-            display_style: DisplayStyle::String,
             display_name: String::from("Uptime"),
-            use_multivalue: false,
+            display_style: DisplayStyle::String,
+            category: String::from("host"),
             unit: String::from("d"),
+            use_multivalue: false,
         }
     }
 
