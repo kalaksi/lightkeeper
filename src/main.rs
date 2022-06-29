@@ -69,7 +69,7 @@ fn main() {
         };
 
         for (monitor_id, monitor_config) in host_config.monitors.iter() {
-            let monitor_spec = ModuleSpecification::new(monitor_id.clone(), monitor_config.version.clone());
+            let monitor_spec = ModuleSpecification::new(monitor_id.clone(), monitor_config.version.as_str());
             let monitor = module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
 
             // Initialize a connector if the monitors uses any.

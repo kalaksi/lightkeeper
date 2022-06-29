@@ -19,7 +19,7 @@ pub struct Ping;
 impl Module for Ping {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new(String::from("ping"), String::from("0.0.1")),
+            module_spec: ModuleSpecification::new(String::from("ping"), "0.0.1"),
             description: String::from(""),
             url: String::from(""),
         }
