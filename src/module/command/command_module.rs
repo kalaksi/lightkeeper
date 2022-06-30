@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use crate::Host;
 use crate::module::{ Module, ModuleSpecification };
 
-pub type Command = Box<dyn CommandModule + Send>;
+pub type Command = Box<dyn CommandModule + Send + Sync>;
 
 pub trait CommandModule : Module {
-    fn new_command_module(settings: &HashMap<String, String>) -> Command where Self: Sized + 'static + Send {
+    fn new_command_module(settings: &HashMap<String, String>) -> Command where Self: Sized + 'static + Send + Sync {
         Box::new(Self::new(settings))
     }
 
@@ -22,6 +22,6 @@ pub trait CommandModule : Module {
         String::from("")
     }
 
-    fn process_response(&self, host: &Host, response: &String) -> Result<String, String>;
+    fn process_response(&self, response: &String) -> Result<String, String>;
 
 }

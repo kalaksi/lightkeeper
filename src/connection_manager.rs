@@ -5,6 +5,7 @@ use std::thread;
 use crate::Host;
 use crate::module::connection::{ ConnectionModule, Connector };
 
+pub type ResponseHandlerCallback = Box<dyn FnOnce(String) + Send + 'static>;
 type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
 
 pub struct ConnectionManager {
@@ -50,6 +51,10 @@ impl ConnectionManager {
         }
     }
 
+    pub fn new_request_sender(&mut self) -> mpsc::Sender<ConnectorRequest> {
+        return self.request_sender_prototype.clone()
+    }
+
     pub fn join(&mut self) {
         self.receiver_handle.take().expect("Thread has already stopped.")
                             .join().unwrap();
@@ -60,9 +65,10 @@ impl ConnectionManager {
         receiver: mpsc::Receiver<ConnectorRequest>
     ) -> thread::JoinHandle<()> {
 
+        // TODO: threadpool
         thread::spawn(move || {
             loop {
-                let request = receiver.recv().unwrap();
+                let mut request = receiver.recv().unwrap();
 
                 log::debug!("Connector message received: {}", request.connector_id);
 
@@ -89,16 +95,14 @@ impl ConnectionManager {
                     }
                 };
 
-                let response = ConnectorResponse {
-                    connector_id: request.connector_id,
-                    monitor_id: request.monitor_id,
-                    host: request.host,
-                    message: output,
-                    connector_is_connected: connector_is_connected,
-                };
-
-                if let Err(error) = request.response_channel.send(response) {
-                    log::error!("Failed to send response from connector: {}", error);
+                if let Some(response_channel) = &request.response_channel {
+                    let response = ConnectorResponse::from(&request, output, connector_is_connected);
+                    if let Err(error) = response_channel.send(response) {
+                        log::error!("Failed to send response from connector: {}", error);
+                    }
+                }
+                else if let Some(response_handler) = request.response_handler.take() {
+                    response_handler(output)
                 }
             }
         })
@@ -108,16 +112,30 @@ impl ConnectionManager {
 
 pub struct ConnectorRequest {
     pub connector_id: String,
-    pub monitor_id: String,
+    pub source_id: String,
     pub host: Host,
     pub message: String,
-    pub response_channel: mpsc::Sender<ConnectorResponse>,
+    pub response_channel: Option<mpsc::Sender<ConnectorResponse>>,
+    pub response_handler: Option<ResponseHandlerCallback>,
 }
 
 pub struct ConnectorResponse {
     pub connector_id: String,
-    pub monitor_id: String,
+    pub destination_id: String,
     pub host: Host,
     pub message: String,
     pub connector_is_connected: bool,
+}
+
+impl ConnectorResponse {
+    fn from(request: &ConnectorRequest, message: String, connector_is_connected: bool) -> Self {
+        ConnectorResponse {
+            connector_id: request.connector_id.clone(),
+            destination_id: request.source_id.clone(),
+            host: request.host.clone(),
+            message: message,
+            connector_is_connected: connector_is_connected,
+        }
+
+    }
 }

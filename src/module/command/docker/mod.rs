@@ -48,7 +48,7 @@ impl CommandModule for Docker {
         String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true")
     }
 
-    fn process_response(&self, host: &Host, response: &String) -> Result<String, String> {
+    fn process_response(&self, response: &String) -> Result<String, String> {
         Ok(response.clone())
     }
 }

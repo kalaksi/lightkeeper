@@ -47,11 +47,16 @@ impl HostManager {
         hosts.add(host, default_status)
     }
 
+    pub fn get_host(&mut self, host_id: &String) -> Host {
+        let hosts = self.hosts.lock().unwrap();
+        (*hosts).hosts.get(host_id).unwrap().host.clone()
+    }
+
     pub fn join(&mut self) {
         self.receiver_handle.take().unwrap().join().unwrap();
     }
 
-    pub fn get_state_udpate_channel(&self) -> mpsc::Sender<DataPointMessage> {
+    pub fn new_state_update_sender(&self) -> mpsc::Sender<DataPointMessage> {
         self.data_sender_prototype.clone()
     }
 

@@ -92,10 +92,11 @@ impl MonitorManager {
 
                         connector_channel.send(ConnectorRequest {
                             connector_id: monitor_handler.monitor.get_connector_spec().unwrap().id,
-                            monitor_id: monitor_id.clone(),
+                            source_id: monitor_id.clone(),
                             host: host.clone(),
                             message: monitor_handler.monitor.get_connector_message(),
-                            response_channel: response_sender_prototype.clone(),
+                            response_channel: Some(response_sender_prototype.clone()),
+                            response_handler: None,
                         }).unwrap_or_else(|error| {
                             log::error!("Couldn't send message to connector: {}", error);
                         });
@@ -132,7 +133,7 @@ impl MonitorManager {
 
                 let monitors = monitors.lock().unwrap();
                 if let Some(host_monitors) = monitors.get(&response.host) {
-                    if let Some(handler) = host_monitors.get(&response.monitor_id) {
+                    if let Some(handler) = host_monitors.get(&response.destination_id) {
 
                         let data_point = handler.monitor.process(&response.host, &response.message, response.connector_is_connected);
                         match data_point {
@@ -154,7 +155,7 @@ impl MonitorManager {
                         }
                     }
                     else {
-                        log::error!("Host monitor {} does not exist.", response.monitor_id);
+                        log::error!("Host monitor {} does not exist.", response.destination_id);
                     }
                 }
                 else {
