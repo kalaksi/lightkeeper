@@ -42,6 +42,8 @@ pub struct Host {
     #[serde(default)]
     pub monitors: HashMap<String, MonitorConfig>,
     #[serde(default)]
+    pub commands: HashMap<String, CommandConfig>,
+    #[serde(default)]
     pub connectors: HashMap<String, ConnectorConfig>,
 }
 
@@ -60,6 +62,14 @@ impl Host {
 pub struct MonitorConfig {
     pub version: String,
     pub is_critical: Option<bool>,
+    #[serde(default)]
+    pub settings: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CommandConfig {
+    pub version: String,
     #[serde(default)]
     pub settings: HashMap<String, String>,
 }
