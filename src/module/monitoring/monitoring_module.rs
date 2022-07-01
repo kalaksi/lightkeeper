@@ -4,8 +4,12 @@ use chrono::{DateTime, Utc};
 
 use serde_derive::Serialize;
 
-use crate::Host;
-use crate::module::{ module::Module, ModuleSpecification };
+use crate::{
+    Host,
+    utils::enums::Criticality,
+    module::module::Module,
+    module::ModuleSpecification
+};
 
 pub type Monitor = Box<dyn MonitoringModule + Send + Sync>;
 
@@ -65,15 +69,6 @@ pub enum DisplayStyle {
     String,
     StatusUpDown,
     CriticalityLevel,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize)]
-pub enum Criticality {
-    NoData,
-    Normal,
-    Warning,
-    Error,
-    Critical,
 }
 
 #[derive(Clone, Serialize)]

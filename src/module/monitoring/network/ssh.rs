@@ -1,13 +1,12 @@
 
 use std::collections::HashMap;
-use crate::Host;
+use crate::{ Host, utils::enums::Criticality };
 use crate::module::{
     Module,
     Metadata,
     ModuleSpecification,
     monitoring::MonitoringModule,
     monitoring::Monitor,
-    monitoring::Criticality,
     monitoring::DisplayStyle,
     monitoring::DisplayOptions,
     monitoring::DataPoint,
