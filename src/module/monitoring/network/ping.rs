@@ -5,15 +5,17 @@ use crate::Host;
 use crate::module::{
     Module,
     Metadata,
-    monitoring::MonitoringModule,
-    monitoring::DataPoint,
-    monitoring::DisplayOptions,
-    monitoring::DisplayStyle,
-    monitoring::Criticality,
     ModuleSpecification,
+    monitoring::MonitoringModule,
+    monitoring::Monitor,
+    monitoring::Criticality,
+    monitoring::DisplayStyle,
+    monitoring::DisplayOptions,
+    monitoring::DataPoint,
 };
 
 
+#[derive(Clone)]
 pub struct Ping;
 
 impl Module for Ping {
@@ -35,6 +37,10 @@ impl Module for Ping {
 }
 
 impl MonitoringModule for Ping {
+    fn clone_module(&self) -> Monitor {
+        Box::new(self.clone())
+    }
+
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
             display_name: String::from("Ping"),

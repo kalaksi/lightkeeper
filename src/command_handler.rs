@@ -1,5 +1,5 @@
 
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::Sender;
 use crate::module::monitoring::{DataPoint, Criticality};
 
 use crate::Host;
@@ -9,7 +9,7 @@ use crate::connection_manager::ConnectorRequest;
 use crate::module::monitoring::DisplayOptions;
 
 pub struct CommandHandler {
-    request_sender: mpsc::Sender<ConnectorRequest>,
+    request_sender: Sender<ConnectorRequest>,
     state_update_sender: Sender<DataPointMessage>,
 }
 
@@ -29,9 +29,8 @@ impl CommandHandler {
             source_id: command.get_module_spec().id,
             host: host.clone(),
             message: command.get_connector_request(None),
-            response_channel: None,
 
-            response_handler: Some(Box::new(move |output| {
+            response_handler: Box::new(move |output, _connector_is_connected| {
                 log::debug!("{}", output);
                 let response_result = command.process_response(&output);
                 let send_result = state_update_sender.send(DataPointMessage {
@@ -40,7 +39,7 @@ impl CommandHandler {
                     module_spec: command.get_module_spec(),
                     data_point: DataPoint::new_with_level(String::from("test"), Criticality::Critical),
                 });
-            }))
+            })
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
         });

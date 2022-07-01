@@ -8,12 +8,16 @@ use crate::{
 use crate::module::{
     Module,
     Metadata,
-    monitoring::{MonitoringModule, DisplayStyle, DisplayOptions, DataPoint},
     ModuleSpecification,
+    monitoring::MonitoringModule,
+    monitoring::Monitor,
+    monitoring::DisplayStyle,
+    monitoring::DisplayOptions,
+    monitoring::DataPoint,
 };
 
-pub struct Uptime {
-}
+#[derive(Clone)]
+pub struct Uptime;
 
 impl Module for Uptime {
     fn get_metadata() -> Metadata {
@@ -34,6 +38,10 @@ impl Module for Uptime {
 }
 
 impl MonitoringModule for Uptime {
+    fn clone_module(&self) -> Monitor {
+        Box::new(self.clone())
+    }
+
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
             display_name: String::from("Uptime"),

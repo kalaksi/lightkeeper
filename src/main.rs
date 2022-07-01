@@ -45,9 +45,9 @@ fn main() {
     let module_factory = ModuleFactory::new();
 
     let mut host_manager = HostManager::new();
-    let mut monitor_manager = MonitorManager::new(host_manager.new_state_update_sender());
     let mut connection_manager = ConnectionManager::new();
-    let mut command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
+    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
+    let command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
 
     // Configure hosts and modules.
     for (host_id, host_config) in config.hosts.iter() {
@@ -79,12 +79,10 @@ fn main() {
 
                 let connector = module_factory.new_connector(&connector_spec, &connector_settings);
 
-                let message_sender = connection_manager.add_connector(&host, connector);
-                monitor_manager.add_monitor(&host, monitor, Some(message_sender));
+                connection_manager.add_connector(&host, connector);
             }
-            else {
-                monitor_manager.add_monitor(&host, monitor, None);
-            }
+
+            monitor_manager.add_monitor(&host, monitor);
         }
 
         for (command_id, command_config) in host_config.commands.iter() {
@@ -116,7 +114,6 @@ fn main() {
     frontend.start();
 
     connection_manager.join();
-    monitor_manager.join();
     host_manager.join();
 
 }

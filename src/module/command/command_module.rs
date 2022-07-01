@@ -1,6 +1,5 @@
 
 use std::collections::HashMap;
-use crate::Host;
 use crate::module::{ Module, ModuleSpecification };
 
 pub type Command = Box<dyn CommandModule + Send + Sync>;

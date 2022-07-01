@@ -4,10 +4,16 @@ use crate::Host;
 use crate::module::{
     Module,
     Metadata,
-    monitoring::{ MonitoringModule, Criticality, DisplayStyle, DisplayOptions, DataPoint },
     ModuleSpecification,
+    monitoring::MonitoringModule,
+    monitoring::Monitor,
+    monitoring::Criticality,
+    monitoring::DisplayStyle,
+    monitoring::DisplayOptions,
+    monitoring::DataPoint,
 };
 
+#[derive(Clone)]
 pub struct Ssh;
 
 impl Module for Ssh {
@@ -29,6 +35,10 @@ impl Module for Ssh {
 }
 
 impl MonitoringModule for Ssh {
+    fn clone_module(&self) -> Monitor {
+        Box::new(self.clone())
+    }
+
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }

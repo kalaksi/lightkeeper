@@ -5,9 +5,20 @@ use serde_derive::Deserialize;
 use serde_json;
 
 use crate::Host;
-use crate::module::{ Module, Metadata, ModuleSpecification };
-use crate::module::monitoring::{ MonitoringModule, Criticality, DisplayStyle, DisplayOptions, DataPoint };
+use crate::module::{
+    Module,
+    Metadata,
+    ModuleSpecification,
+    monitoring::MonitoringModule,
+    monitoring::Monitor,
+    monitoring::Criticality,
+    monitoring::DisplayStyle,
+    monitoring::DisplayOptions,
+    monitoring::DataPoint,
+};
 
+
+#[derive(Clone)]
 pub struct Docker {
     use_sudo: bool,
     excluded_containers: String,
@@ -35,6 +46,10 @@ impl Module for Docker {
 }
 
 impl MonitoringModule for Docker {
+    fn clone_module(&self) -> Monitor {
+        Box::new(self.clone())
+    }
+
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }

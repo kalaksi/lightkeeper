@@ -7,16 +7,19 @@ use serde_derive::Serialize;
 use crate::Host;
 use crate::module::{ module::Module, ModuleSpecification };
 
-pub type Monitor = Box<dyn MonitoringModule + Send>;
+pub type Monitor = Box<dyn MonitoringModule + Send + Sync>;
 
 pub trait MonitoringModule : Module {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         None
     }
 
-    fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor where Self: Sized + 'static + Send {
+    fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor where Self: Sized + 'static + Send + Sync {
         Box::new(Self::new(settings))
     }
+
+    // TODO: less boilerplate for module implementation?
+    fn clone_module(&self) -> Monitor;
 
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use crate::Host;
 use crate::module::{
     Module,
     command::CommandModule,
