@@ -61,7 +61,7 @@ impl MonitoringModule for Docker {
         }
     }
 
-    fn process(&self, _host: &Host, response: &String, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, response: String, _connector_is_connected: bool) -> Result<DataPoint, String> {
         let containers: Vec<ContainerDetails> = serde_json::from_str(response.as_str()).map_err(|e| e.to_string())?;
 
         let mut parent_data = DataPoint::empty();

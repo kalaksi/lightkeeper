@@ -32,7 +32,7 @@ pub trait MonitoringModule : Module {
         String::from("")
     }
 
-    fn process(&self, host: &Host, response: &String, connector_is_connected: bool) -> Result<DataPoint, String>;
+    fn process_response(&self, host: Host, response: String, connector_is_connected: bool) -> Result<DataPoint, String>;
 
 }
 
