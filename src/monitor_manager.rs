@@ -66,20 +66,8 @@ impl MonitorManager {
                     });
                 }
                 else {
-                    // TODO: Use empty connectors to unify implementation.
-                    let data_point = monitor.process_response(host.clone(), String::new(), false).unwrap_or_else(|error| {
-                        log::error!("Error while running monitor: {}", error);
-                        DataPoint::empty_and_critical()
-                    });
-
-                    self.state_update_sender.send(DataPointMessage {
-                        host_name: host.name.clone(),
-                        display_options: monitor.get_display_options(),
-                        module_spec: monitor.get_module_spec(),
-                        data_point: data_point
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to state manager: {}", error);
-                    });
+                    let handler = Self::get_response_handler(host.clone(), monitor.clone_module(), self.state_update_sender.clone());
+                    handler(String::new(), false);
                 } 
             }
         }
@@ -87,25 +75,25 @@ impl MonitorManager {
 
     fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<DataPointMessage>) -> ResponseHandlerCallback {
         Box::new(move |output, connector_is_connected| {
-            let data_point = monitor.process_response(host.clone(), output, connector_is_connected);
-
-            match data_point {
+            let data_point = match monitor.process_response(host.clone(), output, connector_is_connected) {
                 Ok(data_point) => {
                     log::debug!("Data point received: {}", data_point);
-
-                    state_update_sender.send(DataPointMessage {
-                        host_name: host.name.clone(),
-                        display_options: monitor.get_display_options(),
-                        module_spec: monitor.get_module_spec(),
-                        data_point: data_point
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to state manager: {}", error);
-                    });
+                    data_point
                 },
                 Err(error) => {
                     log::error!("Error from monitor: {}", error);
+                    DataPoint::empty_and_critical()
                 }
-            }
+            };
+
+            state_update_sender.send(DataPointMessage {
+                host_name: host.name.clone(),
+                display_options: monitor.get_display_options(),
+                module_spec: monitor.get_module_spec(),
+                data_point: data_point
+            }).unwrap_or_else(|error| {
+                log::error!("Couldn't send message to state manager: {}", error);
+            });
         })
     }
 
