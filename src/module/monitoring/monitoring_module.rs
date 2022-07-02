@@ -124,7 +124,7 @@ impl DataPoint {
     }
 
     pub fn empty_and_critical() -> Self {
-        let mut empty = Self::empty();
+        let mut empty = Self::default();
         empty.criticality = Criticality::Critical;
         empty
     }

@@ -4,10 +4,9 @@ use owo_colors::OwoColorize;
 use std::net::IpAddr;
 use tabled::{ Tabled, Style, builder::Builder };
 
-use crate::utils::enums::HostStatus;
+use crate::utils::enums::{ HostStatus, Criticality };
 use super::{ Frontend, DisplayData };
 use crate::module::monitoring::{
-    Criticality,
     DataPoint,
     DisplayOptions,
     DisplayStyle

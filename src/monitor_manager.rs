@@ -3,7 +3,7 @@ use std::sync::mpsc::{self, Sender};
 
 use crate::Host;
 use crate::module::monitoring::{ Monitor, DataPoint };
-use crate::host_manager::DataPointMessage;
+use crate::host_manager::StateUpdateMessage;
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback };
 
 
@@ -11,11 +11,11 @@ pub struct MonitorManager {
     // Monitor id is the second key.
     monitors: HashMap<Host, HashMap<String, Monitor>>,
     request_sender: Sender<ConnectorRequest>,
-    state_update_sender: Sender<DataPointMessage>,
+    state_update_sender: Sender<StateUpdateMessage>,
 }
 
 impl MonitorManager {
-    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>, state_update_sender: Sender<DataPointMessage>) -> Self {
+    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>) -> Self {
         let monitors = HashMap::new();
 
         MonitorManager {
@@ -73,7 +73,7 @@ impl MonitorManager {
         }
     }
 
-    fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<DataPointMessage>) -> ResponseHandlerCallback {
+    fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
         Box::new(move |output, connector_is_connected| {
             let data_point = match monitor.process_response(host.clone(), output, connector_is_connected) {
                 Ok(data_point) => {
@@ -86,11 +86,12 @@ impl MonitorManager {
                 }
             };
 
-            state_update_sender.send(DataPointMessage {
+            state_update_sender.send(StateUpdateMessage {
                 host_name: host.name.clone(),
                 display_options: monitor.get_display_options(),
                 module_spec: monitor.get_module_spec(),
-                data_point: data_point
+                data_point: Some(data_point),
+                command_result: None,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
             });

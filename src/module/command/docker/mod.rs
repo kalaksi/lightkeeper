@@ -6,6 +6,8 @@ use crate::module::{
     ModuleSpecification,
 };
 
+use super::CommandResult;
+
 pub struct Docker;
 
 impl Module for Docker {
@@ -47,7 +49,7 @@ impl CommandModule for Docker {
         String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true")
     }
 
-    fn process_response(&self, response: &String) -> Result<String, String> {
-        Ok(response.clone())
+    fn process_response(&self, response: &String) -> Result<CommandResult, String> {
+        Ok(CommandResult::new(response.clone()))
     }
 }

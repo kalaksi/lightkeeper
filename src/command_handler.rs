@@ -1,20 +1,20 @@
 
 use std::sync::mpsc::Sender;
-use crate::module::monitoring::{DataPoint, Criticality};
 
 use crate::Host;
 use crate::module::command::Command;
-use crate::host_manager::DataPointMessage;
+use crate::module::command::CommandResult;
+use crate::host_manager::StateUpdateMessage;
 use crate::connection_manager::ConnectorRequest;
 use crate::module::monitoring::DisplayOptions;
 
 pub struct CommandHandler {
     request_sender: Sender<ConnectorRequest>,
-    state_update_sender: Sender<DataPointMessage>,
+    state_update_sender: Sender<StateUpdateMessage>,
 }
 
 impl CommandHandler {
-    pub fn new(request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<DataPointMessage>) -> Self {
+    pub fn new(request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>) -> Self {
         CommandHandler {
             request_sender: request_sender,
             state_update_sender: state_update_sender,
@@ -31,13 +31,25 @@ impl CommandHandler {
             message: command.get_connector_request(None),
 
             response_handler: Box::new(move |output, _connector_is_connected| {
-                log::debug!("{}", output);
-                let response_result = command.process_response(&output);
-                let send_result = state_update_sender.send(DataPointMessage {
+                let response_result = match command.process_response(&output) {
+                    Ok(result) => {
+                        log::debug!("Command result received: {}", result.message);
+                        result
+                    },
+                    Err(error) => {
+                        log::error!("Error from command: {}", error);
+                        CommandResult::empty_and_critical()
+                    }
+                };
+
+                state_update_sender.send(StateUpdateMessage {
                     host_name: host.name,
                     display_options: DisplayOptions::just_style(crate::module::monitoring::DisplayStyle::CriticalityLevel),
                     module_spec: command.get_module_spec(),
-                    data_point: DataPoint::new_with_level(String::from("test"), Criticality::Critical),
+                    data_point: None,
+                    command_result: Some(response_result),
+                }).unwrap_or_else(|error| {
+                    log::error!("Couldn't send message to state manager: {}", error);
                 });
             })
         }).unwrap_or_else(|error| {
