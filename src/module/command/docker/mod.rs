@@ -33,20 +33,19 @@ impl CommandModule for Docker {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_subcommands(&self) -> Option<Vec<String>> {
+    fn get_parameters(&self) -> Option<Vec<String>> {
         Some(vec![
             String::from("ps"),
             String::from("images")
         ])
     }
 
-    fn get_connector_request(&self, subcommand: Option<String>) -> String {
-        /* 
-        match subcommand.unwrap().as_str() {
-            "ps" => String::from("docker ps"),
-            "images" => String::from("docker images"),
-        }*/
-        String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true")
+    fn get_connector_request(&self, parameter: Option<String>) -> String {
+        match parameter.unwrap().as_str() {
+            "ps" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
+            "images" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
+            _ => panic!("Unknown command parameter"),
+        }
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {

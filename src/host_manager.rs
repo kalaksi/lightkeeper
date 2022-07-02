@@ -4,14 +4,13 @@ use std::sync::mpsc;
 use std::thread;
 use std::sync::{Arc, Mutex};
 
-use serde_derive::Serialize;
-
 use crate::module::{
     ModuleSpecification,
     monitoring::MonitoringData,
     monitoring::DataPoint,
     monitoring::DisplayOptions,
     command::CommandResult,
+    command::CommandData,
 };
 
 use crate::{
@@ -103,17 +102,12 @@ impl HostManager {
 
                     let observers = observers.lock().unwrap();
                     for observer in observers.iter() {
-                        let mut monitoring_data: HashMap<String, MonitoringData> = HashMap::new();
-
-                        for (monitor_id, data) in host_state.monitor_data.iter() {
-                            monitoring_data.insert(monitor_id.clone(), data.clone());
-                        }
-
                         observer.send(frontend::HostDisplayData {
                             name: host_state.host.name.clone(),
                             domain_name: host_state.host.fqdn.clone(),
                             ip_address: host_state.host.ip_address.clone(),
-                            monitoring_data: monitoring_data,
+                            monitoring_data: host_state.monitor_data.clone(),
+                            command_data: host_state.command_data.clone(),
                             status: host_state.status,
                         }).unwrap();
                     }
@@ -146,17 +140,12 @@ impl HostManager {
         }
 
         for (host_name, state) in hosts.hosts.iter() {
-            let mut monitoring_data: HashMap<String, MonitoringData> = HashMap::new();
-
-            for (monitor_id, data) in state.monitor_data.iter() {
-                monitoring_data.insert(monitor_id.clone(), data.clone());
-            }
-
             display_data.hosts.insert(host_name.clone(), frontend::HostDisplayData {
                 name: state.host.name.clone(),
                 domain_name: state.host.fqdn.clone(),
                 ip_address: state.host.ip_address.clone(),
-                monitoring_data: monitoring_data,
+                monitoring_data: state.monitor_data.clone(),
+                command_data: state.command_data.clone(),
                 status: state.status,
             });
         }
@@ -230,21 +219,5 @@ impl HostState {
             Some(_) => HostStatus::Down,
             None => HostStatus::Up,
         };
-    }
-}
-
-
-#[derive(Clone, Serialize)]
-pub struct CommandData {
-    pub results: Vec<CommandResult>,
-    pub display_options: DisplayOptions,
-}
-
-impl CommandData {
-    pub fn new(display_options: DisplayOptions) -> Self {
-        CommandData {
-            results: Vec::new(),
-            display_options: display_options,
-        }
     }
 }

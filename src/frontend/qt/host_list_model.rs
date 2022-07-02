@@ -6,6 +6,7 @@ extern crate qmetaobject;
 use qmetaobject::*;
 
 use crate::frontend;
+use super::command_data_model::CommandDataModel;
 use super::monitor_data_model::MonitorDataModel;
 
 
@@ -97,6 +98,11 @@ impl HostListModel {
         host.monitor_data.clone().data
     }
 
+    fn get_command_data(&self, host_id: QString) -> QVariantList {
+        let host = self.hosts.get(&host_id.to_string()).unwrap();
+        host.command_data.clone().data
+    }
+
     fn get_host_data(&self, index: i32) -> QVariantList {
         let mut list = QVariantList::default();
 
@@ -155,6 +161,7 @@ struct HostData {
     fqdn: qt_property!(QString),
     ip_address: qt_property!(QString),
     monitor_data: qt_property!(MonitorDataModel),
+    command_data: qt_property!(CommandDataModel),
 }
 
 impl HostData {
@@ -166,6 +173,7 @@ impl HostData {
             fqdn: host_display_data.domain_name.clone().into(),
             ip_address: host_display_data.ip_address.to_string().into(),
             monitor_data: MonitorDataModel::new(&host_display_data),
+            command_data: CommandDataModel::new(&host_display_data),
         }
     }
 }

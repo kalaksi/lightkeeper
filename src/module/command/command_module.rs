@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use crate::{
     module::Module,
     module::ModuleSpecification,
+    module::monitoring::DisplayOptions,
     utils::enums::Criticality,
 };
 
@@ -20,7 +21,7 @@ pub trait CommandModule : Module {
         None
     }
 
-    fn get_subcommands(&self) -> Option<Vec<String>> {
+    fn get_parameters(&self) -> Option<Vec<String>> {
         None
     }
 
@@ -73,6 +74,21 @@ impl Default for CommandResult {
             message: String::from(""),
             criticality: Criticality::Normal,
             time: Utc::now(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize)]
+pub struct CommandData {
+    pub results: Vec<CommandResult>,
+    pub display_options: DisplayOptions,
+}
+
+impl CommandData {
+    pub fn new(display_options: DisplayOptions) -> Self {
+        CommandData {
+            results: Vec::new(),
+            display_options: display_options,
         }
     }
 }
