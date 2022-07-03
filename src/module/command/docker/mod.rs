@@ -4,6 +4,8 @@ use crate::module::{
     command::CommandModule,
     Metadata,
     ModuleSpecification,
+    monitoring::DisplayOptions,
+    monitoring::DisplayStyle,
 };
 
 use super::CommandResult;
@@ -35,20 +37,33 @@ impl CommandModule for Docker {
 
     fn get_parameters(&self) -> Option<Vec<String>> {
         Some(vec![
+            String::from(""),
             String::from("ps"),
             String::from("images")
         ])
     }
 
+    fn get_display_options(&self) -> DisplayOptions {
+        DisplayOptions {
+            display_name: String::from("test123"),
+            display_style: DisplayStyle::CriticalityLevel,
+            category: String::from("containers"),
+            unit: String::from(""),
+            use_multivalue: true,
+        }
+    }
+
     fn get_connector_request(&self, parameter: Option<String>) -> String {
-        match parameter.unwrap().as_str() {
+        let param_string = parameter.unwrap_or_else(|| String::new());
+        match param_string.as_str() {
             "ps" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
-            "images" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
+            "images" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/images/json?all=true"),
+            "" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
             _ => panic!("Unknown command parameter"),
         }
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {
-        Ok(CommandResult::new(response.clone()))
+        Ok(CommandResult::new(String::from("test")))
     }
 }

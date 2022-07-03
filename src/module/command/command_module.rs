@@ -6,7 +6,8 @@ use chrono::{DateTime, Utc};
 use crate::{
     module::Module,
     module::ModuleSpecification,
-    module::monitoring::DisplayOptions,
+    module::monitoring::DisplayOptions, 
+    module::monitoring::DisplayStyle,
     utils::enums::Criticality,
 };
 
@@ -23,6 +24,16 @@ pub trait CommandModule : Module {
 
     fn get_parameters(&self) -> Option<Vec<String>> {
         None
+    }
+
+    fn get_display_options(&self) -> DisplayOptions {
+        DisplayOptions {
+            display_name: self.get_module_spec().id,
+            display_style: DisplayStyle::String,
+            category: String::from(""),
+            unit: String::from(""),
+            use_multivalue: false,
+        }
     }
 
     fn get_connector_request(&self, _subcommand: Option<String>) -> String {

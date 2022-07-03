@@ -22,8 +22,9 @@ pub struct HostListModel {
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 
     // Couldn't get custom types to work for return types,
-    // so for now methods are used to get the monitoring data.
+    // so for now methods are used to get the data as JSON.
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_command_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_host_data: qt_method!(fn(&self, index: i32) -> QVariantList),
 
     // For table row selection.

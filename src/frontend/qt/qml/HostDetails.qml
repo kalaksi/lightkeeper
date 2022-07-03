@@ -60,7 +60,9 @@ Item {
         }
  
         Repeater {
-            model: root.hostData.length > 0 ? groupByCategory(root.model.get_monitor_data(root.hostData[1])) : 0
+            model: root.hostData.length > 0 ?
+                groupByCategory(root.model.get_monitor_data(root.hostData[1]), root.model.get_command_data(root.hostData[1])) :
+                0
  
             GroupBox {
                 title: modelData.category
@@ -76,9 +78,16 @@ Item {
                         model: modelData.monitors
 
                         PropertyRow {
-                            id: propertyRow
                             label: modelData.display_options.display_name
                             value: modelData.values[0].value + " " + modelData.display_options.unit
+                        }
+                    }
+                    Repeater {
+                        model: modelData.commands
+
+                        PropertyRow {
+                            label: modelData.display_options.display_name
+                            value: modelData.results[0].message
                         }
                     }
                 }
@@ -86,9 +95,10 @@ Item {
         }
     }
 
-    function groupByCategory(monitorDataJsons) {
+    function groupByCategory(monitorDataJsons, commandDataJsons) {
         let categories = []
-        let categorized = {}
+        let monitorsCategorized = {}
+        let commandsCategorized = {}
 
         monitorDataJsons.forEach(json => {
             let data = JSON.parse(json)
@@ -96,17 +106,33 @@ Item {
 
             if (!categories.includes(category)) {
                 categories.push(category)
-                categorized[category] = [ data ]
+                monitorsCategorized[category] = [ data ]
             }
             else {
-                categorized[category].push(data)
+                monitorsCategorized[category].push(data)
+            }
+        })
+
+        commandDataJsons.forEach(json => {
+            let data = JSON.parse(json)
+            let category = data.display_options.category
+
+            if (!categories.includes(category)) {
+                categories.push(category)
+            }
+            if (category in commandsCategorized) {
+                commandsCategorized[category].push(data)
+            }
+            else {
+                commandsCategorized[category] = [ data ]
             }
         })
 
         // Essentially a list of key-value pairs.
         return categories.map(category => ({
             category: TextTransform.capitalize(category),
-            monitors: categorized[category]
+            monitors: monitorsCategorized[category],
+            commands: commandsCategorized[category]
         }))
     }
 

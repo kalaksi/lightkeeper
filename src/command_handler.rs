@@ -31,7 +31,7 @@ impl CommandHandler {
             message: command.get_connector_request(None),
 
             response_handler: Box::new(move |output, _connector_is_connected| {
-                let response_result = match command.process_response(&output) {
+                let command_result = match command.process_response(&output) {
                     Ok(result) => {
                         log::debug!("Command result received: {}", result.message);
                         result
@@ -44,10 +44,10 @@ impl CommandHandler {
 
                 state_update_sender.send(StateUpdateMessage {
                     host_name: host.name,
-                    display_options: DisplayOptions::just_style(crate::module::monitoring::DisplayStyle::CriticalityLevel),
+                    display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     data_point: None,
-                    command_result: Some(response_result),
+                    command_result: Some(command_result),
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to state manager: {}", error);
                 });
