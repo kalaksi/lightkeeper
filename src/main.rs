@@ -47,7 +47,6 @@ fn main() {
     let mut host_manager = HostManager::new();
     let mut connection_manager = ConnectionManager::new();
     let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
-    let command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
 
     // Configure hosts and modules.
     for (host_id, host_config) in config.hosts.iter() {
@@ -102,18 +101,15 @@ fn main() {
 
     monitor_manager.refresh_monitors();
     let initial_display_data = host_manager.get_display_data();
-
-    command_handler.execute(
-        host_manager.get_host(&String::from("test11")),
-        module_factory.new_command(&ModuleSpecification::new("docker", "0.0.1"), &HashMap::new())
-    );
-
     let mut frontend = frontend::qt::QmlFrontend::new(&initial_display_data);
-    host_manager.add_observer(frontend.new_update_sender());
 
+    host_manager.add_observer(frontend.new_update_sender());
+    let command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager, module_factory);
+    frontend.set_command_handler(command_handler);
     frontend.start();
 
     connection_manager.join();
-    host_manager.join();
+    // TODO: enable again when StateManager and HostCollection is split off host manager.
+    // host_manager.join();
 
 }

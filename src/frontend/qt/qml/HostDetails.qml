@@ -73,6 +73,11 @@ Item {
                 ColumnLayout {
                     anchors.top: parent.top
                     implicitWidth: parent.width
+ 
+                    CommandButton {
+                        icon_source: "qrc:/main/images/button/refresh"
+                        onClicked: lightkeeper_commands.execute(root.hostData[1], "docker")
+                    }
 
                     Repeater {
                         model: modelData.monitors
@@ -80,14 +85,6 @@ Item {
                         PropertyRow {
                             label: modelData.display_options.display_name
                             value: modelData.values[0].value + " " + modelData.display_options.unit
-                        }
-                    }
-                    Repeater {
-                        model: modelData.commands
-
-                        PropertyRow {
-                            label: modelData.display_options.display_name
-                            value: modelData.results[0].message
                         }
                     }
                 }

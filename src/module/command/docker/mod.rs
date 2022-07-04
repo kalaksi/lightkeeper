@@ -64,6 +64,7 @@ impl CommandModule for Docker {
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {
+        log::debug!("TEST");
         Ok(CommandResult::new(String::from("test")))
     }
 }
