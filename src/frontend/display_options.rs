@@ -1,6 +1,6 @@
 use serde_derive::Serialize;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Default)]
 pub struct DisplayOptions {
     pub display_name: String,
     pub display_style: DisplayStyle,
@@ -8,6 +8,7 @@ pub struct DisplayOptions {
     pub unit: String,
     // For monitors that produce a group of values.
     pub use_multivalue: bool,
+    pub parent_id: String,
 }
 
 impl DisplayOptions {
@@ -17,7 +18,8 @@ impl DisplayOptions {
             display_style: display_style,
             category: String::from(""),
             unit: String::from(""),
-            use_multivalue: false
+            use_multivalue: false,
+            parent_id: String::from(""),
         }
     }
 }
@@ -27,4 +29,10 @@ pub enum DisplayStyle {
     String,
     StatusUpDown,
     CriticalityLevel,
+}
+
+impl Default for DisplayStyle {
+    fn default() -> Self {
+        DisplayStyle::String
+    }
 }

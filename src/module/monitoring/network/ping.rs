@@ -46,7 +46,7 @@ impl MonitoringModule for Ping {
             display_style: DisplayStyle::String,
             category: String::from("network"),
             unit: String::from("ms"),
-            use_multivalue: false,
+            ..Default::default()
         }
     }
 

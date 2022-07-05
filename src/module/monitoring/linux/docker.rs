@@ -58,8 +58,8 @@ impl MonitoringModule for Docker {
             display_name: String::from("Docker containers"),
             display_style: DisplayStyle::CriticalityLevel,
             category: String::from("containers"),
-            unit: String::from(""),
             use_multivalue: true,
+            ..Default::default()
         }
     }
 

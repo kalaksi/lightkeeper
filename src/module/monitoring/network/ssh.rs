@@ -47,8 +47,7 @@ impl MonitoringModule for Ssh {
             display_name: String::from("SSH"),
             display_style: DisplayStyle::StatusUpDown,
             category: String::from("network"),
-            use_multivalue: false,
-            unit: String::from(""),
+            ..Default::default()
         }
     }
 

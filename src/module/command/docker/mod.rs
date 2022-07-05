@@ -48,8 +48,8 @@ impl CommandModule for Docker {
             display_name: String::from("test123"),
             display_style: DisplayStyle::CriticalityLevel,
             category: String::from("containers"),
-            unit: String::from(""),
             use_multivalue: true,
+            ..Default::default()
         }
     }
 

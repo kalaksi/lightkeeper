@@ -30,9 +30,7 @@ pub trait CommandModule : Module {
         DisplayOptions {
             display_name: self.get_module_spec().id,
             display_style: DisplayStyle::String,
-            category: String::from(""),
-            unit: String::from(""),
-            use_multivalue: false,
+            ..Default::default()
         }
     }
 

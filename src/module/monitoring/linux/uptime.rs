@@ -48,7 +48,7 @@ impl MonitoringModule for Uptime {
             display_style: DisplayStyle::String,
             category: String::from("host"),
             unit: String::from("d"),
-            use_multivalue: false,
+            ..Default::default()
         }
     }
 
