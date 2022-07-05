@@ -8,7 +8,9 @@ use crate::{
     Host,
     utils::enums::Criticality,
     module::module::Module,
-    module::ModuleSpecification
+    module::ModuleSpecification,
+    frontend::DisplayOptions,
+    frontend::DisplayStyle,
 };
 
 pub type Monitor = Box<dyn MonitoringModule + Send + Sync>;
@@ -41,34 +43,6 @@ pub trait MonitoringModule : Module {
 
     fn process_response(&self, host: Host, response: String, connector_is_connected: bool) -> Result<DataPoint, String>;
 
-}
-
-#[derive(Clone, Serialize)]
-pub struct DisplayOptions {
-    pub display_name: String,
-    pub display_style: DisplayStyle,
-    pub category: String,
-    pub unit: String,
-    pub use_multivalue: bool,
-}
-
-impl DisplayOptions {
-    pub fn just_style(display_style: DisplayStyle) -> Self {
-        DisplayOptions {
-            display_name: String::from(""),
-            display_style: display_style,
-            category: String::from(""),
-            unit: String::from(""),
-            use_multivalue: false
-        }
-    }
-}
-
-#[derive(Clone, Serialize)]
-pub enum DisplayStyle {
-    String,
-    StatusUpDown,
-    CriticalityLevel,
 }
 
 #[derive(Clone, Serialize)]
