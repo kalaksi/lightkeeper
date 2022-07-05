@@ -63,6 +63,7 @@ impl MonitoringData {
 #[derive(Clone, Serialize)]
 pub struct DataPoint {
     pub value: String,
+    pub label: String,
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
@@ -72,6 +73,7 @@ impl DataPoint {
     pub fn new(value: String) -> Self {
         DataPoint {
             value: value,
+            label: String::from(""),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
@@ -81,6 +83,7 @@ impl DataPoint {
     pub fn new_with_level(value: String, criticality: Criticality) -> Self {
         DataPoint {
             value: value,
+            label: String::from(""),
             multivalue: Vec::new(),
             criticality: criticality,
             time: Utc::now(),
@@ -106,6 +109,7 @@ impl Default for DataPoint {
     fn default() -> Self {
         DataPoint {
             value: String::new(),
+            label: String::from(""),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
