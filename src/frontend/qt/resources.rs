@@ -10,11 +10,11 @@ pub fn init_resources() {
             "images/fontawesome/circle-exclamation.svg" as "images/criticality/error",
             "images/fontawesome/circle-exclamation.svg" as "images/criticality/warning",
             "images/fontawesome/circle-check.svg" as "images/criticality/normal",
-            "images/fontawesome/circle-question.svg" as "images/criticality/unknown",
+            "images/breeze/light/alarm-symbolic.svg" as "images/criticality/nodata",
 
             "images/fontawesome/circle-arrow-up.svg" as "images/status/up",
             "images/fontawesome/circle-arrow-down.svg" as "images/status/down",
-            "images/fontawesome/circle-question.svg" as "images/status/unknown",
+            "images/breeze/dark/alarm-symbolic.svg" as "images/status/unknown",
 
             "images/breeze/dark/view-refresh.svg" as "images/button/refresh",
         }
@@ -30,11 +30,11 @@ pub fn init_resources() {
             "images/fontawesome/circle-exclamation.svg" as "images/criticality/error",
             "images/fontawesome/circle-exclamation.svg" as "images/criticality/warning",
             "images/fontawesome/circle-check.svg" as "images/criticality/normal",
-            "images/fontawesome/circle-question.svg" as "images/criticality/unknown",
+            "images/breeze/light/alarm-symbolic.svg" as "images/criticality/nodata",
 
             "images/fontawesome/circle-arrow-up.svg" as "images/status/up",
             "images/fontawesome/circle-arrow-down.svg" as "images/status/down",
-            "images/fontawesome/circle-question.svg" as "images/status/unknown",
+            "images/breeze/light/alarm-symbolic.svg" as "images/status/unknown",
 
             "images/breeze/light/view-refresh.svg" as "images/button/refresh",
         }

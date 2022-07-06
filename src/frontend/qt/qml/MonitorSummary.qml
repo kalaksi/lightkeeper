@@ -18,7 +18,7 @@ Item {
     
             Item {
                 property var monitorData: JSON.parse(modelData)
-                property string criticality: JSON.parse(modelData).values[0].criticality.toLowerCase()
+                property string criticality: getLast(JSON.parse(modelData)).criticality.toLowerCase()
                 height: root.height
                 width: 0.7 * root.height
 
@@ -80,11 +80,12 @@ Item {
     function getLast(monitorData) {
         let lastIndex = monitorData.values.length - 1;
         if (lastIndex < 0) {
-            return null
+            return undefined
         }
         return monitorData.values[lastIndex];
     }
 
+    // TODO: unused?
     function getDisplayValue(monitorData) {
         let last = getLast(monitorData)
         if (last === null) {

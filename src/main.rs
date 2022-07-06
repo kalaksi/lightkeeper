@@ -77,7 +77,6 @@ fn main() {
                 };
 
                 let connector = module_factory.new_connector(&connector_spec, &connector_settings);
-
                 connection_manager.add_connector(&host, connector);
             }
 

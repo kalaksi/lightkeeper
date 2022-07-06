@@ -5,6 +5,7 @@ use crate::Host;
 use crate::module::monitoring::{ Monitor, DataPoint };
 use crate::host_manager::StateUpdateMessage;
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback };
+use crate::utils::enums;
 
 
 pub struct MonitorManager {
@@ -29,13 +30,17 @@ impl MonitorManager {
     pub fn add_monitor(&mut self, host: &Host, monitor: Monitor) {
         loop {
 
-            if let Some(monitor_handlers) = self.monitors.get_mut(&host) {
+            if let Some(monitor_collection) = self.monitors.get_mut(&host) {
                 let module_spec = monitor.get_module_spec();
 
-                if let None = monitor_handlers.get_mut(&module_spec.id) {
+                if let None = monitor_collection.get_mut(&module_spec.id) {
                     log::debug!("Adding monitor {}", module_spec.id);
 
-                    monitor_handlers.insert(module_spec.id, monitor);
+                    // Add initial state value indicating no data as been received yet.
+                    Self::send_state_update(&host, &monitor, self.state_update_sender.clone(),
+                                            DataPoint::new_with_level(String::from(""), enums::Criticality::NoData));
+
+                    monitor_collection.insert(module_spec.id, monitor);
                 }
 
                 break;
@@ -77,7 +82,7 @@ impl MonitorManager {
         Box::new(move |output, connector_is_connected| {
             let data_point = match monitor.process_response(host.clone(), output, connector_is_connected) {
                 Ok(data_point) => {
-                    log::debug!("Data point received: {}", data_point);
+                    log::debug!("Data point received: {} {}", data_point.label, data_point);
                     data_point
                 },
                 Err(error) => {
@@ -86,16 +91,21 @@ impl MonitorManager {
                 }
             };
 
-            state_update_sender.send(StateUpdateMessage {
-                host_name: host.name.clone(),
-                display_options: monitor.get_display_options(),
-                module_spec: monitor.get_module_spec(),
-                data_point: Some(data_point),
-                command_result: None,
-            }).unwrap_or_else(|error| {
-                log::error!("Couldn't send message to state manager: {}", error);
-            });
+            Self::send_state_update(&host, &monitor, state_update_sender, data_point);
         })
+    }
+
+    fn send_state_update(host: &Host, monitor: &Monitor, state_update_sender: Sender<StateUpdateMessage>, data_point: DataPoint) {
+        state_update_sender.send(StateUpdateMessage {
+            host_name: host.name.clone(),
+            display_options: monitor.get_display_options(),
+            module_spec: monitor.get_module_spec(),
+            data_point: Some(data_point),
+            command_result: None,
+        }).unwrap_or_else(|error| {
+            log::error!("Couldn't send message to state manager: {}", error);
+        });
+
     }
 
 }

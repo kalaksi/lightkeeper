@@ -8,18 +8,15 @@ pub struct DisplayOptions {
     pub unit: String,
     // For monitors that produce a group of values.
     pub use_multivalue: bool,
+    // Optional monitor id to attach actions to, instead of displaying on category-level.
     pub parent_id: String,
 }
 
 impl DisplayOptions {
     pub fn just_style(display_style: DisplayStyle) -> Self {
         DisplayOptions {
-            display_name: String::from(""),
             display_style: display_style,
-            category: String::from(""),
-            unit: String::from(""),
-            use_multivalue: false,
-            parent_id: String::from(""),
+            ..Default::default()
         }
     }
 }
