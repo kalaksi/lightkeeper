@@ -17,10 +17,8 @@ pub struct MonitorManager {
 
 impl MonitorManager {
     pub fn new(request_sender: mpsc::Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>) -> Self {
-        let monitors = HashMap::new();
-
         MonitorManager {
-            monitors: monitors,
+            monitors: HashMap::new(),
             request_sender: request_sender,
             state_update_sender: state_update_sender,
         }
@@ -28,26 +26,22 @@ impl MonitorManager {
 
     // Adds a monitor but only if a monitor with the same ID doesn't exist.
     pub fn add_monitor(&mut self, host: &Host, monitor: Monitor) {
-        loop {
+        if !self.monitors.contains_key(host) {
+            self.monitors.insert(host.clone(), HashMap::new());
+        }
 
-            if let Some(monitor_collection) = self.monitors.get_mut(&host) {
-                let module_spec = monitor.get_module_spec();
+        let mut monitor_collection = self.monitors.get_mut(host).unwrap();
+        let module_spec = monitor.get_module_spec();
 
-                if let None = monitor_collection.get_mut(&module_spec.id) {
-                    log::debug!("Adding monitor {}", module_spec.id);
+        // Only add if missing.
+        if !monitor_collection.contains_key(&module_spec.id) {
+            log::debug!("Adding monitor {}", module_spec.id);
 
-                    // Add initial state value indicating no data as been received yet.
-                    Self::send_state_update(&host, &monitor, self.state_update_sender.clone(),
-                                            DataPoint::new_with_level(String::from(""), enums::Criticality::NoData));
+            // Add initial state value indicating no data as been received yet.
+            Self::send_state_update(&host, &monitor, self.state_update_sender.clone(),
+                                    DataPoint::new_with_level(String::from(""), enums::Criticality::NoData));
 
-                    monitor_collection.insert(module_spec.id, monitor);
-                }
-
-                break;
-            }
-            else {
-                self.monitors.insert(host.clone(), HashMap::new());
-            }
+            monitor_collection.insert(module_spec.id, monitor);
         }
     }
 
