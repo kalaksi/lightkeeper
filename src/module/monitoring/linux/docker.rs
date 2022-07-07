@@ -55,9 +55,9 @@ impl MonitoringModule for Docker {
 
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
-            display_name: String::from("Docker containers"),
+            display_name: String::from("Containers"),
             display_style: DisplayStyle::CriticalityLevel,
-            category: String::from("containers"),
+            category: String::from("docker"),
             use_multivalue: true,
             ..Default::default()
         }
@@ -82,7 +82,9 @@ impl MonitoringModule for Docker {
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
         parent_data.criticality = most_critical_container.state.to_criticality();
         parent_data.multivalue = containers.iter().map(|container| {
-            DataPoint::new_with_level(container.state.to_string(), container.state.to_criticality())
+            let mut point = DataPoint::new_with_level(container.state.to_string(), container.state.to_criticality());
+            point.label = container.id.clone();
+            point
         }).collect();
 
         Ok(parent_data)

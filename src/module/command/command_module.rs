@@ -26,6 +26,9 @@ pub trait CommandModule : Module {
         None
     }
 
+    // TODO: less boilerplate for module implementation?
+    fn clone_module(&self) -> Command;
+
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
             display_name: self.get_module_spec().id,

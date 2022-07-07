@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::module::{
     Module,
     command::CommandModule,
+    command::Command,
     Metadata,
     ModuleSpecification,
     monitoring::DisplayOptions,
@@ -10,6 +11,7 @@ use crate::module::{
 
 use super::CommandResult;
 
+#[derive(Clone)]
 pub struct Docker;
 
 impl Module for Docker {
@@ -31,24 +33,29 @@ impl Module for Docker {
 }
 
 impl CommandModule for Docker {
+    fn clone_module(&self) -> Command {
+        Box::new(self.clone())
+    }
+
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_parameters(&self) -> Option<Vec<String>> {
-        Some(vec![
+    fn get_parameters(&self) -> Vec<String> {
+        vec![
             String::from(""),
             String::from("ps"),
             String::from("images")
-        ])
+        ]
     }
 
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
             display_name: String::from("test123"),
             display_style: DisplayStyle::CriticalityLevel,
-            category: String::from("containers"),
+            category: String::from("docker"),
             use_multivalue: true,
+            parent_id: String::from("docker"),
             ..Default::default()
         }
     }
