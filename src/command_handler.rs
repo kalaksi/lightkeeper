@@ -68,12 +68,16 @@ impl CommandHandler {
     }
 
     // Return value contains host's commands and command parameters as strings.
-    pub fn get_host_commands(&self, host_id: String) -> HashMap<String, Vec<String>> {
-        let (host, command_collection) = self.commands.iter().filter(|(host, _)| host.name == host_id).next().unwrap();
-
-        command_collection.iter().map(|(command_id, command)| {
-            (command_id.clone(), command.get_parameters())
-        }).collect::<HashMap<String, Vec<String>>>()
+    pub fn get_host_commands(&self, host_id: String) -> HashMap<String, CommandData> {
+        if let Some((_, command_collection)) = self.commands.iter().filter(|(host, _)| host.name == host_id).next() {
+            command_collection.iter().map(|(command_id, command)| {
+                (command_id.clone(),
+                CommandData::new(command_id.clone(), command.get_parameters(), command.get_display_options()))
+            }).collect()
+        }
+        else {
+            HashMap::new()
+        }
     }
 
     fn get_response_handler(host: Host, command: Command, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {

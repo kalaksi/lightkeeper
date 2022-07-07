@@ -21,9 +21,10 @@ pub struct HostListModel {
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 
-    // Couldn't get custom types to work for return types,
-    // so for now methods are used to get the data as JSON.
+    // NOTE: Couldn't get custom types to work for return types,
+    // so for now methods are used to get the data in JSON and parsed in QML.
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_monitor_data_map: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
     get_command_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_host_data: qt_method!(fn(&self, index: i32) -> QVariantList),
 
@@ -94,17 +95,25 @@ impl HostListModel {
         }
     }
 
+    // Returns list of MonitorData structs in JSON.
     fn get_monitor_data(&self, host_id: QString) -> QVariantList {
+        let host = self.hosts.get(&host_id.to_string()).unwrap();
+        host.monitor_data.data.into_iter().map(|(_, data)| data).collect()
+    }
+
+    // Returns map of MonitorData structs in JSON with monitor id as key.
+    fn get_monitor_data_map(&self, host_id: QString) -> QVariantMap {
         let host = self.hosts.get(&host_id.to_string()).unwrap();
         host.monitor_data.clone().data
     }
 
-    // Response data from executed commands.
+    // Returns CommandResults from executed commands in JSON.
     fn get_command_data(&self, host_id: QString) -> QVariantList {
         let host = self.hosts.get(&host_id.to_string()).unwrap();
         host.command_data.clone().data
     }
 
+    // TODO: refactor: use hostdata and variantmap?
     fn get_host_data(&self, index: i32) -> QVariantList {
         let mut list = QVariantList::default();
 
@@ -156,19 +165,21 @@ impl QAbstractTableModel for HostListModel {
 }
 
 
+// HostData is the corresponding Qt struct for frontend::HostDisplayData.
+// Contains host and state information.
 #[derive(QGadget, Default, Clone)]
 struct HostData {
     status: qt_property!(QString),
     name: qt_property!(QString),
     fqdn: qt_property!(QString),
     ip_address: qt_property!(QString),
+    // TODO: rename _data to _results?
     monitor_data: qt_property!(MonitorDataModel),
     command_data: qt_property!(CommandDataModel),
 }
 
 impl HostData {
     pub fn from(host_display_data: &frontend::HostDisplayData) -> Self {
-
         HostData {
             status: host_display_data.status.clone().to_string().into(),
             name: host_display_data.name.clone().into(),

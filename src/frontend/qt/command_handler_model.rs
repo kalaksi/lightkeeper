@@ -7,6 +7,7 @@ use crate::command_handler::CommandHandler;
 pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_child_commands: qt_method!(fn(&self, host_id: QString, parent_id: QString) -> QVariantList),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString)),
     command_handler: CommandHandler,
 }
@@ -20,16 +21,18 @@ impl CommandHandlerModel {
     }
 
     fn get_commands(&self, host_id: QString) -> QVariantList {
-        let commands_with_parameters = self.command_handler.get_host_commands(host_id.to_string());
+        let command_datas = self.command_handler.get_host_commands(host_id.to_string());
 
-        let mut full_commands = QVariantList::default();
-        for (command_id, parameters) in commands_with_parameters.iter() {
-            for parameter in parameters.iter() {
-                full_commands.push(format!("{} {}", command_id, parameter).to_qvariant());
-            }
-        }
+        command_datas.values().map(|item| serde_json::to_string(&item).unwrap().to_qvariant())
+                              .collect()
+    }
 
-        full_commands
+    fn get_child_commands(&self, host_id: QString, parent_id: QString) -> QVariantList {
+        let command_datas = self.command_handler.get_host_commands(host_id.to_string());
+
+        command_datas.values().filter(|item| item.display_options.parent_id == parent_id.to_string())
+                              .map(|item| serde_json::to_string(&item).unwrap().to_qvariant())
+                              .collect()
     }
 
     fn execute(&mut self, host_id: QString, command_id: QString) {

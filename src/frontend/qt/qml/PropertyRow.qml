@@ -6,10 +6,12 @@ import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
 Item {
+    id: root
     implicitWidth: parent.width
     implicitHeight: label.height
     property alias label: label.text
     property alias value: value.text
+    property alias childCommands: commands.model
 
     RowLayout {
         anchors.fill: parent
@@ -37,6 +39,15 @@ Item {
             horizontalAlignment: Text.AlignLeft
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignRight
+        }
+
+        // Row-level command buttons.
+        Repeater {
+            id: commands
+            CommandButton {
+                icon_source: "qrc:/main/images/button/refresh"
+                onClicked: root.commandsModel.execute("Test11", modelData.command_id)
+            }
         }
     }
 }
