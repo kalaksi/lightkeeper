@@ -14,7 +14,6 @@ pub struct Host {
     pub ip_address: IpAddr,
 }
 
-// TODO: rename to NetworkHost
 impl Host {
     pub fn new(name: &String, ip_address: &String, fqdn: &String) -> Result<Self, String> {
         let mut new = Host {
@@ -47,6 +46,7 @@ impl Host {
     }
 }
 
+// Also intended to be used as HashMap key. Only name acts as the identifier.
 impl PartialEq for Host {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name

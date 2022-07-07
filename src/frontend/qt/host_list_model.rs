@@ -99,6 +99,7 @@ impl HostListModel {
         host.monitor_data.clone().data
     }
 
+    // Response data from executed commands.
     fn get_command_data(&self, host_id: QString) -> QVariantList {
         let host = self.hosts.get(&host_id.to_string()).unwrap();
         host.command_data.clone().data

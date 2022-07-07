@@ -22,8 +22,8 @@ pub trait CommandModule : Module {
         None
     }
 
-    fn get_parameters(&self) -> Option<Vec<String>> {
-        None
+    fn get_parameters(&self) -> Vec<String> {
+        Vec::new()
     }
 
     // TODO: less boilerplate for module implementation?
@@ -86,21 +86,6 @@ impl Default for CommandResult {
             message: String::from(""),
             criticality: Criticality::Normal,
             time: Utc::now(),
-        }
-    }
-}
-
-#[derive(Clone, Serialize)]
-pub struct CommandData {
-    pub results: Vec<CommandResult>,
-    pub display_options: DisplayOptions,
-}
-
-impl CommandData {
-    pub fn new(display_options: DisplayOptions) -> Self {
-        CommandData {
-            results: Vec::new(),
-            display_options: display_options,
         }
     }
 }

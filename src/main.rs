@@ -47,6 +47,7 @@ fn main() {
     let mut host_manager = HostManager::new();
     let mut connection_manager = ConnectionManager::new();
     let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
+    let mut command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
 
     // Configure hosts and modules.
     for (host_id, host_config) in config.hosts.iter() {
@@ -95,6 +96,8 @@ fn main() {
                 let connector = module_factory.new_connector(&connector_spec, &connector_settings);
                 connection_manager.add_connector(&host, connector);
             }
+
+            command_handler.add_command(&host, command);
         }
     }
 
@@ -103,7 +106,6 @@ fn main() {
     let mut frontend = frontend::qt::QmlFrontend::new(&initial_display_data);
 
     host_manager.add_observer(frontend.new_update_sender());
-    let command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager, module_factory);
     frontend.set_command_handler(command_handler);
     frontend.start();
 

@@ -10,7 +10,6 @@ use crate::module::{
     monitoring::DataPoint,
     monitoring::DisplayOptions,
     command::CommandResult,
-    command::CommandData,
 };
 
 use crate::{
@@ -87,15 +86,7 @@ impl HostManager {
                     }
 
                     else if let Some(command_result) = message.command_result {
-                        // Check first if there already exists a key for command id.
-                        if let Some(command_data) = host_state.command_data.get_mut(&message.module_spec.id) {
-                            command_data.results.push(command_result);
-                        }
-                        else {
-                            let mut new_data = CommandData::new(message.display_options);
-                            new_data.results.push(command_result);
-                            host_state.command_data.insert(message.module_spec.id, new_data);
-                        }
+                        host_state.command_data.insert(message.module_spec.id, command_result);
                     }
 
                     host_state.update_status();
@@ -192,7 +183,7 @@ struct HostState {
     host: Host,
     status: HostStatus,
     monitor_data: HashMap<String, MonitoringData>,
-    command_data: HashMap<String, CommandData>,
+    command_data: HashMap<String, CommandResult>,
 }
 
 impl HostState {

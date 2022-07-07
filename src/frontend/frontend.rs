@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
 
+use crate::module::command::CommandResult;
 use crate::module::monitoring::MonitoringData;
-use crate::module::command::CommandData;
 use crate::utils::enums::HostStatus;
 
 pub trait Frontend {
@@ -33,7 +33,7 @@ pub struct HostDisplayData {
     pub status: HostStatus,
     pub ip_address: IpAddr,
     pub monitoring_data: HashMap<String, MonitoringData>,
-    pub command_data: HashMap<String, CommandData>,
+    pub command_data: HashMap<String, CommandResult>,
 }
 
 
