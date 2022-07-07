@@ -63,6 +63,7 @@ impl MonitoringData {
 #[derive(Clone, Serialize)]
 pub struct DataPoint {
     pub value: String,
+    // Label can be used for additional labeling of the value. Useful for multivalues.
     pub label: String,
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,

@@ -50,7 +50,7 @@ impl CommandModule for Docker {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_name: String::from("test123"),
+            display_name: String::from("Docker"),
             display_style: frontend::DisplayStyle::CriticalityLevel,
             category: String::from("docker"),
             use_multivalue: true,
