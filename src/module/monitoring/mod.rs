@@ -3,8 +3,6 @@ pub use monitoring_module::MonitoringModule;
 pub use monitoring_module::Monitor;
 pub use monitoring_module::MonitoringData;
 pub use monitoring_module::DataPoint;
-pub use crate::frontend::DisplayStyle;
-pub use crate::frontend::DisplayOptions;
 
 pub mod linux;
 pub use linux::Uptime;

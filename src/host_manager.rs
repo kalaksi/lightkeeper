@@ -8,7 +8,6 @@ use crate::module::{
     ModuleSpecification,
     monitoring::MonitoringData,
     monitoring::DataPoint,
-    monitoring::DisplayOptions,
     command::CommandResult,
 };
 
@@ -149,7 +148,7 @@ impl HostManager {
 
 pub struct StateUpdateMessage {
     pub host_name: String,
-    pub display_options: DisplayOptions,
+    pub display_options: frontend::DisplayOptions,
     pub module_spec: ModuleSpecification,
     pub data_point: Option<DataPoint>,
     pub command_result: Option<CommandResult>,

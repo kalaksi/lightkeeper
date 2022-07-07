@@ -1,15 +1,13 @@
 
 use std::collections::HashMap;
 use oping;
-use crate::{ Host, utils::enums::Criticality };
+use crate::{ Host, utils::enums::Criticality, frontend };
 use crate::module::{
     Module,
     Metadata,
     ModuleSpecification,
     monitoring::MonitoringModule,
     monitoring::Monitor,
-    monitoring::DisplayStyle,
-    monitoring::DisplayOptions,
     monitoring::DataPoint,
 };
 
@@ -40,10 +38,10 @@ impl MonitoringModule for Ping {
         Box::new(self.clone())
     }
 
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
             display_name: String::from("Ping"),
-            display_style: DisplayStyle::String,
+            display_style: frontend::DisplayStyle::String,
             category: String::from("network"),
             unit: String::from("ms"),
             ..Default::default()

@@ -4,6 +4,7 @@ use chrono::{ NaiveDateTime, Utc };
 use crate::{
     utils::strip_newline,
     Host,
+    frontend,
 };
 use crate::module::{
     Module,
@@ -11,8 +12,6 @@ use crate::module::{
     ModuleSpecification,
     monitoring::MonitoringModule,
     monitoring::Monitor,
-    monitoring::DisplayStyle,
-    monitoring::DisplayOptions,
     monitoring::DataPoint,
 };
 
@@ -42,10 +41,10 @@ impl MonitoringModule for Uptime {
         Box::new(self.clone())
     }
 
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
             display_name: String::from("Uptime"),
-            display_style: DisplayStyle::String,
+            display_style: frontend::DisplayStyle::String,
             category: String::from("host"),
             unit: String::from("d"),
             ..Default::default()

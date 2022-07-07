@@ -6,9 +6,8 @@ use chrono::{DateTime, Utc};
 use crate::{
     module::Module,
     module::ModuleSpecification,
-    module::monitoring::DisplayOptions, 
-    module::monitoring::DisplayStyle,
     utils::enums::Criticality,
+    frontend,
 };
 
 pub type Command = Box<dyn CommandModule + Send + Sync>;
@@ -29,10 +28,10 @@ pub trait CommandModule : Module {
     // TODO: less boilerplate for module implementation?
     fn clone_module(&self) -> Command;
 
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
             display_name: self.get_module_spec().id,
-            display_style: DisplayStyle::String,
+            display_style: frontend::DisplayStyle::String,
             ..Default::default()
         }
     }

@@ -1,12 +1,11 @@
 use std::collections::HashMap;
+use crate::frontend;
 use crate::module::{
     Module,
     command::CommandModule,
     command::Command,
     Metadata,
     ModuleSpecification,
-    monitoring::DisplayOptions,
-    monitoring::DisplayStyle,
 };
 
 use super::CommandResult;
@@ -49,10 +48,10 @@ impl CommandModule for Docker {
         ]
     }
 
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
             display_name: String::from("test123"),
-            display_style: DisplayStyle::CriticalityLevel,
+            display_style: frontend::DisplayStyle::CriticalityLevel,
             category: String::from("docker"),
             use_multivalue: true,
             parent_id: String::from("docker"),

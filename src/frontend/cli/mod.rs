@@ -6,11 +6,8 @@ use tabled::{ Tabled, Style, builder::Builder };
 
 use crate::utils::enums::{ HostStatus, Criticality };
 use super::{ Frontend, DisplayData };
-use crate::module::monitoring::{
-    DataPoint,
-    DisplayOptions,
-    DisplayStyle
-};
+use crate::frontend::{ DisplayOptions, DisplayStyle };
+use crate::module::monitoring::DataPoint;
 
 pub struct Cli;
 

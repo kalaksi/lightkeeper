@@ -1,14 +1,12 @@
 
 use std::collections::HashMap;
-use crate::{ Host, utils::enums::Criticality };
+use crate::{ Host, utils::enums::Criticality, frontend };
 use crate::module::{
     Module,
     Metadata,
     ModuleSpecification,
     monitoring::MonitoringModule,
     monitoring::Monitor,
-    monitoring::DisplayStyle,
-    monitoring::DisplayOptions,
     monitoring::DataPoint,
 };
 
@@ -42,10 +40,10 @@ impl MonitoringModule for Ssh {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
             display_name: String::from("SSH"),
-            display_style: DisplayStyle::StatusUpDown,
+            display_style: frontend::DisplayStyle::StatusUpDown,
             category: String::from("network"),
             ..Default::default()
         }

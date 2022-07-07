@@ -3,11 +3,15 @@ use std::sync::mpsc::Sender;
 use std::collections::HashMap;
 use serde_derive::Serialize;
 
-use crate::connection_manager::{ConnectorRequest, ResponseHandlerCallback};
-use crate::host_manager::StateUpdateMessage;
-use crate::Host;
+use crate::{
+    Host,
+    host_manager::StateUpdateMessage,
+    connection_manager::ConnectorRequest, 
+    connection_manager::ResponseHandlerCallback,
+    frontend::DisplayOptions,
+};
+
 use crate::module::{
-    monitoring::DisplayOptions, 
     command::Command,
     command::CommandResult,
 };
