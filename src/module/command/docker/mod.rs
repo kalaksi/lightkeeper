@@ -40,14 +40,6 @@ impl CommandModule for Docker {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_parameters(&self) -> Vec<String> {
-        vec![
-            String::from(""),
-            String::from("ps"),
-            String::from("images")
-        ]
-    }
-
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_name: String::from("Docker"),
@@ -59,18 +51,24 @@ impl CommandModule for Docker {
         }
     }
 
+    fn get_parameters(&self) -> Vec<String> {
+        vec![
+            String::from("inspect"),
+            String::from("images")
+        ]
+    }
+
     fn get_connector_request(&self, parameter: Option<String>) -> String {
         let param_string = parameter.unwrap_or_else(|| String::new());
         match param_string.as_str() {
-            "ps" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
+            "inspect" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
             "images" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/images/json?all=true"),
-            "" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
             _ => panic!("Unknown command parameter"),
         }
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {
-        log::debug!("TEST");
+        log::debug!("TEST {}", response);
         Ok(CommandResult::new(String::from("test")))
     }
 }

@@ -80,25 +80,31 @@ Item {
 
                     // Category-level command buttons.
                     Repeater {
-                        model: root.commandsModel.get_child_commands(root.hostId, "")
+                        model: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, ""))
 
                         CommandButton {
-                            property var parsedData: JSON.parse(modelData)
-
                             icon_source: "qrc:/main/images/button/refresh"
-                            onClicked: root.commandsModel.execute(root.hostId, parsedData.command_id)
+                            onClicked: root.commandsModel.execute(root.hostId, modelData.command_id)
                         }
                     }
 
                     Repeater {
                         model: modelData.monitorDatas
 
-                        PropertyRow {
-                            label: modelData.display_options.display_name
-                            value: modelData.values[0].value + " " + modelData.display_options.unit
-                            childCommands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, modelData.monitor_id))
+                        Repeater {
+                            id: rowRepeater
+                            property var monitorData: modelData
+                            property var lastDataPoint: monitorData.values.slice(-1)[0]
+                            model: monitorData.display_options.use_multivalue ? lastDataPoint.multivalue : [ lastDataPoint ]
+
+                            PropertyRow {
+                                label: modelData.label
+                                value: modelData.value + " " + rowRepeater.monitorData.display_options.unit
+                                hostId: root.hostId
+                                childCommands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, rowRepeater.monitorData.monitor_id))
+                            }
                         }
- 
+
                     }
                 }
             }

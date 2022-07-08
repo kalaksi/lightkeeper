@@ -81,7 +81,9 @@ impl MonitoringModule for Docker {
         parent_data.criticality = most_critical_container.state.to_criticality();
         parent_data.multivalue = containers.iter().map(|container| {
             let mut point = DataPoint::new_with_level(container.state.to_string(), container.state.to_criticality());
-            point.label = container.id.clone();
+            point.label = container.names.iter().map(|name| cleanup_name(name))
+                                         .collect::<Vec<String>>()
+                                         .join(", ");
             point
         }).collect();
 
@@ -89,6 +91,18 @@ impl MonitoringModule for Docker {
     }
 
 }
+
+
+fn cleanup_name(container_name: &String) -> String {
+    let mut result = container_name.clone();
+
+    if container_name.chars().next().unwrap() == '/' {
+        result.remove(0);
+    }
+
+    result
+}
+
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]

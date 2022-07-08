@@ -6,7 +6,7 @@ import QtQuick.Layouts 1.15
 
 RoundButton {
     required property string icon_source
-    property double scale: 0.5
+    property real scale: 0.3
 
     flat: true
     width: scale * parent.height

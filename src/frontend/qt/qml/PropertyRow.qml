@@ -6,12 +6,15 @@ import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
 Item {
+    // hostId is only needed if childCommands is given.
+    property string hostId: ""
+    property var childCommands: []
+    property alias label: label.text
+    property alias value: value.text
+
     id: root
     implicitWidth: parent.width
     implicitHeight: label.height
-    property alias label: label.text
-    property alias value: value.text
-    property alias childCommands: commands.model
 
     RowLayout {
         anchors.fill: parent
@@ -43,10 +46,10 @@ Item {
 
         // Row-level command buttons.
         Repeater {
-            id: commands
+            model: root.childCommands
             CommandButton {
                 icon_source: "qrc:/main/images/button/refresh"
-                onClicked: root.commandsModel.execute("Test11", modelData.command_id)
+                onClicked: root.commandsModel.execute(root.hostId, modelData.command_id)
             }
         }
     }
