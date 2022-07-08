@@ -31,7 +31,7 @@ pub trait CommandModule : Module {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_name: self.get_module_spec().id,
-            display_style: frontend::DisplayStyle::String,
+            display_style: frontend::DisplayStyle::Text,
             ..Default::default()
         }
     }

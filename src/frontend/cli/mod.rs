@@ -83,7 +83,7 @@ fn convert_single(data_point: &DataPoint, display_options: &DisplayOptions) -> S
                 HostStatus::Down => "Down".red().to_string(),
             }
         },
-        DisplayStyle::String => {
+        _ => {
             data_point.value.to_string()
         },
     };
@@ -114,7 +114,7 @@ fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) 
                     HostStatus::Down => "Down".to_string(),
                 }
             },
-            DisplayStyle::String => {
+            _ => {
                 data_point.value.to_string()
             },
         };

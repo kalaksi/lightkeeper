@@ -23,13 +23,14 @@ impl DisplayOptions {
 
 #[derive(Clone, Serialize)]
 pub enum DisplayStyle {
-    String,
+    Text,
     StatusUpDown,
     CriticalityLevel,
+    Icon,
 }
 
 impl Default for DisplayStyle {
     fn default() -> Self {
-        DisplayStyle::String
+        DisplayStyle::Text
     }
 }

@@ -30,7 +30,7 @@ pub trait MonitoringModule : Module {
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
             display_name: self.get_module_spec().id,
-            display_style: DisplayStyle::String,
+            display_style: DisplayStyle::Text,
             ..Default::default()
         }
     }

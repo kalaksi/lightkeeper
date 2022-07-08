@@ -41,7 +41,7 @@ impl MonitoringModule for Ping {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_name: String::from("Ping"),
-            display_style: frontend::DisplayStyle::String,
+            display_style: frontend::DisplayStyle::Text,
             category: String::from("network"),
             unit: String::from("ms"),
             ..Default::default()
