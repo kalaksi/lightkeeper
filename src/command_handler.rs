@@ -9,6 +9,7 @@ use crate::{
     connection_manager::ConnectorRequest, 
     connection_manager::ResponseHandlerCallback,
     frontend::DisplayOptions,
+    module::command::SubCommand,
 };
 
 use crate::module::{
@@ -49,7 +50,7 @@ impl CommandHandler {
         }
     }
 
-    pub fn execute(&mut self, host_id: String, command_id: String) {
+    pub fn execute(&mut self, host_id: String, command_id: String, subcommand: String, target_id: String) {
         // TODO: better solution?
         let (host, command_collection) = self.commands.iter().filter(|(host, _)| host.name == host_id).next().unwrap();
         let command = command_collection.get(&command_id).unwrap();
@@ -60,7 +61,7 @@ impl CommandHandler {
             connector_id: command.get_connector_spec().unwrap().id,
             source_id: command.get_module_spec().id,
             host: host.clone(),
-            message: command.get_connector_request(None),
+            message: command.get_connector_request(subcommand, target_id),
             response_handler: Self::get_response_handler(host.clone(), command.clone_module(), state_update_sender),
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
@@ -72,7 +73,7 @@ impl CommandHandler {
         if let Some((_, command_collection)) = self.commands.iter().filter(|(host, _)| host.name == host_id).next() {
             command_collection.iter().map(|(command_id, command)| {
                 (command_id.clone(),
-                CommandData::new(command_id.clone(), command.get_parameters(), command.get_display_options()))
+                CommandData::new(command_id.clone(), command.get_subcommands(), command.get_display_options()))
             }).collect()
         }
         else {
@@ -112,15 +113,15 @@ impl CommandHandler {
 #[derive(Clone, Serialize)]
 pub struct CommandData {
     pub command_id: String,
-    pub command_parameters: Vec<String>,
+    pub subcommands: Vec<SubCommand>,
     pub display_options: DisplayOptions,
 }
 
 impl CommandData {
-    pub fn new(command_id: String, command_parameters: Vec<String>, display_options: DisplayOptions) -> Self {
+    pub fn new(command_id: String, subcommands: Vec<SubCommand>, display_options: DisplayOptions) -> Self {
         CommandData {
             command_id: command_id,
-            command_parameters: command_parameters,
+            subcommands: subcommands,
             display_options: display_options,
         }
     }

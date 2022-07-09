@@ -8,7 +8,7 @@ pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_child_commands: qt_method!(fn(&self, host_id: QString, parent_id: QString) -> QVariantList),
-    execute: qt_method!(fn(&self, host_id: QString, command_id: QString)),
+    execute: qt_method!(fn(&self, host_id: QString, command_id: QString, subcommand: QString, target_id: QString)),
     command_handler: CommandHandler,
 }
 
@@ -35,7 +35,12 @@ impl CommandHandlerModel {
                               .collect()
     }
 
-    fn execute(&mut self, host_id: QString, command_id: QString) {
-        self.command_handler.execute(host_id.to_string(), command_id.to_string())
+    fn execute(&mut self, host_id: QString, command_id: QString, subcommand: QString, target_id: QString) {
+        self.command_handler.execute(
+            host_id.to_string(),
+            command_id.to_string(),
+            subcommand.to_string(),
+            target_id.to_string(),
+        )
     }
 }

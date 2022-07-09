@@ -42,8 +42,8 @@ impl MonitoringModule for Ssh {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_name: String::from("SSH"),
             display_style: frontend::DisplayStyle::StatusUpDown,
+            display_text: String::from("SSH"),
             category: String::from("network"),
             ..Default::default()
         }

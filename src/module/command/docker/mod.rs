@@ -4,6 +4,7 @@ use crate::module::{
     Module,
     command::CommandModule,
     command::Command,
+    command::SubCommand,
     Metadata,
     ModuleSpecification,
 };
@@ -42,33 +43,35 @@ impl CommandModule for Docker {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_name: String::from("Docker"),
-            display_style: frontend::DisplayStyle::CriticalityLevel,
             category: String::from("docker"),
-            use_multivalue: true,
             parent_id: String::from("docker"),
             ..Default::default()
         }
     }
 
-    fn get_parameters(&self) -> Vec<String> {
+    fn get_subcommands(&self) -> Vec<SubCommand> {
         vec![
-            String::from("inspect"),
-            String::from("images")
+            SubCommand::new_with_icon("restart", "refresh"),
+            SubCommand::new_with_icon("inspect", "refresh"),
+            SubCommand::new_with_icon("shell", "refresh"),
         ]
     }
 
-    fn get_connector_request(&self, parameter: Option<String>) -> String {
-        let param_string = parameter.unwrap_or_else(|| String::new());
-        match param_string.as_str() {
-            "inspect" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true"),
-            "images" => String::from("sudo curl --unix-socket /var/run/docker.sock http://localhost/images/json?all=true"),
-            _ => panic!("Unknown command parameter"),
+    fn get_connector_request(&self, subcommand: String, target_id: String) -> String {
+        if target_id.is_empty() {
+            panic!("target_id is mandatory and should contain a container ID");
+        }
+
+        match subcommand.as_str() {
+            "restart" => format!("sudo curl --unix-socket /var/run/docker.sock -X POST http://localhost/containers/{}/restart", target_id),
+            "inspect" => format!("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/{}/json?all=true", target_id),
+            "shell" => String::from("TODO"),
+            _ => panic!("Unknown subcommand: {}", subcommand),
         }
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {
-        log::debug!("TEST {}", response);
-        Ok(CommandResult::new(String::from("test")))
+        log::debug!("Got response: {}", response);
+        Ok(CommandResult::new(String::from(response)))
     }
 }

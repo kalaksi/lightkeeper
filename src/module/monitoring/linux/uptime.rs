@@ -43,8 +43,8 @@ impl MonitoringModule for Uptime {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_name: String::from("Uptime"),
             display_style: frontend::DisplayStyle::Text,
+            display_text: String::from("Uptime"),
             category: String::from("host"),
             unit: String::from("d"),
             ..Default::default()

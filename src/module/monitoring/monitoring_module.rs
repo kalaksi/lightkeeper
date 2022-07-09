@@ -29,8 +29,8 @@ pub trait MonitoringModule : Module {
 
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
-            display_name: self.get_module_spec().id,
             display_style: DisplayStyle::Text,
+            display_text: self.get_module_spec().id,
             ..Default::default()
         }
     }
@@ -62,9 +62,14 @@ impl MonitoringData {
 
 #[derive(Clone, Serialize)]
 pub struct DataPoint {
+    // With multivalue, value can be a composite result/value of all of the values.
+    // For example, with service statuses, this can show the worst state in the multivalue group.
     pub value: String,
-    // Label can be used for additional labeling of the value. Useful for multivalues.
+    // Optional. Can be used for additional labeling of the value. Useful especially with multivalues.
     pub label: String,
+    // Optional identifer. Can be used as a command parameter.
+    // Some commands will require this in which case the parent monitor has to populate this.
+    pub source_id: String,
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
@@ -75,6 +80,7 @@ impl DataPoint {
         DataPoint {
             value: value,
             label: String::from(""),
+            source_id: String::from(""),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
@@ -85,6 +91,7 @@ impl DataPoint {
         DataPoint {
             value: value,
             label: String::from(""),
+            source_id: String::from(""),
             multivalue: Vec::new(),
             criticality: criticality,
             time: Utc::now(),
@@ -109,8 +116,9 @@ impl DataPoint {
 impl Default for DataPoint {
     fn default() -> Self {
         DataPoint {
-            value: String::new(),
+            value: String::from(""),
             label: String::from(""),
+            source_id: String::from(""),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),

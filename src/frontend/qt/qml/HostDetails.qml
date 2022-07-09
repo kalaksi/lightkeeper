@@ -79,12 +79,10 @@ Item {
                     implicitWidth: parent.width
 
                     // Category-level command buttons.
-                    Repeater {
-                        model: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, ""))
-
-                        CommandButton {
-                            icon_source: "qrc:/main/images/button/refresh"
-                            onClicked: root.commandsModel.execute(root.hostId, modelData.command_id)
+                    CommandButtonRow {
+                        commands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, ""))
+                        onClicked: function(subcommand, targetId) {
+                            root.commandsModel.execute(root.hostId, modelData.command_id, modelData.subcommand, targetId)
                         }
                     }
 
@@ -95,16 +93,17 @@ Item {
                             id: rowRepeater
                             property var monitorData: modelData
                             property var lastDataPoint: monitorData.values.slice(-1)[0]
-                            model: monitorData.display_options.use_multivalue ? lastDataPoint.multivalue : [ lastDataPoint ]
+                            model: lastDataPoint.multivalue.length > 0 ? lastDataPoint.multivalue : [ lastDataPoint ]
 
                             PropertyRow {
                                 label: modelData.label
                                 value: modelData.value + " " + rowRepeater.monitorData.display_options.unit
                                 hostId: root.hostId
-                                childCommands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, rowRepeater.monitorData.monitor_id))
+                                targetId: modelData.source_id
+                                rowCommands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, rowRepeater.monitorData.monitor_id))
+                                commandsModel: root.commandsModel
                             }
                         }
-
                     }
                 }
             }
@@ -119,6 +118,7 @@ Item {
 
         for (let monitorId in monitorDataJsons) {
             let data = JSON.parse(monitorDataJsons[monitorId])
+            // TODO: could be done better than to add a property ad-hoc?
             data.monitor_id = monitorId
 
             let category = data.display_options.category

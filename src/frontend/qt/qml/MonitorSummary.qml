@@ -58,7 +58,7 @@ Item {
                 Text {
                     id: label
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: monitorData.display_options.display_name
+                    text: monitorData.display_options.display_text
                     font.family: font_label.name
                     font.pointSize: 6
                     opacity: 0

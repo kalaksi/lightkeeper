@@ -2,8 +2,9 @@ use serde_derive::Serialize;
 
 #[derive(Clone, Serialize, Default)]
 pub struct DisplayOptions {
-    pub display_name: String,
     pub display_style: DisplayStyle,
+    pub display_text: String,
+    pub display_icon: String,
     pub category: String,
     pub unit: String,
     // For monitors that produce a group of values.

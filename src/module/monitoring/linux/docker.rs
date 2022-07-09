@@ -53,8 +53,8 @@ impl MonitoringModule for Docker {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_name: String::from("Containers"),
             display_style: frontend::DisplayStyle::CriticalityLevel,
+            display_text: String::from("Containers"),
             category: String::from("docker"),
             use_multivalue: true,
             ..Default::default()
@@ -84,6 +84,7 @@ impl MonitoringModule for Docker {
             point.label = container.names.iter().map(|name| cleanup_name(name))
                                          .collect::<Vec<String>>()
                                          .join(", ");
+            point.source_id = container.id.clone();
             point
         }).collect();
 

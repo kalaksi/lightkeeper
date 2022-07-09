@@ -121,8 +121,8 @@ impl HostManager {
                     display_data.all_monitor_names.push(monitor_id.clone());
 
                     let header = match monitor_data.display_options.unit.is_empty() {
-                        true => format!("{}", monitor_data.display_options.display_name),
-                        false => format!("{} ({})", monitor_data.display_options.display_name, monitor_data.display_options.unit),
+                        true => format!("{}", monitor_data.display_options.display_text),
+                        false => format!("{} ({})", monitor_data.display_options.display_text, monitor_data.display_options.unit),
                     };
                     display_data.table_headers.push(header);
                 }
