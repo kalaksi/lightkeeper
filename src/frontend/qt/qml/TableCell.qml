@@ -6,9 +6,10 @@ Item {
     id: root
     property bool firstItem: false
     property bool selected: false
-    property bool clicked: false
     implicitHeight: 40
     implicitWidth: parent.width
+
+    signal clicked()
 
     Rectangle {
         id: rounded
@@ -18,7 +19,7 @@ Item {
 
         MouseArea {
             anchors.fill: parent
-            onClicked: root.clicked = !root.clicked
+            onClicked: root.clicked()
         }
     }
 

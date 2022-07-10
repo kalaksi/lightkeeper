@@ -20,7 +20,7 @@ TableView {
             delegate: TableCell {
                 firstItem: true
                 selected: table.model.selected_row === row
-                onClickedChanged: selectRow(row)
+                onClicked: selectRow(row)
                 implicitWidth: table.width * 0.15
                 implicitHeight: table.rowHeight
 
@@ -34,7 +34,7 @@ TableView {
             column: 1
             delegate: TableCell {
                 selected: table.model.selected_row === row
-                onClickedChanged: selectRow(row)
+                onClicked: selectRow(row)
                 implicitWidth: table.width * 0.10
 
                 Text {
@@ -48,7 +48,7 @@ TableView {
             column: 2
             delegate: TableCell {
                 selected: table.model.selected_row === row
-                onClickedChanged: selectRow(row)
+                onClicked: selectRow(row)
                 implicitWidth: table.width * 0.20
 
                 OptionalText {
@@ -61,7 +61,7 @@ TableView {
             column: 3
             delegate: TableCell {
                 selected: table.model.selected_row === row
-                onClickedChanged: selectRow(row)
+                onClicked: selectRow(row)
                 implicitWidth: table.width * 0.20
 
                 OptionalText {
@@ -74,7 +74,7 @@ TableView {
             column: 4
             delegate: TableCell {
                 selected: table.model.selected_row === row
-                onClickedChanged: selectRow(row)
+                onClicked: selectRow(row)
                 implicitWidth: table.width * 0.3
 
                 MonitorSummary {
@@ -87,7 +87,7 @@ TableView {
             column: 5
             delegate: TableCell {
                 selected: table.model.selected_row === row
-                onClickedChanged: selectRow(row)
+                onClicked: selectRow(row)
             }
         }
     }
