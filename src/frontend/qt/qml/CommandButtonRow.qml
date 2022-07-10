@@ -8,7 +8,7 @@ Item {
     id: root
     property var commands: []
 
-    signal clicked(string commandId, string subcommand)
+    signal clicked(string commandId)
 
     Row {
         anchors.fill: parent
@@ -17,25 +17,19 @@ Item {
         Repeater {
             model: root.commands
 
-            Repeater {
-                property var command: modelData
+            RoundButton {
+                id: button
+                onClicked: root.clicked(modelData.command_id)
 
-                model: modelData.subcommands
+                flat: true
+                width: root.height
+                height: root.height
 
-                RoundButton {
-                    id: button
-                    property real scale: 1.0
-                    onClicked: root.clicked(command.command_id, modelData.subcommand)
-
-                    flat: true
-                    width: scale * root.height
-                    height: scale * root.height
-
-                    Image {
-                        source: "qrc:/main/images/button/" + modelData.display_icon
-                        width: parent.width
-                        height: parent.height
-                    }
+                Image {
+                    anchors.centerIn: parent
+                    source: "qrc:/main/images/button/" + modelData.display_options.display_icon
+                    width: 0.9 * parent.width
+                    height: 0.9 * parent.height
                 }
             }
         }

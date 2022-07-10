@@ -25,7 +25,7 @@ Item {
     GridLayout {
         id: grid
         anchors.fill: parent
-        columns: 6
+        flow: GridLayout.TopToBottom
         rows: 2
  
         Repeater {
@@ -46,8 +46,8 @@ Item {
                     // Category-level command buttons.
                     CommandButtonRow {
                         commands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, ""))
-                        onClicked: function(subcommand, targetId) {
-                            root.commandsModel.execute(root.hostId, modelData.command_id, modelData.subcommand, targetId)
+                        onClicked: function(targetId) {
+                            root.commandsModel.execute(root.hostId, modelData.command_id, targetId)
                         }
                     }
 
@@ -87,7 +87,7 @@ Item {
     }
 
     function groupByCategory(monitorDataJsons, commandJsons) {
-        // TODO: calculate categories on rust side (HostData).
+        // TODO: calculate categories on rust side (HostData)?
         let categories = []
         let monitorDataByCategory = {}
         let commandByCategory = {}

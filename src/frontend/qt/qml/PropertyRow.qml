@@ -45,12 +45,12 @@ Item {
                 id: commands
 
                 anchors.right: parent.right
-                implicitWidth: 3 * 24 * root.rowCommands.length
+                implicitWidth: 24 * root.rowCommands.length
                 implicitHeight: parent.height
 
                 commands: root.rowCommands
-                onClicked: function(commandId, subcommand) {
-                    root.commandsModel.execute(root.hostId, commandId, subcommand, root.targetId)
+                onClicked: function(commandId) {
+                    root.commandsModel.execute(root.hostId, commandId, root.targetId)
                 }
             }
         }

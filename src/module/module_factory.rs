@@ -10,6 +10,7 @@ use super::{
     monitoring::MonitoringModule,
     command,
     command::CommandModule,
+    command::docker,
 };
 
 
@@ -56,11 +57,15 @@ impl ModuleFactory {
     fn load_modules(&mut self) {
         log::info!("Loading modules");
         self.connector_constructors.insert(connection::Ssh2::get_metadata().module_spec, connection::Ssh2::new_connection_module);
+
         self.monitor_constructors.insert(monitoring::Uptime::get_metadata().module_spec, monitoring::Uptime::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::Ping::get_metadata().module_spec, monitoring::Ping::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::Ssh::get_metadata().module_spec, monitoring::Ssh::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::Docker::get_metadata().module_spec, monitoring::Docker::new_monitoring_module);
-        self.command_constructors.insert(command::Docker::get_metadata().module_spec, command::Docker::new_command_module);
+
+        self.command_constructors.insert(command::docker::Restart::get_metadata().module_spec, command::docker::Restart::new_command_module);
+        self.command_constructors.insert(command::docker::Inspect::get_metadata().module_spec, command::docker::Inspect::new_command_module);
+        self.command_constructors.insert(command::docker::Shell::get_metadata().module_spec, command::docker::Shell::new_command_module);
     }
 
 

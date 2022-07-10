@@ -21,20 +21,6 @@ pub trait CommandModule : Module {
         None
     }
 
-    fn get_subcommands(&self) -> Vec<SubCommand> {
-        // Command modules that don't explicitly define subcommands, will technically still have the default
-        // subcommand that is defined here, so that the handling is more unified.
-        let display_options = self.get_display_options();
-        vec![
-            SubCommand {
-                subcommand: String::from(""),
-                display_style: display_options.display_style,
-                display_icon: display_options.display_icon,
-                display_text: display_options.display_text,
-            }
-        ]
-    }
-
     // TODO: less boilerplate for module implementation?
     fn clone_module(&self) -> Command;
 
@@ -46,7 +32,7 @@ pub trait CommandModule : Module {
         }
     }
 
-    fn get_connector_request(&self, _subcommand: String, _target_id: String) -> String;
+    fn get_connector_request(&self, _target_id: String) -> String;
     fn process_response(&self, response: &String) -> Result<CommandResult, String>;
 }
 
@@ -93,25 +79,6 @@ impl Default for CommandResult {
             message: String::from(""),
             criticality: Criticality::Normal,
             time: Utc::now(),
-        }
-    }
-}
-
-#[derive(Clone, Serialize)]
-pub struct SubCommand {
-    pub subcommand: String,
-    pub display_style: frontend::DisplayStyle,
-    pub display_text: String,
-    pub display_icon: String,
-}
-
-impl SubCommand {
-    pub fn new_with_icon(subcommand: &str, icon: &str) -> Self {
-        SubCommand {
-            subcommand: subcommand.to_string(),
-            display_style: frontend::DisplayStyle::Icon,
-            display_icon: icon.to_string(),
-            display_text: String::from(""),
         }
     }
 }
