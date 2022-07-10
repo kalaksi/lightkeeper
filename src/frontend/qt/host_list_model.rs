@@ -26,7 +26,7 @@ pub struct HostListModel {
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_monitor_data_map: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
     get_command_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
-    get_host_data: qt_method!(fn(&self, index: i32) -> QVariantList),
+    get_host_data: qt_method!(fn(&self, index: i32) -> QVariantMap),
 
     // For table row selection.
     selected_row: qt_property!(i32; NOTIFY selected_row_changed),
@@ -51,8 +51,7 @@ impl HostListModel {
         }
 
         for (host_id, host_data) in display_data.hosts.iter() {
-            model.hosts_index.insert(model.hosts.len(), host_id.clone());
-            model.hosts.insert(host_id.clone(), HostData::from(&host_data));
+            model.hosts_index.insert(model.hosts.len(), host_id.clone()); model.hosts.insert(host_id.clone(), HostData::from(&host_data));
         }
 
         (model, sender)
@@ -113,20 +112,18 @@ impl HostListModel {
         host.command_data.clone().data
     }
 
-    // TODO: refactor: use hostdata and variantmap?
-    fn get_host_data(&self, index: i32) -> QVariantList {
-        let mut list = QVariantList::default();
+    fn get_host_data(&self, index: i32) -> QVariantMap {
+        let host_id = self.hosts_index.get(&(index as usize)).unwrap();
+        let host_data = self.hosts.get(&host_id.to_string()).unwrap();
 
-        if let Some(host_id) = self.hosts_index.get(&(index as usize)) {
-            let host = self.hosts.get(&host_id.to_string()).unwrap();
-            list.push(host.status.to_qvariant());
-            list.push(host.name.to_qvariant());
-            list.push(host.fqdn.to_qvariant());
-            list.push(host.ip_address.to_qvariant());
-        }
-
-        list
+        let mut result = QVariantMap::default();
+        result.insert(self.headers[0].clone(), host_data.status.to_qvariant());
+        result.insert(self.headers[1].clone(), host_data.name.to_qvariant());
+        result.insert(self.headers[2].clone(), host_data.fqdn.to_qvariant());
+        result.insert(self.headers[3].clone(), host_data.ip_address.to_qvariant());
+        result
     }
+   
 }
 
 

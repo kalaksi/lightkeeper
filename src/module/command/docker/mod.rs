@@ -52,8 +52,8 @@ impl CommandModule for Docker {
     fn get_subcommands(&self) -> Vec<SubCommand> {
         vec![
             SubCommand::new_with_icon("restart", "refresh"),
-            SubCommand::new_with_icon("inspect", "refresh"),
-            SubCommand::new_with_icon("shell", "refresh"),
+            SubCommand::new_with_icon("inspect", "search"),
+            SubCommand::new_with_icon("shell", "terminal"),
         ]
     }
 

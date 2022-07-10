@@ -12,9 +12,9 @@ Item {
     id: root
     required property var model
     required property var commandsModel
-    property var hostData: model.get_host_data(model.selected_row)
+    property var hostData: model.selected_row >= 0 ? model.get_host_data(model.selected_row) : {}
     // For convenience
-    property string hostId: root.hostData.length > 0 ? root.hostData[1] : ""
+    property string hostId: model.selected_row >= 0 ? root.hostData["Name"] : ""
     property int columnMaximumWidth: 800
 
     Rectangle {
@@ -27,41 +27,6 @@ Item {
         anchors.fill: parent
         columns: 6
         rows: 2
-
-        GroupBox {
-            title: "Host"
-            Layout.minimumWidth: 0.5 * root.columnMaximumWidth
-            Layout.maximumWidth: root.columnMaximumWidth
-            Layout.alignment: Qt.AlignTop
-
-            ColumnLayout {
-                id: column
-                anchors.top: parent.top
-                width: parent.width
-
-                // TODO: get rid of the manual indexing and length checking
-                PropertyRow {
-                    label: "Status"
-                    value: root.hostData.length > 0 ? root.hostData[0] : ""
-                }
-
-                PropertyRow {
-                    label: "Name"
-                    value: root.hostData.length > 0 ? root.hostData[1] : ""
-                }
-
-                PropertyRow {
-                    label: "FQDN"
-                    value: root.hostData.length > 0 ? root.hostData[2] : ""
-                }
-
-                PropertyRow {
-                    label: "IP address"
-                    value: root.hostData.length > 0 ? root.hostData[3] : ""
-                }
-            }
-
-        }
  
         Repeater {
             model: root.hostId !== "" ?
@@ -86,9 +51,20 @@ Item {
                         }
                     }
 
+                    // Host data is a bit different from monitor data, so handling it separately here.
+                    Repeater {
+                        model: modelData.category === "Host" && root.hostId !== "" ?  Object.entries(root.hostData) : []
+
+                        PropertyRow {
+                            label: modelData[0]
+                            value: modelData[1]
+                        }
+                    }
+
                     Repeater {
                         model: modelData.monitorDatas
 
+                        // Creates multiple rows for multivalue-entries, otherwise just one row.
                         Repeater {
                             id: rowRepeater
                             property var monitorData: modelData
