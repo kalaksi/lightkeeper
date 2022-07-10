@@ -43,7 +43,9 @@ impl CommandModule for Inspect {
         frontend::DisplayOptions {
             category: String::from("docker"),
             parent_id: String::from("docker"),
+            display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("search"),
+            display_priority: 1,
             ..Default::default()
         }
     }

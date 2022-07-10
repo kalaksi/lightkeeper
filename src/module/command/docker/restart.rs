@@ -44,7 +44,9 @@ impl CommandModule for Restart {
         frontend::DisplayOptions {
             category: String::from("docker"),
             parent_id: String::from("docker"),
+            display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("refresh"),
+            display_priority: 2,
             ..Default::default()
         }
     }

@@ -1,7 +1,7 @@
 extern crate qmetaobject;
 use qmetaobject::*;
 
-use crate::command_handler::CommandHandler;
+use crate::command_handler::{CommandHandler, CommandData};
 
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
@@ -28,11 +28,12 @@ impl CommandHandlerModel {
     }
 
     fn get_child_commands(&self, host_id: QString, parent_id: QString) -> QVariantList {
-        let command_datas = self.command_handler.get_host_commands(host_id.to_string());
+        let all_commands = self.command_handler.get_host_commands(host_id.to_string());
+        let mut valid_commands = all_commands.values().filter(|item| item.display_options.parent_id == parent_id.to_string())
+                                                      .collect::<Vec<&CommandData>>();
 
-        command_datas.values().filter(|item| item.display_options.parent_id == parent_id.to_string())
-                              .map(|item| serde_json::to_string(&item).unwrap().to_qvariant())
-                              .collect()
+        valid_commands.sort_by(|left, right| left.display_options.display_priority.cmp(&right.display_options.display_priority));
+        valid_commands.iter().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
     }
 
     fn execute(&mut self, host_id: QString, command_id: QString, target_id: QString) {

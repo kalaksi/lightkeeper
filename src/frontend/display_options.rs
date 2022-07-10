@@ -5,6 +5,9 @@ pub struct DisplayOptions {
     pub display_style: DisplayStyle,
     pub display_text: String,
     pub display_icon: String,
+    // Display priority controls which items are shown first. Smaller number wins.
+    // TODO: formulate a better rule for using this.
+    pub display_priority: i8,
     pub category: String,
     pub unit: String,
     // For monitors that produce a group of values.

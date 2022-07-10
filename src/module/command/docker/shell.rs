@@ -44,7 +44,9 @@ impl CommandModule for Shell {
         frontend::DisplayOptions {
             category: String::from("docker"),
             parent_id: String::from("docker"),
+            display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("terminal"),
+            display_priority: 3,
             ..Default::default()
         }
     }
