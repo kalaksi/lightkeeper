@@ -17,6 +17,11 @@ pub fn init_resources() {
             "images/breeze/dark/alarm-symbolic.svg" as "images/status/unknown",
 
             "images/breeze/dark/view-refresh.svg" as "images/button/refresh",
+            "images/breeze/dark/system-search.svg" as "images/button/search",
+            "images/breeze/dark/find-location.svg" as "images/button/search-document",
+            "images/breeze/dark/document-preview.svg" as "images/button/view-document",
+            // "images/breeze/dark/utilities-terminal.svg" as "images/button/terminal",
+            "images/fontawesome/terminal.svg" as "images/button/terminal",
         }
     );
     resources_main();
@@ -37,6 +42,9 @@ pub fn init_resources() {
             "images/breeze/light/alarm-symbolic.svg" as "images/status/unknown",
 
             "images/breeze/light/view-refresh.svg" as "images/button/refresh",
+            "images/breeze/light/system-search.svg" as "images/button/search",
+            "images/breeze/light/find-location.svg" as "images/button/search-document",
+            "images/breeze/light/utilities-terminal.svg" as "images/button/terminal",
         }
     );
     resources_theme_light();
