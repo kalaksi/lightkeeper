@@ -1,19 +1,18 @@
 
 use std::collections::HashMap;
 use oping;
-use crate::Host;
+use crate::{ Host, utils::enums::Criticality, frontend };
 use crate::module::{
     Module,
     Metadata,
-    monitoring::MonitoringModule,
-    monitoring::DataPoint,
-    monitoring::DisplayOptions,
-    monitoring::DisplayStyle,
-    monitoring::Criticality,
     ModuleSpecification,
+    monitoring::MonitoringModule,
+    monitoring::Monitor,
+    monitoring::DataPoint,
 };
 
 
+#[derive(Clone)]
 pub struct Ping;
 
 impl Module for Ping {
@@ -35,17 +34,21 @@ impl Module for Ping {
 }
 
 impl MonitoringModule for Ping {
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
-            display_name: String::from("Ping"),
-            display_style: DisplayStyle::String,
+    fn clone_module(&self) -> Monitor {
+        Box::new(self.clone())
+    }
+
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
+            display_style: frontend::DisplayStyle::Text,
+            display_text: String::from("Ping"),
             category: String::from("network"),
             unit: String::from("ms"),
-            use_multivalue: false,
+            ..Default::default()
         }
     }
 
-    fn process(&self, host: &Host, _response: &String, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, _response: String, _connector_is_connected: bool) -> Result<DataPoint, String> {
         let mut ping = oping::Ping::new();
 
         ping.set_timeout(5.0)

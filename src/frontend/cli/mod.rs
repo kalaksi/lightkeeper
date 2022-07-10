@@ -4,14 +4,10 @@ use owo_colors::OwoColorize;
 use std::net::IpAddr;
 use tabled::{ Tabled, Style, builder::Builder };
 
-use crate::utils::enums::HostStatus;
+use crate::utils::enums::{ HostStatus, Criticality };
 use super::{ Frontend, DisplayData };
-use crate::module::monitoring::{
-    Criticality,
-    DataPoint,
-    DisplayOptions,
-    DisplayStyle
-};
+use crate::frontend::{ DisplayOptions, DisplayStyle };
+use crate::module::monitoring::DataPoint;
 
 pub struct Cli;
 
@@ -87,7 +83,7 @@ fn convert_single(data_point: &DataPoint, display_options: &DisplayOptions) -> S
                 HostStatus::Down => "Down".red().to_string(),
             }
         },
-        DisplayStyle::String => {
+        _ => {
             data_point.value.to_string()
         },
     };
@@ -118,7 +114,7 @@ fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) 
                     HostStatus::Down => "Down".to_string(),
                 }
             },
-            DisplayStyle::String => {
+            _ => {
                 data_point.value.to_string()
             },
         };

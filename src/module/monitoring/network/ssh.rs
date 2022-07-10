@@ -1,13 +1,16 @@
 
 use std::collections::HashMap;
-use crate::Host;
+use crate::{ Host, utils::enums::Criticality, frontend };
 use crate::module::{
     Module,
     Metadata,
-    monitoring::{ MonitoringModule, Criticality, DisplayStyle, DisplayOptions, DataPoint },
     ModuleSpecification,
+    monitoring::MonitoringModule,
+    monitoring::Monitor,
+    monitoring::DataPoint,
 };
 
+#[derive(Clone)]
 pub struct Ssh;
 
 impl Module for Ssh {
@@ -29,25 +32,24 @@ impl Module for Ssh {
 }
 
 impl MonitoringModule for Ssh {
+    fn clone_module(&self) -> Monitor {
+        Box::new(self.clone())
+    }
+
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self) -> String {
-        String::from("")
-    }
-
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
-            display_name: String::from("SSH"),
-            display_style: DisplayStyle::StatusUpDown,
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
+            display_style: frontend::DisplayStyle::StatusUpDown,
+            display_text: String::from("SSH"),
             category: String::from("network"),
-            use_multivalue: false,
-            unit: String::from(""),
+            ..Default::default()
         }
     }
 
-    fn process(&self, _host: &Host, _response: &String, connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, _response: String, connector_is_connected: bool) -> Result<DataPoint, String> {
         match connector_is_connected {
             true => {
                 Ok(DataPoint::new_with_level(String::from("up"), Criticality::Normal))

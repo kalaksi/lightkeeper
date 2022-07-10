@@ -4,16 +4,19 @@ use chrono::{ NaiveDateTime, Utc };
 use crate::{
     utils::strip_newline,
     Host,
+    frontend,
 };
 use crate::module::{
     Module,
     Metadata,
-    monitoring::{MonitoringModule, DisplayStyle, DisplayOptions, DataPoint},
     ModuleSpecification,
+    monitoring::MonitoringModule,
+    monitoring::Monitor,
+    monitoring::DataPoint,
 };
 
-pub struct Uptime {
-}
+#[derive(Clone)]
+pub struct Uptime;
 
 impl Module for Uptime {
     fn get_metadata() -> Metadata {
@@ -34,13 +37,17 @@ impl Module for Uptime {
 }
 
 impl MonitoringModule for Uptime {
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
-            display_name: String::from("Uptime"),
-            display_style: DisplayStyle::String,
+    fn clone_module(&self) -> Monitor {
+        Box::new(self.clone())
+    }
+
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
+            display_style: frontend::DisplayStyle::Text,
+            display_text: String::from("Uptime"),
             category: String::from("host"),
             unit: String::from("d"),
-            use_multivalue: false,
+            ..Default::default()
         }
     }
 
@@ -52,8 +59,8 @@ impl MonitoringModule for Uptime {
         String::from("uptime -s")
     }
 
-    fn process(&self, _host: &Host, response: &String, _connector_is_connected: bool) -> Result<DataPoint, String> {
-        let boot_datetime = NaiveDateTime::parse_from_str(&strip_newline(response), "%Y-%m-%d %H:%M:%S")
+    fn process_response(&self, _host: Host, response: String, _connector_is_connected: bool) -> Result<DataPoint, String> {
+        let boot_datetime = NaiveDateTime::parse_from_str(&strip_newline(&response), "%Y-%m-%d %H:%M:%S")
                                           .map_err(|e| e.to_string())?;
 
         let uptime = Utc::now().naive_utc() - boot_datetime;

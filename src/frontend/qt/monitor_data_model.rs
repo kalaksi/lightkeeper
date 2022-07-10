@@ -5,17 +5,20 @@ use crate::frontend;
 
 #[derive(Default, Clone)]
 pub struct MonitorDataModel {
-    pub data: QVariantList,
+    pub data: QVariantMap,
 }
 
 impl MonitorDataModel {
     pub fn new(host_display_data: &frontend::HostDisplayData) -> Self {
         let mut model = MonitorDataModel { 
-            data: QVariantList::default(),
+            ..Default::default()
         };
 
-        for (_, data) in &host_display_data.monitoring_data {
-            model.data.push(serde_json::to_string(&data).unwrap().to_qvariant());
+        for (monitor_id, monitor_data) in &host_display_data.monitoring_data {
+            model.data.insert(
+                QString::from(monitor_id.clone()),
+                serde_json::to_string(&monitor_data).unwrap().to_qvariant()
+            );
         }
 
         model

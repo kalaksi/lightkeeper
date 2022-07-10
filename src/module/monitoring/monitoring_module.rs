@@ -4,76 +4,43 @@ use chrono::{DateTime, Utc};
 
 use serde_derive::Serialize;
 
-use crate::Host;
-use crate::module::{
-    module::Module,
-    ModuleSpecification,
+use crate::{
+    Host,
+    utils::enums::Criticality,
+    module::module::Module,
+    module::ModuleSpecification,
+    frontend::DisplayOptions,
+    frontend::DisplayStyle,
 };
 
-pub type Monitor = Box<dyn MonitoringModule + Send>;
+pub type Monitor = Box<dyn MonitoringModule + Send + Sync>;
 
 pub trait MonitoringModule : Module {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         None
     }
 
-    fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor where Self: Sized + 'static + Send {
+    fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor where Self: Sized + 'static + Send + Sync {
         Box::new(Self::new(settings))
     }
 
+    // TODO: less boilerplate for module implementation?
+    fn clone_module(&self) -> Monitor;
+
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
-            display_name: self.get_module_spec().id,
-            display_style: DisplayStyle::String,
-            category: String::from(""),
-            unit: String::from(""),
-            use_multivalue: false,
+            display_style: DisplayStyle::Text,
+            display_text: self.get_module_spec().id,
+            ..Default::default()
         }
     }
 
     fn get_connector_message(&self) -> String {
-        panic!("No connector message configured for {}", self.get_module_spec().id);
+        String::from("")
     }
 
-    fn process(&self, host: &Host, response: &String, connector_is_connected: bool) -> Result<DataPoint, String>;
+    fn process_response(&self, host: Host, response: String, connector_is_connected: bool) -> Result<DataPoint, String>;
 
-}
-
-#[derive(Clone, Serialize)]
-pub struct DisplayOptions {
-    pub display_name: String,
-    pub display_style: DisplayStyle,
-    pub category: String,
-    pub unit: String,
-    pub use_multivalue: bool,
-}
-
-impl DisplayOptions {
-    pub fn just_style(display_style: DisplayStyle) -> Self {
-        DisplayOptions {
-            display_name: String::from(""),
-            display_style: display_style,
-            category: String::from(""),
-            unit: String::from(""),
-            use_multivalue: false
-        }
-    }
-}
-
-#[derive(Clone, Serialize)]
-pub enum DisplayStyle {
-    String,
-    StatusUpDown,
-    CriticalityLevel,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize)]
-pub enum Criticality {
-    NoData,
-    Normal,
-    Warning,
-    Error,
-    Critical,
 }
 
 #[derive(Clone, Serialize)]
@@ -95,7 +62,14 @@ impl MonitoringData {
 
 #[derive(Clone, Serialize)]
 pub struct DataPoint {
+    // With multivalue, value can be a composite result/value of all of the values.
+    // For example, with service statuses, this can show the worst state in the multivalue group.
     pub value: String,
+    // Optional. Can be used for additional labeling of the value. Useful especially with multivalues.
+    pub label: String,
+    // Optional identifer. Can be used as a command parameter.
+    // Some commands will require this in which case the parent monitor has to populate this.
+    pub source_id: String,
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
@@ -105,6 +79,8 @@ impl DataPoint {
     pub fn new(value: String) -> Self {
         DataPoint {
             value: value,
+            label: String::from(""),
+            source_id: String::from(""),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
@@ -114,6 +90,8 @@ impl DataPoint {
     pub fn new_with_level(value: String, criticality: Criticality) -> Self {
         DataPoint {
             value: value,
+            label: String::from(""),
+            source_id: String::from(""),
             multivalue: Vec::new(),
             criticality: criticality,
             time: Utc::now(),
@@ -129,7 +107,7 @@ impl DataPoint {
     }
 
     pub fn empty_and_critical() -> Self {
-        let mut empty = Self::empty();
+        let mut empty = Self::default();
         empty.criticality = Criticality::Critical;
         empty
     }
@@ -138,7 +116,9 @@ impl DataPoint {
 impl Default for DataPoint {
     fn default() -> Self {
         DataPoint {
-            value: String::new(),
+            value: String::from(""),
+            label: String::from(""),
+            source_id: String::from(""),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),

@@ -6,6 +6,7 @@ mod configuration;
 mod utils;
 mod frontend;
 mod connection_manager;
+mod command_handler;
 
 use std::collections::HashMap;
 
@@ -14,14 +15,10 @@ use clap::Parser;
 use host_manager::HostManager;
 use monitor_manager::MonitorManager;
 use connection_manager::ConnectionManager;
+use command_handler::CommandHandler;
 use host::Host;
 use configuration::Configuration;
-use frontend::Frontend;
-
-use crate::module::{
-    ModuleFactory,
-    ModuleSpecification,
-};
+use module::{ ModuleFactory, ModuleSpecification };
 
 #[derive(Parser)]
 #[clap()]
@@ -48,8 +45,9 @@ fn main() {
     let module_factory = ModuleFactory::new();
 
     let mut host_manager = HostManager::new();
-    let mut monitor_manager = MonitorManager::new(host_manager.get_state_udpate_channel());
     let mut connection_manager = ConnectionManager::new();
+    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
+    let mut command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
 
     // Configure hosts and modules.
     for (host_id, host_config) in config.hosts.iter() {
@@ -80,26 +78,39 @@ fn main() {
                 };
 
                 let connector = module_factory.new_connector(&connector_spec, &connector_settings);
+                connection_manager.add_connector(&host, connector);
+            }
 
-                let message_sender = connection_manager.add_connector(&host, connector);
-                monitor_manager.add_monitor(&host, monitor, Some(message_sender));
+            monitor_manager.add_monitor(&host, monitor);
+        }
+
+        for (command_id, command_config) in host_config.commands.iter() {
+            let command_spec = ModuleSpecification::new(command_id.as_str(), command_config.version.as_str());
+            let command = module_factory.new_command(&command_spec, &command_config.settings);
+
+            if let Some(connector_spec) = command.get_connector_spec() {
+                let connector_settings = match host_config.connectors.get(&connector_spec.id) {
+                    Some(config) => config.settings.clone(),
+                    None => HashMap::new(),
+                };
+                let connector = module_factory.new_connector(&connector_spec, &connector_settings);
+                connection_manager.add_connector(&host, connector);
             }
-            else {
-                monitor_manager.add_monitor(&host, monitor, None);
-            }
+
+            command_handler.add_command(&host, command);
         }
     }
 
     monitor_manager.refresh_monitors();
     let initial_display_data = host_manager.get_display_data();
-
     let mut frontend = frontend::qt::QmlFrontend::new(&initial_display_data);
-    host_manager.add_observer(frontend.new_update_sender());
 
+    host_manager.add_observer(frontend.new_update_sender());
+    frontend.set_command_handler(command_handler);
     frontend.start();
 
     connection_manager.join();
-    monitor_manager.join();
-    host_manager.join();
+    // TODO: enable again when StateManager and HostCollection is split off host manager.
+    // host_manager.join();
 
 }

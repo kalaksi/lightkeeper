@@ -6,10 +6,18 @@ import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
 Item {
-    implicitWidth: parent.width
-    implicitHeight: label.height
+    id: root
+
+    property string targetId
+    property string hostId: ""
+    property var rowCommands: []
+    property var commandsModel
+    
     property alias label: label.text
     property alias value: value.text
+
+    implicitWidth: parent.width
+    implicitHeight: label.height
 
     RowLayout {
         anchors.fill: parent
@@ -37,6 +45,14 @@ Item {
             horizontalAlignment: Text.AlignLeft
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignRight
+        }
+
+        // Row-level command buttons.
+        CommandButtonRow {
+            commands: root.rowCommands
+            onClicked: function(commandId, subcommand) {
+                root.commandsModel.execute(root.hostId, commandId, subcommand, root.targetId)
+            }
         }
     }
 }

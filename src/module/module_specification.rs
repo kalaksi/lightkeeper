@@ -9,6 +9,10 @@ pub struct ModuleSpecification {
 
 impl ModuleSpecification {
     pub fn new(id: &str, version: &str) -> Self {
+        if id.chars().any(char::is_whitespace) {
+            panic!("No whitespace allowed in module ID.");
+        }
+
         ModuleSpecification {
             id: id.to_string(),
             version: version.to_string(),
@@ -20,7 +24,7 @@ impl ModuleSpecification {
         let id = parts.next().unwrap_or_default();
         let version = parts.next().unwrap_or_default();
 
-        if id.is_empty() || version.is_empty()
+        if id.is_empty() || version.is_empty() || id.chars().any(char::is_whitespace)
         {
             return Err(String::from("Invalid specification string"));
         }

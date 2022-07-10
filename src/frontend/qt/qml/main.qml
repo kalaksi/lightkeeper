@@ -43,6 +43,7 @@ ApplicationWindow {
                 SplitView.maximumHeight: 1.5 * body.splitSize * parent.height
 
                 model: lightkeeper_data
+                commandsModel: lightkeeper_commands
             }
         }
 

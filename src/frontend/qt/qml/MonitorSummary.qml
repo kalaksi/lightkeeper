@@ -18,7 +18,7 @@ Item {
     
             Item {
                 property var monitorData: JSON.parse(modelData)
-                property string criticality: JSON.parse(modelData).values[0].criticality.toLowerCase()
+                property string criticality: monitorData.values.slice(-1)[0].criticality.toLowerCase()
                 height: root.height
                 width: 0.7 * root.height
 
@@ -58,7 +58,7 @@ Item {
                 Text {
                     id: label
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: monitorData.display_options.display_name
+                    text: monitorData.display_options.display_text
                     font.family: font_label.name
                     font.pointSize: 6
                     opacity: 0
@@ -77,16 +77,9 @@ Item {
         }
     }
 
-    function getLast(monitorData) {
-        let lastIndex = monitorData.values.length - 1;
-        if (lastIndex < 0) {
-            return null
-        }
-        return monitorData.values[lastIndex];
-    }
-
+    // TODO: unused?
     function getDisplayValue(monitorData) {
-        let last = getLast(monitorData)
+        let last = monitorData.slice(-1)[0]
         if (last === null) {
             return "Error"
         }

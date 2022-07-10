@@ -36,3 +36,13 @@ impl Display for HostStatus {
         }
     }
 }
+
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize)]
+pub enum Criticality {
+    NoData,
+    Normal,
+    Warning,
+    Error,
+    Critical,
+}

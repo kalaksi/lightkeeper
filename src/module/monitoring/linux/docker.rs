@@ -4,10 +4,18 @@ use std::fmt;
 use serde_derive::Deserialize;
 use serde_json;
 
-use crate::Host;
-use crate::module::{ Module, Metadata, ModuleSpecification };
-use crate::module::monitoring::{ MonitoringModule, Criticality, DisplayStyle, DisplayOptions, DataPoint };
+use crate::{ Host, utils::enums::Criticality, frontend };
+use crate::module::{
+    Module,
+    Metadata,
+    ModuleSpecification,
+    monitoring::MonitoringModule,
+    monitoring::Monitor,
+    monitoring::DataPoint,
+};
 
+
+#[derive(Clone)]
 pub struct Docker {
     use_sudo: bool,
     excluded_containers: String,
@@ -35,45 +43,67 @@ impl Module for Docker {
 }
 
 impl MonitoringModule for Docker {
+    fn clone_module(&self) -> Monitor {
+        Box::new(self.clone())
+    }
+
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_display_options(&self) -> DisplayOptions {
-        DisplayOptions {
-            display_name: String::from("Docker containers"),
-            display_style: DisplayStyle::CriticalityLevel,
-            category: String::from("containers"),
-            unit: String::from(""),
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
+            display_style: frontend::DisplayStyle::CriticalityLevel,
+            display_text: String::from("Containers"),
+            category: String::from("docker"),
             use_multivalue: true,
+            ..Default::default()
         }
     }
 
     fn get_connector_message(&self) -> String {
         // TODO: somehow connect directly to the unix socket instead of using curl?
-        let mut command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
+        let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
         if self.use_sudo {
-            command = format!("sudo {}", command);
+            format!("sudo {}", command)
         }
-
-        command
+        else {
+            command
+        }
     }
 
-    fn process(&self, _host: &Host, response: &String, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, response: String, _connector_is_connected: bool) -> Result<DataPoint, String> {
         let containers: Vec<ContainerDetails> = serde_json::from_str(response.as_str()).map_err(|e| e.to_string())?;
 
         let mut parent_data = DataPoint::empty();
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
         parent_data.criticality = most_critical_container.state.to_criticality();
         parent_data.multivalue = containers.iter().map(|container| {
-            DataPoint::new_with_level(container.state.to_string(), container.state.to_criticality())
+            let mut point = DataPoint::new_with_level(container.state.to_string(), container.state.to_criticality());
+            point.label = container.names.iter().map(|name| cleanup_name(name))
+                                         .collect::<Vec<String>>()
+                                         .join(", ");
+            point.source_id = container.id.clone();
+            point
         }).collect();
 
         Ok(parent_data)
     }
 
 }
+
+
+fn cleanup_name(container_name: &String) -> String {
+    let mut result = container_name.clone();
+
+    if container_name.chars().next().unwrap() == '/' {
+        result.remove(0);
+    }
+
+    result
+}
+
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
