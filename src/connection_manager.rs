@@ -70,7 +70,8 @@ impl ConnectionManager {
             loop {
                 let request = receiver.recv().unwrap();
 
-                log::debug!("Connector request received for {}: {}", request.connector_id, request.message);
+                // Not normally enabled as it may log passwords.
+                // log::debug!("Connector request received for {}: {}", request.connector_id, request.message);
 
                 let mut connectors = connectors.lock().unwrap();
                 let connector = connectors.get_mut(&request.host)

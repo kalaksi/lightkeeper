@@ -8,10 +8,10 @@ import QtQuick.Layouts 1.11
 ApplicationWindow {
     id: root
     visible: true
-    minimumWidth: 800
-    minimumHeight: 400
-    width: 1024
-    height: 600
+    minimumWidth: 1024
+    minimumHeight: 600
+    width: 1280
+    height: 768
 
     Material.theme: Material.System
 

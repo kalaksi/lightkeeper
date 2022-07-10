@@ -10,8 +10,9 @@ Item {
 
     signal clicked(string commandId, string subcommand)
 
-    RowLayout {
+    Row {
         anchors.fill: parent
+        anchors.centerIn: parent
 
         Repeater {
             model: root.commands
@@ -23,12 +24,12 @@ Item {
 
                 RoundButton {
                     id: button
-                    property real scale: 0.3
+                    property real scale: 1.0
                     onClicked: root.clicked(command.command_id, modelData.subcommand)
 
                     flat: true
-                    width: scale * parent.height
-                    height: scale * parent.height
+                    width: scale * root.height
+                    height: scale * root.height
 
                     Image {
                         source: "qrc:/main/images/button/" + modelData.display_icon

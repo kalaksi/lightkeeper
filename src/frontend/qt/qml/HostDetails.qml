@@ -15,7 +15,7 @@ Item {
     property var hostData: model.get_host_data(model.selected_row)
     // For convenience
     property string hostId: root.hostData.length > 0 ? root.hostData[1] : ""
-    property int columnMaximumWidth: 500
+    property int columnMaximumWidth: 800
 
     Rectangle {
         anchors.fill: parent
@@ -96,7 +96,7 @@ Item {
                             model: lastDataPoint.multivalue.length > 0 ? lastDataPoint.multivalue : [ lastDataPoint ]
 
                             PropertyRow {
-                                label: modelData.label
+                                label: modelData.label.length > 0 ? modelData.label : monitorData.display_options.display_text
                                 value: modelData.value + " " + rowRepeater.monitorData.display_options.unit
                                 hostId: root.hostId
                                 targetId: modelData.source_id

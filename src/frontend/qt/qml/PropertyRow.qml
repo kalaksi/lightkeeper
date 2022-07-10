@@ -19,40 +19,41 @@ Item {
     implicitWidth: parent.width
     implicitHeight: label.height
 
-    RowLayout {
+    Row {
         anchors.fill: parent
 
-        Label {
-            id: label
-            text: ""
-            horizontalAlignment: Text.AlignRight
-            Layout.preferredWidth: 0.5 * parent.width
-            Layout.alignment: Qt.AlignLeft
-        }
+        Item {
+            id: labelAndValue
+            implicitWidth: root.implicitWidth
+            implicitHeight: root.implicitHeight
 
-        Text {
-            text: ":"
-            color: Qt.darker(Material.foreground, 1.5)
-            horizontalAlignment: Text.AlignLeft
-            Layout.preferredWidth: 10
-            Layout.alignment: Qt.AlignLeft
-        }
+            Label {
+                id: label
+                text: ""
+                anchors.left: parent.left
+            }
 
-        Text {
-            id: value
-            text: ""
-            color: Material.foreground
-            horizontalAlignment: Text.AlignLeft
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignRight
-        }
+            Text {
+                id: value
+                text: ""
+                color: Material.foreground
+                anchors.right: commands.left
+            }
 
-        // Row-level command buttons.
-        CommandButtonRow {
-            commands: root.rowCommands
-            onClicked: function(commandId, subcommand) {
-                root.commandsModel.execute(root.hostId, commandId, subcommand, root.targetId)
+            // Row-level command buttons.
+            CommandButtonRow {
+                id: commands
+
+                anchors.right: parent.right
+                implicitWidth: 3 * 24 * root.rowCommands.length
+                implicitHeight: parent.height
+
+                commands: root.rowCommands
+                onClicked: function(commandId, subcommand) {
+                    root.commandsModel.execute(root.hostId, commandId, subcommand, root.targetId)
+                }
             }
         }
+
     }
 }
