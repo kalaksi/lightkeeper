@@ -31,6 +31,7 @@ pub struct HostListModel {
     // For table row selection.
     selected_row: qt_property!(i32; NOTIFY selected_row_changed),
     selected_row_changed: qt_signal!(),
+    get_selected_host: qt_method!(fn(&self) -> QString),
 }
 
 impl HostListModel {
@@ -96,32 +97,55 @@ impl HostListModel {
 
     // Returns list of MonitorData structs in JSON.
     fn get_monitor_data(&self, host_id: QString) -> QVariantList {
-        let host = self.hosts.get(&host_id.to_string()).unwrap();
-        host.monitor_data.data.into_iter().map(|(_, data)| data).collect()
+        if let Some(host) = self.hosts.get(&host_id.to_string()) {
+            host.monitor_data.data.into_iter().map(|(_, data)| data).collect()
+        }
+        else {
+            QVariantList::default()
+        }
     }
 
     // Returns map of MonitorData structs in JSON with monitor id as key.
     fn get_monitor_data_map(&self, host_id: QString) -> QVariantMap {
-        let host = self.hosts.get(&host_id.to_string()).unwrap();
-        host.monitor_data.clone().data
+        if let Some(host) = self.hosts.get(&host_id.to_string()) {
+            host.monitor_data.clone().data
+        }
+        else {
+            QVariantMap::default()
+        }
     }
 
     // Returns CommandResults from executed commands in JSON.
     fn get_command_data(&self, host_id: QString) -> QVariantList {
-        let host = self.hosts.get(&host_id.to_string()).unwrap();
-        host.command_data.clone().data
+        if let Some(host) = self.hosts.get(&host_id.to_string()) {
+            host.command_data.clone().data
+        }
+        else {
+            QVariantList::default()
+        }
     }
 
     fn get_host_data(&self, index: i32) -> QVariantMap {
-        let host_id = self.hosts_index.get(&(index as usize)).unwrap();
-        let host_data = self.hosts.get(&host_id.to_string()).unwrap();
-
         let mut result = QVariantMap::default();
-        result.insert(self.headers[0].clone(), host_data.status.to_qvariant());
-        result.insert(self.headers[1].clone(), host_data.name.to_qvariant());
-        result.insert(self.headers[2].clone(), host_data.fqdn.to_qvariant());
-        result.insert(self.headers[3].clone(), host_data.ip_address.to_qvariant());
+
+        if let Some(host_id) = self.hosts_index.get(&(index as usize)) {
+            let host_data = self.hosts.get(&host_id.to_string()).unwrap();
+            result.insert(self.headers[0].clone(), host_data.status.to_qvariant());
+            result.insert(self.headers[1].clone(), host_data.name.to_qvariant());
+            result.insert(self.headers[2].clone(), host_data.fqdn.to_qvariant());
+            result.insert(self.headers[3].clone(), host_data.ip_address.to_qvariant());
+        }
+
         result
+    }
+
+    fn get_selected_host(&self) -> QString {
+        if let Some(host_id) = self.hosts_index.get(&(self.selected_row as usize)) {
+            QString::from(self.hosts.get(host_id).unwrap().name.clone())
+        }
+        else {
+            QString::from("")
+        }
     }
    
 }

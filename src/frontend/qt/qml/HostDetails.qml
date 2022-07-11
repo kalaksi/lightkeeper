@@ -12,9 +12,9 @@ Item {
     id: root
     required property var model
     required property var commandsModel
-    property var hostData: model.selected_row >= 0 ? model.get_host_data(model.selected_row) : {}
+    property var hostData: model.get_host_data(model.selected_row)
     // For convenience
-    property string hostId: model.selected_row >= 0 ? root.hostData["Name"] : ""
+    property string hostId: "Name" in root.hostData ? root.hostData["Name"] : ""
     property int columnMaximumWidth: 800
 
     Rectangle {
@@ -29,10 +29,7 @@ Item {
         rows: 2
  
         Repeater {
-            model: root.hostId !== "" ?
-                groupByCategory(root.model.get_monitor_data_map(root.hostId), root.commandsModel.get_commands(root.hostId)) :
-                []
- 
+            model: groupByCategory(root.model.get_monitor_data_map(root.hostId), root.commandsModel.get_commands(root.hostId))
             GroupBox {
                 title: modelData.category
                 Layout.minimumWidth: 0.5 * root.columnMaximumWidth
