@@ -10,7 +10,6 @@ use super::{
     monitoring::MonitoringModule,
     command,
     command::CommandModule,
-    command::docker,
 };
 
 

@@ -21,6 +21,7 @@ pub struct HostListModel {
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 
+    // TODO: separate data that is not strictly related to table data.
     // NOTE: Couldn't get custom types to work for return types,
     // so for now methods are used to get the data in JSON and parsed in QML.
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),

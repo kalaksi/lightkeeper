@@ -30,7 +30,7 @@ impl MonitorManager {
             self.monitors.insert(host.clone(), HashMap::new());
         }
 
-        let mut monitor_collection = self.monitors.get_mut(host).unwrap();
+        let monitor_collection = self.monitors.get_mut(host).unwrap();
         let module_spec = monitor.get_module_spec();
 
         // Only add if missing.

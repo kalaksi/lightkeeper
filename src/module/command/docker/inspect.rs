@@ -59,7 +59,6 @@ impl CommandModule for Inspect {
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {
-        log::debug!("Got response: {}", response);
         Ok(CommandResult::new(String::from(response)))
     }
 }
