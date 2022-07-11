@@ -5,6 +5,8 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
+import "js/TextTransform.js" as TextTransform
+
 Item {
     id: root
 
@@ -12,9 +14,8 @@ Item {
     property string hostId: ""
     property var rowCommands: []
     property var commandsModel
-    
-    property alias label: label.text
-    property alias value: value.text
+    property string label: ""
+    property string value: ""
 
     implicitWidth: parent.width
     implicitHeight: label.height
@@ -29,13 +30,13 @@ Item {
 
             Label {
                 id: label
-                text: ""
+                text: TextTransform.truncate(root.label, 28)
                 anchors.left: parent.left
             }
 
             Text {
                 id: value
-                text: ""
+                text: root.value
                 color: Material.foreground
                 anchors.right: commands.left
             }
@@ -51,6 +52,5 @@ Item {
                 }
             }
         }
-
     }
 }
