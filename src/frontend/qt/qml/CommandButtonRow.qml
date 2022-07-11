@@ -7,6 +7,10 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
     property var commands: []
+    property int size: 24
+
+    implicitWidth: size * commands.length
+    implicitHeight: size
 
     signal clicked(string commandId)
 

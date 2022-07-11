@@ -15,7 +15,8 @@ Item {
     property var hostData: model.get_host_data(model.selected_row)
     // For convenience
     property string hostId: "Name" in root.hostData ? root.hostData["Name"] : ""
-    property int columnMaximumWidth: 800
+    property int columnMaximumWidth: 400
+    property int columnMinimumWidth: columnMaximumWidth
 
     Rectangle {
         anchors.fill: parent
@@ -25,14 +26,13 @@ Item {
     GridLayout {
         id: grid
         anchors.fill: parent
-        flow: GridLayout.TopToBottom
-        rows: 2
+        columns: Math.floor(root.width / root.columnMinimumWidth)
  
         Repeater {
             model: groupByCategory(root.model.get_monitor_data_map(root.hostId), root.commandsModel.get_commands(root.hostId))
             GroupBox {
                 title: modelData.category
-                Layout.minimumWidth: 0.5 * root.columnMaximumWidth
+                Layout.minimumWidth: root.columnMinimumWidth
                 Layout.maximumWidth: root.columnMaximumWidth
                 Layout.alignment: Qt.AlignTop
 

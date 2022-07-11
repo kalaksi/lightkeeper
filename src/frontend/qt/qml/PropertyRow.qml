@@ -43,10 +43,7 @@ Item {
             // Row-level command buttons.
             CommandButtonRow {
                 id: commands
-
                 anchors.right: parent.right
-                implicitWidth: 24 * root.rowCommands.length
-                implicitHeight: parent.height
 
                 commands: root.rowCommands
                 onClicked: function(commandId) {
