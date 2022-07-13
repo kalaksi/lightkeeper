@@ -2,6 +2,7 @@ extern crate qmetaobject;
 use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
+use crate::module::command::CommandAction;
 
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
@@ -9,6 +10,8 @@ pub struct CommandHandlerModel {
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_child_commands: qt_method!(fn(&self, host_id: QString, parent_id: QString) -> QVariantList),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString)),
+    dialog_opened: qt_signal!(),
+
     command_handler: CommandHandler,
 }
 
@@ -37,10 +40,12 @@ impl CommandHandlerModel {
     }
 
     fn execute(&mut self, host_id: QString, command_id: QString, target_id: QString) {
-        self.command_handler.execute(
-            host_id.to_string(),
-            command_id.to_string(),
-            target_id.to_string(),
-        )
+        let action = self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
+
+        // The UI action to be triggered after successful execution.
+        match action {
+            CommandAction::Dialog => self.dialog_opened(),
+            _ => {},
+        }
     }
 }

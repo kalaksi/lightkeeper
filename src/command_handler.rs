@@ -9,6 +9,7 @@ use crate::{
     connection_manager::ConnectorRequest, 
     connection_manager::ResponseHandlerCallback,
     frontend::DisplayOptions,
+    module::command::CommandAction,
 };
 
 use crate::module::{
@@ -49,8 +50,8 @@ impl CommandHandler {
         }
     }
 
-    pub fn execute(&mut self, host_id: String, command_id: String, target_id: String) {
-        // TODO: better solution?
+    pub fn execute(&mut self, host_id: String, command_id: String, target_id: String) -> CommandAction {
+        // TODO: better solution for searching?
         let (host, command_collection) = self.commands.iter().filter(|(host, _)| host.name == host_id).next().unwrap();
         let command = command_collection.get(&command_id).unwrap();
 
@@ -65,6 +66,8 @@ impl CommandHandler {
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
         });
+
+        command.get_action()
     }
 
     // Return value contains host's commands and command parameters as strings.
@@ -72,7 +75,7 @@ impl CommandHandler {
         if let Some((_, command_collection)) = self.commands.iter().filter(|(host, _)| host.name == host_id).next() {
             command_collection.iter().map(|(command_id, command)| {
                 (command_id.clone(),
-                CommandData::new(command_id.clone(), command.get_display_options()))
+                CommandData::new(command_id.clone(), command.get_action(), command.get_display_options()))
             }).collect()
         }
         else {
@@ -112,13 +115,15 @@ impl CommandHandler {
 #[derive(Clone, Serialize)]
 pub struct CommandData {
     pub command_id: String,
+    pub action: CommandAction,
     pub display_options: DisplayOptions,
 }
 
 impl CommandData {
-    pub fn new(command_id: String, display_options: DisplayOptions) -> Self {
+    pub fn new(command_id: String, action: CommandAction, display_options: DisplayOptions) -> Self {
         CommandData {
             command_id: command_id,
+            action: action,
             display_options: display_options,
         }
     }

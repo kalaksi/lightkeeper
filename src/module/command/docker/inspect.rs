@@ -5,6 +5,7 @@ use crate::module::{
     command::CommandModule,
     command::Command,
     command::CommandResult,
+    command::CommandAction,
     Metadata,
     ModuleSpecification,
 };
@@ -48,6 +49,10 @@ impl CommandModule for Inspect {
             display_priority: 1,
             ..Default::default()
         }
+    }
+
+    fn get_action(&self) -> CommandAction {
+        CommandAction::Dialog
     }
 
     fn get_connector_request(&self, target_id: String) -> String {

@@ -39,11 +39,11 @@ impl QmlFrontend {
 
     pub fn start(&mut self) {
         let qt_data_host_list = QObjectBox::new(self.host_list_model.take().unwrap());
-        let qt_data_command_methods = QObjectBox::new(self.command_handler_model.take().unwrap());
+        let qt_data_command_handler = QObjectBox::new(self.command_handler_model.take().unwrap());
 
         let mut engine = QmlEngine::new();
         engine.set_object_property("lightkeeper_data".into(), qt_data_host_list.pinned());
-        engine.set_object_property("lightkeeper_commands".into(), qt_data_command_methods.pinned());
+        engine.set_object_property("lightkeeper_commands".into(), qt_data_command_handler.pinned());
         engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
         engine.exec();
     }

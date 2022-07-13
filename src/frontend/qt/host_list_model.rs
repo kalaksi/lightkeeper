@@ -10,6 +10,7 @@ use super::command_data_model::CommandDataModel;
 use super::monitor_data_model::MonitorDataModel;
 
 
+// TODO: use camelcase with qml models?
 #[derive(QObject, Default)]
 pub struct HostListModel {
     base: qt_base_class!(trait QAbstractTableModel),

@@ -32,6 +32,10 @@ pub trait CommandModule : Module {
         }
     }
 
+    fn get_action(&self) -> CommandAction {
+        CommandAction::None
+    }
+
     fn get_connector_request(&self, _target_id: String) -> String;
     fn process_response(&self, response: &String) -> Result<CommandResult, String>;
 }
@@ -81,4 +85,10 @@ impl Default for CommandResult {
             time: Utc::now(),
         }
     }
+}
+
+#[derive(Clone, Serialize)]
+pub enum CommandAction {
+    None,
+    Dialog,
 }

@@ -11,6 +11,7 @@ TableView {
     boundsBehavior: Flickable.StopAtBounds
     onWidthChanged: forceLayout()
     Component.onCompleted: model.receive_updates()
+    ScrollBar.vertical: ScrollBar { }
 
     delegate: DelegateChooser {
         id: delegateChooser

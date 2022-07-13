@@ -9,14 +9,13 @@ Item {
     property var commands: []
     property int size: 24
 
-    implicitWidth: size * commands.length
+    implicitWidth: size * (commands.length + 0.5)
     implicitHeight: size
 
     signal clicked(string commandId)
 
     Row {
-        anchors.fill: parent
-        anchors.centerIn: parent
+        anchors.right: parent.right
 
         Repeater {
             model: root.commands
