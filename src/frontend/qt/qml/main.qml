@@ -26,8 +26,8 @@ ApplicationWindow {
     DataDialog {
         id: dataDialog
         commandResults: Parse.ListOfJsons(lightkeeper_data.get_command_data(lightkeeper_data.get_selected_host()))
-        width: 100
-        height: 100
+        width: 500
+        height: 400
     }
 
     Item {

@@ -10,6 +10,16 @@ Dialog {
 
     property var commandResults: []
 
+    AnimatedSprite {
+        source: "qrc:/main/images/animations/working"
+        frameWidth: 22
+        frameHeight: 22
+        frameCount: 15
+        frameDuration: 50
+
+        anchors.centerIn: parent
+    }
+
     Row {
         anchors.fill: parent
 
