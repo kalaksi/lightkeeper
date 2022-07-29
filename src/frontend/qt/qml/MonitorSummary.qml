@@ -55,7 +55,7 @@ Item {
                     antialiasing: true
                 }
 
-                Text {
+                NormalText {
                     id: label
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: monitorData.display_options.display_text

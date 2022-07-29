@@ -5,8 +5,6 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.11
 
-import "js/Parse.js" as Parse
-
 ApplicationWindow {
     id: root
     visible: true
@@ -20,14 +18,12 @@ ApplicationWindow {
 
     Component.onCompleted: {
         // Binding has to be done in a bit of a roundabout way here.
-        lightkeeper_commands.onDialog_opened.connect(dataDialog.open)
+        lightkeeper_commands.onDialog_opened.connect(dataDialog.init)
     }
 
     DataDialog {
         id: dataDialog
-        commandResults: Parse.ListOfJsons(lightkeeper_data.get_command_data(lightkeeper_data.get_selected_host()))
-        width: 500
-        height: 400
+        model: lightkeeper_data
     }
 
     Item {
@@ -75,7 +71,7 @@ ApplicationWindow {
             id: animateShowDetails
             target: body
             property: "splitSize"
-            to: 0.5
+            to: 0.66
             duration: 150
         }
 

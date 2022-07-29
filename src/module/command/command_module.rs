@@ -36,6 +36,8 @@ pub trait CommandModule : Module {
         CommandAction::None
     }
 
+    // target_id is just an optional argument for the command.
+    // TODO: rename?
     fn get_connector_request(&self, _target_id: String) -> String;
     fn process_response(&self, response: &String) -> Result<CommandResult, String>;
 }

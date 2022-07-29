@@ -118,6 +118,7 @@ impl HostListModel {
     }
 
     // Returns CommandResults from executed commands in JSON.
+    // TODO: create a command invocation id to get specific results?
     fn get_command_data(&self, host_id: QString) -> QVariantList {
         if let Some(host) = self.hosts.get(&host_id.to_string()) {
             host.command_data.clone().data

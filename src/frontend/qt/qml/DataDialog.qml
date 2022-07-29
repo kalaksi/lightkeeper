@@ -3,34 +3,36 @@ import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
 
+import "js/Parse.js" as Parse
+
 Dialog {
     id: root
+    implicitHeight: parent.height
+    implicitWidth: parent.width
     modal: false
     standardButtons: Dialog.Ok
 
-    property var commandResults: []
+    required property var model
+    property var commandMessage: ""
 
-    AnimatedSprite {
-        source: "qrc:/main/images/animations/working"
-        frameWidth: 22
-        frameHeight: 22
-        frameCount: 15
-        frameDuration: 50
-
+    WorkingSprite {
+        id: loadingAnimation
         anchors.centerIn: parent
     }
 
-    Row {
-        anchors.fill: parent
-
-        Repeater {
-            model: root.commandResults
-
-            Text {
-                text: modelData.message
-            }
+    JsonTextFormat {
+        jsonText: root.commandMessage
+        Component.onCompleted: {
+            loadingAnimation.visible = false
         }
+    }
 
+    function init() {
+        root.open()
+        let commandResult = root.model.get_command_data(root.model.get_selected_host())[0]
+        if (typeof commandResult !== "undefined") {
+            root.commandMessage = JSON.parse(commandResult).message
+        }
     }
 
 }
