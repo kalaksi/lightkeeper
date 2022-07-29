@@ -36,7 +36,7 @@ Item {
             }
         }
 
-        Text {
+        NormalText {
             text: status.toUpperCase()
             font.family: font_status.name
             color: getColor()

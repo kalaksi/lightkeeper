@@ -7,10 +7,9 @@ Item {
     required property string text
     anchors.fill: parent
 
-    Text {
+    NormalText {
         anchors.verticalCenter: parent.verticalCenter
         text: parent.text.length === 0 ? placeholder : parent.text
-        color: Material.foreground
         font.italic: parent.text.length === 0
         opacity: parent.text.length === 0 ? 0.3 : 1
     }

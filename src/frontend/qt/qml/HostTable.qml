@@ -38,10 +38,9 @@ TableView {
                 onClicked: selectRow(row)
                 implicitWidth: table.width * 0.10
 
-                Text {
+                NormalText {
                     anchors.verticalCenter: parent.verticalCenter
                     text: value
-                    color: Material.foreground
                 }
             }
         }
