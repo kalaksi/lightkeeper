@@ -61,7 +61,7 @@ impl HostListModel {
     }
 
     fn receive_updates(&mut self) {
-        // Shouldn't be run more than once.
+        // Shouldn't (and can't) be run more than once.
         if self.update_receiver_thread.is_none() {
             let self_ptr = QPointer::from(&*self);
             let set_data = qmetaobject::queued_callback(move |host_display_data: frontend::HostDisplayData| {

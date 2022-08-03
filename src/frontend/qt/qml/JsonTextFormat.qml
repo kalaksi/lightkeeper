@@ -8,17 +8,14 @@ import "js/Parse.js" as Parse
 Item {
     id: root
     required property string jsonText
-
-    implicitWidth: parent.width
-    implicitHeight: parent.height
+    implicitHeight: textContent.height
+    implicitWidth: textContent.width
 
     NormalText {
         id: textContent
-        anchors.fill: parent
         wrapMode: Text.WordWrap
         textFormat: Text.MarkdownText
         text: createMarkdown(root.jsonText)
-
     }
 
     function createMarkdown(jsonText) {
@@ -35,7 +32,6 @@ Item {
             }
         }
 
-        console.log(text)
         return text
     }
 

@@ -18,7 +18,8 @@ ApplicationWindow {
 
     Component.onCompleted: {
         // Binding has to be done in a bit of a roundabout way here.
-        lightkeeper_commands.onDialog_opened.connect(dataDialog.init)
+        lightkeeper_commands.onDialog_opened.connect(dataDialog.open)
+        lightkeeper_data.dataChanged.connect(dataDialog.update)
     }
 
     DataDialog {
