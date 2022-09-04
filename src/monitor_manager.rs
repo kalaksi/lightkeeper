@@ -66,22 +66,30 @@ impl MonitorManager {
                 }
                 else {
                     let handler = Self::get_response_handler(host.clone(), monitor.clone_module(), self.state_update_sender.clone());
-                    handler(String::new(), false);
+                    handler(Ok(String::new()), false);
                 } 
             }
         }
     }
 
     fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        Box::new(move |output, connector_is_connected| {
-            let data_point = match monitor.process_response(host.clone(), output, connector_is_connected) {
-                Ok(data_point) => {
-                    log::debug!("Data point received: {} {}", data_point.label, data_point);
-                    data_point
-                },
+        Box::new(move |result, connector_is_connected| {
+            let data_point = match result {
                 Err(error) => {
-                    log::error!("Error from monitor: {}", error);
+                    log::error!("Error refreshing monitor: {}", error);
                     DataPoint::empty_and_critical()
+                },
+                Ok(value) => {
+                    match monitor.process_response(host.clone(), value, connector_is_connected) {
+                        Ok(data_point) => {
+                            log::debug!("Data point received: {} {}", data_point.label, data_point);
+                            data_point
+                        },
+                        Err(error) => {
+                            log::error!("Error from monitor: {}", error);
+                            DataPoint::empty_and_critical()
+                        }
+                    }
                 }
             };
 

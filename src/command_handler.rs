@@ -84,15 +84,23 @@ impl CommandHandler {
     }
 
     fn get_response_handler(host: Host, command: Command, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        Box::new(move |output, _connector_is_connected| {
-            let command_result = match command.process_response(&output) {
-                Ok(result) => {
-                    log::debug!("Command result received: {}", result.message);
-                    result
-                },
+        Box::new(move |result, _connector_is_connected| {
+            let command_result = match result {
                 Err(error) => {
-                    log::error!("Error from command: {}", error);
-                    CommandResult::empty_and_critical()
+                    log::error!("Error sending command: {}", error);
+                    Some(CommandResult::new_critical_error(error))
+                },
+                Ok(value) => {
+                    match command.process_response(&value) {
+                        Ok(result) => {
+                            log::debug!("Command result received: {}", result.message);
+                            Some(result)
+                        },
+                        Err(error) => {
+                            log::error!("Error from command: {}", error);
+                            Some(CommandResult::new_critical_error(error))
+                        }
+                    }
                 }
             };
 
@@ -101,7 +109,7 @@ impl CommandHandler {
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 data_point: None,
-                command_result: Some(command_result),
+                command_result: command_result,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
             });

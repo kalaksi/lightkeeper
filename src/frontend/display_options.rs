@@ -13,6 +13,8 @@ pub struct DisplayOptions {
     pub unit: String,
     // For monitors that produce a group of values.
     pub use_multivalue: bool,
+    // Display confirmation dialog first.
+    pub use_confirmation: bool,
     // Optional monitor id to attach actions to, instead of displaying on category-level.
     pub parent_id: String,
 }

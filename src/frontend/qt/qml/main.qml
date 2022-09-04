@@ -5,6 +5,8 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.11
 
+import "js/CreateObject.js" as CreateObject
+
 ApplicationWindow {
     id: root
     visible: true
@@ -19,7 +21,14 @@ ApplicationWindow {
     Component.onCompleted: {
         // Binding has to be done in a bit of a roundabout way here.
         lightkeeper_commands.onDialog_opened.connect(dataDialog.open)
+        lightkeeper_commands.onConfirmation_dialog_opened.connect(CreateObject.createConfirmationDialog)
+        // TODO: 
         lightkeeper_data.dataChanged.connect(dataDialog.update)
+    }
+
+    ConfirmationDialog {
+        id: confirmationDialog 
+        text: ""
     }
 
     DataDialog {

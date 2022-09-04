@@ -46,6 +46,7 @@ pub trait CommandModule : Module {
 #[derive(Clone, Serialize)]
 pub struct CommandResult {
     pub message: String,
+    pub error: String,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
 }
@@ -54,7 +55,17 @@ impl CommandResult {
     pub fn new(message: String) -> Self {
         CommandResult {
             message: message,
+            error: String::from(""),
             criticality: Criticality::Normal,
+            time: Utc::now(),
+        }
+    }
+
+    pub fn new_critical_error(error: String) -> Self {
+        CommandResult {
+            message: String::from(""),
+            error: error,
+            criticality: Criticality::Critical,
             time: Utc::now(),
         }
     }
@@ -62,20 +73,14 @@ impl CommandResult {
     pub fn new_with_level(message: String, criticality: Criticality) -> Self {
         CommandResult {
             message: message,
+            error: String::from(""),
             criticality: criticality,
             time: Utc::now(),
         }
     }
 
-
     pub fn empty() -> Self {
         Default::default()
-    }
-
-    pub fn empty_and_critical() -> Self {
-        let mut empty = Self::empty();
-        empty.criticality = Criticality::Critical;
-        empty
     }
 }
 
@@ -83,6 +88,7 @@ impl Default for CommandResult {
     fn default() -> Self {
         CommandResult {
             message: String::from(""),
+            error: String::from(""),
             criticality: Criticality::Normal,
             time: Utc::now(),
         }
@@ -93,4 +99,5 @@ impl Default for CommandResult {
 pub enum CommandAction {
     None,
     Dialog,
+    ConfirmationDialog(String),
 }

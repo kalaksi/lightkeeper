@@ -5,7 +5,7 @@ use std::thread;
 use crate::Host;
 use crate::module::connection::{ ConnectionModule, Connector };
 
-pub type ResponseHandlerCallback = Box<dyn FnOnce(String, bool) + Send + 'static>;
+pub type ResponseHandlerCallback = Box<dyn FnOnce(Result<String, String>, bool) + Send + 'static>;
 type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
 
 pub struct ConnectionManager {
@@ -70,7 +70,7 @@ impl ConnectionManager {
             loop {
                 let request = receiver.recv().unwrap();
 
-                // Not normally enabled as it may log passwords.
+                // Not normally enabled as this may log passwords.
                 // log::debug!("Connector request received for {}: {}", request.connector_id, request.message);
 
                 let mut connectors = connectors.lock().unwrap();
@@ -78,25 +78,30 @@ impl ConnectionManager {
                                           .and_then(|connections| connections.get_mut(&request.connector_id)).unwrap();
 
                 let mut connector_is_connected = false;
-                let output = match connector.connect(&request.host.ip_address) {
+                let response = match connector.connect(&request.host.ip_address) {
                     Ok(()) => {
                         connector_is_connected = true;
 
-                        connector.send_message(&request.message).unwrap_or_else(|error| {
-                            log::error!("Error while refreshing monitoring data: {}", error);
+                        match connector.send_message(&request.message) {
+                            Ok(value) => Ok(value),
+                            Err(error) => {
+                                log::error!("Error while refreshing monitoring data: {}", error);
 
-                            // Double check the connection status
-                            connector_is_connected = connector.is_connected();
-                            String::from("")
-                        })
+                                // Double check the connection status
+                                connector_is_connected = connector.is_connected();
+                                Err(error)
+                            }
+                        }
+
                     },
                     Err(error) => {
                         log::error!("Error while connecting: {}", error);
-                        String::from("")
+                        // TODO: proper structure instead of string
+                        Err(format!(""))
                     }
                 };
 
-                (request.response_handler)(output, connector_is_connected);
+                (request.response_handler)(response, connector_is_connected);
             }
         })
     }

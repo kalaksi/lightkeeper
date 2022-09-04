@@ -16,6 +16,9 @@ pub fn init_resources() {
             "images/fontawesome/circle-arrow-down.svg" as "images/status/down",
             "images/breeze/dark/alarm-symbolic.svg" as "images/status/unknown",
 
+            "images/fontawesome/circle-exclamation.svg" as "images/alert/error",
+            "images/fontawesome/triangle-exclamation.svg" as "images/alert/warning",
+
             "images/breeze/dark/view-refresh.svg" as "images/button/refresh",
             "images/breeze/dark/system-search.svg" as "images/button/search",
             "images/breeze/dark/find-location.svg" as "images/button/search-document",
@@ -42,6 +45,9 @@ pub fn init_resources() {
             "images/fontawesome/circle-arrow-up.svg" as "images/status/up",
             "images/fontawesome/circle-arrow-down.svg" as "images/status/down",
             "images/breeze/light/alarm-symbolic.svg" as "images/status/unknown",
+
+            "images/fontawesome/circle-exclamation.svg" as "images/alert/error",
+            "images/fontawesome/triangle-exclamation.svg" as "images/alert/warning",
 
             "images/breeze/light/view-refresh.svg" as "images/button/refresh",
             "images/breeze/light/system-search.svg" as "images/button/search",

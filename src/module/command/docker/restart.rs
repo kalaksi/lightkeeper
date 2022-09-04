@@ -5,6 +5,7 @@ use crate::module::{
     command::CommandModule,
     command::Command,
     command::CommandResult,
+    command::CommandAction,
     Metadata,
     ModuleSpecification,
 };
@@ -47,8 +48,13 @@ impl CommandModule for Restart {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("refresh"),
             display_priority: 2,
+            use_confirmation: true,
             ..Default::default()
         }
+    }
+
+    fn get_action(&self) -> CommandAction {
+        CommandAction::ConfirmationDialog(String::from("Really restart container?"))
     }
 
     fn get_connector_request(&self, target_id: String) -> String {

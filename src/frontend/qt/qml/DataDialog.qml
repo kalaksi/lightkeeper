@@ -13,23 +13,30 @@ Dialog {
     standardButtons: Dialog.Ok
 
     required property var model
-    property var commandMessage: ""
 
+    property var message: ""
+    property var error: ""
+    property var criticality: ""
 
     WorkingSprite {
         id: loadingAnimation
         anchors.centerIn: parent
-        visible: root.commandMessage === ""
+        visible: root.message === "" && root.error === ""
     }
 
     ScrollView {
-        visible: root.commandMessage !== ""
+        visible: root.message !== ""
         anchors.fill: parent
 
         JsonTextFormat {
-            id: content
-            jsonText: root.commandMessage
+            jsonText: root.message
         }
+    }
+
+    ErrorMessage {
+        text: root.error
+        criticality: root.criticality
+        visible: root.error !== ""
     }
 
     function init() {
@@ -37,9 +44,12 @@ Dialog {
     }
 
     function update() {
-        let commandResult = root.model.get_command_data(root.model.get_selected_host())[0]
-        if (typeof commandResult !== "undefined") {
-            root.commandMessage = JSON.parse(commandResult).message
+        let data = root.model.get_command_data(root.model.get_selected_host())[0]
+        if (typeof data !== "undefined") {
+            let commandResult = JSON.parse(data)
+            root.message = commandResult.message
+            root.error = commandResult.error
+            root.criticality = commandResult.criticality
         }
     }
 

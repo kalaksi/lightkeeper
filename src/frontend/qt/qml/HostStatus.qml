@@ -30,7 +30,7 @@ Item {
             ColorOverlay {
                 anchors.fill: status_image
                 source: status_image
-                color: getColor()
+                color: getColor(root.status)
                 antialiasing: true
                 visible: showIcon
             }
@@ -39,7 +39,7 @@ Item {
         NormalText {
             text: status.toUpperCase()
             font.family: font_status.name
-            color: getColor()
+            color: getColor(root.status)
 
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
@@ -55,11 +55,10 @@ Item {
         }
     }
 
-    function getColor() {
-        let color = colors[status]
-        if (typeof color !== "undefined") {
-            return color
+    function getColor(status) {
+        if (typeof status === "undefined") {
+            return colors["_"]
         }
-        return colors["_"]
+        return colors[status]
     }
 }
