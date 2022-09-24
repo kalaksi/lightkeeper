@@ -52,7 +52,7 @@ impl CommandHandler {
 
     pub fn execute(&mut self, host_id: String, command_id: String, target_id: String) -> CommandAction {
         // TODO: better solution for searching?
-        let (host, command_collection) = self.commands.iter().filter(|(host, _)| host.name == host_id).next().unwrap();
+        let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
 
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
@@ -72,15 +72,20 @@ impl CommandHandler {
 
     // Return value contains host's commands and command parameters as strings.
     pub fn get_host_commands(&self, host_id: String) -> HashMap<String, CommandData> {
-        if let Some((_, command_collection)) = self.commands.iter().filter(|(host, _)| host.name == host_id).next() {
+        if let Some((_, command_collection)) = self.commands.iter().find(|(host, _)| host.name == host_id) {
             command_collection.iter().map(|(command_id, command)| {
-                (command_id.clone(),
-                CommandData::new(command_id.clone(), command.get_action(), command.get_display_options()))
+                (command_id.clone(), CommandData::new(command_id.clone(), command.get_action(), command.get_display_options()))
             }).collect()
         }
         else {
             HashMap::new()
         }
+    }
+
+    pub fn get_host_command(&self, host_id: String, command_id: String) -> CommandData {
+        let (_, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
+        let command = command_collection.get(&command_id).unwrap();
+        CommandData::new(command_id, command.get_action(), command.get_display_options())
     }
 
     fn get_response_handler(host: Host, command: Command, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {

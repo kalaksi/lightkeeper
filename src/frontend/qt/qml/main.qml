@@ -8,7 +8,7 @@ import QtQuick.Layouts 1.11
 import "js/CreateObject.js" as CreateObject
 
 ApplicationWindow {
-    id: root
+    id: applicationWindow
     visible: true
     minimumWidth: 1024
     minimumHeight: 600
@@ -21,14 +21,9 @@ ApplicationWindow {
     Component.onCompleted: {
         // Binding has to be done in a bit of a roundabout way here.
         lightkeeper_commands.onDialog_opened.connect(dataDialog.open)
-        lightkeeper_commands.onConfirmation_dialog_opened.connect(CreateObject.createConfirmationDialog)
+        lightkeeper_commands.onConfirmation_dialog_opened.connect(CreateObject.confirmationDialog)
         // TODO: 
         lightkeeper_data.dataChanged.connect(dataDialog.update)
-    }
-
-    ConfirmationDialog {
-        id: confirmationDialog 
-        text: ""
     }
 
     DataDialog {

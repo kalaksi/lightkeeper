@@ -99,5 +99,4 @@ impl Default for CommandResult {
 pub enum CommandAction {
     None,
     Dialog,
-    ConfirmationDialog(String),
 }

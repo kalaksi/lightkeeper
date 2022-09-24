@@ -48,13 +48,9 @@ impl CommandModule for Restart {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("refresh"),
             display_priority: 2,
-            use_confirmation: true,
+            confirmation_text: String::from("Really restart container?"),
             ..Default::default()
         }
-    }
-
-    fn get_action(&self) -> CommandAction {
-        CommandAction::ConfirmationDialog(String::from("Really restart container?"))
     }
 
     fn get_connector_request(&self, target_id: String) -> String {
@@ -66,7 +62,6 @@ impl CommandModule for Restart {
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {
-        log::debug!("Got response: {}", response);
         Ok(CommandResult::new(String::from(response)))
     }
 }

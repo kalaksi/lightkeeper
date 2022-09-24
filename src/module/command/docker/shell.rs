@@ -60,7 +60,6 @@ impl CommandModule for Shell {
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {
-        log::debug!("Got response: {}", response);
         Ok(CommandResult::new(String::from(response)))
     }
 }

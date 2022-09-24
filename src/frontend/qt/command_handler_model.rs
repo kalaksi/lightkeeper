@@ -42,13 +42,19 @@ impl CommandHandlerModel {
     }
 
     fn execute(&mut self, host_id: QString, command_id: QString, target_id: QString) {
+        let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
+
+        if !display_options.confirmation_text.is_empty() {
+            self.confirmation_dialog_opened();
+            return;
+        }
+
         let action = self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
 
         // The UI action to be triggered after successful execution.
         match action {
+            CommandAction::None => {},
             CommandAction::Dialog => self.dialog_opened(),
-            CommandAction::ConfirmationDialog(text) => self.confirmation_dialog_opened(),
-            _ => {},
         }
     }
 }
