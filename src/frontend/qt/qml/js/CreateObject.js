@@ -1,42 +1,51 @@
 
-function confirmationDialog() {
-    _create("ConfirmationDialog")
+function confirmationDialog(parent, text, onAccepted) {
+    _create(parent, "ConfirmationDialog", { "text": text }, { "onAccepted": onAccepted })
 }
 
 
-var _components = {
+var _dynamicComponents = {
     "ConfirmationDialog": {
         qmlPath: "../ConfirmationDialog.qml",
-        config: { x: 100, y: 100 },
+        defaultProperties: {
+            // x: 100,
+            // y: 100,
+            text: "",
+        },
         component: null,
-        // TODO: clean up destroyed objects
+        // TODO: clean up destroyed objects?
         instances: [],
     }
 }
 
-function _create(componentId, config) {
-    console.log("Creating component " + componentId)
+function _create(parent, componentId, userProperties, signalHandlers) {
+    console.log("Creating new UI object for " + componentId)
 
-    let data = _components[componentId];
+    let data = _dynamicComponents[componentId]
     if (data.component === null) {
         data.component = Qt.createComponent(data.qmlPath)
     }
 
+    var properties = Object.assign(data.defaultProperties, userProperties)
     if (data.component.status === Component.Ready) {
-        _finishCreation(applicationWindow, data)
+        _finishCreation(parent, data, properties, signalHandlers)
     }
     else {
-        confirmationDialogComponent.statusChanged.connect(() => _finishCreation(applicationWindow, data));
+        data.component.statusChanged.connect(() => _finishCreation(parent, data, properties, signalHandlers))
     }
 }
 
-function _finishCreation(parent, data) {
+function _finishCreation(parent, data, properties, signalHandlers) {
     if (data.component.status === Component.Ready) {
-        var instance = data.component.createObject(parent, data.config)
+        var instance = data.component.createObject(parent, properties)
 
         if (instance !== null) {
+            for (const [name, handler] of Object.entries(signalHandlers)) {
+                instance[name].connect(handler)
+            }
+
             data.instances.push(instance)
-            console.log("Created new component successfully")
+            console.log("New object created successfully")
         }
         else {
             _error()

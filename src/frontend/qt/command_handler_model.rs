@@ -10,9 +10,10 @@ pub struct CommandHandlerModel {
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_child_commands: qt_method!(fn(&self, host_id: QString, parent_id: QString) -> QVariantList),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString)),
+    execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString)),
 
     dialog_opened: qt_signal!(),
-    confirmation_dialog_opened: qt_signal!(),
+    confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, target_id: QString),
 
     command_handler: CommandHandler,
 }
@@ -45,10 +46,14 @@ impl CommandHandlerModel {
         let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
 
         if !display_options.confirmation_text.is_empty() {
-            self.confirmation_dialog_opened();
-            return;
+            self.confirmation_dialog_opened(QString::from(display_options.confirmation_text), host_id, command_id, target_id);
         }
+        else {
+            self.execute_confirmed(host_id, command_id, target_id);
+        }
+    }
 
+    fn execute_confirmed(&mut self, host_id: QString, command_id: QString, target_id: QString) {
         let action = self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
 
         // The UI action to be triggered after successful execution.
