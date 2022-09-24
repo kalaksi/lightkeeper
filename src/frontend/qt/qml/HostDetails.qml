@@ -7,6 +7,7 @@ import QtQuick.Controls.Material 2.15
 
 import "js/TextTransform.js" as TextTransform
 import "js/Parse.js" as Parse
+import "js/ValueUnit.js" as ValueUnit
 
 Item {
     id: root
@@ -44,7 +45,7 @@ Item {
                         anchors.top: parent.top
                         implicitWidth: parent.width
 
-                        // Category-level command buttons.
+                        // Category-level command buttons (buttons on top of the category area).
                         CommandButtonRow {
                             commands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, ""))
                             onClicked: function(targetId) {
@@ -74,7 +75,7 @@ Item {
 
                                 PropertyRow {
                                     label: modelData.label.length > 0 ? modelData.label : monitorData.display_options.display_text
-                                    value: modelData.value + " " + rowRepeater.monitorData.display_options.unit
+                                    value: ValueUnit.AsText(modelData.value, rowRepeater.monitorData.display_options.unit)
                                     hostId: root.hostId
                                     targetId: modelData.source_id
                                     rowCommands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, rowRepeater.monitorData.monitor_id))
