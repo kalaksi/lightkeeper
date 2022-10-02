@@ -6,8 +6,8 @@ extern crate qmetaobject;
 use qmetaobject::*;
 
 use crate::frontend;
-use super::command_data_model::CommandDataModel;
-use super::monitor_data_model::MonitorDataModel;
+
+use super::host_data_model::HostDataModel;
 
 
 // TODO: use camelcase with qml models?
@@ -15,7 +15,7 @@ use super::monitor_data_model::MonitorDataModel;
 pub struct HostListModel {
     base: qt_base_class!(trait QAbstractTableModel),
     headers: Vec<QString>,
-    hosts: HashMap<String, HostData>,
+    hosts: HashMap<String, HostDataModel>,
     hosts_index: HashMap<usize, String>,
 
     receive_updates: qt_method!(fn(&self)),
@@ -54,7 +54,7 @@ impl HostListModel {
         }
 
         for (host_id, host_data) in display_data.hosts.iter() {
-            model.hosts_index.insert(model.hosts.len(), host_id.clone()); model.hosts.insert(host_id.clone(), HostData::from(&host_data));
+            model.hosts_index.insert(model.hosts.len(), host_id.clone()); model.hosts.insert(host_id.clone(), HostDataModel::from(&host_data));
         }
 
         (model, sender)
@@ -66,8 +66,8 @@ impl HostListModel {
             let self_ptr = QPointer::from(&*self);
             let set_data = qmetaobject::queued_callback(move |host_display_data: frontend::HostDisplayData| {
                 self_ptr.as_pinned().map(|self_pinned| {
-                    // HostData cannot be passed between threads so parsing happens in set_data().
-                    let host_data = HostData::from(&host_display_data);
+                    // HostDataModel cannot be passed between threads so parsing happens in set_data().
+                    let host_data = HostDataModel::from(&host_display_data);
 
                     let _old_value = std::mem::replace(
                         self_pinned.borrow_mut().hosts.get_mut(&host_data.name.to_string()).unwrap(),
@@ -185,32 +185,5 @@ impl QAbstractTableModel for HostListModel {
 
     fn role_names(&self) -> std::collections::HashMap<i32, QByteArray> {
         vec![(USER_ROLE, QByteArray::from("value"))].into_iter().collect()
-    }
-}
-
-
-// HostData is the corresponding Qt struct for frontend::HostDisplayData.
-// Contains host and state information.
-#[derive(QGadget, Default, Clone)]
-struct HostData {
-    status: qt_property!(QString),
-    name: qt_property!(QString),
-    fqdn: qt_property!(QString),
-    ip_address: qt_property!(QString),
-    // TODO: rename _data to _results?
-    monitor_data: qt_property!(MonitorDataModel),
-    command_data: qt_property!(CommandDataModel),
-}
-
-impl HostData {
-    pub fn from(host_display_data: &frontend::HostDisplayData) -> Self {
-        HostData {
-            status: host_display_data.status.clone().to_string().into(),
-            name: host_display_data.name.clone().into(),
-            fqdn: host_display_data.domain_name.clone().into(),
-            ip_address: host_display_data.ip_address.to_string().into(),
-            monitor_data: MonitorDataModel::new(&host_display_data),
-            command_data: CommandDataModel::new(&host_display_data),
-        }
     }
 }

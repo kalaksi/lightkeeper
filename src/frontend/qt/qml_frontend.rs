@@ -1,16 +1,13 @@
-mod monitor_data_model;
-mod command_data_model;
-mod host_list_model;
-use host_list_model::HostListModel;
-mod command_handler_model;
-use command_handler_model::CommandHandlerModel;
 
-mod resources;
+use super::{
+    resources,
+    models::HostListModel,
+    models::CommandHandlerModel,
+};
 
 use std::sync::mpsc;
 extern crate qmetaobject;
 use qmetaobject::*;
-
 use crate::{frontend, command_handler::CommandHandler};
 
 pub struct QmlFrontend {
