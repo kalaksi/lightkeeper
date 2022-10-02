@@ -20,17 +20,26 @@ ApplicationWindow {
 
     Component.onCompleted: {
         // Binding has to be done in a bit of a roundabout way here.
-        lightkeeper_commands.onDialog_opened.connect(dataDialog.open)
         lightkeeper_commands.onConfirmation_dialog_opened.connect((text, host_id, command_id, target_id) =>
             CreateObject.confirmationDialog(root, text, () => lightkeeper_commands.execute_confirmed(host_id, command_id, target_id))
         )
-        // TODO: 
-        lightkeeper_data.dataChanged.connect(dataDialog.update)
-    }
+        lightkeeper_commands.onDetails_dialog_opened.connect(() => {
+            let instanceId = CreateObject.detailsDialog(root, "", "", "")
 
-    DataDialog {
-        id: dataDialog
-        model: lightkeeper_data
+            /* TODO: update dialog data
+            lightkeeper_data.dataChanged.connect(() => {
+                let data = lightkeeper_data.get_command_data(lightkeeper_data.get_selected_host())[0]
+                if (typeof data !== "undefined") {
+                    let instance = CreateObject.get("DetailsDialog", instanceId)
+
+                    let commandResult = JSON.parse(data)
+                    instance.text = commandResult.message
+                    instance.errorText = commandResult.error
+                    instance.criticality = commandResult.criticality
+                }
+            })
+            */
+        })
     }
 
     Item {

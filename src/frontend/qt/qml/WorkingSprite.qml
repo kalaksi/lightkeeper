@@ -10,4 +10,5 @@ AnimatedSprite {
     frameHeight: 22 * size
     frameCount: 15
     frameDuration: 60
+    anchors.centerIn: parent
 }

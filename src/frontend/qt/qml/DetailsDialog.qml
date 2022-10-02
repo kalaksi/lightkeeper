@@ -11,44 +11,37 @@ Dialog {
     implicitWidth: parent.width
     modal: false
     standardButtons: Dialog.Ok
+    Component.onCompleted: visible = true
 
-    required property var model
-
-    property var message: ""
-    property var error: ""
+    property var text: ""
+    property var errorText: ""
     property var criticality: ""
 
     WorkingSprite {
-        id: loadingAnimation
-        anchors.centerIn: parent
-        visible: root.message === "" && root.error === ""
+        visible: root.text === "" && root.errorText === ""
     }
 
     ScrollView {
-        visible: root.message !== ""
+        visible: root.text !== ""
         anchors.fill: parent
 
         JsonTextFormat {
-            jsonText: root.message
+            jsonText: root.text
         }
     }
 
     ErrorMessage {
-        text: root.error
+        text: root.errorText
         criticality: root.criticality
-        visible: root.error !== ""
+        visible: root.errorText !== ""
     }
 
-    function init() {
-        root.open()
-    }
-
-    function update() {
-        let data = root.model.get_command_data(root.model.get_selected_host())[0]
+    function update(lightkeeper_model) {
+        let data = lightkeeper_model.get_command_data(root.model.get_selected_host())[0]
         if (typeof data !== "undefined") {
             let commandResult = JSON.parse(data)
-            root.message = commandResult.message
-            root.error = commandResult.error
+            root.text = commandResult.message
+            root.errorText = commandResult.error
             root.criticality = commandResult.criticality
         }
     }

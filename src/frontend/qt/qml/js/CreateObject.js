@@ -1,9 +1,41 @@
 
 function confirmationDialog(parent, text, onAccepted) {
-    _create(parent, "ConfirmationDialog", { "text": text }, { "onAccepted": onAccepted })
+    return create(parent, "ConfirmationDialog", { "text": text }, { "onAccepted": onAccepted })
 }
 
+function detailsDialog(parent, text, errorText, criticality) {
+    return create(parent, "DetailsDialog", { "text": text, "errorText": errorText, "criticality": criticality }, {})
+}
 
+function create(parent, componentId, userProperties, signalHandlers) {
+    console.log("Creating new UI object for " + componentId)
+
+    let data = _dynamicComponents[componentId]
+    if (data.component === null) {
+        data.component = Qt.createComponent(data.qmlPath)
+    }
+
+    data.lastInstanceId += 1
+    var properties = Object.assign(data.defaultProperties, userProperties)
+    if (data.component.status === Component.Ready) {
+        _finishCreation(parent, data, properties, signalHandlers)
+    }
+    else {
+        data.component.statusChanged.connect(() => _finishCreation(parent, data, properties, signalHandlers))
+    }
+
+    return data.lastInstanceId
+}
+
+function get(componentId, instanceId) {
+    let instance = _dynamicComponents[componentId].instances[instanceId]
+    if (typeof instance === "undefined") {
+        console.log(`Object ${componentId}:${instanceId} does not exist or is not ready yet`)
+    }
+    return instance
+}
+
+// TODO: separate files (and a "type") if there's going to be more dynamic objects.
 var _dynamicComponents = {
     "ConfirmationDialog": {
         qmlPath: "../ConfirmationDialog.qml",
@@ -14,24 +46,15 @@ var _dynamicComponents = {
         },
         component: null,
         // TODO: clean up destroyed objects?
-        instances: [],
-    }
-}
-
-function _create(parent, componentId, userProperties, signalHandlers) {
-    console.log("Creating new UI object for " + componentId)
-
-    let data = _dynamicComponents[componentId]
-    if (data.component === null) {
-        data.component = Qt.createComponent(data.qmlPath)
-    }
-
-    var properties = Object.assign(data.defaultProperties, userProperties)
-    if (data.component.status === Component.Ready) {
-        _finishCreation(parent, data, properties, signalHandlers)
-    }
-    else {
-        data.component.statusChanged.connect(() => _finishCreation(parent, data, properties, signalHandlers))
+        instances: {},
+        lastInstanceId: 0,
+    },
+    "DetailsDialog": {
+        qmlPath: "../DetailsDialog.qml",
+        defaultProperties: { },
+        component: null,
+        instances: {},
+        lastInstanceId: 0,
     }
 }
 
@@ -44,7 +67,7 @@ function _finishCreation(parent, data, properties, signalHandlers) {
                 instance[name].connect(handler)
             }
 
-            data.instances.push(instance)
+            data.instances[data.lastInstanceId] = instance
             console.log("New object created successfully")
         }
         else {

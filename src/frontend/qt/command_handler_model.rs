@@ -12,7 +12,7 @@ pub struct CommandHandlerModel {
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString)),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString)),
 
-    dialog_opened: qt_signal!(),
+    details_dialog_opened: qt_signal!(),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, target_id: QString),
 
     command_handler: CommandHandler,
@@ -59,7 +59,7 @@ impl CommandHandlerModel {
         // The UI action to be triggered after successful execution.
         match action {
             CommandAction::None => {},
-            CommandAction::Dialog => self.dialog_opened(),
+            CommandAction::Dialog => self.details_dialog_opened(),
         }
     }
 }
