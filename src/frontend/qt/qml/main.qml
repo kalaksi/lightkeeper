@@ -21,19 +21,25 @@ ApplicationWindow {
     Component.onCompleted: {
         _hostDataManager.receive_updates()
 
-        _hostDataManager.onUpdate_received.connect((hostId) => {
+        _hostDataManager.update_received.connect((hostId) => {
             _hostTableModel.data_changed_for_host(hostId)
 
-            if (hostId === _hostTableModel.get_selected_host_id()) {
-                body.selectedHostId = hostId
+            if (hostId === hostDetails.hostId) {
+                hostDetails.refresh()
             }
         })
 
-/*
-        _hostTableModel.onSelected_row_changed(() => {
-            body.selectedHostId = _hostTableModel.get_selected_host_id()
+        _hostTableModel.selected_row_changed.connect(() => {
+            hostDetails.hostId = _hostTableModel.get_selected_host_id()
         })
-        */
+
+        _hostTableModel.selection_activated.connect(() => {
+            animateShowDetails.start()
+        })
+
+        _hostTableModel.selection_deactivated.connect(() => {
+            animateHideDetails.start()
+        })
 
         _commandHandler.onConfirmation_dialog_opened.connect((text, host_id, command_id, target_id) =>
             CreateObject.confirmationDialog(root, text, () => commands.execute_confirmed(host_id, command_id, target_id))
@@ -60,16 +66,13 @@ ApplicationWindow {
     Item {
         id: body
         anchors.fill: parent
-        property string selectedHostId: ""
         property real splitSize: 0.0
-        property bool showDetails: false
 
         SplitView {
             anchors.fill: parent
             orientation: Qt.Vertical
 
             HostTable {
-                id: table
                 width: parent.width
                 SplitView.minimumWidth: body.width
                 SplitView.fillHeight: true
@@ -79,33 +82,16 @@ ApplicationWindow {
             }
 
             HostDetails {
-                id: details
+                id: hostDetails
                 width: parent.width
                 SplitView.minimumHeight: 0.5 * body.splitSize * parent.height
                 SplitView.preferredHeight: body.splitSize * parent.height
                 SplitView.maximumHeight: 1.5 * body.splitSize * parent.height
 
-                hostId: body.selectedHostId
+                hostId: _hostTableModel.get_selected_host_id()
                 hostDataManager:_hostDataManager
                 commandHandler: _commandHandler
             }
-        }
-
-        // Slots and bindings
-        onShowDetailsChanged: function() {
-            if (showDetails === true) {
-                body.selectedHostId = _hostTableModel.get_selected_host_id()
-                animateShowDetails.start()
-            }
-            else {
-                animateHideDetails.start()
-            }
-        }
-
-        Binding { 
-            target: body
-            property: "showDetails"
-            value: _hostTableModel.selected_row >= 0
         }
 
         // Animations
@@ -131,7 +117,7 @@ ApplicationWindow {
                 when: body.splitSize > 0.01
 
                 PropertyChanges {
-                    target: details
+                    target: hostDetails 
                     visible: true
                 }
             },
@@ -140,7 +126,7 @@ ApplicationWindow {
                 when: body.splitSize < 0.01
 
                 PropertyChanges {
-                    target: details
+                    target: hostDetails
                     visible: false
                 }
             }

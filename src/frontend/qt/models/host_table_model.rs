@@ -19,8 +19,13 @@ pub struct HostTableModel {
     update: qt_method!(fn(&mut self, new_host_data: HostDataModel)),
     data_changed_for_host: qt_method!(fn(&self, host_id: QString)),
 
+    // toggle_row is preferred for setting selected row.
     selected_row: qt_property!(i32; NOTIFY selected_row_changed),
     selected_row_changed: qt_signal!(),
+    selection_activated: qt_signal!(),
+    selection_deactivated: qt_signal!(),
+    toggle_row: qt_method!(fn(&mut self, row: i32)),
+
     get_selected_host_id: qt_method!(fn(&self) -> QString),
 }
 
@@ -53,6 +58,7 @@ impl HostTableModel {
         self.data_changed_for_host(old_value.name);
     }
 
+    // A slot for informing about change in table data.
     pub fn data_changed_for_host(&mut self, host_id: QString) {
         let host_index = self.host_row_map.get(&host_id.to_string()).unwrap();
 
@@ -61,6 +67,20 @@ impl HostTableModel {
 
         // The standard Qt signal.
         self.data_changed(top_left, bottom_right);
+    }
+
+    pub fn toggle_row(&mut self, row: i32) {
+        if self.selected_row == row {
+            self.selected_row = -1;
+            self.selection_deactivated();
+        }
+        else {
+            if self.selected_row == -1 {
+                self.selection_activated();
+            }
+            self.selected_row = row;
+        }
+        self.selected_row_changed();
     }
 
     pub fn get_selected_host_id(&self) -> QString {

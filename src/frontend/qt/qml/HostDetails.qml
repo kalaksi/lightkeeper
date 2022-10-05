@@ -16,6 +16,7 @@ Item {
     property string hostId: ""
     property int columnMaximumWidth: 400
     property int columnMinimumWidth: columnMaximumWidth
+    property var _hostData: groupByCategory(root.hostDataManager.get_monitor_data_map(hostId), root.commandHandler.get_commands(root.hostId))
 
     Rectangle {
         anchors.fill: parent
@@ -32,7 +33,7 @@ Item {
             columns: Math.floor(root.width / root.columnMinimumWidth)
 
             Repeater {
-                model: groupByCategory(root.hostDataManager.get_monitor_data_map(hostId), root.commandHandler.get_commands(root.hostId))
+                model: root._hostData
 
                 GroupBox {
                     title: modelData.category
@@ -129,6 +130,10 @@ Item {
             monitorDatas: monitorDataByCategory[category] || [],
             commands: commandByCategory[category] || [],
         }))
+    }
+
+    function refresh() {
+        root._hostData = groupByCategory(root.hostDataManager.get_monitor_data_map(hostId), root.commandHandler.get_commands(root.hostId))
     }
 
 }
