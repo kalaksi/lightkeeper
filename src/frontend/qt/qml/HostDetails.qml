@@ -11,11 +11,9 @@ import "js/ValueUnit.js" as ValueUnit
 
 Item {
     id: root
-    required property var model
-    required property var commandsModel
-    property var hostData: model.get_host_data(model.selected_row)
-    // For convenience
-    property string hostId: "Name" in root.hostData ? root.hostData["Name"] : ""
+    required property var commandHandler
+    required property var hostDataManager
+    property string hostId: ""
     property int columnMaximumWidth: 400
     property int columnMinimumWidth: columnMaximumWidth
 
@@ -34,7 +32,8 @@ Item {
             columns: Math.floor(root.width / root.columnMinimumWidth)
 
             Repeater {
-                model: groupByCategory(root.model.get_monitor_data_map(root.hostId), root.commandsModel.get_commands(root.hostId))
+                model: groupByCategory(root.hostDataManager.get_monitor_data_map(hostId), root.commandHandler.get_commands(root.hostId))
+
                 GroupBox {
                     title: modelData.category
                     Layout.minimumWidth: root.columnMinimumWidth
@@ -47,15 +46,15 @@ Item {
 
                         // Category-level command buttons (buttons on top of the category area).
                         CommandButtonRow {
-                            commands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, ""))
+                            commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, ""))
                             onClicked: function(targetId) {
-                                root.commandsModel.execute(root.hostId, modelData.command_id, targetId)
+                                root.commandHandler.execute(root.hostId, modelData.command_id, targetId)
                             }
                         }
 
                         // Host data is a bit different from monitor data, so handling it separately here.
                         Repeater {
-                            model: modelData.category === "Host" && root.hostId !== "" ?  Object.entries(root.hostData) : []
+                            model: modelData.category === "Host" ? Object.entries(root.hostDataManager.get_host_data(root.hostId)) : []
 
                             PropertyRow {
                                 label: modelData[0]
@@ -70,16 +69,17 @@ Item {
                             Repeater {
                                 id: rowRepeater
                                 property var monitorData: modelData
-                                property var lastDataPoint: monitorData.values.slice(-1)[0]
-                                model: lastDataPoint.multivalue.length > 0 ? lastDataPoint.multivalue : [ lastDataPoint ]
+                                property var lastDataPoint: modelData.values.slice(-1)[0]
+                                model: modelData.display_options.use_multivalue ? lastDataPoint.multivalue : [ lastDataPoint ]
 
                                 PropertyRow {
                                     label: modelData.label.length > 0 ? modelData.label : monitorData.display_options.display_text
                                     value: ValueUnit.AsText(modelData.value, rowRepeater.monitorData.display_options.unit)
+
                                     hostId: root.hostId
                                     targetId: modelData.source_id
-                                    rowCommands: Parse.ListOfJsons(root.commandsModel.get_child_commands(root.hostId, rowRepeater.monitorData.monitor_id))
-                                    commandsModel: root.commandsModel
+                                    rowCommands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, monitorData.monitor_id))
+                                    commandHandler: root.commandHandler
                                 }
                             }
                         }
@@ -90,7 +90,6 @@ Item {
     }
 
     function groupByCategory(monitorDataJsons, commandJsons) {
-        // TODO: calculate categories on rust side (HostData)?
         let categories = []
         let monitorDataByCategory = {}
         let commandByCategory = {}

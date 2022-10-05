@@ -19,16 +19,31 @@ ApplicationWindow {
     Material.theme: Material.System
 
     Component.onCompleted: {
-        // Binding has to be done in a bit of a roundabout way here.
-        lightkeeper_commands.onConfirmation_dialog_opened.connect((text, host_id, command_id, target_id) =>
-            CreateObject.confirmationDialog(root, text, () => lightkeeper_commands.execute_confirmed(host_id, command_id, target_id))
+        _hostDataManager.receive_updates()
+
+        _hostDataManager.onUpdate_received.connect((hostId) => {
+            _hostTableModel.data_changed_for_host(hostId)
+
+            if (hostId === _hostTableModel.get_selected_host_id()) {
+                body.selectedHostId = hostId
+            }
+        })
+
+/*
+        _hostTableModel.onSelected_row_changed(() => {
+            body.selectedHostId = _hostTableModel.get_selected_host_id()
+        })
+        */
+
+        _commandHandler.onConfirmation_dialog_opened.connect((text, host_id, command_id, target_id) =>
+            CreateObject.confirmationDialog(root, text, () => commands.execute_confirmed(host_id, command_id, target_id))
         )
-        lightkeeper_commands.onDetails_dialog_opened.connect(() => {
+        _commandHandler.onDetails_dialog_opened.connect(() => {
             let instanceId = CreateObject.detailsDialog(root, "", "", "")
 
             /* TODO: update dialog data
-            lightkeeper_data.dataChanged.connect(() => {
-                let data = lightkeeper_data.get_command_data(lightkeeper_data.get_selected_host())[0]
+            data.dataChanged.connect(() => {
+                let data = data.get_command_data(data.get_selected_host())[0]
                 if (typeof data !== "undefined") {
                     let instance = CreateObject.get("DetailsDialog", instanceId)
 
@@ -45,6 +60,7 @@ ApplicationWindow {
     Item {
         id: body
         anchors.fill: parent
+        property string selectedHostId: ""
         property real splitSize: 0.0
         property bool showDetails: false
 
@@ -58,7 +74,8 @@ ApplicationWindow {
                 SplitView.minimumWidth: body.width
                 SplitView.fillHeight: true
 
-                model: lightkeeper_data
+                hostDataManager: _hostDataManager
+                model: _hostTableModel
             }
 
             HostDetails {
@@ -68,18 +85,27 @@ ApplicationWindow {
                 SplitView.preferredHeight: body.splitSize * parent.height
                 SplitView.maximumHeight: 1.5 * body.splitSize * parent.height
 
-                model: lightkeeper_data
-                commandsModel: lightkeeper_commands
+                hostId: body.selectedHostId
+                hostDataManager:_hostDataManager
+                commandHandler: _commandHandler
             }
         }
 
+        // Slots and bindings
         onShowDetailsChanged: function() {
             if (showDetails === true) {
+                body.selectedHostId = _hostTableModel.get_selected_host_id()
                 animateShowDetails.start()
             }
             else {
                 animateHideDetails.start()
             }
+        }
+
+        Binding { 
+            target: body
+            property: "showDetails"
+            value: _hostTableModel.selected_row >= 0
         }
 
         // Animations
@@ -97,12 +123,6 @@ ApplicationWindow {
             property: "splitSize"
             to: 0.0
             duration: 150
-        }
-
-        Binding { 
-            target: body
-            property: "showDetails"
-            value: lightkeeper_data.selected_row >= 0
         }
 
         states: [

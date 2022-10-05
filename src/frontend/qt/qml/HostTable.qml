@@ -6,11 +6,13 @@ import QtQuick.Controls.Material 2.15
 
 TableView {
     id: table
+
+    required property var hostDataManager
     property int rowHeight: 40
 
+    // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
     onWidthChanged: forceLayout()
-    Component.onCompleted: model.receive_updates()
     ScrollBar.vertical: ScrollBar { }
 
     delegate: DelegateChooser {
@@ -22,7 +24,7 @@ TableView {
                 firstItem: true
                 selected: table.model.selected_row === row
                 onClicked: selectRow(row)
-                implicitWidth: table.width * 0.15
+                implicitWidth: table.width * 0.20
                 implicitHeight: table.rowHeight
 
                 HostStatus {
@@ -78,11 +80,13 @@ TableView {
                 implicitWidth: table.width * 0.3
 
                 MonitorSummary {
-                    model: table.model.get_monitor_data(value)
+                    model: table.hostDataManager.get_monitor_data(value)
                 }
             }
         }
 
+        // TODO: some commands here?
+        /*
         DelegateChoice {
             column: 5
             delegate: TableCell {
@@ -90,6 +94,7 @@ TableView {
                 onClicked: selectRow(row)
             }
         }
+        */
     }
 
     function selectRow(row) {

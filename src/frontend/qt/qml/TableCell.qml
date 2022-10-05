@@ -15,7 +15,7 @@ Item {
         id: rounded
         anchors.fill: parent
         radius: parent.firstItem ? 9 : 0
-        color: getBackgroundColor()
+        color: getBackgroundColor(root.selected)
 
         MouseArea {
             anchors.fill: parent
@@ -24,14 +24,14 @@ Item {
     }
 
     Rectangle {
-        color: getBackgroundColor()
+        color: getBackgroundColor(root.selected)
         width: rounded.radius
         anchors.top: rounded.top
         anchors.bottom: rounded.bottom
         anchors.right: rounded.right
     }
 
-    function getBackgroundColor() {
+    function getBackgroundColor(selected) {
         if (selected === true) {
             return Material.primary
         }
