@@ -18,14 +18,25 @@ Item {
     property int columnMinimumWidth: columnMaximumWidth
     property var _hostData: groupByCategory(root.hostDataManager.get_monitor_data_map(hostId), root.commandHandler.get_commands(root.hostId))
 
+    signal closeClicked()
+
     Rectangle {
         anchors.fill: parent
         color: Material.background
     }
 
+    Header {
+        id: detailsHeader
+        text: root.hostId
+        onCloseClicked: root.closeClicked()
+    }
+
     ScrollView {
-        anchors.fill: parent
         ScrollBar.vertical: ScrollBar { }
+
+        anchors.top: detailsHeader.bottom
+        anchors.margins: 5
+        implicitWidth: parent.width
 
         GridLayout {
             id: grid

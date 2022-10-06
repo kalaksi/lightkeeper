@@ -91,6 +91,8 @@ ApplicationWindow {
                 hostId: _hostTableModel.get_selected_host_id()
                 hostDataManager:_hostDataManager
                 commandHandler: _commandHandler
+
+                onCloseClicked: _hostTableModel.toggle_row(_hostTableModel.selected_row)
             }
         }
 

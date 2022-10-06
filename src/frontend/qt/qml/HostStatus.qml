@@ -28,8 +28,8 @@ Item {
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
             ColorOverlay {
-                anchors.fill: status_image
-                source: status_image
+                anchors.fill: parent
+                source: parent
                 color: getColor(root.status)
                 antialiasing: true
                 visible: showIcon
