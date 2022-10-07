@@ -15,7 +15,7 @@ function create(parent, componentId, userProperties, signalHandlers) {
         data.component = Qt.createComponent(data.qmlPath)
     }
 
-    data.lastInstanceId += 1
+    let instanceId = _instances.length
     var properties = Object.assign(data.defaultProperties, userProperties)
     if (data.component.status === Component.Ready) {
         _finishCreation(parent, data, properties, signalHandlers)
@@ -24,19 +24,19 @@ function create(parent, componentId, userProperties, signalHandlers) {
         data.component.statusChanged.connect(() => _finishCreation(parent, data, properties, signalHandlers))
     }
 
-    return data.lastInstanceId
+    return instanceId
 }
 
-function get(componentId, instanceId) {
-    let instance = _dynamicComponents[componentId].instances[instanceId]
+function get(instanceId) {
+    let instance = _instances[instanceId]
     if (typeof instance === "undefined") {
-        console.log(`Object ${componentId}:${instanceId} does not exist or is not ready yet`)
+        console.log(`Object ${instanceId} does not exist or is not ready yet`)
     }
     return instance
 }
 
 // TODO: separate files (and a "type") if there's going to be more dynamic objects.
-var _dynamicComponents = {
+let _dynamicComponents = {
     "ConfirmationDialog": {
         qmlPath: "../ConfirmationDialog.qml",
         defaultProperties: {
@@ -45,18 +45,16 @@ var _dynamicComponents = {
             text: "",
         },
         component: null,
-        // TODO: clean up destroyed objects?
-        instances: {},
-        lastInstanceId: 0,
     },
     "DetailsDialog": {
         qmlPath: "../DetailsDialog.qml",
         defaultProperties: { },
         component: null,
-        instances: {},
-        lastInstanceId: 0,
     }
 }
+
+// TODO: clean up destroyed objects?
+let _instances = []
 
 function _finishCreation(parent, data, properties, signalHandlers) {
     if (data.component.status === Component.Ready) {
@@ -67,7 +65,7 @@ function _finishCreation(parent, data, properties, signalHandlers) {
                 instance[name].connect(handler)
             }
 
-            data.instances[data.lastInstanceId] = instance
+            _instances.push(instance)
             console.log("New object created successfully")
         }
         else {
