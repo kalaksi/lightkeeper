@@ -1,6 +1,6 @@
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 
-#[derive(Clone, Serialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct DisplayOptions {
     pub display_style: DisplayStyle,
     pub display_text: String,
@@ -28,7 +28,7 @@ impl DisplayOptions {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum DisplayStyle {
     Text,
     StatusUpDown,

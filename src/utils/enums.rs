@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::default::Default;
 use std::fmt::Display;
 
-use serde_derive::{ Serialize, Deserialize };
+use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
@@ -38,7 +38,7 @@ impl Display for HostStatus {
 }
 
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize)]
 pub enum Criticality {
     NoData,
     Normal,

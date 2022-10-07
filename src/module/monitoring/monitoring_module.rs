@@ -2,7 +2,7 @@ use std::fmt;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 
 use crate::{
     Host,
@@ -43,7 +43,7 @@ pub trait MonitoringModule : Module {
 
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MonitoringData {
     pub values: Vec<DataPoint>,
     pub display_options: DisplayOptions,
@@ -60,7 +60,7 @@ impl MonitoringData {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct DataPoint {
     // With multivalue, value can be a composite result/value of all of the values.
     // For example, with service statuses, this can show the worst state in the multivalue group.
