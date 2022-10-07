@@ -5,10 +5,14 @@ import QtQuick.Layouts 1.15
 import QtQuick.Controls.Material 2.15
 
 TableView {
-    id: table
-
+    id: root 
     required property var hostDataManager
     property int rowHeight: 40
+
+    property var _monitorHighlights: {}
+    Component.onCompleted: {
+        root._monitorHighlights = {}
+    }
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
@@ -22,10 +26,10 @@ TableView {
             column: 0
             delegate: TableCell {
                 firstItem: true
-                selected: table.model.selected_row === row
-                onClicked: table.model.toggle_row(row)
-                implicitWidth: table.width * 0.20
-                implicitHeight: table.rowHeight
+                selected: root.model.selected_row === row
+                onClicked: root.model.toggle_row(row)
+                implicitWidth: root.width * 0.20
+                implicitHeight: root.rowHeight
 
                 HostStatus {
                     id: host_status
@@ -36,9 +40,9 @@ TableView {
         DelegateChoice {
             column: 1
             delegate: TableCell {
-                selected: table.model.selected_row === row
-                onClicked: table.model.toggle_row(row)
-                implicitWidth: table.width * 0.10
+                selected: root.model.selected_row === row
+                onClicked: root.model.toggle_row(row)
+                implicitWidth: root.width * 0.10
 
                 NormalText {
                     anchors.verticalCenter: parent.verticalCenter
@@ -49,9 +53,9 @@ TableView {
         DelegateChoice {
             column: 2
             delegate: TableCell {
-                selected: table.model.selected_row === row
-                onClicked: table.model.toggle_row(row)
-                implicitWidth: table.width * 0.20
+                selected: root.model.selected_row === row
+                onClicked: root.model.toggle_row(row)
+                implicitWidth: root.width * 0.20
 
                 OptionalText {
                     placeholder: "No FQDN defined"
@@ -62,9 +66,9 @@ TableView {
         DelegateChoice {
             column: 3
             delegate: TableCell {
-                selected: table.model.selected_row === row
-                onClicked: table.model.toggle_row(row)
-                implicitWidth: table.width * 0.20
+                selected: root.model.selected_row === row
+                onClicked: root.model.toggle_row(row)
+                implicitWidth: root.width * 0.20
 
                 OptionalText {
                     placeholder: "IP address not available"
@@ -75,12 +79,13 @@ TableView {
         DelegateChoice {
             column: 4
             delegate: TableCell {
-                selected: table.model.selected_row === row
-                onClicked: table.model.toggle_row(row)
-                implicitWidth: table.width * 0.3
+                selected: root.model.selected_row === row
+                onClicked: root.model.toggle_row(row)
+                implicitWidth: root.width * 0.3
 
                 MonitorSummary {
-                    model: table.hostDataManager.get_monitor_data(value)
+                    model: root.hostDataManager.get_monitor_data(value)
+                    highlights: value in root._monitorHighlights ? root._monitorHighlights[value] : {}
                 }
             }
         }
@@ -90,10 +95,18 @@ TableView {
         DelegateChoice {
             column: 5
             delegate: TableCell {
-                selected: table.model.selected_row === row
-                onClicked: table.model.toggle_row(row)
+                selected: root.model.selected_row === row
+                onClicked: root.model.toggle_row(row)
             }
         }
         */
+    }
+
+    function highlightMonitor(hostId, monitorId, newCriticality) {
+        if (!(hostId in root._monitorHighlights)) {
+            root._monitorHighlights[hostId] = {}
+        }
+
+        root._monitorHighlights[hostId][monitorId] = newCriticality
     }
 }

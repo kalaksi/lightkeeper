@@ -21,6 +21,8 @@ pub struct HostDataManagerModel {
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 
+    monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
+
     // NOTE: Couldn't get custom types to work for return types,
     // so for now methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
@@ -60,6 +62,32 @@ impl HostDataManagerModel {
                         self_pinned.borrow_mut().hosts.get_mut(&host_data.name.to_string()).unwrap(),
                         host_data,
                     );
+
+                    // Find out any monitor state changes and signal accordingly.
+                    for (monitor_id, new_monitor_data) in &host_display_data.monitoring_data {
+                        // TODO: not very elegant that we need to deserialize old data here, do something about it.
+                        let old_monitor_datas = old_data.monitor_data.deserialize();
+                        let new_criticality = new_monitor_data.values.last().unwrap().criticality;
+
+                        match old_monitor_datas.get(monitor_id) {
+                            Some(old_monitor_data) => {
+                                let old_criticality = old_monitor_data.values.last().unwrap().criticality;
+
+                                if new_criticality != old_criticality {
+                                    self_pinned.borrow().monitor_state_changed(
+                                        QString::from(host_display_data.name.clone()),
+                                        QString::from(monitor_id.clone()),
+                                        QString::from(new_criticality.to_string())
+                                    );
+                                }
+                            },
+                            None => self_pinned.borrow().monitor_state_changed(
+                                QString::from(host_display_data.name.clone()),
+                                QString::from(monitor_id.clone()),
+                                QString::from(new_criticality.to_string())
+                            ),
+                        }
+                    }
 
                     self_pinned.borrow().update_received(old_data.name);
                 });

@@ -8,6 +8,7 @@ pub struct CommandDataModel {
     pub data: QVariantList,
 }
 
+// TODO: get rid of these data models and add to host data manager directly, serialize everything as qstring?
 impl CommandDataModel {
     pub fn new(host_display_data: &frontend::HostDisplayData) -> Self {
         let mut model = CommandDataModel {

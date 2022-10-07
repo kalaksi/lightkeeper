@@ -86,7 +86,7 @@ impl HostTableModel {
     pub fn get_selected_host_id(&self) -> QString {
         match self.row_data.get(self.selected_row as usize) {
             Some(host) => host.name.clone(),
-            None => QString::from(String::new()),
+            None => QString::from(""),
         }
     }
 }

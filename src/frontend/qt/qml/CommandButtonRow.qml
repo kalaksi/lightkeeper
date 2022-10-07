@@ -33,7 +33,7 @@ Item {
                     // TODO: separate type for icons that readily returns the full path?
                     source: "qrc:/main/images/button/" + modelData.display_options.display_icon
                     width: 0.9 * parent.width
-                    height: 0.9 * parent.height
+                    height: width
                 }
             }
         }

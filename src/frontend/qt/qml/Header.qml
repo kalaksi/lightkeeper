@@ -11,6 +11,8 @@ Item {
 
     implicitWidth: parent.width
     implicitHeight: 35
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.horizontalCenter: parent.horizontalCenter
 
     signal closeClicked()
 
@@ -29,7 +31,7 @@ Item {
     Button {
         flat: true
         width: 0.8 * parent.height
-        height: 0.8 * parent.height
+        height: width
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         anchors.margins: 5

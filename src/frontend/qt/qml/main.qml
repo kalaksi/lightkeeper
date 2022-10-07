@@ -29,6 +29,10 @@ ApplicationWindow {
             }
         })
 
+        _hostDataManager.monitor_state_changed.connect((hostId, monitorId, newCriticality) => {
+            hostTable.highlightMonitor(hostId, monitorId, newCriticality)
+        })
+
         _hostTableModel.selected_row_changed.connect(() => {
             hostDetails.hostId = _hostTableModel.get_selected_host_id()
         })
@@ -73,6 +77,7 @@ ApplicationWindow {
             orientation: Qt.Vertical
 
             HostTable {
+                id: hostTable
                 width: parent.width
                 SplitView.minimumWidth: body.width
                 SplitView.fillHeight: true

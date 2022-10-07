@@ -8,9 +8,23 @@ Item {
     implicitHeight: parent.height
     implicitWidth: parent.width
     required property var model 
-    property var colors: {}
+    required property var highlights
 
-    FontLoader { id: font_label; source: "qrc:/main/fonts/pixeloid" }
+    property var _colors: {}
+    Component.onCompleted: function() {
+        _colors = {
+            critical: "firebrick",
+            error: "firebrick",
+            warning: "orange",
+            normal: "forestgreen",
+            _: "orange",
+        }
+    }
+
+    FontLoader {
+        id: fontLabel;
+        source: "qrc:/main/fonts/pixeloid"
+    }
 
     Row {
         Repeater {
@@ -19,11 +33,13 @@ Item {
             Item {
                 property var monitorData: JSON.parse(modelData)
                 property string criticality: monitorData.values.slice(-1)[0].criticality.toLowerCase()
+                property string monitorId: monitorData.display_options.display_text.toLowerCase()
+                property string color: getColor(criticality)
                 height: root.height
                 width: 0.7 * root.height
 
                 states: State {
-                    name: "show_label"
+                    name: "showLabel"
                     when: mouseArea.containsMouse
 
                     PropertyChanges {
@@ -33,13 +49,12 @@ Item {
                 }
 
                 Image {
-                    id: status_image
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    id: statusImage
+                    anchors.centerIn: parent
                     width: 0.45 * root.height
                     height: 0.45 * root.height
                     antialiasing: true
-                    source: "qrc:/main/images/criticality/" + criticality
+                    source: "qrc:/main/images/criticality/" + parent.criticality
 
                     MouseArea {
                         id: mouseArea
@@ -49,62 +64,36 @@ Item {
                 }
 
                 ColorOverlay {
-                    anchors.fill: status_image
-                    source: status_image
-                    color: getColor(criticality)
+                    anchors.fill: statusImage
+                    source: statusImage
+                    color: parent.color
                     antialiasing: true
                 }
 
                 NormalText {
                     id: label
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: monitorData.display_options.display_text
-                    font.family: font_label.name
+                    text: parent.monitorId
+                    font.family: fontLabel.name
                     font.pointSize: 6
                     opacity: 0
                 }
+
+                PingAnimation {
+                    anchors.centerIn: statusImage
+                    color: parent.color
+                    visible: parent.monitorId in root.highlights
+                }
+
             }
         }
-    }
-
-    Component.onCompleted: function() {
-        colors = {
-            critical: "firebrick",
-            error: "firebrick",
-            warning: "orange",
-            normal: "forestgreen",
-            _: "orange",
-        }
-    }
-
-    // TODO: unused?
-    function getDisplayValue(monitorData) {
-        let last = monitorData.slice(-1)[0]
-        if (last === null) {
-            return "Error"
-        }
-        else if (last.value === "") {
-            if (["error", "critical"].includes(last.criticality.toLowerCase())) {
-                return "Error"
-            }
-            else {
-                return ""
-            }
-        }
-
-        if (last.value !== "-") {
-            return last.value + " " + monitorData.display_options.unit
-        }
-
-        return last.value
     }
 
     function getColor(criticality) {
-        let color = colors[criticality]
+        let color = _colors[criticality]
         if (typeof color !== "undefined") {
             return color
         }
-        return colors["_"]
+        return _colors["_"]
     }
-
 }
