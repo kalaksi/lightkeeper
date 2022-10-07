@@ -89,9 +89,9 @@ ApplicationWindow {
             HostDetails {
                 id: hostDetails
                 width: parent.width
-                SplitView.minimumHeight: 0.5 * body.splitSize * parent.height
-                SplitView.preferredHeight: body.splitSize * parent.height
-                SplitView.maximumHeight: 1.5 * body.splitSize * parent.height
+                SplitView.minimumHeight: 0.5 * body.splitSize * body.height
+                SplitView.preferredHeight: body.splitSize * body.height
+                SplitView.maximumHeight: 1.5 * body.splitSize * body.height
 
                 hostId: _hostTableModel.get_selected_host_id()
                 hostDataManager:_hostDataManager

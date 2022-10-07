@@ -11,8 +11,6 @@ Item {
 
     implicitWidth: parent.width
     implicitHeight: 35
-    anchors.verticalCenter: parent.verticalCenter
-    anchors.horizontalCenter: parent.horizontalCenter
 
     signal closeClicked()
 
@@ -33,8 +31,8 @@ Item {
         width: 0.8 * parent.height
         height: width
         anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
         anchors.margins: 5
+        anchors.verticalCenter: parent.verticalCenter
 
         onClicked: root.closeClicked()
 
