@@ -74,10 +74,6 @@ impl CommandResult {
             time: Utc::now(),
         }
     }
-
-    pub fn empty() -> Self {
-        Default::default()
-    }
 }
 
 impl Default for CommandResult {

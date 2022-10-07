@@ -9,7 +9,6 @@ use crate::{
     connection_manager::ConnectorRequest, 
     connection_manager::ResponseHandlerCallback,
     frontend::DisplayOptions,
-    module::command::CommandAction,
 };
 
 use crate::module::{
@@ -25,6 +24,7 @@ pub struct CommandHandler {
     request_sender: Option<Sender<ConnectorRequest>>,
     state_update_sender: Option<Sender<StateUpdateMessage>>,
 
+    // Every execution gets an invocation id. Valid id numbers begin from 1.
     invocation_id_counter: u64,
 }
 

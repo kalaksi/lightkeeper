@@ -5,7 +5,6 @@ use crate::module::{
     command::CommandModule,
     command::Command,
     command::CommandResult,
-    command::CommandAction,
     Metadata,
     ModuleSpecification,
 };
