@@ -47,12 +47,9 @@ impl CommandModule for Inspect {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("search"),
             display_priority: 1,
+            action: CommandAction::Dialog,
             ..Default::default()
         }
-    }
-
-    fn get_action(&self) -> CommandAction {
-        CommandAction::Dialog
     }
 
     fn get_connector_request(&self, target_id: String) -> String {

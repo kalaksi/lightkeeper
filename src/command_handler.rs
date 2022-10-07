@@ -24,6 +24,8 @@ pub struct CommandHandler {
     // For connector communication.
     request_sender: Option<Sender<ConnectorRequest>>,
     state_update_sender: Option<Sender<StateUpdateMessage>>,
+
+    invocation_id_counter: u64,
 }
 
 impl CommandHandler {
@@ -32,6 +34,7 @@ impl CommandHandler {
             commands: HashMap::new(),
             request_sender: Some(request_sender),
             state_update_sender: Some(state_update_sender),
+            invocation_id_counter: 0,
         }
     }
 
@@ -50,7 +53,7 @@ impl CommandHandler {
         }
     }
 
-    pub fn execute(&mut self, host_id: String, command_id: String, target_id: String) -> CommandAction {
+    pub fn execute(&mut self, host_id: String, command_id: String, target_id: String) -> u64 {
         // TODO: better solution for searching?
         let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
@@ -67,14 +70,15 @@ impl CommandHandler {
             log::error!("Couldn't send message to connector: {}", error);
         });
 
-        command.get_action()
+        self.invocation_id_counter += 1;
+        return self.invocation_id_counter
     }
 
     // Return value contains host's commands and command parameters as strings.
     pub fn get_host_commands(&self, host_id: String) -> HashMap<String, CommandData> {
         if let Some((_, command_collection)) = self.commands.iter().find(|(host, _)| host.name == host_id) {
             command_collection.iter().map(|(command_id, command)| {
-                (command_id.clone(), CommandData::new(command_id.clone(), command.get_action(), command.get_display_options()))
+                (command_id.clone(), CommandData::new(command_id.clone(), command.get_display_options()))
             }).collect()
         }
         else {
@@ -85,7 +89,7 @@ impl CommandHandler {
     pub fn get_host_command(&self, host_id: String, command_id: String) -> CommandData {
         let (_, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
-        CommandData::new(command_id, command.get_action(), command.get_display_options())
+        CommandData::new(command_id, command.get_display_options())
     }
 
     fn get_response_handler(host: Host, command: Command, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
@@ -128,15 +132,13 @@ impl CommandHandler {
 #[derive(Clone, Serialize)]
 pub struct CommandData {
     pub command_id: String,
-    pub action: CommandAction,
     pub display_options: DisplayOptions,
 }
 
 impl CommandData {
-    pub fn new(command_id: String, action: CommandAction, display_options: DisplayOptions) -> Self {
+    pub fn new(command_id: String, display_options: DisplayOptions) -> Self {
         CommandData {
             command_id: command_id,
-            action: action,
             display_options: display_options,
         }
     }

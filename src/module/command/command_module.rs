@@ -1,6 +1,6 @@
 
 use std::collections::HashMap;
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 
 use crate::{
@@ -30,10 +30,6 @@ pub trait CommandModule : Module {
             display_text: self.get_module_spec().id,
             ..Default::default()
         }
-    }
-
-    fn get_action(&self) -> CommandAction {
-        CommandAction::None
     }
 
     // target_id is just an optional argument for the command.
@@ -95,8 +91,14 @@ impl Default for CommandResult {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum CommandAction {
     None,
     Dialog,
+}
+
+impl Default for CommandAction {
+    fn default() -> Self {
+        CommandAction::None
+    }
 }
