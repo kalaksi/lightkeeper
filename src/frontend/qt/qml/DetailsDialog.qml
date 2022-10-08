@@ -36,8 +36,9 @@ Dialog {
         visible: root.errorText !== ""
     }
 
+/* TODO: remove
     function update(lightkeeper_model) {
-        let data = lightkeeper_model.get_command_data(root.model.get_selected_host())[0]
+        let data = lightkeeper_model.get_command_results(root.model.get_selected_host())[0]
         if (typeof data !== "undefined") {
             let commandResult = JSON.parse(data)
             root.text = commandResult.message
@@ -45,5 +46,6 @@ Dialog {
             root.criticality = commandResult.criticality
         }
     }
+    */
 
 }

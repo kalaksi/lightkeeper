@@ -22,12 +22,12 @@ pub struct HostDataManagerModel {
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
+    command_result_received: qt_signal!(command_result: QString),
 
     // NOTE: Couldn't get custom types to work for return types,
     // so for now methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_monitor_data_map: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
-    get_command_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_host_data: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
 }
 
@@ -62,6 +62,11 @@ impl HostDataManagerModel {
                         self_pinned.borrow_mut().hosts.get_mut(&host_data.name.to_string()).unwrap(),
                         host_data,
                     );
+
+                    for (_, command_result) in &host_display_data.command_results{
+                        let json = QString::from(serde_json::to_string(command_result).unwrap());
+                        self_pinned.borrow().command_result_received(json);
+                    }
 
                     // Find out any monitor state changes and signal accordingly.
                     for (monitor_id, new_monitor_data) in &host_display_data.monitoring_data {
@@ -118,15 +123,6 @@ impl HostDataManagerModel {
         match self.hosts.get(&host_id.to_string()) {
             Some(host) => host.monitor_data.clone().data,
             None => QVariantMap::default(),
-        }
-    }
-
-    // Returns CommandResults from executed commands in JSON. Empty if host doesn't exist.
-    // TODO: create a command invocation id to get specific results?
-    fn get_command_data(&self, host_id: QString) -> QVariantList {
-        match self.hosts.get(&host_id.to_string()) {
-            Some(host) => host.command_data.clone().data,
-            None => QVariantList::default()
         }
     }
 

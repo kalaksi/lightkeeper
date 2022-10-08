@@ -45,25 +45,27 @@ ApplicationWindow {
             animateHideDetails.start()
         })
 
-        _commandHandler.onConfirmation_dialog_opened.connect((text, host_id, command_id, target_id) =>
+        _commandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, target_id) =>
             CreateObject.confirmationDialog(root, text, () => commands.execute_confirmed(host_id, command_id, target_id))
         )
-        _commandHandler.onDetails_dialog_opened.connect(() => {
+
+        let _dialogInvocationIds = {}
+        _commandHandler.details_dialog_opened.connect((invocationId) => {
             let instanceId = CreateObject.detailsDialog(root, "", "", "")
+            _dialogInvocationIds[invocationId] = instanceId
+        })
 
-            /* TODO: update dialog data
-            data.dataChanged.connect(() => {
-                let data = data.get_command_data(data.get_selected_host())[0]
-                if (typeof data !== "undefined") {
-                    let instance = CreateObject.get("DetailsDialog", instanceId)
+        _hostDataManager.command_result_received.connect((commandResultJson) => {
+            let commandResult = JSON.parse(commandResultJson)
 
-                    let commandResult = JSON.parse(data)
-                    instance.text = commandResult.message
-                    instance.errorText = commandResult.error
-                    instance.criticality = commandResult.criticality
-                }
-            })
-            */
+            let dialogInstanceId = _dialogInvocationIds[commandResult.invocation_id]
+            
+            if (typeof dialogInstanceId !== "undefined") {
+                let dialog = CreateObject.get(dialogInstanceId)
+                dialog.text = commandResult.message
+                dialog.errorText = commandResult.error
+                dialog.criticality = commandResult.criticality
+            }
         })
     }
 

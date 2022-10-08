@@ -9,10 +9,11 @@ pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_child_commands: qt_method!(fn(&self, host_id: QString, parent_id: QString) -> QVariantList),
-    execute: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString)),
-    execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString)),
+    execute: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString) -> u64),
+    execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString) -> u64),
 
-    details_dialog_opened: qt_signal!(),
+    // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
+    details_dialog_opened: qt_signal!(invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, target_id: QString),
 
     command_handler: CommandHandler,
@@ -42,24 +43,29 @@ impl CommandHandlerModel {
         valid_commands.iter().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
     }
 
-    fn execute(&mut self, host_id: QString, command_id: QString, target_id: QString) {
+    fn execute(&mut self, host_id: QString, command_id: QString, target_id: QString) -> u64 {
         let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
 
-        if !display_options.confirmation_text.is_empty() {
-            self.confirmation_dialog_opened(QString::from(display_options.confirmation_text), host_id, command_id, target_id);
+        if display_options.confirmation_text.is_empty() {
+            return self.execute_confirmed(host_id, command_id, target_id);
         }
         else {
-            self.execute_confirmed(host_id, command_id, target_id);
+            self.confirmation_dialog_opened(QString::from(display_options.confirmation_text), host_id, command_id, target_id);
         }
+
+        return 0
     }
 
-    fn execute_confirmed(&mut self, host_id: QString, command_id: QString, target_id: QString) {
-        let action = self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
+    fn execute_confirmed(&mut self, host_id: QString, command_id: QString, target_id: QString) -> u64 {
+        let invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
 
         // The UI action to be triggered after successful execution.
-        match action {
+        let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
+        match display_options.action {
             CommandAction::None => {},
-            CommandAction::Dialog => self.details_dialog_opened(),
+            CommandAction::Dialog => self.details_dialog_opened(invocation_id),
         }
+
+        return invocation_id
     }
 }

@@ -33,7 +33,7 @@ pub struct HostDisplayData {
     pub status: HostStatus,
     pub ip_address: IpAddr,
     pub monitoring_data: HashMap<String, MonitoringData>,
-    pub command_data: HashMap<String, CommandResult>,
+    pub command_results: HashMap<String, CommandResult>,
 }
 
 

@@ -45,6 +45,7 @@ pub struct CommandResult {
     pub error: String,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
+    pub invocation_id: u64,
 }
 
 impl CommandResult {
@@ -54,6 +55,7 @@ impl CommandResult {
             error: String::from(""),
             criticality: Criticality::Normal,
             time: Utc::now(),
+            invocation_id: 0,
         }
     }
 
@@ -63,6 +65,7 @@ impl CommandResult {
             error: error,
             criticality: Criticality::Critical,
             time: Utc::now(),
+            invocation_id: 0,
         }
     }
 
@@ -72,6 +75,7 @@ impl CommandResult {
             error: String::from(""),
             criticality: criticality,
             time: Utc::now(),
+            invocation_id: 0,
         }
     }
 }
@@ -83,6 +87,7 @@ impl Default for CommandResult {
             error: String::from(""),
             criticality: Criticality::Normal,
             time: Utc::now(),
+            invocation_id: 0,
         }
     }
 }

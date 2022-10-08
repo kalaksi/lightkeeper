@@ -59,18 +59,18 @@ impl CommandHandler {
         let command = command_collection.get(&command_id).unwrap();
 
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
+        self.invocation_id_counter += 1;
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
             connector_id: command.get_connector_spec().unwrap().id,
             source_id: command.get_module_spec().id,
             host: host.clone(),
             message: command.get_connector_request(target_id),
-            response_handler: Self::get_response_handler(host.clone(), command.clone_module(), state_update_sender),
+            response_handler: Self::get_response_handler(host.clone(), command.clone_module(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
         });
 
-        self.invocation_id_counter += 1;
         return self.invocation_id_counter
     }
 
@@ -92,7 +92,7 @@ impl CommandHandler {
         CommandData::new(command_id, command.get_display_options())
     }
 
-    fn get_response_handler(host: Host, command: Command, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+    fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
         Box::new(move |result, _connector_is_connected| {
             let command_result = match result {
                 Err(error) => {
@@ -101,8 +101,9 @@ impl CommandHandler {
                 },
                 Ok(value) => {
                     match command.process_response(&value) {
-                        Ok(result) => {
+                        Ok(mut result) => {
                             log::debug!("Command result received: {}", result.message);
+                            result.invocation_id = invocation_id;
                             Some(result)
                         },
                         Err(error) => {

@@ -85,7 +85,7 @@ impl HostManager {
                     }
 
                     else if let Some(command_result) = message.command_result {
-                        host_state.command_data.insert(message.module_spec.id, command_result);
+                        host_state.command_results.insert(message.module_spec.id, command_result);
                     }
 
                     host_state.update_status();
@@ -97,7 +97,7 @@ impl HostManager {
                             domain_name: host_state.host.fqdn.clone(),
                             ip_address: host_state.host.ip_address.clone(),
                             monitoring_data: host_state.monitor_data.clone(),
-                            command_data: host_state.command_data.clone(),
+                            command_results: host_state.command_results.clone(),
                             status: host_state.status,
                         }).unwrap();
                     }
@@ -135,7 +135,7 @@ impl HostManager {
                 domain_name: state.host.fqdn.clone(),
                 ip_address: state.host.ip_address.clone(),
                 monitoring_data: state.monitor_data.clone(),
-                command_data: state.command_data.clone(),
+                command_results: state.command_results.clone(),
                 status: state.status,
             });
         }
@@ -182,7 +182,7 @@ struct HostState {
     host: Host,
     status: HostStatus,
     monitor_data: HashMap<String, MonitoringData>,
-    command_data: HashMap<String, CommandResult>,
+    command_results: HashMap<String, CommandResult>,
 }
 
 impl HostState {
@@ -190,7 +190,7 @@ impl HostState {
         HostState {
             host: host,
             monitor_data: HashMap::new(),
-            command_data: HashMap::new(),
+            command_results: HashMap::new(),
             status: status,
         }
     }
