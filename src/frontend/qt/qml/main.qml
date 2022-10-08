@@ -99,11 +99,29 @@ ApplicationWindow {
                 hostDataManager:_hostDataManager
                 commandHandler: _commandHandler
 
+                onMinimizeClicked: animateMinimizeDetails.start()
+                onMaximizeClicked: animateMaximizeDetails.start()
                 onCloseClicked: _hostTableModel.toggle_row(_hostTableModel.selected_row)
             }
         }
 
         // Animations
+        NumberAnimation {
+            id: animateMaximizeDetails
+            target: body
+            property: "splitSize"
+            to: 1.0
+            duration: 150
+        }
+
+        NumberAnimation {
+            id: animateMinimizeDetails
+            target: body
+            property: "splitSize"
+            to: 0.66
+            duration: 150
+        }
+
         NumberAnimation {
             id: animateShowDetails
             target: body

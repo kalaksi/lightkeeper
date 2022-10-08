@@ -19,6 +19,8 @@ Item {
     property var _hostData: groupByCategory(root.hostDataManager.get_monitor_data_map(hostId), root.commandHandler.get_commands(root.hostId))
 
     signal closeClicked()
+    signal maximizeClicked()
+    signal minimizeClicked()
 
     Rectangle {
         anchors.fill: parent
@@ -28,6 +30,8 @@ Item {
     Header {
         id: detailsHeader
         text: root.hostId
+        onMaximizeClicked: root.maximizeClicked()
+        onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.closeClicked()
     }
 
