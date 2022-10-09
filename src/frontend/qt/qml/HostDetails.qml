@@ -14,7 +14,7 @@ Item {
     required property var commandHandler
     required property var hostDataManager
     property string hostId: ""
-    property real _subviewSize: 1.0
+    property real _subviewSize: 0.0
 
     signal closeClicked()
     signal maximizeClicked()
@@ -26,7 +26,7 @@ Item {
     }
 
     Header {
-        id: detailsHeader
+        id: mainViewHeader
         text: root.hostId
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
@@ -35,7 +35,7 @@ Item {
 
     HostDetailsMainView {
         id: detailsMainView
-        anchors.top: detailsHeader.bottom
+        anchors.top: mainViewHeader.bottom
         anchors.margins: 5
 
         commandHandler: root.commandHandler
@@ -46,14 +46,13 @@ Item {
     Item {
         id: detailsSubview
 
-        implicitHeight: (detailsMainView.height - detailsHeader.height) * root._subviewSize
+        implicitHeight: (detailsMainView.height - mainViewHeader.height) * root._subviewSize
         anchors.bottom: root.bottom
         anchors.left: root.left
         anchors.right: root.right
 
         Header {
             id: subviewHeader
-            text: "TESTHead"
 
             showOpenInWindowButton: true
             showMaximizeButton: false
@@ -63,9 +62,9 @@ Item {
         }
 
         HostDetailsSubview {
+            id: subviewContent
             anchors.top: subviewHeader.bottom
             anchors.bottom: parent.bottom
-            text: "TEST"
         }
 
     }
@@ -109,6 +108,17 @@ Item {
 
     function refresh() {
         detailsMainView.refresh()
+    }
+
+    function openSubview(headerText) {
+        subviewHeader.text = headerText
+        animateShowSubview.start()
+    }
+
+    function refreshSubview(commandResult) {
+        subviewContent.text = commandResult.message
+        subviewContent.errorText = commandResult.error
+        subviewContent.criticality = commandResult.criticality
     }
 
 }

@@ -47,7 +47,7 @@ impl CommandModule for Inspect {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("search"),
             display_priority: 1,
-            action: CommandAction::Dialog,
+            action: CommandAction::TextView,
             ..Default::default()
         }
     }
@@ -57,6 +57,7 @@ impl CommandModule for Inspect {
             panic!("target_id is mandatory and should contain a container ID");
         }
 
+        // TODO: filter out all but alphanumeric characters
         format!("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/{}/json?all=true", target_id)
     }
 

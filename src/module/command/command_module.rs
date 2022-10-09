@@ -96,6 +96,7 @@ impl Default for CommandResult {
 pub enum CommandAction {
     None,
     Dialog,
+    TextView,
 }
 
 impl Default for CommandAction {

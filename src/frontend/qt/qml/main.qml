@@ -50,9 +50,13 @@ ApplicationWindow {
         )
 
         let _dialogInvocationIds = {}
-        _commandHandler.details_dialog_opened.connect((invocationId) => {
+        _commandHandler.text_dialog_opened.connect((invocationId) => {
             let instanceId = CreateObject.detailsDialog(root, "", "", "")
             _dialogInvocationIds[invocationId] = instanceId
+        })
+
+        _commandHandler.text_view_opened.connect((headerText, invocationId) => {
+            hostDetails.openSubview(headerText)
         })
 
         _hostDataManager.command_result_received.connect((commandResultJson) => {
@@ -65,6 +69,9 @@ ApplicationWindow {
                 dialog.text = commandResult.message
                 dialog.errorText = commandResult.error
                 dialog.criticality = commandResult.criticality
+            }
+            else {
+                hostDetails.refreshSubview(commandResult)
             }
         })
     }

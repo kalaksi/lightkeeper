@@ -6,7 +6,7 @@ import QtQuick.Controls.Material 2.15
 
 Item {
     id: root
-    required property string text
+    property string text: ""
     property string color: "#555555"
     property bool showMinimizeButton: true
     property bool showMaximizeButton: true

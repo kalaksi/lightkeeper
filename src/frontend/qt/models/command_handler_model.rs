@@ -13,7 +13,8 @@ pub struct CommandHandlerModel {
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString) -> u64),
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
-    details_dialog_opened: qt_signal!(invocation_id: u64),
+    text_dialog_opened: qt_signal!(invocation_id: u64),
+    text_view_opened: qt_signal!(headerText: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, target_id: QString),
 
     command_handler: CommandHandler,
@@ -63,7 +64,10 @@ impl CommandHandlerModel {
         let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
         match display_options.action {
             CommandAction::None => {},
-            CommandAction::Dialog => self.details_dialog_opened(invocation_id),
+            CommandAction::Dialog => self.text_dialog_opened(invocation_id),
+            CommandAction::TextView => {
+                self.text_view_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id.to_string())), invocation_id)
+            }
         }
 
         return invocation_id
