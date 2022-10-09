@@ -8,12 +8,17 @@ Item {
     id: root
     required property string text
     property string color: "#555555"
+    property bool showMinimizeButton: true
+    property bool showMaximizeButton: true
+    property bool showCloseButton: true
+    property bool showOpenInWindowButton: false
 
     property bool _maximized: false
 
     implicitWidth: parent.width
     implicitHeight: 35
 
+    signal openInWindowClicked()
     signal maximizeClicked()
     signal minimizeClicked()
     signal closeClicked()
@@ -30,45 +35,56 @@ Item {
         }
     }
 
-    ImageButton {
-        id: maximizeButton
-        anchors.right: closeButton.left
-        anchors.rightMargin: 5
-        anchors.verticalCenter: parent.verticalCenter
-
-        imageSource: "qrc:/main/images/button/maximize"
-        onClicked: {
-            root.maximizeClicked()
-            root._maximized = true
-        }
-
-        visible: root._maximized === false
-    }
-
-    ImageButton {
-        id: minimizeButton
-        anchors.right: closeButton.left
-        anchors.rightMargin: 5
-        anchors.verticalCenter: parent.verticalCenter
-
-        imageSource: "qrc:/main/images/button/minimize"
-        onClicked: {
-            root.minimizeClicked()
-            root._maximized = false
-        }
-
-        visible: root._maximized === true
-    }
-
-    ImageButton {
-        id: closeButton
+    Row {
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
         anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
         anchors.rightMargin: 10
+        spacing: 5
 
-        imageSource: "qrc:/main/images/button/close"
-        imageRelativeWidth: 0.5
-        imageRelativeHeight: 0.8
-        onClicked: root.closeClicked()
+        ImageButton {
+            anchors.rightMargin: 5
+            anchors.verticalCenter: parent.verticalCenter
+
+            imageSource: "qrc:/main/images/button/window-new"
+            onClicked: root.openInWindowClicked()
+            visible: root.showOpenInWindowButton
+        }
+
+        ImageButton {
+            anchors.verticalCenter: parent.verticalCenter
+
+            imageSource: "qrc:/main/images/button/maximize"
+            onClicked: {
+                root.maximizeClicked()
+                root._maximized = true
+            }
+
+            visible: root.showMaximizeButton && !root._maximized
+        }
+
+        ImageButton {
+            anchors.verticalCenter: parent.verticalCenter
+
+            imageSource: "qrc:/main/images/button/minimize"
+            onClicked: {
+                root.minimizeClicked()
+                root._maximized = false
+            }
+
+            visible: root.showMinimizeButton && root._maximized
+        }
+
+        ImageButton {
+            anchors.verticalCenter: parent.verticalCenter
+
+            imageSource: "qrc:/main/images/button/close"
+            imageRelativeWidth: 0.5
+            imageRelativeHeight: 0.8
+            onClicked: root.closeClicked()
+
+            visible: root.showCloseButton
+        }
+
     }
 }
