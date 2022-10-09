@@ -2,20 +2,23 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
+import QtQuick.Controls.Material 2.15
 
 import "js/Parse.js" as Parse
 
-Dialog {
+Item {
     id: root
-    implicitHeight: parent.height
-    implicitWidth: parent.width
-    modal: false
-    standardButtons: Dialog.Ok
-    Component.onCompleted: visible = true
-
     property var text: ""
     property var errorText: ""
     property var criticality: ""
+
+    implicitHeight: parent.height
+    implicitWidth: parent.width
+
+    Rectangle {
+        color: Material.background
+        anchors.fill: parent
+    }
 
     WorkingSprite {
         visible: root.text === "" && root.errorText === ""

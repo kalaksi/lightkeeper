@@ -14,6 +14,7 @@ Item {
     required property var commandHandler
     required property var hostDataManager
     property string hostId: ""
+    property real _subviewSize: 1.0
 
     signal closeClicked()
     signal maximizeClicked()
@@ -32,19 +33,82 @@ Item {
         onCloseClicked: root.closeClicked()
     }
 
-    HostDetailsView {
-        id: detailsView
+    HostDetailsMainView {
+        id: detailsMainView
         anchors.top: detailsHeader.bottom
         anchors.margins: 5
 
         commandHandler: root.commandHandler
         hostDataManager: root.hostDataManager
         hostId: root.hostId
+    }
+
+    Item {
+        id: detailsSubview
+
+        implicitHeight: (detailsMainView.height - detailsHeader.height) * root._subviewSize
+        anchors.bottom: root.bottom
+        anchors.left: root.left
+        anchors.right: root.right
+
+        Header {
+            id: subviewHeader
+            text: "TESTHead"
+
+            showOpenInWindowButton: true
+            showMaximizeButton: false
+            // TODO:
+            // onOpenInWindowClicked: root.maximizeClicked()
+            onCloseClicked: animateHideSubview.start()
+        }
+
+        HostDetailsSubview {
+            anchors.top: subviewHeader.bottom
+            anchors.bottom: parent.bottom
+            text: "TEST"
+        }
 
     }
 
+    NumberAnimation {
+        id: animateShowSubview
+        target: root
+        property: "_subviewSize"
+        to: 1.0
+        duration: 150
+    }
+
+    NumberAnimation {
+        id: animateHideSubview
+        target: root
+        property: "_subviewSize"
+        to: 0.0
+        duration: 150
+    }
+
+    states: [
+        State {
+            name: "subviewShownVisibility"
+            when: root._subviewSize > 0.01
+
+            PropertyChanges {
+                target: detailsSubview
+                visible: true
+            }
+        },
+        State {
+            name: "subviewHiddenVisibility"
+            when: root._subviewSize < 0.01
+
+            PropertyChanges {
+                target: detailsSubview
+                visible: false
+            }
+        }
+    ]
+
     function refresh() {
-        detailsView.refresh()
+        detailsMainView.refresh()
     }
 
 }
