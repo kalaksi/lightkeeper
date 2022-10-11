@@ -84,7 +84,13 @@ impl MonitoringModule for Docker {
             point.label = container.names.iter().map(|name| cleanup_name(name))
                                          .collect::<Vec<String>>()
                                          .join(", ");
-            point.source_id = container.id.clone();
+            point.source_id = container.names.first().unwrap_or(&container.id).clone();
+
+            // Names may still contain a leading slash that can cause issues with docker commands.
+            if point.source_id.starts_with('/') {
+                point.source_id.remove(0);
+            }
+
             point
         }).collect();
 
