@@ -4,6 +4,7 @@ use crate::module::{
     Module,
     command::CommandModule,
     command::Command,
+    command::CommandAction,
     command::CommandResult,
     Metadata,
     ModuleSpecification,
@@ -43,10 +44,11 @@ impl CommandModule for Shell {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             category: String::from("docker"),
-            parent_id: String::from("docker"),
+            parent_id: String::from("docker-containers"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("terminal"),
             display_priority: 3,
+            action: CommandAction::Terminal,
             ..Default::default()
         }
     }
@@ -56,7 +58,8 @@ impl CommandModule for Shell {
             panic!("target_id is mandatory and should contain a container ID");
         }
 
-        String::from("TODO")
+        // TODO
+        String::from("")
     }
 
     fn process_response(&self, response: &String) -> Result<CommandResult, String> {

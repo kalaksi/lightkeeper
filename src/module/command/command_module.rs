@@ -97,6 +97,7 @@ pub enum CommandAction {
     None,
     Dialog,
     TextView,
+    Terminal,
 }
 
 impl Default for CommandAction {

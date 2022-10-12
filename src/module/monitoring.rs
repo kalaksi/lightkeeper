@@ -6,7 +6,8 @@ pub use monitoring_module::DataPoint;
 
 pub mod linux;
 pub use linux::Uptime;
-pub use linux::Docker;
+pub use linux::docker;
+
 pub mod network;
 pub use network::Ping;
 pub use network::Ssh;

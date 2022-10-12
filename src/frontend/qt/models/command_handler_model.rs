@@ -58,15 +58,30 @@ impl CommandHandlerModel {
     }
 
     fn execute_confirmed(&mut self, host_id: QString, command_id: QString, target_id: QString) -> u64 {
-        let invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
+        let invocation_id = 0;
 
         // The UI action to be triggered after successful execution.
         let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
         match display_options.action {
-            CommandAction::None => {},
-            CommandAction::Dialog => self.text_dialog_opened(invocation_id),
+            CommandAction::None => {
+                self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
+            },
+            CommandAction::Dialog => {
+                self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
+                self.text_dialog_opened(invocation_id)
+            },
             CommandAction::TextView => {
+                self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
                 self.text_view_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id.to_string())), invocation_id)
+            },
+            CommandAction::Terminal => {
+                self.command_handler.open_terminal(vec![
+                    String::from("ssh"),
+                    String::from("-t"),
+                    host_id.to_string(),
+                    // TODO: allow only alphanumeric and dashes (no spaces and no leading dash)
+                    format!("sudo docker exec -it {} /bin/sh", target_id.to_string())]
+                )
             }
         }
 

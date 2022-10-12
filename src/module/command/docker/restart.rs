@@ -43,7 +43,7 @@ impl CommandModule for Restart {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             category: String::from("docker"),
-            parent_id: String::from("docker"),
+            parent_id: String::from("docker-containers"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("refresh"),
             display_priority: 2,

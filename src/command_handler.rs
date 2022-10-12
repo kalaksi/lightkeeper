@@ -2,6 +2,7 @@
 use std::sync::mpsc::Sender;
 use std::collections::HashMap;
 use serde_derive::Serialize;
+use std::process;
 
 use crate::{
     Host,
@@ -72,6 +73,16 @@ impl CommandHandler {
         });
 
         return self.invocation_id_counter
+    }
+
+    pub fn open_terminal(&self, args: Vec<String>) {
+        let mut command_args = vec![String::from("-e")];
+        command_args.extend(args);
+
+        log::debug!("Starting process: /usr/bin/konsole {}", command_args.join(" "));
+        process::Command::new("/usr/bin/konsole")
+                         .args(command_args)
+                         .output().expect("Running command failed");
     }
 
     // Return value contains host's commands and command parameters as strings.
