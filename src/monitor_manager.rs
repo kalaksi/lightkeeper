@@ -74,9 +74,11 @@ impl MonitorManager {
 
     fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
         Box::new(move |result, connector_is_connected| {
+            let monitor_id = monitor.get_module_spec().id;
+
             let data_point = match result {
                 Err(error) => {
-                    log::error!("Error refreshing monitor: {}", error);
+                    log::error!("Error refreshing monitor {}: {}", monitor_id, error);
                     DataPoint::empty_and_critical()
                 },
                 Ok(value) => {
@@ -86,7 +88,7 @@ impl MonitorManager {
                             data_point
                         },
                         Err(error) => {
-                            log::error!("Error from monitor: {}", error);
+                            log::error!("Error from monitor {}: {}", monitor_id, error);
                             DataPoint::empty_and_critical()
                         }
                     }
