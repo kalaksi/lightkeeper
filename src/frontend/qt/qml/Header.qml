@@ -16,7 +16,7 @@ Item {
     property bool _maximized: false
 
     implicitWidth: parent.width
-    implicitHeight: 35
+    implicitHeight: 30
 
     signal openInWindowClicked()
     signal maximizeClicked()
@@ -31,7 +31,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             leftPadding: 10
             text: root.text
-            font.pointSize: 16
+            font.pointSize: 14
         }
     }
 
@@ -39,7 +39,7 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        anchors.rightMargin: 10
+        anchors.rightMargin: 5
         spacing: 5
 
         ImageButton {

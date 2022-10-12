@@ -84,7 +84,7 @@ impl MonitorManager {
                 Ok(value) => {
                     match monitor.process_response(host.clone(), value, connector_is_connected) {
                         Ok(data_point) => {
-                            log::debug!("Data point received: {} {}", data_point.label, data_point);
+                            log::debug!("Data point received for monitor {}: {} {}", monitor_id, data_point.label, data_point);
                             data_point
                         },
                         Err(error) => {

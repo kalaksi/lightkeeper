@@ -46,7 +46,7 @@ Item {
     Item {
         id: detailsSubview
 
-        implicitHeight: (detailsMainView.height - mainViewHeader.height) * root._subviewSize
+        implicitHeight: (detailsMainView.height - mainViewHeader.height - 3) * root._subviewSize
         anchors.bottom: root.bottom
         anchors.left: root.left
         anchors.right: root.right
