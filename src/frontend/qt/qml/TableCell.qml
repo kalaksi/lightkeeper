@@ -7,10 +7,10 @@ Item {
     property bool firstItem: false
     property bool selected: false
     implicitHeight: 40
-    implicitWidth: parent.width
 
     signal clicked()
 
+    // Stylish rounded cell for first item.
     Rectangle {
         id: rounded
         anchors.fill: parent

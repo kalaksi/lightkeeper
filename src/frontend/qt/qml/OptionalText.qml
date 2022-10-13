@@ -6,9 +6,12 @@ Item {
     // NOTE: remember that required properties can cause issues if used with modelData.
     required property string placeholder
     required property string text
-    anchors.fill: parent
+
+    implicitWidth: textComponent.width
+    implicitHeight: textComponent.height
 
     NormalText {
+        id: textComponent
         anchors.verticalCenter: parent.verticalCenter
         text: parent.text.length === 0 ? placeholder : parent.text
         font.italic: parent.text.length === 0

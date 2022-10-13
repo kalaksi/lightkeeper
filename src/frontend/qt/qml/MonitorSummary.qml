@@ -5,8 +5,6 @@ import QtGraphicalEffects 1.15
 
 Item {
     id: root
-    implicitHeight: parent.height
-    implicitWidth: parent.width
     required property var model 
     required property var highlights
 
@@ -20,6 +18,8 @@ Item {
             _: "orange",
         }
     }
+
+    anchors.fill: parent
 
     FontLoader {
         id: fontLabel;

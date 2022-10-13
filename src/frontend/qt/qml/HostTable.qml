@@ -58,6 +58,7 @@ TableView {
                 implicitWidth: root.width * 0.20
 
                 OptionalText {
+                    anchors.fill: parent
                     placeholder: "No FQDN defined"
                     text: value
                 }
