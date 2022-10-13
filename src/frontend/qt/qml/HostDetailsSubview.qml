@@ -12,9 +12,6 @@ Item {
     property var errorText: ""
     property var criticality: ""
 
-    implicitHeight: parent.height
-    implicitWidth: parent.width
-
     Rectangle {
         color: Material.background
         anchors.fill: parent

@@ -10,8 +10,8 @@ import "js/CreateObject.js" as CreateObject
 ApplicationWindow {
     id: root
     visible: true
-    minimumWidth: 1024
-    minimumHeight: 600
+    minimumWidth: 1280
+    minimumHeight: 768
     width: 1280
     height: 768
 

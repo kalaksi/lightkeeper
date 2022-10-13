@@ -24,38 +24,35 @@ Item {
     property string targetId: ""
     property var rowCommands: []
 
-    implicitWidth: parent.width
     implicitHeight: labelComponent.height
+    anchors.left: parent.left
+    anchors.right: parent.right
 
-    Row {
+    RowLayout {
         anchors.fill: parent
 
-        Item {
-            implicitWidth: root.implicitWidth
-            implicitHeight: root.implicitHeight
+        Label {
+            id: labelComponent
+            text: TextTransform.truncate(root.label, 28)
 
-            Label {
-                id: labelComponent
-                text: TextTransform.truncate(root.label, 28)
-                anchors.left: parent.left
+            Layout.fillWidth: true
+        }
+
+        Text {
+            text: root.value
+            color: Material.foreground
+        }
+
+        // Row-level command buttons.
+        CommandButtonRow {
+            id: commands
+
+            commands: root.rowCommands
+            onClicked: function(commandId) {
+                root.commandHandler.execute(root.hostId, commandId, root.targetId)
             }
 
-            Text {
-                text: root.value
-                color: Material.foreground
-                anchors.right: commands.left
-            }
-
-            // Row-level command buttons.
-            CommandButtonRow {
-                id: commands
-                anchors.right: parent.right
-
-                commands: root.rowCommands
-                onClicked: function(commandId) {
-                    root.commandHandler.execute(root.hostId, commandId, root.targetId)
-                }
-            }
+            visible: root.rowCommands.length > 0
         }
     }
 }

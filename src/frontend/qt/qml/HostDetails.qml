@@ -36,7 +36,10 @@ Item {
     HostDetailsMainView {
         id: detailsMainView
         anchors.top: mainViewHeader.bottom
-        anchors.margins: 5
+        anchors.bottom: root.bottom
+        anchors.left: root.left
+        anchors.right: root.right
+        anchors.margins: 10
 
         commandHandler: root.commandHandler
         hostDataManager: root.hostDataManager
