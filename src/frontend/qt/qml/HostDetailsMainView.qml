@@ -32,11 +32,29 @@ Item {
                 model: root._hostData
 
                 GroupBox {
-                    title: modelData.category
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.maximumHeight: root.columnMaximumHeight
                     Layout.alignment: Qt.AlignTop
+
+                    label: Label {
+                        width: parent.width
+                        padding: 5
+                        horizontalAlignment: Text.AlignHCenter
+                        text: modelData.category
+
+                        background: Rectangle{
+                            anchors.fill: parent
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: "#606060" }
+                                GradientStop { position: 1.0; color: "#404040" }
+                            }
+                        }
+                    }
+
+                    background: Rectangle {
+                        color: "#404040"
+                    }
 
                     ScrollView {
                         anchors.fill: parent
