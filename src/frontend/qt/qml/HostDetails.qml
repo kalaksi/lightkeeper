@@ -48,11 +48,10 @@ Item {
 
     Item {
         id: detailsSubview
-
-        implicitHeight: (detailsMainView.height - mainViewHeader.height - 3) * root._subviewSize
-        anchors.bottom: root.bottom
-        anchors.left: root.left
-        anchors.right: root.right
+        height: (root.height - mainViewHeader.height - 3) * root._subviewSize
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
 
         Header {
             id: subviewHeader
@@ -68,6 +67,8 @@ Item {
             id: subviewContent
             anchors.top: subviewHeader.bottom
             anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
         }
 
     }
