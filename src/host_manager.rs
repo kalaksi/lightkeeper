@@ -46,15 +46,6 @@ impl HostManager {
         hosts.add(host, default_status)
     }
 
-    pub fn get_host(&mut self, host_id: &String) -> Host {
-        let hosts = self.hosts.lock().unwrap();
-        (*hosts).hosts.get(host_id).unwrap().host.clone()
-    }
-
-    pub fn join(&mut self) {
-        self.receiver_handle.take().unwrap().join().unwrap();
-    }
-
     pub fn new_state_update_sender(&self) -> mpsc::Sender<StateUpdateMessage> {
         self.data_sender_prototype.clone()
     }
@@ -83,13 +74,13 @@ impl HostManager {
                             host_state.monitor_data.insert(message.module_spec.id, new_data);
                         }
                     }
-
                     else if let Some(command_result) = message.command_result {
                         host_state.command_results.insert(message.module_spec.id, command_result);
                     }
 
                     host_state.update_status();
 
+                    // Send the state update to the front end (usually).
                     let observers = observers.lock().unwrap();
                     for observer in observers.iter() {
                         observer.send(frontend::HostDisplayData {

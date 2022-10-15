@@ -13,6 +13,7 @@ pub struct MonitorManager {
     // Monitor id is the second key.
     monitors: HashMap<Host, HashMap<String, Monitor>>,
     request_sender: Sender<ConnectorRequest>,
+    // Channel to send state updates to HostManager.
     state_update_sender: Sender<StateUpdateMessage>,
 }
 

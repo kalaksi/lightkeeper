@@ -46,7 +46,7 @@ ApplicationWindow {
         })
 
         _commandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, target_id) =>
-            CreateObject.confirmationDialog(root, text, () => commands.execute_confirmed(host_id, command_id, target_id))
+            CreateObject.confirmationDialog(root, text, () => _commandHandler.execute_confirmed(host_id, command_id, target_id))
         )
 
         let _dialogInvocationIds = {}

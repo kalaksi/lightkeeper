@@ -23,6 +23,7 @@ pub struct CommandHandler {
     commands: HashMap<Host, HashMap<String, Command>>,
     // For connector communication.
     request_sender: Option<Sender<ConnectorRequest>>,
+    // Channel to send state updates to HostManager.
     state_update_sender: Option<Sender<StateUpdateMessage>>,
 
     // Every execution gets an invocation id. Valid id numbers begin from 1.
