@@ -20,7 +20,7 @@ Item {
         anchors.fill: parent
 
         Image {
-            id: error_image
+            id: errorImage
             antialiasing: true
             source: "qrc:/main/images/alert/" + criticalityToAlertLevel(root.criticality)
 
@@ -31,8 +31,8 @@ Item {
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
             ColorOverlay {
-                anchors.fill: error_image 
-                source: error_image 
+                anchors.fill: errorImage
+                source: errorImage
                 color: getColor(root.criticality)
                 antialiasing: true
             }
