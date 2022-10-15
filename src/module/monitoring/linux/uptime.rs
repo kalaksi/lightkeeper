@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
 use chrono::{ NaiveDateTime, Utc };
+use crate::module::connection::ResponseMessage;
 use crate::{
     utils::strip_newline,
     Host,
@@ -59,8 +60,8 @@ impl MonitoringModule for Uptime {
         String::from("uptime -s")
     }
 
-    fn process_response(&self, _host: Host, response: String, _connector_is_connected: bool) -> Result<DataPoint, String> {
-        let boot_datetime = NaiveDateTime::parse_from_str(&strip_newline(&response), "%Y-%m-%d %H:%M:%S")
+    fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+        let boot_datetime = NaiveDateTime::parse_from_str(&strip_newline(&response.message), "%Y-%m-%d %H:%M:%S")
                                           .map_err(|e| e.to_string())?;
 
         let uptime = Utc::now().naive_utc() - boot_datetime;

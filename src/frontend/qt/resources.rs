@@ -28,6 +28,7 @@ pub fn init_resources() {
             "images/breeze/dark/document-preview.svg" as "images/button/view-document",
             // "images/breeze/dark/utilities-terminal.svg" as "images/button/terminal",
             "images/fontawesome/terminal.svg" as "images/button/terminal",
+            "images/breeze/dark/delete.svg" as "images/button/delete",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/dark/window-maximize.svg" as "images/button/maximize",
@@ -65,6 +66,7 @@ pub fn init_resources() {
             "images/breeze/light/system-search.svg" as "images/button/search",
             "images/breeze/light/find-location.svg" as "images/button/search-document",
             "images/breeze/light/utilities-terminal.svg" as "images/button/terminal",
+            "images/breeze/light/delete.svg" as "images/button/delete",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/light/window-maximize.svg" as "images/button/maximize",

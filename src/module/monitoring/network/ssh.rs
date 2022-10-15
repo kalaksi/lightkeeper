@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use crate::module::connection::ResponseMessage;
 use crate::{ Host, utils::enums::Criticality, frontend };
 use crate::module::{
     Module,
@@ -49,7 +50,7 @@ impl MonitoringModule for Ssh {
         }
     }
 
-    fn process_response(&self, _host: Host, _response: String, connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, _response: ResponseMessage, connector_is_connected: bool) -> Result<DataPoint, String> {
         match connector_is_connected {
             true => {
                 Ok(DataPoint::new_with_level(String::from("up"), Criticality::Normal))

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::frontend;
+use crate::module::connection::ResponseMessage;
 use crate::module::{
     Module,
     command::CommandModule,
@@ -61,7 +62,7 @@ impl CommandModule for Inspect {
         format!("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/{}/json?all=true", target_id)
     }
 
-    fn process_response(&self, response: &String) -> Result<CommandResult, String> {
-        Ok(CommandResult::new(String::from(response)))
+    fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
+        Ok(CommandResult::new(response.message.clone()))
     }
 }

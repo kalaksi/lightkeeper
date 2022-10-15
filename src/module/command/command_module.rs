@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use crate::{
     module::Module,
     module::ModuleSpecification,
+    module::connection::ResponseMessage,
     utils::enums::Criticality,
     frontend,
 };
@@ -35,7 +36,7 @@ pub trait CommandModule : Module {
     // target_id is just an optional argument for the command.
     // TODO: rename?
     fn get_connector_request(&self, _target_id: String) -> String;
-    fn process_response(&self, response: &String) -> Result<CommandResult, String>;
+    fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String>;
 }
 
 

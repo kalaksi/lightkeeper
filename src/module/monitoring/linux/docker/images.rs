@@ -1,8 +1,11 @@
 
 use std::collections::HashMap;
+use std::str::FromStr;
+use chrono::TimeZone;
 use serde_derive::Deserialize;
 use serde_json;
 
+use crate::module::connection::ResponseMessage;
 use crate::{ Host, utils::enums::Criticality, frontend };
 use crate::module::{
     Module,
@@ -12,6 +15,9 @@ use crate::module::{
     monitoring::Monitor,
     monitoring::DataPoint,
 };
+
+use chrono::{prelude::DateTime, Utc};
+// use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 
 #[derive(Clone)]
@@ -70,8 +76,8 @@ impl MonitoringModule for Images {
         }
     }
 
-    fn process_response(&self, _host: Host, response: String, _connector_is_connected: bool) -> Result<DataPoint, String> {
-        let images: Vec<ImageDetails> = serde_json::from_str(response.as_str()).map_err(|e| e.to_string())?;
+    fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+        let images: Vec<ImageDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
         // TODO: monitor state
         let mut parent_data = DataPoint::empty();
@@ -79,6 +85,13 @@ impl MonitoringModule for Images {
         parent_data.multivalue = images.iter().map(|image| {
             let mut point = DataPoint::new(image.created.to_string());
             point.label = image.repo_tags.first().unwrap().clone();
+            point.source_id = image.id.clone();
+
+            // TODO: how to make sure timezone is accounted for correctly?
+            let creation_time = Utc.timestamp(point.value.parse::<i64>().unwrap(), 0);
+            let duration = Utc::now().signed_duration_since(creation_time);
+            point.value = format!("{} days old", duration.num_days());
+
             point
         }).collect();
 
@@ -90,7 +103,7 @@ impl MonitoringModule for Images {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct ImageDetails {
-    // id: String,
+    id: String,
     created: i64,
     // labels: Option<HashMap<String, String>>,
     // parent_id: String,

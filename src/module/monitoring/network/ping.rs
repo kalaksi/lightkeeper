@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
 use oping;
+use crate::module::connection::ResponseMessage;
 use crate::{ Host, utils::enums::Criticality, frontend };
 use crate::module::{
     Module,
@@ -48,7 +49,7 @@ impl MonitoringModule for Ping {
         }
     }
 
-    fn process_response(&self, host: Host, _response: String, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, _response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
         let mut ping = oping::Ping::new();
 
         ping.set_timeout(5.0)

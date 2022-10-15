@@ -3,9 +3,13 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::Host;
-use crate::module::connection::{ ConnectionModule, Connector };
+use crate::module::connection::{
+    ConnectionModule,
+    Connector,
+    ResponseMessage,
+};
 
-pub type ResponseHandlerCallback = Box<dyn FnOnce(Result<String, String>, bool) + Send + 'static>;
+pub type ResponseHandlerCallback = Box<dyn FnOnce(Result<ResponseMessage, String>, bool) + Send + 'static>;
 type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
 
 pub struct ConnectionManager {

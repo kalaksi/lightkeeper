@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::mpsc::{self, Sender};
 
 use crate::Host;
+use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::{ Monitor, DataPoint };
 use crate::host_manager::StateUpdateMessage;
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback };
@@ -66,7 +67,7 @@ impl MonitorManager {
                 }
                 else {
                     let handler = Self::get_response_handler(host.clone(), monitor.clone_module(), self.state_update_sender.clone());
-                    handler(Ok(String::new()), false);
+                    handler(Ok(ResponseMessage::empty()), false);
                 } 
             }
         }

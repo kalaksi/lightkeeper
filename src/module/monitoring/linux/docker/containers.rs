@@ -4,6 +4,7 @@ use std::fmt;
 use serde_derive::Deserialize;
 use serde_json;
 
+use crate::module::connection::ResponseMessage;
 use crate::{ Host, utils::enums::Criticality, frontend };
 use crate::module::{
     Module,
@@ -73,8 +74,8 @@ impl MonitoringModule for Containers {
         }
     }
 
-    fn process_response(&self, _host: Host, response: String, _connector_is_connected: bool) -> Result<DataPoint, String> {
-        let containers: Vec<ContainerDetails> = serde_json::from_str(response.as_str()).map_err(|e| e.to_string())?;
+    fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+        let containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
         let mut parent_data = DataPoint::empty();
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();

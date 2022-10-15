@@ -5,6 +5,7 @@ use crate::module::{
     Module,
     metadata::Metadata,
     connection::ConnectionModule,
+    connection::ResponseMessage,
     ModuleSpecification,
 };
 
@@ -73,12 +74,10 @@ impl ConnectionModule for Ssh2 {
         Ok(())
     }
 
-    fn send_message(&self, message: &str) -> Result<String, String>
+    fn send_message(&self, message: &str) -> Result<ResponseMessage, String>
     {
-        // TODO: more elegant error system
-
         if message.is_empty() {
-            return Ok(String::from(""));
+            return Ok(ResponseMessage::empty());
         }
 
         let mut channel = match self.session.channel_session() {
@@ -95,11 +94,16 @@ impl ConnectionModule for Ssh2 {
             return Err(format!("Invalid output string received: {}", error));
         };
 
+        let exit_status = channel.exit_status().unwrap_or(-1);
+
         if let Err(error) = channel.wait_close() {
             log::error!("Error while closing channel: {}", error);
         };
 
-        Ok(output)
+        Ok(ResponseMessage {
+            message: output,
+            return_code: exit_status,
+        })
     }
 
     fn is_connected(&self) -> bool {

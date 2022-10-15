@@ -76,6 +76,9 @@ impl CommandHandler {
     }
 
     pub fn open_terminal(&self, args: Vec<String>) {
+        // TODO: other kind of terminals too
+        // TODO: integrated interactive terminals with ssh2::request_pty() / shell?
+
         let mut command_args = vec![String::from("-e")];
         command_args.extend(args);
 
@@ -104,14 +107,14 @@ impl CommandHandler {
     }
 
     fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        Box::new(move |result, _connector_is_connected| {
-            let command_result = match result {
+        Box::new(move |response, _connector_is_connected| {
+            let command_result = match response {
                 Err(error) => {
                     log::error!("Error sending command: {}", error);
                     Some(CommandResult::new_critical_error(error))
                 },
-                Ok(value) => {
-                    match command.process_response(&value) {
+                Ok(response) => {
+                    match command.process_response(&response) {
                         Ok(mut result) => {
                             log::debug!("Command result received: {}", result.message);
                             result.invocation_id = invocation_id;
