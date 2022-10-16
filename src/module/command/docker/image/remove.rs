@@ -1,10 +1,13 @@
 use std::collections::HashMap;
-use log::debug;
+
+use serde_derive::Deserialize;
+use serde_json;
 
 use crate::frontend;
-use crate::module::connection::ResponseMessage;
+use crate::utils::enums::Criticality;
 use crate::module::{
     Module,
+    connection::ResponseMessage,
     command::CommandModule,
     command::Command,
     command::CommandResult,
@@ -61,6 +64,15 @@ impl CommandModule for Remove {
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
+        if response.message.len() > 0 {
+            let docker_response: JsonMessage = serde_json::from_str(&response.message).unwrap();
+            return Ok(CommandResult::new_with_level(docker_response.message, Criticality::Error));
+        }
         Ok(CommandResult::new(response.message.clone()))
     }
+}
+
+#[derive(Deserialize)]
+struct JsonMessage {
+    message: String,
 }

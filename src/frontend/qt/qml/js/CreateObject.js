@@ -1,8 +1,4 @@
 
-function confirmationDialog(parent, text, onAccepted) {
-    return create(parent, "ConfirmationDialog", { "text": text }, { "onAccepted": onAccepted })
-}
-
 function detailsDialog(parent, text, errorText, criticality) {
     return create(parent, "DetailsDialog", { "text": text, "errorText": errorText, "criticality": criticality }, {})
 }
@@ -37,20 +33,11 @@ function get(instanceId) {
 
 // TODO: separate files (and a "type") if there's going to be more dynamic objects.
 let _dynamicComponents = {
-    "ConfirmationDialog": {
-        qmlPath: "../ConfirmationDialog.qml",
-        defaultProperties: {
-            // x: 100,
-            // y: 100,
-            text: "",
-        },
-        component: null,
-    },
     "DetailsDialog": {
         qmlPath: "../DetailsDialog.qml",
         defaultProperties: { },
         component: null,
-    }
+    },
 }
 
 // TODO: clean up destroyed objects?

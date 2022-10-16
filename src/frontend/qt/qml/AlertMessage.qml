@@ -10,7 +10,7 @@ Item {
     property var _icons: {}
     Component.onCompleted: _icons = {
         nodata: "qrc:/main/images/alert/warning",
-        normal: "qrc:/main/images/alert/information",
+        normal: "qrc:/main/images/alert/info",
         warning: "qrc:/main/images/alert/warning",
         error: "qrc:/main/images/alert/error",
         critical: "qrc:/main/images/alert/error",

@@ -15,10 +15,16 @@ ApplicationWindow {
     width: 1280
     height: 768
 
-
     Material.theme: Material.System
 
     Component.onCompleted: {
+
+        // Set up confirmation dialog on signal.
+        _commandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, target_id) => {
+            dialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
+            dialogLoader.item.onAccepted.connect(() => _commandHandler.execute_confirmed(host_id, command_id, target_id))
+        })
+
         _hostDataManager.receive_updates()
 
         _hostDataManager.update_received.connect((hostId) => {
@@ -45,10 +51,6 @@ ApplicationWindow {
             animateHideDetails.start()
         })
 
-        _commandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, target_id) =>
-            CreateObject.confirmationDialog(root, text, () => _commandHandler.execute_confirmed(host_id, command_id, target_id))
-        )
-
         let _dialogInvocationIds = {}
         _commandHandler.text_dialog_opened.connect((invocationId) => {
             let instanceId = CreateObject.detailsDialog(root, "", "", "")
@@ -61,6 +63,13 @@ ApplicationWindow {
 
         _hostDataManager.command_result_received.connect((commandResultJson) => {
             let commandResult = JSON.parse(commandResultJson)
+
+            if (commandResult.criticality !== "Normal") {
+                toastLoader.setSource("Toast.qml", {
+                    text: commandResult.message,
+                    criticality: commandResult.criticality,
+                })
+            }
 
             let dialogInstanceId = _dialogInvocationIds[commandResult.invocation_id]
             
@@ -110,6 +119,18 @@ ApplicationWindow {
                 onMaximizeClicked: animateMaximizeDetails.start()
                 onCloseClicked: _hostTableModel.toggle_row(_hostTableModel.selected_row)
             }
+        }
+
+        // Dynamic component loaders
+        Loader {
+            id: dialogLoader
+        }
+
+        Loader {
+            id: toastLoader
+            anchors.bottom: body.bottom
+            anchors.right: body.right
+            anchors.margins: 20
         }
 
         // Animations
