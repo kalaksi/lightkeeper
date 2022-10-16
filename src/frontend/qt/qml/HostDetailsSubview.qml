@@ -30,7 +30,7 @@ Item {
         }
     }
 
-    ErrorMessage {
+    AlertMessage {
         text: root.errorText
         criticality: root.criticality
         visible: root.errorText !== ""

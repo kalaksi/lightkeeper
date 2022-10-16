@@ -18,8 +18,9 @@ pub fn init_resources() {
             "images/fontawesome/circle-arrow-down.svg" as "images/status/down",
             "images/breeze/dark/alarm-symbolic.svg" as "images/status/unknown",
 
-            "images/fontawesome/circle-exclamation.svg" as "images/alert/error",
-            "images/fontawesome/triangle-exclamation.svg" as "images/alert/warning",
+            "images/breeze/dark/data-information.svg" as "images/alert/info",
+            "images/breeze/dark/data-warning.svg" as "images/alert/warning",
+            "images/breeze/dark/data-error.svg" as "images/alert/error",
 
             // Buttons
             "images/breeze/dark/view-refresh.svg" as "images/button/refresh",
@@ -58,8 +59,10 @@ pub fn init_resources() {
             "images/fontawesome/circle-arrow-down.svg" as "images/status/down",
             "images/breeze/light/alarm-symbolic.svg" as "images/status/unknown",
 
-            "images/fontawesome/circle-exclamation.svg" as "images/alert/error",
-            "images/fontawesome/triangle-exclamation.svg" as "images/alert/warning",
+            // TODO: remove fontawesome/circle-exclamation and triangle-exclamation as unused?
+            "images/breeze/dark/data-information.svg" as "images/alert/info",
+            "images/breeze/light/data-warning.svg" as "images/alert/warning",
+            "images/breeze/light/data-error.svg" as "images/alert/error",
 
             // Buttons
             "images/breeze/light/view-refresh.svg" as "images/button/refresh",
