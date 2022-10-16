@@ -1,12 +1,11 @@
 
 use std::collections::HashMap;
-use std::str::FromStr;
 use chrono::TimeZone;
 use serde_derive::Deserialize;
 use serde_json;
 
 use crate::module::connection::ResponseMessage;
-use crate::{ Host, utils::enums::Criticality, frontend };
+use crate::{ Host, frontend };
 use crate::module::{
     Module,
     Metadata,
@@ -16,8 +15,7 @@ use crate::module::{
     monitoring::DataPoint,
 };
 
-use chrono::{prelude::DateTime, Utc};
-// use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use chrono::Utc;
 
 
 #[derive(Clone)]
@@ -100,7 +98,7 @@ impl MonitoringModule for Images {
 
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct ImageDetails {
     id: String,
