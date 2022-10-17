@@ -5,7 +5,6 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.11
 
-import "js/CreateObject.js" as CreateObject
 
 ApplicationWindow {
     id: root
@@ -15,16 +14,21 @@ ApplicationWindow {
     width: 1280
     height: 768
 
+    property var _dialogInvocationIds: {}
+
     Material.theme: Material.System
 
+    // TODO: when could Connection component be used instead of JS?
     Component.onCompleted: {
+        _dialogInvocationIds = {}
 
         // Set up confirmation dialog on signal.
         _commandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, target_id) => {
-            dialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
-            dialogLoader.item.onAccepted.connect(() => _commandHandler.execute_confirmed(host_id, command_id, target_id))
+            confirmationDialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
+            confirmationDialogLoader.item.onAccepted.connect(() => _commandHandler.execute_confirmed(host_id, command_id, target_id))
         })
 
+        // Starts the thread that receives host state updates in the backend.
         _hostDataManager.receive_updates()
 
         _hostDataManager.update_received.connect((hostId) => {
@@ -51,14 +55,13 @@ ApplicationWindow {
             animateHideDetails.start()
         })
 
-        let _dialogInvocationIds = {}
-        _commandHandler.text_dialog_opened.connect((invocationId) => {
-            let instanceId = CreateObject.detailsDialog(root, "", "", "")
+        _commandHandler.details_dialog_opened.connect((invocationId) => {
+            let instanceId = detailsDialogManager.create()
             _dialogInvocationIds[invocationId] = instanceId
         })
 
-        _commandHandler.text_view_opened.connect((headerText, invocationId) => {
-            hostDetails.openSubview(headerText)
+        _commandHandler.details_subview_opened.connect((headerText, invocationId) => {
+            hostDetails.openSubview(headerText, invocationId)
         })
 
         _hostDataManager.command_result_received.connect((commandResultJson) => {
@@ -72,9 +75,8 @@ ApplicationWindow {
             }
 
             let dialogInstanceId = _dialogInvocationIds[commandResult.invocation_id]
-            
             if (typeof dialogInstanceId !== "undefined") {
-                let dialog = CreateObject.get(dialogInstanceId)
+                let dialog = detailsDialogManager.get(dialogInstanceId)
                 dialog.text = commandResult.message
                 dialog.errorText = commandResult.error
                 dialog.criticality = commandResult.criticality
@@ -117,13 +119,21 @@ ApplicationWindow {
 
                 onMinimizeClicked: animateMinimizeDetails.start()
                 onMaximizeClicked: animateMaximizeDetails.start()
+                onOpenInNewWindowClicked: (invocationId, text, errorText, criticality) => {
+                    let instanceId = detailsDialogManager.create({
+                        text: text,
+                        errorText: errorText,
+                        criticality: criticality,
+                    })
+                    root._dialogInvocationIds[invocationId] = instanceId
+                }
                 onCloseClicked: _hostTableModel.toggle_row(_hostTableModel.selected_row)
             }
         }
 
         // Dynamic component loaders
         Loader {
-            id: dialogLoader
+            id: confirmationDialogLoader
         }
 
         Loader {
@@ -131,6 +141,17 @@ ApplicationWindow {
             anchors.bottom: body.bottom
             anchors.right: body.right
             anchors.margins: 20
+        }
+
+        DynamicObjectManager {
+            id: detailsDialogManager
+
+            DetailsDialog {
+                y: root.y + 50
+                x: root.x + 50
+                width: root.width
+                height: root.height
+            }
         }
 
         // Animations

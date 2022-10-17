@@ -16,9 +16,14 @@ Item {
     property string hostId: ""
     property real _subviewSize: 0.0
 
+    // Only one subview can be open at one time, but in case a DetailsDialog is opened using openInNewWindowClicked(),
+    // we need to provide the invocation id for state updates since there can be multiple dialogs open.
+    property string _subviewInvocationId: ""
+
     signal closeClicked()
     signal maximizeClicked()
     signal minimizeClicked()
+    signal openInNewWindowClicked(invocationId: string, text: string, errorText: string, criticality: string)
 
     Rectangle {
         anchors.fill: parent
@@ -58,8 +63,10 @@ Item {
 
             showOpenInWindowButton: true
             showMaximizeButton: false
-            // TODO:
-            // onOpenInWindowClicked: root.maximizeClicked()
+            onOpenInWindowClicked: {
+                root.openInNewWindowClicked(root._subviewInvocationId, subviewContent.text, subviewContent.errorText, subviewContent.criticality)
+                animateHideSubview.start()
+            }
             onCloseClicked: animateHideSubview.start()
         }
 
@@ -114,8 +121,10 @@ Item {
         detailsMainView.refresh()
     }
 
-    function openSubview(headerText) {
+    function openSubview(headerText, invocationId) {
         subviewHeader.text = headerText
+        root._subviewInvocationId = invocationId
+
         animateShowSubview.start()
     }
 

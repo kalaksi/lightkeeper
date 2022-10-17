@@ -1,38 +1,49 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import Qt.labs.qmlmodels 1.0
-import QtQuick.Layouts 1.15
+import QtQuick.Window 2.15
+import QtQuick.Controls.Material 2.15
 
 import "js/Parse.js" as Parse
 
-Dialog {
-    id: root
-    implicitHeight: parent.height
-    implicitWidth: parent.width
-    modal: false
-    standardButtons: Dialog.Ok
-    Component.onCompleted: visible = true
-
+Window {
+    property var identifier: ""
     property var text: ""
     property var errorText: ""
     property var criticality: ""
 
-    WorkingSprite {
-        visible: root.text === "" && root.errorText === ""
-    }
+    id: root
+    visible: true
+    color: Material.background
 
-    ScrollView {
-        visible: root.text !== ""
-        anchors.fill: parent
+    Material.theme: Material.System
 
-        JsonTextFormat {
-            jsonText: root.text
+    Dialog {
+        modal: false
+        standardButtons: Dialog.Ok
+        implicitHeight: root.height
+        implicitWidth: root.width
+        Component.onCompleted: visible = true
+
+        onAccepted: root.close()
+
+        WorkingSprite {
+            visible: root.text === "" && root.errorText === ""
         }
-    }
 
-    AlertMessage {
-        text: root.errorText
-        criticality: root.criticality
-        visible: root.errorText !== ""
+        ScrollView {
+            visible: root.text !== ""
+            anchors.fill: parent
+
+            JsonTextFormat {
+                jsonText: root.text
+            }
+        }
+
+        AlertMessage {
+            id: textContent
+            text: root.errorText
+            criticality: root.criticality
+            visible: root.errorText !== ""
+        }
     }
 }
