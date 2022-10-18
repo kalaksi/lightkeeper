@@ -48,7 +48,7 @@ impl CommandModule for Remove {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("docker"),
+            category: String::from("docker-images"),
             parent_id: String::from("docker-images"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("delete"),

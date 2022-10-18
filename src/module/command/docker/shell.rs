@@ -44,7 +44,7 @@ impl CommandModule for Shell {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("docker"),
+            category: String::from("docker-containers"),
             parent_id: String::from("docker-containers"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("terminal"),
