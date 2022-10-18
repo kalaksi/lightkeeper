@@ -102,8 +102,6 @@ impl HostManager {
 
     pub fn get_display_data(&self) -> frontend::DisplayData {
         let mut display_data = frontend::DisplayData::new();
-        display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
-
 
         let hosts = self.hosts.lock().unwrap();
         for (_, host_state) in hosts.hosts.iter() {

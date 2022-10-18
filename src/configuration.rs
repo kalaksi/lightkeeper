@@ -21,8 +21,9 @@ pub struct General {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
-    pub excluded_monitors: Vec<String>,
     pub group_multivalue: bool,
+    pub category_order: Vec<String>,
+    pub command_order: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -98,7 +99,7 @@ impl Configuration {
 
             for (connector_id, connector_config) in config.defaults.connectors.iter() {
                 host_config.connectors.insert(connector_id.clone(),
-                                              ConnectorConfig { settings: connector_config.clone()});
+                                              ConnectorConfig { settings: connector_config.clone() });
             }
         }
 

@@ -33,8 +33,8 @@ impl QmlFrontend {
         }
     }
 
-    pub fn set_command_handler(&mut self, command_handler: CommandHandler) {
-        self.command_handler = Some(CommandHandlerModel::new(command_handler));
+    pub fn set_command_handler(&mut self, command_handler: CommandHandler, command_display_order: Vec<String>) {
+        self.command_handler = Some(CommandHandlerModel::new(command_handler, command_display_order));
     }
 
     pub fn start(&mut self) {

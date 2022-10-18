@@ -46,7 +46,6 @@ impl CommandModule for Prune {
             category: String::from("docker-images"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("delete"),
-            display_priority: 2,
             confirmation_text: String::from("Really remove all unused images?"),
             ..Default::default()
         }

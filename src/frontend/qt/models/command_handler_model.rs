@@ -18,12 +18,14 @@ pub struct CommandHandlerModel {
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, target_id: QString),
 
     command_handler: CommandHandler,
+    command_display_order: Vec<String>,
 }
 
 impl CommandHandlerModel {
-    pub fn new(command_handler: CommandHandler) -> Self {
+    pub fn new(command_handler: CommandHandler, command_display_order: Vec<String>) -> Self {
         CommandHandlerModel { 
             command_handler: command_handler,
+            command_display_order: command_display_order,
             ..Default::default()
         }
     }
@@ -36,12 +38,25 @@ impl CommandHandlerModel {
     }
 
     fn get_child_commands(&self, host_id: QString, parent_id: QString) -> QVariantList {
-        let all_commands = self.command_handler.get_host_commands(host_id.to_string());
-        let mut valid_commands = all_commands.values().filter(|item| item.display_options.parent_id == parent_id.to_string())
-                                                      .collect::<Vec<&CommandData>>();
+        let mut all_commands = self.command_handler.get_host_commands(host_id.to_string());
 
-        valid_commands.sort_by(|left, right| left.display_options.display_priority.cmp(&right.display_options.display_priority));
-        valid_commands.iter().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
+        let parent_id_string = parent_id.to_string();
+        let mut valid_commands_sorted = Vec::<CommandData>::new();
+
+        for command_id in self.command_display_order.iter() {
+            if let Some(command_data) = all_commands.remove(command_id) {
+                if command_data.display_options.parent_id == parent_id_string {
+                    valid_commands_sorted.push(command_data);
+                }
+            }
+        }
+
+        // Append the rest of the commands in an undefined order.
+        let mut unsorted_commands = all_commands.into_iter().map(|(_, command)| command).collect();
+        valid_commands_sorted.append(&mut unsorted_commands);
+
+        // Return list of JSONs.
+        valid_commands_sorted.iter().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
     }
 
     fn execute(&mut self, host_id: QString, command_id: QString, target_id: QString) -> u64 {

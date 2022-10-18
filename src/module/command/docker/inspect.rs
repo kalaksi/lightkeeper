@@ -47,7 +47,6 @@ impl CommandModule for Inspect {
             parent_id: String::from("docker-containers"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("search"),
-            display_priority: 1,
             action: CommandAction::TextView,
             ..Default::default()
         }

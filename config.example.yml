@@ -3,9 +3,10 @@ general:
   default_host_status: "down"
 
 display_options:
-  excluded_monitors: []
   # Group monitors with multiple values into one column (or similar) or display everything separately.
   group_multivalue: true
+  category_order: []
+  command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remove"]
 
 defaults:
   monitors:
