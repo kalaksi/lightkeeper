@@ -17,7 +17,7 @@ Item {
     property int columnMinimumWidth: 400
     property int columnMaximumWidth: 400
     property int columnMaximumHeight: 400
-    property var _hostData: groupByCategory(root.hostDataManager.get_monitor_data_map(hostId), root.commandHandler.get_commands(root.hostId))
+    property var _hostData: groupByCategory(root.hostDataManager.get_monitor_data(hostId), root.commandHandler.get_commands(root.hostId))
 
     ScrollView {
         anchors.fill: parent
@@ -120,10 +120,8 @@ Item {
         let monitorDataByCategory = {}
         let commandByCategory = {}
 
-        for (let monitorId in monitorDataJsons) {
-            let data = JSON.parse(monitorDataJsons[monitorId])
-            // TODO: could be done better than to add a property ad-hoc?
-            data.monitor_id = monitorId
+        monitorDataJsons.forEach(json => {
+            let data = JSON.parse(json)
 
             let category = data.display_options.category
             categories.push(category)
@@ -134,7 +132,7 @@ Item {
             else {
                 monitorDataByCategory[category] = [ data ]
             }
-        }
+        })
 
         commandJsons.forEach(json => {
             let data = JSON.parse(json)

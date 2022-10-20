@@ -1,9 +1,7 @@
 extern crate qmetaobject;
 use qmetaobject::*;
-use std::collections::HashMap;
 
 use crate::frontend;
-use crate::module::monitoring::MonitoringData;
 
 #[derive(Default, Clone)]
 pub struct MonitorDataModel {

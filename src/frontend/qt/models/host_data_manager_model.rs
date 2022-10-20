@@ -1,13 +1,10 @@
 use std::thread;
 use std::sync::mpsc;
-use std::collections::HashMap;
 
 extern crate qmetaobject;
 use qmetaobject::*;
 
 use crate::frontend;
-use crate::module::monitoring::MonitoringData;
-use super::HostDataModel;
 
 
 // TODO: use camelcase with qml models?
@@ -24,7 +21,6 @@ pub struct HostDataManagerModel {
     // NOTE: Couldn't get custom types to work for return types,
     // so for now methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
-    get_monitor_data_map: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
     get_host_data: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
 
     display_data: frontend::DisplayData,
@@ -35,7 +31,7 @@ pub struct HostDataManagerModel {
 impl HostDataManagerModel {
     pub fn new(display_data: frontend::DisplayData) -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
         let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
-        let mut model = HostDataManagerModel {
+        let model = HostDataManagerModel {
             display_data: display_data,
             update_receiver: Some(receiver),
             update_receiver_thread: None,
@@ -106,43 +102,25 @@ impl HostDataManagerModel {
 
     // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
     fn get_monitor_data(&self, host_id: QString) -> QVariantList {
-
-        let mut result = HashMap::<String, HostDataModel>::new();
-        for (host_id, host_data) in self.display_data.hosts.iter() {
-            result.insert(host_id.clone(), HostDataModel::from(&host_data));
-        }
-
         let mut result = QVariantList::default();
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
+            let mut keys_found: Vec<&String> = Vec::new();
 
-            let mut all_monitoring_data = host.monitoring_data.clone();
-
-            // First include data in defined order, then include rest unordered.
-            for monitor_id in self.display_data.category_order.iter() {
-                if let Some(monitoring_data) = all_monitoring_data.remove(monitor_id) {
-                    result.push(serde_json::to_string(&monitoring_data).unwrap().to_qvariant());
+            // First include data in defined order...
+            for category in self.display_data.category_order.iter() {
+                if let Some((id, data)) = host.monitoring_data.iter().find(|(_, data)| &data.display_options.category == category) {
+                    result.push(serde_json::to_string(&data).unwrap().to_qvariant());
+                    keys_found.push(id);
                 }
             }
 
-            for monitoring_data in all_monitoring_data.values() {
+            // ... then include the rest sorted alphabetically.
+            let mut keys_unfound = host.monitoring_data.keys().filter(|key| !keys_found.contains(key)).collect::<Vec<&String>>();
+            keys_unfound.sort();
+
+            for key in keys_unfound {
+                let monitoring_data = host.monitoring_data.get(key).unwrap();
                 result.push(serde_json::to_string(&monitoring_data).unwrap().to_qvariant())
-            }
-        }
-
-        result
-    }
-
-    // Returns map of MonitorData structs in JSON with monitor id as key. Empty if host doesn't exist.
-    fn get_monitor_data_map(&self, host_id: QString) -> QVariantMap {
-        let mut result = QVariantMap::default();
-        // TODO: how to deal with sorting
-
-        if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            for (monitor_id, monitor_data) in &host.monitoring_data {
-                result.insert(
-                    QString::from(monitor_id.clone()),
-                    serde_json::to_string(&monitor_data).unwrap().to_qvariant()
-                );
             }
         }
 
