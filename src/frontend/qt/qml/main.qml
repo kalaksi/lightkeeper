@@ -160,7 +160,8 @@ ApplicationWindow {
             target: body
             property: "splitSize"
             to: 1.0
-            duration: 150
+            duration: 175
+            easing.type: Easing.OutQuad
         }
 
         NumberAnimation {
@@ -168,7 +169,8 @@ ApplicationWindow {
             target: body
             property: "splitSize"
             to: 0.66
-            duration: 150
+            duration: 175
+            easing.type: Easing.OutQuad
         }
 
         NumberAnimation {
@@ -176,7 +178,8 @@ ApplicationWindow {
             target: body
             property: "splitSize"
             to: 0.66
-            duration: 150
+            duration: 175
+            easing.type: Easing.OutQuad
         }
 
         NumberAnimation {
@@ -184,7 +187,8 @@ ApplicationWindow {
             target: body
             property: "splitSize"
             to: 0.0
-            duration: 150
+            duration: 175
+            easing.type: Easing.OutQuad
         }
 
         states: [
