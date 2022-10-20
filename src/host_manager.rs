@@ -69,7 +69,7 @@ impl HostManager {
                             monitoring_data.values.push(message_data_point);
                         }
                         else {
-                            let mut new_data = MonitoringData::new(message.display_options);
+                            let mut new_data = MonitoringData::new(message.module_spec.id.clone(), message.display_options);
                             new_data.values.push(message_data_point);
                             host_state.monitor_data.insert(message.module_spec.id, new_data);
                         }

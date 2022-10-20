@@ -46,14 +46,16 @@ pub trait MonitoringModule : Module {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MonitoringData {
+    pub monitor_id: String,
     pub values: Vec<DataPoint>,
     pub display_options: DisplayOptions,
     pub is_critical: bool,
 }
 
 impl MonitoringData {
-    pub fn new(display_options: DisplayOptions) -> Self {
+    pub fn new(monitor_id: String, display_options: DisplayOptions) -> Self {
         MonitoringData {
+            monitor_id: monitor_id,
             values: Vec::new(),
             display_options: display_options,
             is_critical: false,
