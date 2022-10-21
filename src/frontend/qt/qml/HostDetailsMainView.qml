@@ -122,7 +122,6 @@ Item {
 
         monitorDataJsons.forEach(json => {
             let data = JSON.parse(json)
-
             let category = data.display_options.category
             categories.push(category)
 

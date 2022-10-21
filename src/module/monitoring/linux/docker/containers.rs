@@ -81,7 +81,7 @@ impl MonitoringModule for Containers {
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
         parent_data.criticality = most_critical_container.state.to_criticality();
         parent_data.multivalue = containers.iter().map(|container| {
-            let mut point = DataPoint::new_with_level(container.state.to_string(), container.state.to_criticality());
+            let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
             // Names may still contain a leading slash that can cause issues with docker commands.
             point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
             point.source_id = cleanup_name(&container.names.first().unwrap_or(&container.id));

@@ -68,7 +68,7 @@ pub struct DataPoint {
     // With multivalue, value can be a composite result/value of all of the values.
     // For example, with service statuses, this can show the worst state in the multivalue group.
     pub value: String,
-    // Optional. Can be used for additional labeling of the value. Useful especially with multivalues.
+    // Optional. Used with multivalue-data and usually filled programmatically.
     pub label: String,
     // Optional identifer. Can be used as a command parameter.
     // Some commands will require this in which case the parent monitor has to populate this.
@@ -90,7 +90,18 @@ impl DataPoint {
         }
     }
 
-    pub fn new_with_level(value: String, criticality: Criticality) -> Self {
+    pub fn labeled_value(label: String, value: String) -> Self {
+        DataPoint {
+            value: value,
+            label: label,
+            source_id: String::from(""),
+            multivalue: Vec::new(),
+            criticality: Criticality::Normal,
+            time: Utc::now(),
+        }
+    }
+
+    pub fn value_with_level(value: String, criticality: Criticality) -> Self {
         DataPoint {
             value: value,
             label: String::from(""),

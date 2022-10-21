@@ -1,6 +1,7 @@
 use std::{ net::TcpStream, net::IpAddr, io::Read, collections::HashMap };
 use ssh2::Session;
 
+use crate::utils::strip_newline;
 use crate::module::{
     Module,
     metadata::Metadata,
@@ -101,7 +102,7 @@ impl ConnectionModule for Ssh2 {
         };
 
         Ok(ResponseMessage {
-            message: output,
+            message: strip_newline(&output),
             return_code: exit_status,
         })
     }

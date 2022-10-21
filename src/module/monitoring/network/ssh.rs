@@ -53,10 +53,10 @@ impl MonitoringModule for Ssh {
     fn process_response(&self, _host: Host, _response: ResponseMessage, connector_is_connected: bool) -> Result<DataPoint, String> {
         match connector_is_connected {
             true => {
-                Ok(DataPoint::new_with_level(String::from("up"), Criticality::Normal))
+                Ok(DataPoint::value_with_level(String::from("up"), Criticality::Normal))
             },
             false => {
-                Ok(DataPoint::new_with_level(String::from("down"), Criticality::Critical))
+                Ok(DataPoint::value_with_level(String::from("down"), Criticality::Critical))
             },
         }
     }

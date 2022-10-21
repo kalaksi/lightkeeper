@@ -16,19 +16,19 @@ use crate::module::{
 };
 
 #[derive(Clone)]
-pub struct Uptime;
+pub struct Kernel;
 
-impl Module for Uptime {
+impl Module for Kernel {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new("uptime", "0.0.1"),
+            module_spec: ModuleSpecification::new("kernel", "0.0.1"),
             description: String::from(""),
             url: String::from(""),
         }
     }
 
     fn new(_settings: &HashMap<String, String>) -> Self {
-        Uptime { }
+        Kernel { }
     }
 
     fn get_module_spec(&self) -> ModuleSpecification {
@@ -36,7 +36,7 @@ impl Module for Uptime {
     }
 }
 
-impl MonitoringModule for Uptime {
+impl MonitoringModule for Kernel {
     fn clone_module(&self) -> Monitor {
         Box::new(self.clone())
     }
@@ -44,9 +44,9 @@ impl MonitoringModule for Uptime {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::Text,
-            display_text: String::from("Uptime"),
+            display_text: String::from("Kernel version"),
             category: String::from("host"),
-            unit: String::from("days"),
+            ignore_from_summary: true,
             ..Default::default()
         }
     }
@@ -56,14 +56,10 @@ impl MonitoringModule for Uptime {
     }
 
     fn get_connector_message(&self) -> String {
-        String::from("uptime -s")
+        String::from("uname -r -m")
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
-        let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
-                                          .map_err(|e| e.to_string())?;
-
-        let uptime = Utc::now().naive_utc() - boot_datetime;
-        Ok(DataPoint::new(uptime.num_days().to_string()))
+        Ok(DataPoint::new(response.message.replace(" ", " (") + ")"))
     }
 }

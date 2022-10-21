@@ -5,6 +5,8 @@ pub use monitoring_module::MonitoringData;
 pub use monitoring_module::DataPoint;
 
 pub mod linux;
+pub use linux::Kernel;
+pub use linux::Interfaces;
 pub use linux::Uptime;
 pub use linux::docker;
 

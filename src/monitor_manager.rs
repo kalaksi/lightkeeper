@@ -41,7 +41,7 @@ impl MonitorManager {
 
             // Add initial state value indicating no data as been received yet.
             Self::send_state_update(&host, &monitor, self.state_update_sender.clone(),
-                                    DataPoint::new_with_level(String::from(""), enums::Criticality::NoData));
+                                    DataPoint::value_with_level(String::from(""), enums::Criticality::NoData));
 
             monitor_collection.insert(module_spec.id, monitor);
         }

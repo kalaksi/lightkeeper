@@ -104,21 +104,30 @@ impl HostDataManagerModel {
     fn get_monitor_data(&self, host_id: QString) -> QVariantList {
         let mut result = QVariantList::default();
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            let mut keys_found: Vec<&String> = Vec::new();
+            let mut keys_processed: Vec<&String> = Vec::new();
 
-            // First include data in defined order...
+            // First include data in an order that's defined in configuration...
             for category in self.display_data.category_order.iter() {
                 if let Some((id, data)) = host.monitoring_data.iter().find(|(_, data)| &data.display_options.category == category) {
                     result.push(serde_json::to_string(&data).unwrap().to_qvariant());
-                    keys_found.push(id);
+                    keys_processed.push(id);
                 }
             }
 
-            // ... then include the rest sorted alphabetically.
-            let mut keys_unfound = host.monitoring_data.keys().filter(|key| !keys_found.contains(key)).collect::<Vec<&String>>();
-            keys_unfound.sort();
+            // ... then sort the rest alphabetically but leave multivalue-data last.
+            let mut single_value_keys = host.monitoring_data.values()
+                .filter(|data| !keys_processed.contains(&&data.monitor_id) && !data.display_options.use_multivalue)
+                .map(|data| &data.monitor_id)
+                .collect::<Vec<&String>>();
+            single_value_keys.sort();
 
-            for key in keys_unfound {
+            let mut multivalue_keys = host.monitoring_data.values()
+                .filter(|data| !keys_processed.contains(&&data.monitor_id) && data.display_options.use_multivalue)
+                .map(|data| &data.monitor_id)
+                .collect::<Vec<&String>>();
+            multivalue_keys.sort();
+
+            for key in [ single_value_keys, multivalue_keys ].concat() {
                 let monitoring_data = host.monitoring_data.get(key).unwrap();
                 result.push(serde_json::to_string(&monitoring_data).unwrap().to_qvariant())
             }

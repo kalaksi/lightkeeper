@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use std::str::SplitWhitespace;
 use chrono::{ NaiveDateTime, Utc };
 use crate::module::connection::ResponseMessage;
 use crate::{
@@ -16,19 +17,27 @@ use crate::module::{
 };
 
 #[derive(Clone)]
-pub struct Uptime;
+pub struct Interfaces {
+    ignored_interfaces: Vec<String>,
+}
 
-impl Module for Uptime {
+impl Module for Interfaces {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new("uptime", "0.0.1"),
+            module_spec: ModuleSpecification::new("interfaces", "0.0.1"),
             description: String::from(""),
             url: String::from(""),
         }
     }
 
     fn new(_settings: &HashMap<String, String>) -> Self {
-        Uptime { }
+        Interfaces {
+            ignored_interfaces: vec![
+                String::from("br-"),
+                String::from("docker"),
+                String::from("lo")
+            ]
+        }
     }
 
     fn get_module_spec(&self) -> ModuleSpecification {
@@ -36,7 +45,7 @@ impl Module for Uptime {
     }
 }
 
-impl MonitoringModule for Uptime {
+impl MonitoringModule for Interfaces {
     fn clone_module(&self) -> Monitor {
         Box::new(self.clone())
     }
@@ -44,9 +53,10 @@ impl MonitoringModule for Uptime {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::Text,
-            display_text: String::from("Uptime"),
-            category: String::from("host"),
-            unit: String::from("days"),
+            display_text: String::from("Interfaces"),
+            category: String::from("network"),
+            use_multivalue: true,
+            ignore_from_summary: true,
             ..Default::default()
         }
     }
@@ -56,14 +66,27 @@ impl MonitoringModule for Uptime {
     }
 
     fn get_connector_message(&self) -> String {
-        String::from("uptime -s")
+        String::from("ip -o addr show")
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
-        let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
-                                          .map_err(|e| e.to_string())?;
+        let mut result = DataPoint::empty();
 
-        let uptime = Utc::now().naive_utc() - boot_datetime;
-        Ok(DataPoint::new(uptime.num_days().to_string()))
+        let lines = response.message.split('\n');
+        for line in lines {
+            let mut parts = line.split_whitespace();
+            let if_name = parts.nth(1).unwrap().to_string();
+            
+            if self.ignored_interfaces.iter().any(|item| if_name.starts_with(item)) {
+                continue;
+            }
+
+            let if_address = parts.nth(1).unwrap_or_default().to_string();
+            let data_point = DataPoint::labeled_value(if_name, if_address);
+            result.multivalue.push(data_point);
+
+        }
+
+        Ok(result)
     }
 }

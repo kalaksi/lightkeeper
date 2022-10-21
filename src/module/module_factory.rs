@@ -57,6 +57,8 @@ impl ModuleFactory {
         log::info!("Loading modules");
         self.connector_constructors.insert(connection::Ssh2::get_metadata().module_spec, connection::Ssh2::new_connection_module);
 
+        self.monitor_constructors.insert(monitoring::Kernel::get_metadata().module_spec, monitoring::Kernel::new_monitoring_module);
+        self.monitor_constructors.insert(monitoring::Interfaces::get_metadata().module_spec, monitoring::Interfaces::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::Uptime::get_metadata().module_spec, monitoring::Uptime::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::Ping::get_metadata().module_spec, monitoring::Ping::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::Ssh::get_metadata().module_spec, monitoring::Ssh::new_monitoring_module);
