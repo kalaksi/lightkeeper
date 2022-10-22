@@ -16,6 +16,7 @@ Item {
     property string hostId: ""
     property int columnMinimumWidth: 400
     property int columnMaximumWidth: 400
+    property int columnMinimumHeight: 400
     property int columnMaximumHeight: 400
     property var _hostData: groupByCategory(root.hostDataManager.get_monitor_data(hostId), root.commandHandler.get_commands(root.hostId))
 
@@ -34,6 +35,7 @@ Item {
                 GroupBox {
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
+                    Layout.minimumHeight: root.columnMinimumHeight
                     Layout.maximumHeight: root.columnMaximumHeight
                     Layout.alignment: Qt.AlignTop
 
