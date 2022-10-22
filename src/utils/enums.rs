@@ -40,8 +40,8 @@ impl Display for HostStatus {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize)]
 pub enum Criticality {
-    NoData,
     Normal,
+    NoData,
     Warning,
     Error,
     Critical,
@@ -50,8 +50,8 @@ pub enum Criticality {
 impl Display for Criticality {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Criticality::NoData => write!(f, "NoData"),
             Criticality::Normal => write!(f, "Normal"),
+            Criticality::NoData => write!(f, "NoData"),
             Criticality::Warning => write!(f, "Warning"),
             Criticality::Error => write!(f, "Error"),
             Criticality::Critical => write!(f, "Critical"),
