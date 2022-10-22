@@ -13,3 +13,6 @@ pub use filesystem::Filesystem;
 pub mod docker;
 pub use docker::Containers;
 pub use docker::Images;
+
+pub mod systemd;
+pub use systemd::Service;
