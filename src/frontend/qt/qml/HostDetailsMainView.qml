@@ -18,6 +18,7 @@ Item {
     property int columnMaximumWidth: 400
     property int columnMinimumHeight: 400
     property int columnMaximumHeight: 400
+    property int rowSpacing: 5
     property var _hostData: groupByCategory(root.hostDataManager.get_monitor_data(hostId), root.commandHandler.get_commands(root.hostId))
 
     ScrollView {
@@ -33,6 +34,8 @@ Item {
                 model: root._hostData
 
                 GroupBox {
+                    id: box
+                    property bool hasOnlyMultivalues: modelData.monitorDatas.filter(item => !item.display_options.use_multivalue).length === 0
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.minimumHeight: root.columnMinimumHeight
@@ -65,7 +68,7 @@ Item {
                         Column {
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            spacing: 5
+                            spacing: root.rowSpacing
 
                             // Category-level command buttons (buttons on top of the category area).
                             /*
@@ -90,21 +93,50 @@ Item {
                             Repeater {
                                 model: modelData.monitorDatas
 
-                                // Creates multiple rows for multivalue-entries, otherwise just one row.
-                                Repeater {
-                                    id: rowRepeater
+                                Column {
                                     property var monitorData: modelData
                                     property var lastDataPoint: modelData.values.slice(-1)[0]
-                                    model: modelData.display_options.use_multivalue ? lastDataPoint.multivalue : [ lastDataPoint ]
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    spacing: root.rowSpacing
 
-                                    PropertyRow {
-                                        label: modelData.label.length > 0 ? modelData.label : monitorData.display_options.display_text
-                                        value: ValueUnit.AsText(modelData.value, rowRepeater.monitorData.display_options.unit)
+                                    // Header text for multivalues.
+                                    Label {
+                                        width: parent.width
+                                        padding: 5
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: monitorData.display_options.display_text
+                                        visible: monitorData.display_options.use_multivalue && !box.hasOnlyMultivalues
 
-                                        hostId: root.hostId
-                                        targetId: modelData.source_id
-                                        rowCommands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, monitorData.monitor_id))
-                                        commandHandler: root.commandHandler
+                                        background: Rectangle {
+                                            width: parent.width
+                                            height: 2
+                                            anchors.bottom: parent.bottom
+                                            gradient: Gradient {
+                                                orientation: Gradient.Horizontal
+                                                GradientStop { position: 0.0; color: "#404040" }
+                                                GradientStop { position: 0.5; color: "#505050" }
+                                                GradientStop { position: 1.0; color: "#404040" }
+                                            }
+                                        }
+                                    }
+
+                                    // Creates multiple rows for multivalue-entries, otherwise just one row.
+                                    Repeater {
+                                        id: rowRepeater
+                                        property var monitorData: parent.monitorData
+                                        property var lastDataPoint: parent.lastDataPoint
+                                        model: monitorData.display_options.use_multivalue ? lastDataPoint.multivalue : [ lastDataPoint ]
+
+                                        PropertyRow {
+                                            label: monitorData.display_options.use_multivalue ? modelData.label : monitorData.display_options.display_text
+                                            value: ValueUnit.AsText(modelData.value, rowRepeater.monitorData.display_options.unit)
+
+                                            hostId: root.hostId
+                                            targetId: modelData.source_id
+                                            rowCommands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, monitorData.monitor_id))
+                                            commandHandler: root.commandHandler
+                                        }
                                     }
                                 }
                             }
