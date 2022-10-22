@@ -55,7 +55,7 @@ impl MonitoringModule for Containers {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::CriticalityLevel,
-            display_text: String::from("Docker containers"),
+            display_text: String::from("Containers"),
             category: String::from("docker-containers"),
             use_multivalue: true,
             ..Default::default()

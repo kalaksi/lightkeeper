@@ -63,8 +63,6 @@ Item {
                         contentWidth: availableWidth
 
                         Column {
-                            // anchors.fill: parent
-                            anchors.top: parent.top
                             anchors.left: parent.left
                             anchors.right: parent.right
                             spacing: 5
