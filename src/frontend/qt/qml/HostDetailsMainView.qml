@@ -131,7 +131,8 @@ Item {
 
                                         PropertyRow {
                                             label: monitorData.display_options.use_multivalue ? modelData.label : monitorData.display_options.display_text
-                                            value: ValueUnit.AsText(modelData.value, rowRepeater.monitorData.display_options.unit)
+                                            value: ValueUnit.AsText(modelData.value, monitorData.display_options.unit)
+                                            useProgressBar: monitorData.display_options.display_style === "ProgressBar"
 
                                             hostId: root.hostId
                                             targetId: modelData.source_id

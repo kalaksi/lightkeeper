@@ -45,6 +45,7 @@ pub enum DisplayStyle {
     StatusUpDown,
     CriticalityLevel,
     Icon,
+    ProgressBar,
 }
 
 impl Default for DisplayStyle {

@@ -18,6 +18,7 @@ Item {
     required property string label
     required property string value
 
+    property bool useProgressBar: false
     // Provided only if rowCommands are used.
     property var commandHandler
     property string hostId: ""
@@ -38,9 +39,25 @@ Item {
             Layout.fillWidth: true
         }
 
-        Text {
+        ProgressBar {
+            value: parseInt(root.value, 10) / 100.0
+            visible: root.useProgressBar
+
+            Layout.preferredWidth: 100
+            Layout.alignment: Qt.AlignHCenter
+        }
+
+        NormalText {
             text: root.value
-            color: Material.foreground
+            visible: root.useProgressBar
+            font.pixelSize: 8
+
+            Layout.minimumWidth: 30
+        }
+
+        NormalText {
+            text: root.value
+            visible: !root.useProgressBar
         }
 
         // Row-level command buttons.

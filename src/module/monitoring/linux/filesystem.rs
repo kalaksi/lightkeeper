@@ -47,7 +47,7 @@ impl MonitoringModule for Filesystem {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_style: frontend::DisplayStyle::Text,
+            display_style: frontend::DisplayStyle::ProgressBar,
             display_text: String::from("Filesystem usage"),
             category: String::from("host"),
             unit: String::from("%"),
