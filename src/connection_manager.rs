@@ -99,7 +99,7 @@ impl ConnectionManager {
 
                     },
                     Err(error) => {
-                        log::error!("Error while connecting: {}", error);
+                        log::error!("Error while connecting {}: {}", request.host.ip_address, error);
                         // TODO: proper structure instead of string
                         Err(format!(""))
                     }

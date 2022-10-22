@@ -8,6 +8,7 @@ pub struct DisplayOptions {
     // For multi-values this gets displayed (not always displayed) as a header above the list of values.
     // TODO: validate that this is always provided?
     pub display_text: String,
+    // TODO: validate for alphanumeric chars?
     pub display_icon: String,
 
     // Category for monitor or command. Monitors and commands in same category are grouped to the same box.

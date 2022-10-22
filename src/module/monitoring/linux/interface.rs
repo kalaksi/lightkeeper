@@ -22,7 +22,7 @@ pub struct Interface {
 impl Module for Interface {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new("interfaces", "0.0.1"),
+            module_spec: ModuleSpecification::new("interface", "0.0.1"),
             description: String::from(""),
             url: String::from(""),
         }

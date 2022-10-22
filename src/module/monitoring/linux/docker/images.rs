@@ -77,7 +77,6 @@ impl MonitoringModule for Images {
     fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
         let images: Vec<ImageDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
-        // TODO: monitor state
         let mut parent_data = DataPoint::empty();
 
         parent_data.multivalue = images.iter().map(|image| {

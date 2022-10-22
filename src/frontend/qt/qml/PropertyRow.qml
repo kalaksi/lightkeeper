@@ -44,7 +44,6 @@ Item {
             visible: root.useProgressBar
 
             Layout.preferredWidth: 100
-            Layout.alignment: Qt.AlignHCenter
         }
 
         NormalText {
