@@ -2,7 +2,6 @@ use std::thread;
 use std::sync::mpsc;
 
 extern crate qmetaobject;
-use ::log::debug;
 use qmetaobject::*;
 
 use crate::frontend;
@@ -23,6 +22,7 @@ pub struct HostDataManagerModel {
     // NOTE: Couldn't get custom types to work for return types,
     // so for now methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_host_data: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
 
     display_data: frontend::DisplayData,
@@ -106,27 +106,27 @@ impl HostDataManagerModel {
     fn get_monitor_data(&self, host_id: QString) -> QVariantList {
         let mut result = QVariantList::default();
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            let mut keys_ordered = Vec::<String>::new();
+            let sorted_keys = self.get_monitor_data_keys_sorted(host.monitoring_data.values().collect());
 
-            // First include data of categories in an order that's defined in configuration...
-            for category in self.display_data.category_order.iter() {
-                let category_monitors = host.monitoring_data.values().filter(|data| &data.display_options.category == category)
-                                                                     .collect::<Vec<&MonitoringData>>();
-                keys_ordered.extend(self.get_monitoring_data_keys_sorted(category_monitors));
-            }
-
-            // ... then sort the rest alphabetically but leave multivalue-data last.
-            let rest_of_monitors = host.monitoring_data.iter().filter(|(id, _)| !keys_ordered.contains(id))
-                                                              .map(|(_, data)| data)
-                                                              .collect::<Vec<&MonitoringData>>();
-            keys_ordered.extend(self.get_monitoring_data_keys_sorted(rest_of_monitors));
-
-            for key in keys_ordered {
+            for key in sorted_keys {
                 let monitoring_data = host.monitoring_data.get(&key).unwrap();
                 result.push(serde_json::to_string(&monitoring_data).unwrap().to_qvariant())
             }
         }
+        result
+    }
 
+    fn get_summary_monitor_data(&self, host_id: QString) -> QVariantList {
+        let mut result = QVariantList::default();
+        if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
+            let summary_compatbile = host.monitoring_data.values().filter(|data| !data.display_options.ignore_from_summary).collect();
+            let sorted_keys = self.get_monitor_data_keys_sorted(summary_compatbile);
+
+            for key in sorted_keys {
+                let monitoring_data = host.monitoring_data.get(&key).unwrap();
+                result.push(serde_json::to_string(&monitoring_data).unwrap().to_qvariant())
+            }
+        }
         result
     }
 
@@ -144,7 +144,26 @@ impl HostDataManagerModel {
         result
     }
 
-    fn get_monitoring_data_keys_sorted(&self, datas: Vec<&MonitoringData>) -> Vec<String> {
+    // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
+    fn get_monitor_data_keys_sorted(&self, monitoring_data: Vec<&MonitoringData>) -> Vec<String> {
+        let mut keys_ordered = Vec::<String>::new();
+
+        // First include data of categories in an order that's defined in configuration.
+        for category in self.display_data.category_order.iter() {
+            let category_monitors = monitoring_data.iter().filter(|data| &data.display_options.category == category)
+                                                          .collect::<Vec<&&MonitoringData>>();
+            keys_ordered.extend(self.sort_by_value_type(category_monitors));
+        }
+
+        let rest_of_monitors = monitoring_data.iter().filter(|data| !keys_ordered.contains(&data.monitor_id))
+                                                     .collect::<Vec<&&MonitoringData>>();
+        keys_ordered.extend(self.sort_by_value_type(rest_of_monitors));
+
+        keys_ordered
+    }
+
+    // Sorts first by value type (multivalue vs. single value) and then alphabetically.
+    fn sort_by_value_type(&self, datas: Vec<&&MonitoringData>) -> Vec<String> {
         let mut single_value_keys = datas.iter().filter(|data| !data.display_options.use_multivalue)
                                                 .map(|data| data.monitor_id.clone())
                                                 .collect::<Vec<String>>();
