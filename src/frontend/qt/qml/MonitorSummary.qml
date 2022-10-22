@@ -21,11 +21,6 @@ Item {
 
     anchors.fill: parent
 
-    FontLoader {
-        id: fontLabel;
-        source: "qrc:/main/fonts/pixeloid"
-    }
-
     Row {
         Repeater {
             model: root.model
@@ -70,12 +65,10 @@ Item {
                     antialiasing: true
                 }
 
-                NormalText {
+                PixelatedText {
                     id: label
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: parent.monitorId
-                    font.family: fontLabel.name
-                    font.pointSize: 6
                     opacity: 0
                 }
 
