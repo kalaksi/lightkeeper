@@ -2,9 +2,11 @@ use std::thread;
 use std::sync::mpsc;
 
 extern crate qmetaobject;
+use ::log::debug;
 use qmetaobject::*;
 
 use crate::frontend;
+use crate::module::monitoring::MonitoringData;
 
 
 // TODO: use camelcase with qml models?
@@ -104,31 +106,23 @@ impl HostDataManagerModel {
     fn get_monitor_data(&self, host_id: QString) -> QVariantList {
         let mut result = QVariantList::default();
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            let mut keys_processed: Vec<&String> = Vec::new();
+            let mut keys_ordered = Vec::<String>::new();
 
-            // First include data in an order that's defined in configuration...
+            // First include data of categories in an order that's defined in configuration...
             for category in self.display_data.category_order.iter() {
-                if let Some((id, data)) = host.monitoring_data.iter().find(|(_, data)| &data.display_options.category == category) {
-                    result.push(serde_json::to_string(&data).unwrap().to_qvariant());
-                    keys_processed.push(id);
-                }
+                let category_monitors = host.monitoring_data.values().filter(|data| &data.display_options.category == category)
+                                                                     .collect::<Vec<&MonitoringData>>();
+                keys_ordered.extend(self.get_monitoring_data_keys_sorted(category_monitors));
             }
 
             // ... then sort the rest alphabetically but leave multivalue-data last.
-            let mut single_value_keys = host.monitoring_data.values()
-                .filter(|data| !keys_processed.contains(&&data.monitor_id) && !data.display_options.use_multivalue)
-                .map(|data| &data.monitor_id)
-                .collect::<Vec<&String>>();
-            single_value_keys.sort();
+            let rest_of_monitors = host.monitoring_data.iter().filter(|(id, _)| !keys_ordered.contains(id))
+                                                              .map(|(_, data)| data)
+                                                              .collect::<Vec<&MonitoringData>>();
+            keys_ordered.extend(self.get_monitoring_data_keys_sorted(rest_of_monitors));
 
-            let mut multivalue_keys = host.monitoring_data.values()
-                .filter(|data| !keys_processed.contains(&&data.monitor_id) && data.display_options.use_multivalue)
-                .map(|data| &data.monitor_id)
-                .collect::<Vec<&String>>();
-            multivalue_keys.sort();
-
-            for key in [ single_value_keys, multivalue_keys ].concat() {
-                let monitoring_data = host.monitoring_data.get(key).unwrap();
+            for key in keys_ordered {
+                let monitoring_data = host.monitoring_data.get(&key).unwrap();
                 result.push(serde_json::to_string(&monitoring_data).unwrap().to_qvariant())
             }
         }
@@ -148,5 +142,19 @@ impl HostDataManagerModel {
         }
     
         result
+    }
+
+    fn get_monitoring_data_keys_sorted(&self, datas: Vec<&MonitoringData>) -> Vec<String> {
+        let mut single_value_keys = datas.iter().filter(|data| !data.display_options.use_multivalue)
+                                                .map(|data| data.monitor_id.clone())
+                                                .collect::<Vec<String>>();
+        single_value_keys.sort();
+
+        let mut multivalue_keys = datas.iter().filter(|data| data.display_options.use_multivalue)
+                                              .map(|data| data.monitor_id.clone())
+                                              .collect::<Vec<String>>();
+        multivalue_keys.sort();
+
+        [ single_value_keys, multivalue_keys ].concat()
     }
 }
