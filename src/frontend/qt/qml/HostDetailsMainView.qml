@@ -104,6 +104,7 @@ Item {
                                     Label {
                                         width: parent.width
                                         padding: 5
+                                        topPadding: 10
                                         horizontalAlignment: Text.AlignHCenter
                                         text: monitorData.display_options.display_text
                                         visible: monitorData.display_options.use_multivalue && !box.hasOnlyMultivalues
