@@ -17,11 +17,11 @@ use crate::module::{
 };
 
 #[derive(Clone)]
-pub struct Interfaces {
+pub struct Interface {
     ignored_interfaces: Vec<String>,
 }
 
-impl Module for Interfaces {
+impl Module for Interface {
     fn get_metadata() -> Metadata {
         Metadata {
             module_spec: ModuleSpecification::new("interfaces", "0.0.1"),
@@ -31,7 +31,7 @@ impl Module for Interfaces {
     }
 
     fn new(_settings: &HashMap<String, String>) -> Self {
-        Interfaces {
+        Interface {
             ignored_interfaces: vec![
                 String::from("br-"),
                 String::from("docker"),
@@ -45,7 +45,7 @@ impl Module for Interfaces {
     }
 }
 
-impl MonitoringModule for Interfaces {
+impl MonitoringModule for Interface {
     fn clone_module(&self) -> Monitor {
         Box::new(self.clone())
     }

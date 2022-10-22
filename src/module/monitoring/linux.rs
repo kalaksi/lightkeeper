@@ -4,8 +4,11 @@ pub use uptime::Uptime;
 pub mod kernel;
 pub use kernel::Kernel;
 
-pub mod interfaces;
-pub use interfaces::Interfaces;
+pub mod interface;
+pub use interface::Interface;
+
+pub mod filesystem;
+pub use filesystem::Filesystem;
 
 pub mod docker;
 pub use docker::Containers;

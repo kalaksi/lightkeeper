@@ -57,11 +57,12 @@ impl ModuleFactory {
         log::info!("Loading modules");
         self.connector_constructors.insert(connection::Ssh2::get_metadata().module_spec, connection::Ssh2::new_connection_module);
 
-        self.monitor_constructors.insert(monitoring::Kernel::get_metadata().module_spec, monitoring::Kernel::new_monitoring_module);
-        self.monitor_constructors.insert(monitoring::Interfaces::get_metadata().module_spec, monitoring::Interfaces::new_monitoring_module);
-        self.monitor_constructors.insert(monitoring::Uptime::get_metadata().module_spec, monitoring::Uptime::new_monitoring_module);
-        self.monitor_constructors.insert(monitoring::Ping::get_metadata().module_spec, monitoring::Ping::new_monitoring_module);
-        self.monitor_constructors.insert(monitoring::Ssh::get_metadata().module_spec, monitoring::Ssh::new_monitoring_module);
+        self.monitor_constructors.insert(monitoring::linux::Kernel::get_metadata().module_spec, monitoring::linux::Kernel::new_monitoring_module);
+        self.monitor_constructors.insert(monitoring::linux::Filesystem::get_metadata().module_spec, monitoring::linux::Filesystem::new_monitoring_module);
+        self.monitor_constructors.insert(monitoring::linux::Interface::get_metadata().module_spec, monitoring::linux::Interface::new_monitoring_module);
+        self.monitor_constructors.insert(monitoring::linux::Uptime::get_metadata().module_spec, monitoring::linux::Uptime::new_monitoring_module);
+        self.monitor_constructors.insert(monitoring::network::Ping::get_metadata().module_spec, monitoring::network::Ping::new_monitoring_module);
+        self.monitor_constructors.insert(monitoring::network::Ssh::get_metadata().module_spec, monitoring::network::Ssh::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::docker::Containers::get_metadata().module_spec, monitoring::docker::Containers::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::docker::Images::get_metadata().module_spec, monitoring::docker::Images::new_monitoring_module);
 
