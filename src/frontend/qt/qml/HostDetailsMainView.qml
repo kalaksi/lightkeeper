@@ -155,7 +155,7 @@ Item {
     }
 
     function refresh() {
-        root._hostData = groupByCategory(root.hostDataManager.get_monitor_data_map(hostId), root.commandHandler.get_commands(root.hostId))
+        root._hostData = groupByCategory(root.hostDataManager.get_monitor_data(hostId), root.commandHandler.get_commands(root.hostId))
     }
 
 }
