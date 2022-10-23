@@ -26,13 +26,25 @@ Item {
 
                 flat: true
                 width: root.height
-                height: root.height
+                height: width
+
+                ToolTip {
+                    id: toolTip
+                    text: modelData.display_options.display_text
+                    visible: text.length > 0 && mouseArea.containsMouse
+                }
 
                 Image {
                     anchors.centerIn: parent
                     source: "qrc:/main/images/button/" + modelData.display_options.display_icon
                     width: 0.85 * parent.width
                     height: width
+                }
+
+                MouseArea {
+                    id: mouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
                 }
             }
         }

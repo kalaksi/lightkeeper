@@ -48,6 +48,7 @@ impl CommandModule for Shell {
             parent_id: String::from("docker-containers"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("terminal"),
+            display_text: String::from("Open shell inside"),
             action: CommandAction::Terminal,
             ..Default::default()
         }

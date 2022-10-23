@@ -48,6 +48,7 @@ impl CommandModule for Prune {
             category: String::from("docker-images"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("clear"),
+            display_text: String::from("Prune"),
             confirmation_text: String::from("Really prune all unused images?"),
             ..Default::default()
         }

@@ -47,6 +47,7 @@ impl CommandModule for Restart {
             parent_id: String::from("docker-containers"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("refresh"),
+            display_text: String::from("Restart"),
             confirmation_text: String::from("Really restart container?"),
             ..Default::default()
         }
