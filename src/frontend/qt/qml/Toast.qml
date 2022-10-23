@@ -13,12 +13,14 @@ Rectangle {
 
     property var colors: {}
     property var icons: {}
+
     Component.onCompleted: {
         colors = {
-            nodata:  "#FFF0C0",
             normal: Qt.darker(Material.background),
+            info: Qt.darker(Material.background),
+            nodata:  "#FFF0C0",
             warning: "#FFF0C0",
-            error: Qt.lighter(Material.background),
+            error: "#FF8045",
             critical: "#FF8045",
         }
 
@@ -45,7 +47,7 @@ Rectangle {
         id: animation
 
         NumberAnimation {
-            to: 1.0
+            to: 0.75
             duration: root.fadeDuration
         }
 

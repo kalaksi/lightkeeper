@@ -72,9 +72,11 @@ Item {
 
                             // Category-level command buttons (buttons on top of the category area).
                             CommandButtonRow {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                size: 34
                                 commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, modelData.category, ""))
-                                onClicked: function(targetId) {
-                                    root.commandHandler.execute(root.hostId, modelData.command_id, targetId)
+                                onClicked: function(commandId) {
+                                    root.commandHandler.execute(root.hostId, commandId, "")
                                 }
                             }
 

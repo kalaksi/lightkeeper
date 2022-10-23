@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use serde_derive::Deserialize;
+use serde_json;
 use crate::frontend;
 use crate::module::connection::ResponseMessage;
 use crate::module::{
@@ -56,6 +58,15 @@ impl CommandModule for Prune {
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
-        Ok(CommandResult::new(response.message.clone()))
+        let result: PruneResult = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+        Ok(CommandResult::new_info(format!("Total reclaimed space: {} B", result.space_reclaimed)))
     }
+}
+
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct PruneResult {
+    // images_deleted: Option<Vec<String>>,
+    space_reclaimed: i64,
 }

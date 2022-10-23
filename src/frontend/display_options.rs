@@ -18,7 +18,6 @@ pub struct DisplayOptions {
 
     // For monitors that produce a group of values.
     pub use_multivalue: bool,
-
     pub ignore_from_summary: bool,
 
     // Display confirmation dialog with this text first.
@@ -28,6 +27,7 @@ pub struct DisplayOptions {
     pub parent_id: String,
 
     // Action to be executed by the frontend after sending the command.
+    // TODO: check if really needed
     pub action: CommandAction,
 }
 

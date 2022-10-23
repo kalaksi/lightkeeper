@@ -15,6 +15,7 @@ Item {
             error: "firebrick",
             warning: "orange",
             normal: "forestgreen",
+            info: "forestgreen",
             _: "orange",
         }
     }

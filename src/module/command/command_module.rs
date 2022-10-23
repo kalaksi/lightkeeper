@@ -60,6 +60,16 @@ impl CommandResult {
         }
     }
 
+    pub fn new_info(message: String) -> Self {
+        CommandResult {
+            message: message,
+            error: String::from(""),
+            criticality: Criticality::Info,
+            time: Utc::now(),
+            invocation_id: 0,
+        }
+    }
+
     pub fn new_critical_error(error: String) -> Self {
         CommandResult {
             message: String::from(""),

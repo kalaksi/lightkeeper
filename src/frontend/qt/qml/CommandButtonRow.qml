@@ -31,7 +31,7 @@ Item {
                 Image {
                     anchors.centerIn: parent
                     source: "qrc:/main/images/button/" + modelData.display_options.display_icon
-                    width: 0.9 * parent.width
+                    width: 0.85 * parent.width
                     height: width
                 }
             }

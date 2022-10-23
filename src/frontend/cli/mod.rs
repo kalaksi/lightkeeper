@@ -70,8 +70,9 @@ fn convert_single(data_point: &DataPoint, display_options: &DisplayOptions) -> S
     let single_value = match display_options.display_style {
         DisplayStyle::CriticalityLevel => {
             match data_point.criticality {
-                Criticality::NoData => String::from("No data"),
                 Criticality::Normal => String::from("Normal"),
+                Criticality::Info => String::from("Info"),
+                Criticality::NoData => String::from("No data"),
                 Criticality::Warning => String::from("Warning"),
                 Criticality::Error => String::from("Error"),
                 Criticality::Critical => String::from("Critical"),
@@ -101,8 +102,9 @@ fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) 
                 separator = "";
 
                 match data_point.criticality {
-                    Criticality::NoData => "No data".to_string(),
                     Criticality::Normal => "▩".to_string(),
+                    Criticality::Info => "▩".to_string(),
+                    Criticality::NoData => "No data".to_string(),
                     Criticality::Warning =>"▩".to_string(),
                     Criticality::Error => "▩".to_string(),
                     Criticality::Critical =>"▩".to_string(),
@@ -126,8 +128,9 @@ fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) 
 
 fn color_by_level(text: String, criticality: Criticality) -> String {
     match criticality {
-        Criticality::NoData => text.clone(),
         Criticality::Normal => text.green().to_string(),
+        Criticality::Info => text.green().to_string(),
+        Criticality::NoData => text.clone(),
         Criticality::Warning => text.yellow().to_string(),
         Criticality::Error => text.red().to_string(),
         Criticality::Critical => text.red().to_string(),
