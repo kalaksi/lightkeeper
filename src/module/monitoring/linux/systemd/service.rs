@@ -73,9 +73,10 @@ impl MonitoringModule for Service {
     }
 
     fn get_connector_message(&self) -> String {
+        // TODO: use dbus?
+        String::from("systemctl list-units -t service --all --output json")
         // Alternative:
         // String::from("systemctl list-units -t service --full --all --plain --no-legend")
-        String::from("systemctl list-units -t service --all --output json")
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {

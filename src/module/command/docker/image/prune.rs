@@ -17,7 +17,7 @@ pub struct Prune;
 impl Module for Prune {
     fn get_metadata() -> Metadata {
         Metadata {
-            module_spec: ModuleSpecification::new("docker-image-prune ", "0.0.1"),
+            module_spec: ModuleSpecification::new("docker-image-prune", "0.0.1"),
             description: String::from(""),
             url: String::from(""),
         }
@@ -45,8 +45,8 @@ impl CommandModule for Prune {
         frontend::DisplayOptions {
             category: String::from("docker-images"),
             display_style: frontend::DisplayStyle::Icon,
-            display_icon: String::from("delete"),
-            confirmation_text: String::from("Really remove all unused images?"),
+            display_icon: String::from("clear"),
+            confirmation_text: String::from("Really prune all unused images?"),
             ..Default::default()
         }
     }

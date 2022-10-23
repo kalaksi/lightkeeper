@@ -35,7 +35,7 @@ Item {
 
                 GroupBox {
                     id: box
-                    property bool hasOnlyMultivalues: modelData.monitorDatas.filter(item => !item.display_options.use_multivalue).length === 0
+                    property bool _hasOnlyMultivalues: modelData.monitorDatas.filter(item => !item.display_options.use_multivalue).length === 0
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.minimumHeight: root.columnMinimumHeight
@@ -71,14 +71,12 @@ Item {
                             spacing: root.rowSpacing
 
                             // Category-level command buttons (buttons on top of the category area).
-                            /*
                             CommandButtonRow {
-                                commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, ""))
+                                commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, modelData.category, ""))
                                 onClicked: function(targetId) {
                                     root.commandHandler.execute(root.hostId, modelData.command_id, targetId)
                                 }
                             }
-                            */
 
                             // Host data is a bit different from monitor data, so handling it separately here.
                             Repeater {
@@ -107,7 +105,7 @@ Item {
                                         topPadding: 10
                                         horizontalAlignment: Text.AlignHCenter
                                         text: monitorData.display_options.display_text
-                                        visible: monitorData.display_options.use_multivalue && !box.hasOnlyMultivalues
+                                        visible: monitorData.display_options.use_multivalue && !box._hasOnlyMultivalues
 
                                         background: Rectangle {
                                             width: parent.width
@@ -116,7 +114,7 @@ Item {
                                             gradient: Gradient {
                                                 orientation: Gradient.Horizontal
                                                 GradientStop { position: 0.0; color: "#404040" }
-                                                GradientStop { position: 0.5; color: "#505050" }
+                                                GradientStop { position: 0.5; color: "#555555" }
                                                 GradientStop { position: 1.0; color: "#404040" }
                                             }
                                         }
@@ -136,7 +134,9 @@ Item {
 
                                             hostId: root.hostId
                                             targetId: modelData.source_id
-                                            rowCommands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, monitorData.monitor_id))
+                                            rowCommands: Parse.ListOfJsons(
+                                                root.commandHandler.get_child_commands(root.hostId, monitorData.display_options.category, monitorData.monitor_id)
+                                            )
                                             commandHandler: root.commandHandler
                                         }
                                     }

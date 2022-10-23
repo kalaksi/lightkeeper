@@ -1,4 +1,6 @@
 extern crate qmetaobject;
+use std::collections::HashMap;
+
 use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
@@ -8,7 +10,7 @@ use crate::module::command::CommandAction;
 pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
-    get_child_commands: qt_method!(fn(&self, host_id: QString, parent_id: QString) -> QVariantList),
+    get_child_commands: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString) -> QVariantList),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, target_id: QString) -> u64),
 
@@ -37,17 +39,19 @@ impl CommandHandlerModel {
                               .collect()
     }
 
-    fn get_child_commands(&self, host_id: QString, parent_id: QString) -> QVariantList {
-        let mut all_commands = self.command_handler.get_host_commands(host_id.to_string());
+    // Parent ID is either command ID or category ID (for category-level commands).
+    fn get_child_commands(&self, host_id: QString, category: QString, parent_id: QString) -> QVariantList {
+        let category_string = category.to_string().to_lowercase();
+        let parent_id_string = parent_id.to_string().to_lowercase();
+        let mut all_commands = self.command_handler.get_host_commands(host_id.to_string())
+                                   .into_iter().filter(|(_, data)| data.display_options.parent_id == parent_id_string &&
+                                                                   data.display_options.category == category_string)
+                                   .collect::<HashMap<String, CommandData>>();
 
-        let parent_id_string = parent_id.to_string();
         let mut valid_commands_sorted = Vec::<CommandData>::new();
-
         for command_id in self.command_display_order.iter() {
             if let Some(command_data) = all_commands.remove(command_id) {
-                if command_data.display_options.parent_id == parent_id_string {
-                    valid_commands_sorted.push(command_data);
-                }
+                valid_commands_sorted.push(command_data);
             }
         }
 
