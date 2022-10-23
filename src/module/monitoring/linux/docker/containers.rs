@@ -19,7 +19,6 @@ use crate::module::{
 #[derive(Clone)]
 pub struct Containers {
     use_sudo: bool,
-    excluded_containers: String,
 }
 
 impl Module for Containers {
@@ -34,7 +33,6 @@ impl Module for Containers {
     fn new(settings: &HashMap<String, String>) -> Self {
         Containers {
             use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(false),
-            excluded_containers: settings.get("excluded_containers").unwrap_or(&String::from("")).clone(),
         }
     }
 

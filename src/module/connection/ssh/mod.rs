@@ -16,7 +16,7 @@ pub struct Ssh2 {
     is_initialized: bool,
     port: u16,
     username: String,
-    password: String,
+    // password: String,
 }
 
 impl Module for Ssh2 {
@@ -37,7 +37,7 @@ impl Module for Ssh2 {
             is_initialized: false,
             port: 22,
             username: settings.get("username").unwrap_or(&String::from("")).clone(),
-            password: settings.get("password").unwrap_or(&String::from("")).clone(),
+            // password: settings.get("password").unwrap_or(&String::from("")).clone(),
         }
     }
 
