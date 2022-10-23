@@ -10,6 +10,9 @@ pub use interface::Interface;
 pub mod filesystem;
 pub use filesystem::Filesystem;
 
+pub mod package;
+pub use package::Package;
+
 pub mod docker;
 pub use docker::Containers;
 pub use docker::Images;
