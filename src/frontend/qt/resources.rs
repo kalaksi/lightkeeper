@@ -31,6 +31,7 @@ pub fn init_resources() {
             "images/fontawesome/terminal.svg" as "images/button/terminal",
             "images/breeze/dark/delete.svg" as "images/button/delete",
             "images/breeze/dark/edit-clear-all.svg" as "images/button/clear",
+            "images/breeze/dark/system-shutdown.svg" as "images/button/shutdown",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/dark/window-maximize.svg" as "images/button/maximize",
@@ -72,6 +73,7 @@ pub fn init_resources() {
             "images/breeze/light/utilities-terminal.svg" as "images/button/terminal",
             "images/breeze/light/delete.svg" as "images/button/delete",
             "images/breeze/light/edit-clear-all.svg" as "images/button/clear",
+            "images/breeze/light/system-shutdown.svg" as "images/button/shutdown",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/light/window-maximize.svg" as "images/button/maximize",

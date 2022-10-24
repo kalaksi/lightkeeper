@@ -1,11 +1,8 @@
 
 use std::collections::HashMap;
-use std::fmt;
-use serde_derive::Deserialize;
-use serde_json;
 
 use crate::module::connection::ResponseMessage;
-use crate::{ Host, utils::enums::Criticality, frontend };
+use crate::{ Host, frontend };
 use crate::module::{
     Module,
     Metadata,
