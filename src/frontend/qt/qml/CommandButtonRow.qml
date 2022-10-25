@@ -31,7 +31,7 @@ Item {
                 ToolTip {
                     id: toolTip
                     text: modelData.display_options.display_text
-                    visible: text.length > 0 && mouseArea.containsMouse
+                    visible: text && mouseArea.containsMouse
                 }
 
                 Image {
@@ -45,6 +45,7 @@ Item {
                     id: mouseArea
                     anchors.fill: parent
                     hoverEnabled: true
+                    preventStealing: true
                 }
             }
         }
