@@ -28,24 +28,15 @@ Item {
                 width: root.height
                 height: width
 
-                ToolTip {
-                    id: toolTip
-                    text: modelData.display_options.display_text
-                    visible: text && mouseArea.containsMouse
-                }
+                ToolTip.visible: hovered
+                ToolTip.delay: 1000
+                ToolTip.text: modelData.display_options.display_text
 
                 Image {
                     anchors.centerIn: parent
                     source: "qrc:/main/images/button/" + modelData.display_options.display_icon
                     width: 0.85 * parent.width
                     height: width
-                }
-
-                MouseArea {
-                    id: mouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    preventStealing: true
                 }
             }
         }
