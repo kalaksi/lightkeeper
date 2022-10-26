@@ -1,3 +1,13 @@
+# Design goals
+
+## General
+- Make customizations easy so that the tool can be modified to different needs.
+- Make the tool extendable.
+
+## UI
+- Keep the amount of navigating and clicking to a minimum.
+- Avoid including too much non-essential information to keep the UI simple.
+
 # Dependencies
 ## Requirements
 - Qt 5.15

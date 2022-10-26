@@ -47,7 +47,7 @@ Rectangle {
         id: animation
 
         NumberAnimation {
-            to: 0.75
+            to: 0.8
             duration: root.fadeDuration
         }
 
