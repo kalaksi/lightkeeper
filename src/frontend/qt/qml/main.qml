@@ -61,7 +61,11 @@ ApplicationWindow {
         })
 
         _commandHandler.details_subview_opened.connect((headerText, invocationId) => {
-            hostDetails.openSubview(headerText, invocationId)
+            hostDetails.openTextView(headerText, invocationId)
+        })
+
+        _commandHandler.logs_subview_opened.connect((headerText, invocationId) => {
+            hostDetails.openLogView(headerText, invocationId)
         })
 
         _hostDataManager.command_result_received.connect((commandResultJson) => {

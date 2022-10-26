@@ -108,6 +108,7 @@ pub enum CommandAction {
     None,
     Dialog,
     TextView,
+    LogView,
     Terminal,
 }
 

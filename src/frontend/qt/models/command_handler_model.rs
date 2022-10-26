@@ -17,6 +17,8 @@ pub struct CommandHandlerModel {
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
     details_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
+    // TODO: dialog for logs (refactor so doesn't need dedicated)
+    logs_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, target_id: QString),
 
     command_handler: CommandHandler,
@@ -92,6 +94,10 @@ impl CommandHandlerModel {
             CommandAction::TextView => {
                 self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
                 self.details_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id.to_string())), invocation_id)
+            },
+            CommandAction::LogView => {
+                self.command_handler.execute(host_id.to_string(), command_id.to_string(), target_id.to_string());
+                self.logs_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id.to_string())), invocation_id)
             },
             CommandAction::Terminal => {
                 self.command_handler.open_terminal(vec![

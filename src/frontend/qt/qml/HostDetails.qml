@@ -70,14 +70,25 @@ Item {
             onCloseClicked: animateHideSubview.start()
         }
 
-        HostDetailsSubview {
+        Item {
             id: subviewContent
             anchors.top: subviewHeader.bottom
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-        }
 
+            HostDetailsTextView {
+                id: textView
+                anchors.fill: parent
+                visible: false
+            }
+
+            HostDetailsLogView {
+                id: logView
+                anchors.fill: parent
+                visible: false
+            }
+        }
     }
 
     NumberAnimation {
@@ -121,17 +132,35 @@ Item {
         detailsMainView.refresh()
     }
 
-    function openSubview(headerText, invocationId) {
+    function openTextView(headerText, invocationId) {
         subviewHeader.text = headerText
         root._subviewInvocationId = invocationId
+        logView.visible = false
+        textView.visible = true
+
+        animateShowSubview.start()
+    }
+
+    function openLogView(headerText, invocationId) {
+        subviewHeader.text = headerText
+        root._subviewInvocationId = invocationId
+        textView.visible = false
+        logView.visible = true
 
         animateShowSubview.start()
     }
 
     function refreshSubview(commandResult) {
-        subviewContent.text = commandResult.message
-        subviewContent.errorText = commandResult.error
-        subviewContent.criticality = commandResult.criticality
+        if (textView.visible) {
+            textView.text = commandResult.message
+            textView.errorText = commandResult.error
+            textView.criticality = commandResult.criticality
+        }
+        else {
+            logView.text = commandResult.message
+            logView.errorText = commandResult.error
+            logView.criticality = commandResult.criticality
+        }
     }
 
 }
