@@ -87,16 +87,19 @@ Item {
                 id: logView
                 anchors.fill: parent
                 visible: false
+                selections: ["asdf", "lkjlkjl"]
             }
         }
     }
 
+    // TODO: custom component (see main.qml too)
     NumberAnimation {
         id: animateShowSubview
         target: root
         property: "_subviewSize"
         to: 1.0
-        duration: 150
+        easing.type: Easing.OutQuad
+        duration: 175
     }
 
     NumberAnimation {
@@ -104,7 +107,8 @@ Item {
         target: root
         property: "_subviewSize"
         to: 0.0
-        duration: 150
+        easing.type: Easing.OutQuad
+        duration: 175
     }
 
     states: [

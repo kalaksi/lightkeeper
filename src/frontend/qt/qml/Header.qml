@@ -31,7 +31,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             leftPadding: 10
             text: root.text
-            font.pointSize: 14
+            font.pointSize: 12
         }
     }
 
