@@ -54,7 +54,7 @@ impl CommandModule for Logs {
     }
 
     fn get_connector_request(&self, _target_id: String) -> String {
-        String::from("journalctl -q -n 100")
+        String::from("journalctl -q -n 500")
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

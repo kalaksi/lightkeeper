@@ -32,10 +32,12 @@ pub fn init_resources() {
             "images/breeze/dark/delete.svg" as "images/button/delete",
             "images/breeze/dark/edit-clear-all.svg" as "images/button/clear",
             "images/breeze/dark/system-shutdown.svg" as "images/button/shutdown",
+            "images/breeze/dark/arrow-up.svg" as "images/button/search-up",
+            "images/breeze/dark/arrow-down.svg" as "images/button/search-down",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
-            "images/breeze/dark/window-maximize.svg" as "images/button/maximize",
-            "images/breeze/dark/window-minimize.svg" as "images/button/minimize",
+            "images/breeze/dark/arrow-up.svg" as "images/button/maximize",
+            "images/breeze/dark/arrow-down.svg" as "images/button/minimize",
             "images/breeze/dark/window-new.svg" as "images/button/window-new",
 
             // Animations
@@ -62,7 +64,7 @@ pub fn init_resources() {
             "images/breeze/light/alarm-symbolic.svg" as "images/status/unknown",
 
             // TODO: remove fontawesome/circle-exclamation and triangle-exclamation as unused?
-            "images/breeze/dark/data-information.svg" as "images/alert/info",
+            "images/breeze/light/data-information.svg" as "images/alert/info",
             "images/breeze/light/data-warning.svg" as "images/alert/warning",
             "images/breeze/light/data-error.svg" as "images/alert/error",
 
@@ -74,10 +76,12 @@ pub fn init_resources() {
             "images/breeze/light/delete.svg" as "images/button/delete",
             "images/breeze/light/edit-clear-all.svg" as "images/button/clear",
             "images/breeze/light/system-shutdown.svg" as "images/button/shutdown",
+            "images/breeze/light/arrow-up.svg" as "images/button/search-up",
+            "images/breeze/light/arrow-down.svg" as "images/button/search-down",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
-            "images/breeze/light/window-maximize.svg" as "images/button/maximize",
-            "images/breeze/light/window-minimize.svg" as "images/button/minimize",
+            "images/breeze/light/arrow-up.svg" as "images/button/maximize",
+            "images/breeze/light/arrow-down.svg" as "images/button/minimize",
             "images/breeze/light/window-new.svg" as "images/button/window-new",
 
             // Animations
