@@ -83,11 +83,15 @@ Item {
                 visible: false
             }
 
+            // TODO: disable button until service unit list is received.
             HostDetailsLogView {
                 id: logView
                 anchors.fill: parent
                 visible: false
-                selections: ["asdf", "lkjlkjl"]
+
+                hostId: root.hostId
+                commandHandler: root.commandHandler
+                selections: []
             }
         }
     }
@@ -148,10 +152,20 @@ Item {
     function openLogView(headerText, invocationId) {
         subviewHeader.text = headerText
         root._subviewInvocationId = invocationId
-        textView.visible = false
-        logView.visible = true
 
-        animateShowSubview.start()
+        let monitorDataJSON = root.hostDataManager.get_monitor_data(root.hostId, "systemd-service")
+
+        if (monitorDataJSON.length > 2) {
+            let monitorData = JSON.parse(monitorDataJSON)
+            let lastDataPoint = monitorData.values.slice(-1)[0]
+            logView.selections = ["ALL", "DMESG"].concat(
+                lastDataPoint.multivalue.map((item) => item.label)
+            )
+            textView.visible = false
+            logView.visible = true
+
+            animateShowSubview.start()
+        }
     }
 
     function refreshSubview(commandResult) {

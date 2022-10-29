@@ -125,6 +125,10 @@ impl DataPoint {
         empty.criticality = Criticality::Critical;
         empty
     }
+
+    pub fn hide(&mut self) {
+        self.criticality = Criticality::Ignore;
+    }
 }
 
 impl Default for DataPoint {

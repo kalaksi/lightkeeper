@@ -17,6 +17,7 @@ pub struct Logs;
 
 impl Module for Logs {
     fn get_metadata() -> Metadata {
+        // TODO: define dependnecy to systemd-service command
         Metadata {
             module_spec: ModuleSpecification::new("logs", "0.0.1"),
             description: String::from(""),
@@ -53,8 +54,14 @@ impl CommandModule for Logs {
         }
     }
 
-    fn get_connector_request(&self, _target_id: String) -> String {
-        String::from("journalctl -q -n 500")
+    fn get_connector_request(&self, target_id: String) -> String {
+        // TODO: validate target_id?
+        match target_id.as_str() {
+            "" => String::from("sudo journalctl -q -n 500"),
+            "all" => String::from("sudo journalctl -q -n 500"),
+            "dmesg" => String::from("sudo journalctl -q -n 500 --dmesg"),
+            _ => format!("sudo journalctl -q -n 500 -u {}", target_id)
+        }
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

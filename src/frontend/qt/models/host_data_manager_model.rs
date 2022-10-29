@@ -21,7 +21,8 @@ pub struct HostDataManagerModel {
 
     // NOTE: Couldn't get custom types to work for return types,
     // so for now methods are used to get the data in JSON and parsed in QML side.
-    get_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
+    get_monitor_datas: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_host_data: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
 
@@ -102,8 +103,17 @@ impl HostDataManagerModel {
         }
     }
 
+    fn get_monitor_data(&self, host_id: QString, monitor_id: QString) -> QString {
+        if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
+            if let Some(monitoring_data) = host.monitoring_data.get(&monitor_id.to_string()) {
+                return QString::from(serde_json::to_string(monitoring_data).unwrap())
+            }
+        }
+        QString::from("{}")
+    }
+
     // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
-    fn get_monitor_data(&self, host_id: QString) -> QVariantList {
+    fn get_monitor_datas(&self, host_id: QString) -> QVariantList {
         let mut result = QVariantList::default();
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
             let sorted_keys = self.get_monitor_data_keys_sorted(host.monitoring_data.values().collect());

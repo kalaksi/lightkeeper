@@ -84,17 +84,19 @@ impl MonitoringModule for Service {
 
         let mut result = DataPoint::empty();
 
-        result.multivalue = services.iter()
-                                    .filter(|service| self.included_services.contains(&service.unit))
-                                    .map(|service| {
-
+        result.multivalue = services.iter().map(|service| {
             let mut point = DataPoint::labeled_value(service.unit.clone(), service.sub.clone());
+
             point.criticality = match service.sub.as_str() {
                 "dead" => enums::Criticality::Critical,
                 "exited" => enums::Criticality::Error,
                 "running" => enums::Criticality::Normal,
                 _ => enums::Criticality::Warning,
             };
+
+            if !self.included_services.contains(&service.unit) {
+                point.hide();
+            }
 
             point
         }).collect();

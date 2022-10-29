@@ -5,11 +5,16 @@ import QtQuick.Layouts 1.15
 import QtQuick.Controls.Material 2.15
 
 Item {
+    // TODO: loading indicator and indicator (translucent text maybe) for empty results 
+    // TODO: indicator for no search results
     id: root
+    required property var commandHandler
+    property string hostId: ""
     property var selections: []
-    property var text: ""
-    property var errorText: ""
-    property var criticality: ""
+    property string text: ""
+    property string errorText: ""
+    property string criticality: ""
+
 
     Rectangle {
         color: Material.background
@@ -31,6 +36,9 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width * 0.20
             model: root.selections
+
+            // TODO: don't hard-code command id.
+            onActivated: (index) => root.commandHandler.execute(root.hostId, "logs", root.selections[index].toLowerCase())
         }
 
         CheckBox {
@@ -163,7 +171,7 @@ Item {
     }
     function highlight(query) {
         let cursor = textArea.cursorRectangle
-        highlighter.x = cursor.x - 3
+        highlighter.x = cursor.x - 2
         // Adds some extra padding depending how much bigger the highlighter height is than the text.
         highlighter.y = cursor.y + ((highlighter.height - textArea.font.pixelSize) / 2.0 - 1)
         // With monospace font this crude approach will suffice.

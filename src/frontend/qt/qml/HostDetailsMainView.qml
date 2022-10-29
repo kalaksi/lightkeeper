@@ -19,7 +19,7 @@ Item {
     property int columnMinimumHeight: 400
     property int columnMaximumHeight: 400
     property int rowSpacing: 5
-    property var _hostData: groupByCategory(root.hostDataManager.get_monitor_data(hostId), root.commandHandler.get_commands(root.hostId))
+    property var _hostData: groupByCategory(root.hostDataManager.get_monitor_datas(hostId), root.commandHandler.get_commands(root.hostId))
 
     ScrollView {
         anchors.fill: parent
@@ -91,7 +91,7 @@ Item {
                             }
 
                             Repeater {
-                                model: modelData.monitorDatas
+                                model: modelData.monitorDatas.filter((item) => item.criticality !== "Ignore")
 
                                 Column {
                                     property var monitorData: modelData
@@ -127,7 +127,9 @@ Item {
                                         id: rowRepeater
                                         property var monitorData: parent.monitorData
                                         property var lastDataPoint: parent.lastDataPoint
-                                        model: monitorData.display_options.use_multivalue ? lastDataPoint.multivalue : [ lastDataPoint ]
+                                        model: monitorData.display_options.use_multivalue ?
+                                                    lastDataPoint.multivalue.filter((item) => item.criticality !== "Ignore") :
+                                                    [ lastDataPoint ]
 
                                         PropertyRow {
                                             label: monitorData.display_options.use_multivalue ? modelData.label : monitorData.display_options.display_text
@@ -191,7 +193,7 @@ Item {
     }
 
     function refresh() {
-        root._hostData = groupByCategory(root.hostDataManager.get_monitor_data(hostId), root.commandHandler.get_commands(root.hostId))
+        root._hostData = groupByCategory(root.hostDataManager.get_monitor_datas(hostId), root.commandHandler.get_commands(root.hostId))
     }
 
 }

@@ -37,9 +37,9 @@ impl CommandHandlerModel {
     fn get_commands(&self, host_id: QString) -> QVariantList {
         let command_datas = self.command_handler.get_host_commands(host_id.to_string());
 
-        command_datas.values().map(|item| serde_json::to_string(&item).unwrap().to_qvariant())
-                              .collect()
+        command_datas.values().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
     }
+
 
     // Parent ID is either command ID or category ID (for category-level commands).
     fn get_child_commands(&self, host_id: QString, category: QString, parent_id: QString) -> QVariantList {
