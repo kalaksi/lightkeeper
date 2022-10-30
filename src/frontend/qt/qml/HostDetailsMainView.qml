@@ -74,6 +74,8 @@ Item {
                             CommandButtonRow {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 size: 34
+                                flatButtons: false
+                                roundButtons: false
                                 commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, modelData.category, ""))
                                 onClicked: function(commandId) {
                                     root.commandHandler.execute(root.hostId, commandId, "")
