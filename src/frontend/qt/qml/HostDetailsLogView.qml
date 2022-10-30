@@ -73,7 +73,6 @@ Item {
             Button {
                 anchors.leftMargin: 30
                 anchors.verticalCenter: parent.verticalCenter
-                // onClicked: root.clicked(modelData.command_id)
                 flat: true
 
                 ToolTip.visible: hovered
@@ -92,7 +91,6 @@ Item {
 
             Button {
                 anchors.verticalCenter: parent.verticalCenter
-                // onClicked: root.clicked(modelData.command_id)
                 flat: true
 
                 ToolTip.visible: hovered
@@ -108,20 +106,20 @@ Item {
                     source: "qrc:/main/images/button/search-down"
                 }
             }
-        }
 
-        Button {
-            anchors.verticalCenter: parent.verticalCenter
-            onClicked: root.commandHandler.execute(root.hostId, "logs", [root._unitId])
+            Button {
+                anchors.verticalCenter: parent.verticalCenter
+                onClicked: root.commandHandler.execute(root.hostId, "logs", [root._unitId, searchField.text])
 
-            ToolTip.visible: hovered
-            ToolTip.text: "Show only matching rows"
+                ToolTip.visible: hovered
+                ToolTip.text: "Show only matching rows"
 
-            Image {
-                width: parent.width * 0.8
-                height: width
-                anchors.centerIn: parent
-                source: "qrc:/main/images/button/search"
+                Image {
+                    width: parent.width * 0.8
+                    height: width
+                    anchors.centerIn: parent
+                    source: "qrc:/main/images/button/search"
+                }
             }
         }
     }

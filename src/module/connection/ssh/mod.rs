@@ -50,6 +50,7 @@ impl Module for Ssh2 {
 impl ConnectionModule for Ssh2 {
     fn connect(&mut self, address: &IpAddr) -> Result<(), String> {
         // TODO: support ipv6
+        // TODO: reconnect when server side has disconnected
 
         if self.is_initialized {
             return Ok(())

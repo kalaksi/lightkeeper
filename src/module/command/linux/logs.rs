@@ -62,17 +62,21 @@ impl CommandModule for Logs {
 
         let mut result = String::from("sudo journalctl -q -n 400");
         if let Some(parameter1) = parameters.first() {
-            let suffix = match parameter1.as_str() {
-                "all" => String::from(""),
-                "dmesg" => String::from("--dmesg"),
-                _ => format!("-u {}", parameter1),
-            };
+            if !parameter1.is_empty() {
+                let suffix = match parameter1.as_str() {
+                    "all" => String::from(""),
+                    "dmesg" => String::from("--dmesg"),
+                    _ => format!("-u {}", parameter1),
+                };
 
-            result = format!("{} {}", result, suffix);
+                result = format!("{} {}", result, suffix);
+            }
         }
 
         if let Some(parameter2) = parameters.get(1) {
-            result = format!("{} -g {}", result, parameter2);
+            if !parameter2.is_empty() {
+                result = format!("{} -g {}", result, parameter2);
+            }
         }
         result
     }
