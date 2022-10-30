@@ -14,6 +14,7 @@ Item {
     property string text: ""
     property string errorText: ""
     property string criticality: ""
+    property string _unitId: ""
 
 
     Rectangle {
@@ -38,7 +39,11 @@ Item {
             model: root.selections
 
             // TODO: don't hard-code command id.
-            onActivated: (index) => root.commandHandler.execute(root.hostId, "logs", root.selections[index].toLowerCase())
+            onActivated: function(index) {
+                root._unitId = root.selections[index].toLowerCase()
+                // TODO: use invocation id?
+                root.commandHandler.execute(root.hostId, "logs", [root._unitId])
+            }
         }
 
         CheckBox {
@@ -72,7 +77,7 @@ Item {
                 flat: true
 
                 ToolTip.visible: hovered
-                ToolTip.text: "Search up"
+                ToolTip.text: "Search up in the text"
 
                 onClicked: searchUp(searchField.text, textArea.cursorPosition)
 
@@ -91,16 +96,32 @@ Item {
                 flat: true
 
                 ToolTip.visible: hovered
-                ToolTip.text: "Search down"
+                ToolTip.text: "Search down in the text"
 
                 onClicked: searchDown(searchField.text, textArea.cursorPosition)
 
                 Image {
                     width: 0.80 * parent.width
+                    height: width
                     anchors.fill: parent
                     anchors.centerIn: parent
                     source: "qrc:/main/images/button/search-down"
                 }
+            }
+        }
+
+        Button {
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: root.commandHandler.execute(root.hostId, "logs", [root._unitId])
+
+            ToolTip.visible: hovered
+            ToolTip.text: "Show only matching rows"
+
+            Image {
+                width: parent.width * 0.8
+                height: width
+                anchors.centerIn: parent
+                source: "qrc:/main/images/button/search"
             }
         }
     }
@@ -155,6 +176,10 @@ Item {
 
 
     function searchUp(query, currentPosition) {
+        if (query.length === 0) {
+            return;
+        }
+
         let match = textArea.text.lastIndexOf(query, currentPosition - 1)
         if (match !== -1) {
             textArea.cursorPosition = match
@@ -163,6 +188,10 @@ Item {
     }
 
     function searchDown(query, currentPosition) {
+        if (query.length === 0) {
+            return;
+        }
+
         let match = textArea.text.indexOf(query, currentPosition + 1)
         if (match !== -1) {
             textArea.cursorPosition = match

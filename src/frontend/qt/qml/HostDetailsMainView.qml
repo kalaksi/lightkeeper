@@ -78,7 +78,7 @@ Item {
                                 roundButtons: false
                                 commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, modelData.category, ""))
                                 onClicked: function(commandId) {
-                                    root.commandHandler.execute(root.hostId, commandId, "")
+                                    root.commandHandler.execute(root.hostId, commandId, [""])
                                 }
                             }
 

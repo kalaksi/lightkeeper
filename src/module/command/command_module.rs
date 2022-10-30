@@ -35,7 +35,7 @@ pub trait CommandModule : Module {
 
     // target_id is just an optional argument for the command.
     // TODO: rename?
-    fn get_connector_request(&self, _target_id: String) -> String;
+    fn get_connector_request(&self, _parameters: Vec<String>) -> String;
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String>;
 }
 

@@ -54,14 +54,27 @@ impl CommandModule for Logs {
         }
     }
 
-    fn get_connector_request(&self, target_id: String) -> String {
-        // TODO: validate target_id?
-        match target_id.as_str() {
-            "" => String::from("sudo journalctl -q -n 500"),
-            "all" => String::from("sudo journalctl -q -n 500"),
-            "dmesg" => String::from("sudo journalctl -q -n 500 --dmesg"),
-            _ => format!("sudo journalctl -q -n 500 -u {}", target_id)
+    // Parameter 1 is for unit selection and special values "all" and "dmesg".
+    // Parameter 2 is for grepping. Filters rows based on regexp.
+    fn get_connector_request(&self, parameters: Vec<String>) -> String {
+        // TODO: filter out all but alphanumeric characters
+        // TODO: validate?
+
+        let mut result = String::from("sudo journalctl -q -n 400");
+        if let Some(parameter1) = parameters.first() {
+            let suffix = match parameter1.as_str() {
+                "all" => String::from(""),
+                "dmesg" => String::from("--dmesg"),
+                _ => format!("-u {}", parameter1),
+            };
+
+            result = format!("{} {}", result, suffix);
         }
+
+        if let Some(parameter2) = parameters.get(1) {
+            result = format!("{} -g {}", result, parameter2);
+        }
+        result
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

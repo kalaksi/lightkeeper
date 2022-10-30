@@ -54,7 +54,7 @@ impl CommandModule for Prune {
         }
     }
 
-    fn get_connector_request(&self, _target_id: String) -> String {
+    fn get_connector_request(&self, _parameters: Vec<String>) -> String {
         String::from("sudo curl --unix-socket /var/run/docker.sock -X POST http://localhost/images/prune")
     }
 

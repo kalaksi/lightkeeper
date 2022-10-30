@@ -25,7 +25,7 @@ ApplicationWindow {
         // Set up confirmation dialog on signal.
         _commandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, target_id) => {
             confirmationDialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
-            confirmationDialogLoader.item.onAccepted.connect(() => _commandHandler.execute_confirmed(host_id, command_id, target_id))
+            confirmationDialogLoader.item.onAccepted.connect(() => _commandHandler.execute_confirmed(host_id, command_id, [target_id]))
         })
 
         // Starts the thread that receives host state updates in the backend.

@@ -55,7 +55,7 @@ impl CommandHandler {
         }
     }
 
-    pub fn execute(&mut self, host_id: String, command_id: String, target_id: String) -> u64 {
+    pub fn execute(&mut self, host_id: String, command_id: String, parameters: Vec<String>) -> u64 {
         // TODO: better solution for searching?
         let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
@@ -67,7 +67,7 @@ impl CommandHandler {
             connector_id: command.get_connector_spec().unwrap().id,
             source_id: command.get_module_spec().id,
             host: host.clone(),
-            message: command.get_connector_request(target_id),
+            message: command.get_connector_request(parameters),
             response_handler: Self::get_response_handler(host.clone(), command.clone_module(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);

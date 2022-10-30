@@ -54,10 +54,9 @@ impl CommandModule for Shell {
         }
     }
 
-    fn get_connector_request(&self, target_id: String) -> String {
-        if target_id.is_empty() {
-            panic!("target_id is mandatory and should contain a container ID");
-        }
+    fn get_connector_request(&self, parameters: Vec<String>) -> String {
+        // TODO: filter out all but alphanumeric characters
+        let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
 
         // TODO
         String::from("")

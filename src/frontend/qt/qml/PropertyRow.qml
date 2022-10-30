@@ -65,7 +65,7 @@ Item {
 
             commands: root.rowCommands
             onClicked: function(commandId) {
-                root.commandHandler.execute(root.hostId, commandId, root.targetId)
+                root.commandHandler.execute(root.hostId, commandId, [root.targetId])
             }
 
             visible: root.rowCommands.length > 0
