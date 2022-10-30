@@ -15,6 +15,8 @@ Item {
     property string errorText: ""
     property string criticality: ""
     property string _unitId: ""
+    property var _matches: []
+    property string _lastQuery: ""
 
 
     Rectangle {
@@ -41,17 +43,9 @@ Item {
             // TODO: don't hard-code command id.
             onActivated: function(index) {
                 root._unitId = root.selections[index].toLowerCase()
-                // TODO: use invocation id?
+                // TODO: use invocation id (only needed for dialog?)?
                 root.commandHandler.execute(root.hostId, "logs", [root._unitId])
             }
-        }
-
-        CheckBox {
-            anchors.leftMargin: 30
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width * 0.10
-            checked: true
-            text: "Regex search"
         }
 
         Row {
@@ -61,12 +55,12 @@ Item {
                 id: searchField
                 anchors.leftMargin: 30
                 anchors.verticalCenter: parent.verticalCenter
-                width: searchBox.width * 0.45
-                placeholderText: "Search..."
+                width: searchBox.width * 0.55
+                placeholderText: "RegExp search..."
                 color: Material.foreground
                 focus: true
 
-                onAccepted: searchUp(searchField.text, textArea.cursorPosition)
+                onAccepted: search("up", searchField.text)
             }
 
             // TODO: custom component for buttons (and roundbuttons).
@@ -78,7 +72,7 @@ Item {
                 ToolTip.visible: hovered
                 ToolTip.text: "Search up in the text"
 
-                onClicked: searchUp(searchField.text, textArea.cursorPosition)
+                onClicked: search("up", searchField.text)
 
                 Image {
                     width: 0.80 * parent.width
@@ -96,7 +90,7 @@ Item {
                 ToolTip.visible: hovered
                 ToolTip.text: "Search down in the text"
 
-                onClicked: searchDown(searchField.text, textArea.cursorPosition)
+                onClicked: search("down", searchField.text)
 
                 Image {
                     width: 0.80 * parent.width
@@ -109,7 +103,7 @@ Item {
 
             Button {
                 anchors.verticalCenter: parent.verticalCenter
-                onClicked: root.commandHandler.execute(root.hostId, "logs", [root._unitId, searchField.text])
+                onClicked: searchRows(searchField.text)
 
                 ToolTip.visible: hovered
                 ToolTip.text: "Show only matching rows"
@@ -164,56 +158,73 @@ Item {
 
     Shortcut {
         sequence: StandardKey.FindNext
-        onActivated: searchUp(searchField.text, textArea.cursorPosition)
+        onActivated: search("up", searchField.text)
     }
 
     Shortcut {
         sequence: StandardKey.FindPrevious
-        onActivated: searchDown(searchField.text, textArea.cursorPosition)
+        onActivated: search("down", searchField.text)
     }
 
 
-    function searchUp(query, currentPosition) {
+    function search(direction, query) {
+        dehighlight()
         if (query.length === 0) {
             return;
         }
 
-        let match = textArea.text.lastIndexOf(query, currentPosition - 1)
-        if (match !== -1) {
-            textArea.cursorPosition = match
-            highlight(query)
+        if (root._matches.length === 0 || root._lastQuery !== query) {
+            recordMatches(query, textArea.text)
+            root._lastQuery = query
+        }
+
+        let match;
+        if (direction === "up") {
+            let reversed = [...root._matches].reverse()
+            match = reversed.find((item) => textArea.cursorPosition > item[0])
+        }
+        else if (direction === "down") {
+            match = root._matches.find((item) => textArea.cursorPosition < item[0])
+        }
+
+        if (match) {
+            textArea.cursorPosition = match[0]
+            highlight(match[1])
+        }
+
+    }
+
+    function recordMatches(query, text) {
+        root._matches = []
+        let regexp = RegExp(query, "g")
+
+        let match = regexp.exec(text)
+        while (match !== null) {
+            root._matches.push([match.index, match[0]])
+            match = regexp.exec(text)
         }
     }
 
-    function searchDown(query, currentPosition) {
+    function searchRows(query) {
+        dehighlight()
         if (query.length === 0) {
             return;
         }
 
-        let match = textArea.text.indexOf(query, currentPosition + 1)
-        if (match !== -1) {
-            textArea.cursorPosition = match
-            highlight(query)
-        }
+        root.commandHandler.execute(root.hostId, "logs", [root._unitId, query])
     }
-    function highlight(query) {
+
+    function highlight(match) {
         let cursor = textArea.cursorRectangle
         highlighter.x = cursor.x - 2
         // Adds some extra padding depending how much bigger the highlighter height is than the text.
         highlighter.y = cursor.y + ((highlighter.height - textArea.font.pixelSize) / 2.0 - 1)
-        // With monospace font this crude approach will suffice.
-        highlighter.width = (textArea.font.pixelSize - 4) * query.length
+        // With monospace font this crude approach will suffice for now (TODO: better solution)
+        highlighter.width = (textArea.font.pixelSize - 4.8) * match.length + 4
         highlighter.visible = true
     }
 
-/*
-    function highlight(text, search) {
-        text.replace(search, `<font style="background-color: red">{search}</font>`)
+    function dehighlight() {
+        highlighter.visible = false
     }
-
-    function escapeHtml(text) {
-        // TODO
-        return text.replace(/&/g, "&amp;")
-    }
-    */
 }
