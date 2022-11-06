@@ -19,6 +19,8 @@ use crate::module::{
 #[derive(Clone)]
 pub struct Containers {
     use_sudo: bool,
+    // Ignore containers that are managed by docker-compose.
+    ignore_compose_managed: bool,
 }
 
 impl Module for Containers {
@@ -33,6 +35,7 @@ impl Module for Containers {
     fn new(settings: &HashMap<String, String>) -> Self {
         Containers {
             use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(false),
+            ignore_compose_managed: true,
         }
     }
 
@@ -73,11 +76,16 @@ impl MonitoringModule for Containers {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
-        let containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+        let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
         let mut parent_data = DataPoint::empty();
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
         parent_data.criticality = most_critical_container.state.to_criticality();
+
+        if self.ignore_compose_managed {
+            containers.retain(|container| !container.labels.contains_key("com.docker.compose.config-hash"));
+        }
+
         parent_data.multivalue = containers.iter().map(|container| {
             let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
             // Names may still contain a leading slash that can cause issues with docker commands.
@@ -109,6 +117,7 @@ struct ContainerDetails {
     id: String,
     names: Vec<String>,
     state: ContainerState,
+    labels: HashMap<String, String>,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
