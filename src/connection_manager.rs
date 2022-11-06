@@ -91,6 +91,8 @@ impl ConnectionManager {
                 let mut responses = Vec::<Result<ResponseMessage, String>>::new();
                 if connector_is_connected {
                     for message in &request.messages {
+                        log::debug!("sending message: {}", message);
+
                         match connector.send_message(message) {
                             Ok(response) => {
                                 let return_code = response.return_code;
