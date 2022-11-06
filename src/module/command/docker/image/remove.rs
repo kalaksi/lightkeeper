@@ -58,7 +58,7 @@ impl CommandModule for Remove {
         }
     }
 
-    fn get_connector_request(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, parameters: Vec<String>) -> String {
         // TODO: validate target_id
         let target_id = parameters.first().unwrap();
         format!("sudo curl --unix-socket /var/run/docker.sock -X DELETE http://localhost/images/{}", target_id)

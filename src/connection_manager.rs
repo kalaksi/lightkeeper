@@ -9,7 +9,7 @@ use crate::module::connection::{
     ResponseMessage,
 };
 
-pub type ResponseHandlerCallback = Box<dyn FnOnce(Result<ResponseMessage, String>, bool) + Send + 'static>;
+pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, String>>, bool) + Send + 'static>;
 type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
 
 pub struct ConnectionManager {
@@ -82,30 +82,38 @@ impl ConnectionManager {
                                           .and_then(|connections| connections.get_mut(&request.connector_id)).unwrap();
 
                 let mut connector_is_connected = false;
-                let response = match connector.connect(&request.host.ip_address) {
-                    Ok(()) => {
-                        connector_is_connected = true;
 
-                        match connector.send_message(&request.message) {
-                            Ok(value) => Ok(value),
-                            Err(error) => {
-                                log::error!("Error while refreshing monitoring data: {}", error);
+                match connector.connect(&request.host.ip_address) {
+                    Ok(()) => connector_is_connected = true,
+                    Err(error) => log::error!("error while connecting {}: {}", request.host.ip_address, error),
+                }
 
-                                // Double check the connection status
-                                connector_is_connected = connector.is_connected();
-                                Err(error)
+                let mut responses = Vec::<Result<ResponseMessage, String>>::new();
+                if connector_is_connected {
+                    for message in &request.messages {
+                        match connector.send_message(message) {
+                            Ok(response) => {
+                                let return_code = response.return_code;
+                                responses.push(Ok(response));
+
+                                if return_code != 0 {
+                                    // Don't continue if any of the commands fail unexpectedly.
+                                    break;
+                                }
                             }
-                        }
+                            Err(error) => {
+                                log::error!("error while sending data: {}", error);
 
-                    },
-                    Err(error) => {
-                        log::error!("Error while connecting {}: {}", request.host.ip_address, error);
-                        // TODO: proper structure instead of string
-                        Err(format!(""))
+                                // Double check the connection status.
+                                connector_is_connected = connector.is_connected();
+                                responses.push(Err(error));
+                                break;
+                            }
+                        };
                     }
-                };
+                }
 
-                (request.response_handler)(response, connector_is_connected);
+                (request.response_handler)(responses, connector_is_connected);
             }
         })
     }
@@ -116,6 +124,6 @@ pub struct ConnectorRequest {
     pub connector_id: String,
     pub source_id: String,
     pub host: Host,
-    pub message: String,
+    pub messages: Vec<String>,
     pub response_handler: ResponseHandlerCallback,
 }

@@ -67,7 +67,8 @@ impl CommandHandler {
             connector_id: command.get_connector_spec().unwrap().id,
             source_id: command.get_module_spec().id,
             host: host.clone(),
-            message: command.get_connector_request(parameters),
+            // Only one of these should be implemented, but it doesn't matter either if both are.
+            messages: [command.get_connector_messages(parameters.clone()), vec![command.get_connector_message(parameters.clone())]].concat(),
             response_handler: Self::get_response_handler(host.clone(), command.clone_module(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
@@ -108,24 +109,27 @@ impl CommandHandler {
     }
 
     fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        Box::new(move |response, _connector_is_connected| {
+        Box::new(move |responses, _connector_is_connected| {
+            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
+            let response = responses.first().unwrap();
+
             let command_result = match response {
-                Err(error) => {
-                    log::error!("Error sending command: {}", error);
-                    Some(CommandResult::new_critical_error(error))
-                },
                 Ok(response) => {
                     match command.process_response(&response) {
                         Ok(mut result) => {
                             log::debug!("Command result received: {}", result.message);
                             result.invocation_id = invocation_id;
-                            Some(result)
+                            result
                         },
                         Err(error) => {
                             log::error!("Error from command: {}", error);
-                            Some(CommandResult::new_critical_error(error))
+                            CommandResult::new_critical_error(error)
                         }
                     }
+                },
+                Err(error) => {
+                    log::error!("Error sending command: {}", error);
+                    CommandResult::new_critical_error(error.clone())
                 }
             };
 
@@ -134,7 +138,7 @@ impl CommandHandler {
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 data_point: None,
-                command_result: command_result,
+                command_result: Some(command_result),
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
             });

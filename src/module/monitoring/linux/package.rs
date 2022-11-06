@@ -72,7 +72,6 @@ impl MonitoringModule for Package {
             
             let data_point = DataPoint::labeled_value(package_name, new_version);
             result.multivalue.push(data_point);
-
         }
 
         Ok(result)

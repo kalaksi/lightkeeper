@@ -148,7 +148,7 @@ impl HostDataManagerModel {
             result.insert(QString::from("Status"), QString::from(host_data.status.to_string()).to_qvariant());
             result.insert(QString::from("Name"), QString::from(host_data.name.clone()).to_qvariant());
             result.insert(QString::from("FQDN"), QString::from(host_data.domain_name.to_string()).to_qvariant());
-            result.insert(QString::from("IP"), QString::from(host_data.ip_address.to_string()).to_qvariant());
+            result.insert(QString::from("IP address"), QString::from(host_data.ip_address.to_string()).to_qvariant());
         }
     
         result

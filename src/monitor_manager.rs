@@ -55,12 +55,12 @@ impl MonitorManager {
                 // If monitor has a connector defined, send message through it, but
                 // if there's no need for a connector, run the monitor independently.
                 if let Some(connector_spec) = monitor.get_connector_spec() {
-
                     self.request_sender.send(ConnectorRequest {
                         connector_id: connector_spec.id,
                         source_id: monitor_id.clone(),
                         host: host.clone(),
-                        message: monitor.get_connector_message(),
+                        // Only one of these should be implemented, but it doesn't matter either if both are.
+                        messages: [monitor.get_connector_messages(), vec![monitor.get_connector_message()]].concat(),
                         response_handler: Self::get_response_handler(host.clone(), monitor.clone_module(), self.state_update_sender.clone())
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to connector: {}", error);
@@ -68,36 +68,48 @@ impl MonitorManager {
                 }
                 else {
                     let handler = Self::get_response_handler(host.clone(), monitor.clone_module(), self.state_update_sender.clone());
-                    handler(Ok(ResponseMessage::empty()), false);
+                    handler(vec![Ok(ResponseMessage::empty())], false);
                 } 
             }
         }
     }
 
     fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        Box::new(move |result, connector_is_connected| {
+        Box::new(move |results, connector_is_connected| {
             let monitor_id = monitor.get_module_spec().id;
+            let mut responses = Vec::<ResponseMessage>::new();
+            let mut errors = Vec::<String>::new();
 
-            let data_point = match result {
-                Err(error) => {
-                    log::error!("Error refreshing monitor {}: {}", monitor_id, error);
-                    DataPoint::empty_and_critical()
-                },
-                Ok(value) => {
-                    match monitor.process_response(host.clone(), value, connector_is_connected) {
-                        Ok(data_point) => {
-                            log::debug!("Data point received for monitor {}: {} {}", monitor_id, data_point.label, data_point);
-                            data_point
-                        },
-                        Err(error) => {
-                            log::error!("Error from monitor {}: {}", monitor_id, error);
-                            DataPoint::empty_and_critical()
-                        }
+            for result in results {
+                match result {
+                    Ok(response) => responses.push(response),
+                    Err(error) => errors.push(error),
+                }
+            }
+
+            let mut result = DataPoint::empty_and_critical();
+            if !responses.is_empty() {
+                let process_result = match monitor.uses_multiple_commands() {
+                    true => monitor.process_responses(host.clone(), responses, connector_is_connected),
+                    false => monitor.process_response(host.clone(), responses.remove(0), connector_is_connected),
+                };
+
+                match process_result {
+                    Ok(data_point) => {
+                        log::debug!("Data point received for monitor {}: {} {}", monitor_id, data_point.label, data_point);
+                        result = data_point;
+                    },
+                    Err(error) => {
+                        log::error!("Error from monitor {}: {}", monitor_id, error);
                     }
                 }
-            };
+            }
 
-            Self::send_state_update(&host, &monitor, state_update_sender, data_point);
+            for error in errors {
+                log::error!("Error refreshing monitor {}: {}", monitor_id, error);
+            }
+
+            Self::send_state_update(&host, &monitor, state_update_sender, result);
         })
     }
 

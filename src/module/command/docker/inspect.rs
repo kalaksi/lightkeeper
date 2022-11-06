@@ -53,7 +53,7 @@ impl CommandModule for Inspect {
         }
     }
 
-    fn get_connector_request(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, parameters: Vec<String>) -> String {
         let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
 
         // TODO: filter out all but alphanumeric characters

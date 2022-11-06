@@ -139,6 +139,7 @@ pub struct StateUpdateMessage {
     pub host_name: String,
     pub display_options: frontend::DisplayOptions,
     pub module_spec: ModuleSpecification,
+    // Only used with MonitoringModule.
     pub data_point: Option<DataPoint>,
     pub command_result: Option<CommandResult>,
 }

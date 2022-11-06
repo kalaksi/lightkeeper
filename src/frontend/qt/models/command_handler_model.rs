@@ -19,6 +19,7 @@ pub struct CommandHandlerModel {
     details_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
     // TODO: dialog for logs (refactor so doesn't need dedicated)
     logs_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
+    text_editor_opened: qt_signal!(headerText: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
 
     command_handler: CommandHandler,
@@ -111,7 +112,12 @@ impl CommandHandlerModel {
                     // TODO: allow only alphanumeric and dashes (no spaces and no leading dash)
                     format!("sudo docker exec -it {} /bin/sh", target_id.to_string())]
                 )
-            }
+            },
+            CommandAction::TextEditor => {
+                let target_id = parameters.first().unwrap().clone();
+                self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
+                self.text_editor_opened(QString::from(format!("Edit {}", target_id)), invocation_id)
+            },
         }
 
         return invocation_id

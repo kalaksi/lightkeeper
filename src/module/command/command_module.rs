@@ -34,8 +34,12 @@ pub trait CommandModule : Module {
     }
 
     // target_id is just an optional argument for the command.
-    // TODO: rename?
-    fn get_connector_request(&self, _parameters: Vec<String>) -> String;
+    fn get_connector_message(&self, _parameters: Vec<String>) -> String;
+
+    fn get_connector_messages(&self, _parameters: Vec<String>) -> Vec<String> {
+        Vec::new()
+    }
+
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String>;
 }
 
@@ -110,6 +114,7 @@ pub enum CommandAction {
     TextView,
     LogView,
     Terminal,
+    TextEditor,
 }
 
 impl Default for CommandAction {

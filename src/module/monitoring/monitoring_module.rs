@@ -40,7 +40,22 @@ pub trait MonitoringModule : Module {
         String::from("")
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage, connector_is_connected: bool) -> Result<DataPoint, String>;
+    fn get_connector_messages(&self) -> Vec<String> {
+        Vec::new()
+    }
+
+    fn process_response(&self, _host: Host, _response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+        Err(String::from("Not implemented"))
+    }
+
+    fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>, _connector_is_connected: bool) -> Result<DataPoint, String> {
+        Err(String::from("Not implemented"))
+    }
+
+    // TODO: Maybe change DisplayOptions to ModuleOptions and include there?
+    fn uses_multiple_commands(&self) -> bool {
+        false
+    }
 
 }
 

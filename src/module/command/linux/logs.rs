@@ -56,7 +56,7 @@ impl CommandModule for Logs {
 
     // Parameter 1 is for unit selection and special values "all" and "dmesg".
     // Parameter 2 is for grepping. Filters rows based on regexp.
-    fn get_connector_request(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, parameters: Vec<String>) -> String {
         // TODO: filter out all but alphanumeric characters
         // TODO: validate?
 

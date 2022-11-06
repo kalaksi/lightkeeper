@@ -53,7 +53,7 @@ impl CommandModule for Reboot {
         }
     }
 
-    fn get_connector_request(&self, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _parameters: Vec<String>) -> String {
         String::from("sudo reboot")
     }
 
