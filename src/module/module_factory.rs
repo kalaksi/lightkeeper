@@ -65,6 +65,7 @@ impl ModuleFactory {
         self.monitor_constructors.insert(monitoring::linux::Uptime::get_metadata().module_spec, monitoring::linux::Uptime::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::network::Ping::get_metadata().module_spec, monitoring::network::Ping::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::network::Ssh::get_metadata().module_spec, monitoring::network::Ssh::new_monitoring_module);
+        self.monitor_constructors.insert(monitoring::docker::Compose::get_metadata().module_spec, monitoring::docker::Compose::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::docker::Containers::get_metadata().module_spec, monitoring::docker::Containers::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::docker::Images::get_metadata().module_spec, monitoring::docker::Images::new_monitoring_module);
 

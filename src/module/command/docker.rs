@@ -7,4 +7,7 @@ pub use restart::Restart;
 pub mod shell;
 pub use shell::Shell;
 
+pub mod compose;
+pub use compose::Compose;
+
 pub mod image;

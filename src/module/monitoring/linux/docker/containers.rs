@@ -100,7 +100,7 @@ impl MonitoringModule for Containers {
 }
 
 
-fn cleanup_name(container_name: &String) -> String {
+pub fn cleanup_name(container_name: &String) -> String {
     let mut result = container_name.clone();
 
     if container_name.chars().next().unwrap() == '/' {
@@ -113,16 +113,16 @@ fn cleanup_name(container_name: &String) -> String {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct ContainerDetails {
-    id: String,
-    names: Vec<String>,
-    state: ContainerState,
-    labels: HashMap<String, String>,
+pub struct ContainerDetails {
+    pub id: String,
+    pub names: Vec<String>,
+    pub state: ContainerState,
+    pub labels: HashMap<String, String>,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]
-enum ContainerState {
+pub enum ContainerState {
     Created,
     Running,
     Paused,
@@ -133,7 +133,7 @@ enum ContainerState {
 }
 
 impl ContainerState {
-    fn to_criticality(&self) -> Criticality {
+    pub fn to_criticality(&self) -> Criticality {
         match self {
             ContainerState::Created => Criticality::Normal,
             ContainerState::Running => Criticality::Normal,

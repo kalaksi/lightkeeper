@@ -116,6 +116,17 @@ impl DataPoint {
         }
     }
 
+    pub fn labeled_value_with_level(label: String, value: String, criticality: Criticality) -> Self {
+        DataPoint {
+            value: value,
+            label: label,
+            source_id: String::from(""),
+            multivalue: Vec::new(),
+            criticality: criticality,
+            time: Utc::now(),
+        }
+    }
+
     pub fn value_with_level(value: String, criticality: Criticality) -> Self {
         DataPoint {
             value: value,
