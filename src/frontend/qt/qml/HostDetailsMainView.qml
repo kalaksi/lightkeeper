@@ -16,9 +16,9 @@ Item {
     property string hostId: ""
     property int columnMinimumWidth: 400
     property int columnMaximumWidth: 600
-    property int columnMinimumHeight: 400
-    property int columnMaximumHeight: 400
-    property int rowSpacing: 5
+    property int columnMinimumHeight: 450
+    property int columnMaximumHeight: 450
+    property int columnSpacing: 5
     property var _hostData: groupByCategory(root.hostDataManager.get_monitor_datas(hostId), root.commandHandler.get_commands(root.hostId))
 
     ScrollView {
@@ -39,7 +39,9 @@ Item {
                     property bool _hasOnlyMultivalues: modelData.monitorDatas.filter(item => !item.display_options.use_multivalue).length === 0
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
-                    Layout.preferredWidth: root.columnMinimumWidth + (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns)
+                    Layout.preferredWidth: root.columnMinimumWidth +
+                                           (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns) - 
+                                           root.columnSpacing
                     Layout.minimumHeight: root.columnMinimumHeight
                     Layout.maximumHeight: root.columnMaximumHeight
                     Layout.alignment: Qt.AlignTop
@@ -70,7 +72,7 @@ Item {
                         Column {
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            spacing: root.rowSpacing
+                            spacing: root.columnSpacing
 
                             // Category-level command buttons (buttons on top of the category area).
                             CommandButtonRow {
@@ -103,7 +105,7 @@ Item {
                                     property var lastDataPoint: modelData.values.slice(-1)[0]
                                     anchors.left: parent.left
                                     anchors.right: parent.right
-                                    spacing: root.rowSpacing
+                                    spacing: root.columnSpacing
 
                                     // Header text for multivalues.
                                     Label {
