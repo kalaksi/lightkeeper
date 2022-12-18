@@ -15,13 +15,14 @@ Item {
     required property var hostDataManager
     property string hostId: ""
     property int columnMinimumWidth: 400
-    property int columnMaximumWidth: 400
+    property int columnMaximumWidth: 600
     property int columnMinimumHeight: 400
     property int columnMaximumHeight: 400
     property int rowSpacing: 5
     property var _hostData: groupByCategory(root.hostDataManager.get_monitor_datas(hostId), root.commandHandler.get_commands(root.hostId))
 
     ScrollView {
+        id: rootScrollView
         anchors.fill: parent
         contentWidth: availableWidth
 
@@ -38,6 +39,7 @@ Item {
                     property bool _hasOnlyMultivalues: modelData.monitorDatas.filter(item => !item.display_options.use_multivalue).length === 0
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
+                    Layout.preferredWidth: root.columnMinimumWidth + (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns)
                     Layout.minimumHeight: root.columnMinimumHeight
                     Layout.maximumHeight: root.columnMaximumHeight
                     Layout.alignment: Qt.AlignTop
@@ -92,6 +94,7 @@ Item {
                                 }
                             }
 
+                            // Go through monitoring datas and create rows.
                             Repeater {
                                 model: modelData.monitorDatas.filter((item) => item.criticality !== "Ignore")
 
