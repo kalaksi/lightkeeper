@@ -172,7 +172,7 @@ ApplicationWindow {
             id: animateMinimizeDetails
             target: body
             property: "splitSize"
-            to: 0.7
+            to: 0.8
             duration: 175
             easing.type: Easing.OutQuad
         }
@@ -181,7 +181,7 @@ ApplicationWindow {
             id: animateShowDetails
             target: body
             property: "splitSize"
-            to: 0.7
+            to: 0.8
             duration: 175
             easing.type: Easing.OutQuad
         }
