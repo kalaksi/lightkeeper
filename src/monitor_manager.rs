@@ -5,7 +5,7 @@ use crate::Host;
 use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::{ Monitor, DataPoint };
 use crate::host_manager::StateUpdateMessage;
-use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback };
+use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestMessage };
 use crate::utils::enums;
 
 
@@ -52,6 +52,8 @@ impl MonitorManager {
             log::info!("Refreshing monitoring data for host {}", host.name);
 
             for (monitor_id, monitor) in monitor_collection.iter() {
+                let messages = [monitor.get_connector_messages(), vec![monitor.get_connector_message()]].concat();
+
                 // If monitor has a connector defined, send message through it, but
                 // if there's no need for a connector, run the monitor independently.
                 if let Some(connector_spec) = monitor.get_connector_spec() {
@@ -60,7 +62,7 @@ impl MonitorManager {
                         source_id: monitor_id.clone(),
                         host: host.clone(),
                         // Only one of these should be implemented, but it doesn't matter either if both are.
-                        messages: [monitor.get_connector_messages(), vec![monitor.get_connector_message()]].concat(),
+                        messages: messages.into_iter().map(|message| RequestMessage::command(message)).collect(),
                         response_handler: Self::get_response_handler(host.clone(), monitor.clone_module(), self.state_update_sender.clone())
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to connector: {}", error);

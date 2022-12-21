@@ -88,30 +88,46 @@ impl ConnectionManager {
                     Err(error) => log::error!("error while connecting {}: {}", request.host.ip_address, error),
                 }
 
+                if !connector_is_connected {
+                    continue;
+                }
+
                 let mut responses = Vec::<Result<ResponseMessage, String>>::new();
-                if connector_is_connected {
-                    for message in &request.messages {
-                        log::debug!("sending message: {}", message);
 
-                        match connector.send_message(message) {
-                            Ok(response) => {
-                                let return_code = response.return_code;
-                                responses.push(Ok(response));
+                for request_message in &request.messages {
+                    log::debug!("processing request: {:?}", request_message);
 
-                                if return_code != 0 {
-                                    // Don't continue if any of the commands fail unexpectedly.
+                    let response_result;
+                    match request_message.request_type {
+                        RequestType::Unknown => continue,
+                        RequestType::Command => {
+                            response_result = connector.send_message(&request_message.message);
+
+                            if response_result.is_ok() {
+                                // Don't continue if any of the commands fail unexpectedly.
+                                if response_result.clone().unwrap().return_code != 0 {
                                     break;
                                 }
                             }
-                            Err(error) => {
-                                log::error!("error while sending data: {}", error);
+                        },
+                        RequestType::Download => {
+                            response_result = Err(String::from("TODO"))
+                            // response_result = connector.download_file();
+                            // TODO
+                        },
+                        RequestType::Upload => {
+                            response_result = Err(String::from("TODO"))
+                            // TODO
+                        },
+                    }
 
-                                // Double check the connection status.
-                                connector_is_connected = connector.is_connected();
-                                responses.push(Err(error));
-                                break;
-                            }
-                        };
+                    responses.push(response_result);
+
+                    if let Err(error) = responses.last().unwrap() {
+                        // Make sure the status is up-to-date.
+                        connector.is_connected();
+                        log::error!("error while processing request: {}", error);
+                        break;
                     }
                 }
 
@@ -126,6 +142,50 @@ pub struct ConnectorRequest {
     pub connector_id: String,
     pub source_id: String,
     pub host: Host,
-    pub messages: Vec<String>,
+    pub messages: Vec<RequestMessage>,
     pub response_handler: ResponseHandlerCallback,
+}
+
+#[derive(Debug, Clone)]
+pub struct RequestMessage {
+    pub message: String,
+    pub request_type: RequestType,
+}
+
+impl RequestMessage {
+    pub fn command(command: String) -> RequestMessage {
+        RequestMessage {
+            message: command,
+            request_type: RequestType::Command,
+        }
+    }
+
+    pub fn file_download(path: String) -> RequestMessage {
+        RequestMessage {
+            message: path,
+            request_type: RequestType::Download,
+        }
+    }
+
+    pub fn file_upload(path: String) -> RequestMessage {
+        RequestMessage {
+            message: path,
+            request_type: RequestType::Download,
+        }
+    }
+
+    pub fn empty() -> RequestMessage{
+        RequestMessage {
+            message: String::new(),
+            request_type: RequestType::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum RequestType {
+    Unknown,
+    Command,
+    Download,
+    Upload,
 }

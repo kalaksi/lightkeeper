@@ -1,5 +1,5 @@
 use serde_derive::{Serialize, Deserialize};
-use crate::module::command::CommandAction;
+use crate::module::command::UIAction;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct DisplayOptions {
@@ -27,8 +27,7 @@ pub struct DisplayOptions {
     pub parent_id: String,
 
     // Action to be executed by the frontend after sending the command.
-    // TODO: check if really needed
-    pub action: CommandAction,
+    pub action: UIAction,
 }
 
 impl DisplayOptions {

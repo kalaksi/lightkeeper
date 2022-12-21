@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use crate::connection_manager::RequestMessage;
 use crate::frontend;
-use crate::module::command::CommandAction;
+use crate::module::command::UIAction;
 use crate::module::connection::ResponseMessage;
 use crate::module::{
     Module,
@@ -49,14 +50,14 @@ impl CommandModule for Logs {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("view-document"),
             display_text: String::from("Show logs"),
-            action: CommandAction::LogView,
+            action: UIAction::LogView,
             ..Default::default()
         }
     }
 
     // Parameter 1 is for unit selection and special values "all" and "dmesg".
     // Parameter 2 is for grepping. Filters rows based on regexp.
-    fn get_connector_message(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, parameters: Vec<String>) -> RequestMessage {
         // TODO: filter out all but alphanumeric characters
         // TODO: validate?
 
@@ -78,7 +79,7 @@ impl CommandModule for Logs {
                 result = format!("{} -g {}", result, parameter2);
             }
         }
-        result
+        RequestMessage::command(result)
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

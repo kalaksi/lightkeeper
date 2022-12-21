@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+use crate::connection_manager::RequestMessage;
 use crate::frontend;
 use crate::module::connection::ResponseMessage;
 use crate::module::{
     Module,
     command::CommandModule,
     command::Command,
-    command::CommandAction,
+    command::UIAction,
     command::CommandResult,
     Metadata,
     ModuleSpecification,
@@ -49,17 +50,17 @@ impl CommandModule for Shell {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("terminal"),
             display_text: String::from("Open shell inside"),
-            action: CommandAction::Terminal,
+            action: UIAction::Terminal,
             ..Default::default()
         }
     }
 
-    fn get_connector_message(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, parameters: Vec<String>) -> RequestMessage {
         // TODO: filter out all but alphanumeric characters
         let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
 
         // TODO
-        String::from("")
+        RequestMessage::empty()
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

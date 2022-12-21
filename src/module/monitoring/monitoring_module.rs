@@ -36,6 +36,7 @@ pub trait MonitoringModule : Module {
         }
     }
 
+    // TODO: use RequestMessage?
     fn get_connector_message(&self) -> String {
         String::from("")
     }
@@ -78,6 +79,7 @@ impl MonitoringData {
     }
 }
 
+// TODO: split to separate file.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DataPoint {
     // With multivalue, value can be a composite result/value of all of the values.

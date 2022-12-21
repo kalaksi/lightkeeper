@@ -9,6 +9,7 @@ use crate::{
     module::connection::ResponseMessage,
     utils::enums::Criticality,
     frontend,
+    connection_manager::{RequestType, RequestMessage},
 };
 
 pub type Command = Box<dyn CommandModule + Send + Sync>;
@@ -33,10 +34,11 @@ pub trait CommandModule : Module {
         }
     }
 
-    // target_id is just an optional argument for the command.
-    fn get_connector_message(&self, _parameters: Vec<String>) -> String;
+    fn get_connector_message(&self, _parameters: Vec<String>) -> RequestMessage {
+        RequestMessage::empty()
+    }
 
-    fn get_connector_messages(&self, _parameters: Vec<String>) -> Vec<String> {
+    fn get_connector_messages(&self, _parameters: Vec<String>) -> Vec<RequestMessage> {
         Vec::new()
     }
 
@@ -108,7 +110,7 @@ impl Default for CommandResult {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub enum CommandAction {
+pub enum UIAction {
     None,
     Dialog,
     TextView,
@@ -117,8 +119,8 @@ pub enum CommandAction {
     TextEditor,
 }
 
-impl Default for CommandAction {
+impl Default for UIAction {
     fn default() -> Self {
-        CommandAction::None
+        UIAction::None
     }
 }

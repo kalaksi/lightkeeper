@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
-use crate::module::command::CommandAction;
+use crate::module::command::UIAction;
 
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
@@ -86,37 +86,39 @@ impl CommandHandlerModel {
         // The UI action to be triggered after successful execution.
         let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
         match display_options.action {
-            CommandAction::None => {
+            UIAction::None => {
                 self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
             },
-            CommandAction::Dialog => {
+            UIAction::Dialog => {
                 self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.details_dialog_opened(invocation_id)
             },
-            CommandAction::TextView => {
+            UIAction::TextView => {
                 let target_id = parameters.first().unwrap().clone();
                 self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.details_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
             },
-            CommandAction::LogView => {
+            UIAction::LogView => {
                 let target_id = parameters.first().unwrap().clone();
                 self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.logs_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
             },
-            CommandAction::Terminal => {
+            UIAction::Terminal => {
                 let target_id = parameters.first().unwrap();
                 self.command_handler.open_terminal(vec![
                     String::from("ssh"),
                     String::from("-t"),
                     host_id.to_string(),
                     // TODO: allow only alphanumeric and dashes (no spaces and no leading dash)
-                    format!("sudo docker exec -it {} /bin/sh", target_id.to_string())]
-                )
+                    format!("sudo docker exec -it {} /bin/sh", target_id.to_string())
+                ])
             },
-            CommandAction::TextEditor => {
-                let target_id = parameters.first().unwrap().clone();
-                self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
-                self.text_editor_opened(QString::from(format!("Edit {}", target_id)), invocation_id)
+            UIAction::TextEditor => {
+                let resource_path = parameters.first().unwrap();
+                // self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
+                // TODO: integrated text editor
+                // self.text_editor_opened(QString::from(format!("Edit {}", target_id)), invocation_id)
+                // self.command_handler.open_text_editor(host_id.to_string(), resource_path.clone());
             },
         }
 

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::connection_manager::RequestMessage;
 use crate::frontend;
 use crate::module::connection::ResponseMessage;
 use crate::module::{
@@ -6,7 +7,7 @@ use crate::module::{
     command::CommandModule,
     command::Command,
     command::CommandResult,
-    command::CommandAction,
+    command::UIAction,
     Metadata,
     ModuleSpecification,
 };
@@ -48,16 +49,16 @@ impl CommandModule for Inspect {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("search"),
             display_text: String::from("Inspect"),
-            action: CommandAction::TextView,
+            action: UIAction::TextView,
             ..Default::default()
         }
     }
 
-    fn get_connector_message(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, parameters: Vec<String>) -> RequestMessage {
         let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
 
         // TODO: filter out all but alphanumeric characters
-        format!("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/{}/json?all=true", target_id)
+        RequestMessage::command(format!("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/{}/json?all=true", target_id))
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

@@ -1,5 +1,5 @@
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResponseMessage {
     pub message: String,
     pub return_code: i32,

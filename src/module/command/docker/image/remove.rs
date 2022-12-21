@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde_derive::Deserialize;
 use serde_json;
 
+use crate::connection_manager::RequestMessage;
 use crate::frontend;
 use crate::utils::enums::Criticality;
 use crate::module::{
@@ -58,10 +59,10 @@ impl CommandModule for Remove {
         }
     }
 
-    fn get_connector_message(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, parameters: Vec<String>) -> RequestMessage {
         // TODO: validate target_id
         let target_id = parameters.first().unwrap();
-        format!("sudo curl --unix-socket /var/run/docker.sock -X DELETE http://localhost/images/{}", target_id)
+        RequestMessage::command(format!("sudo curl --unix-socket /var/run/docker.sock -X DELETE http://localhost/images/{}", target_id))
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
