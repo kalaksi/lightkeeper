@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use serde_derive::Deserialize;
 use serde_json;
-use crate::connection_manager::RequestMessage;
 use crate::frontend;
 use crate::module::connection::ResponseMessage;
 use crate::module::{
@@ -55,8 +54,8 @@ impl CommandModule for Prune {
         }
     }
 
-    fn get_connector_message(&self, _parameters: Vec<String>) -> RequestMessage {
-        RequestMessage::command(String::from("sudo curl --unix-socket /var/run/docker.sock -X POST http://localhost/images/prune"))
+    fn get_connector_message(&self, _parameters: Vec<String>) -> String {
+        String::from("sudo curl --unix-socket /var/run/docker.sock -X POST http://localhost/images/prune")
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

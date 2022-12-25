@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use crate::connection_manager::RequestMessage;
 use crate::frontend;
 use crate::utils::enums::Criticality;
 use crate::module::connection::ResponseMessage;
@@ -54,8 +53,8 @@ impl CommandModule for Shutdown {
         }
     }
 
-    fn get_connector_message(&self, _parameters: Vec<String>) -> RequestMessage {
-        RequestMessage::command(String::from("sudo poweroff"))
+    fn get_connector_message(&self, _parameters: Vec<String>) -> String {
+        String::from("sudo poweroff")
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use crate::connection_manager::RequestMessage;
 use crate::frontend;
 use crate::module::connection::ResponseMessage;
 use crate::module::{
@@ -55,12 +54,12 @@ impl CommandModule for Shell {
         }
     }
 
-    fn get_connector_message(&self, parameters: Vec<String>) -> RequestMessage {
+    fn get_connector_message(&self, parameters: Vec<String>) -> String {
         // TODO: filter out all but alphanumeric characters
         let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
 
         // TODO
-        RequestMessage::empty()
+        String::new()
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {

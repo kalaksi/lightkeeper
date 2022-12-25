@@ -9,7 +9,6 @@ use crate::{
     module::connection::ResponseMessage,
     utils::enums::Criticality,
     frontend,
-    connection_manager::{RequestType, RequestMessage},
 };
 
 pub type Command = Box<dyn CommandModule + Send + Sync>;
@@ -34,15 +33,17 @@ pub trait CommandModule : Module {
         }
     }
 
-    fn get_connector_message(&self, _parameters: Vec<String>) -> RequestMessage {
-        RequestMessage::empty()
+    fn get_connector_message(&self, _parameters: Vec<String>) -> String {
+        String::new()
     }
 
-    fn get_connector_messages(&self, _parameters: Vec<String>) -> Vec<RequestMessage> {
+    fn get_connector_messages(&self, _parameters: Vec<String>) -> Vec<String> {
         Vec::new()
     }
 
-    fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String>;
+    fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
+        Ok(CommandResult::new(response.message.clone()))
+    }
 }
 
 

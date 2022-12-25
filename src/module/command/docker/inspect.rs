@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use crate::connection_manager::RequestMessage;
 use crate::frontend;
 use crate::module::connection::ResponseMessage;
 use crate::module::{
@@ -54,11 +53,11 @@ impl CommandModule for Inspect {
         }
     }
 
-    fn get_connector_message(&self, parameters: Vec<String>) -> RequestMessage {
+    fn get_connector_message(&self, parameters: Vec<String>) -> String {
         let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
 
         // TODO: filter out all but alphanumeric characters
-        RequestMessage::command(format!("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/{}/json?all=true", target_id))
+        format!("sudo curl --unix-socket /var/run/docker.sock http://localhost/containers/{}/json?all=true", target_id)
     }
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
