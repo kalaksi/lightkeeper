@@ -18,3 +18,4 @@ tabled = { version = "0.6.1", features = ["color"] }
 owo-colors = "3.4.0"
 qmetaobject = "0.2.7"
 cstr = "0.2.10"
+sha256 = "1.1.1"

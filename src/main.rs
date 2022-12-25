@@ -7,6 +7,7 @@ mod utils;
 mod frontend;
 mod connection_manager;
 mod command_handler;
+mod file_handler;
 
 use std::collections::HashMap;
 
