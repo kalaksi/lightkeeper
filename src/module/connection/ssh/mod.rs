@@ -1,6 +1,15 @@
-use std::{ net::TcpStream, net::IpAddr, io::Read, collections::HashMap };
-use ssh2::Session;
+use std::{
+    net::TcpStream,
+    net::IpAddr,
+    io::Read,
+    collections::HashMap,
+    path::Path,
+    fs,
+    io,
+    io::Write,
+};
 
+use ssh2::Session;
 use crate::utils::strip_newline;
 use crate::module::{
     Module,
@@ -17,6 +26,29 @@ pub struct Ssh2 {
     port: u16,
     username: String,
     // password: String,
+}
+
+impl Ssh2 {
+    fn send_eof_and_close(&self, mut channel: ssh2::Channel) {
+        if let Err(error) = channel.send_eof() {
+            log::error!("Sending EOF failed: {}", error);
+        }
+        else {
+            if let Err(error) = channel.wait_eof() {
+                log::error!("Waiting EOF failed: {}", error);
+            }
+        }
+
+
+        if let Err(error) = channel.close() {
+            log::error!("Error while closing channel: {}", error);
+        }
+        else {
+            if let Err(error) = channel.wait_close() {
+                log::error!("Error while closing channel: {}", error);
+            }
+        }
+    }
 }
 
 impl Module for Ssh2 {
@@ -106,6 +138,51 @@ impl ConnectionModule for Ssh2 {
             message: strip_newline(&output),
             return_code: exit_status,
         })
+    }
+
+    fn download_file(&self, source: &String) -> io::Result<Vec<u8>> {
+        let result: Result<Vec<u8>, io::Error>;
+
+        match self.session.scp_recv(Path::new(&source)) {
+            Ok((mut remote_file, _)) => {
+                let mut contents = Vec::new();
+                if let Err(error) = remote_file.read_to_end(&mut contents) {
+                    result = Err(error);
+                }
+                else {
+                    result = Ok(contents);
+                }
+
+                self.send_eof_and_close(remote_file);
+            },
+            Err(error) => {
+                result = Err(io::Error::new(io::ErrorKind::Other, error.message()));
+            }
+        };
+
+        result
+    }
+
+    fn upload_file(&self, destination: &String, contents: Vec<u8>) -> io::Result<()> {
+        let result: io::Result<()>;
+
+        // TODO: keep original permissions.
+        match self.session.scp_send(Path::new(destination), 0o640, contents.len().try_into().unwrap(), None) {
+            Ok(mut remote_file) => {
+                if let Err(error) = remote_file.write(&contents) {
+                    result = Err(error)
+                }
+                else {
+                    result = Ok(());
+                }
+                self.send_eof_and_close(remote_file);
+            },
+            Err(error) => {
+                result = Err(io::Error::new(io::ErrorKind::Other, error.message()));
+            }
+        };
+
+        result
     }
 
     fn is_connected(&self) -> bool {
