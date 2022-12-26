@@ -77,6 +77,7 @@ impl ModuleFactory {
         self.command_constructors.insert(command::docker::Shell::get_metadata().module_spec, command::docker::Shell::new_command_module);
         self.command_constructors.insert(command::docker::image::Remove::get_metadata().module_spec, command::docker::image::Remove::new_command_module);
         self.command_constructors.insert(command::docker::image::Prune::get_metadata().module_spec, command::docker::image::Prune::new_command_module);
+        self.command_constructors.insert(command::docker::compose::Edit::get_metadata().module_spec, command::docker::compose::Edit::new_command_module);
     }
 
 
