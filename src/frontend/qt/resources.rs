@@ -34,6 +34,7 @@ pub fn init_resources() {
             "images/breeze/dark/system-shutdown.svg" as "images/button/shutdown",
             "images/breeze/dark/arrow-up.svg" as "images/button/search-up",
             "images/breeze/dark/arrow-down.svg" as "images/button/search-down",
+            "images/breeze/dark/story-editor.svg" as "images/button/story-editor",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/dark/arrow-up.svg" as "images/button/maximize",
@@ -78,6 +79,7 @@ pub fn init_resources() {
             "images/breeze/light/system-shutdown.svg" as "images/button/shutdown",
             "images/breeze/light/arrow-up.svg" as "images/button/search-up",
             "images/breeze/light/arrow-down.svg" as "images/button/search-down",
+            "images/breeze/light/story-editor.svg" as "images/button/story-editor",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/light/arrow-up.svg" as "images/button/maximize",

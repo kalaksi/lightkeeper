@@ -5,7 +5,7 @@ use crate::Host;
 use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::{ Monitor, DataPoint };
 use crate::host_manager::StateUpdateMessage;
-use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestMessage };
+use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestType };
 use crate::utils::enums;
 
 
@@ -61,8 +61,8 @@ impl MonitorManager {
                         connector_id: connector_spec.id,
                         source_id: monitor_id.clone(),
                         host: host.clone(),
-                        // Only one of these should be implemented, but it doesn't matter either if both are.
-                        messages: messages.into_iter().map(|message| RequestMessage::command(message)).collect(),
+                        messages: messages,
+                        request_type: RequestType::Command,
                         response_handler: Self::get_response_handler(host.clone(), monitor.clone_module(), self.state_update_sender.clone())
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to connector: {}", error);

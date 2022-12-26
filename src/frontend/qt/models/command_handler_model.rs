@@ -80,45 +80,43 @@ impl CommandHandlerModel {
     }
 
     fn execute_confirmed(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64 {
-        let invocation_id = 0;
+        let mut invocation_id = 0;
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_qbytearray().to_string()).collect();
 
-        // The UI action to be triggered after successful execution.
         let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
         match display_options.action {
             UIAction::None => {
-                self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
+                invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
             },
             UIAction::Dialog => {
-                self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
+                invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.details_dialog_opened(invocation_id)
             },
             UIAction::TextView => {
                 let target_id = parameters.first().unwrap().clone();
-                self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
+                invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.details_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
             },
             UIAction::LogView => {
                 let target_id = parameters.first().unwrap().clone();
-                self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
+                invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.logs_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
             },
             UIAction::Terminal => {
                 let target_id = parameters.first().unwrap();
+                // TODO: don't hardcode the command here (add to command module).
                 self.command_handler.open_terminal(vec![
                     String::from("ssh"),
                     String::from("-t"),
                     host_id.to_string(),
-                    // TODO: allow only alphanumeric and dashes (no spaces and no leading dash)
+                    // TODO: allow only alphanumeric and dashes (no spaces and no leading dash).
                     format!("sudo docker exec -it {} /bin/sh", target_id.to_string())
                 ])
             },
             UIAction::TextEditor => {
-                let resource_path = parameters.first().unwrap();
-                // self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 // TODO: integrated text editor
-                // self.text_editor_opened(QString::from(format!("Edit {}", target_id)), invocation_id)
-                // self.command_handler.open_text_editor(host_id.to_string(), resource_path.clone());
+                let remote_file_path = parameters.first().unwrap().clone();
+                self.command_handler.open_text_editor(host_id.to_string(), command_id.to_string(), remote_file_path);
             },
         }
 

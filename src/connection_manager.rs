@@ -1,8 +1,12 @@
-use std::collections::HashMap;
-use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{
+    collections::HashMap,
+    sync::mpsc,
+    sync::Arc,
+    sync::Mutex,
+    thread,
+};
 use crate::Host;
+use crate::file_handler;
 use crate::module::connection::{
     ConnectionModule,
     Connector,
@@ -95,13 +99,12 @@ impl ConnectionManager {
                 let mut responses = Vec::<Result<ResponseMessage, String>>::new();
 
                 for request_message in &request.messages {
-                    log::debug!("processing request: {:?}", request_message);
 
                     let response_result;
-                    match request_message.request_type {
-                        RequestType::Unknown => continue,
+                    match &request.request_type {
                         RequestType::Command => {
-                            response_result = connector.send_message(&request_message.message);
+                            log::debug!("processing command: {}", request_message);
+                            response_result = connector.send_message(&request_message);
 
                             if response_result.is_ok() {
                                 // Don't continue if any of the commands fail unexpectedly.
@@ -111,12 +114,38 @@ impl ConnectionManager {
                             }
                         },
                         RequestType::Download => {
-                            response_result = Err(String::from("TODO"))
-                            // response_result = connector.download_file();
-                            // TODO
+                            log::debug!("downloading file {}:{}", request.host.name, request_message);
+                            response_result = match connector.download_file(&request_message) {
+                                Ok(contents) => {
+                                    match file_handler::create_file(&request.host, &request_message, contents) {
+                                        Ok(file_path) => Ok(ResponseMessage::new(file_path)),
+                                        Err(error) => Err(error.to_string()),
+                                    }
+                                },
+                                Err(error) => Err(error.to_string()),
+                            }
                         },
                         RequestType::Upload => {
-                            response_result = Err(String::from("TODO"))
+                            log::debug!("uploading file: {}", request_message);
+                            response_result = match file_handler::read_file(&request_message) {
+                                Ok((metadata, contents)) => {
+                                    let mut result = connector.upload_file(&metadata.remote_path, contents);
+                                    if result.is_ok() {
+                                        if metadata.temporary {
+                                            log::debug!("removing temporary local file");
+                                            result = file_handler::remove_file(&request_message);
+                                        }
+                                    }
+
+                                    if result.is_ok() {
+                                        Ok(ResponseMessage::empty())
+                                    }
+                                    else {
+                                        Err(result.unwrap_err().to_string())
+                                    }
+                                },
+                                Err(error) => Err(error.to_string()),
+                            };
                             // TODO
                         },
                     }
@@ -142,50 +171,15 @@ pub struct ConnectorRequest {
     pub connector_id: String,
     pub source_id: String,
     pub host: Host,
-    pub messages: Vec<RequestMessage>,
+    pub messages: Vec<String>,
+    pub request_type: RequestType,
     pub response_handler: ResponseHandlerCallback,
 }
 
 #[derive(Debug, Clone)]
-pub struct RequestMessage {
-    pub message: String,
-    pub request_type: RequestType,
-}
-
-impl RequestMessage {
-    pub fn command(command: String) -> RequestMessage {
-        RequestMessage {
-            message: command,
-            request_type: RequestType::Command,
-        }
-    }
-
-    pub fn file_download(path: String) -> RequestMessage {
-        RequestMessage {
-            message: path,
-            request_type: RequestType::Download,
-        }
-    }
-
-    pub fn file_upload(path: String) -> RequestMessage {
-        RequestMessage {
-            message: path,
-            request_type: RequestType::Download,
-        }
-    }
-
-    pub fn empty() -> RequestMessage{
-        RequestMessage {
-            message: String::new(),
-            request_type: RequestType::Unknown,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
 pub enum RequestType {
-    Unknown,
     Command,
     Download,
     Upload,
+
 }

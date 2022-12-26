@@ -10,6 +10,7 @@ use crate::{
     connection_manager::ConnectorRequest, 
     connection_manager::ResponseHandlerCallback,
     frontend::DisplayOptions,
+    connection_manager::RequestType,
 };
 
 use crate::module::{
@@ -56,18 +57,20 @@ impl CommandHandler {
     }
 
     pub fn execute(&mut self, host_id: String, command_id: String, parameters: Vec<String>) -> u64 {
+        self.invocation_id_counter += 1;
+
         // TODO: better solution for searching?
         let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
 
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
-        self.invocation_id_counter += 1;
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
             connector_id: command.get_connector_spec().unwrap().id,
             source_id: command.get_module_spec().id,
             host: host.clone(),
-            // Only one of these should be implemented, but it doesn't matter either if both are.
+            request_type: RequestType::Command,
+            // Only one of these should be implemented, but it doesn't matter if both are.
             messages: [command.get_connector_messages(parameters.clone()), vec![command.get_connector_message(parameters.clone())]].concat(),
             response_handler: Self::get_response_handler(host.clone(), command.clone_module(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
@@ -75,19 +78,6 @@ impl CommandHandler {
         });
 
         return self.invocation_id_counter
-    }
-
-    pub fn open_terminal(&self, args: Vec<String>) {
-        // TODO: other kind of terminals too
-        // TODO: integrated interactive terminals with ssh2::request_pty() / shell?
-
-        let mut command_args = vec![String::from("-e")];
-        command_args.extend(args);
-
-        log::debug!("Starting process: /usr/bin/konsole {}", command_args.join(" "));
-        process::Command::new("/usr/bin/konsole")
-                         .args(command_args)
-                         .output().expect("Running command failed");
     }
 
     // Return value contains host's commands and command parameters as strings.
@@ -146,6 +136,115 @@ impl CommandHandler {
 
     }
 
+    //
+    // INTEGRATED COMMANDS
+    //
+
+    pub fn open_terminal(&self, args: Vec<String>) {
+        // TODO: other kind of terminals too
+        // TODO: integrated interactive terminals with ssh2::request_pty() / shell?
+
+        let mut command_args = vec![String::from("-e")];
+        command_args.extend(args);
+
+        log::debug!("Starting process: /usr/bin/konsole {}", command_args.join(" "));
+        process::Command::new("/usr/bin/konsole").args(command_args).output()
+                         .expect("Running command failed");
+    }
+
+    pub fn open_text_editor(&self, host_id: String, command_id: String, remote_file_path: String) {
+        // TODO: better solution for searching?
+        let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
+        let command = command_collection.get(&command_id).unwrap();
+
+        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+            connector_id: command.get_connector_spec().unwrap().id,
+            source_id: command.get_module_spec().id,
+            host: host.clone(),
+            request_type: RequestType::Download,
+            // Only one of these should be implemented, but it doesn't matter if both are.
+            messages: [command.get_connector_messages(vec![remote_file_path.clone()]), vec![command.get_connector_message(vec![remote_file_path])]].concat(),
+            response_handler: Self::get_response_handler_text_editor(
+                host.clone(), command.clone_module(), self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
+            ),
+        }).unwrap_or_else(|error| {
+            log::error!("Couldn't send message to connector: {}", error);
+        });
+
+    }
+
+    // TODO: better naming for response handlers
+    fn get_response_handler_text_editor(host: Host, command: Command,
+                                        request_sender: Sender<ConnectorRequest>,
+                                        state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+
+        Box::new(move |responses, _connector_is_connected| {
+            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
+            let response = responses.first().unwrap();
+
+            match response {
+                Ok(response_message) => {
+                    // TODO: make text editor choosable.
+                    log::debug!("Starting process: /usr/bin/kate {}", response_message.message);
+                    process::Command::new("/usr/bin/kate").args(vec![response_message.message.clone()]).output()
+                                     .expect("Running command failed");
+
+                    // TODO: check that destination hasn't changed.
+
+                    request_sender.send(ConnectorRequest {
+                        connector_id: command.get_connector_spec().unwrap().id,
+                        source_id: command.get_module_spec().id,
+                        host: host.clone(),
+                        request_type: RequestType::Upload,
+                        messages: vec![response_message.message.clone()],
+                        response_handler: Self::get_response_handler_upload_file(host, command, state_update_sender),
+                    }).unwrap_or_else(|error| {
+                        log::error!("Couldn't send message to connector: {}", error);
+                    });
+                },
+                Err(error) => {
+                    log::error!("Error downloading file: {}", error);
+                    state_update_sender.send(StateUpdateMessage {
+                        host_name: host.name,
+                        display_options: command.get_display_options(),
+                        module_spec: command.get_module_spec(),
+                        data_point: None,
+                        command_result: Some(CommandResult::new_critical_error(error.clone())),
+                    }).unwrap_or_else(|error| {
+                        log::error!("Couldn't send message to state manager: {}", error);
+                    });
+                }
+            };
+        })
+    }
+
+    fn get_response_handler_upload_file(host: Host, command: Command, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+
+        Box::new(move |responses, _connector_is_connected| {
+            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
+            let response = responses.first().unwrap();
+
+            let command_result = match response {
+                Ok(_) => {
+                    CommandResult::new(String::from("File updated successfully"))
+                },
+                Err(error) => {
+                    log::error!("Error uploading file: {}", error);
+                    CommandResult::new_critical_error(error.clone())
+                }
+            };
+
+            state_update_sender.send(StateUpdateMessage {
+                host_name: host.name,
+                display_options: command.get_display_options(),
+                module_spec: command.get_module_spec(),
+                data_point: None,
+                command_result: Some(command_result),
+            }).unwrap_or_else(|error| {
+                log::error!("Couldn't send message to state manager: {}", error);
+            });
+        })
+    }
 }
 
 

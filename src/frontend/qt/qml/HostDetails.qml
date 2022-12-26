@@ -84,15 +84,22 @@ Item {
             }
 
             // TODO: disable button until service unit list is received.
-            HostDetailsLogView {
-                id: logView
-                anchors.fill: parent
-                visible: false
+            // HostDetailsLogView {
+            //     id: logView
+            //     anchors.fill: parent
+            //     visible: false
+            //     selections: []
 
-                hostId: root.hostId
-                commandHandler: root.commandHandler
-                selections: []
-            }
+            //     //onOptionSelected: function(options) {
+            //     //    root.commandHandler.execute(root.hostId, "logs", options)
+            //     //}
+            // }
+
+            // HostDetailsTextView{
+            //     id: textEditor
+            //     anchors.fill: parent
+            //     visible: false
+            // }
         }
     }
 
@@ -145,6 +152,7 @@ Item {
         root._subviewInvocationId = invocationId
         logView.visible = false
         textView.visible = true
+        textEditor.visible = false
 
         animateShowSubview.start()
     }
@@ -161,11 +169,21 @@ Item {
             logView.selections = ["ALL", "DMESG"].concat(
                 lastDataPoint.multivalue.map((item) => item.label)
             )
+
             textView.visible = false
             logView.visible = true
-
+            textEditor.visible = false
             animateShowSubview.start()
         }
+    }
+
+    function openTextEditorView(headerText, invocationId) {
+        subviewHeader.text = headerText
+        root._subviewInvocationId = invocationId
+
+        textView.visible = false
+        logView.visible = false
+        textEditor.visible = true
     }
 
     function refreshSubview(commandResult) {
@@ -175,9 +193,9 @@ Item {
             textView.criticality = commandResult.criticality
         }
         else {
-            logView.text = commandResult.message
-            logView.errorText = commandResult.error
-            logView.criticality = commandResult.criticality
+            //logView.text = commandResult.message
+            //logView.errorText = commandResult.error
+            //logView.criticality = commandResult.criticality
         }
     }
 
