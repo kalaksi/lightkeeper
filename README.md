@@ -9,7 +9,9 @@
 - Avoid including too much non-essential information to keep the UI simple.
 
 # Dependencies
+
 ## Requirements
+- Currently only linux supported
 - Qt 5.15
 
 ## Ubuntu 22.04 packages
