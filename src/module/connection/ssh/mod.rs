@@ -4,7 +4,6 @@ use std::{
     io::Read,
     collections::HashMap,
     path::Path,
-    fs,
     io,
     io::Write,
 };

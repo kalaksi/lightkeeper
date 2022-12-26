@@ -17,9 +17,6 @@ use crate::module::{
 #[derive(Clone)]
 pub struct Compose {
     use_sudo: bool,
-    working_dir: String,
-    // compose_file_suffix: String,
-    // project_dirs: Vec<String>, 
 }
 
 impl Module for Compose {
@@ -35,10 +32,6 @@ impl Module for Compose {
     fn new(settings: &HashMap<String, String>) -> Self {
         Compose {
             use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(true),
-            working_dir: settings.get("working_dir").unwrap_or(&String::new()).clone(),
-            // compose_file_suffix: settings.get("compose_file_suffix").unwrap_or(&String::from("yml")).clone(),
-            // project_dirs: settings.get("project_dirs").unwrap_or(&String::new()).clone()
-            //                       .split(",").map(|value| value.to_string()).collect(),
         }
     }
 
