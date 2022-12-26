@@ -1,0 +1,13 @@
+hosts:
+  test1:
+    fqdn: test.domain.invalid
+    monitors:
+      ping:
+        version: 0.0.1
+        is_critical: true
+  test2:
+    address: 10.0.20.2
+    monitors:
+      ssh:
+        version: 0.0.1
+        is_critical: true

@@ -1,15 +1,28 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
-use std::{ fs, collections::HashMap };
+use std::{ fs, io, collections::HashMap };
 use crate::utils::enums::HostStatus;
+
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
+    pub preferences: Preferences,
     pub general: General,
     pub defaults: Defaults,
     pub display_options: DisplayOptions,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Hosts {
     pub hosts: HashMap<String, Host>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Preferences {
+    pub text_editor: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -83,27 +96,31 @@ pub struct ConnectorConfig {
 }
 
 impl Configuration {
-    pub fn read(filename: &String) -> Result<Configuration, String> {
-        let contents = fs::read_to_string(filename).map_err(|e| e.to_string())?;
-        let mut config = serde_yaml::from_str::<Configuration>(contents.as_str()).map_err(|e| e.to_string())?;
+    pub fn read(config_file_name: &String, hosts_file_name: &String) -> io::Result<(Configuration, Hosts)> {
+        let config_contents = fs::read_to_string(config_file_name)?;
+        let hosts_contents = fs::read_to_string(hosts_file_name)?;
+        let mut main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
+                                         .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+        let mut hosts = serde_yaml::from_str::<Hosts>(hosts_contents.as_str())
+                                   .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
         // Apply defaults.
-        for (_, host_config) in &mut config.hosts.iter_mut() {
+        for (_, host_config) in hosts.hosts.iter_mut() {
             for (monitor_id, monitor_config) in &mut host_config.monitors.iter_mut() {
-                if let Some(defaults) = config.defaults.monitors.get(monitor_id) {
+                if let Some(defaults) = main_config.defaults.monitors.get(monitor_id) {
                     let mut unified = defaults.clone();
                     unified.extend(monitor_config.settings.clone());
                     monitor_config.settings = unified;
                 }
             }
 
-            for (connector_id, connector_config) in config.defaults.connectors.iter() {
+            for (connector_id, connector_config) in main_config.defaults.connectors.iter() {
                 host_config.connectors.insert(connector_id.clone(),
                                               ConnectorConfig { settings: connector_config.clone() });
             }
         }
 
-        Ok(config)
+        Ok((main_config, hosts))
     }
 }
 

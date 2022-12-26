@@ -25,7 +25,10 @@ use module::{ ModuleFactory, ModuleSpecification };
 #[clap()]
 struct Args {
     #[clap(short, long, default_value = "config.yml")]
-    config_file: String,
+    main_config_file: String,
+
+    #[clap(short, long, default_value = "hosts.yml")]
+    hosts_file: String,
 }
 
 
@@ -35,7 +38,7 @@ fn main() {
 
     let args = Args::parse();
 
-    let config = match Configuration::read(&args.config_file) {
+    let (config, hosts_config) = match Configuration::read(&args.main_config_file, &args.hosts_file) {
         Ok(configuration) => configuration,
         Err(error) => {
             log::error!("Error while reading configuration file: {}", error);
@@ -51,7 +54,7 @@ fn main() {
     let mut command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
 
     // Configure hosts and modules.
-    for (host_id, host_config) in config.hosts.iter() {
+    for (host_id, host_config) in hosts_config.hosts.iter() {
         log::info!("Found configuration for host {}", host_id);
 
         let host = match Host::new(&host_id, &host_config.address, &host_config.fqdn) {
