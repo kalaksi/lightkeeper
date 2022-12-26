@@ -80,6 +80,7 @@ impl MonitoringModule for Compose {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+        // Compose doesn't have a stable interface so using Docker API instead.
         let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
         containers.retain(|container| container.labels.contains_key("com.docker.compose.config-hash"));
 
@@ -93,12 +94,15 @@ impl MonitoringModule for Compose {
 
         for container in containers {
             let project = container.labels.get("com.docker.compose.project").unwrap().clone();
-            let service = container.labels.get("com.docker.compose.service").unwrap().clone();
 
             if let Some(project_datapoints) = projects.get_mut(&project) {
-                project_datapoints.push(
-                    DataPoint::labeled_value_with_level(service, container.state.to_string(), container.state.to_criticality())
-                );
+                let service = container.labels.get("com.docker.compose.service").unwrap().clone();
+                let container_number = container.labels.get("com.docker.compose.container-number").unwrap().clone();
+                let container_name = [project.clone(), service.clone(), container_number].join("_");
+
+                let mut data_point = DataPoint::labeled_value_with_level(service, container.state.to_string(), container.state.to_criticality());
+                data_point.source_id = container_name;
+                project_datapoints.push(data_point);
             }
             else {
                 projects.insert(project, Vec::new());
@@ -107,7 +111,8 @@ impl MonitoringModule for Compose {
 
         for (project, datapoints) in projects {
             let mut second_parent_point = DataPoint::empty();
-            second_parent_point.label = project;
+            second_parent_point.label = project.clone();
+            second_parent_point.source_id = project;
             second_parent_point.multivalue = datapoints;
 
             parent_point.multivalue.push(second_parent_point);
