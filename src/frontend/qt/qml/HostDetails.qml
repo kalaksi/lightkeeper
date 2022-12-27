@@ -5,6 +5,7 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
+import "Text"
 import "js/TextTransform.js" as TextTransform
 import "js/Parse.js" as Parse
 import "js/ValueUnit.js" as ValueUnit

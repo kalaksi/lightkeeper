@@ -3,6 +3,8 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Layouts 1.15
 
+import "Text"
+
 Item {
     id: root
     required property string status
