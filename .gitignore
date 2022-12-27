@@ -1,4 +1,5 @@
 /target
 .*
 config.yml
+hosts.yml
 vendor
