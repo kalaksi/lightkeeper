@@ -19,10 +19,17 @@ pub struct Hosts {
     pub hosts: HashMap<String, Host>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Preferences {
+    pub use_remote_editor: bool,
+    pub sudo_remote_editor: bool,
+    // TODO: check for valid command.
+    pub remote_text_editor: String,
+    // TODO: check for valid path.
     pub text_editor: String,
+    pub terminal: String,
+    pub terminal_args: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]

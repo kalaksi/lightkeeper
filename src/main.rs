@@ -51,7 +51,7 @@ fn main() {
     let mut host_manager = HostManager::new();
     let mut connection_manager = ConnectionManager::new();
     let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
-    let mut command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
+    let mut command_handler = CommandHandler::new(&config.preferences, connection_manager.new_request_sender(), host_manager.new_state_update_sender());
 
     // Configure hosts and modules.
     for (host_id, host_config) in hosts_config.hosts.iter() {

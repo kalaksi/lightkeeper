@@ -5,6 +5,7 @@ use serde_derive::Serialize;
 use std::process;
 
 use crate::{
+    configuration::Preferences,
     Host,
     host_manager::StateUpdateMessage,
     connection_manager::ConnectorRequest, 
@@ -20,23 +21,25 @@ use crate::module::{
 
 #[derive(Default)]
 pub struct CommandHandler {
-    // Command id is the second key.
+    /// Command id is the second key.
     commands: HashMap<Host, HashMap<String, Command>>,
-    // For connector communication.
+    /// For connector communication.
     request_sender: Option<Sender<ConnectorRequest>>,
-    // Channel to send state updates to HostManager.
+    /// Channel to send state updates to HostManager.
     state_update_sender: Option<Sender<StateUpdateMessage>>,
-
-    // Every execution gets an invocation id. Valid id numbers begin from 1.
+    /// Preferences from config file.
+    preferences: Preferences,
+    /// Every execution gets an invocation id. Valid id numbers begin from 1.
     invocation_id_counter: u64,
 }
 
 impl CommandHandler {
-    pub fn new(request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>) -> Self {
+    pub fn new(preferences: &Preferences, request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>) -> Self {
         CommandHandler {
             commands: HashMap::new(),
             request_sender: Some(request_sender),
             state_update_sender: Some(state_update_sender),
+            preferences: preferences.clone(),
             invocation_id_counter: 0,
         }
     }
@@ -144,11 +147,11 @@ impl CommandHandler {
         // TODO: other kind of terminals too
         // TODO: integrated interactive terminals with ssh2::request_pty() / shell?
 
-        let mut command_args = vec![String::from("-e")];
+        let mut command_args = self.preferences.terminal_args.clone();
         command_args.extend(args);
 
-        log::debug!("Starting process: /usr/bin/konsole {}", command_args.join(" "));
-        process::Command::new("/usr/bin/konsole").args(command_args).output()
+        log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.join(" "));
+        process::Command::new(self.preferences.terminal.as_str()).args(command_args).output()
                          .expect("Running command failed");
     }
 
@@ -156,25 +159,60 @@ impl CommandHandler {
         // TODO: better solution for searching?
         let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
+        // Only one of these should be implemented, but it doesn't matter if both are.
+        let connector_messages = [command.get_connector_messages(vec![remote_file_path.clone()]), vec![command.get_connector_message(vec![remote_file_path])]].concat();
 
-        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-            connector_id: command.get_connector_spec().unwrap().id,
-            source_id: command.get_module_spec().id,
-            host: host.clone(),
-            request_type: RequestType::Download,
-            // Only one of these should be implemented, but it doesn't matter if both are.
-            messages: [command.get_connector_messages(vec![remote_file_path.clone()]), vec![command.get_connector_message(vec![remote_file_path])]].concat(),
-            response_handler: Self::get_response_handler_text_editor(
-                host.clone(), command.clone_module(), self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
-            ),
-        }).unwrap_or_else(|error| {
-            log::error!("Couldn't send message to connector: {}", error);
-        });
+        if self.preferences.use_remote_editor {
+            let mut command_args = self.preferences.terminal_args.clone();
+            command_args.extend(vec![
+                String::from("ssh"),
+                String::from("-t"),
+                host.name.clone(),
+            ]);
+
+
+            if self.preferences.sudo_remote_editor {
+                command_args.push(String::from("sudo"));
+            }
+
+            command_args.push(self.preferences.remote_text_editor.clone());
+            command_args.push(connector_messages.join(" "));
+
+            log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.join(" "));
+            process::Command::new(self.preferences.terminal.as_str()).args(command_args).output()
+                                .expect("Running command failed");
+
+            self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
+                host_name: host.name.clone(),
+                display_options: command.get_display_options(),
+                module_spec: command.get_module_spec(),
+                data_point: None,
+                command_result: Some(CommandResult::new(String::from("Successfully modified file"))),
+            }).unwrap_or_else(|error| {
+                log::error!("Couldn't send message to state manager: {}", error);
+            });
+        }
+        else {
+            self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+                connector_id: command.get_connector_spec().unwrap().id,
+                source_id: command.get_module_spec().id,
+                host: host.clone(),
+                request_type: RequestType::Download,
+                messages: connector_messages,
+                response_handler: Self::get_response_handler_text_editor(
+                    host.clone(), command.clone_module(), self.preferences.clone(),
+                    self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
+                ),
+            }).unwrap_or_else(|error| {
+                log::error!("Couldn't send message to connector: {}", error);
+            });
+        }
 
     }
 
     // TODO: better naming for response handlers
     fn get_response_handler_text_editor(host: Host, command: Command,
+                                        preferences: Preferences,
                                         request_sender: Sender<ConnectorRequest>,
                                         state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
@@ -184,12 +222,11 @@ impl CommandHandler {
 
             match response {
                 Ok(response_message) => {
-                    // TODO: make text editor choosable.
-                    log::debug!("Starting process: /usr/bin/kate {}", response_message.message);
-                    process::Command::new("/usr/bin/kate").args(vec![response_message.message.clone()]).output()
-                                     .expect("Running command failed");
+                    // TODO: check that destination file hasn't changed.
 
-                    // TODO: check that destination hasn't changed.
+                    log::debug!("Starting local process: {} {}", preferences.text_editor, response_message.message);
+                    process::Command::new(preferences.text_editor).args(vec![response_message.message.clone()]).output()
+                                        .expect("Running command failed");
 
                     request_sender.send(ConnectorRequest {
                         connector_id: command.get_connector_spec().unwrap().id,

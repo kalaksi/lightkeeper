@@ -1,3 +1,11 @@
+preferences:
+  use_remote_editor: true
+  sudo_remote_editor: false
+  remote_text_editor: "/usr/bin/vim"
+  text_editor: "/usr/bin/kate"
+  terminal: "/usr/bin/konsole"
+  terminal_args: ["-e"]
+
 general:
   # Assume hosts are down (or up) until a critical monitor says otherwise.
   default_host_status: "down"

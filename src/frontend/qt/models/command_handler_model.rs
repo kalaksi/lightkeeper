@@ -104,7 +104,6 @@ impl CommandHandlerModel {
             },
             UIAction::Terminal => {
                 let target_id = parameters.first().unwrap();
-                // TODO: don't hardcode the command here (add to command module).
                 self.command_handler.open_terminal(vec![
                     String::from("ssh"),
                     String::from("-t"),
