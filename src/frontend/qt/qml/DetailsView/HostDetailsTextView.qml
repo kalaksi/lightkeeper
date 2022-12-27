@@ -4,7 +4,8 @@ import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
 import QtQuick.Controls.Material 2.15
 
-import "js/Parse.js" as Parse
+import ".."
+import "../js/Parse.js" as Parse
 
 Item {
     id: root

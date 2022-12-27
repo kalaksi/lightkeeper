@@ -5,10 +5,11 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
-import "Text"
-import "js/TextTransform.js" as TextTransform
-import "js/Parse.js" as Parse
-import "js/ValueUnit.js" as ValueUnit
+import ".."
+import "../Text"
+import "../js/TextTransform.js" as TextTransform
+import "../js/Parse.js" as Parse
+import "../js/ValueUnit.js" as ValueUnit
 
 Item {
     id: root
@@ -85,22 +86,20 @@ Item {
             }
 
             // TODO: disable button until service unit list is received.
-            // HostDetailsLogView {
-            //     id: logView
-            //     anchors.fill: parent
-            //     visible: false
-            //     selections: []
+            HostDetailsLogView {
+                id: logView
+                anchors.fill: parent
+                visible: false
+                selections: []
 
-            //     //onOptionSelected: function(options) {
-            //     //    root.commandHandler.execute(root.hostId, "logs", options)
-            //     //}
-            // }
+                commandHandler: root.commandHandler
+            }
 
-            // HostDetailsTextView{
-            //     id: textEditor
-            //     anchors.fill: parent
-            //     visible: false
-            // }
+            HostDetailsTextView{
+                id: textEditor
+                anchors.fill: parent
+                visible: false
+            }
         }
     }
 
@@ -194,9 +193,9 @@ Item {
             textView.criticality = commandResult.criticality
         }
         else {
-            //logView.text = commandResult.message
-            //logView.errorText = commandResult.error
-            //logView.criticality = commandResult.criticality
+            logView.text = commandResult.message
+            logView.errorText = commandResult.error
+            logView.criticality = commandResult.criticality
         }
     }
 
