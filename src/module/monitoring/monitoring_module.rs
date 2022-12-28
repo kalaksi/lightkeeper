@@ -149,13 +149,21 @@ impl DataPoint {
     }
 
     pub fn empty_and_critical() -> Self {
-        let mut empty = Self::default();
-        empty.criticality = Criticality::Critical;
-        empty
+        DataPoint {
+            criticality: Criticality::Critical,
+            ..Default::default()
+        }
     }
 
     pub fn hide(&mut self) {
         self.criticality = Criticality::Ignore;
+    }
+
+    pub fn none() -> Self {
+        DataPoint {
+            value: String::from(" "),
+            ..Default::default()
+        }
     }
 }
 
