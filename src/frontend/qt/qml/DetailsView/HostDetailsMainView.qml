@@ -15,6 +15,7 @@ Item {
     required property var commandHandler
     required property var hostDataManager
     property string hostId: ""
+    property bool hideEmptyCategories: true
     property int columnMinimumWidth: 400
     property int columnMaximumWidth: 600
     property int columnMinimumHeight: 450
@@ -33,7 +34,14 @@ Item {
             columns: Math.floor(parent.width / root.columnMinimumWidth)
 
             Repeater {
-                model: root._hostData
+                // TODO: hide empty categories
+                //model: root.hideEmptyCategories ?
+                //    root._hostData.filter((item) => item.monitorDatas !== undefined && item.monitorDatas.filter((data) => data.criticality !== "Ignore").length > 0) :
+                //    root._hostData
+                model: {
+                    // console.log(JSON.stringify(root._hostData))
+                    return root._hostData
+                }
 
                 GroupBox {
                     id: box
@@ -134,14 +142,12 @@ Item {
                                     Repeater {
                                         id: rowRepeater
                                         property var monitorData: parent.monitorData
-                                        property var lastDataPoint: parent.lastDataPoint
-                                        model: monitorData.display_options.use_multivalue ?
-                                                    lastDataPoint.multivalue.filter((item) => item.criticality !== "Ignore") :
-                                                    [ lastDataPoint ]
+                                        model: getPropertyRows(monitorData)
 
                                         PropertyRow {
                                             label: monitorData.display_options.use_multivalue ? modelData.label : monitorData.display_options.display_text
-                                            value: ValueUnit.AsText(modelData.value, monitorData.display_options.unit)
+                                            value: 
+                                                ValueUnit.AsText(modelData.value, monitorData.display_options.unit)
                                             useProgressBar: monitorData.display_options.display_style === "ProgressBar"
 
                                             hostId: root.hostId
@@ -159,6 +165,30 @@ Item {
                 }
             }
         }
+    }
+
+    // Practically flattens multivalue data and does some filtering.
+    function getPropertyRows(monitorData) {
+        let lastDataPoint = monitorData.values.slice(-1)[0]
+        let result = []
+
+        if (monitorData.display_options.use_multivalue) {
+
+            lastDataPoint.multivalue.forEach(multivalue => {
+                result.push(multivalue)
+
+                // 2nd level of multivalues.
+                multivalue.multivalue.forEach(multivalue2 => {
+                    // Add indent for 2nd level values.
+                    multivalue2.label = "    " + multivalue2.label
+                    result.push(multivalue2)
+                })
+            })
+        }
+        else {
+            result = [ lastDataPoint ]
+        }
+        return result.filter(item => item.criticality !== "Ignore")
     }
 
     function groupByCategory(monitorDataJsons, commandJsons) {

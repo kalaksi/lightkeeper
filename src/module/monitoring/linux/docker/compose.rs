@@ -65,6 +65,7 @@ impl MonitoringModule for Compose {
         // Docker API is much better suited for this than using the docker-compose CLI.
         // More effective too.
         // TODO: Reuse command results between docker-compose and docker monitors (a global command cache?)
+        // TODO: find down-status compose-projects with find-command?
         let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
         if self.use_sudo {
@@ -79,7 +80,7 @@ impl MonitoringModule for Compose {
         let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
         containers.retain(|container| container.labels.contains_key("com.docker.compose.config-hash"));
 
-        // There will be 2 levels of multivalues.
+        // There will be 2 levels of multivalues (services under projects).
         let mut parent_point = DataPoint::empty();
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
         parent_point.criticality = most_critical_container.state.to_criticality();
@@ -90,22 +91,24 @@ impl MonitoringModule for Compose {
         for container in containers {
             let project = container.labels.get("com.docker.compose.project").unwrap().clone();
 
-            if let Some(project_datapoints) = projects.get_mut(&project) {
-                let service = container.labels.get("com.docker.compose.service").unwrap().clone();
-                let container_number = container.labels.get("com.docker.compose.container-number").unwrap().clone();
-                let container_name = [project.clone(), service.clone(), container_number].join("_");
+            if !projects.contains_key(&project) {
+                projects.insert(project.clone(), Vec::new());
+            }
 
-                let mut data_point = DataPoint::labeled_value_with_level(service, container.state.to_string(), container.state.to_criticality());
-                data_point.source_id = container_name;
-                project_datapoints.push(data_point);
-            }
-            else {
-                projects.insert(project, Vec::new());
-            }
+            // TODO: send this as part of the values instead of always trying to find through directories.
+            let compose_file = container.labels.get("com.docker.compose.project.working_dir").unwrap().clone();
+            let service = container.labels.get("com.docker.compose.service").unwrap().clone();
+            let container_number = container.labels.get("com.docker.compose.container-number").unwrap().clone();
+            let container_name = [project.clone(), service.clone(), container_number].join("_");
+
+            let mut data_point = DataPoint::labeled_value_with_level(service, container.state.to_string(), container.state.to_criticality());
+            data_point.source_id = container_name;
+
+            projects.get_mut(&project).unwrap().push(data_point);
         }
 
         for (project, datapoints) in projects {
-            let mut second_parent_point = DataPoint::empty();
+            let mut second_parent_point = DataPoint::none();
             second_parent_point.label = project.clone();
             second_parent_point.source_id = project;
             second_parent_point.multivalue = datapoints;
