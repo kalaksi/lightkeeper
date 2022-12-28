@@ -8,20 +8,14 @@ use crate::module::{
     command::CommandModule,
     command::Command,
     command::UIAction,
+    monitoring::docker::compose::ComposeConfig,
     Metadata,
     ModuleSpecification,
 };
 
 #[derive(Clone)]
 pub struct Edit {
-    pub compose_file_name: String,
-    /// If you have one directory under which all the compose projects are, use this.
-    pub main_dir: String, 
-    /// If you have project directories all over the place, use this.
-    pub project_directories: Vec<String>, 
-    // TODO
-    // pub project_allowlist: Vec<String>, 
-    // pub project_blocklist: Vec<String>, 
+    config: ComposeConfig,
 }
 
 impl Module for Edit {
@@ -34,12 +28,8 @@ impl Module for Edit {
     }
 
     fn new(settings: &HashMap<String, String>) -> Self {
-        // TODO: validation?
         Edit {
-            compose_file_name: String::from("docker-compose.yml"),
-            main_dir: settings.get("main_dir").unwrap_or(&String::new()).clone(),
-            project_directories: settings.get("project_directories").unwrap_or(&String::new()).clone()
-                                         .split(",").map(|value| value.to_string()).collect(),
+            config: ComposeConfig::new(settings),
         }
     }
 
@@ -71,26 +61,6 @@ impl CommandModule for Edit {
 
     fn get_connector_message(&self, parameters: Vec<String>) -> String {
         let compose_project_name = parameters.first().unwrap().clone();
-
-        let mut project_dir = String::new();
-
-        if !self.main_dir.is_empty() {
-            project_dir = Path::new(&self.main_dir).join(compose_project_name.clone()).to_string_lossy().to_string();
-        }
-        else {
-            for dir in self.project_directories.iter() {
-                // The last directory component should match the project name.
-                let last_dir_component = Path::new(dir).components().last().unwrap().as_os_str().to_string_lossy();
-                if compose_project_name == last_dir_component {
-                    project_dir = dir.clone();
-                }
-            }
-        }
-
-        let remote_file_path = Path::new(&project_dir)
-                                    .join(self.compose_file_name.clone())
-                                    .to_string_lossy().to_string();
-
-        remote_file_path
+        self.config.get_project_compose_file(compose_project_name)
     }
 }
