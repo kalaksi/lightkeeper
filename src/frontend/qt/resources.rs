@@ -35,6 +35,9 @@ pub fn init_resources() {
             "images/breeze/dark/arrow-up.svg" as "images/button/search-up",
             "images/breeze/dark/arrow-down.svg" as "images/button/search-down",
             "images/breeze/dark/story-editor.svg" as "images/button/story-editor",
+            "images/breeze/dark/update-none.svg" as "images/button/update-none",
+            "images/breeze/dark/update-low.svg" as "images/button/update-low",
+            "images/breeze/dark/update-high.svg" as "images/button/update-high",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/dark/arrow-up.svg" as "images/button/maximize",
@@ -80,6 +83,9 @@ pub fn init_resources() {
             "images/breeze/light/arrow-up.svg" as "images/button/search-up",
             "images/breeze/light/arrow-down.svg" as "images/button/search-down",
             "images/breeze/light/story-editor.svg" as "images/button/story-editor",
+            "images/breeze/light/update-none.svg" as "images/button/update-none",
+            "images/breeze/light/update-low.svg" as "images/button/update-low",
+            "images/breeze/light/update-high.svg" as "images/button/update-high",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/light/arrow-up.svg" as "images/button/maximize",
