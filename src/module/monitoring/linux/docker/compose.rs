@@ -1,5 +1,7 @@
-
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    path::Path,
+};
 
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, frontend };
@@ -61,7 +63,8 @@ impl MonitoringModule for Compose {
 
     fn get_connector_message(&self) -> String {
         // Docker API is much better suited for this than using the docker-compose CLI.
-        // TODO: Reuse results from containers module somehow
+        // More effective too.
+        // TODO: Reuse command results between docker-compose and docker monitors (a global command cache?)
         let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
         if self.use_sudo {
@@ -73,7 +76,6 @@ impl MonitoringModule for Compose {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
-        // Compose doesn't have a stable interface so using Docker API instead.
         let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
         containers.retain(|container| container.labels.contains_key("com.docker.compose.config-hash"));
 
@@ -113,4 +115,49 @@ impl MonitoringModule for Compose {
 
         Ok(parent_point)
     }
+}
+
+
+#[derive(Clone)]
+pub struct ComposeConfig {
+    pub compose_file_name: String,
+    /// If you have one directory under which all the compose projects are, use this.
+    pub main_dir: String, 
+    /// If you have project directories all over the place, use this.
+    pub project_directories: Vec<String>, 
+}
+
+// TODO: some validations?
+impl ComposeConfig {
+    pub fn new(settings: &HashMap<String, String>) -> Self {
+        ComposeConfig {
+            compose_file_name: String::from("docker-compose.yml"),
+            main_dir: settings.get("main_dir").unwrap_or(&String::new()).clone(),
+            project_directories: settings.get("project_directories").unwrap_or(&String::new()).clone()
+                                         .split(",").map(|value| value.to_string()).collect(),
+        }
+    }
+
+
+    pub fn get_project_dir(&self, project_name: &String) -> String {
+        if !self.main_dir.is_empty() {
+            return Path::new(&self.main_dir).join(project_name.clone()).to_string_lossy().to_string();
+        }
+        else {
+            for dir in self.project_directories.iter() {
+                // The last directory component should match the project name.
+                let last_dir_component = Path::new(dir).components().last().unwrap().as_os_str().to_string_lossy();
+                if *project_name == last_dir_component {
+                    return dir.clone();
+                }
+            }
+        }
+        panic!()
+    }
+
+    pub fn get_project_compose_file(&self, project_name: String) -> String {
+        let project_dir = self.get_project_dir(&project_name);
+        Path::new(&project_dir).join(self.compose_file_name.clone()).to_string_lossy().to_string()
+    }
+
 }
