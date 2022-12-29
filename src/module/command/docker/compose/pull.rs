@@ -50,7 +50,7 @@ impl CommandModule for Pull {
             category: String::from("docker-compose"),
             parent_id: String::from("docker-compose"),
             display_style: frontend::DisplayStyle::Icon,
-            display_icon: String::from("update-low"),
+            display_icon: String::from("download"),
             display_text: String::from("Pull (update)"),
             action: UIAction::None,
             ..Default::default()

@@ -35,6 +35,11 @@ pub fn init_resources() {
             "images/breeze/dark/arrow-up.svg" as "images/button/search-up",
             "images/breeze/dark/arrow-down.svg" as "images/button/search-down",
             "images/breeze/dark/story-editor.svg" as "images/button/story-editor",
+            "images/breeze/dark/download.svg" as "images/button/download",
+
+            // TODO: not used?
+            "images/breeze/dark/media-playback-start.svg" as "images/button/start",
+            "images/breeze/dark/media-playback-stop.svg" as "images/button/stop",
             "images/breeze/dark/update-none.svg" as "images/button/update-none",
             "images/breeze/dark/update-low.svg" as "images/button/update-low",
             "images/breeze/dark/update-high.svg" as "images/button/update-high",
@@ -83,6 +88,11 @@ pub fn init_resources() {
             "images/breeze/light/arrow-up.svg" as "images/button/search-up",
             "images/breeze/light/arrow-down.svg" as "images/button/search-down",
             "images/breeze/light/story-editor.svg" as "images/button/story-editor",
+            "images/breeze/light/download.svg" as "images/button/download",
+
+            // TODO: not used?
+            "images/breeze/light/media-playback-start.svg" as "images/button/start",
+            "images/breeze/light/media-playback-stop.svg" as "images/button/stop",
             "images/breeze/light/update-none.svg" as "images/button/update-none",
             "images/breeze/light/update-low.svg" as "images/button/update-low",
             "images/breeze/light/update-high.svg" as "images/button/update-high",
