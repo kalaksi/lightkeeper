@@ -62,9 +62,10 @@ impl CommandHandlerModel {
             }
         }
 
-        // Append the rest of the commands in an undefined order.
-        let mut unsorted_commands = all_commands.into_iter().map(|(_, command)| command).collect();
-        valid_commands_sorted.append(&mut unsorted_commands);
+        // Append the rest of the commands in alphabetical order.
+        let mut rest_of_commands: Vec<CommandData> = all_commands.into_iter().map(|(_, command)| command).collect();
+        rest_of_commands.sort_by(|left, right| left.command_id.cmp(&right.command_id));
+        valid_commands_sorted.append(&mut rest_of_commands);
 
         // Return list of JSONs.
         valid_commands_sorted.iter().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
