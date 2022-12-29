@@ -80,6 +80,7 @@ impl ModuleFactory {
         self.command_constructors.insert(command::docker::compose::Edit::get_metadata().module_spec, command::docker::compose::Edit::new_command_module);
         self.command_constructors.insert(command::docker::compose::Pull::get_metadata().module_spec, command::docker::compose::Pull::new_command_module);
         self.command_constructors.insert(command::docker::compose::Up::get_metadata().module_spec, command::docker::compose::Up::new_command_module);
+        self.command_constructors.insert(command::docker::compose::Start::get_metadata().module_spec, command::docker::compose::Start::new_command_module);
     }
 
 
