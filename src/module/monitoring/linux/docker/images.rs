@@ -81,7 +81,7 @@ impl MonitoringModule for Images {
 
         parent_data.multivalue = images.iter().map(|image| {
             let mut point = DataPoint::labeled_value(image.repo_tags.first().unwrap().clone(), image.created.to_string());
-            point.source_id = image.id.clone();
+            point.command_params = vec![image.id.clone()];
 
             // TODO: how to make sure timezone is accounted for correctly?
             let creation_time = Utc.timestamp(point.value.parse::<i64>().unwrap(), 0);

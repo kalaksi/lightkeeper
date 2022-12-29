@@ -111,7 +111,6 @@ Item {
 
                                 Column {
                                     property var monitorData: modelData
-                                    property var lastDataPoint: modelData.values.slice(-1)[0]
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     spacing: root.columnSpacing
@@ -151,7 +150,7 @@ Item {
                                             useProgressBar: monitorData.display_options.display_style === "ProgressBar"
 
                                             hostId: root.hostId
-                                            targetId: modelData.source_id
+                                            commandParams: modelData.command_params
                                             rowCommands: Parse.ListOfJsons(
                                                 root.commandHandler.get_child_commands(
                                                     root.hostId, monitorData.display_options.category, monitorData.monitor_id, modelData.multivalue_level

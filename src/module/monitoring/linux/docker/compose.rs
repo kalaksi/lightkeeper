@@ -102,7 +102,7 @@ impl MonitoringModule for Compose {
             let container_name = [project.clone(), service.clone(), container_number].join("_");
 
             let mut data_point = DataPoint::labeled_value_with_level(service, container.state.to_string(), container.state.to_criticality());
-            data_point.source_id = container_name;
+            data_point.command_params = vec![container_name];
 
             projects.get_mut(&project).unwrap().push(data_point);
         }
@@ -110,7 +110,7 @@ impl MonitoringModule for Compose {
         for (project, datapoints) in projects {
             let mut second_parent_point = DataPoint::none();
             second_parent_point.label = project.clone();
-            second_parent_point.source_id = project;
+            second_parent_point.command_params = vec![project];
             second_parent_point.multivalue = datapoints;
 
             parent_point.multivalue.push(second_parent_point);

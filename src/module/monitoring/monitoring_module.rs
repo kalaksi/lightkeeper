@@ -82,14 +82,14 @@ impl MonitoringData {
 // TODO: split to separate file.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DataPoint {
-    // With multivalue, value can be a composite result/value of all of the values.
-    // For example, with service statuses, this can show the worst state in the multivalue group.
+    /// With multivalue, value can be a composite result/value of all of the values.
+    /// For example, with service statuses, this can show the worst state in the multivalue group.
     pub value: String,
-    // Optional. Used with multivalue-data and usually filled programmatically.
+    /// Optional. Used with multivalue-data and usually filled programmatically.
     pub label: String,
-    // Optional identifer. Can be used as a command parameter.
-    // Some commands will require this in which case the parent monitor has to populate this.
-    pub source_id: String,
+    /// This data is passed to commands. Usually contains an identifier of the source of this data,
+    /// e.g. container ID or service name, so that attached commands can target the correct identity.
+    pub command_params: Vec<String>,
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
@@ -100,7 +100,7 @@ impl DataPoint {
         DataPoint {
             value: value,
             label: String::from(""),
-            source_id: String::from(""),
+            command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
@@ -111,7 +111,7 @@ impl DataPoint {
         DataPoint {
             value: value,
             label: label,
-            source_id: String::from(""),
+            command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
@@ -122,7 +122,7 @@ impl DataPoint {
         DataPoint {
             value: value,
             label: label,
-            source_id: String::from(""),
+            command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: criticality,
             time: Utc::now(),
@@ -133,7 +133,7 @@ impl DataPoint {
         DataPoint {
             value: value,
             label: String::from(""),
-            source_id: String::from(""),
+            command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: criticality,
             time: Utc::now(),
@@ -172,7 +172,7 @@ impl Default for DataPoint {
         DataPoint {
             value: String::from(""),
             label: String::from(""),
-            source_id: String::from(""),
+            command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),

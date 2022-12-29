@@ -23,7 +23,7 @@ Item {
     // Provided only if rowCommands are used.
     property var commandHandler
     property string hostId: ""
-    property string targetId: ""
+    property var commandParams: []
     property var rowCommands: []
 
     implicitHeight: labelComponent.height
@@ -66,7 +66,7 @@ Item {
 
             commands: root.rowCommands
             onClicked: function(commandId) {
-                root.commandHandler.execute(root.hostId, commandId, [root.targetId])
+                root.commandHandler.execute(root.hostId, commandId, root.commandParams)
             }
 
             visible: root.rowCommands.length > 0
