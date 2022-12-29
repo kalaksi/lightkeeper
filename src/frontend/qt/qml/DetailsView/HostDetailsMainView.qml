@@ -89,7 +89,7 @@ Item {
                                 size: 34
                                 flatButtons: false
                                 roundButtons: false
-                                commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, modelData.category, ""))
+                                commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, modelData.category, "", 0))
                                 onClicked: function(commandId) {
                                     root.commandHandler.execute(root.hostId, commandId, [""])
                                 }
@@ -153,7 +153,9 @@ Item {
                                             hostId: root.hostId
                                             targetId: modelData.source_id
                                             rowCommands: Parse.ListOfJsons(
-                                                root.commandHandler.get_child_commands(root.hostId, monitorData.display_options.category, monitorData.monitor_id)
+                                                root.commandHandler.get_child_commands(
+                                                    root.hostId, monitorData.display_options.category, monitorData.monitor_id, modelData.multivalue_level
+                                                )
                                             )
                                             commandHandler: root.commandHandler
                                         }
@@ -171,21 +173,24 @@ Item {
     function getPropertyRows(monitorData) {
         let lastDataPoint = monitorData.values.slice(-1)[0]
         let result = []
-
         if (monitorData.display_options.use_multivalue) {
 
             lastDataPoint.multivalue.forEach(multivalue => {
+                multivalue.multivalue_level = 1
+
                 result.push(multivalue)
 
                 // 2nd level of multivalues.
                 multivalue.multivalue.forEach(multivalue2 => {
                     // Add indent for 2nd level values.
                     multivalue2.label = "    " + multivalue2.label
+                    multivalue2.multivalue_level = 2
                     result.push(multivalue2)
                 })
             })
         }
         else {
+            lastDataPoint.multivalue_level = 0
             result = [ lastDataPoint ]
         }
         return result.filter(item => item.criticality !== "Ignore")

@@ -51,6 +51,7 @@ impl CommandModule for Edit {
         frontend::DisplayOptions {
             category: String::from("docker-compose"),
             parent_id: String::from("docker-compose"),
+            multivalue_level: 1,
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("story-editor"),
             display_text: String::from("Edit compose-file"),

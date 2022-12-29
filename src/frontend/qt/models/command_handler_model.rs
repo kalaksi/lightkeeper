@@ -10,7 +10,7 @@ use crate::module::command::UIAction;
 pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
-    get_child_commands: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString) -> QVariantList),
+    get_child_commands: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
 
@@ -43,12 +43,16 @@ impl CommandHandlerModel {
 
 
     // Parent ID is either command ID or category ID (for category-level commands).
-    fn get_child_commands(&self, host_id: QString, category: QString, parent_id: QString) -> QVariantList {
+    fn get_child_commands(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList {
         let category_string = category.to_string().to_lowercase();
         let parent_id_string = parent_id.to_string().to_lowercase();
+        let multivalue_level: u8 = multivalue_level.to_string().parse().unwrap();
+
         let mut all_commands = self.command_handler.get_host_commands(host_id.to_string())
-                                   .into_iter().filter(|(_, data)| data.display_options.parent_id == parent_id_string &&
-                                                                   data.display_options.category == category_string)
+                                   .into_iter().filter(|(_, data)| 
+                                        data.display_options.parent_id == parent_id_string &&
+                                        data.display_options.category == category_string &&
+                                        (data.display_options.multivalue_level == 0 || data.display_options.multivalue_level == multivalue_level))
                                    .collect::<HashMap<String, CommandData>>();
 
         let mut valid_commands_sorted = Vec::<CommandData>::new();
