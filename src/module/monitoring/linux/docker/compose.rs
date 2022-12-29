@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    path::Path,
 };
 
 use crate::module::connection::ResponseMessage;
@@ -108,27 +109,26 @@ impl MonitoringModule for Compose {
             }
 
             let service = container.labels.get("com.docker.compose.service").unwrap().clone();
-            let container_number = container.labels.get("com.docker.compose.container-number").unwrap().clone();
-            let container_name = [project.clone(), service.clone(), container_number].join("_");
-            let compose_file = container.labels.get("com.docker.compose.project.working_dir").unwrap().clone();
+            let compose_file = Path::new(container.labels.get("com.docker.compose.project.working_dir").unwrap())
+                                    .join(&self.compose_file_name).to_string_lossy().to_string();
 
-            let mut data_point = DataPoint::labeled_value_with_level(service, container.state.to_string(), container.state.to_criticality());
-            data_point.command_params = vec![container_name, compose_file];
+            let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.state.to_string(), container.state.to_criticality());
+            data_point.command_params = vec![compose_file, service];
 
             projects.get_mut(&project).unwrap().push(data_point);
         }
 
         for (project, datapoints) in projects {
-            let compose_file = datapoints.first().unwrap().command_params[1].clone();
+            let compose_file = datapoints.first().unwrap().command_params[0].clone();
 
             // Check just in case that all have the same compose-file.
-            if datapoints.iter().any(|point| point.command_params[1] != compose_file) {
+            if datapoints.iter().any(|point| point.command_params[0] != compose_file) {
                 panic!("Containers under same project can't have different compose-files");
             }
 
             let mut second_parent_point = DataPoint::none();
             second_parent_point.label = project.clone();
-            second_parent_point.command_params = vec![project, compose_file];
+            second_parent_point.command_params = vec![compose_file];
             second_parent_point.multivalue = datapoints;
 
             parent_point.multivalue.push(second_parent_point);
