@@ -3,3 +3,6 @@ pub use edit::Edit;
 
 pub mod pull;
 pub use pull::Pull;
+
+pub mod up;
+pub use up::Up;
