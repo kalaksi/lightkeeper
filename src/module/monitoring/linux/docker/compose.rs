@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    path::Path,
 };
 
 use crate::module::connection::ResponseMessage;
@@ -19,6 +18,13 @@ use crate::module::{
 #[derive(Clone)]
 pub struct Compose {
     use_sudo: bool,
+
+    // TODO: these are unused atm
+    pub compose_file_name: String,
+    /// If you have one directory under which all the compose projects are, use this.
+    pub main_dir: String, 
+    /// If you have project directories all over the place, use this.
+    pub project_directories: Vec<String>, 
 }
 
 impl Module for Compose {
@@ -34,6 +40,11 @@ impl Module for Compose {
     fn new(settings: &HashMap<String, String>) -> Self {
         Compose {
             use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(true),
+
+            compose_file_name: String::from("docker-compose.yml"),
+            main_dir: settings.get("main_dir").unwrap_or(&String::new()).clone(),
+            project_directories: settings.get("project_directories").unwrap_or(&String::new()).clone()
+                                         .split(",").map(|value| value.to_string()).collect(),
         }
     }
 
@@ -80,6 +91,7 @@ impl MonitoringModule for Compose {
         let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
         containers.retain(|container| container.labels.contains_key("com.docker.compose.config-hash"));
 
+
         // There will be 2 levels of multivalues (services under projects).
         let mut parent_point = DataPoint::empty();
         let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
@@ -95,22 +107,28 @@ impl MonitoringModule for Compose {
                 projects.insert(project.clone(), Vec::new());
             }
 
-            // TODO: send this as part of the values instead of always trying to find through directories.
-            let compose_file = container.labels.get("com.docker.compose.project.working_dir").unwrap().clone();
             let service = container.labels.get("com.docker.compose.service").unwrap().clone();
             let container_number = container.labels.get("com.docker.compose.container-number").unwrap().clone();
             let container_name = [project.clone(), service.clone(), container_number].join("_");
+            let compose_file = container.labels.get("com.docker.compose.project.working_dir").unwrap().clone();
 
             let mut data_point = DataPoint::labeled_value_with_level(service, container.state.to_string(), container.state.to_criticality());
-            data_point.command_params = vec![container_name];
+            data_point.command_params = vec![container_name, compose_file];
 
             projects.get_mut(&project).unwrap().push(data_point);
         }
 
         for (project, datapoints) in projects {
+            let compose_file = datapoints.first().unwrap().command_params[1].clone();
+
+            // Check just in case that all have the same compose-file.
+            if datapoints.iter().any(|point| point.command_params[1] != compose_file) {
+                panic!("Containers under same project can't have different compose-files");
+            }
+
             let mut second_parent_point = DataPoint::none();
             second_parent_point.label = project.clone();
-            second_parent_point.command_params = vec![project];
+            second_parent_point.command_params = vec![project, compose_file];
             second_parent_point.multivalue = datapoints;
 
             parent_point.multivalue.push(second_parent_point);
@@ -118,49 +136,4 @@ impl MonitoringModule for Compose {
 
         Ok(parent_point)
     }
-}
-
-
-#[derive(Clone)]
-pub struct ComposeConfig {
-    pub compose_file_name: String,
-    /// If you have one directory under which all the compose projects are, use this.
-    pub main_dir: String, 
-    /// If you have project directories all over the place, use this.
-    pub project_directories: Vec<String>, 
-}
-
-// TODO: some validations?
-impl ComposeConfig {
-    pub fn new(settings: &HashMap<String, String>) -> Self {
-        ComposeConfig {
-            compose_file_name: String::from("docker-compose.yml"),
-            main_dir: settings.get("main_dir").unwrap_or(&String::new()).clone(),
-            project_directories: settings.get("project_directories").unwrap_or(&String::new()).clone()
-                                         .split(",").map(|value| value.to_string()).collect(),
-        }
-    }
-
-
-    pub fn get_project_dir(&self, project_name: &String) -> String {
-        if !self.main_dir.is_empty() {
-            return Path::new(&self.main_dir).join(project_name.clone()).to_string_lossy().to_string();
-        }
-        else {
-            for dir in self.project_directories.iter() {
-                // The last directory component should match the project name.
-                let last_dir_component = Path::new(dir).components().last().unwrap().as_os_str().to_string_lossy();
-                if *project_name == last_dir_component {
-                    return dir.clone();
-                }
-            }
-        }
-        panic!()
-    }
-
-    pub fn get_project_compose_file(&self, project_name: String) -> String {
-        let project_dir = self.get_project_dir(&project_name);
-        Path::new(&project_dir).join(self.compose_file_name.clone()).to_string_lossy().to_string()
-    }
-
 }

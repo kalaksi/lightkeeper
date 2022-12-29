@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    path::Path,
 };
 use crate::frontend;
 use crate::module::{
@@ -8,14 +7,12 @@ use crate::module::{
     command::CommandModule,
     command::Command,
     command::UIAction,
-    monitoring::docker::compose::ComposeConfig,
     Metadata,
     ModuleSpecification,
 };
 
 #[derive(Clone)]
 pub struct Edit {
-    config: ComposeConfig,
 }
 
 impl Module for Edit {
@@ -27,9 +24,8 @@ impl Module for Edit {
         }
     }
 
-    fn new(settings: &HashMap<String, String>) -> Self {
+    fn new(_settings: &HashMap<String, String>) -> Self {
         Edit {
-            config: ComposeConfig::new(settings),
         }
     }
 
@@ -60,8 +56,8 @@ impl CommandModule for Edit {
         }
     }
 
-    fn get_connector_message(&self, parameters: Vec<String>) -> String {
-        let compose_project_name = parameters.first().unwrap().clone();
-        self.config.get_project_compose_file(compose_project_name)
+    fn get_connector_message(&self, mut parameters: Vec<String>) -> String {
+        let compose_file = parameters.remove(1);
+        compose_file
     }
 }
