@@ -18,20 +18,6 @@ impl ModuleSpecification {
             version: version.to_string(),
         }
     }
-
-    pub fn from_string(string: &String) -> Result<Self, String> {
-        let mut parts = string.split('-');
-        let id = parts.next().unwrap_or_default();
-        let version = parts.next().unwrap_or_default();
-
-        if id.is_empty() || version.is_empty() || id.chars().any(char::is_whitespace)
-        {
-            return Err(String::from("Invalid specification string"));
-        }
-        else {
-            return Ok(ModuleSpecification::new(id, version))
-        }
-    }
 }
 
 impl Display for ModuleSpecification {

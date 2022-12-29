@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use super::metadata::Metadata;
+use crate::module::metadata::Metadata;
 use crate::module::ModuleSpecification;
 
 pub trait Module {
