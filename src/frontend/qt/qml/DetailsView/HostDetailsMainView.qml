@@ -20,7 +20,7 @@ Item {
     property int columnMaximumWidth: 600
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
-    property int columnSpacing: 5
+    property int columnSpacing: 2
     property var _hostData: groupByCategory(root.hostDataManager.get_monitor_datas(hostId), root.commandHandler.get_commands(root.hostId))
 
     ScrollView {
@@ -46,6 +46,8 @@ Item {
                 GroupBox {
                     id: box
                     property bool _hasOnlyMultivalues: modelData.monitorDatas.filter(item => !item.display_options.use_multivalue).length === 0
+                    leftPadding: 2
+                    rightPadding: 2
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.preferredWidth: root.columnMinimumWidth +

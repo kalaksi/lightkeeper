@@ -30,46 +30,64 @@ Item {
     anchors.left: parent.left
     anchors.right: parent.right
 
-    RowLayout {
+
+    Rectangle {
         anchors.fill: parent
+        radius: 6
+        color: Material.background
+        visible: hoverArea.containsMouse
+    }
 
-        Label {
-            id: labelComponent
-            text: TextTransform.truncate(root.label, 28)
+    // For highlighting. The whole row needs to be a child so that mouse events are still properly
+    // propagated to action buttons too.
+    MouseArea {
+        id: hoverArea
+        anchors.fill: parent
+        hoverEnabled: true
+        propagateComposedEvents: true
 
-            Layout.fillWidth: true
-        }
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 4
+            anchors.rightMargin: 4
 
-        ProgressBar {
-            value: parseInt(root.value, 10) / 100.0
-            visible: root.useProgressBar
+            Label {
+                id: labelComponent
+                text: TextTransform.truncate(root.label, 28)
 
-            Layout.preferredWidth: 100
-        }
-
-        NormalText {
-            text: root.value
-            visible: root.useProgressBar
-            font.pixelSize: 8
-
-            Layout.minimumWidth: 30
-        }
-
-        NormalText {
-            text: root.value
-            visible: !root.useProgressBar
-        }
-
-        // Row-level command buttons.
-        CommandButtonRow {
-            id: commands
-
-            commands: root.rowCommands
-            onClicked: function(commandId) {
-                root.commandHandler.execute(root.hostId, commandId, root.commandParams)
+                Layout.fillWidth: true
             }
 
-            visible: root.rowCommands.length > 0
+            ProgressBar {
+                value: parseInt(root.value, 10) / 100.0
+                visible: root.useProgressBar
+
+                Layout.preferredWidth: 100
+            }
+
+            SmallerText {
+                text: root.value
+                visible: root.useProgressBar
+
+                Layout.minimumWidth: 30
+            }
+
+            SmallText {
+                text: root.value
+                visible: !root.useProgressBar
+            }
+
+            // Row-level command buttons.
+            CommandButtonRow {
+                id: commands
+
+                commands: root.rowCommands
+                onClicked: function(commandId) {
+                    root.commandHandler.execute(root.hostId, commandId, root.commandParams)
+                }
+
+                visible: root.rowCommands.length > 0
+            }
         }
     }
 }
