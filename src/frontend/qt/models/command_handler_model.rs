@@ -5,6 +5,7 @@ use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
 use crate::module::command::UIAction;
+use crate::monitor_manager::MonitorManager;
 
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
@@ -13,6 +14,7 @@ pub struct CommandHandlerModel {
     get_child_commands: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
+    refresh_monitors: qt_method!(fn(&self, host_id: QString)),
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
@@ -23,13 +25,15 @@ pub struct CommandHandlerModel {
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
 
     command_handler: CommandHandler,
+    monitor_manager: MonitorManager,
     command_display_order: Vec<String>,
 }
 
 impl CommandHandlerModel {
-    pub fn new(command_handler: CommandHandler, command_display_order: Vec<String>) -> Self {
+    pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, command_display_order: Vec<String>) -> Self {
         CommandHandlerModel { 
             command_handler: command_handler,
+            monitor_manager: monitor_manager,
             command_display_order: command_display_order,
             ..Default::default()
         }
@@ -125,5 +129,16 @@ impl CommandHandlerModel {
         }
 
         return invocation_id
+    }
+
+    fn refresh_monitors(&self, host_id: QString) {
+        let host_id = host_id.to_string();
+
+        if host_id.is_empty() {
+            self.monitor_manager.refresh_monitors(None);
+        }
+        else {
+            self.monitor_manager.refresh_monitors(Some(&host_id));
+        }
     }
 }

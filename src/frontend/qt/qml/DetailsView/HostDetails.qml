@@ -35,6 +35,7 @@ Item {
     Header {
         id: mainViewHeader
         text: root.hostId
+        onRefreshClicked: (host_id) => root.commandHandler.refresh_monitors(root.hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.closeClicked()

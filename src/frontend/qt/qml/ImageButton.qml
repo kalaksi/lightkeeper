@@ -10,6 +10,7 @@ Item {
     property real imageRelativeWidth: 0.9
     property real imageRelativeHeight: 0.9
     property string color: Material.foreground
+    property string tooltip: ""
 
     width: 0.8 * parent.height
     height: width
@@ -22,6 +23,10 @@ Item {
         anchors.centerIn: parent
 
         onClicked: root.clicked()
+
+        ToolTip.visible: root.tooltip !== "" && hovered
+        ToolTip.delay: 800
+        ToolTip.text: root.tooltip
 
         Image {
             anchors.centerIn: parent

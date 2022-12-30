@@ -10,6 +10,7 @@ Item {
     id: root
     property string text: ""
     property string color: "#555555"
+    property bool showRefreshButton: true
     property bool showMinimizeButton: true
     property bool showMaximizeButton: true
     property bool showCloseButton: true
@@ -20,6 +21,7 @@ Item {
     implicitWidth: parent.width
     implicitHeight: 30
 
+    signal refreshClicked()
     signal openInWindowClicked()
     signal maximizeClicked()
     signal minimizeClicked()
@@ -45,48 +47,54 @@ Item {
         spacing: 5
 
         ImageButton {
+            anchors.verticalCenter: parent.verticalCenter
+            imageSource: "qrc:/main/images/button/refresh"
+            imageRelativeWidth: 0.8
+            imageRelativeHeight: 0.8
+            tooltip: "Refresh monitors"
+            onClicked: root.refreshClicked()
+            visible: root.showRefreshButton
+        }
+
+        ImageButton {
             anchors.rightMargin: 5
             anchors.verticalCenter: parent.verticalCenter
-
             imageSource: "qrc:/main/images/button/window-new"
+            tooltip: "Open in new window"
             onClicked: root.openInWindowClicked()
             visible: root.showOpenInWindowButton
         }
 
         ImageButton {
             anchors.verticalCenter: parent.verticalCenter
-
             imageSource: "qrc:/main/images/button/maximize"
+            tooltip: "Maximize"
             onClicked: {
                 root.maximizeClicked()
                 root._maximized = true
             }
-
             visible: root.showMaximizeButton && !root._maximized
         }
 
         ImageButton {
             anchors.verticalCenter: parent.verticalCenter
-
             imageSource: "qrc:/main/images/button/minimize"
+            tooltip: "Minimize"
             onClicked: {
                 root.minimizeClicked()
                 root._maximized = false
             }
-
             visible: root.showMinimizeButton && root._maximized
         }
 
         ImageButton {
             anchors.verticalCenter: parent.verticalCenter
-
             imageSource: "qrc:/main/images/button/close"
             imageRelativeWidth: 0.5
             imageRelativeHeight: 0.8
+            tooltip: "Close"
             onClicked: root.closeClicked()
-
             visible: root.showCloseButton
         }
-
     }
 }

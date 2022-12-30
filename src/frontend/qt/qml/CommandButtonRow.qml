@@ -30,7 +30,7 @@ Item {
                 height: width
 
                 ToolTip.visible: hovered
-                ToolTip.delay: 1000
+                ToolTip.delay: 800
                 ToolTip.text: modelData.display_options.display_text
 
                 Image {
