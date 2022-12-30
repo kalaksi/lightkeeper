@@ -36,6 +36,7 @@ pub fn init_resources() {
             "images/breeze/dark/arrow-down.svg" as "images/button/search-down",
             "images/breeze/dark/story-editor.svg" as "images/button/story-editor",
             "images/breeze/dark/download.svg" as "images/button/download",
+            "images/breeze/dark/overflow-menu.svg" as "images/button/overflow-menu",
 
             // TODO: not used?
             "images/breeze/dark/media-playback-start.svg" as "images/button/start",
@@ -89,6 +90,7 @@ pub fn init_resources() {
             "images/breeze/light/arrow-down.svg" as "images/button/search-down",
             "images/breeze/light/story-editor.svg" as "images/button/story-editor",
             "images/breeze/light/download.svg" as "images/button/download",
+            "images/breeze/light/overflow-menu.svg" as "images/button/overflow-menu",
 
             // TODO: not used?
             "images/breeze/light/media-playback-start.svg" as "images/button/start",
