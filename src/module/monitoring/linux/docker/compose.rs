@@ -118,7 +118,13 @@ impl MonitoringModule for Compose {
             projects.get_mut(&project).unwrap().push(data_point);
         }
 
-        for (project, datapoints) in projects {
+        let mut projects_sorted = projects.keys().cloned().collect::<Vec<String>>();
+        projects_sorted.sort();
+
+        for project in projects_sorted.into_iter() {
+            let mut datapoints = projects.remove_entry(&project).unwrap().1;
+            datapoints.sort_by(|left, right| left.label.cmp(&right.label));
+
             let compose_file = datapoints.first().unwrap().command_params[0].clone();
 
             // Check just in case that all have the same compose-file.
