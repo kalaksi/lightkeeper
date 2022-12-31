@@ -90,6 +90,7 @@ Item {
         ImageButton {
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/close"
+            color: Qt.darker(Material.foreground, 1.10)
             imageRelativeWidth: 0.5
             imageRelativeHeight: 0.8
             tooltip: "Close"

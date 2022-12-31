@@ -50,10 +50,16 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: 4
             anchors.rightMargin: 4
+            anchors.bottomMargin: 4
+
 
             Label {
                 id: labelComponent
                 text: TextTransform.truncate(root.label, 28)
+                verticalAlignment: Text.AlignVCenter
+                lineHeight: 0.9
+                // TODO: a proper way to center the text better
+                bottomPadding: 4
 
                 Layout.fillWidth: true
             }
@@ -68,6 +74,10 @@ Item {
             SmallerText {
                 text: root.value
                 visible: root.useProgressBar
+                verticalAlignment: Text.AlignVCenter
+                lineHeight: 0.9
+                // TODO: a proper way to center the text better
+                bottomPadding: 4
 
                 Layout.minimumWidth: 30
             }
@@ -75,12 +85,17 @@ Item {
             SmallText {
                 text: root.value
                 visible: !root.useProgressBar
+                verticalAlignment: Text.AlignVCenter
+                lineHeight: 0.9
+                // TODO: a proper way to center the text better
+                bottomPadding: 4
             }
 
             // Row-level command buttons.
             CommandButtonRow {
                 id: commands
-
+                collapsed: true
+                menuTooltip: "Commands"
                 commands: root.rowCommands
                 onClicked: function(commandId) {
                     root.commandHandler.execute(root.hostId, commandId, root.commandParams)
