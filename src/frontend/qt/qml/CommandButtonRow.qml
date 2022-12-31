@@ -10,6 +10,7 @@ Item {
     property int size: 24
     property bool flatButtons: true
     property bool roundButtons: true
+    property bool collapsed: false
 
     implicitWidth: size * (commands.length + 0.5)
     implicitHeight: size
@@ -20,48 +21,16 @@ Item {
         anchors.right: parent.right
 
         Repeater {
-            model: root.roundButtons === true ? root.commands : []
+            model: root.commands
 
-            RoundButton {
+            ImageButton {
+                width: root.size
+                height: root.size
+                flatButton: root.flatButtons
+                roundButton: root.roundButtons
+                tooltip: modelData.display_options.display_text
+                imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
                 onClicked: root.clicked(modelData.command_id)
-
-                flat: root.flatButtons
-                width: root.height
-                height: width
-
-                ToolTip.visible: hovered
-                ToolTip.delay: 800
-                ToolTip.text: modelData.display_options.display_text
-
-                Image {
-                    anchors.centerIn: parent
-                    source: "qrc:/main/images/button/" + modelData.display_options.display_icon
-                    width: 0.85 * parent.width
-                    height: width
-                }
-            }
-        }
-
-        Repeater {
-            model: root.roundButtons === false ? root.commands : []
-
-            Button {
-                onClicked: root.clicked(modelData.command_id)
-
-                flat: root.flatButtons
-                width: root.height
-                height: width
-
-                ToolTip.visible: hovered
-                ToolTip.delay: 1000
-                ToolTip.text: modelData.display_options.display_text
-
-                Image {
-                    anchors.centerIn: parent
-                    source: "qrc:/main/images/button/" + modelData.display_options.display_icon
-                    width: 0.85 * parent.width
-                    height: width
-                }
             }
         }
     }

@@ -16,9 +16,9 @@ Item {
     // https://stackoverflow.com/questions/62484078/required-property-not-working-with-repeater
     // https://doc.qt.io/qt-5/qtquick-modelviewsdata-modelview.html#models
     required property var modelData // Not really used
+
     required property string label
     required property string value
-
     property bool useProgressBar: false
     // Provided only if rowCommands are used.
     property var commandHandler
