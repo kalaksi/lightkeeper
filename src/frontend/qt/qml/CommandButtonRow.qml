@@ -14,7 +14,7 @@ Item {
     property bool roundButtons: true
     property bool collapsed: false
     property string menuTooltip: "More..."
-    property int animationDuration: 175
+    property int animationDuration: 150
     property bool _showCommands: false
 
     implicitWidth: calculateWidth(!collapsed)

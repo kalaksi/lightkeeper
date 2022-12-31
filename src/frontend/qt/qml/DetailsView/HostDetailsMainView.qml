@@ -148,6 +148,7 @@ Item {
                                         PropertyRow {
                                             label: monitorData.display_options.use_multivalue ? modelData.label : monitorData.display_options.display_text
                                             value: ValueUnit.AsText(modelData.value, monitorData.display_options.unit)
+                                            displayStyle: monitorData.display_options.display_style
                                             useProgressBar: monitorData.display_options.display_style === "ProgressBar"
 
                                             hostId: root.hostId

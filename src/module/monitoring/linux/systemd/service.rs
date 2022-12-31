@@ -60,7 +60,7 @@ impl MonitoringModule for Service {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_style: frontend::DisplayStyle::Text,
+            display_style: frontend::DisplayStyle::CriticalityLevel,
             display_text: String::from("Services"),
             category: String::from("systemd"),
             use_multivalue: true,

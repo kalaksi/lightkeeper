@@ -45,7 +45,7 @@ impl MonitoringModule for Package {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_style: frontend::DisplayStyle::CriticalityLevel,
+            display_style: frontend::DisplayStyle::Text,
             display_text: String::from("Packages"),
             category: String::from("packages"),
             use_multivalue: true,

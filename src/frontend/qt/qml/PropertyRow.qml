@@ -19,6 +19,8 @@ Item {
 
     required property string label
     required property string value
+    // Corresponds to frontend::DisplayStyle.
+    property string displayStyle: "Text"
     property bool useProgressBar: false
     // Provided only if rowCommands are used.
     property var commandHandler
@@ -73,7 +75,7 @@ Item {
 
             SmallerText {
                 text: root.value
-                visible: root.useProgressBar
+                visible: root.displayStyle === "ProgressBar"
                 verticalAlignment: Text.AlignVCenter
                 lineHeight: 0.9
                 // TODO: a proper way to center the text better
@@ -84,11 +86,18 @@ Item {
 
             SmallText {
                 text: root.value
-                visible: !root.useProgressBar
+                visible: root.displayStyle === "Text"
                 verticalAlignment: Text.AlignVCenter
                 lineHeight: 0.9
                 // TODO: a proper way to center the text better
                 bottomPadding: 4
+            }
+
+            PillText {
+                text: root.value
+
+                visible: root.displayStyle === "CriticalityLevel"
+                height: root.height * 0.9
             }
 
             // Row-level command buttons.
