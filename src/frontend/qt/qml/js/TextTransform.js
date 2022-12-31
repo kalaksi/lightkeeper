@@ -13,3 +13,7 @@ function truncate(text, maxLength) {
     }
     return text
 }
+
+function removeWhitespaces(text) {
+    return text.replace(/\s/g, '')
+}
