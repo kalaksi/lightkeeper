@@ -94,9 +94,7 @@ impl MonitoringModule for Compose {
 
 
         // There will be 2 levels of multivalues (services under projects).
-        let mut parent_point = DataPoint::empty();
-        let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
-        parent_point.criticality = most_critical_container.state.to_criticality();
+        let mut projects_datapoint = DataPoint::empty();
 
         // Group containers by project name.
         let mut projects = HashMap::<String, Vec<DataPoint>>::new();
@@ -132,14 +130,14 @@ impl MonitoringModule for Compose {
                 panic!("Containers under same project can't have different compose-files");
             }
 
-            let mut second_parent_point = DataPoint::none();
-            second_parent_point.label = project.clone();
-            second_parent_point.command_params = vec![compose_file];
-            second_parent_point.multivalue = datapoints;
+            let most_critical = datapoints.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
+            let mut services_datapoint = DataPoint::labeled_value_with_level(project.clone(), most_critical.value.clone(), most_critical.criticality);
+            services_datapoint.command_params = vec![compose_file];
+            services_datapoint.multivalue = datapoints;
 
-            parent_point.multivalue.push(second_parent_point);
+            projects_datapoint.multivalue.push(services_datapoint);
         }
 
-        Ok(parent_point)
+        Ok(projects_datapoint)
     }
 }

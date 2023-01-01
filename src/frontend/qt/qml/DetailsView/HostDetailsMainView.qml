@@ -178,7 +178,6 @@ Item {
 
             lastDataPoint.multivalue.forEach(multivalue => {
                 multivalue.multivalue_level = 1
-
                 result.push(multivalue)
 
                 // 2nd level of multivalues.
@@ -188,6 +187,9 @@ Item {
                     multivalue2.multivalue_level = 2
                     result.push(multivalue2)
                 })
+
+                // Now remove the duplicate data.
+                multivalue.multivalue = []
             })
         }
         else {
