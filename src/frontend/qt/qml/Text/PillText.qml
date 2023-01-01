@@ -17,12 +17,12 @@ Item {
         color: root.pillColor
         anchors.fill: parent
         radius: parent.height
-        visible: textElement.text.length > 0
+        visible: TextTransform.removeWhitespaces(textElement.text).length > 0
     }
 
     Text {
         id: textElement
-        text: TextTransform.removeWhitespaces(root.text)
+        text: root.text
         anchors.fill: parent
         font.pointSize: 8
         verticalAlignment: Text.AlignVCenter
