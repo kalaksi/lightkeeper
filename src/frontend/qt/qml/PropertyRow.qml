@@ -22,7 +22,6 @@ Item {
     property string criticality: "nodata"
     // Corresponds to frontend::DisplayStyle.
     property string displayStyle: "Text"
-    property bool useProgressBar: false
     // Provided only if rowCommands are used.
     property var commandHandler
     property string hostId: ""
@@ -80,7 +79,7 @@ Item {
 
             ProgressBar {
                 value: parseInt(root.value, 10) / 100.0
-                visible: root.useProgressBar
+                visible: root.displayStyle === "ProgressBar"
 
                 Layout.preferredWidth: 100
             }
