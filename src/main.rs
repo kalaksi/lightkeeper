@@ -108,11 +108,11 @@ fn main() {
     monitor_manager.refresh_monitors(None);
     let mut initial_display_data = host_manager.get_display_data();
     initial_display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
-    initial_display_data.category_order = config.display_options.category_order;
+    initial_display_data.category_order = config.display_options.category_order.clone();
     let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data);
 
     host_manager.add_observer(frontend.new_update_sender());
-    frontend.setup_command_handler(command_handler, monitor_manager, config.display_options.command_order);
+    frontend.setup_command_handler(command_handler, monitor_manager, config.display_options.clone());
     frontend.start();
 
     connection_manager.join();

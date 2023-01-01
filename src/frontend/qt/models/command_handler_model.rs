@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
+use crate::configuration;
 use crate::module::command::UIAction;
 use crate::monitor_manager::MonitorManager;
 
@@ -26,15 +27,15 @@ pub struct CommandHandlerModel {
 
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
-    command_display_order: Vec<String>,
+    ui_display_options: configuration::DisplayOptions,
 }
 
 impl CommandHandlerModel {
-    pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, command_display_order: Vec<String>) -> Self {
+    pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, ui_display_options: configuration::DisplayOptions) -> Self {
         CommandHandlerModel { 
             command_handler: command_handler,
             monitor_manager: monitor_manager,
-            command_display_order: command_display_order,
+            ui_display_options,
             ..Default::default()
         }
     }
@@ -59,8 +60,13 @@ impl CommandHandlerModel {
                                         (data.display_options.multivalue_level == 0 || data.display_options.multivalue_level == multivalue_level))
                                    .collect::<HashMap<String, CommandData>>();
 
+        // Update the collapsible display option according to configuration.
+        for (command_id, data) in all_commands.iter_mut() {
+            data.display_options.collapsible = !self.ui_display_options.non_collapsible_commands.contains(command_id);
+        }
+
         let mut valid_commands_sorted = Vec::<CommandData>::new();
-        for command_id in self.command_display_order.iter() {
+        for command_id in self.ui_display_options.command_order.iter() {
             if let Some(command_data) = all_commands.remove(command_id) {
                 valid_commands_sorted.push(command_data);
             }

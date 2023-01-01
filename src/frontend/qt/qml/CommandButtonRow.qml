@@ -16,11 +16,22 @@ Item {
     property string menuTooltip: "More..."
     property int animationDuration: 150
     property bool _showCommands: false
+    property var _alwaysShownCommands: commands.filter(command => !command.display_options.collapsible)
+    // Shown when `collapsed` is enabled and all of the commands aren't already visible.
+    property bool _showMenu: collapsed && _alwaysShownCommands.length < commands.length
+
 
     implicitWidth: calculateWidth(!collapsed)
     implicitHeight: size
 
     signal clicked(string commandId)
+
+    Component.onCompleted: {
+        // No sense in allowing only 1 command to collapse.
+        if (root.commands.length < 2) {
+            root.collapsed = false
+        }
+    }
 
     Rectangle {
         id: background
@@ -35,8 +46,7 @@ Item {
             anchors.right: parent.right
 
             Repeater {
-                model: !root.collapsed || root._showCommands ? root.commands : []
-
+                model: !root.collapsed || root._showCommands ?  root.commands : root._alwaysShownCommands
                 ImageButton {
                     width: root.buttonSize
                     height: root.buttonSize
@@ -56,7 +66,7 @@ Item {
                 roundButton: root.roundButtons
                 tooltip: root.menuTooltip
                 imageSource: "qrc:/main/images/button/overflow-menu"
-                visible: root.collapsed
+                visible: root._showMenu
 
                 onClicked: {
                     if (root._showCommands) {
@@ -91,11 +101,13 @@ Item {
     }
 
     function calculateWidth(forAllCommands) {
+        let spaceForMenu = root._showMenu ? 1 : 0
+
         if (forAllCommands === true) {
-            return root.size * (commands.length + 1)
+            return root.size * (commands.length + spaceForMenu)
         }
         else {
-            return root.size
+            return root.size * (root._alwaysShownCommands.length + spaceForMenu) 
         }
     }
 }

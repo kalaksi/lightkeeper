@@ -9,7 +9,12 @@ use super::{
 use std::sync::mpsc;
 extern crate qmetaobject;
 use qmetaobject::*;
-use crate::{frontend, command_handler::CommandHandler, monitor_manager::MonitorManager};
+use crate::{
+    frontend,
+    command_handler::CommandHandler,
+    monitor_manager::MonitorManager,
+    configuration
+};
 
 pub struct QmlFrontend {
     update_sender_prototype: mpsc::Sender<frontend::HostDisplayData>,
@@ -34,8 +39,8 @@ impl QmlFrontend {
         }
     }
 
-    pub fn setup_command_handler(&mut self, command_handler: CommandHandler, monitor_manager: MonitorManager, command_display_order: Vec<String>) {
-        self.command_handler = Some(CommandHandlerModel::new(command_handler, monitor_manager, command_display_order));
+    pub fn setup_command_handler(&mut self, command_handler: CommandHandler, monitor_manager: MonitorManager, display_options: configuration::DisplayOptions) {
+        self.command_handler = Some(CommandHandlerModel::new(command_handler, monitor_manager, display_options));
     }
 
     pub fn start(&mut self) {

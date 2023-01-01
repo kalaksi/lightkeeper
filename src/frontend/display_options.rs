@@ -32,6 +32,10 @@ pub struct DisplayOptions {
 
     /// Action to be executed by the frontend after sending the command.
     pub action: UIAction,
+
+    /// Controls if UI is allowed to collapse / hide this value e.g. under a menu button.
+    /// This shouldn't normally be set on a module level. Set the prefernce in UI configuration options instead.
+    pub collapsible: bool,
 }
 
 impl DisplayOptions {

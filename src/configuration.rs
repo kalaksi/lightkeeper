@@ -38,12 +38,13 @@ pub struct General {
     pub default_host_status: HostStatus,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
     pub group_multivalue: bool,
     pub category_order: Vec<String>,
     pub command_order: Vec<String>,
+    pub non_collapsible_commands: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]

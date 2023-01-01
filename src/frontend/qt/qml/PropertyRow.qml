@@ -34,7 +34,7 @@ Item {
     anchors.right: parent.right
 
     property var _pillColors: {}
-    Component.onCompleted: function() {
+    Component.onCompleted: {
         _pillColors = {
             critical: "#60ff3300",
             error: "#60ff3300",
