@@ -80,13 +80,17 @@ impl MonitoringModule for Images {
         let mut parent_data = DataPoint::empty();
 
         parent_data.multivalue = images.iter().map(|image| {
-            let mut point = DataPoint::labeled_value(image.repo_tags.first().unwrap().clone(), image.created.to_string());
+            let label = match &image.repo_tags {
+                Some(repo_tags) => repo_tags.first().unwrap().clone(),
+                None => image.id.clone(),
+            };
+            let mut point = DataPoint::labeled_value(label, image.created.to_string());
             point.command_params = vec![image.id.clone()];
 
             // TODO: how to make sure timezone is accounted for correctly?
             let creation_time = Utc.timestamp(point.value.parse::<i64>().unwrap(), 0);
             let duration = Utc::now().signed_duration_since(creation_time);
-            point.value = format!("{} days old", duration.num_days());
+            point.value = format!("{} days", duration.num_days());
 
             point
         }).collect();
@@ -104,7 +108,7 @@ struct ImageDetails {
     // labels: Option<HashMap<String, String>>,
     // parent_id: String,
     // repo_digests: Option<Vec<String>>,
-    repo_tags: Vec<String>,
+    repo_tags: Option<Vec<String>>,
     // shared_size: i64,
     // size: i64,
     // virtual_size: i64,
