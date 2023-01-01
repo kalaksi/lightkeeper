@@ -19,6 +19,7 @@ Item {
 
     required property string label
     required property string value
+    property string criticality: "nodata"
     // Corresponds to frontend::DisplayStyle.
     property string displayStyle: "Text"
     property bool useProgressBar: false
@@ -32,6 +33,17 @@ Item {
     anchors.left: parent.left
     anchors.right: parent.right
 
+    property var _pillColors: {}
+    Component.onCompleted: function() {
+        _pillColors = {
+            critical: "#60ff3300",
+            error: "#60ff3300",
+            warning: "#60ffcc00",
+            normal: "#6033cc33",
+            info: "#60ffffff",
+            _: "#60ffffff",
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -94,24 +106,31 @@ Item {
             }
 
             PillText {
-                text: root.value
-
                 visible: root.displayStyle === "CriticalityLevel"
+                text: root.value
+                pillColor: getPillColor(root.criticality)
                 height: root.height * 0.9
             }
 
             // Row-level command buttons.
             CommandButtonRow {
                 id: commands
+                visible: root.rowCommands.length > 0
                 collapsed: true
                 menuTooltip: "Commands"
                 commands: root.rowCommands
                 onClicked: function(commandId) {
                     root.commandHandler.execute(root.hostId, commandId, root.commandParams)
                 }
-
-                visible: root.rowCommands.length > 0
             }
         }
+    }
+
+    function getPillColor(criticality) {
+        let color = root._pillColors[criticality]
+        if (typeof color !== "undefined") {
+            return color
+        }
+        return root._pillColors["_"]
     }
 }

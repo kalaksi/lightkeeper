@@ -33,8 +33,4 @@ Item {
         lineHeight: 0.9
         bottomPadding: 3
     }
-
-    function getColor() {
-
-    }
 }
