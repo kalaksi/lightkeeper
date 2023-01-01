@@ -8,7 +8,7 @@ Item {
     property string text: ""
     property alias textColor: textElement.color
     property string pillColor: "#30FFFFFF"
-    property int padding: 4
+    property int padding: 3
 
     implicitWidth: textElement.implicitWidth + padding * 2
     implicitHeight: textElement.implicitHeight
