@@ -129,8 +129,8 @@ impl HostDataManagerModel {
     fn get_summary_monitor_data(&self, host_id: QString) -> QVariantList {
         let mut result = QVariantList::default();
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            let summary_compatbile = host.monitoring_data.values().filter(|data| !data.display_options.ignore_from_summary).collect();
-            let sorted_keys = self.get_monitor_data_keys_sorted(summary_compatbile);
+            let summary_compatible = host.monitoring_data.values().filter(|data| !data.display_options.ignore_from_summary).collect();
+            let sorted_keys = self.get_monitor_data_keys_sorted(summary_compatible);
 
             for key in sorted_keys {
                 let monitoring_data = host.monitoring_data.get(&key).unwrap();

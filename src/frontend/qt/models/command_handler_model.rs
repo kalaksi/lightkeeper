@@ -35,7 +35,7 @@ impl CommandHandlerModel {
         CommandHandlerModel { 
             command_handler: command_handler,
             monitor_manager: monitor_manager,
-            ui_display_options,
+            ui_display_options: ui_display_options,
             ..Default::default()
         }
     }
