@@ -49,7 +49,7 @@ impl QmlFrontend {
         let qt_data_host_table = QObjectBox::new(self.host_table.take().unwrap());
 
         let mut engine = QmlEngine::new();
-        engine.set_object_property("_hostDataManager".into(), qt_data_host_data_manager.pinned());
+        engine.set_object_property("HostDataManager".into(), qt_data_host_data_manager.pinned());
         engine.set_object_property("CommandHandler".into(), qt_data_command_handler.pinned());
         engine.set_object_property("_hostTableModel".into(), qt_data_host_table.pinned());
         engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));

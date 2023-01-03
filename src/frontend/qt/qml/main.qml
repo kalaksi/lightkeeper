@@ -30,9 +30,9 @@ ApplicationWindow {
         })
 
         // Starts the thread that receives host state updates in the backend.
-        _hostDataManager.receive_updates()
+        HostDataManager.receive_updates()
 
-        _hostDataManager.update_received.connect((hostId) => {
+        HostDataManager.update_received.connect((hostId) => {
             _hostTableModel.data_changed_for_host(hostId)
 
             if (hostId === hostDetails.hostId) {
@@ -40,7 +40,7 @@ ApplicationWindow {
             }
         })
 
-        _hostDataManager.monitor_state_changed.connect((hostId, monitorId, newCriticality) => {
+        HostDataManager.monitor_state_changed.connect((hostId, monitorId, newCriticality) => {
             hostTable.highlightMonitor(hostId, monitorId, newCriticality)
         })
 
@@ -69,7 +69,7 @@ ApplicationWindow {
             hostDetails.openLogView(headerText, invocationId)
         })
 
-        _hostDataManager.command_result_received.connect((commandResultJson) => {
+        HostDataManager.command_result_received.connect((commandResultJson) => {
             let commandResult = JSON.parse(commandResultJson)
 
             if (commandResult.criticality !== "Normal") {
@@ -107,7 +107,6 @@ ApplicationWindow {
                 SplitView.minimumWidth: body.width
                 SplitView.fillHeight: true
 
-                hostDataManager: _hostDataManager
                 model: _hostTableModel
             }
 
@@ -119,7 +118,6 @@ ApplicationWindow {
                 SplitView.maximumHeight: 1.5 * body.splitSize * body.height
 
                 hostId: _hostTableModel.get_selected_host_id()
-                hostDataManager:_hostDataManager
 
                 onMinimizeClicked: animateMinimizeDetails.start()
                 onMaximizeClicked: animateMaximizeDetails.start()

@@ -8,7 +8,6 @@ import "Text"
 
 TableView {
     id: root 
-    required property var hostDataManager
     property int rowHeight: 40
 
     property var _monitorHighlights: {}
@@ -87,7 +86,7 @@ TableView {
                 implicitWidth: root.width * 0.3
 
                 MonitorSummary {
-                    model: root.hostDataManager.get_summary_monitor_data(value)
+                    model: HostDataManager.get_summary_monitor_data(value)
                     highlights: value in root._monitorHighlights ? root._monitorHighlights[value] : {}
                 }
             }

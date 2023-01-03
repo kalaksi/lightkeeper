@@ -12,7 +12,6 @@ import "../js/ValueUnit.js" as ValueUnit
 
 Item {
     id: root
-    required property var hostDataManager
     property string hostId: ""
     property bool hideEmptyCategories: true
     property int columnMinimumWidth: 400
@@ -20,7 +19,7 @@ Item {
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
     property int columnSpacing: 6
-    property var _hostData: groupByCategory(root.hostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
+    property var _hostData: groupByCategory(HostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
 
     ScrollView {
         id: rootScrollView
@@ -92,7 +91,7 @@ Item {
 
                             // Host data is a bit different from monitor data, so handling it separately here.
                             Repeater {
-                                model: modelData.category === "Host" ? Object.entries(root.hostDataManager.get_host_data(root.hostId)) : []
+                                model: modelData.category === "Host" ? Object.entries(HostDataManager.get_host_data(root.hostId)) : []
 
                                 PropertyRow {
                                     label: modelData[0]
@@ -231,7 +230,7 @@ Item {
     }
 
     function refresh() {
-        root._hostData = groupByCategory(root.hostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
+        root._hostData = groupByCategory(HostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
     }
 
 }

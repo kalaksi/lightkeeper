@@ -13,7 +13,6 @@ import "../js/ValueUnit.js" as ValueUnit
 
 Item {
     id: root
-    required property var hostDataManager
     property string hostId: ""
     property real _subviewSize: 0.0
 
@@ -48,7 +47,6 @@ Item {
         anchors.right: root.right
         anchors.margins: 10
 
-        hostDataManager: root.hostDataManager
         hostId: root.hostId
     }
 
@@ -158,7 +156,7 @@ Item {
         subviewHeader.text = headerText
         root._subviewInvocationId = invocationId
 
-        let monitorDataJSON = root.hostDataManager.get_monitor_data(root.hostId, "systemd-service")
+        let monitorDataJSON = HostDataManager.get_monitor_data(root.hostId, "systemd-service")
 
         if (monitorDataJSON.length > 2) {
             let monitorData = JSON.parse(monitorDataJSON)
