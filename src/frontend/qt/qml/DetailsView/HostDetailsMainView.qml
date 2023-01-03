@@ -20,7 +20,7 @@ Item {
     property int columnMaximumWidth: 600
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
-    property int columnSpacing: 2
+    property int columnSpacing: 6
     property var _hostData: groupByCategory(root.hostDataManager.get_monitor_datas(hostId), root.commandHandler.get_commands(root.hostId))
 
     ScrollView {
@@ -32,6 +32,7 @@ Item {
             id: grid
             anchors.fill: parent
             columns: Math.floor(parent.width / root.columnMinimumWidth)
+            columnSpacing: root.columnSpacing
 
             Repeater {
                 // TODO: hide empty categories
@@ -44,46 +45,39 @@ Item {
                 }
 
                 GroupBox {
-                    id: box
+                    id: groupBox
                     property bool _hasOnlyMultivalues: modelData.monitorDatas.filter(item => !item.display_options.use_multivalue).length === 0
                     leftPadding: 2
                     rightPadding: 2
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.preferredWidth: root.columnMinimumWidth +
-                                           (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns) - 
+                                           (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns) -
                                            root.columnSpacing
                     Layout.minimumHeight: root.columnMinimumHeight
                     Layout.maximumHeight: root.columnMaximumHeight
                     Layout.alignment: Qt.AlignTop
 
-                    label: Label {
-                        width: parent.width
-                        padding: 5
-                        horizontalAlignment: Text.AlignHCenter
-                        text: modelData.category
-
-                        background: Rectangle{
-                            anchors.fill: parent
-                            gradient: Gradient {
-                                GradientStop { position: 0.0; color: "#606060" }
-                                GradientStop { position: 1.0; color: "#404040" }
-                            }
-                        }
-                    }
-
                     background: Rectangle {
                         color: "#404040"
                     }
 
+                    // Custom label provides more flexibility.
+                    label: GroupBoxLabel {
+                        id: customLabel
+                        text: modelData.category
+                        anchors.left: groupBox.left
+                        anchors.right: groupBox.right
+                    }
+
                     ScrollView {
                         anchors.fill: parent
+                        anchors.topMargin: customLabel.height
                         contentWidth: availableWidth
 
                         Column {
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            spacing: root.columnSpacing
 
                             // Category-level command buttons (buttons on top of the category area).
                             CommandButtonRow {
@@ -124,7 +118,7 @@ Item {
                                         topPadding: 10
                                         horizontalAlignment: Text.AlignHCenter
                                         text: monitorData.display_options.display_text
-                                        visible: monitorData.display_options.use_multivalue && !box._hasOnlyMultivalues
+                                        visible: monitorData.display_options.use_multivalue && !groupBox._hasOnlyMultivalues
 
                                         background: Rectangle {
                                             width: parent.width
