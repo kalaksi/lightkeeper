@@ -24,9 +24,9 @@ ApplicationWindow {
         _dialogInvocationIds = {}
 
         // Set up confirmation dialog on signal.
-        _commandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, command_params) => {
+        CommandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, command_params) => {
             confirmationDialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
-            confirmationDialogLoader.item.onAccepted.connect(() => _commandHandler.execute_confirmed(host_id, command_id, command_params))
+            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.execute_confirmed(host_id, command_id, command_params))
         })
 
         // Starts the thread that receives host state updates in the backend.
@@ -56,16 +56,16 @@ ApplicationWindow {
             animateHideDetails.start()
         })
 
-        _commandHandler.details_dialog_opened.connect((invocationId) => {
+        CommandHandler.details_dialog_opened.connect((invocationId) => {
             let instanceId = detailsDialogManager.create()
             _dialogInvocationIds[invocationId] = instanceId
         })
 
-        _commandHandler.details_subview_opened.connect((headerText, invocationId) => {
+        CommandHandler.details_subview_opened.connect((headerText, invocationId) => {
             hostDetails.openTextView(headerText, invocationId)
         })
 
-        _commandHandler.logs_subview_opened.connect((headerText, invocationId) => {
+        CommandHandler.logs_subview_opened.connect((headerText, invocationId) => {
             hostDetails.openLogView(headerText, invocationId)
         })
 
@@ -120,7 +120,6 @@ ApplicationWindow {
 
                 hostId: _hostTableModel.get_selected_host_id()
                 hostDataManager:_hostDataManager
-                commandHandler: _commandHandler
 
                 onMinimizeClicked: animateMinimizeDetails.start()
                 onMaximizeClicked: animateMaximizeDetails.start()

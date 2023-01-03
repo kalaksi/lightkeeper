@@ -22,8 +22,6 @@ Item {
     property string criticality: "nodata"
     // Corresponds to frontend::DisplayStyle.
     property string displayStyle: "Text"
-    // Provided only if rowCommands are used.
-    property var commandHandler
     property string hostId: ""
     property var commandParams: []
     property var rowCommands: []
@@ -119,7 +117,7 @@ Item {
                 menuTooltip: "Commands"
                 commands: root.rowCommands
                 onClicked: function(commandId) {
-                    root.commandHandler.execute(root.hostId, commandId, root.commandParams)
+                    CommandHandler.execute(root.hostId, commandId, root.commandParams)
                 }
             }
         }

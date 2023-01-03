@@ -12,7 +12,6 @@ import "../js/ValueUnit.js" as ValueUnit
 
 Item {
     id: root
-    required property var commandHandler
     required property var hostDataManager
     property string hostId: ""
     property bool hideEmptyCategories: true
@@ -21,7 +20,7 @@ Item {
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
     property int columnSpacing: 6
-    property var _hostData: groupByCategory(root.hostDataManager.get_monitor_datas(hostId), root.commandHandler.get_commands(root.hostId))
+    property var _hostData: groupByCategory(root.hostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
 
     ScrollView {
         id: rootScrollView
@@ -85,9 +84,9 @@ Item {
                                 size: 34
                                 flatButtons: false
                                 roundButtons: false
-                                commands: Parse.ListOfJsons(root.commandHandler.get_child_commands(root.hostId, modelData.category, "", 0))
+                                commands: Parse.ListOfJsons(CommandHandler.get_child_commands(root.hostId, modelData.category, "", 0))
                                 onClicked: function(commandId) {
-                                    root.commandHandler.execute(root.hostId, commandId, [""])
+                                    CommandHandler.execute(root.hostId, commandId, [""])
                                 }
                             }
 
@@ -148,11 +147,10 @@ Item {
                                             hostId: root.hostId
                                             commandParams: modelData.command_params
                                             rowCommands: Parse.ListOfJsons(
-                                                root.commandHandler.get_child_commands(
+                                                CommandHandler.get_child_commands(
                                                     root.hostId, monitorData.display_options.category, monitorData.monitor_id, modelData.multivalue_level
                                                 )
                                             )
-                                            commandHandler: root.commandHandler
                                         }
                                     }
                                 }
@@ -233,7 +231,7 @@ Item {
     }
 
     function refresh() {
-        root._hostData = groupByCategory(root.hostDataManager.get_monitor_datas(hostId), root.commandHandler.get_commands(root.hostId))
+        root._hostData = groupByCategory(root.hostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
     }
 
 }

@@ -8,7 +8,6 @@ Item {
     // TODO: loading indicator and indicator (translucent text maybe) for empty results 
     // TODO: indicator for no search results
     id: root
-    required property var commandHandler
     property string hostId: ""
     property var selections: []
     property string text: ""
@@ -44,7 +43,7 @@ Item {
             onActivated: function(index) {
                 root._unitId = root.selections[index].toLowerCase()
                 // TODO: use invocation id (only needed for dialog?)?
-                root.commandHandler.execute(root.hostId, "logs", [root._unitId])
+                CommandHandler.execute(root.hostId, "logs", [root._unitId])
             }
         }
 
@@ -211,7 +210,7 @@ Item {
             return;
         }
 
-        root.commandHandler.execute(root.hostId, "logs", [root._unitId, query])
+        CommandHandler.execute(root.hostId, "logs", [root._unitId, query])
     }
 
     function highlight(match) {

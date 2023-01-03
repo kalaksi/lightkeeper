@@ -13,7 +13,6 @@ import "../js/ValueUnit.js" as ValueUnit
 
 Item {
     id: root
-    required property var commandHandler
     required property var hostDataManager
     property string hostId: ""
     property real _subviewSize: 0.0
@@ -35,7 +34,7 @@ Item {
     Header {
         id: mainViewHeader
         text: root.hostId
-        onRefreshClicked: (host_id) => root.commandHandler.refresh_monitors(root.hostId)
+        onRefreshClicked: (host_id) => CommandHandler.refresh_monitors(root.hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.closeClicked()
@@ -49,7 +48,6 @@ Item {
         anchors.right: root.right
         anchors.margins: 10
 
-        commandHandler: root.commandHandler
         hostDataManager: root.hostDataManager
         hostId: root.hostId
     }
@@ -92,8 +90,6 @@ Item {
                 anchors.fill: parent
                 visible: false
                 selections: []
-
-                commandHandler: root.commandHandler
             }
 
             HostDetailsTextView{
