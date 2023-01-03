@@ -38,6 +38,9 @@ pub fn init_resources() {
             "images/breeze/dark/download.svg" as "images/button/download",
             "images/breeze/dark/overflow-menu.svg" as "images/button/overflow-menu",
 
+            // Category icons
+            "images/fontawesome/docker.svg" as "images/docker",
+
             // TODO: not used?
             "images/breeze/dark/media-playback-start.svg" as "images/button/start",
             "images/breeze/dark/media-playback-stop.svg" as "images/button/stop",
@@ -91,6 +94,9 @@ pub fn init_resources() {
             "images/breeze/light/story-editor.svg" as "images/button/story-editor",
             "images/breeze/light/download.svg" as "images/button/download",
             "images/breeze/light/overflow-menu.svg" as "images/button/overflow-menu",
+
+            // Category icons
+            "images/fontawesome/docker.svg" as "images/docker",
 
             // TODO: not used?
             "images/breeze/light/media-playback-start.svg" as "images/button/start",
