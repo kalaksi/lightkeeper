@@ -4,6 +4,7 @@ use super::{
     models::HostDataManagerModel,
     models::CommandHandlerModel,
     models::HostTableModel,
+    models::ThemeModel,
 };
 
 use std::sync::mpsc;
@@ -17,6 +18,7 @@ use crate::{
 };
 
 pub struct QmlFrontend {
+    theme: Option<ThemeModel>,
     update_sender_prototype: mpsc::Sender<frontend::HostDisplayData>,
     host_data_manager: Option<HostDataManagerModel>,
     command_handler: Option<CommandHandlerModel>,
@@ -28,10 +30,12 @@ impl QmlFrontend {
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
 
+        let theme_model = ThemeModel::new(display_options.clone());
         let host_table_model = HostTableModel::new(&display_data);
         let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data, display_options);
 
         QmlFrontend {
+            theme: Some(theme_model),
             update_sender_prototype: update_sender,
             host_data_manager: Some(host_data_manager),
             command_handler: None,
@@ -44,11 +48,13 @@ impl QmlFrontend {
     }
 
     pub fn start(&mut self) {
+        let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
         let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
         let qt_data_command_handler = QObjectBox::new(self.command_handler.take().unwrap());
         let qt_data_host_table = QObjectBox::new(self.host_table.take().unwrap());
 
         let mut engine = QmlEngine::new();
+        engine.set_object_property("Theme".into(), qt_data_theme.pinned());
         engine.set_object_property("HostDataManager".into(), qt_data_host_data_manager.pinned());
         engine.set_object_property("CommandHandler".into(), qt_data_command_handler.pinned());
         engine.set_object_property("_hostTableModel".into(), qt_data_host_table.pinned());

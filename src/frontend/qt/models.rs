@@ -1,3 +1,5 @@
+pub mod theme_model;
+pub use theme_model::ThemeModel;
 
 pub mod host_data_manager_model;
 pub use host_data_manager_model::HostDataManagerModel;

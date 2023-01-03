@@ -7,12 +7,12 @@ import QtQuick.Controls.Material 2.15
 Rectangle {
     id: root
     property string text: ""
-    property string icon: "qrc:///main/images/docker"
+    property string icon: ""
+    color: "#00000000"
 
     implicitWidth: label.implicitWidth
     implicitHeight: label.implicitHeight + 10
 
-    color: "#8010A0EE"
     layer.enabled: true
     layer.effect: DropShadow {
         color: "#40000000"

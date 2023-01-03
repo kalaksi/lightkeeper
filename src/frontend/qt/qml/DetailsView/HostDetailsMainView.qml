@@ -63,9 +63,12 @@ Item {
                     // Custom label provides more flexibility.
                     label: GroupBoxLabel {
                         id: customLabel
-                        text: modelData.category
                         anchors.left: groupBox.left
                         anchors.right: groupBox.right
+
+                        text: modelData.category
+                        icon: Theme.category_icon(modelData.category)
+                        color: Theme.category_color(modelData.category)
                     }
 
                     ScrollView {
