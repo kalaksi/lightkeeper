@@ -4,6 +4,7 @@ use std::sync::mpsc;
 extern crate qmetaobject;
 use qmetaobject::*;
 
+use crate::configuration;
 use crate::frontend;
 use crate::module::monitoring::MonitoringData;
 
@@ -27,17 +28,25 @@ pub struct HostDataManagerModel {
     get_host_data: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
 
     display_data: frontend::DisplayData,
+    display_options: configuration::DisplayOptions,
+    display_options_category_order: Vec<String>,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 }
 
 impl HostDataManagerModel {
-    pub fn new(display_data: frontend::DisplayData) -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
+    pub fn new(display_data: frontend::DisplayData, display_options: configuration::DisplayOptions) -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
+        let mut priorities = display_options.categories.iter().map(|(category, options)| (category.clone(), options.priority)).collect::<Vec<_>>();
+        priorities.sort_by(|left, right| left.1.cmp(&right.1));
+
         let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
+
         let model = HostDataManagerModel {
             display_data: display_data,
             update_receiver: Some(receiver),
             update_receiver_thread: None,
+            display_options: display_options,
+            display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             ..Default::default()
         };
 
@@ -159,7 +168,7 @@ impl HostDataManagerModel {
         let mut keys_ordered = Vec::<String>::new();
 
         // First include data of categories in an order that's defined in configuration.
-        for category in self.display_data.category_order.iter() {
+        for category in self.display_options_category_order.iter() {
             let category_monitors = monitoring_data.iter().filter(|data| &data.display_options.category == category)
                                                           .collect::<Vec<&&MonitoringData>>();
             keys_ordered.extend(self.sort_by_value_type(category_monitors));

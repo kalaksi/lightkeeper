@@ -24,12 +24,12 @@ pub struct QmlFrontend {
 }
 
 impl QmlFrontend {
-    pub fn new(display_data: frontend::DisplayData) -> Self {
+    pub fn new(display_data: frontend::DisplayData, display_options: configuration::DisplayOptions) -> Self {
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
 
         let host_table_model = HostTableModel::new(&display_data);
-        let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data);
+        let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data, display_options);
 
         QmlFrontend {
             update_sender_prototype: update_sender,

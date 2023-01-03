@@ -15,7 +15,6 @@ pub struct DisplayData {
     pub hosts: HashMap<String, HostDisplayData>,
     pub all_monitor_names: Vec<String>,
     pub table_headers: Vec<String>,
-    pub category_order: Vec<String>,
 }
 
 impl DisplayData {
@@ -25,7 +24,6 @@ impl DisplayData {
             // To help creating tables.
             all_monitor_names: Vec::new(),
             table_headers: Vec::new(),
-            category_order: Vec::new(),
         }
     }
 }

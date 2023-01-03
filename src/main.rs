@@ -109,11 +109,7 @@ fn main() {
     let mut initial_display_data = host_manager.get_display_data();
     initial_display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 
-    let mut priorities = config.display_options.categories.iter().map(|(category, options)| (category.clone(), options.priority)).collect::<Vec<_>>();
-    priorities.sort_by(|left, right| left.1.cmp(&right.1));
-    initial_display_data.category_order = priorities.into_iter().map(|(category, _)| category).collect();
-
-    let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data);
+    let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data, config.display_options.clone());
 
     host_manager.add_observer(frontend.new_update_sender());
     frontend.setup_command_handler(command_handler, monitor_manager, config.display_options.clone());
