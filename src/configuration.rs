@@ -42,9 +42,17 @@ pub struct General {
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
     pub group_multivalue: bool,
-    pub category_order: Vec<String>,
     pub command_order: Vec<String>,
     pub non_collapsible_commands: Vec<String>,
+    pub categories: HashMap<String, Category>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct Category {
+    pub priority: u16,
+    pub icon: Option<String>,
+    pub color: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
