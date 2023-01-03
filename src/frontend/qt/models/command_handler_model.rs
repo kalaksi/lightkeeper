@@ -60,11 +60,6 @@ impl CommandHandlerModel {
                                         (data.display_options.multivalue_level == 0 || data.display_options.multivalue_level == multivalue_level))
                                    .collect::<HashMap<String, CommandData>>();
 
-        // Update the collapsible display option according to configuration.
-        for (command_id, data) in all_commands.iter_mut() {
-            data.display_options.collapsible = !self.ui_display_options.non_collapsible_commands.contains(command_id);
-        }
-
         let mut valid_commands_sorted = Vec::<CommandData>::new();
         for command_id in self.ui_display_options.command_order.iter() {
             if let Some(command_data) = all_commands.remove(command_id) {

@@ -16,7 +16,7 @@ Item {
     property string menuTooltip: "More..."
     property int animationDuration: 150
     property bool _showCommands: false
-    property var _alwaysShownCommands: commands.filter(command => !command.display_options.collapsible)
+    property var _alwaysShownCommands: commands.filter(command => Theme.allow_collapsing_command(command.command_id) === "0")
     // Shown when `collapsed` is enabled and all of the commands aren't already visible.
     property bool _showMenu: collapsed && _alwaysShownCommands.length < commands.length
 

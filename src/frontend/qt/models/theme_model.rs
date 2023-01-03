@@ -10,6 +10,7 @@ pub struct ThemeModel {
     group_multivalue: qt_method!(fn(&self) -> QString),
     category_color: qt_method!(fn(&self, category: QString) -> QString),
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
+    allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
 
     display_options: configuration::DisplayOptions,
 }
@@ -42,6 +43,15 @@ impl ThemeModel {
         }
         else {
             QString::from("")
+        }
+    }
+
+    fn allow_collapsing_command(&self, command_id: QString) -> QString {
+        if self.display_options.non_collapsible_commands.contains(&command_id.to_string().to_lowercase()) {
+            QString::from("0")
+        }
+        else {
+            QString::from("1")
         }
     }
 }
