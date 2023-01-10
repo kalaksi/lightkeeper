@@ -6,6 +6,7 @@ use crate::{
     Host,
     module::module::Module,
     module::ModuleSpecification,
+    module::MetadataSupport,
     module::connection::ResponseMessage,
     frontend::DisplayOptions,
     frontend::DisplayStyle,
@@ -13,7 +14,7 @@ use crate::{
 
 pub type Monitor = Box<dyn MonitoringModule + Send + Sync>;
 
-pub trait MonitoringModule : Module {
+pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         None
     }
@@ -21,9 +22,6 @@ pub trait MonitoringModule : Module {
     fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor where Self: Sized + 'static + Send + Sync {
         Box::new(Self::new(settings))
     }
-
-    // TODO: less boilerplate for module implementation?
-    fn clone_module(&self) -> Monitor;
 
     fn get_display_options(&self) -> DisplayOptions {
         DisplayOptions {
@@ -55,6 +53,11 @@ pub trait MonitoringModule : Module {
         false
     }
 
+}
+
+// Implemented by the macro.
+pub trait BoxCloneableMonitor {
+    fn box_clone(&self) -> Monitor;
 }
 
 #[derive(Clone, Serialize, Deserialize)]

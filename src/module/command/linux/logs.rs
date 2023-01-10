@@ -2,43 +2,20 @@ use std::collections::HashMap;
 use crate::frontend;
 use crate::module::command::UIAction;
 use crate::module::connection::ResponseMessage;
-use crate::module::{
-    Module,
-    command::CommandModule,
-    command::Command,
-    command::CommandResult,
-    Metadata,
-    ModuleSpecification,
-};
+use crate::module::*;
+use crate::module::command::*;
+use lightkeeper_module::command_module;
 
-
-#[derive(Clone)]
+#[command_module("logs", "0.0.1")]
 pub struct Logs;
 
 impl Module for Logs {
-    fn get_metadata() -> Metadata {
-        // TODO: define dependnecy to systemd-service command
-        Metadata {
-            module_spec: ModuleSpecification::new("logs", "0.0.1"),
-            description: String::from(""),
-            url: String::from(""),
-        }
-    }
-
     fn new(_settings: &HashMap<String, String>) -> Self {
         Logs { }
-    }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
     }
 }
 
 impl CommandModule for Logs {
-    fn clone_module(&self) -> Command {
-        Box::new(self.clone())
-    }
-
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }

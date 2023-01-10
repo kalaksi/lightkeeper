@@ -3,40 +3,26 @@ use std::collections::HashMap;
 use chrono::TimeZone;
 use serde_derive::Deserialize;
 use serde_json;
+use chrono::Utc;
 
 use crate::module::connection::ResponseMessage;
 use crate::utils::enums::Criticality;
 use crate::{ Host, frontend };
-use crate::module::{
-    Module,
-    Metadata,
-    ModuleSpecification,
-    monitoring::MonitoringModule,
-    monitoring::Monitor,
-    monitoring::DataPoint,
-};
-
-use chrono::Utc;
+use lightkeeper_module::monitoring_module;
+use crate::module::*;
+use crate::module::monitoring::*;
 
 const LEVEL_WARNING: usize = 0;
 const LEVEL_ERROR: usize = 1;
 const LEVEL_CRITICAL: usize = 2;
 
-#[derive(Clone)]
+#[monitoring_module("docker-images", "0.0.1")]
 pub struct Images {
     use_sudo: bool,
     criticality_levels: Vec<u32>,
 }
 
 impl Module for Images {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("docker-images", "0.0.1"),
-            description: String::from("Tested with Docker API version 1.41"),
-            url: String::from(""),
-        }
-    }
-
     fn new(settings: &HashMap<String, String>) -> Self {
         Images {
             use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(false),
@@ -46,17 +32,9 @@ impl Module for Images {
                                         .collect(),
         }
     }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
-    }
 }
 
 impl MonitoringModule for Images {
-    fn clone_module(&self) -> Monitor {
-        Box::new(self.clone())
-    }
-
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }

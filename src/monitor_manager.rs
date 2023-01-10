@@ -72,7 +72,7 @@ impl MonitorManager {
                         messages: messages,
                         request_type: RequestType::Command,
                         response_handler: Self::get_response_handler(
-                            host.clone(), monitor.clone_module(), self.state_update_sender.as_ref().unwrap().clone()
+                            host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
                         )
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to connector: {}", error);
@@ -80,7 +80,7 @@ impl MonitorManager {
                 }
                 else {
                     let handler = Self::get_response_handler(
-                        host.clone(), monitor.clone_module(), self.state_update_sender.as_ref().unwrap().clone()
+                        host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
                     );
                     handler(vec![Ok(ResponseMessage::empty())], false);
                 } 

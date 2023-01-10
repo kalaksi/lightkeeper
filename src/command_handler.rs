@@ -75,7 +75,7 @@ impl CommandHandler {
             request_type: RequestType::Command,
             // Only one of these should be implemented, but it doesn't matter if both are.
             messages: [command.get_connector_messages(parameters.clone()), vec![command.get_connector_message(parameters.clone())]].concat(),
-            response_handler: Self::get_response_handler(host.clone(), command.clone_module(), self.invocation_id_counter, state_update_sender),
+            response_handler: Self::get_response_handler(host.clone(), command.box_clone(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
         });
@@ -200,7 +200,7 @@ impl CommandHandler {
                 request_type: RequestType::Download,
                 messages: connector_messages,
                 response_handler: Self::get_response_handler_text_editor(
-                    host.clone(), command.clone_module(), self.preferences.clone(),
+                    host.clone(), command.box_clone(), self.preferences.clone(),
                     self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
                 ),
             }).unwrap_or_else(|error| {

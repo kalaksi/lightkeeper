@@ -51,7 +51,7 @@ Item {
             imageSource: "qrc:/main/images/button/refresh"
             imageRelativeWidth: 0.8
             imageRelativeHeight: 0.8
-            tooltip: "Refresh monitors"
+            tooltip: "Refresh"
             onClicked: root.refreshClicked()
             visible: root.showRefreshButton
         }

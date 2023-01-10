@@ -62,7 +62,6 @@ Item {
 
                     // Custom label provides more flexibility.
                     label: GroupBoxLabel {
-                        id: customLabel
                         anchors.left: groupBox.left
                         anchors.right: groupBox.right
 
@@ -73,7 +72,6 @@ Item {
 
                     ScrollView {
                         anchors.fill: parent
-                        anchors.topMargin: customLabel.height
                         contentWidth: availableWidth
 
                         Column {

@@ -10,15 +10,11 @@ use std::{
 
 use ssh2::Session;
 use crate::utils::strip_newline;
-use crate::module::{
-    Module,
-    metadata::Metadata,
-    connection::ConnectionModule,
-    connection::ResponseMessage,
-    ModuleSpecification,
-};
+use lightkeeper_module::connection_module;
+use crate::module::*;
+use crate::module::connection::*;
 
-
+#[connection_module("ssh", "0.0.1")]
 pub struct Ssh2 {
     session: Session,
     is_initialized: bool,
@@ -51,14 +47,6 @@ impl Ssh2 {
 }
 
 impl Module for Ssh2 {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("ssh", "0.0.1"),
-            description: String::from(""),
-            url: String::from(""),
-        }
-    }
-
     fn new(settings: &HashMap<String, String>) -> Self {
         // TODO: error handling?
         let session = Session::new().unwrap();
@@ -71,11 +59,6 @@ impl Module for Ssh2 {
             // password: settings.get("password").unwrap_or(&String::from("")).clone(),
         }
     }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
-    }
-
 }
 
 impl ConnectionModule for Ssh2 {

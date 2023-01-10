@@ -2,42 +2,20 @@ use std::collections::HashMap;
 use crate::frontend;
 use crate::utils::enums::Criticality;
 use crate::module::connection::ResponseMessage;
-use crate::module::{
-    Module,
-    command::CommandModule,
-    command::Command,
-    command::CommandResult,
-    Metadata,
-    ModuleSpecification,
-};
+use crate::module::*;
+use crate::module::command::*;
+use lightkeeper_module::command_module;
 
-
-#[derive(Clone)]
+#[command_module("shutdown", "0.0.1")]
 pub struct Shutdown;
 
 impl Module for Shutdown {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("shutdown", "0.0.1"),
-            description: String::from(""),
-            url: String::from(""),
-        }
-    }
-
     fn new(_settings: &HashMap<String, String>) -> Self {
         Shutdown { }
-    }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
     }
 }
 
 impl CommandModule for Shutdown {
-    fn clone_module(&self) -> Command {
-        Box::new(self.clone())
-    }
-
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }

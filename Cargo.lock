@@ -395,6 +395,7 @@ dependencies = [
  "clap",
  "cstr",
  "env_logger",
+ "lightkeeper_module",
  "log",
  "oping",
  "owo-colors",
@@ -406,6 +407,14 @@ dependencies = [
  "sha256",
  "ssh2",
  "tabled",
+]
+
+[[package]]
+name = "lightkeeper_module"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]

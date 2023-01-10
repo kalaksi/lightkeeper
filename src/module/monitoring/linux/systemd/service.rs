@@ -9,29 +9,16 @@ use crate::{
 };
 
 use crate::utils::enums;
-use crate::module::{
-    Module,
-    Metadata,
-    ModuleSpecification,
-    monitoring::MonitoringModule,
-    monitoring::Monitor,
-    monitoring::DataPoint,
-};
+use lightkeeper_module::monitoring_module;
+use crate::module::*;
+use crate::module::monitoring::*;
 
-#[derive(Clone)]
+#[monitoring_module("systemd-service", "0.0.1")]
 pub struct Service {
     included_services: Vec<String>,
 }
 
 impl Module for Service {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("systemd-service", "0.0.1"),
-            description: String::from(""),
-            url: String::from(""),
-        }
-    }
-
     fn new(_settings: &HashMap<String, String>) -> Self {
         Service {
             // TODO: configurable (remember to automatically add .service suffix)
@@ -47,17 +34,9 @@ impl Module for Service {
             ]
         }
     }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
-    }
 }
 
 impl MonitoringModule for Service {
-    fn clone_module(&self) -> Monitor {
-        Box::new(self.clone())
-    }
-
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::CriticalityLevel,

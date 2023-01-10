@@ -30,10 +30,10 @@ impl ThemeModel {
 
     fn category_color(&self, category: QString) -> QString {
         if let Some(category) = self.display_options.categories.get(&category.to_string().to_lowercase()) {
-            QString::from(category.color.clone().unwrap_or_else(|| String::from("#00000000")))
+            QString::from(category.color.clone().unwrap_or_else(|| String::from("#505050")))
         }
         else {
-            QString::from("#00000000")
+            QString::from("#505050")
         }
     }
 

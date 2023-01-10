@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use super::{
-    Module,
+    module::MetadataSupport,
     ModuleSpecification,
     connection,
     connection::ConnectionModule,

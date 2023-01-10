@@ -5,18 +5,12 @@ use std::{
 
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, frontend };
-use crate::module::{
-    Module,
-    Metadata,
-    ModuleSpecification,
-    monitoring::MonitoringModule,
-    monitoring::Monitor,
-    monitoring::DataPoint,
-    monitoring::docker::containers::ContainerDetails,
-};
+use lightkeeper_module::monitoring_module;
+use crate::module::monitoring::docker::containers::ContainerDetails;
+use crate::module::*;
+use crate::module::monitoring::*;
 
-
-#[derive(Clone)]
+#[monitoring_module("docker-compose", "0.0.1")]
 pub struct Compose {
     use_sudo: bool,
 
@@ -29,15 +23,6 @@ pub struct Compose {
 }
 
 impl Module for Compose {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("docker-compose", "0.0.1"),
-            // TODO: check compose version and enforce compatibility
-            description: String::from(""),
-            url: String::from(""),
-        }
-    }
-
     fn new(settings: &HashMap<String, String>) -> Self {
         Compose {
             use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(true),
@@ -48,17 +33,9 @@ impl Module for Compose {
                                          .split(",").map(|value| value.to_string()).collect(),
         }
     }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
-    }
 }
 
 impl MonitoringModule for Compose {
-    fn clone_module(&self) -> Monitor {
-        Box::new(self.clone())
-    }
-
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }

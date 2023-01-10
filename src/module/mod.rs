@@ -6,6 +6,7 @@ pub use metadata::Metadata;
 
 pub mod module;
 pub use module::Module;
+pub use module::MetadataSupport;
 
 pub mod connection;
 pub mod command;

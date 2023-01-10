@@ -6,17 +6,11 @@ use serde_json;
 
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, utils::enums::Criticality, frontend };
-use crate::module::{
-    Module,
-    Metadata,
-    ModuleSpecification,
-    monitoring::MonitoringModule,
-    monitoring::Monitor,
-    monitoring::DataPoint,
-};
+use lightkeeper_module::monitoring_module;
+use crate::module::*;
+use crate::module::monitoring::*;
 
-
-#[derive(Clone)]
+#[monitoring_module("docker-containers", "0.0.1")]
 pub struct Containers {
     use_sudo: bool,
     // Ignore containers that are managed by docker-compose.
@@ -24,31 +18,15 @@ pub struct Containers {
 }
 
 impl Module for Containers {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("docker-containers", "0.0.1"),
-            description: String::from("Tested with Docker API version 1.41"),
-            url: String::from(""),
-        }
-    }
-
     fn new(settings: &HashMap<String, String>) -> Self {
         Containers {
             use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(false),
             ignore_compose_managed: true,
         }
     }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
-    }
 }
 
 impl MonitoringModule for Containers {
-    fn clone_module(&self) -> Monitor {
-        Box::new(self.clone())
-    }
-
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }

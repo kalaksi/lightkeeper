@@ -2,41 +2,20 @@
 use std::collections::HashMap;
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, utils::enums::Criticality, frontend };
-use crate::module::{
-    Module,
-    Metadata,
-    ModuleSpecification,
-    monitoring::MonitoringModule,
-    monitoring::Monitor,
-    monitoring::DataPoint,
-};
+use lightkeeper_module::monitoring_module;
+use crate::module::*;
+use crate::module::monitoring::*;
 
-#[derive(Clone)]
+#[monitoring_module("ssh", "0.0.1")]
 pub struct Ssh;
 
 impl Module for Ssh {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("ssh", "0.0.1"),
-            description: String::from(""),
-            url: String::from(""),
-        }
-    }
-
     fn new(_settings: &HashMap<String, String>) -> Self {
         Ssh { }
-    }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
     }
 }
 
 impl MonitoringModule for Ssh {
-    fn clone_module(&self) -> Monitor {
-        Box::new(self.clone())
-    }
-
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }

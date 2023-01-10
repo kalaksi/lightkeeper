@@ -2,12 +2,13 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::io;
+use crate::module::MetadataSupport;
 use crate::module::module::Module;
 use crate::module::connection::ResponseMessage;
 
 pub type Connector = Box<dyn ConnectionModule + Send>;
 
-pub trait ConnectionModule : Module {
+pub trait ConnectionModule : MetadataSupport + Module {
     /// Connect to the specified address. Should do nothing if already connected.
     fn connect(&mut self, address: &IpAddr) -> Result<(), String>;
 

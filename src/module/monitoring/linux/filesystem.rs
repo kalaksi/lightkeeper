@@ -4,47 +4,27 @@ use crate::{
     Host,
     frontend,
 };
-use crate::module::{
-    Module,
-    Metadata,
-    ModuleSpecification,
-    monitoring::MonitoringModule,
-    monitoring::Monitor,
-    monitoring::DataPoint,
-};
+use lightkeeper_module::monitoring_module;
+use crate::module::*;
+use crate::module::monitoring::*;
 
-#[derive(Clone)]
+#[monitoring_module("filesystem", "0.0.1")]
 pub struct Filesystem {
     ignored_filesystems: Vec<String>,
 }
 
 impl Module for Filesystem {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("filesystem", "0.0.1"),
-            description: String::from(""),
-            url: String::from(""),
-        }
-    }
-
     fn new(_settings: &HashMap<String, String>) -> Self {
         Filesystem {
             ignored_filesystems: vec![
                 String::from("/run"),
+                String::from("/dev/shm"),
             ]
         }
-    }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
     }
 }
 
 impl MonitoringModule for Filesystem {
-    fn clone_module(&self) -> Monitor {
-        Box::new(self.clone())
-    }
-
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::ProgressBar,

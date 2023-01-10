@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use crate::{
     module::Module,
     module::ModuleSpecification,
+    module::MetadataSupport,
     module::connection::ResponseMessage,
     utils::enums::Criticality,
     frontend,
@@ -13,7 +14,7 @@ use crate::{
 
 pub type Command = Box<dyn CommandModule + Send + Sync>;
 
-pub trait CommandModule : Module {
+pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
     fn new_command_module(settings: &HashMap<String, String>) -> Command where Self: Sized + 'static + Send + Sync {
         Box::new(Self::new(settings))
     }
@@ -21,9 +22,6 @@ pub trait CommandModule : Module {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         None
     }
-
-    // TODO: less boilerplate for module implementation?
-    fn clone_module(&self) -> Command;
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
@@ -44,6 +42,11 @@ pub trait CommandModule : Module {
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
         Ok(CommandResult::new(response.message.clone()))
     }
+}
+
+// Implemented by the macro.
+pub trait BoxCloneableCommand {
+    fn box_clone(&self) -> Command;
 }
 
 

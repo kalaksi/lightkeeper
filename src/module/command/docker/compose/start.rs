@@ -2,44 +2,24 @@ use std::{
     collections::HashMap,
 };
 use crate::frontend;
-use crate::module::{
-    Module,
-    command::CommandModule,
-    command::Command,
-    Metadata,
-    ModuleSpecification,
-};
+use crate::module::*;
+use crate::module::command::*;
+use lightkeeper_module::command_module;
 
-#[derive(Clone)]
+#[command_module("docker-compose-start", "0.0.1")]
 pub struct Start {
     use_sudo: bool,
 }
 
 impl Module for Start {
-    fn get_metadata() -> Metadata {
-        Metadata {
-            module_spec: ModuleSpecification::new("docker-compose-start", "0.0.1"),
-            description: String::from(""),
-            url: String::from(""),
-        }
-    }
-
     fn new(settings: &HashMap<String, String>) -> Self {
         Start {
             use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(true),
         }
     }
-
-    fn get_module_spec(&self) -> ModuleSpecification {
-        Self::get_metadata().module_spec
-    }
 }
 
 impl CommandModule for Start {
-    fn clone_module(&self) -> Command {
-        Box::new(self.clone())
-    }
-
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
