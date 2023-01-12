@@ -1,5 +1,6 @@
 /target
 .*
+vendor
 config.yml
 hosts.yml
-vendor
+templates.yml

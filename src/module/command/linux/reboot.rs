@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use crate::frontend;
-use crate::utils::enums::Criticality;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
@@ -37,7 +36,7 @@ impl CommandModule for Reboot {
 
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.message.len() > 0 {
-            Ok(CommandResult::new_with_level(response.message.clone(), Criticality::Warning))
+            Ok(CommandResult::new_warning(response.message.clone()))
         }
         else {
             Ok(CommandResult::new(response.message.clone()))

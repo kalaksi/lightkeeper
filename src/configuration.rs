@@ -9,8 +9,13 @@ use crate::utils::enums::HostStatus;
 pub struct Configuration {
     pub preferences: Preferences,
     pub general: General,
-    pub defaults: Defaults,
     pub display_options: DisplayOptions,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct Templates {
+    pub templates: HashMap<String, Host>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -55,16 +60,10 @@ pub struct Category {
     pub color: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Defaults {
-    pub connectors: HashMap<String, HashMap<String, String>>,
-    pub monitors: HashMap<String, HashMap<String, String>>,
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Host {
+    pub templates: Option<Vec<String>>,
     #[serde(default = "Host::default_address")]
     pub address: String,
     #[serde(default = "Host::default_fqdn")]
@@ -87,24 +86,38 @@ impl Host {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct MonitorConfig {
+    #[serde(default = "MonitorConfig::default_version")]
     pub version: String,
     pub is_critical: Option<bool>,
     #[serde(default)]
     pub settings: HashMap<String, String>,
 }
 
-#[derive(Serialize, Deserialize)]
+impl MonitorConfig {
+    pub fn default_version() -> String {
+        String::from("latest")
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CommandConfig {
+    #[serde(default = "CommandConfig::default_version")]
     pub version: String,
     #[serde(default)]
     pub settings: HashMap<String, String>,
 }
 
-#[derive(Serialize, Deserialize)]
+impl CommandConfig {
+    pub fn default_version() -> String {
+        String::from("latest")
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ConnectorConfig {
     #[serde(default)]
@@ -112,27 +125,43 @@ pub struct ConnectorConfig {
 }
 
 impl Configuration {
-    pub fn read(config_file_name: &String, hosts_file_name: &String) -> io::Result<(Configuration, Hosts)> {
+    pub fn read(config_file_name: &String, hosts_file_name: &String, templates_file_name: &String) -> io::Result<(Configuration, Hosts)> {
+        log::debug!("Reading general configuration from {}", config_file_name);
         let config_contents = fs::read_to_string(config_file_name)?;
+        let main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
+                                     .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+
+        log::debug!("Reading host configuration from {}", hosts_file_name);
         let hosts_contents = fs::read_to_string(hosts_file_name)?;
-        let mut main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
-                                         .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
         let mut hosts = serde_yaml::from_str::<Hosts>(hosts_contents.as_str())
                                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
-        // Apply defaults.
-        for (_, host_config) in hosts.hosts.iter_mut() {
-            for (monitor_id, monitor_config) in &mut host_config.monitors.iter_mut() {
-                if let Some(defaults) = main_config.defaults.monitors.get(monitor_id) {
-                    let mut unified = defaults.clone();
-                    unified.extend(monitor_config.settings.clone());
-                    monitor_config.settings = unified;
-                }
-            }
+        log::debug!("Reading template configuration from {}", templates_file_name);
+        let templates_contents = fs::read_to_string(templates_file_name)?;
+        let all_templates = serde_yaml::from_str::<Templates>(templates_contents.as_str())
+                                   .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
-            for (connector_id, connector_config) in main_config.defaults.connectors.iter() {
-                host_config.connectors.insert(connector_id.clone(),
-                                              ConnectorConfig { settings: connector_config.clone() });
+        // Apply templates.
+        for (_, host_config) in hosts.hosts.iter_mut() {
+            if let Some(host_templates) = host_config.templates.clone() {
+                for template_id in host_templates.iter().rev() {
+                    if let Some(template_config) = all_templates.templates.get(template_id) {
+                        let mut monitors = template_config.monitors.clone();
+                        monitors.extend(host_config.monitors.to_owned());
+                        host_config.monitors = monitors;
+
+                        let mut commands = template_config.commands.clone();
+                        commands.extend(host_config.commands.to_owned());
+                        host_config.commands = commands;
+
+                        let mut connectors = template_config.connectors.clone();
+                        connectors.extend(host_config.connectors.to_owned());
+                        host_config.connectors = connectors;
+                    }
+                    else {
+                        panic!("No such template");
+                    }
+                }
             }
         }
 

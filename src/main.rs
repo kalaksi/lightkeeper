@@ -29,6 +29,9 @@ struct Args {
 
     #[clap(short, long, default_value = "hosts.yml")]
     hosts_file: String,
+
+    #[clap(short, long, default_value = "templates.yml")]
+    templates_file: String,
 }
 
 
@@ -38,7 +41,7 @@ fn main() {
 
     let args = Args::parse();
 
-    let (config, hosts_config) = match Configuration::read(&args.main_config_file, &args.hosts_file) {
+    let (config, hosts_config) = match Configuration::read(&args.main_config_file, &args.hosts_file, &args.templates_file) {
         Ok(configuration) => configuration,
         Err(error) => {
             log::error!("Error while reading configuration file: {}", error);

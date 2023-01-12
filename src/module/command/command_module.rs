@@ -63,40 +63,40 @@ impl CommandResult {
     pub fn new(message: String) -> Self {
         CommandResult {
             message: message,
-            error: String::from(""),
             criticality: Criticality::Normal,
-            time: Utc::now(),
-            invocation_id: 0,
+            ..Default::default()
         }
     }
 
     pub fn new_info(message: String) -> Self {
         CommandResult {
             message: message,
-            error: String::from(""),
             criticality: Criticality::Info,
-            time: Utc::now(),
-            invocation_id: 0,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_warning(message: String) -> Self {
+        CommandResult {
+            message: message,
+            criticality: Criticality::Warning,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_error(error: String) -> Self {
+        CommandResult {
+            error: error,
+            criticality: Criticality::Error,
+            ..Default::default()
         }
     }
 
     pub fn new_critical_error(error: String) -> Self {
         CommandResult {
-            message: String::from(""),
             error: error,
             criticality: Criticality::Critical,
-            time: Utc::now(),
-            invocation_id: 0,
-        }
-    }
-
-    pub fn new_with_level(message: String, criticality: Criticality) -> Self {
-        CommandResult {
-            message: message,
-            error: String::from(""),
-            criticality: criticality,
-            time: Utc::now(),
-            invocation_id: 0,
+            ..Default::default()
         }
     }
 }

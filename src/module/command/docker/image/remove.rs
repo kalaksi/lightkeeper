@@ -5,7 +5,6 @@ use serde_json;
 
 use crate::frontend;
 use crate::module::connection::ResponseMessage;
-use crate::utils::enums::Criticality;
 use crate::module::*;
 use crate::module::command::*;
 use lightkeeper_module::command_module;
@@ -45,7 +44,7 @@ impl CommandModule for Remove {
     fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.message.len() > 0 {
             let docker_response: JsonMessage = serde_json::from_str(&response.message).unwrap();
-            return Ok(CommandResult::new_with_level(docker_response.message, Criticality::Error));
+            return Ok(CommandResult::new_error(docker_response.message));
         }
         Ok(CommandResult::new(response.message.clone()))
     }

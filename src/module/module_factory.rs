@@ -33,28 +33,63 @@ impl ModuleFactory {
     }
 
     pub fn new_connector(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> connection::Connector {
-        match self.connector_constructors.get(&module_spec)  {
-            Some(constructor) => return constructor(settings),
-            None => panic!("Required connection module '{}' not found", module_spec)
-        }
+        let normalized_spec = match module_spec.latest_version() {
+            true => ModuleSpecification::new(&module_spec.id.as_str(), self.get_latest_version_for_connector(&module_spec.id).as_str()),
+            false => module_spec.clone(),
+        };
+
+        let constructor = self.connector_constructors.get(&normalized_spec).unwrap();
+        constructor(settings)
     }
 
     pub fn new_monitor(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> monitoring::Monitor {
-        match self.monitor_constructors.get(&module_spec)  {
-            Some(constructor) => return constructor(settings),
-            None => panic!("Required monitoring module '{}' not found", module_spec)
-        }
+        let normalized_spec = match module_spec.latest_version() {
+            true => ModuleSpecification::new(&module_spec.id.as_str(), self.get_latest_version_for_monitor(&module_spec.id).as_str()),
+            false => module_spec.clone(),
+        };
+
+        let constructor = self.monitor_constructors.get(&normalized_spec).unwrap();
+        constructor(settings)
     }
 
     pub fn new_command(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> command::Command {
-        match self.command_constructors.get(&module_spec)  {
-            Some(constructor) => return constructor(settings),
-            None => panic!("Required command module '{}' not found", module_spec)
-        }
+        let normalized_spec = match module_spec.latest_version() {
+            true => ModuleSpecification::new(&module_spec.id.as_str(), self.get_latest_version_for_command(&module_spec.id).as_str()),
+            false => module_spec.clone(),
+        };
+
+        let constructor = self.command_constructors.get(&normalized_spec).unwrap();
+        constructor(settings)
+    }
+
+    pub fn get_latest_version_for_command(&self, module_id: &String) -> String {
+        let mut all_versions = self.command_constructors.iter()
+                                                        .filter(|(spec, _)| &spec.id == module_id)
+                                                        .map(|(spec, _)| spec.version.clone())
+                                                        .collect::<Vec<String>>();
+        all_versions.sort();
+        all_versions.last().unwrap_or_else(|| panic!("Command module '{}' was not found.", module_id)).to_owned()
+    }
+
+    pub fn get_latest_version_for_monitor(&self, module_id: &String) -> String {
+        let mut all_versions = self.monitor_constructors.iter()
+                                                        .filter(|(spec, _)| &spec.id == module_id)
+                                                        .map(|(spec, _)| spec.version.clone())
+                                                        .collect::<Vec<String>>();
+        all_versions.sort();
+        all_versions.last().unwrap_or_else(|| panic!("Monitoring module '{}' was not found.", module_id)).to_owned()
+    }
+
+    pub fn get_latest_version_for_connector(&self, module_id: &String) -> String {
+        let mut all_versions = self.connector_constructors.iter()
+                                                          .filter(|(spec, _)| &spec.id == module_id)
+                                                          .map(|(spec, _)| spec.version.clone())
+                                                          .collect::<Vec<String>>();
+        all_versions.sort();
+        all_versions.last().unwrap_or_else(|| panic!("Connector module '{}' was not found.", module_id)).to_owned()
     }
 
     fn load_modules(&mut self) {
-        log::info!("Loading modules");
         self.connector_constructors.insert(connection::Ssh2::get_metadata().module_spec, connection::Ssh2::new_connection_module);
 
         self.monitor_constructors.insert(monitoring::linux::Package::get_metadata().module_spec, monitoring::linux::Package::new_monitoring_module);
@@ -82,7 +117,12 @@ impl ModuleFactory {
         self.command_constructors.insert(command::docker::compose::Up::get_metadata().module_spec, command::docker::compose::Up::new_command_module);
         self.command_constructors.insert(command::docker::compose::Start::get_metadata().module_spec, command::docker::compose::Start::new_command_module);
         self.command_constructors.insert(command::docker::compose::Stop::get_metadata().module_spec, command::docker::compose::Stop::new_command_module);
+
+        log::info!("Loaded {} command modules, {} monitoring modules and {} connector modules",
+                   self.command_constructors.len(), self.monitor_constructors.len(), self.connector_constructors.len());
+
     }
+
 
 
 }

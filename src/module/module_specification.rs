@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
-// TODO: custom equality comparer for versions
-#[derive(Default, Hash, PartialEq, Eq)]
+#[derive(Default, Clone, Hash, PartialEq, Eq)]
 pub struct ModuleSpecification {
     pub id: String,
     pub version: String,
@@ -17,6 +16,10 @@ impl ModuleSpecification {
             id: id.to_string(),
             version: version.to_string(),
         }
+    }
+
+    pub fn latest_version(&self) -> bool {
+        self.version == "latest"
     }
 }
 
