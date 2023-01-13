@@ -7,11 +7,14 @@ use std::{
     hash::Hash,
 };
 
+use crate::module::PlatformInfo;
+
 #[derive(Clone)]
 pub struct Host {
     pub name: String,
     pub fqdn: String,
     pub ip_address: IpAddr,
+    pub platform: PlatformInfo,
 }
 
 impl Host {
@@ -22,7 +25,8 @@ impl Host {
             ip_address: match Ipv4Addr::from_str(ip_address) {
                 Ok(address) => IpAddr::V4(address),
                 Err(error) => return Err(format!("{}", error)),
-            }
+            },
+            platform: PlatformInfo::default()
         };
 
         new.resolve_ip()?;

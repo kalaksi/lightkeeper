@@ -75,7 +75,7 @@ impl ConnectionModule for Ssh2 {
             Err(error) => return Err(format!("Connection error: {}", error))
         };
 
-        log::info!("Connected to {}", address);
+        log::info!("Connected to {} as user {}", address, self.username);
 
         self.session.set_tcp_stream(stream);
         if let Err(error) = self.session.handshake() {

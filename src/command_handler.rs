@@ -15,6 +15,7 @@ use crate::{
 };
 
 use crate::module::{
+    PlatformInfo,
     command::Command,
     command::CommandResult,
 };
@@ -74,7 +75,10 @@ impl CommandHandler {
             host: host.clone(),
             request_type: RequestType::Command,
             // Only one of these should be implemented, but it doesn't matter if both are.
-            messages: [command.get_connector_messages(parameters.clone()), vec![command.get_connector_message(parameters.clone())]].concat(),
+            messages: [
+                command.get_connector_messages(PlatformInfo::default(), parameters.clone()),
+                vec![command.get_connector_message(PlatformInfo::default(), parameters.clone())]
+            ].concat(),
             response_handler: Self::get_response_handler(host.clone(), command.box_clone(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
@@ -108,7 +112,7 @@ impl CommandHandler {
 
             let command_result = match response {
                 Ok(response) => {
-                    match command.process_response(&response) {
+                    match command.process_response(PlatformInfo::default(), &response) {
                         Ok(mut result) => {
                             log::debug!("Command result received: {}", result.message);
                             result.invocation_id = invocation_id;
@@ -160,7 +164,10 @@ impl CommandHandler {
         let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
         // Only one of these should be implemented, but it doesn't matter if both are.
-        let connector_messages = [command.get_connector_messages(vec![remote_file_path.clone()]), vec![command.get_connector_message(vec![remote_file_path])]].concat();
+        let connector_messages = [
+            command.get_connector_messages(PlatformInfo::default(), vec![remote_file_path.clone()]),
+            vec![command.get_connector_message(PlatformInfo::default(), vec![remote_file_path])]
+        ].concat();
 
         if self.preferences.use_remote_editor {
             let mut command_args = self.preferences.terminal_args.clone();

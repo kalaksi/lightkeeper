@@ -4,9 +4,9 @@ use std::sync::mpsc::{self, Sender};
 use crate::Host;
 use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::{ Monitor, DataPoint };
+use crate::enums::Criticality;
 use crate::host_manager::StateUpdateMessage;
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestType };
-use crate::utils::enums;
 
 
 #[derive(Default)]
@@ -42,7 +42,7 @@ impl MonitorManager {
 
             // Add initial state value indicating no data as been received yet.
             Self::send_state_update(&host, &monitor, self.state_update_sender.as_ref().unwrap().clone(),
-                                    DataPoint::value_with_level(String::from(""), enums::Criticality::NoData));
+                                    DataPoint::value_with_level(String::from(""), Criticality::NoData));
 
             monitor_collection.insert(module_spec.id, monitor);
         }

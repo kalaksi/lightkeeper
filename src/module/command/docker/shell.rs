@@ -31,7 +31,7 @@ impl CommandModule for Shell {
         }
     }
 
-    fn get_connector_message(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _platform: PlatformInfo, parameters: Vec<String>) -> String {
         // TODO: filter out all but alphanumeric characters
         let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
 
@@ -39,7 +39,7 @@ impl CommandModule for Shell {
         String::new()
     }
 
-    fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
+    fn process_response(&self, _platform: PlatformInfo, response: &ResponseMessage) -> Result<CommandResult, String> {
         Ok(CommandResult::new(response.message.clone()))
     }
 }

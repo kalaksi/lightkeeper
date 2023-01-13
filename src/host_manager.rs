@@ -12,8 +12,8 @@ use crate::module::{
 };
 
 use crate::{
-    utils::enums::HostStatus,
-    utils::enums::Criticality,
+    enums::HostStatus,
+    enums::Criticality,
     host::Host,
     frontend,
 };

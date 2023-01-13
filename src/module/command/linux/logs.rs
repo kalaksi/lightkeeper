@@ -33,7 +33,7 @@ impl CommandModule for Logs {
 
     // Parameter 1 is for unit selection and special values "all" and "dmesg".
     // Parameter 2 is for grepping. Filters rows based on regexp.
-    fn get_connector_message(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _platform: PlatformInfo, parameters: Vec<String>) -> String {
         // TODO: filter out all but alphanumeric characters
         // TODO: validate?
 
@@ -59,7 +59,7 @@ impl CommandModule for Logs {
         result
     }
 
-    fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
+    fn process_response(&self, _platform: PlatformInfo, response: &ResponseMessage) -> Result<CommandResult, String> {
         Ok(CommandResult::new(response.message.clone()))
     }
 }

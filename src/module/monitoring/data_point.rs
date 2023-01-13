@@ -2,7 +2,7 @@ use std::fmt;
 use chrono::{DateTime, Utc};
 
 use serde_derive::{Serialize, Deserialize};
-use crate::utils::enums::Criticality;
+use crate::enums::Criticality;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DataPoint {

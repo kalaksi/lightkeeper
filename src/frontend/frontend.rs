@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use crate::module::command::CommandResult;
 use crate::module::monitoring::MonitoringData;
-use crate::utils::enums::HostStatus;
+use crate::enums::HostStatus;
 
 pub trait Frontend {
     fn draw(display_data: &DisplayData);

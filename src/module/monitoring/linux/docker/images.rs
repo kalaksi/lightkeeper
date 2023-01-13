@@ -6,7 +6,7 @@ use serde_json;
 use chrono::Utc;
 
 use crate::module::connection::ResponseMessage;
-use crate::utils::enums::Criticality;
+use crate::enums::Criticality;
 use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;

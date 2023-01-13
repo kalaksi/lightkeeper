@@ -4,6 +4,7 @@ mod monitor_manager;
 mod host;
 mod configuration;
 mod utils;
+mod enums;
 mod frontend;
 mod connection_manager;
 mod command_handler;

@@ -32,11 +32,11 @@ impl CommandModule for Prune {
         }
     }
 
-    fn get_connector_message(&self, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _platform: PlatformInfo, _parameters: Vec<String>) -> String {
         String::from("sudo curl --unix-socket /var/run/docker.sock -X POST http://localhost/images/prune")
     }
 
-    fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
+    fn process_response(&self, _platform: PlatformInfo, response: &ResponseMessage) -> Result<CommandResult, String> {
         let result: PruneResult = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
         Ok(CommandResult::new_info(format!("Total reclaimed space: {} B", result.space_reclaimed)))
     }

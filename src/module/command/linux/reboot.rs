@@ -30,11 +30,11 @@ impl CommandModule for Reboot {
         }
     }
 
-    fn get_connector_message(&self, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _platform: PlatformInfo, _parameters: Vec<String>) -> String {
         String::from("sudo reboot")
     }
 
-    fn process_response(&self, response: &ResponseMessage) -> Result<CommandResult, String> {
+    fn process_response(&self, _platform: PlatformInfo, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.message.len() > 0 {
             Ok(CommandResult::new_warning(response.message.clone()))
         }

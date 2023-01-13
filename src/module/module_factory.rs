@@ -117,6 +117,8 @@ impl ModuleFactory {
         self.command_constructors.insert(command::docker::compose::Up::get_metadata().module_spec, command::docker::compose::Up::new_command_module);
         self.command_constructors.insert(command::docker::compose::Start::get_metadata().module_spec, command::docker::compose::Start::new_command_module);
         self.command_constructors.insert(command::docker::compose::Stop::get_metadata().module_spec, command::docker::compose::Stop::new_command_module);
+        self.command_constructors.insert(command::systemd::service::Start::get_metadata().module_spec, command::systemd::service::Start::new_command_module);
+        self.command_constructors.insert(command::systemd::service::Stop::get_metadata().module_spec, command::systemd::service::Stop::new_command_module);
 
         log::info!("Loaded {} command modules, {} monitoring modules and {} connector modules",
                    self.command_constructors.len(), self.monitor_constructors.len(), self.connector_constructors.len());

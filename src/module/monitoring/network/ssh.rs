@@ -1,7 +1,7 @@
 
 use std::collections::HashMap;
 use crate::module::connection::ResponseMessage;
-use crate::{ Host, utils::enums::Criticality, frontend };
+use crate::{ Host, enums::Criticality, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;

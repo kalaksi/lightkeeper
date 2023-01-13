@@ -35,7 +35,7 @@ impl CommandModule for Edit {
         }
     }
 
-    fn get_connector_message(&self, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _platform: PlatformInfo, parameters: Vec<String>) -> String {
         let compose_file = parameters[0].clone();
         compose_file
     }

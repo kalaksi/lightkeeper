@@ -1,7 +1,7 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
 use std::{ fs, io, collections::HashMap };
-use crate::utils::enums::HostStatus;
+use crate::enums::HostStatus;
 
 
 #[derive(Serialize, Deserialize)]

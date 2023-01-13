@@ -8,7 +8,7 @@ use crate::{
     frontend,
 };
 
-use crate::utils::enums;
+use crate::enums;
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
