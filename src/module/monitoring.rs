@@ -11,5 +11,5 @@ pub mod linux;
 pub use linux::docker;
 
 pub mod network;
-pub use network::Ping;
-pub use network::Ssh;
+
+pub mod internal;
