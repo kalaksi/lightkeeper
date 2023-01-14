@@ -19,7 +19,7 @@ type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
 pub struct ConnectionManager {
     // Collection of ConnectionModules that can be shared between threads.
     // Host as the first hashmap key, connector id as the second.
-    connectors: Arc<Mutex<HashMap<Host, ConnectorCollection>>>,
+    connectors: Arc<Mutex<HashMap<String, ConnectorCollection>>>,
     request_sender_prototype: mpsc::Sender<ConnectorRequest>,
     receiver_handle: Option<thread::JoinHandle<()>>,
 }
@@ -41,20 +41,15 @@ impl ConnectionManager {
     // Adds a connector but only if a connector with the same ID doesn't exist.
     // This call will block if process_messages() is currently handling a message.
     pub fn add_connector(&mut self, host: &Host, connector: Connector) {
-        loop {
-            let mut connectors = self.connectors.lock().unwrap();
+        let mut connectors = self.connectors.lock().unwrap();
 
-            if let Some(host_connections) = connectors.get_mut(&host) {
-                let module_spec = connector.get_module_spec();
+        connectors.entry(host.name.clone()).or_insert(HashMap::new());
 
-                if let None = host_connections.get_mut(&module_spec.id) {
-                    host_connections.insert(module_spec.id, connector);
-                }
+        if let Some(host_connectors) = connectors.get_mut(&host.name) {
+            let module_spec = connector.get_module_spec();
 
-                return;
-            }
-            else {
-                connectors.insert(host.clone(), HashMap::new());
+            if !host_connectors.contains_key(&module_spec.id) {
+                host_connectors.insert(module_spec.id, connector);
             }
         }
     }
@@ -69,7 +64,7 @@ impl ConnectionManager {
     }
 
     fn start_receiving_messages(
-        connectors: Arc<Mutex<HashMap<Host, ConnectorCollection>>>,
+        connectors: Arc<Mutex<HashMap<String, ConnectorCollection>>>,
         receiver: mpsc::Receiver<ConnectorRequest>
     ) -> thread::JoinHandle<()> {
 
@@ -82,18 +77,14 @@ impl ConnectionManager {
                 // log::debug!("Connector request received for {}: {}", request.connector_id, request.message);
 
                 let mut connectors = connectors.lock().unwrap();
-                let connector = connectors.get_mut(&request.host)
+                let connector = connectors.get_mut(&request.host.name)
                                           .and_then(|connections| connections.get_mut(&request.connector_id)).unwrap();
 
-                let mut connector_is_connected = false;
-
-                match connector.connect(&request.host.ip_address) {
-                    Ok(()) => connector_is_connected = true,
-                    Err(error) => log::error!("error while connecting {}: {}", request.host.ip_address, error),
-                }
-
-                if !connector_is_connected {
-                    continue;
+                if !connector.is_connected() {
+                    if let Err(error) = connector.connect(&request.host.ip_address) {
+                        log::error!("error while connecting {}: {}", request.host.ip_address, error);
+                        continue;
+                    }
                 }
 
                 let mut responses = Vec::<Result<ResponseMessage, String>>::new();
@@ -160,11 +151,10 @@ impl ConnectionManager {
                     }
                 }
 
-                (request.response_handler)(responses, connector_is_connected);
+                (request.response_handler)(responses, true);
             }
         })
     }
-
 }
 
 pub struct ConnectorRequest {
@@ -181,5 +171,4 @@ pub enum RequestType {
     Command,
     Download,
     Upload,
-
 }
