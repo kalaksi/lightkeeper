@@ -7,11 +7,8 @@ use std::{
 };
 use crate::Host;
 use crate::file_handler;
-use crate::module::connection::{
-    ConnectionModule,
-    Connector,
-    ResponseMessage,
-};
+use crate::module::monitoring::*;
+use crate::module::connection::*;
 
 pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, String>>, bool) + Send + 'static>;
 type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
@@ -82,21 +79,19 @@ impl ConnectionManager {
 
                 if !connector.is_connected() {
                     if let Err(error) = connector.connect(&request.host.ip_address) {
-                        log::error!("error while connecting {}: {}", request.host.ip_address, error);
+                        log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
                         continue;
                     }
                 }
 
                 let mut responses = Vec::<Result<ResponseMessage, String>>::new();
-
                 for request_message in &request.messages {
 
                     let response_result;
                     match &request.request_type {
                         RequestType::Command => {
-                            log::debug!("processing command: {}", request_message);
+                            log::debug!("[{}] Processing command: {}", request.host.name, request_message);
                             response_result = connector.send_message(&request_message);
-
                             if response_result.is_ok() {
                                 // Don't continue if any of the commands fail unexpectedly.
                                 if response_result.clone().unwrap().return_code != 0 {
@@ -105,7 +100,7 @@ impl ConnectionManager {
                             }
                         },
                         RequestType::Download => {
-                            log::debug!("downloading file {}:{}", request.host.name, request_message);
+                            log::debug!("[{}] Downloading file: {}", request.host.name, request_message);
                             response_result = match connector.download_file(&request_message) {
                                 Ok(contents) => {
                                     match file_handler::create_file(&request.host, &request_message, contents) {
@@ -117,7 +112,7 @@ impl ConnectionManager {
                             }
                         },
                         RequestType::Upload => {
-                            log::debug!("uploading file: {}", request_message);
+                            log::debug!("[{}] Uploading file: {}", request.host.name, request_message);
                             response_result = match file_handler::read_file(&request_message) {
                                 Ok((metadata, contents)) => {
                                     let mut result = connector.upload_file(&metadata.remote_path, contents);
@@ -143,11 +138,13 @@ impl ConnectionManager {
 
                     responses.push(response_result);
 
-                    if let Err(error) = responses.last().unwrap() {
-                        // Make sure the status is up-to-date.
-                        connector.is_connected();
-                        log::error!("error while processing request: {}", error);
-                        break;
+                    for response in responses.iter() {
+                        if let Err(error) = response {
+                            // Make sure the status is up-to-date.
+                            connector.is_connected();
+                            log::error!("[{}] error while processing request: {}", request.host.name, error);
+                            break;
+                        }
                     }
                 }
 
