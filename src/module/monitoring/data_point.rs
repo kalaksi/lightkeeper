@@ -23,11 +23,8 @@ impl DataPoint {
     pub fn new(value: String) -> Self {
         DataPoint {
             value: value,
-            label: String::from(""),
-            command_params: Vec::new(),
-            multivalue: Vec::new(),
             criticality: Criticality::Normal,
-            time: Utc::now(),
+            ..Default::default()
         }
     }
 
@@ -35,10 +32,8 @@ impl DataPoint {
         DataPoint {
             value: value,
             label: label,
-            command_params: Vec::new(),
-            multivalue: Vec::new(),
             criticality: Criticality::Normal,
-            time: Utc::now(),
+            ..Default::default()
         }
     }
 
@@ -46,21 +41,16 @@ impl DataPoint {
         DataPoint {
             value: value,
             label: label,
-            command_params: Vec::new(),
-            multivalue: Vec::new(),
             criticality: criticality,
-            time: Utc::now(),
+            ..Default::default()
         }
     }
 
     pub fn value_with_level(value: String, criticality: Criticality) -> Self {
         DataPoint {
             value: value,
-            label: String::from(""),
-            command_params: Vec::new(),
-            multivalue: Vec::new(),
             criticality: criticality,
-            time: Utc::now(),
+            ..Default::default()
         }
     }
 
@@ -70,6 +60,13 @@ impl DataPoint {
 
     pub fn empty() -> Self {
         Default::default()
+    }
+
+    pub fn no_data() -> Self {
+        DataPoint {
+            criticality: Criticality::NoData,
+            ..Default::default()
+        }
     }
 
     pub fn empty_and_critical() -> Self {
