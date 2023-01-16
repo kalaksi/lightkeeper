@@ -178,6 +178,5 @@ impl ConnectionModule for Ssh2 {
             None => false,
         }
     }
-
 }
 

@@ -48,7 +48,7 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
         Err(String::from("Not implemented"))
     }
 
-    // TODO: Maybe change DisplayOptions to ModuleOptions and include there?
+    // TODO: Include in the macro?
     fn uses_multiple_commands(&self) -> bool {
         false
     }
