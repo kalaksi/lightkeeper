@@ -54,7 +54,7 @@ fn main() {
 
     let module_factory = ModuleFactory::new();
 
-    let mut host_manager = Rc::new(RefCell::new(HostManager::new()));
+    let host_manager = Rc::new(RefCell::new(HostManager::new()));
     let mut connection_manager = ConnectionManager::new();
     let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.clone());
     let mut command_handler = CommandHandler::new(&config.preferences, connection_manager.new_request_sender(), host_manager.clone());
@@ -107,7 +107,7 @@ fn main() {
                 connection_manager.add_connector(&host, connector);
             }
 
-            command_handler.add_command(&host, command);
+            command_handler.add_command(&host.name, command);
         }
     }
 

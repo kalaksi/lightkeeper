@@ -24,8 +24,8 @@ use crate::module::{
 
 #[derive(Default)]
 pub struct CommandHandler {
-    /// Command id is the second key.
-    commands: HashMap<Host, HashMap<String, Command>>,
+    /// Host name is the first key, command id is the second key.
+    commands: HashMap<String, HashMap<String, Command>>,
     /// For connector communication.
     request_sender: Option<Sender<ConnectorRequest>>,
     /// Channel to send state updates to HostManager.
@@ -49,12 +49,12 @@ impl CommandHandler {
         }
     }
 
-    pub fn add_command(&mut self, host: &Host, command: Command) {
-        if !self.commands.contains_key(host) {
-            self.commands.insert(host.clone(), HashMap::new());
+    pub fn add_command(&mut self, host_id: &String, command: Command) {
+        if !self.commands.contains_key(host_id) {
+            self.commands.insert(host_id.clone(), HashMap::new());
         }
 
-        let command_collection = self.commands.get_mut(host).unwrap();
+        let command_collection = self.commands.get_mut(host_id).unwrap();
         let module_spec = command.get_module_spec();
 
         // Only add if missing.
@@ -67,11 +67,9 @@ impl CommandHandler {
     pub fn execute(&mut self, host_id: String, command_id: String, parameters: Vec<String>) -> u64 {
         self.invocation_id_counter += 1;
 
-        // TODO: better solution for searching?
-        let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
-        let command = command_collection.get(&command_id).unwrap();
-
-        let platform_info = self.host_manager.borrow().get_host(&host_id).unwrap().platform;
+        let host = self.host_manager.borrow().get_host(&host_id);
+        let command = self.commands.get(&host_id).unwrap()
+                                   .get(&command_id).unwrap();
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
@@ -81,10 +79,10 @@ impl CommandHandler {
             request_type: RequestType::Command,
             // Only one of these should be implemented, but it doesn't matter if both are.
             messages: [
-                command.get_connector_messages(platform_info.clone(), parameters.clone()),
-                vec![command.get_connector_message(platform_info, parameters.clone())]
+                command.get_connector_messages(host.platform.clone(), parameters.clone()),
+                vec![command.get_connector_message(host.platform.clone(), parameters.clone())]
             ].concat(),
-            response_handler: Self::get_response_handler(host.clone(), command.box_clone(), self.invocation_id_counter, state_update_sender),
+            response_handler: Self::get_response_handler(host, command.box_clone(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
         });
@@ -94,7 +92,7 @@ impl CommandHandler {
 
     // Return value contains host's commands and command parameters as strings.
     pub fn get_host_commands(&self, host_id: String) -> HashMap<String, CommandData> {
-        if let Some((_, command_collection)) = self.commands.iter().find(|(host, _)| host.name == host_id) {
+        if let Some(command_collection) = self.commands.get(&host_id) {
             command_collection.iter().map(|(command_id, command)| {
                 (command_id.clone(), CommandData::new(command_id.clone(), command.get_display_options()))
             }).collect()
@@ -105,7 +103,7 @@ impl CommandHandler {
     }
 
     pub fn get_host_command(&self, host_id: String, command_id: String) -> CommandData {
-        let (_, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
+        let command_collection = self.commands.get(&host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
         CommandData::new(command_id, command.get_display_options())
     }
@@ -165,16 +163,14 @@ impl CommandHandler {
     }
 
     pub fn open_text_editor(&self, host_id: String, command_id: String, remote_file_path: String) {
-        // TODO: better solution for searching?
-        let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
-
-        let platform_info = self.host_manager.borrow().get_host(&host_id).unwrap().platform;
-        let command = command_collection.get(&command_id).unwrap();
+        let host = self.host_manager.borrow().get_host(&host_id);
+        let command = self.commands.get(&host_id).unwrap()
+                                   .get(&command_id).unwrap();
 
         // Only one of these should be implemented, but it doesn't matter if both are.
         let connector_messages = [
-            command.get_connector_messages(platform_info.clone(), vec![remote_file_path.clone()]),
-            vec![command.get_connector_message(platform_info, vec![remote_file_path])]
+            command.get_connector_messages(host.platform.clone(), vec![remote_file_path.clone()]),
+            vec![command.get_connector_message(host.platform.clone(), vec![remote_file_path])]
         ].concat();
 
         if self.preferences.use_remote_editor {
@@ -198,7 +194,7 @@ impl CommandHandler {
                                 .expect("Running command failed");
 
             self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
-                host_name: host.name.clone(),
+                host_name: host.name,
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 data_point: None,
@@ -215,7 +211,7 @@ impl CommandHandler {
                 request_type: RequestType::Download,
                 messages: connector_messages,
                 response_handler: Self::get_response_handler_text_editor(
-                    host.clone(), command.box_clone(), self.preferences.clone(),
+                    host, command.box_clone(), self.preferences.clone(),
                     self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
                 ),
             }).unwrap_or_else(|error| {

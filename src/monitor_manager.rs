@@ -12,8 +12,8 @@ use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, Requ
 
 #[derive(Default)]
 pub struct MonitorManager {
-    // Monitor id is the second key.
-    monitors: HashMap<Host, HashMap<String, Monitor>>,
+    // Host name is the first key, monitor id is the second key.
+    monitors: HashMap<String, HashMap<String, Monitor>>,
     request_sender: Option<Sender<ConnectorRequest>>,
     // Channel to send state updates to HostManager.
     state_update_sender: Option<Sender<StateUpdateMessage>>,
@@ -32,9 +32,9 @@ impl MonitorManager {
 
     // Adds a monitor but only if a monitor with the same ID doesn't exist.
     pub fn add_monitor(&mut self, host: &Host, monitor: Monitor) {
-        self.monitors.entry(host.clone()).or_insert(HashMap::new());
+        self.monitors.entry(host.name.clone()).or_insert(HashMap::new());
 
-        let monitor_collection = self.monitors.get_mut(host).unwrap();
+        let monitor_collection = self.monitors.get_mut(&host.name).unwrap();
         let module_spec = monitor.get_module_spec();
 
         // Only add if missing.
@@ -51,20 +51,21 @@ impl MonitorManager {
 
     /// Use `None` to refresh all monitors on every host or limit by host.
     pub fn refresh_monitors(&self, host_id: Option<&String>) {
-        for (host, monitor_collection) in self.monitors.iter() {
+        for (host_name, monitor_collection) in self.monitors.iter() {
             if let Some(host_filter) = host_id {
-                if host.name != *host_filter {
+                if host_name != host_filter {
                     continue;
                 }
             }
 
-            log::info!("[{}] Refreshing monitoring data", host.name);
+            log::info!("[{}] Refreshing monitoring data", host_name);
 
             for (monitor_id, monitor) in monitor_collection.into_iter() {
+                let host = self.host_manager.borrow().get_host(host_name);
+
                 // If monitor has a connector defined, send message through it, but
                 // if there's no need for a connector, run the monitor independently.
                 if let Some(connector_spec) = monitor.get_connector_spec() {
-
                     if connector_spec.id == "ssh" {
                         let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
                         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
@@ -89,7 +90,7 @@ impl MonitorManager {
                         messages: messages,
                         request_type: RequestType::Command,
                         response_handler: Self::get_response_handler(
-                            host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
+                            host, monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
                         )
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to connector: {}", error);
@@ -97,7 +98,7 @@ impl MonitorManager {
                 }
                 else {
                     let handler = Self::get_response_handler(
-                        host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
+                        host, monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
                     );
                     handler(vec![Ok(ResponseMessage::empty())], false);
                 } 

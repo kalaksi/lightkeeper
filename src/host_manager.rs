@@ -154,9 +154,12 @@ impl HostManager {
         display_data
     }
 
-    pub fn get_host(&self, host_name: &String) -> Option<Host> {
+    /// Get Host details by name. Panics if the host is not found.
+    pub fn get_host(&self, host_name: &String) -> Host {
         let hosts = self.hosts.lock().unwrap();
-        hosts.hosts.get(host_name).and_then(|host_state| Some(host_state.host.clone()))
+        hosts.hosts.get(host_name)
+                   .expect(format!("Host '{}' not found", host_name).as_str())
+                   .host.clone()
     }
 
     fn read_platform_info(data_point: DataPoint) -> Result<platform_info::PlatformInfo, String> {
