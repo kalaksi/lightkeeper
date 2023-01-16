@@ -31,7 +31,6 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
         }
     }
 
-    // TODO: use RequestMessage?
     fn get_connector_message(&self) -> String {
         String::from("")
     }

@@ -67,7 +67,13 @@ impl ConnectionManager {
         // TODO: threadpool
         thread::spawn(move || {
             loop {
-                let request = receiver.recv().unwrap();
+                let request = match receiver.recv() {
+                    Ok(data) => data,
+                    Err(error) => {
+                        log::error!("Stopped receiver thread: {}", error);
+                        return;
+                    }
+                };
 
                 // Not normally enabled as this may log passwords.
                 // log::debug!("Connector request received for {}: {}", request.connector_id, request.message);
