@@ -109,7 +109,7 @@ impl CommandHandler {
     }
 
     fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        Box::new(move |responses, _connector_is_connected| {
+        Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
             let response = responses.first().unwrap();
 
@@ -227,7 +227,7 @@ impl CommandHandler {
                                         request_sender: Sender<ConnectorRequest>,
                                         state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
-        Box::new(move |responses, _connector_is_connected| {
+        Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
             let response = responses.first().unwrap();
 
@@ -268,7 +268,7 @@ impl CommandHandler {
 
     fn get_response_handler_upload_file(host: Host, command: Command, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
-        Box::new(move |responses, _connector_is_connected| {
+        Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
             let response = responses.first().unwrap();
 

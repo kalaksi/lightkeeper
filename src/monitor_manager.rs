@@ -100,15 +100,14 @@ impl MonitorManager {
                     let handler = Self::get_response_handler(
                         host, monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
                     );
-                    handler(vec![Ok(ResponseMessage::empty())], false);
+                    handler(vec![Ok(ResponseMessage::empty())]);
                 } 
             }
         }
     }
 
     fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        // TODO: remove connector_is_connected
-        Box::new(move |results, connector_is_connected| {
+        Box::new(move |results| {
             let monitor_id = monitor.get_module_spec().id;
             let mut responses = Vec::<ResponseMessage>::new();
             let mut errors = Vec::<String>::new();
@@ -123,8 +122,8 @@ impl MonitorManager {
             let mut result = DataPoint::empty_and_critical();
             if !responses.is_empty() {
                 let process_result = match monitor.uses_multiple_commands() {
-                    true => monitor.process_responses(host.clone(), responses, connector_is_connected),
-                    false => monitor.process_response(host.clone(), responses.remove(0), connector_is_connected),
+                    true => monitor.process_responses(host.clone(), responses),
+                    false => monitor.process_response(host.clone(), responses.remove(0)),
                 };
 
                 match process_result {

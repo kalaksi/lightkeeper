@@ -38,7 +38,7 @@ impl MonitoringModule for Kernel {
         String::from("uname -r -m")
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
         Ok(DataPoint::new(response.message.replace(" ", " (") + ")"))
     }
 }

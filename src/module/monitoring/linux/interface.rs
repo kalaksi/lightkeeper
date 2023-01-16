@@ -47,7 +47,7 @@ impl MonitoringModule for Interface {
         String::from("ip -o addr show")
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
         let mut result = DataPoint::empty();
 
         let lines = response.message.split('\n');

@@ -40,11 +40,11 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
         Vec::new()
     }
 
-    fn process_response(&self, _host: Host, _response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, _response: ResponseMessage) -> Result<DataPoint, String> {
         Err(String::from("Not implemented"))
     }
 
-    fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>) -> Result<DataPoint, String> {
         Err(String::from("Not implemented"))
     }
 

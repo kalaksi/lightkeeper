@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 
 use crate::module::connection::ResponseMessage;
+use crate::module::platform_info::OperatingSystem;
 use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
@@ -35,7 +36,10 @@ impl MonitoringModule for Package {
         String::from("sudo apt list --upgradable")
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        if host.platform.os == OperatingSystem::Linux {
+            print!("TEST");
+        }
         let mut result = DataPoint::empty();
 
         let lines = response.message.split('\n').filter(|line| line.contains("[upgradable"));

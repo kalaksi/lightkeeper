@@ -9,7 +9,7 @@ use crate::Host;
 use crate::file_handler;
 use crate::module::connection::*;
 
-pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, String>>, bool) + Send + 'static>;
+pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, String>>) + Send + 'static>;
 type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
 
 pub struct ConnectionManager {
@@ -147,7 +147,7 @@ impl ConnectionManager {
                     }
                 }
 
-                (request.response_handler)(responses, true);
+                (request.response_handler)(responses);
             }
         })
     }

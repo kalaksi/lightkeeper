@@ -38,7 +38,7 @@ impl MonitoringModule for Uptime {
         String::from("uptime -s")
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage, _connector_is_connected: bool) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
         let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
                                           .map_err(|e| e.to_string())?;
 
