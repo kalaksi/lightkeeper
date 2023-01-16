@@ -61,7 +61,14 @@ impl HostManager {
         observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             loop {
-                let message = receiver.recv().unwrap();
+                let message = match receiver.recv() {
+                    Ok(data) => data,
+                    Err(error) => {
+                        log::error!("Stopped receiver thread: {}", error);
+                        return;
+                    }
+                };
+
                 let mut hosts = hosts.lock().unwrap();
 
                 if let Some(host_state) = hosts.hosts.get_mut(&message.host_name) {
