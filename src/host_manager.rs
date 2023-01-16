@@ -1,9 +1,11 @@
 
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::mpsc;
 use std::thread;
 use std::sync::{Arc, Mutex};
 
+use crate::module::platform_info;
 use crate::module::{
     ModuleSpecification,
     monitoring::MonitoringData,
@@ -20,6 +22,7 @@ use crate::{
 
 pub struct HostManager {
     hosts: Arc<Mutex<HostCollection>>,
+    /// Provides sender handles for sending StateUpdateMessages to this instance.
     data_sender_prototype: mpsc::Sender<StateUpdateMessage>,
     receiver_handle: Option<thread::JoinHandle<()>>,
     observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
@@ -64,6 +67,18 @@ impl HostManager {
                 if let Some(host_state) = hosts.hosts.get_mut(&message.host_name) {
 
                     if let Some(message_data_point) = message.data_point {
+
+                        // Specially structured data point for passing platform info here.
+                        if message_data_point.value == "_platform_info" {
+                            if let Ok(platform) = Self::read_platform_info(message_data_point) {
+                                host_state.host.platform = platform;
+                            }
+                            else {
+                                log::error!("[{}] Invalid platform info received", host_state.host.name);
+                            }
+                            continue;
+                        }
+
                         // Check first if there already exists a key for monitor id.
                         if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
                             monitoring_data.values.push(message_data_point);
@@ -129,10 +144,34 @@ impl HostManager {
             });
         }
 
-
         display_data
     }
 
+    pub fn get_host(&self, host_name: &String) -> Option<Host> {
+        let hosts = self.hosts.lock().unwrap();
+        hosts.hosts.get(host_name).and_then(|host_state| Some(host_state.host.clone()))
+    }
+
+    fn read_platform_info(data_point: DataPoint) -> Result<platform_info::PlatformInfo, String> {
+        let mut platform = platform_info::PlatformInfo::default();
+        for data in data_point.multivalue.iter() {
+            match data.label.as_str() {
+                "os" => platform.os = platform_info::OperatingSystem::from_str(data.value.as_str())
+                                                                     .map_err(|error| error.to_string())?,
+                "os_version" => platform.os_version = data.value.clone(),
+                "os_flavor" => platform.os_flavor = platform_info::Flavor::from_str(data.value.as_str())
+                                                                          .map_err(|error| error.to_string())?,
+                _ => return Err(String::from("Invalid platform info data"))
+            }
+        }
+        Ok(platform)
+    }
+}
+
+impl Default for HostManager {
+    fn default() -> Self {
+        HostManager::new()
+    }
 }
 
 pub struct StateUpdateMessage {
@@ -164,7 +203,6 @@ impl HostCollection {
         self.hosts.insert(host.name.clone(), HostState::from_host(host, default_status));
         Ok(())
     }
-
 }
 
 
