@@ -1,3 +1,4 @@
+use strum_macros::{ EnumString, Display };
 
 #[derive(Default, Clone)]
 pub struct PlatformInfo {
@@ -11,7 +12,7 @@ pub struct PlatformInfo {
     pub os_flavor: Flavor,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, EnumString, Display)]
 pub enum OperatingSystem {
     Unknown,
     Windows,
@@ -24,7 +25,7 @@ impl Default for OperatingSystem {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, EnumString, Display)]
 pub enum Flavor {
     Unknown,
 
@@ -36,7 +37,9 @@ pub enum Flavor {
 
     // Linux:
     Debian,
+    Ubuntu,
     ArchLinux,
+    RHEL,
 }
 
 impl Default for Flavor {
