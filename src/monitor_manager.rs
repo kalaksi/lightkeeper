@@ -1,11 +1,12 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::collections::HashMap;
 use std::sync::mpsc::{self, Sender};
 
 use crate::Host;
 use crate::module::connection::ResponseMessage;
-use crate::module::monitoring::{ Monitor, DataPoint };
-use crate::enums::Criticality;
-use crate::host_manager::StateUpdateMessage;
+use crate::module::monitoring::*;
+use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestType };
 
 
@@ -16,22 +17,22 @@ pub struct MonitorManager {
     request_sender: Option<Sender<ConnectorRequest>>,
     // Channel to send state updates to HostManager.
     state_update_sender: Option<Sender<StateUpdateMessage>>,
+    host_manager: Rc<RefCell<HostManager>>,
 }
 
 impl MonitorManager {
-    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>) -> Self {
+    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>, host_manager: Rc<RefCell<HostManager>>) -> Self {
         MonitorManager {
             monitors: HashMap::new(),
             request_sender: Some(request_sender),
-            state_update_sender: Some(state_update_sender),
+            host_manager: host_manager.clone(),
+            state_update_sender: Some(host_manager.borrow().new_state_update_sender()),
         }
     }
 
     // Adds a monitor but only if a monitor with the same ID doesn't exist.
     pub fn add_monitor(&mut self, host: &Host, monitor: Monitor) {
-        if !self.monitors.contains_key(host) {
-            self.monitors.insert(host.clone(), HashMap::new());
-        }
+        self.monitors.entry(host.clone()).or_insert(HashMap::new());
 
         let monitor_collection = self.monitors.get_mut(host).unwrap();
         let module_spec = monitor.get_module_spec();
@@ -42,7 +43,7 @@ impl MonitorManager {
 
             // Add initial state value indicating no data as been received yet.
             Self::send_state_update(&host, &monitor, self.state_update_sender.as_ref().unwrap().clone(),
-                                    DataPoint::value_with_level(String::from(""), Criticality::NoData));
+                                    DataPoint::no_data());
 
             monitor_collection.insert(module_spec.id, monitor);
         }
@@ -57,14 +58,30 @@ impl MonitorManager {
                 }
             }
 
-            log::info!("Refreshing monitoring data for host {}", host.name);
+            log::info!("[{}] Refreshing monitoring data", host.name);
 
-            for (monitor_id, monitor) in monitor_collection.iter() {
-                let messages = [monitor.get_connector_messages(), vec![monitor.get_connector_message()]].concat();
-
+            for (monitor_id, monitor) in monitor_collection.into_iter() {
                 // If monitor has a connector defined, send message through it, but
                 // if there's no need for a connector, run the monitor independently.
                 if let Some(connector_spec) = monitor.get_connector_spec() {
+
+                    if connector_spec.id == "ssh" {
+                        let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
+                        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+                            connector_id: info_provider.get_connector_spec().unwrap().id,
+                            source_id: info_provider.get_module_spec().id,
+                            host: host.clone(),
+                            messages: vec![info_provider.get_connector_message()],
+                            request_type: RequestType::Command,
+                            response_handler: Self::get_response_handler(
+                                host.clone(), info_provider, self.state_update_sender.as_ref().unwrap().clone()
+                            )
+                        }).unwrap_or_else(|error| {
+                            log::error!("Couldn't send message to connector: {}", error);
+                        });
+                    };
+
+                    let messages = [monitor.get_connector_messages(), vec![monitor.get_connector_message()]].concat();
                     self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                         connector_id: connector_spec.id,
                         source_id: monitor_id.clone(),
@@ -89,6 +106,7 @@ impl MonitorManager {
     }
 
     fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+        // TODO: remove connector_is_connected
         Box::new(move |results, connector_is_connected| {
             let monitor_id = monitor.get_module_spec().id;
             let mut responses = Vec::<ResponseMessage>::new();
@@ -110,17 +128,17 @@ impl MonitorManager {
 
                 match process_result {
                     Ok(data_point) => {
-                        log::debug!("Data point received for monitor {}: {} {}", monitor_id, data_point.label, data_point);
+                        log::debug!("[{}] Data point received for monitor {}: {} {}", host.name, monitor_id, data_point.label, data_point);
                         result = data_point;
                     },
                     Err(error) => {
-                        log::error!("Error from monitor {}: {}", monitor_id, error);
+                        log::error!("[{}] Error from monitor {}: {}", host.name, monitor_id, error);
                     }
                 }
             }
 
             for error in errors {
-                log::error!("Error refreshing monitor {}: {}", monitor_id, error);
+                log::error!("[{}] Error refreshing monitor {}: {}", host.name, monitor_id, error);
             }
 
             Self::send_state_update(&host, &monitor, state_update_sender, result);
@@ -137,7 +155,5 @@ impl MonitorManager {
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to state manager: {}", error);
         });
-
     }
-
 }

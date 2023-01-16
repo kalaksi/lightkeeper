@@ -3,7 +3,10 @@ use std::sync::mpsc::Sender;
 use std::collections::HashMap;
 use serde_derive::Serialize;
 use std::process;
+use std::cell::RefCell;
+use std::rc::Rc;
 
+use crate::host_manager::HostManager;
 use crate::{
     configuration::Preferences,
     Host,
@@ -15,7 +18,6 @@ use crate::{
 };
 
 use crate::module::{
-    PlatformInfo,
     command::Command,
     command::CommandResult,
 };
@@ -28,6 +30,7 @@ pub struct CommandHandler {
     request_sender: Option<Sender<ConnectorRequest>>,
     /// Channel to send state updates to HostManager.
     state_update_sender: Option<Sender<StateUpdateMessage>>,
+    host_manager: Rc<RefCell<HostManager>>,
     /// Preferences from config file.
     preferences: Preferences,
     /// Every execution gets an invocation id. Valid id numbers begin from 1.
@@ -35,11 +38,12 @@ pub struct CommandHandler {
 }
 
 impl CommandHandler {
-    pub fn new(preferences: &Preferences, request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>) -> Self {
+    pub fn new(preferences: &Preferences, request_sender: Sender<ConnectorRequest>, host_manager: Rc<RefCell<HostManager>>) -> Self {
         CommandHandler {
             commands: HashMap::new(),
             request_sender: Some(request_sender),
-            state_update_sender: Some(state_update_sender),
+            host_manager: host_manager.clone(),
+            state_update_sender: Some(host_manager.borrow().new_state_update_sender()),
             preferences: preferences.clone(),
             invocation_id_counter: 0,
         }
@@ -67,6 +71,7 @@ impl CommandHandler {
         let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
 
+        let platform_info = self.host_manager.borrow().get_host(&host_id).unwrap().platform;
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
@@ -76,8 +81,8 @@ impl CommandHandler {
             request_type: RequestType::Command,
             // Only one of these should be implemented, but it doesn't matter if both are.
             messages: [
-                command.get_connector_messages(PlatformInfo::default(), parameters.clone()),
-                vec![command.get_connector_message(PlatformInfo::default(), parameters.clone())]
+                command.get_connector_messages(platform_info.clone(), parameters.clone()),
+                vec![command.get_connector_message(platform_info, parameters.clone())]
             ].concat(),
             response_handler: Self::get_response_handler(host.clone(), command.box_clone(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
@@ -112,7 +117,7 @@ impl CommandHandler {
 
             let command_result = match response {
                 Ok(response) => {
-                    match command.process_response(PlatformInfo::default(), &response) {
+                    match command.process_response(host.platform, &response) {
                         Ok(mut result) => {
                             log::debug!("Command result received: {}", result.message);
                             result.invocation_id = invocation_id;
@@ -162,11 +167,14 @@ impl CommandHandler {
     pub fn open_text_editor(&self, host_id: String, command_id: String, remote_file_path: String) {
         // TODO: better solution for searching?
         let (host, command_collection) = self.commands.iter().find(|(host, _)| host.name == host_id).unwrap();
+
+        let platform_info = self.host_manager.borrow().get_host(&host_id).unwrap().platform;
         let command = command_collection.get(&command_id).unwrap();
+
         // Only one of these should be implemented, but it doesn't matter if both are.
         let connector_messages = [
-            command.get_connector_messages(PlatformInfo::default(), vec![remote_file_path.clone()]),
-            vec![command.get_connector_message(PlatformInfo::default(), vec![remote_file_path])]
+            command.get_connector_messages(platform_info.clone(), vec![remote_file_path.clone()]),
+            vec![command.get_connector_message(platform_info, vec![remote_file_path])]
         ].concat();
 
         if self.preferences.use_remote_editor {

@@ -11,6 +11,8 @@ mod command_handler;
 mod file_handler;
 
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use clap::Parser;
 
@@ -52,10 +54,10 @@ fn main() {
 
     let module_factory = ModuleFactory::new();
 
-    let mut host_manager = HostManager::new();
+    let mut host_manager = Rc::new(RefCell::new(HostManager::new()));
     let mut connection_manager = ConnectionManager::new();
-    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.new_state_update_sender());
-    let mut command_handler = CommandHandler::new(&config.preferences, connection_manager.new_request_sender(), host_manager.new_state_update_sender());
+    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.clone());
+    let mut command_handler = CommandHandler::new(&config.preferences, connection_manager.new_request_sender(), host_manager.clone());
 
     // Configure hosts and modules.
     for (host_id, host_config) in hosts_config.hosts.iter() {
@@ -69,7 +71,7 @@ fn main() {
             }
         };
 
-        if let Err(error) = host_manager.add_host(host.clone(), config.general.default_host_status) {
+        if let Err(error) = host_manager.borrow_mut().add_host(host.clone(), config.general.default_host_status) {
             log::error!("{}", error.to_string());
             continue;
         };
@@ -78,7 +80,7 @@ fn main() {
             let monitor_spec = ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
             let monitor = module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
 
-            // Initialize a connector if the monitors uses any.
+            // Initialize a connector if the monitor uses any.
             if let Some(connector_spec) = monitor.get_connector_spec() {
                 let connector_settings = match host_config.connectors.get(&connector_spec.id) {
                     Some(config) => config.settings.clone(),
@@ -110,12 +112,12 @@ fn main() {
     }
 
     monitor_manager.refresh_monitors(None);
-    let mut initial_display_data = host_manager.get_display_data();
+    let mut initial_display_data = host_manager.borrow().get_display_data();
     initial_display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 
     let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data, config.display_options.clone());
 
-    host_manager.add_observer(frontend.new_update_sender());
+    host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     frontend.setup_command_handler(command_handler, monitor_manager, config.display_options.clone());
     frontend.start();
 
