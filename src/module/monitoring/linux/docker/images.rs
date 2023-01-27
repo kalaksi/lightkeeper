@@ -49,7 +49,7 @@ impl MonitoringModule for Images {
         }
     }
 
-    fn get_connector_message(&self) -> String {
+    fn get_connector_message(&self, _host: Host) -> String {
         // TODO: somehow connect directly to the unix socket instead of using curl?
         let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/images/json");
 

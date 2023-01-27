@@ -41,7 +41,7 @@ impl MonitoringModule for Filesystem {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self) -> String {
+    fn get_connector_message(&self, _host: Host) -> String {
         String::from("df -P")
     }
 

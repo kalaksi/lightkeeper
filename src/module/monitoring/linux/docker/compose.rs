@@ -50,7 +50,7 @@ impl MonitoringModule for Compose {
         }
     }
 
-    fn get_connector_message(&self) -> String {
+    fn get_connector_message(&self, _host: Host) -> String {
         // Docker API is much better suited for this than using the docker-compose CLI.
         // More effective too.
         // TODO: Reuse command results between docker-compose and docker monitors (a global command cache?)

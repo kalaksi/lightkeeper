@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use crate::module::connection::ResponseMessage;
-use crate::module::platform_info::OperatingSystem;
+use crate::module::platform_info::{OperatingSystem, Flavor};
 use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
@@ -32,16 +32,26 @@ impl MonitoringModule for Package {
         }
     }
 
-    fn get_connector_message(&self) -> String {
-        String::from("sudo apt list --upgradable")
+    fn get_connector_message(&self, host: Host) -> String {
+        match host.platform.os_flavor {
+            Flavor::Debian => String::from("sudo apt list --upgradable"),
+            _ => String::new(),
+        }
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        if host.platform.os == OperatingSystem::Linux {
-            print!("TEST");
+        match host.platform.os_flavor {
+            Flavor::Debian => self.process_debian(response),
+            // TODO: better way to signal no support?
+            _ => Ok(DataPoint::no_data()),
         }
-        let mut result = DataPoint::empty();
+    }
 
+}
+
+impl Package {
+    fn process_debian(&self, response: ResponseMessage) -> Result<DataPoint, String> {
+        let mut result = DataPoint::empty();
         let lines = response.message.split('\n').filter(|line| line.contains("[upgradable"));
         for line in lines {
             let mut parts = line.split_whitespace();
@@ -58,5 +68,4 @@ impl MonitoringModule for Package {
 
         Ok(result)
     }
-
 }

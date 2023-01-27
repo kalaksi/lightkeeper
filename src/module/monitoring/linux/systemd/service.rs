@@ -51,7 +51,7 @@ impl MonitoringModule for Service {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self) -> String {
+    fn get_connector_message(&self, _host: Host) -> String {
         // TODO: use dbus?
         String::from("systemctl list-units -t service --all --output json")
         // Alternative:

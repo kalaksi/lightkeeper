@@ -68,7 +68,7 @@ impl MonitorManager {
                     connector_id: info_provider.get_connector_spec().unwrap().id,
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
-                    messages: vec![info_provider.get_connector_message()],
+                    messages: vec![info_provider.get_connector_message(host.clone())],
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
                         host.clone(), info_provider, self.state_update_sender.as_ref().unwrap().clone()
@@ -100,7 +100,7 @@ impl MonitorManager {
                 // If monitor has a connector defined, send message through it, but
                 // if there's no need for a connector, run the monitor independently.
                 if let Some(connector_spec) = monitor.get_connector_spec() {
-                    let messages = [monitor.get_connector_messages(), vec![monitor.get_connector_message()]].concat();
+                    let messages = [monitor.get_connector_messages(host.clone()), vec![monitor.get_connector_message(host.clone())]].concat();
                     self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                         connector_id: connector_spec.id,
                         source_id: monitor_id.clone(),

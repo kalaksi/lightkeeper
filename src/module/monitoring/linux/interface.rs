@@ -43,7 +43,7 @@ impl MonitoringModule for Interface {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self) -> String {
+    fn get_connector_message(&self, _host: Host) -> String {
         String::from("ip -o addr show")
     }
 

@@ -31,11 +31,11 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
         }
     }
 
-    fn get_connector_message(&self) -> String {
+    fn get_connector_message(&self, _host: Host) -> String {
         String::from("")
     }
 
-    fn get_connector_messages(&self) -> Vec<String> {
+    fn get_connector_messages(&self, _host: Host) -> Vec<String> {
         Vec::new()
     }
 
