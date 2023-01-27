@@ -26,7 +26,7 @@ impl Host {
                 Ok(address) => IpAddr::V4(address),
                 Err(error) => return Err(format!("{}", error)),
             },
-            platform: PlatformInfo::default()
+            platform: PlatformInfo::new()
         };
 
         new.resolve_ip()?;

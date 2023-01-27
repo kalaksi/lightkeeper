@@ -51,7 +51,7 @@ pub trait BoxCloneableCommand {
 }
 
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CommandResult {
     pub message: String,
     pub error: String,

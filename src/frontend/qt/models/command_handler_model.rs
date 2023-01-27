@@ -135,6 +135,9 @@ impl CommandHandlerModel {
     fn refresh_monitors(&self, host_id: QString) {
         let host_id = host_id.to_string();
 
+
+        // TODO: check if host is ready (platforminfo)
+
         if host_id.is_empty() {
             self.monitor_manager.refresh_monitors(None);
         }

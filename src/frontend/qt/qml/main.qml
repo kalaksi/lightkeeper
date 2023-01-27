@@ -35,9 +35,13 @@ ApplicationWindow {
         HostDataManager.update_received.connect((hostId) => {
             _hostTableModel.data_changed_for_host(hostId)
 
-            if (hostId === hostDetails.hostId) {
-                hostDetails.refresh()
+            if (hostId === detailsView.hostId) {
+                detailsView.refresh()
             }
+        })
+
+        HostDataManager.host_platform_initialized.connect((hostId) => {
+            CommandHandler.refresh_monitors(hostId)
         })
 
         HostDataManager.monitor_state_changed.connect((hostId, monitorId, newCriticality) => {
@@ -45,7 +49,7 @@ ApplicationWindow {
         })
 
         _hostTableModel.selected_row_changed.connect(() => {
-            hostDetails.hostId = _hostTableModel.get_selected_host_id()
+            detailsView.hostId = _hostTableModel.get_selected_host_id()
         })
 
         _hostTableModel.selection_activated.connect(() => {
@@ -62,11 +66,11 @@ ApplicationWindow {
         })
 
         CommandHandler.details_subview_opened.connect((headerText, invocationId) => {
-            hostDetails.openTextView(headerText, invocationId)
+            detailsView.openTextView(headerText, invocationId)
         })
 
         CommandHandler.logs_subview_opened.connect((headerText, invocationId) => {
-            hostDetails.openLogView(headerText, invocationId)
+            detailsView.openLogView(headerText, invocationId)
         })
 
         HostDataManager.command_result_received.connect((commandResultJson) => {
@@ -87,7 +91,7 @@ ApplicationWindow {
                 dialog.criticality = commandResult.criticality
             }
             else {
-                hostDetails.refreshSubview(commandResult)
+                detailsView.refreshSubview(commandResult)
             }
         })
     }
@@ -111,7 +115,7 @@ ApplicationWindow {
             }
 
             HostDetails {
-                id: hostDetails
+                id: detailsView
                 width: parent.width
                 SplitView.minimumHeight: 0.5 * body.splitSize * body.height
                 SplitView.preferredHeight: body.splitSize * body.height
@@ -199,7 +203,7 @@ ApplicationWindow {
                 when: body.splitSize > 0.01
 
                 PropertyChanges {
-                    target: hostDetails 
+                    target: detailsView 
                     visible: true
                 }
             },
@@ -208,7 +212,7 @@ ApplicationWindow {
                 when: body.splitSize < 0.01
 
                 PropertyChanges {
-                    target: hostDetails
+                    target: detailsView
                     visible: false
                 }
             }

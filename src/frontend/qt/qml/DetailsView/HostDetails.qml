@@ -15,7 +15,6 @@ Item {
     id: root
     property string hostId: ""
     property real _subviewSize: 0.0
-
     // Only one subview can be open at one time, but in case a DetailsDialog is opened using openInNewWindowClicked(),
     // we need to provide the invocation id for state updates since there can be multiple dialogs open.
     property string _subviewInvocationId: ""

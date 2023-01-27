@@ -16,6 +16,7 @@ pub fn init_resources() {
 
             "images/fontawesome/circle-arrow-up.svg" as "images/status/up",
             "images/fontawesome/circle-arrow-down.svg" as "images/status/down",
+            "images/breeze/dark/alarm-symbolic.svg" as "images/status/pending",
             "images/breeze/dark/alarm-symbolic.svg" as "images/status/unknown",
 
             "images/breeze/dark/data-information.svg" as "images/alert/info",
@@ -41,7 +42,6 @@ pub fn init_resources() {
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
 
-            // TODO: not used?
             "images/breeze/dark/media-playback-start.svg" as "images/button/start",
             "images/breeze/dark/media-playback-stop.svg" as "images/button/stop",
             "images/breeze/dark/update-none.svg" as "images/button/update-none",
@@ -74,6 +74,7 @@ pub fn init_resources() {
 
             "images/fontawesome/circle-arrow-up.svg" as "images/status/up",
             "images/fontawesome/circle-arrow-down.svg" as "images/status/down",
+            "images/breeze/light/alarm-symbolic.svg" as "images/status/pending",
             "images/breeze/light/alarm-symbolic.svg" as "images/status/unknown",
 
             // TODO: remove fontawesome/circle-exclamation and triangle-exclamation as unused?
@@ -98,7 +99,6 @@ pub fn init_resources() {
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
 
-            // TODO: not used?
             "images/breeze/light/media-playback-start.svg" as "images/button/start",
             "images/breeze/light/media-playback-stop.svg" as "images/button/stop",
             "images/breeze/light/update-none.svg" as "images/button/update-none",

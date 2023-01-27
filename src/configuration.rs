@@ -1,14 +1,12 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
 use std::{ fs, io, collections::HashMap };
-use crate::enums::HostStatus;
 
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
     pub preferences: Preferences,
-    pub general: General,
     pub display_options: DisplayOptions,
 }
 
@@ -35,12 +33,6 @@ pub struct Preferences {
     pub text_editor: String,
     pub terminal: String,
     pub terminal_args: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct General {
-    pub default_host_status: HostStatus,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]

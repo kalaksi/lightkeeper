@@ -44,9 +44,17 @@ impl HostManager {
         }
     }
 
-    pub fn add_host(&mut self, host: Host, default_status: HostStatus) -> Result<(), String> {
+    pub fn add_host(&mut self, host: Host) -> Result<(), String> {
         let mut hosts = self.hosts.lock().unwrap();
-        hosts.add(host, default_status)
+        hosts.add(host, HostStatus::Pending)
+    }
+
+    /// Get Host details by name. Panics if the host is not found.
+    pub fn get_host(&self, host_name: &String) -> Host {
+        let hosts = self.hosts.lock().unwrap();
+        hosts.hosts.get(host_name)
+                   .expect(format!("Host '{}' not found", host_name).as_str())
+                   .host.clone()
     }
 
     pub fn new_state_update_sender(&self) -> mpsc::Sender<StateUpdateMessage> {
@@ -76,24 +84,26 @@ impl HostManager {
                     if let Some(message_data_point) = message.data_point {
 
                         // Specially structured data point for passing platform info here.
+                        // TODO: remove hardcoding?
                         if message_data_point.value == "_platform_info" {
                             if let Ok(platform) = Self::read_platform_info(message_data_point) {
                                 host_state.host.platform = platform;
+                                log::debug!("[{}] Platform info updated", host_state.host.name);
                             }
                             else {
                                 log::error!("[{}] Invalid platform info received", host_state.host.name);
                             }
-                            continue;
-                        }
-
-                        // Check first if there already exists a key for monitor id.
-                        if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
-                            monitoring_data.values.push(message_data_point);
                         }
                         else {
-                            let mut new_data = MonitoringData::new(message.module_spec.id.clone(), message.display_options);
-                            new_data.values.push(message_data_point);
-                            host_state.monitor_data.insert(message.module_spec.id, new_data);
+                            // Check first if there already exists a key for monitor id.
+                            if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
+                                monitoring_data.values.push(message_data_point);
+                            }
+                            else {
+                                let mut new_data = MonitoringData::new(message.module_spec.id.clone(), message.display_options);
+                                new_data.values.push(message_data_point);
+                                host_state.monitor_data.insert(message.module_spec.id, new_data);
+                            }
                         }
                     }
                     else if let Some(command_result) = message.command_result {
@@ -102,12 +112,13 @@ impl HostManager {
 
                     host_state.update_status();
 
-                    // Send the state update to the front end (usually).
+                    // Send the state update to the front end.
                     let observers = observers.lock().unwrap();
                     for observer in observers.iter() {
                         observer.send(frontend::HostDisplayData {
                             name: host_state.host.name.clone(),
                             domain_name: host_state.host.fqdn.clone(),
+                            platform: host_state.host.platform.clone(),
                             ip_address: host_state.host.ip_address.clone(),
                             monitoring_data: host_state.monitor_data.clone(),
                             command_results: host_state.command_results.clone(),
@@ -144,6 +155,7 @@ impl HostManager {
             display_data.hosts.insert(host_name.clone(), frontend::HostDisplayData {
                 name: state.host.name.clone(),
                 domain_name: state.host.fqdn.clone(),
+                platform: state.host.platform.clone(),
                 ip_address: state.host.ip_address.clone(),
                 monitoring_data: state.monitor_data.clone(),
                 command_results: state.command_results.clone(),
@@ -152,14 +164,6 @@ impl HostManager {
         }
 
         display_data
-    }
-
-    /// Get Host details by name. Panics if the host is not found.
-    pub fn get_host(&self, host_name: &String) -> Host {
-        let hosts = self.hosts.lock().unwrap();
-        hosts.hosts.get(host_name)
-                   .expect(format!("Host '{}' not found", host_name).as_str())
-                   .host.clone()
     }
 
     fn read_platform_info(data_point: DataPoint) -> Result<platform_info::PlatformInfo, String> {

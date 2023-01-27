@@ -92,6 +92,7 @@ impl ModuleFactory {
     fn load_modules(&mut self) {
         self.connector_constructors.insert(connection::Ssh2::get_metadata().module_spec, connection::Ssh2::new_connection_module);
 
+        self.monitor_constructors.insert(monitoring::os::Os::get_metadata().module_spec, monitoring::os::Os::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::linux::Package::get_metadata().module_spec, monitoring::linux::Package::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::linux::systemd::Service::get_metadata().module_spec, monitoring::linux::systemd::Service::new_monitoring_module);
         self.monitor_constructors.insert(monitoring::linux::Kernel::get_metadata().module_spec, monitoring::linux::Kernel::new_monitoring_module);

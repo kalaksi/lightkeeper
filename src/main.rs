@@ -71,7 +71,7 @@ fn main() {
             }
         };
 
-        if let Err(error) = host_manager.borrow_mut().add_host(host.clone(), config.general.default_host_status) {
+        if let Err(error) = host_manager.borrow_mut().add_host(host.clone()) {
             log::error!("{}", error.to_string());
             continue;
         };
@@ -111,7 +111,7 @@ fn main() {
         }
     }
 
-    monitor_manager.refresh_monitors(None);
+    monitor_manager.refresh_platform_info(None);
     let mut initial_display_data = host_manager.borrow().get_display_data();
     initial_display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 

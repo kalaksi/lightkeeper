@@ -39,13 +39,44 @@ impl MonitorManager {
 
         // Only add if missing.
         if !monitor_collection.contains_key(&module_spec.id) {
-            log::debug!("Adding monitor {}", module_spec.id);
+            log::debug!("[{}] Adding monitor {}", host.name, module_spec.id);
 
             // Add initial state value indicating no data as been received yet.
             Self::send_state_update(&host, &monitor, self.state_update_sender.as_ref().unwrap().clone(),
                                     DataPoint::no_data());
 
             monitor_collection.insert(module_spec.id, monitor);
+        }
+    }
+
+    pub fn refresh_platform_info(&self, host_id: Option<&String>) {
+        for (host_name, monitor_collection) in self.monitors.iter() {
+            if let Some(host_filter) = host_id {
+                if host_name != host_filter {
+                    continue;
+                }
+            }
+
+            let host = self.host_manager.borrow().get_host(host_name);
+            log::debug!("[{}] Refreshing platform info", host_name);
+
+            // Executed only if required connector is available.
+            if monitor_collection.iter().any(|(_, monitor)| monitor.get_connector_spec().unwrap_or_default().id == "ssh") {
+                // TODO: remove hardcoding and execute once per connector type.
+                let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
+                self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+                    connector_id: info_provider.get_connector_spec().unwrap().id,
+                    source_id: info_provider.get_module_spec().id,
+                    host: host.clone(),
+                    messages: vec![info_provider.get_connector_message()],
+                    request_type: RequestType::Command,
+                    response_handler: Self::get_response_handler(
+                        host.clone(), info_provider, self.state_update_sender.as_ref().unwrap().clone()
+                    )
+                }).unwrap_or_else(|error| {
+                    log::error!("Couldn't send message to connector: {}", error);
+                });
+            }
         }
     }
 
@@ -58,30 +89,17 @@ impl MonitorManager {
                 }
             }
 
+            let host = self.host_manager.borrow().get_host(host_name);
+
             log::info!("[{}] Refreshing monitoring data", host_name);
+            if host.platform.is_unset() {
+                log::warn!("[{}] Refreshing monitors despite missing platform info", host_name);
+            }
 
             for (monitor_id, monitor) in monitor_collection.into_iter() {
-                let host = self.host_manager.borrow().get_host(host_name);
-
                 // If monitor has a connector defined, send message through it, but
                 // if there's no need for a connector, run the monitor independently.
                 if let Some(connector_spec) = monitor.get_connector_spec() {
-                    if connector_spec.id == "ssh" {
-                        let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
-                        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-                            connector_id: info_provider.get_connector_spec().unwrap().id,
-                            source_id: info_provider.get_module_spec().id,
-                            host: host.clone(),
-                            messages: vec![info_provider.get_connector_message()],
-                            request_type: RequestType::Command,
-                            response_handler: Self::get_response_handler(
-                                host.clone(), info_provider, self.state_update_sender.as_ref().unwrap().clone()
-                            )
-                        }).unwrap_or_else(|error| {
-                            log::error!("Couldn't send message to connector: {}", error);
-                        });
-                    };
-
                     let messages = [monitor.get_connector_messages(), vec![monitor.get_connector_message()]].concat();
                     self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                         connector_id: connector_spec.id,
@@ -90,7 +108,7 @@ impl MonitorManager {
                         messages: messages,
                         request_type: RequestType::Command,
                         response_handler: Self::get_response_handler(
-                            host, monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
+                            host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
                         )
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to connector: {}", error);
@@ -98,7 +116,7 @@ impl MonitorManager {
                 }
                 else {
                     let handler = Self::get_response_handler(
-                        host, monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
+                        host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
                     );
                     handler(vec![Ok(ResponseMessage::empty())]);
                 } 

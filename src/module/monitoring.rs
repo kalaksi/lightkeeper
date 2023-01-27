@@ -13,3 +13,5 @@ pub use linux::docker;
 pub mod network;
 
 pub mod internal;
+
+pub mod os;

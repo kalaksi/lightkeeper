@@ -13,8 +13,8 @@ pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, St
 type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
 
 pub struct ConnectionManager {
-    // Collection of ConnectionModules that can be shared between threads.
-    // Host as the first hashmap key, connector id as the second.
+    /// Collection of ConnectionModules that can be shared between threads.
+    /// Host as the first hashmap key, connector id as the second.
     connectors: Arc<Mutex<HashMap<String, ConnectorCollection>>>,
     request_sender_prototype: mpsc::Sender<ConnectorRequest>,
     receiver_handle: Option<thread::JoinHandle<()>>,
@@ -45,6 +45,7 @@ impl ConnectionManager {
             let module_spec = connector.get_module_spec();
 
             if !host_connectors.contains_key(&module_spec.id) {
+                log::debug!("[{}] Adding connector {}", host.name, module_spec.id);
                 host_connectors.insert(module_spec.id, connector);
             }
         }
@@ -90,7 +91,7 @@ impl ConnectionManager {
                 }
 
                 let mut responses = Vec::<Result<ResponseMessage, String>>::new();
-                for request_message in &request.messages {
+                for request_message in request.messages.iter() {
 
                     let response_result;
                     match &request.request_type {

@@ -19,7 +19,9 @@ Item {
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
     property int columnSpacing: 6
-    property var _hostData: groupByCategory(HostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
+    property var _groupedData: groupByCategory(HostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
+    property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
+    property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
 
     ScrollView {
         id: rootScrollView
@@ -35,12 +37,9 @@ Item {
             Repeater {
                 // TODO: hide empty categories
                 //model: root.hideEmptyCategories ?
-                //    root._hostData.filter((item) => item.monitorDatas !== undefined && item.monitorDatas.filter((data) => data.criticality !== "Ignore").length > 0) :
-                //    root._hostData
-                model: {
-                    // console.log(JSON.stringify(root._hostData))
-                    return root._hostData
-                }
+                //    root._groupedData.filter((item) => item.monitorDatas !== undefined && item.monitorDatas.filter((data) => data.criticality !== "Ignore").length > 0) :
+                //    root._groupedData
+                model: root._groupedData
 
                 GroupBox {
                     id: groupBox
@@ -92,7 +91,13 @@ Item {
 
                             // Host data is a bit different from monitor data, so handling it separately here.
                             Repeater {
-                                model: modelData.category === "Host" ? Object.entries(HostDataManager.get_host_data(root.hostId)) : []
+                                model: modelData.category === "Host" && root._hostDetails !== null ?
+                                    [
+                                        [ "Status", root._hostDetails.status ],
+                                        [ "Name", root._hostDetails.name ],
+                                        [ "FQDN", root._hostDetails.domain_name ],
+                                        [ "IP Address", root._hostDetails.ip_address ],
+                                    ] : []
 
                                 PropertyRow {
                                     label: modelData[0]
@@ -231,7 +236,9 @@ Item {
     }
 
     function refresh() {
-        root._hostData = groupByCategory(HostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
+        root._groupedData = groupByCategory(HostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
+        root._hostDetailsJson = HostDataManager.get_host_data_json(hostId)
+        root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
     }
 
 }

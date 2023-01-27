@@ -59,7 +59,7 @@ impl CommandHandler {
 
         // Only add if missing.
         if !command_collection.contains_key(&module_spec.id) {
-            log::debug!("Adding command {}", module_spec.id);
+            log::debug!("[{}] Adding command {}", host_id, module_spec.id);
             command_collection.insert(module_spec.id, command);
         }
     }
@@ -68,6 +68,11 @@ impl CommandHandler {
         self.invocation_id_counter += 1;
 
         let host = self.host_manager.borrow().get_host(&host_id);
+
+        if host.platform.is_unset() {
+            log::warn!("[{}] Executing command \"{}\" despite missing platform info", host_id, command_id);
+        }
+
         let command = self.commands.get(&host_id).unwrap()
                                    .get(&command_id).unwrap();
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();

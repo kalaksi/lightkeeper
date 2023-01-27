@@ -20,13 +20,13 @@ pub struct DisplayOptions {
     pub use_multivalue: bool,
     pub ignore_from_summary: bool,
 
-    /// Display confirmation dialog with this text first.
+    /// Display confirmation dialog with this text.
     pub confirmation_text: String,
 
     /// Monitor id to attach commands to, instead of displaying on just category-level.
     pub parent_id: String,
 
-    /// For multi-level multivalues. Limits this command to specific level so it's not displayed on every line.
+    /// For multi-level multivalues. Limits this command to specific level (i.e. specific rows) so it's not displayed on every line.
     /// Default is 0 which means that this limit is disabled.
     pub multivalue_level: u8,
 

@@ -17,6 +17,7 @@ pub struct HostDataManagerModel {
     receive_updates: qt_method!(fn(&self)),
     update_received: qt_signal!(host_id: QString),
 
+    host_platform_initialized: qt_signal!(host_id: QString),
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     command_result_received: qt_signal!(command_result: QString),
 
@@ -25,10 +26,10 @@ pub struct HostDataManagerModel {
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
     get_monitor_datas: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
-    get_host_data: qt_method!(fn(&self, host_id: QString) -> QVariantMap),
+    get_host_data_json: qt_method!(fn(&self, host_id: QString) -> QString),
 
     display_data: frontend::DisplayData,
-    display_options: configuration::DisplayOptions,
+    // display_options: configuration::DisplayOptions,
     display_options_category_order: Vec<String>,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
@@ -45,7 +46,7 @@ impl HostDataManagerModel {
             display_data: display_data,
             update_receiver: Some(receiver),
             update_receiver_thread: None,
-            display_options: display_options,
+            // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             ..Default::default()
         };
@@ -67,13 +68,17 @@ impl HostDataManagerModel {
                         host_display_data.clone(),
                     );
 
-                    for (_, command_result) in &host_display_data.command_results{
+                    if old_data.platform.is_unset() && !host_display_data.platform.is_unset() {
+                        self_pinned.borrow().host_platform_initialized(QString::from(old_data.name.clone()));
+                    }
+
+                    for command_result in host_display_data.command_results.values() {
                         let json = QString::from(serde_json::to_string(command_result).unwrap());
                         self_pinned.borrow().command_result_received(json);
                     }
 
                     // Find out any monitor state changes and signal accordingly.
-                    for (monitor_id, new_monitor_data) in &host_display_data.monitoring_data {
+                    for (monitor_id, new_monitor_data) in host_display_data.monitoring_data.iter() {
                         let new_criticality = new_monitor_data.values.last().unwrap().criticality;
 
                         match old_data.monitoring_data.get(monitor_id) {
@@ -149,18 +154,17 @@ impl HostDataManagerModel {
         result
     }
 
-    fn get_host_data(&self, host_id: QString) -> QVariantMap {
-        let mut result = QVariantMap::default();
-    
+    fn get_host_data_json(&self, host_id: QString) -> QString {
+        // Doesn't include monitor and command datas.
+        let mut result = String::new();
         if let Some(host_data) = self.display_data.hosts.get(&host_id.to_string()) {
-            // TODO: use table headers from display data in init? Or remove table headers completely.
-            result.insert(QString::from("Status"), QString::from(host_data.status.to_string()).to_qvariant());
-            result.insert(QString::from("Name"), QString::from(host_data.name.clone()).to_qvariant());
-            result.insert(QString::from("FQDN"), QString::from(host_data.domain_name.to_string()).to_qvariant());
-            result.insert(QString::from("IP address"), QString::from(host_data.ip_address.to_string()).to_qvariant());
+            let mut stripped = host_data.clone();
+            stripped.monitoring_data.clear();
+            stripped.command_results.clear();
+            result = serde_json::to_string(&stripped).unwrap();
         }
-    
-        result
+
+        return QString::from(result);
     }
 
     // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.

@@ -1,6 +1,7 @@
 use strum_macros::{ EnumString, Display };
+use serde_derive::{ Serialize, Deserialize };
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct PlatformInfo {
     /// Operating system, i.e. Windows, Linux...
     pub os: OperatingSystem,
@@ -12,7 +13,17 @@ pub struct PlatformInfo {
     pub os_flavor: Flavor,
 }
 
-#[derive(Clone, PartialEq, Eq, EnumString, Display)]
+impl PlatformInfo {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn is_unset(&self) -> bool {
+        self.os == OperatingSystem::Unknown
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, EnumString, Display, Serialize, Deserialize)]
 pub enum OperatingSystem {
     Unknown,
     Windows,
@@ -25,7 +36,7 @@ impl Default for OperatingSystem {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, EnumString, Display)]
+#[derive(Clone, PartialEq, Eq, EnumString, Display, Serialize, Deserialize)]
 pub enum Flavor {
     Unknown,
 
