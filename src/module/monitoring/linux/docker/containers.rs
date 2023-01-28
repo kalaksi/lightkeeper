@@ -19,7 +19,7 @@ pub struct Containers {
 impl Module for Containers {
     fn new(settings: &HashMap<String, String>) -> Self {
         Containers {
-            ignore_compose_managed: true,
+            ignore_compose_managed: settings.get("ignore_compose_managed").and_then(|value| Some(value == "true")).unwrap_or(true),
         }
     }
 }
