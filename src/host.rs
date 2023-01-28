@@ -1,20 +1,21 @@
 
+use serde_derive::{ Serialize, Deserialize };
 use std::{
     net::IpAddr,
     net::Ipv4Addr,
     net::ToSocketAddrs,
     str::FromStr,
-    hash::Hash,
 };
 
 use crate::module::PlatformInfo;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Host {
     pub name: String,
     pub fqdn: String,
     pub ip_address: IpAddr,
     pub platform: PlatformInfo,
+    pub settings: Vec<HostSetting>,
 }
 
 impl Host {
@@ -26,7 +27,8 @@ impl Host {
                 Ok(address) => IpAddr::V4(address),
                 Err(error) => return Err(format!("{}", error)),
             },
-            platform: PlatformInfo::new()
+            platform: PlatformInfo::new(),
+            settings: Vec::new(),
         };
 
         new.resolve_ip()?;
@@ -50,17 +52,17 @@ impl Host {
     }
 }
 
-// Also intended to be used as HashMap key. Only name acts as the identifier.
-impl PartialEq for Host {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
+/// Host settings should be controlled only through configuration files.
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum HostSetting {
+    None,
+    /// Use sudo for commands that require higher privileges.
+    UseSudo,
 }
 
-impl Eq for Host { }
-
-impl Hash for Host {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.name.hash(state)
+impl Default for HostSetting {
+    fn default() -> Self {
+        HostSetting::None
     }
 }

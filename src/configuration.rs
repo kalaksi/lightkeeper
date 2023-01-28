@@ -1,6 +1,7 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
 use std::{ fs, io, collections::HashMap };
+use crate::host::HostSetting;
 
 
 #[derive(Serialize, Deserialize)]
@@ -66,6 +67,8 @@ pub struct Host {
     pub commands: HashMap<String, CommandConfig>,
     #[serde(default)]
     pub connectors: HashMap<String, ConnectorConfig>,
+    #[serde(default)]
+    pub settings: Vec<HostSetting>,
 }
 
 impl Host {
@@ -149,6 +152,10 @@ impl Configuration {
                         let mut connectors = template_config.connectors.clone();
                         connectors.extend(host_config.connectors.to_owned());
                         host_config.connectors = connectors;
+
+                        let mut settings = template_config.settings.clone();
+                        settings.extend(host_config.settings.to_owned());
+                        host_config.settings = settings;
                     }
                     else {
                         panic!("No such template");
@@ -160,4 +167,3 @@ impl Configuration {
         Ok((main_config, hosts))
     }
 }
-
