@@ -53,7 +53,7 @@ pub enum Flavor {
     Unknown,
 
     // Windows:
-    Server2012,
+    WindowsServer2012,
     Windows7,
     Windows10,
     Windows11,
@@ -62,7 +62,7 @@ pub enum Flavor {
     Debian,
     Ubuntu,
     ArchLinux,
-    RHEL,
+    RedHat,
 }
 
 impl Default for Flavor {
