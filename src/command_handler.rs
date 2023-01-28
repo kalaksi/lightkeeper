@@ -78,7 +78,7 @@ impl CommandHandler {
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-            connector_id: command.get_connector_spec().unwrap().id,
+            connector_id: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
             request_type: RequestType::Command,
@@ -210,7 +210,7 @@ impl CommandHandler {
         }
         else {
             self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-                connector_id: command.get_connector_spec().unwrap().id,
+                connector_id: command.get_connector_spec(),
                 source_id: command.get_module_spec().id,
                 host: host.clone(),
                 request_type: RequestType::Download,
@@ -245,7 +245,7 @@ impl CommandHandler {
                                         .expect("Running command failed");
 
                     request_sender.send(ConnectorRequest {
-                        connector_id: command.get_connector_spec().unwrap().id,
+                        connector_id: command.get_connector_spec(),
                         source_id: command.get_module_spec().id,
                         host: host.clone(),
                         request_type: RequestType::Upload,

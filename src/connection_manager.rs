@@ -7,10 +7,11 @@ use std::{
 };
 use crate::Host;
 use crate::file_handler;
+use crate::module::ModuleSpecification;
 use crate::module::connection::*;
 
 pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, String>>) + Send + 'static>;
-type ConnectorCollection = HashMap<String, Box<dyn ConnectionModule + Send>>;
+type ConnectorCollection = HashMap<ModuleSpecification, Box<dyn ConnectionModule + Send>>;
 
 pub struct ConnectionManager {
     /// Collection of ConnectionModules that can be shared between threads.
@@ -44,9 +45,9 @@ impl ConnectionManager {
         if let Some(host_connectors) = connectors.get_mut(&host.name) {
             let module_spec = connector.get_module_spec();
 
-            if !host_connectors.contains_key(&module_spec.id) {
+            if !host_connectors.contains_key(&module_spec) {
                 log::debug!("[{}] Adding connector {}", host.name, module_spec.id);
-                host_connectors.insert(module_spec.id, connector);
+                host_connectors.insert(module_spec, connector);
             }
         }
     }
@@ -79,9 +80,15 @@ impl ConnectionManager {
                 // Not normally enabled as this may log passwords.
                 // log::debug!("Connector request received for {}: {}", request.connector_id, request.message);
 
+                // Requests with no connector dependency are directly executed here.
+                if request.connector_id.is_none() {
+                    (request.response_handler)(Vec::new());
+                    continue;
+                }
+
                 let mut connectors = connectors.lock().unwrap();
                 let connector = connectors.get_mut(&request.host.name)
-                                          .and_then(|connections| connections.get_mut(&request.connector_id)).unwrap();
+                                          .and_then(|connections| connections.get_mut(&request.connector_id.unwrap())).unwrap();
 
                 if !connector.is_connected() {
                     if let Err(error) = connector.connect(&request.host.ip_address) {
@@ -161,7 +168,7 @@ impl ConnectionManager {
 }
 
 pub struct ConnectorRequest {
-    pub connector_id: String,
+    pub connector_id: Option<ModuleSpecification>,
     pub source_id: String,
     pub host: Host,
     pub messages: Vec<String>,

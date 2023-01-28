@@ -65,7 +65,7 @@ impl MonitorManager {
                 // TODO: remove hardcoding and execute once per connector type.
                 let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
                 self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-                    connector_id: info_provider.get_connector_spec().unwrap().id,
+                    connector_id: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
                     messages: vec![info_provider.get_connector_message(host.clone())],
@@ -97,29 +97,19 @@ impl MonitorManager {
             }
 
             for (monitor_id, monitor) in monitor_collection.into_iter() {
-                // If monitor has a connector defined, send message through it, but
-                // if there's no need for a connector, run the monitor independently.
-                if let Some(connector_spec) = monitor.get_connector_spec() {
-                    let messages = [monitor.get_connector_messages(host.clone()), vec![monitor.get_connector_message(host.clone())]].concat();
-                    self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-                        connector_id: connector_spec.id,
-                        source_id: monitor_id.clone(),
-                        host: host.clone(),
-                        messages: messages,
-                        request_type: RequestType::Command,
-                        response_handler: Self::get_response_handler(
-                            host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
-                        )
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to connector: {}", error);
-                    });
-                }
-                else {
-                    let handler = Self::get_response_handler(
+                let messages = [monitor.get_connector_messages(host.clone()), vec![monitor.get_connector_message(host.clone())]].concat();
+                self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+                    connector_id: monitor.get_connector_spec(),
+                    source_id: monitor_id.clone(),
+                    host: host.clone(),
+                    messages: messages,
+                    request_type: RequestType::Command,
+                    response_handler: Self::get_response_handler(
                         host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
-                    );
-                    handler(vec![Ok(ResponseMessage::empty())]);
-                } 
+                    )
+                }).unwrap_or_else(|error| {
+                    log::error!("Couldn't send message to connector: {}", error);
+                });
             }
         }
     }
