@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use crate::module::connection::ResponseMessage;
-use crate::module::platform_info::{OperatingSystem, Flavor};
+use crate::module::platform_info::Flavor;
 use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;

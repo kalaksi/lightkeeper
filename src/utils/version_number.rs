@@ -12,10 +12,6 @@ pub struct VersionNumber {
 }
 
 impl VersionNumber {
-    pub fn new(major: u16, minor: u16, patch: u16) -> Self {
-        Self { major, minor, patch }
-    }
-
     // Never panics or returns error. Zeroes will be used as defaults when parsing fails.
     pub fn from_string(version_string: &String) -> Self {
         let mut parts = version_string.split('.').collect::<Vec<&str>>();
