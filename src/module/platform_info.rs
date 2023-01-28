@@ -31,7 +31,7 @@ impl PlatformInfo {
         let parsed_version = VersionNumber::from_str(version).unwrap();
 
         self.os_flavor == flavor &&
-        parsed_version > self.os_version
+        self.os_version > parsed_version
     }
 }
 
