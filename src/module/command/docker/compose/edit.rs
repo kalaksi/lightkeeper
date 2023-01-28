@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
 };
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::*;
 use crate::module::command::*;
 use lightkeeper_module::command_module;
@@ -13,7 +13,7 @@ pub struct Edit {
 
 impl Module for Edit {
     fn new(_settings: &HashMap<String, String>) -> Self {
-        Edit {
+        Self {
         }
     }
 }
@@ -37,7 +37,7 @@ impl CommandModule for Edit {
     }
 
     fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
-        let compose_file = parameters[0].clone();
+        let compose_file = parameters.first().unwrap().clone();
         compose_file
     }
 }

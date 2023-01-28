@@ -2,20 +2,18 @@ use std::{
     collections::HashMap,
 };
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::*;
 use crate::module::command::*;
 use lightkeeper_module::command_module;
 
 #[command_module("docker-compose-pull", "0.0.1")]
 pub struct Pull {
-    use_sudo: bool,
 }
 
 impl Module for Pull {
-    fn new(settings: &HashMap<String, String>) -> Self {
-        Pull {
-            use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(true),
+    fn new(_settings: &HashMap<String, String>) -> Self {
+        Self {
         }
     }
 }
@@ -36,16 +34,21 @@ impl CommandModule for Pull {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
-        let compose_file = parameters[0].clone();
-        let mut command = format!("docker-compose -f {} pull", compose_file);
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+        // TODO: some indicator for unsupported command (for UI)? Use Result?
+        let mut command = String::new();
 
-        if let Some(service_name) = parameters.get(1) {
-            command = format!("{} {}", command, service_name);
-        }
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let compose_file = parameters.first().unwrap();
+            command = format!("docker-compose -f {} pull", compose_file);
 
-        if self.use_sudo {
-            command = format!("sudo {}", command);
+            if let Some(service_name) = parameters.get(1) {
+                command = format!("{} {}", command, service_name);
+            }
+
+            if host.settings.contains(&HostSetting::UseSudo) {
+                command = format!("sudo {}", command)
+            }
         }
 
         command

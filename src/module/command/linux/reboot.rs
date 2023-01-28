@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
@@ -31,8 +31,18 @@ impl CommandModule for Reboot {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> String {
-        String::from("sudo reboot")
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
+        let mut command = String::new();
+
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            command = String::from("reboot");
+
+            if host.settings.contains(&HostSetting::UseSudo) {
+                command = format!("sudo {}", command);
+            }
+        }
+
+        command
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

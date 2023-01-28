@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
@@ -32,9 +32,20 @@ impl CommandModule for Stop {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
-        let service = parameters[0].clone();
-        let mut command = format!("sudo systemctl stop {}", service);
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+        let mut command = String::new();
+
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
+                let service = parameters.first().unwrap();
+                command = format!("sudo systemctl stop {}", service);
+            }
+
+            if !command.is_empty() && host.settings.contains(&HostSetting::UseSudo) {
+                command = format!("sudo {}", command);
+            }
+        }
+
         command
     }
 

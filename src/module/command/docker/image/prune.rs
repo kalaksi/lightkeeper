@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use serde_derive::Deserialize;
 use serde_json;
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
@@ -33,13 +33,27 @@ impl CommandModule for Prune {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> String {
-        String::from("sudo curl --unix-socket /var/run/docker.sock -X POST http://localhost/images/prune")
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
+        let mut command = String::new();
+
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            command = String::from("curl --unix-socket /var/run/docker.sock -X POST http://localhost/images/prune");
+            if host.settings.contains(&HostSetting::UseSudo) {
+                command = format!("sudo {}", command);
+            }
+        }
+
+        command
     }
 
-    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        let result: PruneResult = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
-        Ok(CommandResult::new_info(format!("Total reclaimed space: {} B", result.space_reclaimed)))
+    fn process_response(&self, host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let result: PruneResult = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+            Ok(CommandResult::new_info(format!("Total reclaimed space: {} B", result.space_reclaimed)))
+        }
+        else {
+            self.error_unsupported()
+        }
     }
 }
 

@@ -4,7 +4,7 @@ use serde_derive::Deserialize;
 use serde_json;
 
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
@@ -36,10 +36,19 @@ impl CommandModule for Remove {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+        let mut command = String::new();
+
         // TODO: validate target_id
-        let target_id = parameters.first().unwrap();
-        format!("sudo curl --unix-socket /var/run/docker.sock -X DELETE http://localhost/images/{}", target_id)
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let target_id = parameters.first().unwrap();
+            command = format!("curl --unix-socket /var/run/docker.sock -X DELETE http://localhost/images/{}", target_id);
+            if host.settings.contains(&HostSetting::UseSudo) {
+                command = format!("sudo {}", command);
+            }
+        }
+
+        command
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

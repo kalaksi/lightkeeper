@@ -43,6 +43,10 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         Ok(CommandResult::new(response.message.clone()))
     }
+
+    fn error_unsupported(&self) -> Result<CommandResult, String> {
+        Err(String::from("Unsupported platform"))
+    }
 }
 
 // Implemented by the macro.

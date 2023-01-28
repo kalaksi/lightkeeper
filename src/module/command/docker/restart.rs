@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
@@ -32,11 +32,20 @@ impl CommandModule for Restart {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
-        // TODO: filter out all but alphanumeric characters
-        let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+        let mut command = String::new();
 
-        format!("sudo curl --unix-socket /var/run/docker.sock -X POST http://localhost/containers/{}/restart", target_id)
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            // TODO: filter out all but alphanumeric characters
+            let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
+            command = format!("curl --unix-socket /var/run/docker.sock -X POST http://localhost/containers/{}/restart", target_id);
+
+            if host.settings.contains(&HostSetting::UseSudo) {
+                command = format!("sudo {}", command);
+            }
+        }
+
+        command
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

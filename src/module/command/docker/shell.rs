@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
@@ -34,7 +34,7 @@ impl CommandModule for Shell {
 
     fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
         // TODO: filter out all but alphanumeric characters
-        let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
+        let _target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
 
         // TODO
         String::new()
