@@ -84,8 +84,8 @@ impl CommandHandler {
             request_type: RequestType::Command,
             // Only one of these should be implemented, but it doesn't matter if both are.
             messages: [
-                command.get_connector_messages(host.platform.clone(), parameters.clone()),
-                vec![command.get_connector_message(host.platform.clone(), parameters.clone())]
+                command.get_connector_messages(host.clone(), parameters.clone()),
+                vec![command.get_connector_message(host.clone(), parameters.clone())]
             ].concat(),
             response_handler: Self::get_response_handler(host, command.box_clone(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
@@ -120,7 +120,7 @@ impl CommandHandler {
 
             let command_result = match response {
                 Ok(response) => {
-                    match command.process_response(host.platform, &response) {
+                    match command.process_response(host.clone(), &response) {
                         Ok(mut result) => {
                             log::debug!("Command result received: {}", result.message);
                             result.invocation_id = invocation_id;
@@ -174,8 +174,8 @@ impl CommandHandler {
 
         // Only one of these should be implemented, but it doesn't matter if both are.
         let connector_messages = [
-            command.get_connector_messages(host.platform.clone(), vec![remote_file_path.clone()]),
-            vec![command.get_connector_message(host.platform.clone(), vec![remote_file_path])]
+            command.get_connector_messages(host.clone(), vec![remote_file_path.clone()]),
+            vec![command.get_connector_message(host.clone(), vec![remote_file_path])]
         ].concat();
 
         if self.preferences.use_remote_editor {

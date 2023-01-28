@@ -6,11 +6,11 @@ use chrono::{DateTime, Utc};
 use crate::{
     module::Module,
     module::ModuleSpecification,
-    module::PlatformInfo,
     module::MetadataSupport,
     module::connection::ResponseMessage,
     enums::Criticality,
     frontend,
+    host::Host,
 };
 
 pub type Command = Box<dyn CommandModule + Send + Sync>;
@@ -32,15 +32,15 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
         }
     }
 
-    fn get_connector_message(&self, _platform: PlatformInfo, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> String {
         String::new()
     }
 
-    fn get_connector_messages(&self, _platform: PlatformInfo, _parameters: Vec<String>) -> Vec<String> {
+    fn get_connector_messages(&self, _host: Host, _parameters: Vec<String>) -> Vec<String> {
         Vec::new()
     }
 
-    fn process_response(&self, _platform: PlatformInfo, response: &ResponseMessage) -> Result<CommandResult, String> {
+    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         Ok(CommandResult::new(response.message.clone()))
     }
 }

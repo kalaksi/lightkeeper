@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
 };
 use crate::frontend;
+use crate::host::Host;
 use crate::module::*;
 use crate::module::command::*;
 use lightkeeper_module::command_module;
@@ -36,7 +37,7 @@ impl CommandModule for Up {
         }
     }
 
-    fn get_connector_message(&self, _platform: PlatformInfo, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
         let compose_file = parameters[0].clone();
         let mut command = format!("docker-compose -f {} up -d", compose_file);
 

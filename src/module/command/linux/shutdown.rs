@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::frontend;
+use crate::host::Host;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
@@ -30,11 +31,11 @@ impl CommandModule for Shutdown {
         }
     }
 
-    fn get_connector_message(&self, _platform: PlatformInfo, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> String {
         String::from("sudo poweroff")
     }
 
-    fn process_response(&self, _platform: PlatformInfo, response: &ResponseMessage) -> Result<CommandResult, String> {
+    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.message.len() > 0 {
             Ok(CommandResult::new_warning(response.message.clone()))
         }
