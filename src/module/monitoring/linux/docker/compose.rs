@@ -12,8 +12,6 @@ use crate::module::monitoring::*;
 
 #[monitoring_module("docker-compose", "0.0.1")]
 pub struct Compose {
-    use_sudo: bool,
-
     // TODO: these are unused atm
     pub compose_file_name: String,
     /// If you have one directory under which all the compose projects are, use this.
@@ -25,8 +23,6 @@ pub struct Compose {
 impl Module for Compose {
     fn new(settings: &HashMap<String, String>) -> Self {
         Compose {
-            use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(true),
-
             compose_file_name: String::from("docker-compose.yml"),
             main_dir: settings.get("main_dir").unwrap_or(&String::new()).clone(),
             project_directories: settings.get("project_directories").unwrap_or(&String::new()).clone()
@@ -58,7 +54,7 @@ impl MonitoringModule for Compose {
             // TODO: find down-status compose-projects with find-command?
             let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
-            if self.use_sudo {
+            if host.settings.contains(&crate::host::HostSetting::UseSudo) {
                 format!("sudo {}", command)
             }
             else {

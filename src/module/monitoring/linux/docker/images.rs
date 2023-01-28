@@ -18,14 +18,12 @@ const LEVEL_CRITICAL: usize = 2;
 
 #[monitoring_module("docker-images", "0.0.1")]
 pub struct Images {
-    use_sudo: bool,
     criticality_levels: Vec<u32>,
 }
 
 impl Module for Images {
     fn new(settings: &HashMap<String, String>) -> Self {
         Images {
-            use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(false),
             criticality_levels: settings.get("criticality_levels").unwrap_or(&String::from("270,365,730"))
                                         .split(',')
                                         .map(|value| value.parse().unwrap())
@@ -54,7 +52,7 @@ impl MonitoringModule for Images {
             // TODO: somehow connect directly to the unix socket instead of using curl?
             let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/images/json");
 
-            if self.use_sudo {
+            if host.settings.contains(&crate::host::HostSetting::UseSudo) {
                 format!("sudo {}", command)
             }
             else {

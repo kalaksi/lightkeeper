@@ -12,7 +12,6 @@ use crate::module::monitoring::*;
 
 #[monitoring_module("docker-containers", "0.0.1")]
 pub struct Containers {
-    use_sudo: bool,
     // Ignore containers that are managed by docker-compose.
     ignore_compose_managed: bool,
 }
@@ -20,7 +19,6 @@ pub struct Containers {
 impl Module for Containers {
     fn new(settings: &HashMap<String, String>) -> Self {
         Containers {
-            use_sudo: settings.get("use_sudo").and_then(|value| Some(value == "true")).unwrap_or(false),
             ignore_compose_managed: true,
         }
     }
@@ -46,7 +44,7 @@ impl MonitoringModule for Containers {
             // TODO: somehow connect directly to the unix socket instead of using curl?
             let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
-            if self.use_sudo {
+            if host.settings.contains(&crate::host::HostSetting::UseSudo) {
                 format!("sudo {}", command)
             }
             else {
