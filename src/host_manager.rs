@@ -13,6 +13,7 @@ use crate::module::{
     command::CommandResult,
 };
 
+use crate::utils::VersionNumber;
 use crate::{
     enums::HostStatus,
     enums::Criticality,
@@ -172,7 +173,7 @@ impl HostManager {
             match data.label.as_str() {
                 "os" => platform.os = platform_info::OperatingSystem::from_str(data.value.as_str())
                                                                      .map_err(|error| error.to_string())?,
-                "os_version" => platform.os_version = data.value.clone(),
+                "os_version" => platform.os_version = VersionNumber::from_string(&data.value),
                 "os_flavor" => platform.os_flavor = platform_info::Flavor::from_str(data.value.as_str())
                                                                           .map_err(|error| error.to_string())?,
                 _ => return Err(String::from("Invalid platform info data"))

@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 use chrono::{ NaiveDateTime, Utc };
 use crate::module::connection::ResponseMessage;
+use crate::module::platform_info;
 use crate::{
     Host,
     frontend,
@@ -34,15 +35,25 @@ impl MonitoringModule for Uptime {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
-        String::from("uptime -s")
+    fn get_connector_message(&self, host: Host) -> String {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            String::from("uptime -s")
+        }
+        else {
+            String::new()
+        }
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
-                                          .map_err(|e| e.to_string())?;
+    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
+                                            .map_err(|e| e.to_string())?;
 
-        let uptime = Utc::now().naive_utc() - boot_datetime;
-        Ok(DataPoint::new(uptime.num_days().to_string()))
+            let uptime = Utc::now().naive_utc() - boot_datetime;
+            Ok(DataPoint::new(uptime.num_days().to_string()))
+        }
+        else {
+            self.error_unsupported()
+        }
     }
 }

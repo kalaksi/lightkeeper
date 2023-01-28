@@ -33,39 +33,36 @@ impl MonitoringModule for Package {
     }
 
     fn get_connector_message(&self, host: Host) -> String {
-        match host.platform.os_flavor {
-            Flavor::Debian => String::from("sudo apt list --upgradable"),
-            _ => String::new(),
+        if host.platform.is_newer_than(Flavor::Debian, "8") {
+            String::from("sudo apt list --upgradable")
+        }
+        else {
+            String::new()
         }
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        match host.platform.os_flavor {
-            Flavor::Debian => self.process_debian(response),
-            // TODO: better way to signal no support?
-            _ => Ok(DataPoint::no_data()),
+        if host.platform.is_newer_than(Flavor::Debian, "8") {
+            let mut result = DataPoint::empty();
+            let lines = response.message.split('\n').filter(|line| line.contains("[upgradable"));
+            for line in lines {
+                let mut parts = line.split_whitespace();
+                let package = parts.next().unwrap().to_string();
+                let package_name = package.split('/').next().unwrap().to_string();
+                let new_version = parts.next().unwrap().to_string();
+                // let mut old_version = parts.nth(3).unwrap().to_string();
+                // Last character is ']'.
+                // old_version.pop();
+                
+                let data_point = DataPoint::labeled_value(package_name, new_version);
+                result.multivalue.push(data_point);
+            }
+
+            Ok(result)
+        }
+        else {
+            self.error_unsupported()
         }
     }
 
-}
-
-impl Package {
-    fn process_debian(&self, response: ResponseMessage) -> Result<DataPoint, String> {
-        let mut result = DataPoint::empty();
-        let lines = response.message.split('\n').filter(|line| line.contains("[upgradable"));
-        for line in lines {
-            let mut parts = line.split_whitespace();
-            let package = parts.next().unwrap().to_string();
-            let package_name = package.split('/').next().unwrap().to_string();
-            let new_version = parts.next().unwrap().to_string();
-            // let mut old_version = parts.nth(3).unwrap().to_string();
-            // Last character is ']'.
-            // old_version.pop();
-            
-            let data_point = DataPoint::labeled_value(package_name, new_version);
-            result.multivalue.push(data_point);
-        }
-
-        Ok(result)
-    }
 }

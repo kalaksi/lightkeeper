@@ -41,36 +41,46 @@ impl MonitoringModule for Filesystem {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
-        String::from("df -P")
+    fn get_connector_message(&self, host: Host) -> String {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            String::from("df -P")
+        }
+        else {
+            String::new()
+        }
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        let mut result = DataPoint::empty();
+    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let mut result = DataPoint::empty();
 
-        let mut lines = response.message.split('\n');
-        // First line contains headers
-        lines.nth(1).unwrap();
-        for line in lines {
-            let mut parts = line.split_whitespace();
-            let _source = parts.next().unwrap().to_string();
-            let _size_m = parts.next().unwrap().to_string();
-            let _used_m = parts.next().unwrap().to_string();
-            let _available_m = parts.next().unwrap().to_string();
-            let mut used_percent = parts.next().unwrap().to_string();
-            let mountpoint = parts.next().unwrap().to_string();
+            let mut lines = response.message.split('\n');
+            // First line contains headers
+            lines.nth(1).unwrap();
+            for line in lines {
+                let mut parts = line.split_whitespace();
+                let _source = parts.next().unwrap().to_string();
+                let _size_m = parts.next().unwrap().to_string();
+                let _used_m = parts.next().unwrap().to_string();
+                let _available_m = parts.next().unwrap().to_string();
+                let mut used_percent = parts.next().unwrap().to_string();
+                let mountpoint = parts.next().unwrap().to_string();
 
-            if self.ignored_filesystems.iter().any(|item| mountpoint.starts_with(item)) {
-                continue;
+                if self.ignored_filesystems.iter().any(|item| mountpoint.starts_with(item)) {
+                    continue;
+                }
+
+                // Remove percent symbol from the end.
+                used_percent.pop();
+                let data_point = DataPoint::labeled_value(mountpoint, used_percent);
+                result.multivalue.push(data_point);
+
             }
 
-            // Remove percent symbol from the end.
-            used_percent.pop();
-            let data_point = DataPoint::labeled_value(mountpoint, used_percent);
-            result.multivalue.push(data_point);
-
+            Ok(result)
         }
-
-        Ok(result)
+        else {
+            self.error_unsupported()
+        }
     }
 }

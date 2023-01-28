@@ -50,71 +50,81 @@ impl MonitoringModule for Compose {
         }
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
-        // Docker API is much better suited for this than using the docker-compose CLI.
-        // More effective too.
-        // TODO: Reuse command results between docker-compose and docker monitors (a global command cache?)
-        // TODO: find down-status compose-projects with find-command?
-        let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
+    fn get_connector_message(&self, host: Host) -> String {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            // Docker API is much better suited for this than using the docker-compose CLI.
+            // More effective too.
+            // TODO: Reuse command results between docker-compose and docker monitors (a global command cache?)
+            // TODO: find down-status compose-projects with find-command?
+            let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
-        if self.use_sudo {
-            format!("sudo {}", command)
+            if self.use_sudo {
+                format!("sudo {}", command)
+            }
+            else {
+                command
+            }
         }
         else {
-            command
+            String::new()
         }
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
-        containers.retain(|container| container.labels.contains_key("com.docker.compose.config-hash"));
+    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+            containers.retain(|container| container.labels.contains_key("com.docker.compose.config-hash"));
 
 
-        // There will be 2 levels of multivalues (services under projects).
-        let mut projects_datapoint = DataPoint::empty();
+            // There will be 2 levels of multivalues (services under projects).
+            let mut projects_datapoint = DataPoint::empty();
 
-        // Group containers by project name.
-        let mut projects = HashMap::<String, Vec<DataPoint>>::new();
+            // Group containers by project name.
+            let mut projects = HashMap::<String, Vec<DataPoint>>::new();
 
-        for container in containers {
-            let project = container.labels.get("com.docker.compose.project").unwrap().clone();
+            for container in containers {
+                let project = container.labels.get("com.docker.compose.project").unwrap().clone();
 
-            if !projects.contains_key(&project) {
-                projects.insert(project.clone(), Vec::new());
+                if !projects.contains_key(&project) {
+                    projects.insert(project.clone(), Vec::new());
+                }
+
+                let service = container.labels.get("com.docker.compose.service").unwrap().clone();
+                let compose_file = Path::new(container.labels.get("com.docker.compose.project.working_dir").unwrap())
+                                        .join(&self.compose_file_name).to_string_lossy().to_string();
+
+                let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.state.to_string(), container.state.to_criticality());
+                data_point.command_params = vec![compose_file, service];
+
+                projects.get_mut(&project).unwrap().push(data_point);
             }
 
-            let service = container.labels.get("com.docker.compose.service").unwrap().clone();
-            let compose_file = Path::new(container.labels.get("com.docker.compose.project.working_dir").unwrap())
-                                    .join(&self.compose_file_name).to_string_lossy().to_string();
+            let mut projects_sorted = projects.keys().cloned().collect::<Vec<String>>();
+            projects_sorted.sort();
 
-            let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.state.to_string(), container.state.to_criticality());
-            data_point.command_params = vec![compose_file, service];
+            for project in projects_sorted.into_iter() {
+                let mut datapoints = projects.remove_entry(&project).unwrap().1;
+                datapoints.sort_by(|left, right| left.label.cmp(&right.label));
 
-            projects.get_mut(&project).unwrap().push(data_point);
-        }
+                let compose_file = datapoints.first().unwrap().command_params[0].clone();
 
-        let mut projects_sorted = projects.keys().cloned().collect::<Vec<String>>();
-        projects_sorted.sort();
+                // Check just in case that all have the same compose-file.
+                if datapoints.iter().any(|point| point.command_params[0] != compose_file) {
+                    panic!("Containers under same project can't have different compose-files");
+                }
 
-        for project in projects_sorted.into_iter() {
-            let mut datapoints = projects.remove_entry(&project).unwrap().1;
-            datapoints.sort_by(|left, right| left.label.cmp(&right.label));
+                let most_critical = datapoints.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
+                let mut services_datapoint = DataPoint::labeled_value_with_level(project.clone(), most_critical.value.clone(), most_critical.criticality);
+                services_datapoint.command_params = vec![compose_file];
+                services_datapoint.multivalue = datapoints;
 
-            let compose_file = datapoints.first().unwrap().command_params[0].clone();
-
-            // Check just in case that all have the same compose-file.
-            if datapoints.iter().any(|point| point.command_params[0] != compose_file) {
-                panic!("Containers under same project can't have different compose-files");
+                projects_datapoint.multivalue.push(services_datapoint);
             }
 
-            let most_critical = datapoints.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
-            let mut services_datapoint = DataPoint::labeled_value_with_level(project.clone(), most_critical.value.clone(), most_critical.criticality);
-            services_datapoint.command_params = vec![compose_file];
-            services_datapoint.multivalue = datapoints;
-
-            projects_datapoint.multivalue.push(services_datapoint);
+            Ok(projects_datapoint)
         }
-
-        Ok(projects_datapoint)
+        else {
+            self.error_unsupported()
+        }
     }
 }

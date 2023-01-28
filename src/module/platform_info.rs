@@ -1,5 +1,9 @@
+use std::str::FromStr;
+
 use strum_macros::{ EnumString, Display };
 use serde_derive::{ Serialize, Deserialize };
+
+use crate::utils::VersionNumber;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct PlatformInfo {
@@ -7,7 +11,7 @@ pub struct PlatformInfo {
     pub os: OperatingSystem,
 
     /// Numeric version.
-    pub os_version: String,
+    pub os_version: VersionNumber,
 
     /// Flavor covers different Windows OSes and Linux distributions.
     pub os_flavor: Flavor,
@@ -20,6 +24,14 @@ impl PlatformInfo {
 
     pub fn is_unset(&self) -> bool {
         self.os == OperatingSystem::Unknown
+    }
+
+    // Version is given as str for convenience.
+    pub fn is_newer_than(&self, flavor: Flavor, version: &str) -> bool {
+        let parsed_version = VersionNumber::from_str(version).unwrap();
+
+        self.os_flavor == flavor &&
+        parsed_version > self.os_version
     }
 }
 

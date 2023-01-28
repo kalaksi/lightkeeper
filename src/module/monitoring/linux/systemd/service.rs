@@ -51,38 +51,48 @@ impl MonitoringModule for Service {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
+    fn get_connector_message(&self, host: Host) -> String {
         // TODO: use dbus?
-        String::from("systemctl list-units -t service --all --output json")
+        if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
+            String::from("systemctl list-units -t service --all --output json")
+        }
+        else {
+            String::new()
+        }
         // Alternative:
         // String::from("systemctl list-units -t service --full --all --plain --no-legend")
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        let services: Vec<ServiceUnit> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
+            let services: Vec<ServiceUnit> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
-        let mut result = DataPoint::empty();
+            let mut result = DataPoint::empty();
 
-        result.multivalue = services.iter().map(|service| {
-            let mut point = DataPoint::labeled_value(service.unit.clone(), service.sub.clone());
+            result.multivalue = services.iter().map(|service| {
+                let mut point = DataPoint::labeled_value(service.unit.clone(), service.sub.clone());
 
-            point.criticality = match service.sub.as_str() {
-                "dead" => enums::Criticality::Critical,
-                "exited" => enums::Criticality::Error,
-                "running" => enums::Criticality::Normal,
-                _ => enums::Criticality::Warning,
-            };
+                point.criticality = match service.sub.as_str() {
+                    "dead" => enums::Criticality::Critical,
+                    "exited" => enums::Criticality::Error,
+                    "running" => enums::Criticality::Normal,
+                    _ => enums::Criticality::Warning,
+                };
 
-            if !self.included_services.contains(&service.unit) {
-                point.hide();
-            }
+                if !self.included_services.contains(&service.unit) {
+                    point.hide();
+                }
 
-            point
-        }).collect();
+                point
+            }).collect();
 
-        let most_critical = result.multivalue.iter().max_by_key(|value| value.criticality).unwrap();
-        result.criticality = most_critical.criticality;
-        Ok(result)
+            let most_critical = result.multivalue.iter().max_by_key(|value| value.criticality).unwrap();
+            result.criticality = most_critical.criticality;
+            Ok(result)
+        }
+        else {
+            self.error_unsupported()
+        }
     }
 }
 

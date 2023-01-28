@@ -52,6 +52,10 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
         false
     }
 
+    fn error_unsupported(&self) -> Result<DataPoint, String> {
+        Err(String::from("Unsupported platform"))
+    }
+
 }
 
 // Implemented by the macro.

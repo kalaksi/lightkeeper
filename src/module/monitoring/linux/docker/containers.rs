@@ -41,38 +41,48 @@ impl MonitoringModule for Containers {
         }
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
-        // TODO: somehow connect directly to the unix socket instead of using curl?
-        let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
+    fn get_connector_message(&self, host: Host) -> String {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            // TODO: somehow connect directly to the unix socket instead of using curl?
+            let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
 
-        if self.use_sudo {
-            format!("sudo {}", command)
+            if self.use_sudo {
+                format!("sudo {}", command)
+            }
+            else {
+                command
+            }
         }
         else {
-            command
+            String::new()
         }
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
-        let mut parent_data = DataPoint::empty();
-        let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
-        parent_data.criticality = most_critical_container.state.to_criticality();
+            let mut parent_data = DataPoint::empty();
+            let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
+            parent_data.criticality = most_critical_container.state.to_criticality();
 
-        if self.ignore_compose_managed {
-            containers.retain(|container| !container.labels.contains_key("com.docker.compose.config-hash"));
+            if self.ignore_compose_managed {
+                containers.retain(|container| !container.labels.contains_key("com.docker.compose.config-hash"));
+            }
+
+            parent_data.multivalue = containers.iter().map(|container| {
+                let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
+                // Names may still contain a leading slash that can cause issues with docker commands.
+                point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
+                point.command_params = vec![cleanup_name(&container.names.first().unwrap_or(&container.id))];
+                point
+            }).collect();
+
+            Ok(parent_data)
         }
-
-        parent_data.multivalue = containers.iter().map(|container| {
-            let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
-            // Names may still contain a leading slash that can cause issues with docker commands.
-            point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
-            point.command_params = vec![cleanup_name(&container.names.first().unwrap_or(&container.id))];
-            point
-        }).collect();
-
-        Ok(parent_data)
+        else {
+            self.error_unsupported()
+        }
     }
 
 }

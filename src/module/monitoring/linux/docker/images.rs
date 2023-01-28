@@ -49,51 +49,61 @@ impl MonitoringModule for Images {
         }
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
-        // TODO: somehow connect directly to the unix socket instead of using curl?
-        let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/images/json");
+    fn get_connector_message(&self, host: Host) -> String {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            // TODO: somehow connect directly to the unix socket instead of using curl?
+            let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/images/json");
 
-        if self.use_sudo {
-            format!("sudo {}", command)
+            if self.use_sudo {
+                format!("sudo {}", command)
+            }
+            else {
+                command
+            }
         }
         else {
-            command
+            String::new()
         }
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        let images: Vec<ImageDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let images: Vec<ImageDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
-        let mut parent_data = DataPoint::empty();
+            let mut parent_data = DataPoint::empty();
 
-        parent_data.multivalue = images.iter().map(|image| {
-            let label = match &image.repo_tags {
-                Some(repo_tags) => repo_tags.first().unwrap().clone(),
-                None => image.id.clone(),
-            };
-            let mut point = DataPoint::labeled_value(label, image.created.to_string());
-            point.command_params = vec![image.id.clone()];
+            parent_data.multivalue = images.iter().map(|image| {
+                let label = match &image.repo_tags {
+                    Some(repo_tags) => repo_tags.first().unwrap().clone(),
+                    None => image.id.clone(),
+                };
+                let mut point = DataPoint::labeled_value(label, image.created.to_string());
+                point.command_params = vec![image.id.clone()];
 
-            // TODO: make sure timezone is accounted for correctly?
-            let creation_time = Utc.timestamp(point.value.parse::<i64>().unwrap(), 0);
-            let duration_days = Utc::now().signed_duration_since(creation_time).num_days();
+                // TODO: make sure timezone is accounted for correctly?
+                let creation_time = Utc.timestamp(point.value.parse::<i64>().unwrap(), 0);
+                let duration_days = Utc::now().signed_duration_since(creation_time).num_days();
 
-            if duration_days > self.criticality_levels[LEVEL_CRITICAL].into() {
-                point.criticality = Criticality::Critical;
-            }
-            else if duration_days > self.criticality_levels[LEVEL_ERROR].into() {
-                point.criticality = Criticality::Error;
-            }
-            else if duration_days > self.criticality_levels[LEVEL_WARNING].into() {
-                point.criticality = Criticality::Warning;
-            }
+                if duration_days > self.criticality_levels[LEVEL_CRITICAL].into() {
+                    point.criticality = Criticality::Critical;
+                }
+                else if duration_days > self.criticality_levels[LEVEL_ERROR].into() {
+                    point.criticality = Criticality::Error;
+                }
+                else if duration_days > self.criticality_levels[LEVEL_WARNING].into() {
+                    point.criticality = Criticality::Warning;
+                }
 
-            point.value = format!("{} days", duration_days);
+                point.value = format!("{} days", duration_days);
 
-            point
-        }).collect();
+                point
+            }).collect();
 
-        Ok(parent_data)
+            Ok(parent_data)
+        }
+        else {
+            self.error_unsupported()
+        }
     }
 
 }

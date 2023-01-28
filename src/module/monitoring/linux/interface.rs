@@ -43,28 +43,37 @@ impl MonitoringModule for Interface {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
-        String::from("ip -o addr show")
+    fn get_connector_message(&self, host: Host) -> String {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            String::from("ip -o addr show")
+        }
+        else {
+            String::new()
+        }
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
-        let mut result = DataPoint::empty();
+    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let mut result = DataPoint::empty();
 
-        let lines = response.message.split('\n');
-        for line in lines {
-            let mut parts = line.split_whitespace();
-            let if_name = parts.nth(1).unwrap().to_string();
-            
-            if self.ignored_interfaces.iter().any(|item| if_name.starts_with(item)) {
-                continue;
+            let lines = response.message.split('\n');
+            for line in lines {
+                let mut parts = line.split_whitespace();
+                let if_name = parts.nth(1).unwrap().to_string();
+ 
+                if self.ignored_interfaces.iter().any(|item| if_name.starts_with(item)) {
+                    continue;
+                }
+
+                let if_address = parts.nth(1).unwrap_or_default().to_string();
+                let data_point = DataPoint::labeled_value(if_name, if_address);
+                result.multivalue.push(data_point);
+
             }
-
-            let if_address = parts.nth(1).unwrap_or_default().to_string();
-            let data_point = DataPoint::labeled_value(if_name, if_address);
-            result.multivalue.push(data_point);
-
+            Ok(result)
         }
-
-        Ok(result)
+        else {
+            self.error_unsupported()
+        }
     }
 }
