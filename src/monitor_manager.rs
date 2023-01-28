@@ -41,6 +41,24 @@ impl MonitorManager {
         if !monitor_collection.contains_key(&module_spec.id) {
             log::debug!("[{}] Adding monitor {}", host.name, module_spec.id);
 
+            // Independent monitors are always executed first.
+            // They don't depend on platform info or connectors.
+            if monitor.get_connector_spec().is_none() {
+                self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+                    connector_id: None,
+                    source_id: monitor.get_module_spec().id,
+                    host: host.clone(),
+                    messages: Vec::new(),
+                    request_type: RequestType::Command,
+                    response_handler: Self::get_response_handler(
+                        host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
+                    )
+                }).unwrap_or_else(|error| {
+                    log::error!("Couldn't send message to connector: {}", error);
+                });
+
+            }
+
             // Add initial state value indicating no data as been received yet.
             Self::send_state_update(&host, &monitor, self.state_update_sender.as_ref().unwrap().clone(),
                                     DataPoint::no_data());
@@ -96,7 +114,9 @@ impl MonitorManager {
                 log::warn!("[{}] Refreshing monitors despite missing platform info", host_name);
             }
 
-            for (monitor_id, monitor) in monitor_collection.into_iter() {
+            let monitors_with_connectors = monitor_collection.iter().filter(|(_, monitor)| monitor.get_connector_spec().is_some());
+
+            for (monitor_id, monitor) in monitors_with_connectors.into_iter() {
                 let messages = [monitor.get_connector_messages(host.clone()), vec![monitor.get_connector_message(host.clone())]].concat();
                 self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                     connector_id: monitor.get_connector_spec(),
