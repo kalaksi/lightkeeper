@@ -19,7 +19,7 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(name: &String, ip_address: &String, fqdn: &String) -> Result<Self, String> {
+    pub fn new(name: &String, ip_address: &String, fqdn: &String, settings: &Vec<HostSetting>) -> Result<Self, String> {
         let mut new = Host {
             name: name.clone(),
             fqdn: fqdn.clone(),
@@ -28,7 +28,7 @@ impl Host {
                 Err(error) => return Err(format!("{}", error)),
             },
             platform: PlatformInfo::new(),
-            settings: Vec::new(),
+            settings: settings.clone(),
         };
 
         new.resolve_ip()?;

@@ -25,7 +25,7 @@ pub struct HostManager {
     hosts: Arc<Mutex<HostCollection>>,
     /// Provides sender handles for sending StateUpdateMessages to this instance.
     data_sender_prototype: mpsc::Sender<StateUpdateMessage>,
-    receiver_handle: Option<thread::JoinHandle<()>>,
+    _receiver_handle: Option<thread::JoinHandle<()>>,
     observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
 }
 
@@ -40,7 +40,7 @@ impl HostManager {
         HostManager {
             hosts: shared_hosts,
             data_sender_prototype: sender,
-            receiver_handle: Some(handle),
+            _receiver_handle: Some(handle),
             observers: observers,
         }
     }

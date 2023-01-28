@@ -63,7 +63,7 @@ fn main() {
     for (host_id, host_config) in hosts_config.hosts.iter() {
         log::info!("Found configuration for host {}", host_id);
 
-        let host = match Host::new(&host_id, &host_config.address, &host_config.fqdn) {
+        let host = match Host::new(&host_id, &host_config.address, &host_config.fqdn, &host_config.settings) {
             Ok(host) => host,
             Err(error) => {
                 log::error!("{}", error);
