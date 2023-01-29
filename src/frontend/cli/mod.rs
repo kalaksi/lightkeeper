@@ -28,7 +28,7 @@ impl Frontend for Cli {
             for monitor_id in &display_data.all_monitor_names {
                 match host_data.monitoring_data.get(monitor_id) {
                     // There should always be some monitoring data if the key exists.
-                    Some(monitoring_data) => row.push(convert_to_display_string(monitoring_data.values.last().unwrap(),
+                    Some(monitoring_data) => row.push(convert_to_display_string(monitoring_data.values.back().unwrap(),
                                                                                 &monitoring_data.display_options)),
                     None => row.push(String::from(""))
                 }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use serde_derive::{Serialize, Deserialize};
 use super::DataPoint;
 
@@ -66,7 +66,7 @@ pub trait BoxCloneableMonitor {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MonitoringData {
     pub monitor_id: String,
-    pub values: Vec<DataPoint>,
+    pub values: VecDeque<DataPoint>,
     pub display_options: DisplayOptions,
     pub is_critical: bool,
 }
@@ -75,7 +75,7 @@ impl MonitoringData {
     pub fn new(monitor_id: String, display_options: DisplayOptions) -> Self {
         MonitoringData {
             monitor_id: monitor_id,
-            values: Vec::new(),
+            values: VecDeque::new(),
             display_options: display_options,
             is_critical: false,
         }

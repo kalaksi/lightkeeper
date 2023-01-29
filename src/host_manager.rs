@@ -21,6 +21,8 @@ use crate::{
     frontend,
 };
 
+const DATA_POINT_BUFFER_SIZE: usize = 4;
+
 pub struct HostManager {
     hosts: Arc<Mutex<HostCollection>>,
     /// Provides sender handles for sending StateUpdateMessages to this instance.
@@ -98,11 +100,14 @@ impl HostManager {
                         else {
                             // Check first if there already exists a key for monitor id.
                             if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
-                                monitoring_data.values.push(message_data_point);
+                                monitoring_data.values.push_back(message_data_point);
+                                if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
+                                    monitoring_data.values.pop_front();
+                                }
                             }
                             else {
                                 let mut new_data = MonitoringData::new(message.module_spec.id.clone(), message.display_options);
-                                new_data.values.push(message_data_point);
+                                new_data.values.push_back(message_data_point);
                                 host_state.monitor_data.insert(message.module_spec.id, new_data);
                             }
                         }
@@ -241,7 +246,7 @@ impl HostState {
     fn update_status(&mut self) {
         let critical_monitor = &self.monitor_data.iter().find(|(_, data)| {
             // There should always be some monitoring data available at this point.
-            data.is_critical && data.values.last().unwrap().criticality == Criticality::Critical
+            data.is_critical && data.values.back().unwrap().criticality == Criticality::Critical
         });
 
         if let Some((name, _)) = critical_monitor {

@@ -204,6 +204,7 @@ impl MonitorManager {
         })
     }
 
+    /// Send a state update to HostManager.
     fn send_state_update(host: &Host, monitor: &Monitor, state_update_sender: Sender<StateUpdateMessage>, data_point: DataPoint) {
         state_update_sender.send(StateUpdateMessage {
             host_name: host.name.clone(),
