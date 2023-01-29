@@ -11,10 +11,10 @@ Item {
     id: root
     property string text: ""
     property string color: "#555555"
-    property bool showRefreshButton: true
-    property bool showMinimizeButton: true
-    property bool showMaximizeButton: true
-    property bool showCloseButton: true
+    property bool showRefreshButton: false
+    property bool showMinimizeButton: false
+    property bool showMaximizeButton: false
+    property bool showCloseButton: false
     property bool showOpenInWindowButton: false
 
     property bool _maximized: false

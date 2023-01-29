@@ -32,6 +32,10 @@ Item {
     Header {
         id: mainViewHeader
         text: root.hostId
+        showRefreshButton: true
+        showMinimizeButton: true
+        showMaximizeButton: true
+        showCloseButton: true
         onRefreshClicked: (host_id) => CommandHandler.refresh_monitors(root.hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
@@ -60,7 +64,8 @@ Item {
             id: subviewHeader
 
             showOpenInWindowButton: true
-            showMaximizeButton: false
+            showMinimizeButton: true 
+            showMaximizeButton: true
             onOpenInWindowClicked: {
                 root.openInNewWindowClicked(root._subviewInvocationId, subviewContent.text, subviewContent.errorText, subviewContent.criticality)
                 animateHideSubview.start()

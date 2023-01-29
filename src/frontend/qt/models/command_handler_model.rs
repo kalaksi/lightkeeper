@@ -16,6 +16,7 @@ pub struct CommandHandlerModel {
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     refresh_monitors: qt_method!(fn(&self, host_id: QString)),
+    refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString)),
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
@@ -134,15 +135,15 @@ impl CommandHandlerModel {
 
     fn refresh_monitors(&self, host_id: QString) {
         let host_id = host_id.to_string();
-
-
-        // TODO: check if host is ready (platforminfo)
-
         if host_id.is_empty() {
-            self.monitor_manager.refresh_monitors(None);
+            self.monitor_manager.refresh_all_monitors(None);
         }
         else {
-            self.monitor_manager.refresh_monitors(Some(&host_id));
+            self.monitor_manager.refresh_all_monitors(Some(&host_id));
         }
+    }
+
+    fn refresh_monitors_of_category(&self, host_id: QString, category: QString) {
+        self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string())
     }
 }

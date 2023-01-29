@@ -99,38 +99,46 @@ impl MonitorManager {
     }
 
     /// Use `None` to refresh all monitors on every host or limit by host.
-    pub fn refresh_monitors(&self, host_id: Option<&String>) {
-        for (host_name, monitor_collection) in self.monitors.iter() {
-            if let Some(host_filter) = host_id {
-                if host_name != host_filter {
-                    continue;
-                }
-            }
+    pub fn refresh_monitors_of_category(&self, host_id: &String, category: &String) {
+        let host = self.host_manager.borrow().get_host(host_id);
+        let monitors_by_category = self.monitors.get(host_id).unwrap().iter()
+                                                .filter(|(_, monitor)| &monitor.get_display_options().category == category)
+                                                .collect();
+        self.refresh_monitors(host, monitors_by_category);
+    }
 
-            let host = self.host_manager.borrow().get_host(host_name);
+    /// Use `None` to refresh all monitors on every host or limit by host.
+    pub fn refresh_all_monitors(&self, host_filter: Option<&String>) {
+        let monitors: HashMap<&String, &HashMap<String, Monitor>> = match host_filter {
+            Some(host_filter) => self.monitors.iter().filter(|(host_id, _)| host_id == &host_filter).collect(),
+            None => self.monitors.iter().collect(),
+        };
 
-            log::info!("[{}] Refreshing monitoring data", host_name);
-            if host.platform.is_unset() {
-                log::warn!("[{}] Refreshing monitors despite missing platform info", host_name);
-            }
+        for (host_id, monitor_collection) in monitors {
+            let host = self.host_manager.borrow().get_host(host_id);
+            self.refresh_monitors(host, monitor_collection.iter().collect());
+        }
+    }
 
-            let monitors_with_connectors = monitor_collection.iter().filter(|(_, monitor)| monitor.get_connector_spec().is_some());
+    fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>) {
+        if host.platform.is_unset() {
+            log::warn!("[{}] Refreshing monitors despite missing platform info", host.name);
+        }
 
-            for (monitor_id, monitor) in monitors_with_connectors.into_iter() {
-                let messages = [monitor.get_connector_messages(host.clone()), vec![monitor.get_connector_message(host.clone())]].concat();
-                self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-                    connector_id: monitor.get_connector_spec(),
-                    source_id: monitor_id.clone(),
-                    host: host.clone(),
-                    messages: messages,
-                    request_type: RequestType::Command,
-                    response_handler: Self::get_response_handler(
-                        host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
-                    )
-                }).unwrap_or_else(|error| {
-                    log::error!("Couldn't send message to connector: {}", error);
-                });
-            }
+        for (monitor_id, monitor) in monitors.into_iter() {
+            let messages = [monitor.get_connector_messages(host.clone()), vec![monitor.get_connector_message(host.clone())]].concat();
+            self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+                connector_id: monitor.get_connector_spec(),
+                source_id: monitor_id.clone(),
+                host: host.clone(),
+                messages: messages,
+                request_type: RequestType::Command,
+                response_handler: Self::get_response_handler(
+                    host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
+                )
+            }).unwrap_or_else(|error| {
+                log::error!("Couldn't send message to connector: {}", error);
+            });
         }
     }
 
