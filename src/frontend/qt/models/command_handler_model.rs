@@ -144,6 +144,6 @@ impl CommandHandlerModel {
     }
 
     fn refresh_monitors_of_category(&self, host_id: QString, category: QString) {
-        self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string())
+        self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string().to_lowercase())
     }
 }

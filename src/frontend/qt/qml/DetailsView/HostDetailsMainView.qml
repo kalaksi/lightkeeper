@@ -67,6 +67,7 @@ Item {
                         text: modelData.category
                         icon: Theme.category_icon(modelData.category)
                         color: Theme.category_color(modelData.category)
+                        onRefreshClicked: () => CommandHandler.refresh_monitors_of_category(root.hostId, modelData.category)
                     }
 
                     ScrollView {
@@ -84,9 +85,7 @@ Item {
                                 flatButtons: false
                                 roundButtons: false
                                 commands: Parse.ListOfJsons(CommandHandler.get_child_commands(root.hostId, modelData.category, "", 0))
-                                onClicked: function(commandId) {
-                                    CommandHandler.execute(root.hostId, commandId, [""])
-                                }
+                                onClicked: (commandId) => CommandHandler.execute(root.hostId, commandId, [""])
                             }
 
                             // Host data is a bit different from monitor data, so handling it separately here.

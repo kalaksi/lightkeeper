@@ -4,6 +4,8 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
+import ".."
+
 Rectangle {
     id: root
     property string text: ""
@@ -20,6 +22,8 @@ Rectangle {
         horizontalOffset: 0
         verticalOffset: 2
     }
+
+    signal refreshClicked()
 
     Row {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -51,6 +55,16 @@ Rectangle {
             lineHeight: 0.9
             bottomPadding: 4
         }
+    }
+
+    ImageButton {
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.right: parent.right
+        imageSource: "qrc:/main/images/button/refresh"
+        imageRelativeWidth: 0.8
+        imageRelativeHeight: 0.8
+        tooltip: "Refresh"
+        onClicked: root.refreshClicked()
     }
 
     function cleanupLabel(text) {

@@ -36,7 +36,7 @@ Item {
         showMinimizeButton: true
         showMaximizeButton: true
         showCloseButton: true
-        onRefreshClicked: (host_id) => CommandHandler.refresh_monitors(root.hostId)
+        onRefreshClicked: CommandHandler.refresh_monitors(root.hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.closeClicked()
