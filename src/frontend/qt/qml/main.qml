@@ -65,14 +65,6 @@ ApplicationWindow {
             _dialogInvocationIds[invocationId] = instanceId
         })
 
-        CommandHandler.details_subview_opened.connect((headerText, invocationId) => {
-            detailsView.openTextView(headerText, invocationId)
-        })
-
-        CommandHandler.logs_subview_opened.connect((headerText, invocationId) => {
-            detailsView.openLogView(headerText, invocationId)
-        })
-
         HostDataManager.command_result_received.connect((commandResultJson) => {
             let commandResult = JSON.parse(commandResultJson)
 

@@ -33,7 +33,7 @@ pub struct CommandHandler {
     host_manager: Rc<RefCell<HostManager>>,
     /// Preferences from config file.
     preferences: Preferences,
-    /// Every execution gets an invocation id. Valid id numbers begin from 1.
+    /// Every execution gets an invocation ID. Valid ID numbers begin from 1.
     invocation_id_counter: u64,
 }
 

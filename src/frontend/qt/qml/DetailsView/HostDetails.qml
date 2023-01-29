@@ -24,6 +24,17 @@ Item {
     signal minimizeClicked()
     signal openInNewWindowClicked(invocationId: string, text: string, errorText: string, criticality: string)
 
+    Component.onCompleted: {
+        CommandHandler.details_subview_opened.connect((headerText, invocationId) => {
+            openTextView(headerText, invocationId)
+        })
+
+        CommandHandler.logs_subview_opened.connect((headerText, invocationId) => {
+            openLogView(headerText, invocationId)
+        })
+    }
+
+
     Rectangle {
         anchors.fill: parent
         color: Material.background
