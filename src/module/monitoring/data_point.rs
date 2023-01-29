@@ -11,12 +11,14 @@ pub struct DataPoint {
     pub value: String,
     /// Optional. Used with multivalue-data and usually filled programmatically.
     pub label: String,
-    /// This data is passed to commands. Usually contains an identifier of the source of this data,
+    /// This data is passed to commands. Contents depend on the monitoring module.
+    /// Usually contains an identifier of the source of this data,
     /// e.g. container ID or service name, so that attached commands can target the correct identity.
     pub command_params: Vec<String>,
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
+    pub invocation_id: u64,
 }
 
 impl DataPoint {
@@ -90,6 +92,7 @@ impl Default for DataPoint {
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             time: Utc::now(),
+            invocation_id: 0,
         }
     }
 }

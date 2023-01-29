@@ -18,6 +18,8 @@ pub struct MonitorManager {
     // Channel to send state updates to HostManager.
     state_update_sender: Option<Sender<StateUpdateMessage>>,
     host_manager: Rc<RefCell<HostManager>>,
+    /// Every refresh operation gets an invocation ID. Valid ID numbers begin from 1.
+    invocation_id_counter: u64,
 }
 
 impl MonitorManager {
@@ -27,6 +29,7 @@ impl MonitorManager {
             request_sender: Some(request_sender),
             host_manager: host_manager.clone(),
             state_update_sender: Some(host_manager.borrow().new_state_update_sender()),
+            invocation_id_counter: 0,
         }
     }
 
@@ -44,6 +47,8 @@ impl MonitorManager {
             // Independent monitors are always executed first.
             // They don't depend on platform info or connectors.
             if monitor.get_connector_spec().is_none() {
+                self.invocation_id_counter += 1;
+
                 self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                     connector_id: None,
                     source_id: monitor.get_module_spec().id,
@@ -51,12 +56,11 @@ impl MonitorManager {
                     messages: Vec::new(),
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
-                        host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
+                        host.clone(), monitor.box_clone(), self.invocation_id_counter, self.state_update_sender.as_ref().unwrap().clone()
                     )
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to connector: {}", error);
                 });
-
             }
 
             // Add initial state value indicating no data as been received yet.
@@ -67,7 +71,7 @@ impl MonitorManager {
         }
     }
 
-    pub fn refresh_platform_info(&self, host_id: Option<&String>) {
+    pub fn refresh_platform_info(&mut self, host_id: Option<&String>) {
         for (host_name, monitor_collection) in self.monitors.iter() {
             if let Some(host_filter) = host_id {
                 if host_name != host_filter {
@@ -80,6 +84,8 @@ impl MonitorManager {
 
             // Executed only if required connector is available.
             if monitor_collection.iter().any(|(_, monitor)| monitor.get_connector_spec().unwrap_or_default().id == "ssh") {
+                self.invocation_id_counter += 1;
+
                 // TODO: remove hardcoding and execute once per connector type.
                 let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
                 self.request_sender.as_ref().unwrap().send(ConnectorRequest {
@@ -89,7 +95,7 @@ impl MonitorManager {
                     messages: vec![info_provider.get_connector_message(host.clone())],
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
-                        host.clone(), info_provider, self.state_update_sender.as_ref().unwrap().clone()
+                        host.clone(), info_provider, self.invocation_id_counter, self.state_update_sender.as_ref().unwrap().clone()
                     )
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to connector: {}", error);
@@ -99,34 +105,48 @@ impl MonitorManager {
     }
 
     /// Use `None` to refresh all monitors on every host or limit by host.
-    pub fn refresh_monitors_of_category(&self, host_id: &String, category: &String) {
+    /// Returns the amount of monitors that will be refreshed.
+    pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let monitors_by_category = self.monitors.get(host_id).unwrap().iter()
                                                 .filter(|(_, monitor)| &monitor.get_display_options().category == category)
                                                 .collect();
-        self.refresh_monitors(host, monitors_by_category);
+
+        let invocation_ids = self.refresh_monitors(host, monitors_by_category);
+        self.invocation_id_counter = invocation_ids.last().unwrap().clone();
+        invocation_ids
     }
 
     /// Use `None` to refresh all monitors on every host or limit by host.
-    pub fn refresh_all_monitors(&self, host_filter: Option<&String>) {
+    pub fn refresh_all_monitors(&mut self, host_filter: Option<&String>) -> Vec<u64> {
         let monitors: HashMap<&String, &HashMap<String, Monitor>> = match host_filter {
             Some(host_filter) => self.monitors.iter().filter(|(host_id, _)| host_id == &host_filter).collect(),
             None => self.monitors.iter().collect(),
         };
 
+        let mut invocation_ids = Vec::new();
         for (host_id, monitor_collection) in monitors {
             let host = self.host_manager.borrow().get_host(host_id);
-            self.refresh_monitors(host, monitor_collection.iter().collect());
+            invocation_ids.extend(self.refresh_monitors(host, monitor_collection.iter().collect()));
         }
+
+        self.invocation_id_counter = invocation_ids.last().unwrap().clone();
+        invocation_ids
     }
 
-    fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>) {
+    fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>) -> Vec<u64> {
         if host.platform.is_unset() {
             log::warn!("[{}] Refreshing monitors despite missing platform info", host.name);
         }
 
+        let mut current_invocation_id = self.invocation_id_counter;
+        let mut invocation_ids = Vec::new();
         for (monitor_id, monitor) in monitors.into_iter() {
+            current_invocation_id += 1;
+            invocation_ids.push(current_invocation_id);
+
             let messages = [monitor.get_connector_messages(host.clone()), vec![monitor.get_connector_message(host.clone())]].concat();
+
             self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                 connector_id: monitor.get_connector_spec(),
                 source_id: monitor_id.clone(),
@@ -134,15 +154,17 @@ impl MonitorManager {
                 messages: messages,
                 request_type: RequestType::Command,
                 response_handler: Self::get_response_handler(
-                    host.clone(), monitor.box_clone(), self.state_update_sender.as_ref().unwrap().clone()
+                    host.clone(), monitor.box_clone(), current_invocation_id, self.state_update_sender.as_ref().unwrap().clone()
                 )
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to connector: {}", error);
             });
         }
+
+        invocation_ids
     }
 
-    fn get_response_handler(host: Host, monitor: Monitor, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+    fn get_response_handler(host: Host, monitor: Monitor, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
         Box::new(move |results| {
             let monitor_id = monitor.get_module_spec().id;
             let mut responses = Vec::<ResponseMessage>::new();
@@ -177,6 +199,7 @@ impl MonitorManager {
                 log::error!("[{}] Error refreshing monitor {}: {}", host.name, monitor_id, error);
             }
 
+            result.invocation_id = invocation_id;
             Self::send_state_update(&host, &monitor, state_update_sender, result);
         })
     }

@@ -29,6 +29,8 @@ pub struct CommandHandlerModel {
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
     ui_display_options: configuration::DisplayOptions,
+
+    refresh_after_execution: bool,
 }
 
 impl CommandHandlerModel {
@@ -37,6 +39,7 @@ impl CommandHandlerModel {
             command_handler: command_handler,
             monitor_manager: monitor_manager,
             ui_display_options: ui_display_options,
+            refresh_after_execution: true,
             ..Default::default()
         }
     }
@@ -133,7 +136,7 @@ impl CommandHandlerModel {
         return invocation_id
     }
 
-    fn refresh_monitors(&self, host_id: QString) {
+    fn refresh_monitors(&mut self, host_id: QString) {
         let host_id = host_id.to_string();
         if host_id.is_empty() {
             self.monitor_manager.refresh_all_monitors(None);
@@ -143,7 +146,7 @@ impl CommandHandlerModel {
         }
     }
 
-    fn refresh_monitors_of_category(&self, host_id: QString, category: QString) {
-        self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string().to_lowercase())
+    fn refresh_monitors_of_category(&mut self, host_id: QString, category: QString) {
+        self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string().to_lowercase());
     }
 }
