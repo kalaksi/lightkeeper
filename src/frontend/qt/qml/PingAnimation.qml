@@ -4,7 +4,7 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
-// TODO: rename to WaveAnimation and make rectangle direct root.
+// TODO: rename to WaveAnimation.
 Item {
     id: root
     property string color: "#555555"
