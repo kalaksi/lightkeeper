@@ -22,6 +22,18 @@ Item {
     property var _groupedData: groupByCategory(HostDataManager.get_monitor_datas(hostId), CommandHandler.get_commands(root.hostId))
     property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
+    // Contains invocation IDs. Keeps track of monitoring data refresh progress. Empty when all is done.
+    property var _pendingMonitorInvocations: []
+
+    Component.onCompleted: {
+        HostDataManager.monitoring_data_received.connect((invocationId) => {
+            // Remove from array of pending monitor invocations.
+            let index = root._pendingMonitorInvocations.indexOf(invocationId)
+            if (index >= 0) {
+                root._pendingMonitorInvocations.splice(index, 1)
+            }
+        })
+    }
 
     ScrollView {
         id: rootScrollView
@@ -67,7 +79,10 @@ Item {
                         text: modelData.category
                         icon: Theme.category_icon(modelData.category)
                         color: Theme.category_color(modelData.category)
-                        onRefreshClicked: () => CommandHandler.refresh_monitors_of_category(root.hostId, modelData.category)
+                        onRefreshClicked: function() {
+                            let invocation_ids = CommandHandler.refresh_monitors_of_category(root.hostId, modelData.category)
+                            root._pendingMonitorInvocations.push(...invocation_ids)
+                        }
                     }
 
                     ScrollView {

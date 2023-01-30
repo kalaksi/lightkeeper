@@ -19,7 +19,7 @@ pub struct HostDataManagerModel {
 
     host_platform_initialized: qt_signal!(host_id: QString),
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
-    monitoring_data_received: qt_signal!(monitoring_data: QString),
+    monitoring_data_received: qt_signal!(invocation_id: QVariant),
     command_result_received: qt_signal!(command_result: QString),
 
     // NOTE: Couldn't get custom types to work for return types,
@@ -79,8 +79,8 @@ impl HostDataManagerModel {
                     }
 
                     for (monitor_id, new_monitor_data) in host_display_data.monitoring_data.iter() {
-                        let json = QString::from(serde_json::to_string(new_monitor_data).unwrap());
-                        self_pinned.borrow().monitoring_data_received(json);
+                        let last_data_point = new_monitor_data.values.back().unwrap();
+                        self_pinned.borrow().monitoring_data_received(QVariant::from(last_data_point.invocation_id));
 
                         // Find out any monitor state changes and signal accordingly.
                         let new_criticality = new_monitor_data.values.back().unwrap().criticality;

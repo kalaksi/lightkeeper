@@ -15,8 +15,8 @@ pub struct CommandHandlerModel {
     get_child_commands: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
-    refresh_monitors: qt_method!(fn(&self, host_id: QString)),
-    refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString)),
+    refresh_monitors: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
@@ -136,17 +136,17 @@ impl CommandHandlerModel {
         return invocation_id
     }
 
-    fn refresh_monitors(&mut self, host_id: QString) {
+    fn refresh_monitors(&mut self, host_id: QString) -> QVariantList {
         let host_id = host_id.to_string();
-        if host_id.is_empty() {
-            self.monitor_manager.refresh_all_monitors(None);
-        }
-        else {
-            self.monitor_manager.refresh_all_monitors(Some(&host_id));
-        }
+        let invocation_ids = match host_id.is_empty() {
+            true => self.monitor_manager.refresh_all_monitors(None),
+            false => self.monitor_manager.refresh_all_monitors(Some(&host_id))
+        };
+        QVariantList::from_iter(invocation_ids)
     }
 
-    fn refresh_monitors_of_category(&mut self, host_id: QString, category: QString) {
-        self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string().to_lowercase());
+    fn refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
+        let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string().to_lowercase());
+        QVariantList::from_iter(invocation_ids)
     }
 }
