@@ -37,6 +37,10 @@ impl ThemeModel {
         }
     }
 
+    fn category_background_color(&self) -> QString {
+        QString::from(String::from("#404040"))
+    }
+
     fn category_icon(&self, category: QString) -> QString {
         if let Some(category) = self.display_options.categories.get(&category.to_string().to_lowercase()) {
             QString::from(category.icon.clone().unwrap_or_default())
