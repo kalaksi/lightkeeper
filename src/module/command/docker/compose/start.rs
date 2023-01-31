@@ -12,8 +12,8 @@ pub struct Start {
 }
 
 impl Module for Start {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Self {
+    fn new(_settings: &HashMap<String, String>) -> Start {
+        Start {
         }
     }
 }

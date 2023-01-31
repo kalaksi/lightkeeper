@@ -12,8 +12,8 @@ pub struct Stop {
 }
 
 impl Module for Stop {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Self {
+    fn new(_settings: &HashMap<String, String>) -> Stop {
+        Stop {
         }
     }
 }

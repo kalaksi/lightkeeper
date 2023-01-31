@@ -12,8 +12,8 @@ pub struct Edit {
 }
 
 impl Module for Edit {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Self {
+    fn new(_settings: &HashMap<String, String>) -> Edit {
+        Edit {
         }
     }
 }

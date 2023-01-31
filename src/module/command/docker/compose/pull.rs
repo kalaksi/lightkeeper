@@ -12,8 +12,8 @@ pub struct Pull {
 }
 
 impl Module for Pull {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Self {
+    fn new(_settings: &HashMap<String, String>) -> Pull {
+        Pull {
         }
     }
 }

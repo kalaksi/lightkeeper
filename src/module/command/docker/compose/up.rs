@@ -12,7 +12,7 @@ pub struct Up {
 }
 
 impl Module for Up {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(_settings: &HashMap<String, String>) -> Up {
         Up {
         }
     }
