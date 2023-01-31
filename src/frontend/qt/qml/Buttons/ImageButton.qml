@@ -27,7 +27,7 @@ Item {
         onClicked: root.clicked()
 
         ToolTip.visible: root.tooltip !== "" && hovered
-        ToolTip.delay: 800
+        ToolTip.delay: Theme.tooltip_delay()
         ToolTip.text: root.tooltip
 
         Image {

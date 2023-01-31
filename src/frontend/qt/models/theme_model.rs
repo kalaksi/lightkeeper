@@ -11,6 +11,7 @@ pub struct ThemeModel {
     category_color: qt_method!(fn(&self, category: QString) -> QString),
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
+    tooltip_delay: qt_method!(fn(&self) -> QVariant),
 
     display_options: configuration::DisplayOptions,
 }
@@ -57,5 +58,9 @@ impl ThemeModel {
         else {
             QString::from("1")
         }
+    }
+
+    fn tooltip_delay(&self) -> QVariant {
+        QVariant::from(800)
     }
 }
