@@ -1,4 +1,7 @@
 
+use std::sync::mpsc;
+extern crate qmetaobject;
+use qmetaobject::*;
 use super::{
     resources,
     models::HostDataManagerModel,
@@ -6,16 +9,13 @@ use super::{
     models::HostTableModel,
     models::ThemeModel,
 };
-
-use std::sync::mpsc;
-extern crate qmetaobject;
-use qmetaobject::*;
 use crate::{
     frontend,
     command_handler::CommandHandler,
     monitor_manager::MonitorManager,
     configuration
 };
+
 
 pub struct QmlFrontend {
     theme: Option<ThemeModel>,
@@ -54,10 +54,10 @@ impl QmlFrontend {
         let qt_data_host_table = QObjectBox::new(self.host_table.take().unwrap());
 
         let mut engine = QmlEngine::new();
-        engine.set_object_property("Theme".into(), qt_data_theme.pinned());
-        engine.set_object_property("HostDataManager".into(), qt_data_host_data_manager.pinned());
-        engine.set_object_property("CommandHandler".into(), qt_data_command_handler.pinned());
-        engine.set_object_property("_hostTableModel".into(), qt_data_host_table.pinned());
+        engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
+        engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
+        engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
+        engine.set_object_property(QString::from("_hostTableModel"), qt_data_host_table.pinned());
         engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
         engine.exec();
     }
