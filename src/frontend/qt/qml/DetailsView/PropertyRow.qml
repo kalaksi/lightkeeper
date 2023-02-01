@@ -31,17 +31,6 @@ Item {
     anchors.left: parent.left
     anchors.right: parent.right
 
-    property var _pillColors: {}
-    Component.onCompleted: {
-        _pillColors = {
-            critical: "#60ff3300",
-            error: "#60ff3300",
-            warning: "#60ffcc00",
-            normal: "#6033cc33",
-            info: "#60ffffff",
-            _: "#60ffffff",
-        }
-    }
 
     Rectangle {
         anchors.fill: parent
@@ -106,7 +95,7 @@ Item {
             PillText {
                 visible: root.displayStyle === "CriticalityLevel"
                 text: root.value
-                pillColor: getPillColor(root.criticality)
+                pillColor: Theme.pill_color_for_criticality(root.criticality)
                 height: root.height * 0.9
             }
 
@@ -122,13 +111,5 @@ Item {
                 }
             }
         }
-    }
-
-    function getPillColor(criticality) {
-        let color = root._pillColors[criticality]
-        if (typeof color !== "undefined") {
-            return color
-        }
-        return root._pillColors["_"]
     }
 }

@@ -10,8 +10,10 @@ pub struct ThemeModel {
     group_multivalue: qt_method!(fn(&self) -> QString),
     category_color: qt_method!(fn(&self, category: QString) -> QString),
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
+    category_background_color: qt_method!(fn(&self) -> QString),
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
+    pill_color_for_criticality: qt_method!(fn(&self, criticality: QString) -> QString),
 
     display_options: configuration::DisplayOptions,
 }
@@ -62,5 +64,16 @@ impl ThemeModel {
 
     fn tooltip_delay(&self) -> QVariant {
         QVariant::from(800)
+    }
+
+    fn pill_color_for_criticality(&self, criticality: QString) -> QString {
+        match criticality.to_string().as_str() {
+            "critical" => QString::from("#60ff3300"),
+            "error" => QString::from("#60ff3300"),
+            "warning" => QString::from("#60ffcc00"),
+            "normal" => QString::from("#6033cc33"),
+            "info" => QString::from("#60ffffff"),
+            _ => QString::from("#60ffffff"),
+        }
     }
 }
