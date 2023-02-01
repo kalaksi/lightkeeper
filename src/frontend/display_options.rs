@@ -1,5 +1,6 @@
 use serde_derive::{Serialize, Deserialize};
 use crate::module::command::UIAction;
+use strum_macros::Display;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct DisplayOptions {
@@ -43,7 +44,7 @@ impl DisplayOptions {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Display)]
 pub enum DisplayStyle {
     Text,
     StatusUpDown,
