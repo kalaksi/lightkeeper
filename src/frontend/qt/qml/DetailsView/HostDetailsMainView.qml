@@ -24,6 +24,7 @@ Item {
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
     // Contains invocation IDs. Keeps track of monitoring data refresh progress. Empty when all is done.
     property var _pendingMonitorInvocations: []
+    property int _maximumPendingInvocations: 0
 
     Component.onCompleted: {
         HostDataManager.monitoring_data_received.connect((invocationId) => {
@@ -31,6 +32,9 @@ Item {
             let index = root._pendingMonitorInvocations.indexOf(invocationId)
             if (index >= 0) {
                 root._pendingMonitorInvocations.splice(index, 1)
+            }
+            if (root._pendingMonitorInvocations.length === 0) {
+                root._maximumPendingInvocations = 0
             }
         })
     }
@@ -79,9 +83,13 @@ Item {
                         text: modelData.category
                         icon: Theme.category_icon(modelData.category)
                         color: Theme.category_color(modelData.category)
+                        refreshProgress: 1.0 - root._pendingMonitorInvocations.length / root._maximumPendingInvocations
                         onRefreshClicked: function() {
                             let invocation_ids = CommandHandler.refresh_monitors_of_category(root.hostId, modelData.category)
-                            root._pendingMonitorInvocations.push(...invocation_ids)
+                            if (invocation_ids.length > 0) {
+                                root._pendingMonitorInvocations.push(...invocation_ids)
+                                root._maximumPendingInvocations = root._pendingMonitorInvocations.length
+                            }
                         }
                     }
 

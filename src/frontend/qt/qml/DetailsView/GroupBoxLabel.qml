@@ -10,11 +10,11 @@ Rectangle {
     id: root
     property string text: ""
     property string icon: ""
-    color: "#00000000"
+    property real refreshProgress: 1.0
 
+    color: "#00000000"
     implicitWidth: label.implicitWidth
     implicitHeight: label.implicitHeight + 10
-
     layer.enabled: true
     layer.effect: DropShadow {
         color: "#40000000"
@@ -57,14 +57,11 @@ Rectangle {
         }
     }
 
-    ImageButton {
+    RefreshButton {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
-        imageSource: "qrc:/main/images/button/refresh"
-        imageRelativeWidth: 0.8
-        imageRelativeHeight: 0.8
-        tooltip: "Refresh"
         onClicked: root.refreshClicked()
+        spinning: root.refreshProgress <= 0.99
     }
 
     function cleanupLabel(text) {
