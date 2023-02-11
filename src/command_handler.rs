@@ -301,7 +301,7 @@ impl CommandHandler {
 }
 
 
-#[derive(Clone, Serialize)]
+#[derive(Default, Clone, Serialize)]
 pub struct CommandData {
     pub command_id: String,
     pub display_options: DisplayOptions,

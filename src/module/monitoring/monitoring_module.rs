@@ -63,7 +63,7 @@ pub trait BoxCloneableMonitor {
     fn box_clone(&self) -> Monitor;
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct MonitoringData {
     pub monitor_id: String,
     pub values: VecDeque<DataPoint>,

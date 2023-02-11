@@ -2,7 +2,7 @@ use serde_derive::{Serialize, Deserialize};
 use crate::module::command::UIAction;
 use strum_macros::Display;
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct DisplayOptions {
     pub display_style: DisplayStyle,
     /// Text to display in front of the value.
