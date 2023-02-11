@@ -98,7 +98,7 @@ impl MonitoringModule for Compose {
             let mut projects_sorted = projects.keys().cloned().collect::<Vec<String>>();
             projects_sorted.sort();
 
-            for project in projects_sorted.into_iter() {
+            for project in projects_sorted {
                 let mut datapoints = projects.remove_entry(&project).unwrap().1;
                 datapoints.sort_by(|left, right| left.label.cmp(&right.label));
 

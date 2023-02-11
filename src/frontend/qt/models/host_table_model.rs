@@ -16,7 +16,6 @@ pub struct HostTableModel {
     row_data: Vec<HostDataModel>,
     host_row_map: HashMap<String, usize>,
 
-    update: qt_method!(fn(&mut self, new_host_data: HostDataModel)),
     data_changed_for_host: qt_method!(fn(&self, host_id: QString)),
 
     // toggle_row is preferred for setting selected row.
@@ -49,13 +48,6 @@ impl HostTableModel {
         }
 
         model
-    }
-
-    // TODO: currently unused, clean up maybe
-    pub fn update(&mut self, new_host_data: HostDataModel) {
-        let host_index = self.host_row_map.get(&new_host_data.name.to_string()).unwrap();
-        let old_value = std::mem::replace(self.row_data.get_mut(*host_index).unwrap(), new_host_data);
-        self.data_changed_for_host(old_value.name);
     }
 
     // A slot for informing about change in table data.

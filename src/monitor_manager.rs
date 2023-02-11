@@ -141,7 +141,7 @@ impl MonitorManager {
 
         let mut current_invocation_id = self.invocation_id_counter;
         let mut invocation_ids = Vec::new();
-        for (monitor_id, monitor) in monitors.into_iter() {
+        for (monitor_id, monitor) in monitors {
             current_invocation_id += 1;
             invocation_ids.push(current_invocation_id);
 
