@@ -7,6 +7,8 @@ use qmetaobject::*;
 use crate::configuration;
 use crate::frontend;
 use crate::module::monitoring::MonitoringData;
+use crate::module::monitoring::DataPoint;
+use super::qmetatypes;
 
 
 // TODO: use camelcase with qml models?
@@ -22,7 +24,10 @@ pub struct HostDataManagerModel {
     monitoring_data_received: qt_signal!(invocation_id: QVariant),
     command_result_received: qt_signal!(command_result: QString),
 
-    // NOTE: Couldn't get custom types to work for return types,
+    new_monitoring_data_received: qt_signal!(monitoring_data: QVariant),
+    get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
+    get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+
     // so for now methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
     get_monitor_datas: qt_method!(fn(&self, host_id: QString) -> QVariantList),
@@ -81,6 +86,7 @@ impl HostDataManagerModel {
                     for (monitor_id, new_monitor_data) in host_display_data.monitoring_data.iter() {
                         let last_data_point = new_monitor_data.values.back().unwrap();
                         self_pinned.borrow().monitoring_data_received(QVariant::from(last_data_point.invocation_id));
+                        self_pinned.borrow().new_monitoring_data_received(new_monitor_data.to_qvariant());
 
                         // Find out any monitor state changes and signal accordingly.
                         let new_criticality = new_monitor_data.values.back().unwrap().criticality;
@@ -121,6 +127,7 @@ impl HostDataManagerModel {
         }
     }
 
+    // TODO: remove
     fn get_monitor_data(&self, host_id: QString, monitor_id: QString) -> QString {
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
             if let Some(monitoring_data) = host.monitoring_data.get(&monitor_id.to_string()) {
@@ -130,11 +137,28 @@ impl HostDataManagerModel {
         QString::from("{}")
     }
 
+    fn get_monitoring_data(&self, host_id: QString, monitor_id: QString) -> QVariant {
+        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        host.monitoring_data.get(&monitor_id.to_string()).unwrap().to_qvariant()
+    }
+
+    fn get_category_monitor_ids(&self, host_id: QString, category: QString) -> QVariantList {
+        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        let category = category.to_string();
+
+        let mut result = QVariantList::default();
+        let category_monitors = host.monitoring_data.iter().filter(|(_, monitor_data)| monitor_data.display_options.category == category);
+        category_monitors.for_each(|(monitor_id, _)| result.push(monitor_id.to_qvariant()));
+
+        result
+    }
+
+
     // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
     fn get_monitor_datas(&self, host_id: QString) -> QVariantList {
         let mut result = QVariantList::default();
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            let sorted_keys = self.get_monitor_data_keys_sorted(host.monitoring_data.values().collect());
+            let sorted_keys = self.get_monitoring_data_keys_sorted(host.monitoring_data.values().collect());
 
             for key in sorted_keys {
                 let monitoring_data = host.monitoring_data.get(&key).unwrap();
@@ -171,6 +195,7 @@ impl HostDataManagerModel {
         return QString::from(result);
     }
 
+    // TODO: remove
     // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
     fn get_monitor_data_keys_sorted(&self, monitoring_data: Vec<&MonitoringData>) -> Vec<String> {
         let mut keys_ordered = Vec::<String>::new();
@@ -179,18 +204,36 @@ impl HostDataManagerModel {
         for category in self.display_options_category_order.iter() {
             let category_monitors = monitoring_data.iter().filter(|data| &data.display_options.category == category)
                                                           .collect::<Vec<&&MonitoringData>>();
-            keys_ordered.extend(self.sort_by_value_type(category_monitors));
+            keys_ordered.extend(Self::sort_by_value_type(category_monitors));
         }
 
         let rest_of_monitors = monitoring_data.iter().filter(|data| !keys_ordered.contains(&data.monitor_id))
                                                      .collect::<Vec<&&MonitoringData>>();
-        keys_ordered.extend(self.sort_by_value_type(rest_of_monitors));
+        keys_ordered.extend(Self::sort_by_value_type(rest_of_monitors));
+
+        keys_ordered
+    }
+
+    // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
+    fn get_monitoring_data_keys_sorted(&self, monitoring_data: Vec<&MonitoringData>) -> Vec<String> {
+        let mut keys_ordered = Vec::<String>::new();
+
+        // First include data of categories in an order that's defined in configuration.
+        for category in self.display_options_category_order.iter() {
+            let category_monitors = monitoring_data.iter().filter(|data| &data.display_options.category == category)
+                                                          .collect::<Vec<&&MonitoringData>>();
+            keys_ordered.extend(Self::sort_by_value_type(category_monitors));
+        }
+
+        let rest_of_monitors = monitoring_data.iter().filter(|data| !keys_ordered.contains(&data.monitor_id))
+                                                     .collect::<Vec<&&MonitoringData>>();
+        keys_ordered.extend(Self::sort_by_value_type(rest_of_monitors));
 
         keys_ordered
     }
 
     // Sorts first by value type (multivalue vs. single value) and then alphabetically.
-    fn sort_by_value_type(&self, datas: Vec<&&MonitoringData>) -> Vec<String> {
+    fn sort_by_value_type(datas: Vec<&&MonitoringData>) -> Vec<String> {
         let mut single_value_keys = datas.iter().filter(|data| !data.display_options.use_multivalue)
                                                 .map(|data| data.monitor_id.clone())
                                                 .collect::<Vec<String>>();

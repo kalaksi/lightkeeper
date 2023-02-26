@@ -26,6 +26,7 @@ Item {
     property var _pendingMonitorInvocations: []
     property int _maximumPendingInvocations: 0
 
+
     Component.onCompleted: {
         HostDataManager.monitoring_data_received.connect((invocationId) => {
             // Remove from array of pending monitor invocations.
@@ -71,6 +72,15 @@ Item {
                     Layout.maximumHeight: root.columnMaximumHeight
                     Layout.alignment: Qt.AlignTop
 
+/*
+                    Component.onCompleted: {
+                        // Receive new data from monitors.
+                        HostDataManager.new_monitoring_data_received.connect((monitoring_data_qv) => {
+                            propertyTable.model.update(monitoring_data_qv)
+                        })
+                    }
+                    */
+
                     background: Rectangle {
                         color: "#404040"
                     }
@@ -80,7 +90,7 @@ Item {
                         anchors.left: groupBox.left
                         anchors.right: groupBox.right
 
-                        text: modelData.category
+                        text: TextTransform.capitalize(modelData.category)
                         icon: Theme.category_icon(modelData.category)
                         color: Theme.category_color(modelData.category)
                         refreshProgress: 1.0 - root._pendingMonitorInvocations.length / root._maximumPendingInvocations
@@ -113,7 +123,7 @@ Item {
 
                             // Host data is a bit different from monitor data, so handling it separately here.
                             Repeater {
-                                model: modelData.category === "Host" && root._hostDetails !== null ?
+                                model: modelData.category === "host" && root._hostDetails !== null ?
                                     [
                                         [ "Status", root._hostDetails.status ],
                                         [ "Name", root._hostDetails.name ],
@@ -127,7 +137,24 @@ Item {
                                 }
                             }
 
+                            PropertyTable {
+                                id: propertyTable
+                                width: 200
+                                height: 200
+                                monitoring_datas: HostDataManager.get_category_monitor_ids(root.hostId, modelData.category)
+                                                                 .map(monitorId => HostDataManager.get_monitoring_data(root.hostId, monitorId))
+                                command_datas: CommandHandler.get_category_commands(root.hostId, modelData.category)
+
+                                Connections {
+                                    target: HostDataManager
+                                    function onNew_monitoring_data_received(monitoring_data_qv) {
+                                        propertyTable.model.update(monitoring_data_qv)
+                                    }
+                                }
+                            }
+
                             // Go through monitoring datas and create rows.
+                            /*
                             Repeater {
                                 model: modelData.monitorDatas.filter((item) => item.criticality !== "Ignore")
 
@@ -182,40 +209,12 @@ Item {
                                     }
                                 }
                             }
+                            */
                         }
                     }
                 }
             }
         }
-    }
-
-    // Practically flattens multivalue data and does some filtering.
-    function getPropertyRows(monitorData) {
-        let lastDataPoint = monitorData.values.slice(-1)[0]
-        let result = []
-        if (monitorData.display_options.use_multivalue) {
-
-            lastDataPoint.multivalue.forEach(multivalue => {
-                multivalue.multivalue_level = 1
-                result.push(multivalue)
-
-                // 2nd level of multivalues.
-                multivalue.multivalue.forEach(multivalue2 => {
-                    // Add indent for 2nd level values.
-                    multivalue2.label = "    " + multivalue2.label
-                    multivalue2.multivalue_level = 2
-                    result.push(multivalue2)
-                })
-
-                // Now remove the duplicate data.
-                multivalue.multivalue = []
-            })
-        }
-        else {
-            lastDataPoint.multivalue_level = 0
-            result = [ lastDataPoint ]
-        }
-        return result.filter(item => item.criticality !== "Ignore")
     }
 
     function groupByCategory(monitorDataJsons, commandJsons) {
@@ -251,7 +250,7 @@ Item {
 
         let uniqueCategories = [...new Set(categories)]
         return uniqueCategories.map(category => ({
-            category: TextTransform.capitalize(category),
+            category: category,
             monitorDatas: monitorDataByCategory[category] || [],
             commands: commandByCategory[category] || [],
         }))

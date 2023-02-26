@@ -19,7 +19,7 @@ ApplicationWindow {
 
     Material.theme: Material.System
 
-    // TODO: when could Connection component be used instead of JS?
+    // TODO: Use Connections component instead?
     Component.onCompleted: {
         _dialogInvocationIds = {}
 

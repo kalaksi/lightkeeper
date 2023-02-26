@@ -32,7 +32,7 @@ impl ThemeModel {
 
 
     fn category_color(&self, category: QString) -> QString {
-        if let Some(category) = self.display_options.categories.get(&category.to_string().to_lowercase()) {
+        if let Some(category) = self.display_options.categories.get(&category.to_string()) {
             QString::from(category.color.clone().unwrap_or_else(|| String::from("#505050")))
         }
         else {
@@ -45,7 +45,7 @@ impl ThemeModel {
     }
 
     fn category_icon(&self, category: QString) -> QString {
-        if let Some(category) = self.display_options.categories.get(&category.to_string().to_lowercase()) {
+        if let Some(category) = self.display_options.categories.get(&category.to_string()) {
             QString::from(category.icon.clone().unwrap_or_default())
         }
         else {
@@ -54,7 +54,7 @@ impl ThemeModel {
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
-        if self.display_options.non_collapsible_commands.contains(&command_id.to_string().to_lowercase()) {
+        if self.display_options.non_collapsible_commands.contains(&command_id.to_string()) {
             QString::from("0")
         }
         else {

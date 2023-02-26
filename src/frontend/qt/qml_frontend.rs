@@ -6,6 +6,7 @@ use super::{
     resources,
     models::HostDataManagerModel,
     models::CommandHandlerModel,
+    models::PropertyTableModel,
     models::HostTableModel,
     models::ThemeModel,
 };
@@ -48,6 +49,8 @@ impl QmlFrontend {
     }
 
     pub fn start(&mut self) {
+        qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
+
         let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
         let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
         let qt_data_command_handler = QObjectBox::new(self.command_handler.take().unwrap());

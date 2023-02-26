@@ -12,6 +12,7 @@ use crate::monitor_manager::MonitorManager;
 pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     get_child_commands: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
@@ -50,11 +51,32 @@ impl CommandHandlerModel {
         command_datas.values().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
     }
 
+    fn get_category_commands(&self, host_id: QString, category: QString) -> QVariantList {
+        let category_string = category.to_string();
+
+        let mut category_commands = self.command_handler.get_host_commands(host_id.to_string())
+                                                   .into_iter().filter(|(_, data)| data.display_options.category == category_string)
+                                                   .collect::<HashMap<String, CommandData>>();
+
+        let mut valid_commands_sorted = Vec::<CommandData>::new();
+        for command_id in self.ui_display_options.command_order.iter() {
+            if let Some(command_data) = category_commands.remove(command_id) {
+                valid_commands_sorted.push(command_data);
+            }
+        }
+
+        // Append the rest of the commands in alphabetical order.
+        let mut rest_of_commands: Vec<CommandData> = category_commands.into_iter().map(|(_, command)| command).collect();
+        rest_of_commands.sort_by(|left, right| left.command_id.cmp(&right.command_id));
+        valid_commands_sorted.append(&mut rest_of_commands);
+
+        valid_commands_sorted.into_iter().map(|command| command.to_qvariant()).collect()
+    }
 
     // Parent ID is either command ID or category ID (for category-level commands).
     fn get_child_commands(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList {
-        let category_string = category.to_string().to_lowercase();
-        let parent_id_string = parent_id.to_string().to_lowercase();
+        let category_string = category.to_string();
+        let parent_id_string = parent_id.to_string();
         let multivalue_level: u8 = multivalue_level.to_string().parse().unwrap();
 
         let mut all_commands = self.command_handler.get_host_commands(host_id.to_string())
@@ -146,7 +168,7 @@ impl CommandHandlerModel {
     }
 
     fn refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
-        let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string().to_lowercase());
+        let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
         QVariantList::from_iter(invocation_ids)
     }
 }

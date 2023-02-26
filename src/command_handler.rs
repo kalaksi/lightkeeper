@@ -1,7 +1,7 @@
 
 use std::sync::mpsc::Sender;
 use std::collections::HashMap;
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 use std::process;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -301,7 +301,7 @@ impl CommandHandler {
 }
 
 
-#[derive(Default, Clone, Serialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct CommandData {
     pub command_id: String,
     pub display_options: DisplayOptions,
