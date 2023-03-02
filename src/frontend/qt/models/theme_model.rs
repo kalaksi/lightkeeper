@@ -67,12 +67,13 @@ impl ThemeModel {
     }
 
     fn pill_color_for_criticality(&self, criticality: QString) -> QString {
+        // TODO: Deserialize from serde and user enum instead.
         match criticality.to_string().as_str() {
-            "critical" => QString::from("#60ff3300"),
-            "error" => QString::from("#60ff3300"),
-            "warning" => QString::from("#60ffcc00"),
-            "normal" => QString::from("#6033cc33"),
-            "info" => QString::from("#60ffffff"),
+            "Critical" => QString::from("#60ff3300"),
+            "Error" => QString::from("#60ff3300"),
+            "Warning" => QString::from("#60ffcc00"),
+            "Normal" => QString::from("#6033cc33"),
+            "Info" => QString::from("#60ffffff"),
             _ => QString::from("#60ffffff"),
         }
     }

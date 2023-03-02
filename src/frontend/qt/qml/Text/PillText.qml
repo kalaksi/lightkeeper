@@ -29,8 +29,5 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         leftPadding: root.padding
         rightPadding: root.padding
-        // TODO: a proper way to center the text better
-        lineHeight: 0.9
-        bottomPadding: 3
     }
 }

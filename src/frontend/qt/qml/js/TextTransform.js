@@ -1,10 +1,12 @@
 
 
 function capitalize(text) {
-    if (typeof text[0] === "undefined") {
-        return undefined
+    if (text.length > 1) {
+        return text[0].toUpperCase() + text.slice(1)
     }
-    return text[0].toUpperCase() + text.slice(1)
+    else {
+        return text
+    }
 }
 
 function truncate(text, maxLength) {
