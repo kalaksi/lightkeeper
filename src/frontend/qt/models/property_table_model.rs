@@ -122,7 +122,8 @@ impl PropertyTableModel {
 
         let level_commands = command_datas.iter()
                                           .filter(|command| command.display_options.parent_id == monitoring_data.monitor_id &&
-                                                            command.display_options.multivalue_level == multivalue_level)
+                                                            (command.display_options.multivalue_level == 0 || 
+                                                             command.display_options.multivalue_level == multivalue_level))
                                           .map(|command| command.clone()).collect::<Vec<CommandData>>();
 
         if multivalue_level > 1 {

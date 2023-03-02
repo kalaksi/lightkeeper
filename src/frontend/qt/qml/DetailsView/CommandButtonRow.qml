@@ -25,7 +25,7 @@ Item {
     implicitWidth: calculateWidth(!collapsed)
     implicitHeight: size
 
-    signal clicked(string commandId)
+    signal clicked(string commandId, var params)
 
     Component.onCompleted: {
         // No sense in allowing only 1 command to collapse.
@@ -55,7 +55,7 @@ Item {
                     roundButton: root.roundButtons
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
-                    onClicked: root.clicked(modelData.command_id)
+                    onClicked: root.clicked(modelData.command_id, modelData.command_params)
                 }
             }
 

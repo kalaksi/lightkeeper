@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::thread;
 use std::sync::mpsc;
 
@@ -7,8 +8,6 @@ use qmetaobject::*;
 use crate::configuration;
 use crate::frontend;
 use crate::module::monitoring::MonitoringData;
-use crate::module::monitoring::DataPoint;
-use super::qmetatypes;
 
 
 // TODO: use camelcase with qml models?
@@ -21,21 +20,20 @@ pub struct HostDataManagerModel {
 
     host_platform_initialized: qt_signal!(host_id: QString),
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
-    monitoring_data_received: qt_signal!(invocation_id: QVariant),
     command_result_received: qt_signal!(command_result: QString),
 
-    new_monitoring_data_received: qt_signal!(monitoring_data: QVariant),
+    monitoring_data_received: qt_signal!(invocation_id: QString, category: QString, monitoring_data: QVariant),
+
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
+    get_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
-    // so for now methods are used to get the data in JSON and parsed in QML side.
+    // These methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
-    get_monitor_datas: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_host_data_json: qt_method!(fn(&self, host_id: QString) -> QString),
 
     display_data: frontend::DisplayData,
-    // display_options: configuration::DisplayOptions,
     display_options_category_order: Vec<String>,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
@@ -85,8 +83,9 @@ impl HostDataManagerModel {
 
                     for (monitor_id, new_monitor_data) in host_display_data.monitoring_data.iter() {
                         let last_data_point = new_monitor_data.values.back().unwrap();
-                        self_pinned.borrow().monitoring_data_received(QVariant::from(last_data_point.invocation_id));
-                        self_pinned.borrow().new_monitoring_data_received(new_monitor_data.to_qvariant());
+                        self_pinned.borrow().monitoring_data_received(QString::from(last_data_point.invocation_id.to_string()),
+                                                                      QString::from(new_monitor_data.display_options.category.clone()),
+                                                                      new_monitor_data.to_qvariant());
 
                         // Find out any monitor state changes and signal accordingly.
                         let new_criticality = new_monitor_data.values.back().unwrap().criticality;
@@ -138,8 +137,10 @@ impl HostDataManagerModel {
     }
 
     fn get_monitoring_data(&self, host_id: QString, monitor_id: QString) -> QVariant {
+        let monitor_id = monitor_id.to_string();
+
         let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
-        host.monitoring_data.get(&monitor_id.to_string()).unwrap().to_qvariant()
+        host.monitoring_data.get(&monitor_id).unwrap().to_qvariant()
     }
 
     fn get_category_monitor_ids(&self, host_id: QString, category: QString) -> QVariantList {
@@ -147,24 +148,41 @@ impl HostDataManagerModel {
         let category = category.to_string();
 
         let mut result = QVariantList::default();
-        let category_monitors = host.monitoring_data.iter().filter(|(_, monitor_data)| monitor_data.display_options.category == category);
-        category_monitors.for_each(|(monitor_id, _)| result.push(monitor_id.to_qvariant()));
+
+        for (monitor_id, monitor_data) in host.monitoring_data.iter() {
+            if monitor_data.display_options.category == category {
+                result.push(monitor_id.to_qvariant());
+            }
+        }
 
         result
     }
 
+    // Get a readily sorted list of unique categories for a host
+    fn get_categories(&self, host_id: QString) -> QVariantList {
+        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
 
-    // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
-    fn get_monitor_datas(&self, host_id: QString) -> QVariantList {
+        // Get unique categories from monitoring datas, and sort them according to config and alphabetically.
+        let mut categories = host.monitoring_data.values().map(|monitor_data| monitor_data.display_options.category.clone())
+                                                 .collect::<HashSet<String>>()
+                                                 .into_iter().collect::<Vec<String>>();
+        categories.sort();
+
         let mut result = QVariantList::default();
-        if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            let sorted_keys = self.get_monitoring_data_keys_sorted(host.monitoring_data.values().collect());
 
-            for key in sorted_keys {
-                let monitoring_data = host.monitoring_data.get(&key).unwrap();
-                result.push(serde_json::to_string(&monitoring_data).unwrap().to_qvariant())
+        // First add categories in the order they are defined in the config.
+        for prioritized_category in self.display_options_category_order.iter() {
+            if categories.contains(prioritized_category) {
+                result.push(prioritized_category.to_qvariant());
             }
         }
+
+        for remaining_category in categories.iter() {
+            if !self.display_options_category_order.contains(remaining_category) {
+                result.push(remaining_category.to_qvariant());
+            }
+        }
+
         result
     }
 
@@ -198,24 +216,6 @@ impl HostDataManagerModel {
     // TODO: remove
     // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
     fn get_monitor_data_keys_sorted(&self, monitoring_data: Vec<&MonitoringData>) -> Vec<String> {
-        let mut keys_ordered = Vec::<String>::new();
-
-        // First include data of categories in an order that's defined in configuration.
-        for category in self.display_options_category_order.iter() {
-            let category_monitors = monitoring_data.iter().filter(|data| &data.display_options.category == category)
-                                                          .collect::<Vec<&&MonitoringData>>();
-            keys_ordered.extend(Self::sort_by_value_type(category_monitors));
-        }
-
-        let rest_of_monitors = monitoring_data.iter().filter(|data| !keys_ordered.contains(&data.monitor_id))
-                                                     .collect::<Vec<&&MonitoringData>>();
-        keys_ordered.extend(Self::sort_by_value_type(rest_of_monitors));
-
-        keys_ordered
-    }
-
-    // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
-    fn get_monitoring_data_keys_sorted(&self, monitoring_data: Vec<&MonitoringData>) -> Vec<String> {
         let mut keys_ordered = Vec::<String>::new();
 
         // First include data of categories in an order that's defined in configuration.
