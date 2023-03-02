@@ -1,8 +1,9 @@
-# Design goals
+# Design goals for Lightkeeper
 
 ## General
-- Make customizations easy so that the tool can be modified to different needs.
-- Make the tool extendable.
+- Make customizations easy so that it can be modified to different needs.
+- Make it easily extendable.
+- Avoid sending too many commands to keep target host logs cleaner and traffic minimal.
 
 ## UI
 - Keep the amount of navigating and clicking to a minimum.
