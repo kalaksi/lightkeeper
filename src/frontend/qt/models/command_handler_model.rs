@@ -51,26 +51,34 @@ impl CommandHandlerModel {
         command_datas.values().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
     }
 
+    // Return CommandDatas relevant to category as QVariants.
     fn get_category_commands(&self, host_id: QString, category: QString) -> QVariantList {
         let category_string = category.to_string();
 
-        let mut category_commands = self.command_handler.get_host_commands(host_id.to_string())
-                                                   .into_iter().filter(|(_, data)| data.display_options.category == category_string)
-                                                   .collect::<HashMap<String, CommandData>>();
+        let category_commands = self.command_handler.get_host_commands(host_id.to_string())
+                                                    .into_iter().filter(|(_, data)| data.display_options.category == category_string)
+                                                    .collect::<HashMap<String, CommandData>>();
 
-        let mut valid_commands_sorted = Vec::<CommandData>::new();
+        let mut result = QVariantList::default();
+
+        // First, add commands in the order specified in the config.
         for command_id in self.ui_display_options.command_order.iter() {
-            if let Some(command_data) = category_commands.remove(command_id) {
-                valid_commands_sorted.push(command_data);
+            if let Some(command_data) = category_commands.get(command_id) {
+                result.push(command_data.to_qvariant());
             }
         }
 
         // Append the rest of the commands in alphabetical order.
-        let mut rest_of_commands: Vec<CommandData> = category_commands.into_iter().map(|(_, command)| command).collect();
-        rest_of_commands.sort_by(|left, right| left.command_id.cmp(&right.command_id));
-        valid_commands_sorted.append(&mut rest_of_commands);
+        let mut rest = category_commands.keys().filter(|key| !self.ui_display_options.command_order.contains(key)).collect::<Vec<&String>>();
+        rest.sort();
 
-        valid_commands_sorted.into_iter().map(|command| command.to_qvariant()).collect()
+        for command_id in rest {
+            if let Some(command_data) = category_commands.get(command_id) {
+                result.push(command_data.to_qvariant());
+            }
+        }
+
+        result
     }
 
     // Parent ID is either command ID or category ID (for category-level commands).
