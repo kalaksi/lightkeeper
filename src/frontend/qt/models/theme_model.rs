@@ -9,8 +9,9 @@ pub struct ThemeModel {
     base: qt_base_class!(trait QObject),
     group_multivalue: qt_method!(fn(&self) -> QString),
     category_color: qt_method!(fn(&self, category: QString) -> QString),
-    category_icon: qt_method!(fn(&self, category: QString) -> QString),
     category_background_color: qt_method!(fn(&self) -> QString),
+    category_icon: qt_method!(fn(&self, category: QString) -> QString),
+    groupbox_margins: qt_method!(fn(&self) -> i8),
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     pill_color_for_criticality: qt_method!(fn(&self, criticality: QString) -> QString),
@@ -51,6 +52,10 @@ impl ThemeModel {
         else {
             QString::from("")
         }
+    }
+
+    fn groupbox_margins(&self) -> i8 {
+        5
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
