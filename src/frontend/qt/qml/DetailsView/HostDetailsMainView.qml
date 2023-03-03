@@ -56,8 +56,8 @@ Item {
 
                 GroupBox {
                     id: groupBox
-                    leftPadding: 5
-                    rightPadding: 5
+                    leftPadding: Theme.groupbox_margins()
+                    rightPadding: Theme.groupbox_margins()
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.preferredWidth: root.columnMinimumWidth +
@@ -94,12 +94,13 @@ Item {
 
                         // Category-level command buttons (buttons on top of the category area).
                         CommandButtonRow {
-                            // anchors.horizontalCenter: parent.horizontalCenter
                             size: 34
                             flatButtons: false
                             roundButtons: false
                             commands: Parse.ListOfJsons(CommandHandler.get_child_commands(root.hostId, modelData, "", 0))
                             onClicked: (commandId) => CommandHandler.execute(root.hostId, commandId, [""])
+
+                            Layout.alignment: Qt.AlignHCenter
                         }
 
                         // Host data is a bit different from monitor data, so handling it separately here.
@@ -125,7 +126,7 @@ Item {
                         PropertyTable {
                             id: propertyTable
                             // Default to 10 just to avoid warnings of zero length
-                            width: parent.width > 0 ? parent.width : 10
+                            // width: parent.width > 0 ? parent.width : 10
                             hostId: root.hostId
                             monitoring_datas: HostDataManager.get_category_monitor_ids(root.hostId, modelData)
                                                              .map(monitorId => HostDataManager.get_monitoring_data(root.hostId, monitorId))

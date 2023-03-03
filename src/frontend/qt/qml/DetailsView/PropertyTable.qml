@@ -18,15 +18,23 @@ TableView {
     property string hostId: ""
     property var monitoring_datas: []
     property var command_datas: []
-    property int rowHeight: 20
+    property int rowHeight: 24
+
+    // Number of the row that has command row menu expanded.
+    // Only one menu can be open at a time.
+    property int expandedCommandRow: -1
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
     onWidthChanged: forceLayout()
     onHeightChanged: forceLayout()
     clip: true
+    topMargin: Theme.groupbox_margins()
+    bottomMargin: Theme.groupbox_margins()
 
-    ScrollBar.vertical: ScrollBar { }
+    ScrollBar.vertical: ScrollBar {
+        id: scrollBar
+    }
 
     model: PropertyTableModel {
         monitoring_datas: root.monitoring_datas
@@ -44,7 +52,7 @@ TableView {
                 property string separatorLabel: root.model.get_separator_label(row)
                 property bool isSeparator: separatorLabel !== ""
 
-                implicitWidth: root.width * 0.4
+                implicitWidth: root.width * 0.5
                 implicitHeight: isSeparator ? root.rowHeight * 2.5 : root.rowHeight
 
                 // Header text for multivalues.
@@ -86,20 +94,20 @@ TableView {
                 property var styledValue: JSON.parse(model.value)
 
                 visible: !isSeparator
-                implicitWidth: root.width * 0.4
+                implicitWidth: root.width * 0.3
                 implicitHeight: root.rowHeight
 
                 // Used to clip overflowing text from the label.
                 // Avoiding clip-property on the label itself, since it could cause performance issues.
                 // This also allows more customized style for the clipping.
                 Rectangle {
-                    x: -50
-                    width: parent.width + 50
+                    x: -parent.width * 0.3
+                    width: parent.width * 1.3
                     height: parent.height
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop { position: 0.0; color: "#00000000" }
-                        GradientStop { position: 0.2; color: Theme.category_background_color() }
+                        GradientStop { position: 0.15; color: Theme.category_background_color() }
                         GradientStop { position: 1.0; color: Theme.category_background_color() }
                     }
                 }
@@ -109,12 +117,12 @@ TableView {
                     spacing: 5
 
                     ProgressBar {
-                        width: parent.parent.width * 0.8
+                        width: parent.parent.width * 0.75
                         value: parseInt(styledValue.data_point.value, 10) / 100.0
                     }
 
                     SmallerText {
-                        text: styledValue.data_point.value
+                        text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
                         anchors.verticalCenter: parent.verticalCenter
                         lineHeight: 0.9
                     }
@@ -123,6 +131,7 @@ TableView {
                 SmallText {
                     visible: styledValue.display_options.display_style === "Text"
                     text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
+
                     anchors.verticalCenter: parent.verticalCenter
                     lineHeight: 0.9
                 }
@@ -141,6 +150,7 @@ TableView {
             delegate: Item {
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var parsedCommands: JSON.parse(model.value)
+                property real _marginRight: scrollBar.width + 5
 
                 visible: !isSeparator
                 implicitWidth: root.width * 0.2
@@ -148,18 +158,36 @@ TableView {
 
                 // Reason for this Rectangle is the same as with delegate 1.
                 Rectangle {
-                    color: Theme.category_background_color()
-                    anchors.fill: parent
+                    x: -parent.width * 0.3
+                    width: parent.width * 1.3
+                    height: parent.height
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "#00000000" }
+                        GradientStop { position: 0.15; color: Theme.category_background_color() }
+                        GradientStop { position: 1.0; color: Theme.category_background_color() }
+                    }
                 }
 
-                // Row-level command buttons.
+                // Row-level command buttons, aligned to the right.
                 CommandButtonRow {
+                    anchors.right: parent.right
+                    // TODO: how to account for scrollbar better?
+                    // For scrollbar.
+                    anchors.rightMargin: _marginRight
+                    size: root.rowHeight
                     visible: parsedCommands.length > 0
-                    collapsed: true
+                    collapsible: true
                     menuTooltip: "Commands"
                     commands: parsedCommands
+                    forceCollapse: root.expandedCommandRow !== row
+
+
                     onClicked: function(commandId, params) {
                         CommandHandler.execute(root.hostId, commandId, params)
+                    }
+                    onExpanded: function() {
+                        root.expandedCommandRow = row
                     }
                 }
             }

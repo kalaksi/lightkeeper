@@ -13,41 +13,48 @@ Item {
     property int buttonSize: size * 0.95
     property bool flatButtons: true
     property bool roundButtons: true
-    property bool collapsed: false
+    property bool collapsible: false
+    // Provides a mechanism for forcing the expanded command bar to collapse.
+    // Can be used to allow only one command bar to be expanded at a time.
+    property bool forceCollapse: false
     property string menuTooltip: "More..."
     property int animationDuration: 150
+    property bool _showBackground: false
     property bool _showCommands: false
     property var _alwaysShownCommands: commands.filter(command => Theme.allow_collapsing_command(command.command_id) === "0")
-    // Shown when `collapsed` is enabled and all of the commands aren't already visible.
-    property bool _showMenu: collapsed && _alwaysShownCommands.length < commands.length
+    // Shown when `collapsible` is enabled and all of the commands aren't already visible.
+    property bool _showMenu: collapsible && _alwaysShownCommands.length < commands.length
 
 
-    implicitWidth: calculateWidth(!collapsed)
+    implicitWidth: calculateWidth(!collapsible)
     implicitHeight: size
 
     signal clicked(string commandId, var params)
+    signal expanded()
 
     Component.onCompleted: {
         // No sense in allowing only 1 command to collapse.
         if (root.commands.length < 2) {
-            root.collapsed = false
+            root.collapsible = false
         }
     }
 
     Rectangle {
         id: background
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.fill: parent
+        // width: root.width
+        // height: root.height
         radius: root.size * 0.5
-        color: root.collapsed ? Qt.lighter(Material.background, 1.25) : "transparent"
-        width: calculateWidth(!root.collapsed)
+        color: root._showBackground ? Qt.lighter(Theme.category_background_color(), 1.4) : "transparent"
 
         Row {
+            // anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
 
             Repeater {
-                model: !root.collapsed || root._showCommands ?  root.commands : root._alwaysShownCommands
+                model: !root.collapsible || root._showCommands ?  root.commands : root._alwaysShownCommands
                 ImageButton {
                     width: root.buttonSize
                     height: root.buttonSize
@@ -61,54 +68,77 @@ Item {
 
             ImageButton {
                 id: menuButton
+                visible: root._showMenu
                 width: root.buttonSize
                 height: root.buttonSize
                 flatButton: root.flatButtons
                 roundButton: root.roundButtons
                 tooltip: root.menuTooltip
                 imageSource: "qrc:/main/images/button/overflow-menu"
-                visible: root._showMenu
 
-                onClicked: {
-                    if (root._showCommands) {
-                        root._showCommands = false
-                        collapseAnimation.start()
-                    }
-                    else {
-                        expandAnimation.start()
-                        root._showCommands = true
-                    }
-                }
+                onClicked: root.expand(!root._showCommands)
             }
         }
     }
 
     NumberAnimation {
         id: expandAnimation
-        target: background
+        target: root 
         property: "width"
         to: calculateWidth(true)
         duration: root.animationDuration
         easing.type: Easing.OutQuad
+        onStopped: {
+            root._showCommands = true
+        }
     }
 
     NumberAnimation {
         id: collapseAnimation
-        target: background
+        target: root 
         property: "width"
         to: calculateWidth(false)
         duration: root.animationDuration
         easing.type: Easing.OutQuad
+        onStopped: {
+            root._showBackground = false
+        }
     }
+
+    states: [
+        State {
+            when: root.forceCollapse
+
+            StateChangeScript {
+                script: {
+                    if (root.forceCollapse) {
+                        expand(false)
+                    }
+                }
+            }
+        }
+    ]
 
     function calculateWidth(forAllCommands) {
         let spaceForMenu = root._showMenu ? 1 : 0
 
-        if (forAllCommands === true) {
+        if (forAllCommands) {
             return root.size * (commands.length + spaceForMenu)
         }
         else {
             return root.size * (root._alwaysShownCommands.length + spaceForMenu) 
+        }
+    }
+
+    function expand(doExpand) {
+        if (doExpand && !root._showCommands) {
+            root._showBackground = true
+            expandAnimation.start()
+            root.expanded()
+        }
+        else if (!doExpand && root._showCommands) {
+            root._showCommands = false
+            collapseAnimation.start()
         }
     }
 }
