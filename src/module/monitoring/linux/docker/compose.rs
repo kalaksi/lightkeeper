@@ -99,20 +99,20 @@ impl MonitoringModule for Compose {
             projects_sorted.sort();
 
             for project in projects_sorted {
-                let mut datapoints = projects.remove_entry(&project).unwrap().1;
-                datapoints.sort_by(|left, right| left.label.cmp(&right.label));
+                let mut data_points = projects.remove_entry(&project).unwrap().1;
+                data_points.sort_by(|left, right| left.label.cmp(&right.label));
 
-                let compose_file = datapoints.first().unwrap().command_params[0].clone();
+                let compose_file = data_points.first().unwrap().command_params[0].clone();
 
                 // Check just in case that all have the same compose-file.
-                if datapoints.iter().any(|point| point.command_params[0] != compose_file) {
+                if data_points.iter().any(|point| point.command_params[0] != compose_file) {
                     panic!("Containers under same project can't have different compose-files");
                 }
 
-                let most_critical = datapoints.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
+                let most_critical = data_points.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
                 let mut services_datapoint = DataPoint::labeled_value_with_level(project.clone(), most_critical.value.clone(), most_critical.criticality);
-                services_datapoint.command_params = vec![compose_file];
-                services_datapoint.multivalue = datapoints;
+                services_datapoint.command_params = vec![compose_file, project];
+                services_datapoint.multivalue = data_points;
 
                 projects_datapoint.multivalue.push(services_datapoint);
             }

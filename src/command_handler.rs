@@ -85,7 +85,7 @@ impl CommandHandler {
             // Only one of these should be implemented, but it doesn't matter if both are.
             messages: [
                 command.get_connector_messages(host.clone(), parameters.clone()),
-                vec![command.get_connector_message(host.clone(), parameters.clone())]
+                vec![command.get_connector_message(host.clone(), parameters)]
             ].concat(),
             response_handler: Self::get_response_handler(host, command.box_clone(), self.invocation_id_counter, state_update_sender),
         }).unwrap_or_else(|error| {
@@ -95,8 +95,8 @@ impl CommandHandler {
         return self.invocation_id_counter
     }
 
-    // Return value contains host's commands and command parameters as strings.
-    pub fn get_host_commands(&self, host_id: String) -> HashMap<String, CommandData> {
+    // Return value contains host's commands. `parameters` is not set since provided by data point later on.
+    pub fn get_commands_for_host(&self, host_id: String) -> HashMap<String, CommandData> {
         if let Some(command_collection) = self.commands.get(&host_id) {
             command_collection.iter().map(|(command_id, command)| {
                 (command_id.clone(), CommandData::new(command_id.clone(), command.get_display_options()))
@@ -107,7 +107,7 @@ impl CommandHandler {
         }
     }
 
-    pub fn get_host_command(&self, host_id: String, command_id: String) -> CommandData {
+    pub fn get_command_for_host(&self, host_id: String, command_id: String) -> CommandData {
         let command_collection = self.commands.get(&host_id).unwrap();
         let command = command_collection.get(&command_id).unwrap();
         CommandData::new(command_id, command.get_display_options())
@@ -304,6 +304,7 @@ impl CommandHandler {
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct CommandData {
     pub command_id: String,
+    pub command_params: Vec<String>,
     pub display_options: DisplayOptions,
 }
 
@@ -311,6 +312,7 @@ impl CommandData {
     pub fn new(command_id: String, display_options: DisplayOptions) -> Self {
         CommandData {
             command_id: command_id,
+            command_params: Vec::new(),
             display_options: display_options,
         }
     }

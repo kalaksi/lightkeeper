@@ -78,7 +78,7 @@ impl DataPoint {
         }
     }
 
-    pub fn hide(&mut self) {
+    pub fn ignore(&mut self) {
         self.criticality = Criticality::Ignore;
     }
 }

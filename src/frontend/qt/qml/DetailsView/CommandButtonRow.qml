@@ -51,7 +51,6 @@ Item {
         border.width: 1
 
         Row {
-            // anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
 

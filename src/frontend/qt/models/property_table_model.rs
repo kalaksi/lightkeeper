@@ -120,11 +120,17 @@ impl PropertyTableModel {
             return None;
         }
 
+        // Find commands relevant to this row and populate command.parameters property from data point.
         let level_commands = command_datas.iter()
                                           .filter(|command| command.display_options.parent_id == monitoring_data.monitor_id &&
                                                             (command.display_options.multivalue_level == 0 || 
                                                              command.display_options.multivalue_level == multivalue_level))
-                                          .map(|command| command.clone()).collect::<Vec<CommandData>>();
+                                          .map(|command| {
+                                              let mut full_command = command.clone();
+                                              full_command.command_params = data_point.command_params.clone();
+                                              full_command 
+                                          })
+                                          .collect::<Vec<CommandData>>();
 
         if multivalue_level > 1 {
             let indent = "    ".repeat((multivalue_level - 1).into());

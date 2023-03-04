@@ -46,7 +46,7 @@ impl CommandHandlerModel {
     }
 
     fn get_commands(&self, host_id: QString) -> QVariantList {
-        let command_datas = self.command_handler.get_host_commands(host_id.to_string());
+        let command_datas = self.command_handler.get_commands_for_host(host_id.to_string());
 
         command_datas.values().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
     }
@@ -55,7 +55,7 @@ impl CommandHandlerModel {
     fn get_category_commands(&self, host_id: QString, category: QString) -> QVariantList {
         let category_string = category.to_string();
 
-        let category_commands = self.command_handler.get_host_commands(host_id.to_string())
+        let category_commands = self.command_handler.get_commands_for_host(host_id.to_string())
                                                     .into_iter().filter(|(_, data)| data.display_options.category == category_string)
                                                     .collect::<HashMap<String, CommandData>>();
 
@@ -87,7 +87,7 @@ impl CommandHandlerModel {
         let parent_id_string = parent_id.to_string();
         let multivalue_level: u8 = multivalue_level.to_string().parse().unwrap();
 
-        let mut all_commands = self.command_handler.get_host_commands(host_id.to_string())
+        let mut all_commands = self.command_handler.get_commands_for_host(host_id.to_string())
                                    .into_iter().filter(|(_, data)| 
                                         data.display_options.parent_id == parent_id_string &&
                                         data.display_options.category == category_string &&
@@ -111,7 +111,7 @@ impl CommandHandlerModel {
     }
 
     fn execute(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64 {
-        let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
+        let display_options = self.command_handler.get_command_for_host(host_id.to_string(), command_id.to_string()).display_options;
 
         if display_options.confirmation_text.is_empty() {
             return self.execute_confirmed(host_id, command_id, parameters);
@@ -127,7 +127,7 @@ impl CommandHandlerModel {
         let mut invocation_id = 0;
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_qbytearray().to_string()).collect();
 
-        let display_options = self.command_handler.get_host_command(host_id.to_string(), command_id.to_string()).display_options;
+        let display_options = self.command_handler.get_command_for_host(host_id.to_string(), command_id.to_string()).display_options;
         match display_options.action {
             UIAction::None => {
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);

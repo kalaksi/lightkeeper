@@ -80,8 +80,10 @@ impl MonitoringModule for Service {
                 };
 
                 if !self.included_services.contains(&service.unit) {
-                    point.hide();
+                    point.ignore();
                 }
+
+                point.command_params.push(service.unit.clone());
 
                 point
             }).collect();

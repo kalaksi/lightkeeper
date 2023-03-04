@@ -17,6 +17,7 @@ TableView {
     id: root 
     property string hostId: ""
     property var monitoring_datas: []
+    // CommandDatas as QVariants.
     property var command_datas: []
     property int rowHeight: 24
 
