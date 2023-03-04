@@ -150,7 +150,7 @@ TableView {
             delegate: Item {
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var parsedCommands: JSON.parse(model.value)
-                property real _marginRight: scrollBar.width + 5
+                property real _marginRight: scrollBar.width + 6
 
                 visible: !isSeparator
                 implicitWidth: root.width * 0.2

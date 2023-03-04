@@ -47,6 +47,8 @@ Item {
         // height: root.height
         radius: root.size * 0.5
         color: root._showBackground ? Qt.lighter(Theme.category_background_color(), 1.4) : "transparent"
+        border.color: root._showBackground ? Qt.darker(Theme.category_background_color(), 1.2) : "transparent"
+        border.width: 1
 
         Row {
             // anchors.horizontalCenter: parent.horizontalCenter
