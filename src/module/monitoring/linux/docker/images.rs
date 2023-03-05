@@ -24,7 +24,7 @@ pub struct Images {
 impl Module for Images {
     fn new(settings: &HashMap<String, String>) -> Self {
         Images {
-            criticality_levels: settings.get("criticality_levels").unwrap_or(&String::from("270,365,730"))
+            criticality_levels: settings.get("criticality_levels").unwrap_or(&String::from("180,365,730"))
                                         .split(',')
                                         .map(|value| value.parse().unwrap())
                                         .collect(),
