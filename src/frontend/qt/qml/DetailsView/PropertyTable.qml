@@ -16,6 +16,8 @@ import "../js/ValueUnit.js" as ValueUnit
 TableView {
     id: root 
     property string hostId: ""
+    property string category: ""
+    // MonitoringDatas as QVariants.
     property var monitoring_datas: []
     // CommandDatas as QVariants.
     property var command_datas: []
@@ -42,7 +44,7 @@ TableView {
         command_datas: root.command_datas
     }
 
-    implicitHeight: rowHeight * model.rowCount() + 100
+    implicitHeight: rowHeight * model.rowCount()
 
     delegate: DelegateChooser {
         id: delegateChooser
@@ -93,10 +95,12 @@ TableView {
             delegate: Item {
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var styledValue: JSON.parse(model.value)
+                property bool _hasNoChildCommands: CommandHandler.get_child_command_count(root.hostId, root.category) === 0
 
                 visible: !isSeparator
-                implicitWidth: root.width * 0.3
+                implicitWidth: _hasNoChildCommands ? root.width * 0.5 : root.width * 0.3
                 implicitHeight: root.rowHeight
+
 
                 // Used to clip overflowing text from the label.
                 // Avoiding clip-property on the label itself, since it could cause performance issues.
@@ -139,6 +143,7 @@ TableView {
 
                 PillText {
                     visible: styledValue.display_options.display_style === "CriticalityLevel"
+                    anchors.verticalCenter: parent.verticalCenter
                     text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
                     pillColor: Theme.pill_color_for_criticality(styledValue.data_point.criticality)
                     height: root.rowHeight * 0.9
@@ -152,9 +157,10 @@ TableView {
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var parsedCommands: JSON.parse(model.value)
                 property real _marginRight: scrollBar.width + 6
+                property bool _hasNoChildCommands: CommandHandler.get_child_command_count(root.hostId, root.category) === 0
 
                 visible: !isSeparator
-                implicitWidth: root.width * 0.2
+                implicitWidth: _hasNoChildCommands ? 1 : root.width * 0.2
                 implicitHeight: root.rowHeight
 
                 // Reason for this Rectangle is the same as with delegate 1.

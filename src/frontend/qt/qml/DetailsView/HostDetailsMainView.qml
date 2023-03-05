@@ -20,21 +20,28 @@ Item {
     property int columnSpacing: 6
     property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
+    property var _categories: getCategories()
     // Contains invocation IDs. Keeps track of monitoring data refresh progress. Empty when all is done.
-    property var _pendingMonitorInvocations: []
-    property int _maximumPendingInvocations: 0
+    property var _pendingMonitorInvocations: {}
+    property var _maximumPendingInvocations: {}
 
+
+    Component.onCompleted: {
+        root._pendingMonitorInvocations = {}
+        root._maximumPendingInvocations = {}
+    }
 
     Connections {
         target: HostDataManager
         function onMonitoring_data_received(invocation_id, category, monitoring_data_qv) {
-            // Remove from array of pending monitor invocations.
-            let index = root._pendingMonitorInvocations.indexOf(invocation_id)
-            if (index >= 0) {
-                root._pendingMonitorInvocations.splice(index, 1)
+            if (root._pendingMonitorInvocations[category] === undefined) {
+                root._pendingMonitorInvocations[category] = []
             }
-            if (root._pendingMonitorInvocations.length === 0) {
-                root._maximumPendingInvocations = 0
+
+            let index = root._pendingMonitorInvocations[category].indexOf(invocation_id)
+            if (index >= 0) {
+                // Remove from array of pending monitor invocations.
+                root._pendingMonitorInvocations[category].splice(index, 1)
             }
         }
     }
@@ -52,7 +59,7 @@ Item {
 
             Repeater {
                 // TODO: hide empty categories
-                model: getCategories()
+                model: root._categories
 
                 GroupBox {
                     id: groupBox
@@ -79,12 +86,12 @@ Item {
                         text: TextTransform.capitalize(modelData)
                         icon: Theme.category_icon(modelData)
                         color: Theme.category_color(modelData)
-                        refreshProgress: 1.0 - root._pendingMonitorInvocations.length / root._maximumPendingInvocations
+                        refreshProgress: 1.0 - root._pendingMonitorInvocations[modelData].length / root._maximumPendingInvocations[modelData]
                         onRefreshClicked: function() {
                             let invocation_ids = CommandHandler.refresh_monitors_of_category(root.hostId, modelData)
                             if (invocation_ids.length > 0) {
-                                root._pendingMonitorInvocations.push(...invocation_ids)
-                                root._maximumPendingInvocations = root._pendingMonitorInvocations.length
+                                root._pendingMonitorInvocations[modelData] = invocation_ids
+                                root._maximumPendingInvocations[modelData] = invocation_ids.length
                             }
                         }
                     }
@@ -97,7 +104,8 @@ Item {
                             size: 34
                             flatButtons: false
                             roundButtons: false
-                            commands: Parse.ListOfJsons(CommandHandler.get_child_commands(root.hostId, modelData, "", 0))
+                            commands: Parse.ListOfJsons(CommandHandler.get_commands_on_level(root.hostId, modelData, "", 0))
+                            visible: commands.length > 0
                             onClicked: (commandId) => CommandHandler.execute(root.hostId, commandId, [""])
 
                             Layout.alignment: Qt.AlignHCenter
@@ -128,6 +136,7 @@ Item {
                             // Default to 10 just to avoid warnings of zero length
                             // width: parent.width > 0 ? parent.width : 10
                             hostId: root.hostId
+                            category: modelData
                             monitoring_datas: HostDataManager.get_category_monitor_ids(root.hostId, modelData)
                                                              .map(monitorId => HostDataManager.get_monitoring_data(root.hostId, monitorId))
                             command_datas: CommandHandler.get_category_commands(root.hostId, modelData)

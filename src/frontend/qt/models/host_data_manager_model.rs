@@ -22,7 +22,7 @@ pub struct HostDataManagerModel {
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     command_result_received: qt_signal!(command_result: QString),
 
-    monitoring_data_received: qt_signal!(invocation_id: QString, category: QString, monitoring_data: QVariant),
+    monitoring_data_received: qt_signal!(invocation_id: u64, category: QString, monitoring_data: QVariant),
 
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     get_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
@@ -63,27 +63,28 @@ impl HostDataManagerModel {
         if self.update_receiver_thread.is_none() {
             let self_ptr = QPointer::from(&*self);
 
-            let set_data = qmetaobject::queued_callback(move |host_display_data: frontend::HostDisplayData| {
+            let set_data = qmetaobject::queued_callback(move |new_display_data: frontend::HostDisplayData| {
                 self_ptr.as_pinned().map(|self_pinned| {
                     // HostDataModel cannot be passed between threads so parsing happens here.
 
                     let old_data = std::mem::replace(
-                        self_pinned.borrow_mut().display_data.hosts.get_mut(&host_display_data.name).unwrap(),
-                        host_display_data.clone(),
+                        self_pinned.borrow_mut().display_data.hosts.get_mut(&new_display_data.name).unwrap(),
+                        new_display_data.clone(),
                     );
 
-                    if old_data.platform.is_unset() && !host_display_data.platform.is_unset() {
+                    // If the platform data was unset before, it means that the host was just initialized.
+                    if old_data.platform.is_unset() && !new_display_data.platform.is_unset() {
                         self_pinned.borrow().host_platform_initialized(QString::from(old_data.name.clone()));
                     }
 
-                    for command_result in host_display_data.command_results.values() {
+                    for command_result in new_display_data.command_results.values() {
                         let json = QString::from(serde_json::to_string(command_result).unwrap());
                         self_pinned.borrow().command_result_received(json);
                     }
 
-                    for (monitor_id, new_monitor_data) in host_display_data.monitoring_data.iter() {
+                    for (monitor_id, new_monitor_data) in new_display_data.monitoring_data.iter() {
                         let last_data_point = new_monitor_data.values.back().unwrap();
-                        self_pinned.borrow().monitoring_data_received(QString::from(last_data_point.invocation_id.to_string()),
+                        self_pinned.borrow().monitoring_data_received(last_data_point.invocation_id,
                                                                       QString::from(new_monitor_data.display_options.category.clone()),
                                                                       new_monitor_data.to_qvariant());
 
@@ -96,14 +97,14 @@ impl HostDataManagerModel {
 
                                 if new_criticality != old_criticality {
                                     self_pinned.borrow().monitor_state_changed(
-                                        QString::from(host_display_data.name.clone()),
+                                        QString::from(new_display_data.name.clone()),
                                         QString::from(monitor_id.clone()),
                                         QString::from(new_criticality.to_string())
                                     );
                                 }
                             },
                             None => self_pinned.borrow().monitor_state_changed(
-                                QString::from(host_display_data.name.clone()),
+                                QString::from(new_display_data.name.clone()),
                                 QString::from(monitor_id.clone()),
                                 QString::from(new_criticality.to_string())
                             ),
