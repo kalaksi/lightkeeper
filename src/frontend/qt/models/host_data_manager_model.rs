@@ -6,6 +6,7 @@ extern crate qmetaobject;
 use qmetaobject::*;
 
 use crate::configuration;
+use crate::enums::Criticality;
 use crate::frontend;
 use crate::module::monitoring::MonitoringData;
 
@@ -25,6 +26,7 @@ pub struct HostDataManagerModel {
     monitoring_data_received: qt_signal!(invocation_id: u64, category: QString, monitoring_data: QVariant),
 
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
+    is_empty_category: qt_method!(fn(&self, host_id: QString, category: QString) -> bool),
     get_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
@@ -137,6 +139,7 @@ impl HostDataManagerModel {
         QString::from("{}")
     }
 
+    // Get monitoring data as a QVariant.
     fn get_monitoring_data(&self, host_id: QString, monitor_id: QString) -> QVariant {
         let monitor_id = monitor_id.to_string();
 
@@ -144,6 +147,7 @@ impl HostDataManagerModel {
         host.monitoring_data.get(&monitor_id).unwrap().to_qvariant()
     }
 
+    // Get list of monitors for category.
     fn get_category_monitor_ids(&self, host_id: QString, category: QString) -> QVariantList {
         let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
         let category = category.to_string();
@@ -159,7 +163,17 @@ impl HostDataManagerModel {
         result
     }
 
-    // Get a readily sorted list of unique categories for a host
+    fn is_empty_category(&self, host_id: QString, category: QString) -> bool {
+        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        let category = category.to_string();
+
+        host.monitoring_data.values()
+                            .filter(|monitor_data| monitor_data.display_options.category == category)
+                            .all(|monitor_data| monitor_data.values.iter().all(|data_point| data_point.criticality == Criticality::Ignore ||
+                                                                                            data_point.is_empty()))
+    }
+
+    // Get a readily sorted list of unique categories for a host. Gathered from the monitoring data.
     fn get_categories(&self, host_id: QString) -> QVariantList {
         let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
 

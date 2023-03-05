@@ -34,6 +34,7 @@ Item {
     Connections {
         target: HostDataManager
         function onMonitoring_data_received(invocation_id, category, monitoring_data_qv) {
+            // Keep track of ongoing monitor invocations.
             if (root._pendingMonitorInvocations[category] === undefined) {
                 root._pendingMonitorInvocations[category] = []
             }
@@ -43,6 +44,9 @@ Item {
                 // Remove from array of pending monitor invocations.
                 root._pendingMonitorInvocations[category].splice(index, 1)
             }
+
+            // Refresh list of categories.
+            root._categories = getCategories()
         }
     }
 
@@ -58,7 +62,6 @@ Item {
             columnSpacing: root.columnSpacing
 
             Repeater {
-                // TODO: hide empty categories
                 model: root._categories
 
                 GroupBox {
@@ -163,6 +166,12 @@ Item {
         if (root.hostId !== "") {
             let categories = HostDataManager.get_categories(root.hostId)
                                             .map(category_qv => category_qv.toString())
+
+            if (root.hideEmptyCategories) {
+                categories = categories.filter(category => !HostDataManager.is_empty_category(root.hostId, category))
+
+            }
+
             return categories
         }
         return []

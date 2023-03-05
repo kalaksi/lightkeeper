@@ -166,7 +166,7 @@ TableView {
                 // Reason for this Rectangle is the same as with delegate 1.
                 Rectangle {
                     x: -parent.width * 0.3
-                    width: parent.width * 1.3
+                    width: parent.width * 1.35
                     height: parent.height
                     gradient: Gradient {
                         orientation: Gradient.Horizontal

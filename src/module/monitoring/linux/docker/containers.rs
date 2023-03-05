@@ -60,21 +60,24 @@ impl MonitoringModule for Containers {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
-            let mut parent_data = DataPoint::empty();
-            let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
-            parent_data.criticality = most_critical_container.state.to_criticality();
-
             if self.ignore_compose_managed {
                 containers.retain(|container| !container.labels.contains_key("com.docker.compose.config-hash"));
             }
 
-            parent_data.multivalue = containers.iter().map(|container| {
-                let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
-                // Names may still contain a leading slash that can cause issues with docker commands.
-                point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
-                point.command_params = vec![cleanup_name(&container.names.first().unwrap_or(&container.id))];
-                point
-            }).collect();
+            let mut parent_data = DataPoint::empty();
+
+            if !containers.is_empty() {
+                let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
+                parent_data.criticality = most_critical_container.state.to_criticality();
+
+                parent_data.multivalue = containers.iter().map(|container| {
+                    let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
+                    // Names may still contain a leading slash that can cause issues with docker commands.
+                    point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
+                    point.command_params = vec![cleanup_name(&container.names.first().unwrap_or(&container.id))];
+                    point
+                }).collect();
+            }
 
             Ok(parent_data)
         }
