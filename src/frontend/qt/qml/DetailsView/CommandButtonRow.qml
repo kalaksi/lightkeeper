@@ -77,7 +77,7 @@ Item {
                 tooltip: root.menuTooltip
                 imageSource: "qrc:/main/images/button/overflow-menu"
 
-                onClicked: root.expand(!root._showCommands)
+                onClicked: !root._showCommands ? root.expand() : root.collapse()
             }
         }
     }
@@ -113,7 +113,7 @@ Item {
             StateChangeScript {
                 script: {
                     if (root.forceCollapse) {
-                        expand(false)
+                        collapse()
                     }
                 }
             }
@@ -131,13 +131,16 @@ Item {
         }
     }
 
-    function expand(doExpand) {
-        if (doExpand && !root._showCommands) {
+    function expand() {
+        if (!root._showCommands) {
             root._showBackground = true
             expandAnimation.start()
             root.expanded()
         }
-        else if (!doExpand && root._showCommands) {
+    }
+
+    function collapse() {
+        if (root._showCommands) {
             root._showCommands = false
             collapseAnimation.start()
         }
