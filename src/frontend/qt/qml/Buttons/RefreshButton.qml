@@ -55,6 +55,7 @@ Item {
                 loops: Animation.Infinite
                 duration: 1000
                 running: root.spinning
+                alwaysRunToEnd: true
             }
         }
     }

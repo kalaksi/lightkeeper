@@ -36,8 +36,8 @@ Rectangle {
             width: height
             // height: 32
             // width: 32
-            // So that small images look good. Has a performance cost.
-            mipmap: true
+            // So that small images look good. Has a performance cost and makes the image blurry.
+            // mipmap: true
 
             ColorOverlay {
                 anchors.fill: parent

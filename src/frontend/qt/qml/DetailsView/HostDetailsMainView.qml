@@ -34,17 +34,6 @@ Item {
     Connections {
         target: HostDataManager
         function onMonitoring_data_received(invocation_id, category, monitoring_data_qv) {
-            // Keep track of ongoing monitor invocations.
-            if (root._pendingMonitorInvocations[category] === undefined) {
-                root._pendingMonitorInvocations[category] = []
-            }
-
-            let index = root._pendingMonitorInvocations[category].indexOf(invocation_id)
-            if (index >= 0) {
-                // Remove from array of pending monitor invocations.
-                root._pendingMonitorInvocations[category].splice(index, 1)
-            }
-
             // Refresh list of categories.
             root._categories = getCategories()
         }
@@ -83,18 +72,44 @@ Item {
 
                     // Custom label provides more flexibility.
                     label: GroupBoxLabel {
+                        id: groupBoxLabel
                         anchors.left: groupBox.left
                         anchors.right: groupBox.right
 
                         text: TextTransform.capitalize(modelData)
                         icon: Theme.category_icon(modelData)
                         color: Theme.category_color(modelData)
-                        refreshProgress: 1.0 - root._pendingMonitorInvocations[modelData].length / root._maximumPendingInvocations[modelData]
                         onRefreshClicked: function() {
                             let invocation_ids = CommandHandler.refresh_monitors_of_category(root.hostId, modelData)
                             if (invocation_ids.length > 0) {
                                 root._pendingMonitorInvocations[modelData] = invocation_ids
                                 root._maximumPendingInvocations[modelData] = invocation_ids.length
+                                groupBoxLabel.refreshProgress = 0.0
+                            }
+                        }
+
+                        Connections {
+                            target: HostDataManager
+                            function onMonitoring_data_received(invocation_id, category, monitoring_data_qv) {
+                                // Keep track of ongoing monitor invocations.
+                                if (category === modelData &&
+                                    root._pendingMonitorInvocations[category] !== undefined &&
+                                    root._maximumPendingInvocations[category] !== undefined) {
+
+                                    let index = root._pendingMonitorInvocations[category].indexOf(invocation_id)
+                                    if (index >= 0) {
+                                        // Remove from array of pending monitor invocations.
+                                        root._pendingMonitorInvocations[category].splice(index, 1)
+                                    }
+
+                                    if (root._maximumPendingInvocations[category] > 0) {
+                                        groupBoxLabel.refreshProgress = 1.0 - root._pendingMonitorInvocations[category].length /
+                                                                              root._maximumPendingInvocations[category]
+                                    }
+                                    else {
+                                        groupBoxLabel.refreshProgress = 1.0
+                                    }
+                                }
                             }
                         }
                     }
