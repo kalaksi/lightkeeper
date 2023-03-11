@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::enums::Criticality;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -27,6 +28,8 @@ impl CommandModule for Start {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("start"),
             display_text: String::from("Start"),
+            // Only displayed if the service isn't running.
+            depends_on_criticality: vec![Criticality::Error, Criticality::Critical],
             ..Default::default()
         }
     }

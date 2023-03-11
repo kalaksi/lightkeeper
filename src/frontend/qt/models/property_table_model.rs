@@ -37,8 +37,7 @@ impl PropertyTableModel {
     pub fn update(&mut self, new_data: QVariant) {
         let mut new_data = MonitoringData::from_qvariant(new_data).unwrap();
 
-        self.begin_reset_model();
-        if let Some(old_data) = self.i_monitoring_datas.iter_mut().find(|old_data| old_data.monitor_id == new_data.monitor_id) {
+        self.begin_reset_model(); if let Some(old_data) = self.i_monitoring_datas.iter_mut().find(|old_data| old_data.monitor_id == new_data.monitor_id) {
             std::mem::swap(old_data, &mut new_data);
         }
         else {
@@ -192,19 +191,25 @@ impl QAbstractTableModel for PropertyTableModel {
             display_options: row_data.display_options.clone()
         };
 
-        let label = if row_data.display_options.use_multivalue {
-            row_data.value.label.clone()
-        }
-        else {
-            row_data.display_options.display_text.clone()
+        let label = match row_data.display_options.use_multivalue {
+            true => row_data.value.label.clone(),
+            false => row_data.display_options.display_text.clone()
         };
         let styled_value_json = serde_json::to_string(&styled_value).unwrap();
 
+        // Filter out commands that depend on specific criticality or value.
+        let command_datas = row_data.command_datas.into_iter()
+            .filter(|command| command.display_options.depends_on_criticality.is_empty() ||
+                            command.display_options.depends_on_criticality.contains(&row_data.value.criticality))
+            .filter(|command| command.display_options.depends_on_value.is_empty() ||
+                            command.display_options.depends_on_value.contains(&row_data.value.value))
+            .collect::<Vec<CommandData>>();
+ 
         match index.column() {
             0 => label.to_qvariant(),
             1 => styled_value_json.to_qvariant(),
             // TODO: Maybe avoid using JSON encoding here too?
-            2 => serde_json::to_string(&row_data.command_datas).unwrap().to_qvariant(),
+            2 => serde_json::to_string(&command_datas).unwrap().to_qvariant(),
             _ => panic!(),
         }
     }

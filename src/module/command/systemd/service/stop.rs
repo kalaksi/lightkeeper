@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::enums::Criticality;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -27,6 +28,8 @@ impl CommandModule for Stop {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("stop"),
             display_text: String::from("Stop"),
+            // Only displayed if the service is running.
+            depends_on_criticality: vec![Criticality::Normal, Criticality::Info, Criticality::Warning],
             confirmation_text: String::from("Really stop service?"),
             ..Default::default()
         }
@@ -38,7 +41,7 @@ impl CommandModule for Stop {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
                 let service = parameters.first().unwrap();
-                command = format!("sudo systemctl stop {}", service);
+                command = format!("systemctl stop {}", service);
             }
 
             if !command.is_empty() && host.settings.contains(&HostSetting::UseSudo) {

@@ -178,6 +178,7 @@ TableView {
 
                 // Row-level command buttons, aligned to the right.
                 CommandButtonRow {
+                    id: commandButtonRow
                     anchors.right: parent.right
                     // TODO: how to account for scrollbar better?
                     // For scrollbar.

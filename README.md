@@ -6,13 +6,13 @@
 - Avoid sending too many commands to keep target host logs cleaner and traffic minimal.
 
 ## UI
+- Aim for compact style. Avoid including too much information to keep the UI simple.
 - Keep the amount of navigating and clicking to a minimum.
-- Avoid including too much non-essential information to keep the UI simple.
 
 # Dependencies
 
 ## Requirements
-- Currently only linux supported
+- Currently only Linux is supported
 - Qt 5.15
 
 ## Ubuntu 22.04 packages

@@ -1,5 +1,5 @@
 use serde_derive::{Serialize, Deserialize};
-use crate::module::command::UIAction;
+use crate::{module::command::UIAction, enums::Criticality};
 use strum_macros::Display;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
@@ -26,6 +26,12 @@ pub struct DisplayOptions {
 
     /// Monitor id to attach commands to, instead of displaying on just category-level.
     pub parent_id: String,
+
+    /// Show only if related monitor's criticality is one of these.
+    /// Can be used, for example, for start and stop buttons.
+    pub depends_on_criticality: Vec<Criticality>,
+    /// Show only if related monitor's value is one of these.
+    pub depends_on_value: Vec<String>,
 
     /// For multi-level multivalues. Limits this command to specific level (i.e. specific rows) so it's not displayed on every line.
     /// Default is 0 which means that this limit is disabled.
