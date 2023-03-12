@@ -7,8 +7,8 @@ import QtQuick.Controls.Material 2.15
 Item {
     id: root
     property string imageSource: ""
-    property real imageRelativeWidth: 0.9
-    property real imageRelativeHeight: 0.9
+    property real imageRelativeWidth: 0.0
+    property real imageRelativeHeight: 0.0
     property string color: "transparent"
     property string tooltip: ""
     property bool roundButton: false
@@ -33,8 +33,12 @@ Item {
         Image {
             anchors.centerIn: parent
             source: root.imageSource
-            width: root.imageRelativeWidth * root.width
-            height: root.imageRelativeHeight * root.height
+            width: root.imageRelativeWidth > 0.0 ? root.imageRelativeWidth * root.width :
+                                                   getIconRelativeSize(root.imageSource) * root.width
+            height: root.imageRelativeHeight > 0.0 ? root.imageRelativeHeight * root.height :
+                                                     getIconRelativeSize(root.imageSource) * root.height
+            // width: 0.9 * root.width
+            // height: 0.9 * root.height
 
             ColorOverlay {
                 anchors.fill: parent
@@ -59,8 +63,10 @@ Item {
         Image {
             anchors.centerIn: parent
             source: root.imageSource
-            width: root.imageRelativeWidth * root.width
-            height: root.imageRelativeHeight * root.height
+            width: root.imageRelativeWidth > 0.0 ? root.imageRelativeWidth * root.width :
+                                                   getIconRelativeSize(root.imageSource) * root.width
+            height: root.imageRelativeHeight > 0.0 ? root.imageRelativeHeight * root.height :
+                                                     getIconRelativeSize(root.imageSource) * root.height
 
             ColorOverlay {
                 anchors.fill: parent
@@ -68,6 +74,24 @@ Item {
                 color: root.color
                 antialiasing: true
             }
+        }
+    }
+
+    // TODO: provide this info somehow in qrc or theme file along the icon's path.
+    // Icon padding/margins vary a bit so patching a better sizing here.
+    function getIconRelativeSize(resourcePath) {
+        let icon_name = resourcePath.split("/").pop()
+        if (icon_name === "start") {
+            return 0.5
+        }
+        if (icon_name === "stop") {
+            return 0.5
+        }
+        if (icon_name === "delete") {
+            return 0.8
+        }
+        else {
+            return 0.9
         }
     }
 }

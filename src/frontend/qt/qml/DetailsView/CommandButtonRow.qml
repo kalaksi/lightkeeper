@@ -11,7 +11,7 @@ Item {
     property var commands: []
     property int size: 24
     property int buttonSize: size * 0.95
-    property bool flatButtons: true
+    property bool flatButtons: false
     property bool roundButtons: true
     property bool collapsible: false
     // Provides a mechanism for forcing the expanded command bar to collapse.
