@@ -52,6 +52,7 @@ Item {
             imageSource: "qrc:/main/images/button/refresh"
             imageRelativeWidth: 0.8
             imageRelativeHeight: 0.8
+            flatButton: true
             tooltip: "Refresh"
             onClicked: root.refreshClicked()
             visible: root.showRefreshButton
@@ -61,6 +62,7 @@ Item {
             anchors.rightMargin: 5
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/window-new"
+            flatButton: true
             tooltip: "Open in new window"
             onClicked: root.openInWindowClicked()
             visible: root.showOpenInWindowButton
@@ -69,6 +71,7 @@ Item {
         ImageButton {
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/maximize"
+            flatButton: true
             tooltip: "Maximize"
             onClicked: {
                 root.maximizeClicked()
@@ -80,6 +83,7 @@ Item {
         ImageButton {
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/minimize"
+            flatButton: true
             tooltip: "Minimize"
             onClicked: {
                 root.minimizeClicked()
@@ -94,6 +98,7 @@ Item {
             color: Qt.darker(Material.foreground, 1.10)
             imageRelativeWidth: 0.5
             imageRelativeHeight: 0.8
+            flatButton: true
             tooltip: "Close"
             onClicked: root.closeClicked()
             visible: root.showCloseButton

@@ -12,7 +12,7 @@ Item {
     property string color: "transparent"
     property string tooltip: ""
     property bool roundButton: false
-    property bool flatButton: true
+    property bool flatButton: false
 
     width: 0.8 * parent.height
     height: width
@@ -37,9 +37,6 @@ Item {
                                                    getIconRelativeSize(root.imageSource) * root.width
             height: root.imageRelativeHeight > 0.0 ? root.imageRelativeHeight * root.height :
                                                      getIconRelativeSize(root.imageSource) * root.height
-            // width: 0.9 * root.width
-            // height: 0.9 * root.height
-
             ColorOverlay {
                 anchors.fill: parent
                 source: parent
@@ -57,7 +54,7 @@ Item {
         onClicked: root.clicked()
 
         ToolTip.visible: root.tooltip !== "" && hovered
-        ToolTip.delay: 800
+        ToolTip.delay: Theme.tooltip_delay()
         ToolTip.text: root.tooltip
 
         Image {

@@ -180,7 +180,7 @@ TableView {
                 CommandButtonRow {
                     id: commandButtonRow
                     anchors.right: parent.right
-                    // TODO: how to account for scrollbar better?
+                    // TODO: how to account for scrollbar so margin is not used when scrollbar is not visible?
                     // For scrollbar.
                     anchors.rightMargin: _marginRight
                     size: root.rowHeight
@@ -189,7 +189,6 @@ TableView {
                     menuTooltip: "Commands"
                     commands: parsedCommands
                     forceCollapse: root.expandedCommandRow !== row
-
 
                     onClicked: function(commandId, params) {
                         CommandHandler.execute(root.hostId, commandId, params)

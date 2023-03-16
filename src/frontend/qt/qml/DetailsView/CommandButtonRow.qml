@@ -53,6 +53,7 @@ Item {
         Row {
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
+            spacing: 1
 
             Repeater {
                 model: !root.collapsible || root._showCommands ?  root.commands : root._alwaysShownCommands
