@@ -37,7 +37,8 @@ impl PropertyTableModel {
     pub fn update(&mut self, new_data: QVariant) {
         let mut new_data = MonitoringData::from_qvariant(new_data).unwrap();
 
-        self.begin_reset_model(); if let Some(old_data) = self.i_monitoring_datas.iter_mut().find(|old_data| old_data.monitor_id == new_data.monitor_id) {
+        self.begin_reset_model();
+        if let Some(old_data) = self.i_monitoring_datas.iter_mut().find(|old_data| old_data.monitor_id == new_data.monitor_id) {
             std::mem::swap(old_data, &mut new_data);
         }
         else {

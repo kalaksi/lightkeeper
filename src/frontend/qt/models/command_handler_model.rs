@@ -129,9 +129,8 @@ impl CommandHandlerModel {
         }
         else {
             self.confirmation_dialog_opened(QString::from(display_options.confirmation_text), host_id, command_id, parameters);
+            return 0
         }
-
-        return 0
     }
 
     fn execute_confirmed(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64 {
