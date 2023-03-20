@@ -19,53 +19,26 @@ ApplicationWindow {
 
     Material.theme: Material.System
 
-    // TODO: Use Connections component instead?
-    Component.onCompleted: {
-        _dialogInvocationIds = {}
+    Connections {
+        target: HostDataManager
 
-        // Set up confirmation dialog on signal.
-        CommandHandler.confirmation_dialog_opened.connect((text, host_id, command_id, command_params) => {
-            confirmationDialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
-            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.execute_confirmed(host_id, command_id, command_params))
-        })
-
-        // Starts the thread that receives host state updates in the backend.
-        HostDataManager.receive_updates()
-
-        HostDataManager.update_received.connect((hostId) => {
+        function onUpdate_received(hostId) {
             _hostTableModel.data_changed_for_host(hostId)
 
             if (hostId === detailsView.hostId) {
                 detailsView.refresh()
             }
-        })
+        }
 
-        HostDataManager.host_platform_initialized.connect((hostId) => {
+        function onHost_platform_initialized(hostId) {
             CommandHandler.refresh_monitors(hostId)
-        })
+        }
 
-        HostDataManager.monitor_state_changed.connect((hostId, monitorId, newCriticality) => {
+        function onMonitor_state_changed(hostId, monitorId, newCriticality) {
             hostTable.highlightMonitor(hostId, monitorId, newCriticality)
-        })
+        }
 
-        _hostTableModel.selected_row_changed.connect(() => {
-            detailsView.hostId = _hostTableModel.get_selected_host_id()
-        })
-
-        _hostTableModel.selection_activated.connect(() => {
-            animateShowDetails.start()
-        })
-
-        _hostTableModel.selection_deactivated.connect(() => {
-            animateHideDetails.start()
-        })
-
-        CommandHandler.details_dialog_opened.connect((invocationId) => {
-            let instanceId = detailsDialogManager.create()
-            _dialogInvocationIds[invocationId] = instanceId
-        })
-
-        HostDataManager.command_result_received.connect((commandResultJson) => {
+        function onCommand_result_received(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
 
             if (commandResult.criticality !== "Normal") {
@@ -85,7 +58,46 @@ ApplicationWindow {
             else {
                 detailsView.refreshSubview(commandResult)
             }
-        })
+        }
+    }
+
+    Connections {
+        target: CommandHandler
+
+        // Set up confirmation dialog on signal.
+        function onConfirmation_dialog_opened(text, hostId, commandId, commandParams) {
+            confirmationDialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
+            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.execute_confirmed(host_id, command_id, command_params))
+        }
+
+        function onDetails_dialog_opened(invocationId) {
+            let instanceId = detailsDialogManager.create()
+            _dialogInvocationIds[invocationId] = instanceId
+        }
+    }
+
+    Connections {
+        target: _hostTableModel
+
+        function onSelected_row_changed() {
+            detailsView.hostId = _hostTableModel.get_selected_host_id()
+        }
+
+        function onSelection_activated() {
+            animateShowDetails.start()
+        }
+
+        function onSelection_deactivated() {
+            animateHideDetails.start()
+        }
+    }
+
+
+    Component.onCompleted: {
+        _dialogInvocationIds = {}
+
+        // Starts the thread that receives host state updates in the backend.
+        HostDataManager.receive_updates()
     }
 
     Item {

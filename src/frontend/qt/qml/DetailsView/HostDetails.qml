@@ -24,14 +24,16 @@ Item {
     signal minimizeClicked()
     signal openInNewWindowClicked(invocationId: string, text: string, errorText: string, criticality: string)
 
-    Component.onCompleted: {
-        CommandHandler.details_subview_opened.connect((headerText, invocationId) => {
-            openTextView(headerText, invocationId)
-        })
+    Connections {
+        target: CommandHandler
 
-        CommandHandler.logs_subview_opened.connect((headerText, invocationId) => {
+        function onDetails_subview_opened(headerText, invocationId) {
+            openTextView(headerText, invocationId)
+        }
+
+        function onLogs_subview_opened(headerText, invocationId) {
             openLogView(headerText, invocationId)
-        })
+        }
     }
 
 
