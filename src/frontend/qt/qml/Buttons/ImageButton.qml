@@ -25,6 +25,7 @@ Item {
         anchors.centerIn: parent
         visible: roundButton === false
         onClicked: root.clicked()
+        focusPolicy: Qt.NoFocus
 
         ToolTip.visible: root.tooltip !== "" && hovered
         ToolTip.delay: Theme.tooltip_delay()
@@ -47,11 +48,14 @@ Item {
     }
 
     RoundButton {
+        // TODO: For some reason, the hover effect is not working on the RoundButton by default.
+
         flat: root.flatButton
         anchors.fill: parent
         anchors.centerIn: parent
         visible: roundButton === true
         onClicked: root.clicked()
+        focusPolicy: Qt.NoFocus
 
         ToolTip.visible: root.tooltip !== "" && hovered
         ToolTip.delay: Theme.tooltip_delay()

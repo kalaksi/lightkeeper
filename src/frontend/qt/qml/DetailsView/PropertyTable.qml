@@ -34,17 +34,25 @@ TableView {
     clip: true
     topMargin: Theme.groupbox_margins()
     bottomMargin: Theme.groupbox_margins()
-
-    ScrollBar.vertical: ScrollBar {
-        id: scrollBar
-    }
+    implicitHeight: rowHeight * model.rowCount()
 
     model: PropertyTableModel {
         monitoring_datas: root.monitoring_datas
         command_datas: root.command_datas
     }
 
-    implicitHeight: rowHeight * model.rowCount()
+
+    ScrollBar.vertical: ScrollBar {
+        id: scrollBar
+    }
+
+    Connections {
+        target: HostDataManager
+        function onCommand_result_received(commandResultJson) {
+            let commandResult = JSON.parse(commandResultJson)
+            root.model.end_command_cooldown(commandResult.invocation_id)
+        }
+    }
 
     delegate: DelegateChooser {
         id: delegateChooser
@@ -183,20 +191,52 @@ TableView {
                     // TODO: how to account for scrollbar so margin is not used when scrollbar is not visible?
                     // For scrollbar.
                     anchors.rightMargin: _marginRight
-                    size: root.rowHeight
                     visible: parsedCommands.length > 0
+
+                    hostId: root.hostId
+                    size: root.rowHeight
                     collapsible: true
-                    menuTooltip: "Commands"
+                    menuTooltip: "More commands..."
                     commands: parsedCommands
                     forceCollapse: root.expandedCommandRow !== row
-
-                    onClicked: function(commandId, params) {
-                        CommandHandler.execute(root.hostId, commandId, params)
-                    }
                     onExpanded: function() {
                         root.expandedCommandRow = row
                     }
+
+                    onClicked: function(commandId, params) {
+                        let invocationId = CommandHandler.execute(root.hostId, commandId, params)
+                        let buttonIdentifier = commandId + params.join("")
+                        root.model.start_command_cooldown(buttonIdentifier, invocationId)
+
+                        // Does nothing if timer is already running.
+                        cooldownTimer.start()
+                    }
+
+                    Connections {
+                        target: cooldownTimer
+                        function onTriggered() {
+                            let cooldowns = JSON.parse(root.model.get_command_cooldowns(row))
+                            if (Object.keys(cooldowns).length > 0) {
+                                commandButtonRow.updateCooldowns(cooldowns)
+                            }
+                        }
+                    }
                 }
+            }
+        }
+    }
+
+    // Countdown timer for the cooldown canvas animation
+    Timer {
+        id: cooldownTimer
+
+        interval: 50
+        repeat: true
+        running: false
+        onTriggered: {
+            let cooldownCount = root.model.decrease_command_cooldowns(interval)
+            if (cooldownCount === 0) {
+                cooldownTimer.stop()
             }
         }
     }

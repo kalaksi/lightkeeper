@@ -124,7 +124,6 @@ Item {
                             roundButtons: false
                             commands: Parse.ListOfJsons(CommandHandler.get_commands_on_level(root.hostId, modelData, "", 0))
                             visible: commands.length > 0
-                            onClicked: (commandId) => CommandHandler.execute(root.hostId, commandId, [""])
 
                             Layout.alignment: Qt.AlignHCenter
                         }

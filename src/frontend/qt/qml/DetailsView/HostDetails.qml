@@ -202,7 +202,7 @@ Item {
             textView.errorText = commandResult.error
             textView.criticality = commandResult.criticality
         }
-        else {
+        else if (logView.visible) {
             logView.text = commandResult.message
             logView.errorText = commandResult.error
             logView.criticality = commandResult.criticality

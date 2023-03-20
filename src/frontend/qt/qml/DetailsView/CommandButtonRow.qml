@@ -8,6 +8,7 @@ import "../Buttons"
 
 Item {
     id: root
+    property string hostId: ""
     property var commands: []
     property int size: 24
     property int buttonSize: size * 0.95
@@ -19,6 +20,8 @@ Item {
     property bool forceCollapse: false
     property string menuTooltip: "More..."
     property int animationDuration: 150
+
+    property var _commandCooldowns: {}
     property bool _showBackground: false
     property bool _showCommands: false
     property var _alwaysShownCommands: commands.filter(command => Theme.allow_collapsing_command(command.command_id) === "0")
@@ -31,8 +34,11 @@ Item {
 
     signal clicked(string commandId, var params)
     signal expanded()
+    signal cooldownsUpdated()
 
     Component.onCompleted: {
+        root._commandCooldowns = {}
+
         // No sense in allowing only 1 command to collapse.
         if (root.commands.length < 2) {
             root.collapsible = false
@@ -57,14 +63,28 @@ Item {
 
             Repeater {
                 model: !root.collapsible || root._showCommands ?  root.commands : root._alwaysShownCommands
-                ImageButton {
-                    width: root.buttonSize
-                    height: root.buttonSize
-                    flatButton: root.flatButtons
+
+                CommandButton {
+                    property string buttonIdentifier: modelData.command_id + modelData.command_params.join("")
+
+                    id: commandButton
+                    size: root.buttonSize
                     roundButton: root.roundButtons
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
-                    onClicked: root.clicked(modelData.command_id, modelData.command_params)
+                    cooldownPercent: root._getButtonCooldown(buttonIdentifier)
+                    onClicked: () => root.clicked(modelData.command_id, modelData.command_params)
+
+                    Connections {
+                        target: root
+                        function onCooldownsUpdated() {
+                            let newValue = root._getButtonCooldown(buttonIdentifier)
+                            if (newValue !== cooldownPercent) {
+                                cooldownPercent = newValue
+                            }
+                        }
+                    }
+
                 }
             }
 
@@ -145,5 +165,21 @@ Item {
             root._showCommands = false
             collapseAnimation.start()
         }
+    }
+
+    function updateCooldowns(cooldowns) {
+        // Update _commandCooldowns by modifying the existing object.
+        // This avoids the need to reassign the property, which would cause everything to be re-rendered.
+        for (const buttonIdentifier of Object.keys(cooldowns)) {
+            root._commandCooldowns[buttonIdentifier] = cooldowns[buttonIdentifier]
+        }
+        root.cooldownsUpdated()
+    }
+
+    function _getButtonCooldown(buttonIdentifier) {
+        if (root._commandCooldowns[buttonIdentifier] !== undefined) {
+            return root._commandCooldowns[buttonIdentifier]
+        }
+        return 0.0
     }
 }
