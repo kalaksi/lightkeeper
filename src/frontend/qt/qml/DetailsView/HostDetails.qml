@@ -19,10 +19,12 @@ Item {
     // we need to provide the invocation id for state updates since there can be multiple dialogs open.
     property string _subviewInvocationId: ""
 
+
     signal closeClicked()
     signal maximizeClicked()
     signal minimizeClicked()
     signal openInNewWindowClicked(invocationId: string, text: string, errorText: string, criticality: string)
+
 
     Connections {
         target: CommandHandler
@@ -35,7 +37,6 @@ Item {
             openLogView(headerText, invocationId)
         }
     }
-
 
     Rectangle {
         anchors.fill: parent

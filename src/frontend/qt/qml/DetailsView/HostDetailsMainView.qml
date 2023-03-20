@@ -26,6 +26,10 @@ Item {
     property var _maximumPendingInvocations: {}
 
 
+    onHostIdChanged: {
+        root._categories = getCategories()
+    }
+
     Component.onCompleted: {
         root._pendingMonitorInvocations = {}
         root._maximumPendingInvocations = {}
