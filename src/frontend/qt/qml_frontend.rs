@@ -60,6 +60,7 @@ impl QmlFrontend {
         engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
         engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
         engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
+        // TODO: move to QML? (like PropertyTableModel)
         engine.set_object_property(QString::from("_hostTableModel"), qt_data_host_table.pinned());
         engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
         engine.exec();

@@ -7,6 +7,7 @@ use std::{
 };
 use crate::Host;
 use crate::file_handler;
+use crate::host::HostSetting;
 use crate::module::ModuleSpecification;
 use crate::module::connection::*;
 
@@ -77,8 +78,11 @@ impl ConnectionManager {
                     }
                 };
 
-                // Not normally enabled as this may log passwords.
-                // log::debug!("Connector request received for {}: {}", request.connector_id, request.message);
+
+                if request.request_type == RequestType::Exit {
+                    log::debug!("Gracefully exiting connection manager thread");
+                    return;
+                }
 
                 // Requests with no connector dependency are directly executed here.
                 if request.connector_id.is_none() {
@@ -145,8 +149,8 @@ impl ConnectionManager {
                                 },
                                 Err(error) => Err(error.to_string()),
                             };
-                            // TODO
                         },
+                        RequestType::Exit => panic!(),
                     }
 
                     responses.push(response_result);
@@ -176,9 +180,23 @@ pub struct ConnectorRequest {
     pub response_handler: ResponseHandlerCallback,
 }
 
-#[derive(Debug, Clone)]
+impl ConnectorRequest {
+    pub fn exit_token() -> Self {
+        ConnectorRequest {
+            connector_id: None,
+            source_id: String::new(),
+            host: Host::new(&String::new(), &String::from("127.0.0.1"), &String::new(), &Vec::new()).unwrap(),
+            messages: Vec::new(),
+            request_type: RequestType::Exit,
+            response_handler: Box::new(|_| ()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum RequestType {
     Command,
     Download,
     Upload,
+    Exit,
 }

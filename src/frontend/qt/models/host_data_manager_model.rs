@@ -121,6 +121,11 @@ impl HostDataManagerModel {
             let thread = std::thread::spawn(move || {
                 loop {
                     let received_data = receiver.recv().unwrap();
+
+                    if received_data.exit_thread {
+                        ::log::debug!("Gracefully exiting UI host state receiver thread");
+                        return;
+                    }
                     set_data(received_data);
                 }
             });

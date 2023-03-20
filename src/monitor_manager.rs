@@ -212,6 +212,7 @@ impl MonitorManager {
             module_spec: monitor.get_module_spec(),
             data_point: Some(data_point),
             command_result: None,
+            exit_thread: false,
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to state manager: {}", error);
         });

@@ -40,6 +40,16 @@ pub struct HostDisplayData {
     pub ip_address: IpAddr,
     pub monitoring_data: HashMap<String, MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
+    pub exit_thread: bool,
+}
+
+impl HostDisplayData {
+    pub fn exit_token() -> Self {
+        HostDisplayData {
+            exit_thread: true,
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for HostDisplayData {
@@ -52,6 +62,7 @@ impl Default for HostDisplayData {
             ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             monitoring_data: HashMap::new(),
             command_results: HashMap::new(),
+            exit_thread: false,
         }
     }
 }

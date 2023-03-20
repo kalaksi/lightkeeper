@@ -23,11 +23,13 @@ use crate::{
 
 const DATA_POINT_BUFFER_SIZE: usize = 4;
 
+
+// TODO: Split to StateManager and HostCollection?
 pub struct HostManager {
     hosts: Arc<Mutex<HostCollection>>,
     /// Provides sender handles for sending StateUpdateMessages to this instance.
     data_sender_prototype: mpsc::Sender<StateUpdateMessage>,
-    _receiver_handle: Option<thread::JoinHandle<()>>,
+    receiver_handle: Option<thread::JoinHandle<()>>,
     observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
 }
 
@@ -42,9 +44,14 @@ impl HostManager {
         HostManager {
             hosts: shared_hosts,
             data_sender_prototype: sender,
-            _receiver_handle: Some(handle),
+            receiver_handle: Some(handle),
             observers: observers,
         }
+    }
+
+    pub fn join(&mut self) {
+        self.receiver_handle.take().expect("Thread has already stopped.")
+                            .join().unwrap();
     }
 
     pub fn add_host(&mut self, host: Host) -> Result<(), String> {
@@ -79,6 +86,14 @@ impl HostManager {
                         return;
                     }
                 };
+
+                if message.exit_thread {
+                    log::debug!("Gracefully exiting state manager thread.");
+                    for observer in observers.lock().unwrap().iter() {
+                        observer.send(frontend::HostDisplayData::exit_token()).unwrap();
+                    }
+                    return;
+                }
 
                 let mut hosts = hosts.lock().unwrap();
 
@@ -129,6 +144,7 @@ impl HostManager {
                             monitoring_data: host_state.monitor_data.clone(),
                             command_results: host_state.command_results.clone(),
                             status: host_state.status,
+                            exit_thread: false,
                         }).unwrap();
                     }
                 }
@@ -166,6 +182,7 @@ impl HostManager {
                 monitoring_data: state.monitor_data.clone(),
                 command_results: state.command_results.clone(),
                 status: state.status,
+                exit_thread: false,
             });
         }
 
@@ -194,6 +211,7 @@ impl Default for HostManager {
     }
 }
 
+#[derive(Default)]
 pub struct StateUpdateMessage {
     pub host_name: String,
     pub display_options: frontend::DisplayOptions,
@@ -201,6 +219,16 @@ pub struct StateUpdateMessage {
     // Only used with MonitoringModule.
     pub data_point: Option<DataPoint>,
     pub command_result: Option<CommandResult>,
+    pub exit_thread: bool,
+}
+
+impl StateUpdateMessage {
+    pub fn exit_token() -> Self {
+        StateUpdateMessage {
+            exit_thread: true,
+            ..Default::default()
+        }
+    }
 }
 
 

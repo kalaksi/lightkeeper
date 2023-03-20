@@ -121,8 +121,15 @@ fn main() {
     frontend.setup_command_handler(command_handler, monitor_manager, config.display_options.clone());
     frontend.start();
 
+    // Shut down threads.
+    connection_manager.new_request_sender()
+                      .send(connection_manager::ConnectorRequest::exit_token())
+                      .unwrap_or_else(|error| log::error!("Couldn't send message to connection manager: {}", error));
     connection_manager.join();
-    // TODO: enable again when StateManager and HostCollection is split off host manager.
-    // host_manager.join();
 
+    host_manager.borrow_mut()
+                .new_state_update_sender()
+                .send(host_manager::StateUpdateMessage::exit_token())
+                .unwrap_or_else(|error| log::error!("Couldn't send message to state manager: {}", error));
+    host_manager.borrow_mut().join();
 }

@@ -144,6 +144,7 @@ impl CommandHandler {
                 module_spec: command.get_module_spec(),
                 data_point: None,
                 command_result: Some(command_result),
+                exit_thread: false,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
             });
@@ -204,6 +205,7 @@ impl CommandHandler {
                 module_spec: command.get_module_spec(),
                 data_point: None,
                 command_result: Some(CommandResult::new(String::from("Successfully modified file"))),
+                exit_thread: false,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
             });
@@ -263,6 +265,7 @@ impl CommandHandler {
                         module_spec: command.get_module_spec(),
                         data_point: None,
                         command_result: Some(CommandResult::new_critical_error(error.clone())),
+                        exit_thread: false,
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to state manager: {}", error);
                     });
@@ -293,6 +296,7 @@ impl CommandHandler {
                 module_spec: command.get_module_spec(),
                 data_point: None,
                 command_result: Some(command_result),
+                exit_thread: false,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
             });

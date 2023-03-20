@@ -41,11 +41,13 @@ pub fn create_file(host: &Host, remote_file_path: &String, file_contents: Vec<u8
 
 /// Removes local copy of the file.
 pub fn remove_file(local_file_path: &String) -> io::Result<()> {
+    // TODO: path validation and limits just in case?
     fs::remove_file(local_file_path)?;
     Ok(())
 }
 
 pub fn read_file(local_file_path: &String) -> io::Result<(FileMetadata, Vec<u8>)> {
+    // TODO: path validation and limits just in case?
     let contents = fs::read(&local_file_path)?;
 
     let metadata_path = get_metadata_path(local_file_path);
