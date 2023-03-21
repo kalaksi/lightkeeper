@@ -89,6 +89,24 @@ impl ModuleFactory {
         all_versions.last().unwrap_or_else(|| panic!("Connector module '{}' was not found.", module_id)).to_owned()
     }
 
+    pub fn validate_modules(&self) {
+        // Validate monitoring modules.
+        for (module_spec, constructor) in &self.monitor_constructors {
+            let new_monitor = constructor(&HashMap::new());
+            if let Err(error) = new_monitor.get_display_options().validate() {
+                panic!("Error in monitoring module '{}' display_options: {}", module_spec.id, error);
+            }
+        }
+
+        // Validate command modules.
+        for (module_spec, constructor) in &self.command_constructors {
+            let new_command = constructor(&HashMap::new());
+            if let Err(error) = new_command.get_display_options().validate() {
+                panic!("Error in command module '{}' display_options: {}", module_spec.id, error);
+            }
+        }
+    }
+
     fn load_modules(&mut self) {
         self.connector_constructors.insert(connection::Ssh2::get_metadata().module_spec, connection::Ssh2::new_connection_module);
 
@@ -122,6 +140,7 @@ impl ModuleFactory {
         self.command_constructors.insert(command::systemd::service::Start::get_metadata().module_spec, command::systemd::service::Start::new_command_module);
         self.command_constructors.insert(command::systemd::service::Stop::get_metadata().module_spec, command::systemd::service::Stop::new_command_module);
 
+        self.validate_modules();
         log::info!("Loaded {} command modules, {} monitoring modules and {} connector modules",
                    self.command_constructors.len(), self.monitor_constructors.len(), self.connector_constructors.len());
 

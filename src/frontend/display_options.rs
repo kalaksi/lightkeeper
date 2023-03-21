@@ -1,19 +1,21 @@
 use serde_derive::{Serialize, Deserialize};
-use crate::{module::command::UIAction, enums::Criticality};
 use strum_macros::Display;
+
+use crate::{
+    module::command::UIAction,
+    enums::Criticality,
+    utils::string_validation,
+};
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct DisplayOptions {
     pub display_style: DisplayStyle,
     /// Text to display in front of the value.
     /// For multi-values this gets displayed (not always displayed) as a header above the list of values.
-    // TODO: validate that this is always provided?
     pub display_text: String,
-    // TODO: validate for alphanumeric chars?
     pub display_icon: String,
 
     /// Category for monitor or command. Monitors and commands in same category are grouped to the same box.
-    // TODO: validate that this is always provided?
     pub category: String,
     pub unit: String,
 
@@ -48,9 +50,30 @@ impl DisplayOptions {
             ..Default::default()
         }
     }
+
+    pub fn validate(&self) -> Result<(), String> {
+        if self.display_style == DisplayStyle::Icon && self.display_icon.is_empty() {
+            return Err(String::from("Icon display style requires display_icon to be set."));
+        }
+
+        // Must be alphanumeric.
+        if !self.display_icon.is_empty() && !string_validation::is_alphanumeric_with_dash(&self.display_icon) {
+            return Err(String::from("display_icon must only contain alphanumeric characters and dashes."));
+        }
+
+        if self.display_text.is_empty() {
+            return Err(String::from("display_text must be set."));
+        }
+
+        if self.category.is_empty() {
+            return Err(String::from("Category must be set."));
+        }
+
+        Ok(())
+    }
 }
 
-#[derive(Clone, Serialize, Deserialize, Display)]
+#[derive(Clone, Serialize, Deserialize, Display, PartialEq)]
 pub enum DisplayStyle {
     Text,
     StatusUpDown,

@@ -43,8 +43,17 @@ impl Host {
             }
             else {
                 // Resolve FQDN and get the first IP address.
-                // TODO: get rid of unwraps.
-                self.ip_address = format!("{}:0", self.fqdn).to_socket_addrs().unwrap().next().unwrap().ip();
+                let mut addresses = match format!("{}:0", self.fqdn).to_socket_addrs() {
+                    Ok(addresses) => addresses,
+                    Err(error) => return Err(format!("Failed to resolve: {}", error)),
+                };
+
+                if addresses.len() > 0 {
+                    self.ip_address = addresses.next().unwrap().ip();
+                }
+                else {
+                    return Err(format!("Failed to resolve: No addresses found."));
+                }
                 return Ok(());
             }
         }

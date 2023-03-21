@@ -228,7 +228,6 @@ impl CommandHandler {
 
     }
 
-    // TODO: better naming for response handlers
     fn get_response_handler_text_editor(host: Host, command: Command,
                                         preferences: Preferences,
                                         request_sender: Sender<ConnectorRequest>,
