@@ -20,7 +20,7 @@ pub struct Ssh2 {
     is_initialized: bool,
     port: u16,
     username: String,
-    // password: String,
+    password: Option<String>,
 }
 
 impl Ssh2 {
@@ -33,7 +33,6 @@ impl Ssh2 {
                 log::error!("Waiting EOF failed: {}", error);
             }
         }
-
 
         if let Err(error) = channel.close() {
             log::error!("Error while closing channel: {}", error);
@@ -48,22 +47,21 @@ impl Ssh2 {
 
 impl Module for Ssh2 {
     fn new(settings: &HashMap<String, String>) -> Self {
-        // TODO: error handling?
+        // This can fail for unknown reasons, no way to propery handle the error.
         let session = Session::new().unwrap();
 
         Ssh2 {
             session: session,
             is_initialized: false,
             port: 22,
-            username: settings.get("username").unwrap_or(&String::from("")).clone(),
-            // password: settings.get("password").unwrap_or(&String::from("")).clone(),
+            username: settings.get("username").unwrap().clone(),
+            password: settings.get("password").map(|s| s.clone()),
         }
     }
 }
 
 impl ConnectionModule for Ssh2 {
     fn connect(&mut self, address: &IpAddr) -> Result<(), String> {
-        // TODO: support ipv6
         // TODO: reconnect when server side has disconnected
 
         if self.is_initialized {
@@ -82,9 +80,17 @@ impl ConnectionModule for Ssh2 {
             return Err(format!("Handshake error: {}", error));
         };
 
-        if let Err(error) = self.session.userauth_agent(self.username.as_str()) {
-            return Err(format!("Error when communicating with authentication agent: {}", error));
-        };
+        if self.password.is_some() {
+            if let Err(error) = self.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str()) {
+                return Err(format!("Authentication error: {}", error));
+            };
+        }
+        else {
+            log::debug!("Password is not set, trying authentication with first key found in SSH agent");
+            if let Err(error) = self.session.userauth_agent(self.username.as_str()) {
+                return Err(format!("Error when communicating with SSH agent: {}", error));
+            };
+        }
 
         self.is_initialized = true;
         Ok(())
