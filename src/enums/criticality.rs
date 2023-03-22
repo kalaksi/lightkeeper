@@ -1,7 +1,7 @@
 use serde_derive::{Serialize, Deserialize};
-use strum_macros::Display;
+use strum_macros::{Display, EnumString};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize, Display)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize, Display, EnumString)]
 pub enum Criticality {
     Ignore,
     Normal,
