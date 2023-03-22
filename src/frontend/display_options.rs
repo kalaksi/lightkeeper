@@ -57,7 +57,7 @@ impl DisplayOptions {
         }
 
         // Must be alphanumeric.
-        if !self.display_icon.is_empty() && !string_validation::is_alphanumeric_with_dash(&self.display_icon) {
+        if !self.display_icon.is_empty() && !string_validation::is_alphanumeric_with(&self.display_icon, "-") {
             return Err(String::from("display_icon must only contain alphanumeric characters and dashes."));
         }
 
