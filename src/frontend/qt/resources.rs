@@ -77,7 +77,6 @@ pub fn init_resources() {
             "images/breeze/light/alarm-symbolic.svg" as "images/status/pending",
             "images/breeze/light/alarm-symbolic.svg" as "images/status/unknown",
 
-            // TODO: remove fontawesome/circle-exclamation and triangle-exclamation as unused?
             "images/breeze/light/data-information.svg" as "images/alert/info",
             "images/breeze/light/data-warning.svg" as "images/alert/warning",
             "images/breeze/light/data-error.svg" as "images/alert/error",

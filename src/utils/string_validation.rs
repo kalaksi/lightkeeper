@@ -11,7 +11,3 @@ pub fn is_alphanumeric_with(string: &String, allowed_chars: &str) -> bool {
 pub fn begins_with_dash(string: &String) -> bool {
     string.chars().next().unwrap_or(' ') == '-'
 }
-
-pub fn has_whitespace(string: &String) -> bool {
-    string.chars().any(|char| char.is_whitespace())
-}

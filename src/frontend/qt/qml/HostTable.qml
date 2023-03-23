@@ -91,17 +91,6 @@ TableView {
                 }
             }
         }
-
-        // TODO: some commands here?
-        /*
-        DelegateChoice {
-            column: 5
-            delegate: TableCell {
-                selected: root.model.selected_row === row
-                onClicked: root.model.toggle_row(row)
-            }
-        }
-        */
     }
 
     function highlightMonitor(hostId, monitorId, newCriticality) {

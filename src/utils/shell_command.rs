@@ -8,7 +8,6 @@ pub struct ShellCommand {
     pub use_sudo: bool,
 }
 
-// TODO: Use similar Into-approach elsewhere too.
 impl ShellCommand {
     pub fn new() -> ShellCommand {
         ShellCommand {

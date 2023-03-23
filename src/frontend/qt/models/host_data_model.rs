@@ -12,7 +12,6 @@ pub struct HostDataModel {
     pub name: qt_property!(QString),
     pub fqdn: qt_property!(QString),
     pub ip_address: qt_property!(QString),
-    // TODO: rename _data to _results?
     pub monitor_data: qt_property!(MonitorDataModel),
 }
 
