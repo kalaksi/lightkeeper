@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
 
+use crate::host::HostSetting;
 use crate::module::connection::ResponseMessage;
 use crate::module::platform_info::Flavor;
 use crate::{ Host, frontend };
@@ -34,7 +35,14 @@ impl MonitoringModule for Package {
 
     fn get_connector_message(&self, host: Host) -> String {
         if host.platform.is_newer_than(Flavor::Debian, "8") {
-            String::from("sudo apt list --upgradable")
+            let command = String::from("apt list --upgradable");
+
+            if host.settings.contains(&HostSetting::UseSudo) {
+                format!("sudo {}", command)
+            }
+            else {
+                command
+            }
         }
         else {
             String::new()

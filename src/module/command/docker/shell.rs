@@ -4,6 +4,7 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
+use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module("docker-shell", "0.0.1")]
@@ -33,8 +34,11 @@ impl CommandModule for Shell {
     }
 
     fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
-        // TODO: filter out all but alphanumeric characters
-        let _target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
+        let target_id = parameters.first().unwrap();
+
+        if !string_validation::is_alphanumeric(target_id) {
+            panic!("Invalid container ID: {}", target_id)
+        }
 
         // TODO
         String::new()

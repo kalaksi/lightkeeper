@@ -7,6 +7,7 @@ use crate::command_handler::{CommandHandler, CommandData};
 use crate::configuration;
 use crate::module::command::UIAction;
 use crate::monitor_manager::MonitorManager;
+use crate::utils::string_validation;
 
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
@@ -32,7 +33,7 @@ pub struct CommandHandlerModel {
     monitor_manager: MonitorManager,
     ui_display_options: configuration::DisplayOptions,
 
-    refresh_after_execution: bool,
+    // refresh_after_execution: bool,
 }
 
 impl CommandHandlerModel {
@@ -41,7 +42,7 @@ impl CommandHandlerModel {
             command_handler: command_handler,
             monitor_manager: monitor_manager,
             ui_display_options: ui_display_options,
-            refresh_after_execution: true,
+            // refresh_after_execution: true,
             ..Default::default()
         }
     }
@@ -158,11 +159,15 @@ impl CommandHandlerModel {
             },
             UIAction::Terminal => {
                 let target_id = parameters.first().unwrap();
+                if !string_validation::is_alphanumeric_with(target_id, "-") || string_validation::begins_with_dash(target_id){
+                    panic!("Invalid container name: {}", target_id)
+                }
+
+                // TODO: use ShellCommand
                 self.command_handler.open_terminal(vec![
                     String::from("ssh"),
                     String::from("-t"),
                     host_id.to_string(),
-                    // TODO: allow only alphanumeric and dashes (no spaces and no leading dash).
                     format!("sudo docker exec -it {} /bin/sh", target_id.to_string())
                 ])
             },

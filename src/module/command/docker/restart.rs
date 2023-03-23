@@ -4,6 +4,8 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
+use crate::utils::ShellCommand;
+use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module("docker-restart", "0.0.1")]
@@ -33,19 +35,20 @@ impl CommandModule for Restart {
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
-        let mut command = String::new();
+        let mut command = ShellCommand::new();
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            // TODO: filter out all but alphanumeric characters
-            let target_id = parameters.first().expect("1 parameter is mandatory and should contain a container ID");
-            command = format!("curl --unix-socket /var/run/docker.sock -X POST http://localhost/containers/{}/restart", target_id);
-
-            if host.settings.contains(&HostSetting::UseSudo) {
-                command = format!("sudo {}", command);
-            }
+        let target_id = parameters.first().unwrap();
+        if !string_validation::is_alphanumeric(target_id) {
+            panic!("Invalid container ID: {}", target_id)
         }
 
-        command
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            let url = format!("http://localhost/containers/{}/restart", target_id);
+            command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "-X", "POST", &url]);
+            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        }
+
+        command.to_string()
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

@@ -6,6 +6,7 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
+use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module("docker-image-prune", "0.0.1")]
@@ -34,16 +35,14 @@ impl CommandModule for Prune {
     }
 
     fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
-        let mut command = String::new();
+        let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command = String::from("curl --unix-socket /var/run/docker.sock -X POST http://localhost/images/prune");
-            if host.settings.contains(&HostSetting::UseSudo) {
-                command = format!("sudo {}", command);
-            }
+            command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "-X", "POST", "http://localhost/images/prune"]);
+            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
         }
 
-        command
+        command.to_string()
     }
 
     fn process_response(&self, host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

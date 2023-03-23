@@ -34,7 +34,7 @@ impl CommandModule for Update {
         todo!()
     }
 
-    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+    fn process_response(&self, _host: Host, _response: &ResponseMessage) -> Result<CommandResult, String> {
         todo!()
     }
 }

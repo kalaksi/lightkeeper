@@ -7,7 +7,6 @@ use std::{
 };
 use crate::Host;
 use crate::file_handler;
-use crate::host::HostSetting;
 use crate::module::ModuleSpecification;
 use crate::module::connection::*;
 

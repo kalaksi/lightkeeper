@@ -5,6 +5,8 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
+use crate::utils::ShellCommand;
+use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module("systemd-service-stop", "0.0.1")]
@@ -36,20 +38,24 @@ impl CommandModule for Stop {
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
-        let mut command = String::new();
+        let service = parameters.first().unwrap();
+        if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
+            string_validation::begins_with_dash(service){
+            panic!("Invalid unit name: {}", service)
+        }
+
+        let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
                 let service = parameters.first().unwrap();
-                command = format!("systemctl stop {}", service);
+                command.arguments(vec!["systemctl", "stop", service]);
             }
 
-            if !command.is_empty() && host.settings.contains(&HostSetting::UseSudo) {
-                command = format!("sudo {}", command);
-            }
+            command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
         }
 
-        command
+        command.to_string()
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

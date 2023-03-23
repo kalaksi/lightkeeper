@@ -4,6 +4,7 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
+use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module("reboot", "0.0.1")]
@@ -32,17 +33,14 @@ impl CommandModule for Reboot {
     }
 
     fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
-        let mut command = String::new();
+        let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command = String::from("reboot");
-
-            if host.settings.contains(&HostSetting::UseSudo) {
-                command = format!("sudo {}", command);
-            }
+            command.argument("reboot");
+            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
         }
 
-        command
+        command.to_string()
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

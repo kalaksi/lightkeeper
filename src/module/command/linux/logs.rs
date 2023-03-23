@@ -5,6 +5,8 @@ use crate::module::command::UIAction;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
+use crate::utils::string_validation;
+use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module("logs", "0.0.1")]
@@ -35,36 +37,36 @@ impl CommandModule for Logs {
     // Parameter 1 is for unit selection and special values "all" and "dmesg".
     // Parameter 2 is for grepping. Filters rows based on regexp.
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
-        // TODO: filter out all but alphanumeric characters
-        // TODO: validate?
-        let mut command = String::new();
+        let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command = String::from("journalctl -q -n 400");
+            command.arguments(vec!["journalctl", "-q", "-n", "400"]);
+
             if let Some(parameter1) = parameters.first() {
                 if !parameter1.is_empty() {
-                    let suffix = match parameter1.as_str() {
-                        "all" => String::from(""),
-                        "dmesg" => String::from("--dmesg"),
-                        _ => format!("-u {}", parameter1),
-                    };
+                    if !string_validation::is_alphanumeric_with(parameter1, "-_.@\\") ||
+                        string_validation::begins_with_dash(parameter1){
+                        panic!("Invalid unit name: {}", parameter1)
+                    }
 
-                    command = format!("{} {}", command, suffix);
+                    if parameter1 == "all" {
+                        // No parameter needed.
+                    } else if parameter1 == "dmesg" {
+                        command.argument("--dmesg");
+                    } else {
+                        command.arguments(vec!["-u", parameter1]);
+                    }
                 }
             }
 
             if let Some(parameter2) = parameters.get(1) {
                 if !parameter2.is_empty() {
-                    command = format!("{} -g {}", command, parameter2);
+                    command.arguments(vec!["-g", parameter2]);
                 }
-            }
-
-            if host.settings.contains(&crate::host::HostSetting::UseSudo) {
-                command = format!("sudo {}", command);
             }
         }
 
-        command
+        command.to_string()
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

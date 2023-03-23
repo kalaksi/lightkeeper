@@ -4,6 +4,7 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
+use crate::utils::ShellCommand;
 use crate::module::platform_info::Flavor;
 use lightkeeper_module::command_module;
 
@@ -32,22 +33,20 @@ impl CommandModule for Clean {
     }
 
     fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
-        let mut command = String::new();
+        let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command = match host.platform.os_flavor {
-                Flavor::Debian => String::from("apt-get clean"),
-                Flavor::Ubuntu => String::from("apt-get clean"),
-                Flavor::RedHat => String::from("yum clean all"),
-                _ => String::new(),
+            match host.platform.os_flavor {
+                Flavor::Debian => command.arguments(vec!["apt-get", "clean"]),
+                Flavor::Ubuntu => command.arguments(vec!["apt-get", "clean"]),
+                Flavor::RedHat => command.arguments(vec!["yum", "clean", "all"]),
+                _ => (),
             };
 
-            if !command.is_empty() && host.settings.contains(&HostSetting::UseSudo) {
-                command = format!("sudo {}", command);
-            }
+            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
         }
 
-        command
+        command.to_string()
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

@@ -1,11 +1,10 @@
-use std::{
-    collections::HashMap,
-};
+use std::collections::HashMap;
 use crate::enums::Criticality;
 use crate::frontend;
 use crate::host::*;
 use crate::module::*;
 use crate::module::command::*;
+use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module("docker-compose-start", "0.0.1")]
@@ -38,21 +37,19 @@ impl CommandModule for Start {
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
-        let mut command = String::new();
+        let compose_file = parameters.first().unwrap();
+        let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            let compose_file = parameters.first().unwrap();
-            command = format!("docker-compose -f {} start", compose_file);
+            command.arguments(vec!["docker-compose", "-f", compose_file, "start"]);
 
             if let Some(service_name) = parameters.get(1) {
-                command = format!("{} {}", command, service_name);
+                command.argument(service_name);
             }
 
-            if host.settings.contains(&HostSetting::UseSudo) {
-                command = format!("sudo {}", command);
-            }
+            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
         }
 
-        command
+        command.to_string()
     }
 }
