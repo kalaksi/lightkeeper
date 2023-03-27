@@ -79,14 +79,30 @@ impl MonitoringModule for Compose {
             let mut projects = HashMap::<String, Vec<DataPoint>>::new();
 
             for container in containers {
-                let project = container.labels.get("com.docker.compose.project").unwrap().clone();
+                let project = match container.labels.get("com.docker.compose.project") {
+                    Some(project) => project.clone(),
+                    None => {
+                        // Likely a container that is not used with docker-compose.
+                        log::info!("Container {} has no com.docker.compose.project label and therefore can't be used", container.id);
+                        continue;
+                    }
+                };
 
                 if !projects.contains_key(&project) {
                     projects.insert(project.clone(), Vec::new());
                 }
 
+                let working_dir = match container.labels.get("com.docker.compose.project.working_dir") {
+                    Some(working_dir) => working_dir.clone(),
+                    None => {
+                        // Some earlier Docker Compose versions don't include this label.
+                        log::error!("Container {} has no com.docker.compose.project.working_dir label and therefore can't be used", container.id);
+                        continue;
+                    }
+                };
+
                 let service = container.labels.get("com.docker.compose.service").unwrap().clone();
-                let compose_file = Path::new(container.labels.get("com.docker.compose.project.working_dir").unwrap())
+                let compose_file = Path::new(&working_dir)
                                         .join(&self.compose_file_name).to_string_lossy().to_string();
 
                 let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.state.to_string(), container.state.to_criticality());
@@ -102,7 +118,10 @@ impl MonitoringModule for Compose {
                 let mut data_points = projects.remove_entry(&project).unwrap().1;
                 data_points.sort_by(|left, right| left.label.cmp(&right.label));
 
-                let compose_file = data_points.first().unwrap().command_params[0].clone();
+                let compose_file = match data_points.first() {
+                    Some(first) => first.command_params[0].clone(),
+                    None => { log::error!("No compose-file found for project {}", project); continue; }
+                };
 
                 // Check just in case that all have the same compose-file.
                 if data_points.iter().any(|point| point.command_params[0] != compose_file) {

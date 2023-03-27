@@ -40,7 +40,7 @@ impl CommandModule for Remove {
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
         let target_id = parameters.first().unwrap();
-        if !string_validation::is_alphanumeric(target_id) {
+        if !string_validation::is_alphanumeric_with(target_id, ":-.") {
             panic!("Invalid image ID: {}", target_id)
         }
 
