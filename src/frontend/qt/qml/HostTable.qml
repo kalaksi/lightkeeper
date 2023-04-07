@@ -73,6 +73,7 @@ TableView {
                 implicitWidth: root.width * 0.20
 
                 OptionalText {
+                    anchors.fill: parent
                     placeholder: "IP address not available"
                     text: value
                 }

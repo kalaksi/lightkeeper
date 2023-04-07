@@ -164,7 +164,7 @@ TableView {
             delegate: Item {
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var parsedCommands: JSON.parse(model.value)
-                property real _marginRight: scrollBar.width + 6
+                property real _marginRight: scrollBar.width + 8
                 property bool _hasNoChildCommands: CommandHandler.get_child_command_count(root.hostId, root.category) === 0
 
                 visible: !isSeparator
