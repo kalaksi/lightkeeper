@@ -4,7 +4,7 @@ use std::{ fs, io, collections::HashMap };
 use crate::host::HostSetting;
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
     pub preferences: Preferences,
@@ -26,6 +26,7 @@ pub struct Hosts {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Preferences {
+    pub refresh_hosts_on_start: bool,
     pub use_remote_editor: bool,
     pub sudo_remote_editor: bool,
     // TODO: check for valid command.

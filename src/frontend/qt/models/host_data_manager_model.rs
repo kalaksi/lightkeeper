@@ -26,9 +26,12 @@ pub struct HostDataManagerModel {
     monitoring_data_received: qt_signal!(invocation_id: u64, category: QString, monitoring_data: QVariant),
 
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
+    get_display_data: qt_method!(fn(&self) -> QVariant),
     is_empty_category: qt_method!(fn(&self, host_id: QString, category: QString) -> bool),
     get_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+    refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
+    host_is_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
     // These methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
@@ -37,13 +40,17 @@ pub struct HostDataManagerModel {
 
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
+    i_refresh_hosts_on_start: bool,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 }
 
 impl HostDataManagerModel {
-    pub fn new(display_data: frontend::DisplayData, display_options: configuration::DisplayOptions) -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
-        let mut priorities = display_options.categories.iter().map(|(category, options)| (category.clone(), options.priority)).collect::<Vec<_>>();
+    pub fn new(display_data: frontend::DisplayData, config: configuration::Configuration) -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
+        let mut priorities = config.display_options.categories.iter()
+                                                              .map(|(category, options)| (category.clone(), options.priority))
+                                                              .collect::<Vec<_>>();
+
         priorities.sort_by(|left, right| left.1.cmp(&right.1));
 
         let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
@@ -54,6 +61,7 @@ impl HostDataManagerModel {
             update_receiver_thread: None,
             // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
+            i_refresh_hosts_on_start: config.preferences.refresh_hosts_on_start,
             ..Default::default()
         };
 
@@ -123,7 +131,7 @@ impl HostDataManagerModel {
                     let received_data = receiver.recv().unwrap();
 
                     if received_data.exit_thread {
-                        ::log::debug!("Gracefully exiting UI host state receiver thread");
+                        ::log::debug!("Gracefully exiting UI state receiver thread");
                         return;
                     }
                     set_data(received_data);
@@ -152,6 +160,10 @@ impl HostDataManagerModel {
         host.monitoring_data.get(&monitor_id).unwrap().to_qvariant()
     }
 
+    fn get_display_data(&self) -> QVariant {
+        self.display_data.to_qvariant()
+    }
+
     // Get list of monitors for category.
     fn get_category_monitor_ids(&self, host_id: QString, category: QString) -> QVariantList {
         let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
@@ -166,6 +178,15 @@ impl HostDataManagerModel {
         }
 
         result
+    }
+
+    fn refresh_hosts_on_start(&self) -> bool {
+        self.i_refresh_hosts_on_start
+    }
+
+    fn host_is_initialized(&self, host_id: QString) -> bool {
+        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        !host.platform.is_unset()
     }
 
     fn is_empty_category(&self, host_id: QString, category: QString) -> bool {

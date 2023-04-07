@@ -111,11 +111,14 @@ fn main() {
         }
     }
 
-    monitor_manager.refresh_platform_info(None);
+    if config.preferences.refresh_hosts_on_start {
+        monitor_manager.refresh_platform_info(None);
+    }
+
     let mut initial_display_data = host_manager.borrow().get_display_data();
     initial_display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 
-    let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data, config.display_options.clone());
+    let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data, config.clone());
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     frontend.setup_command_handler(command_handler, monitor_manager, config.display_options.clone());
@@ -124,12 +127,12 @@ fn main() {
     // Shut down threads.
     connection_manager.new_request_sender()
                       .send(connection_manager::ConnectorRequest::exit_token())
-                      .unwrap_or_else(|error| log::error!("Couldn't send message to connection manager: {}", error));
+                      .unwrap_or_else(|error| log::error!("Couldn't send exit token to connection manager: {}", error));
     connection_manager.join();
 
     host_manager.borrow_mut()
                 .new_state_update_sender()
                 .send(host_manager::StateUpdateMessage::exit_token())
-                .unwrap_or_else(|error| log::error!("Couldn't send message to state manager: {}", error));
+                .unwrap_or_else(|error| log::error!("Couldn't send exit token to state manager: {}", error));
     host_manager.borrow_mut().join();
 }

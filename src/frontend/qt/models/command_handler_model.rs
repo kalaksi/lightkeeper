@@ -18,6 +18,7 @@ pub struct CommandHandlerModel {
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
+    refresh_platform_info: qt_method!(fn(&self, host_id: QString)),
     refresh_monitors: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
@@ -179,6 +180,10 @@ impl CommandHandlerModel {
         }
 
         return invocation_id
+    }
+
+    fn refresh_platform_info(&mut self, host_id: QString) {
+        self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()));
     }
 
     fn refresh_monitors(&mut self, host_id: QString) -> QVariantList {

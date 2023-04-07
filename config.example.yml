@@ -1,5 +1,6 @@
 preferences:
   use_remote_editor: true
+  refresh_hosts_on_start: true
   sudo_remote_editor: false
   remote_text_editor: "/usr/bin/vim"
   text_editor: "/usr/bin/kate"

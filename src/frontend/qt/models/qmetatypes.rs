@@ -10,3 +10,6 @@ impl QMetaType for crate::module::monitoring::MonitoringData {
 
 impl QMetaType for crate::command_handler::CommandData {
 }
+
+impl QMetaType for crate::frontend::DisplayData {
+}

@@ -11,7 +11,7 @@ pub trait Frontend {
     fn draw(display_data: &DisplayData);
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct DisplayData {
     // Key is host name.
     pub hosts: HashMap<String, HostDisplayData>,

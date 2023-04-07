@@ -11,11 +11,7 @@ use super::HostDataModel;
 #[derive(QObject, Default)]
 pub struct HostTableModel {
     base: qt_base_class!(trait QAbstractTableModel),
-    headers: Vec<QString>,
-    // Currently stores the same data as HostDataManagerModel but that might change.
-    row_data: Vec<HostDataModel>,
-    host_row_map: HashMap<String, usize>,
-
+    display_data: qt_property!(QVariant; WRITE set_display_data),
     data_changed_for_host: qt_method!(fn(&self, host_id: QString)),
 
     // toggle_row is preferred for setting selected row.
@@ -24,30 +20,32 @@ pub struct HostTableModel {
     selection_activated: qt_signal!(),
     selection_deactivated: qt_signal!(),
     toggle_row: qt_method!(fn(&mut self, row: i32)),
-
     get_selected_host_id: qt_method!(fn(&self) -> QString),
+
+    headers: Vec<QString>,
+    host_row_map: HashMap<String, usize>,
+    i_display_data: frontend::DisplayData,
+    // Currently stores the same data as HostDataManagerModel but that might change.
+    /// Holds preprocessed data more fitting for table rows.
+    row_data: Vec<HostDataModel>,
 }
 
 impl HostTableModel {
-    pub fn new(display_data: &frontend::DisplayData) -> Self {
-        let mut model = HostTableModel {
-            headers: Vec::new(),
-            row_data: Vec::new(),
-            host_row_map: HashMap::new(),
-            selected_row: -1,
-            ..Default::default()
-        };
+    fn set_display_data(&mut self, display_data: QVariant) {
+        self.begin_reset_model();
 
-        for header in &display_data.table_headers {
-            model.headers.push(header.clone().into());
+        self.selected_row = -1;
+        self.i_display_data = frontend::DisplayData::from_qvariant(display_data).unwrap();
+        self.headers = self.i_display_data.table_headers.iter().map(|header| QString::from(header.clone())).collect::<Vec<QString>>();
+
+        self.host_row_map.clear();
+        self.row_data.clear();
+        for (host_id, host_data) in self.i_display_data.hosts.iter() {
+            self.host_row_map.insert(host_id.clone(), self.row_data.len());
+            self.row_data.push(HostDataModel::from(&host_data));
         }
 
-        for (host_id, host_data) in display_data.hosts.iter() {
-            model.host_row_map.insert(host_id.clone(), model.row_data.len());
-            model.row_data.push(HostDataModel::from(&host_data));
-        }
-
-        model
+        self.end_reset_model();
     }
 
     // A slot for informing about change in table data.

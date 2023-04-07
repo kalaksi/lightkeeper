@@ -5,6 +5,8 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.11
 
+import HostTableModel 1.0
+
 import "./DetailsView"
 
 ApplicationWindow {
@@ -81,6 +83,12 @@ ApplicationWindow {
 
         function onSelected_row_changed() {
             detailsView.hostId = _hostTableModel.get_selected_host_id()
+
+            if (detailsView.hostId !== "") {
+                if (!HostDataManager.host_is_initialized(detailsView.hostId)) {
+                    CommandHandler.refresh_platform_info(detailsView.hostId)
+                }
+            }
         }
 
         function onSelection_activated() {
@@ -115,7 +123,11 @@ ApplicationWindow {
                 SplitView.minimumWidth: body.width
                 SplitView.fillHeight: true
 
-                model: _hostTableModel
+                model: HostTableModel {
+                    id: _hostTableModel
+                    display_data: HostDataManager.get_display_data()
+                }
+
             }
 
             HostDetails {

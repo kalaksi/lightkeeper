@@ -40,7 +40,6 @@ pub struct PropertyTableModel {
     command_cooldowns_finishing: Vec<String>,
     command_invocations: HashMap<u64, String>,
 
-
     /// Holds preprocessed data more fitting for table rows.
     row_datas: Vec<RowData>
 }
