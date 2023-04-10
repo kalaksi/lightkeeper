@@ -15,6 +15,7 @@ pub struct DataPoint {
     /// Usually contains an identifier of the source of this data,
     /// e.g. container ID or service name, so that attached commands can target the correct identity.
     pub command_params: Vec<String>,
+    // TODO: rename to children?
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,

@@ -105,7 +105,7 @@ impl MonitorManager {
     }
 
     /// Use `None` to refresh all monitors on every host or limit by host.
-    /// Returns the amount of monitors that will be refreshed.
+    /// Returns the invocation IDs of the refresh operations.
     pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let monitors_by_category = self.monitors.get(host_id).unwrap().iter()
@@ -113,6 +113,19 @@ impl MonitorManager {
                                                 .collect();
 
         let invocation_ids = self.refresh_monitors(host, monitors_by_category);
+        self.invocation_id_counter = invocation_ids.last().unwrap().clone();
+        invocation_ids
+    }
+
+    /// Refresh by monitor ID.
+    /// Returns the invocation IDs of the refresh operations.
+    pub fn refresh_monitors_by_id(&mut self, host_id: &String, monitor_id: &String) -> Vec<u64> {
+        let host = self.host_manager.borrow().get_host(host_id);
+        let monitor = self.monitors.get(host_id).unwrap().iter()
+                                   .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
+                                   .collect();
+
+        let invocation_ids = self.refresh_monitors(host, monitor);
         self.invocation_id_counter = invocation_ids.last().unwrap().clone();
         invocation_ids
     }

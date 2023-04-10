@@ -57,6 +57,7 @@ pub trait BoxCloneableCommand {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CommandResult {
+    pub command_id: String,
     pub message: String,
     pub error: String,
     pub criticality: Criticality,
@@ -109,6 +110,7 @@ impl CommandResult {
 impl Default for CommandResult {
     fn default() -> Self {
         CommandResult {
+            command_id: String::from(""),
             message: String::from(""),
             error: String::from(""),
             criticality: Criticality::Normal,

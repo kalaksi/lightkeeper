@@ -2,7 +2,6 @@
 More important features first.
 - limit monitor/command result history (avoid memory leaks)
 - cache for monitor's command results to minimize amount of commands actually run
-- Option for doing a partial auto-refresh after running a command
 - minimize scrolling areas in groupboxes so that the details view can be easily scrolled
 - new module property `privileged` for modules that require sudo/root
 - Check and display vuln status of system (or docker) packages using mitre, DSA and etc.

@@ -27,6 +27,10 @@ TableView {
     // Only one menu can be open at a time.
     property int expandedCommandRow: -1
 
+    // Automatic refresh is done after all commands have been executed.
+    // This keeps track which commands were executed.
+    property var pendingRefreshAfterCommand: []
+
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
     onWidthChanged: forceLayout()
@@ -51,6 +55,8 @@ TableView {
         function onCommand_result_received(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
             root.model.end_command_cooldown(commandResult.invocation_id)
+
+            root.pendingRefreshAfterCommand.push(commandResult.command_id);
         }
     }
 
@@ -230,13 +236,20 @@ TableView {
     Timer {
         id: cooldownTimer
 
-        interval: 50
+        interval: 20
         repeat: true
         running: false
         onTriggered: {
             let cooldownCount = root.model.decrease_command_cooldowns(interval)
             if (cooldownCount === 0) {
                 cooldownTimer.stop()
+
+                // Refresh the monitor(s) related to commands that were executed.
+                for (const command_id of root.pendingRefreshAfterCommand) {
+                    CommandHandler.refresh_monitors_of_command(root.hostId, command_id)
+                }
+
+                root.pendingRefreshAfterCommand = []
             }
         }
     }

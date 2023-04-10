@@ -38,6 +38,7 @@ pub struct HostDataManagerModel {
     get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_host_data_json: qt_method!(fn(&self, host_id: QString) -> QString),
 
+    // Basically contains the state of hosts and relevant data. Received from HostManager.
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
     i_refresh_hosts_on_start: bool,
@@ -77,22 +78,21 @@ impl HostDataManagerModel {
                 self_ptr.as_pinned().map(|self_pinned| {
                     // HostDataModel cannot be passed between threads so parsing happens here.
 
-                    let old_data = std::mem::replace(
-                        self_pinned.borrow_mut().display_data.hosts.get_mut(&new_display_data.name).unwrap(),
-                        new_display_data.clone(),
-                    );
+                    // Update host data.
+                    // There should always be old data.
+                    let old_data = self_pinned.borrow_mut().display_data.hosts.insert(new_display_data.name.clone(), new_display_data.clone()).unwrap();
 
                     // If the platform data was unset before, it means that the host was just initialized.
                     if old_data.platform.is_unset() && !new_display_data.platform.is_unset() {
                         self_pinned.borrow().host_platform_initialized(QString::from(old_data.name.clone()));
                     }
 
-                    for command_result in new_display_data.command_results.values() {
-                        let json = QString::from(serde_json::to_string(command_result).unwrap());
+                    if let Some(command_result) = new_display_data.new_command_results {
+                        let json = QString::from(serde_json::to_string(&command_result).unwrap());
                         self_pinned.borrow().command_result_received(json);
                     }
 
-                    for (monitor_id, new_monitor_data) in new_display_data.monitoring_data.iter() {
+                    if let Some(new_monitor_data) = new_display_data.new_monitoring_data {
                         let last_data_point = new_monitor_data.values.back().unwrap();
                         self_pinned.borrow().monitoring_data_received(last_data_point.invocation_id,
                                                                       QString::from(new_monitor_data.display_options.category.clone()),
@@ -101,23 +101,23 @@ impl HostDataManagerModel {
                         // Find out any monitor state changes and signal accordingly.
                         let new_criticality = new_monitor_data.values.back().unwrap().criticality;
 
-                        match old_data.monitoring_data.get(monitor_id) {
-                            Some(old_monitor_data) => {
-                                let old_criticality = old_monitor_data.values.back().unwrap().criticality;
+                        if let Some(old_monitor_data) = old_data.monitoring_data.get(&new_monitor_data.monitor_id) {
+                            let old_criticality = old_monitor_data.values.back().unwrap().criticality;
 
-                                if new_criticality != old_criticality {
-                                    self_pinned.borrow().monitor_state_changed(
-                                        QString::from(new_display_data.name.clone()),
-                                        QString::from(monitor_id.clone()),
-                                        QString::from(new_criticality.to_string())
-                                    );
-                                }
-                            },
-                            None => self_pinned.borrow().monitor_state_changed(
+                            if new_criticality != old_criticality {
+                                self_pinned.borrow().monitor_state_changed(
+                                    QString::from(new_display_data.name.clone()),
+                                    QString::from(new_monitor_data.monitor_id.clone()),
+                                    QString::from(new_criticality.to_string())
+                                );
+                            }
+                        }
+                        else {
+                            self_pinned.borrow().monitor_state_changed(
                                 QString::from(new_display_data.name.clone()),
-                                QString::from(monitor_id.clone()),
+                                QString::from(new_monitor_data.monitor_id.clone()),
                                 QString::from(new_criticality.to_string())
-                            ),
+                            );
                         }
                     }
 

@@ -20,6 +20,7 @@ pub struct CommandHandlerModel {
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     refresh_platform_info: qt_method!(fn(&self, host_id: QString)),
     refresh_monitors: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
@@ -33,6 +34,7 @@ pub struct CommandHandlerModel {
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
     ui_display_options: configuration::DisplayOptions,
+
 
     // refresh_after_execution: bool,
 }
@@ -124,7 +126,7 @@ impl CommandHandlerModel {
     }
 
     fn execute(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64 {
-        let display_options = self.command_handler.get_command_for_host(host_id.to_string(), command_id.to_string()).display_options;
+        let display_options = self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()).display_options;
 
         if display_options.confirmation_text.is_empty() {
             return self.execute_confirmed(host_id, command_id, parameters);
@@ -139,7 +141,7 @@ impl CommandHandlerModel {
         let mut invocation_id = 0;
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_qbytearray().to_string()).collect();
 
-        let display_options = self.command_handler.get_command_for_host(host_id.to_string(), command_id.to_string()).display_options;
+        let display_options = self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()).display_options;
         match display_options.action {
             UIAction::None => {
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
@@ -192,6 +194,20 @@ impl CommandHandlerModel {
             true => self.monitor_manager.refresh_all_monitors(None),
             false => self.monitor_manager.refresh_all_monitors(Some(&host_id))
         };
+        QVariantList::from_iter(invocation_ids)
+    }
+
+    // Finds related monitors for a command and refresh them.
+    fn refresh_monitors_of_command(&mut self, host_id: QString, command_id: QString) -> QVariantList  {
+        let host_id = host_id.to_string();
+        let command_id = command_id.to_string();
+
+        ::log::debug!("[{}] Refreshing monitors related to command {}", host_id, command_id);
+
+        let command = self.command_handler.get_command_for_host(&host_id, &command_id);
+        let monitor_id = command.display_options.parent_id;
+
+        let invocation_ids = self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id);
         QVariantList::from_iter(invocation_ids)
     }
 

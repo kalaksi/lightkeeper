@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 use std::sync::mpsc;
 use std::thread;
@@ -96,60 +96,66 @@ impl HostManager {
                 }
 
                 let mut hosts = hosts.lock().unwrap();
+                let host_state = hosts.hosts.get_mut(&message.host_name).unwrap();
+                let mut new_monitoring_data: Option<MonitoringData> = None;
+                let mut new_command_results: Option<CommandResult> = None;
 
-                if let Some(host_state) = hosts.hosts.get_mut(&message.host_name) {
+                if let Some(message_data_point) = message.data_point {
 
-                    if let Some(message_data_point) = message.data_point {
+                    // Specially structured data point for passing platform info here.
+                    // TODO: remove hardcoding?
+                    if message_data_point.value == "_platform_info" {
+                        if let Ok(platform) = Self::read_platform_info(message_data_point) {
+                            host_state.host.platform = platform;
+                            log::debug!("[{}] Platform info updated", host_state.host.name);
+                        }
+                        else {
+                            log::error!("[{}] Invalid platform info received", host_state.host.name);
+                        }
+                    }
+                    else {
+                        // Check first if there already exists a key for monitor id.
+                        if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
 
-                        // Specially structured data point for passing platform info here.
-                        // TODO: remove hardcoding?
-                        if message_data_point.value == "_platform_info" {
-                            if let Ok(platform) = Self::read_platform_info(message_data_point) {
-                                host_state.host.platform = platform;
-                                log::debug!("[{}] Platform info updated", host_state.host.name);
-                            }
-                            else {
-                                log::error!("[{}] Invalid platform info received", host_state.host.name);
+                            monitoring_data.values.push_back(message_data_point.clone());
+
+                            if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
+                                monitoring_data.values.pop_front();
                             }
                         }
                         else {
-                            // Check first if there already exists a key for monitor id.
-                            if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
-                                monitoring_data.values.push_back(message_data_point);
-                                if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
-                                    monitoring_data.values.pop_front();
-                                }
-                            }
-                            else {
-                                let mut new_data = MonitoringData::new(message.module_spec.id.clone(), message.display_options);
-                                new_data.values.push_back(message_data_point);
-                                host_state.monitor_data.insert(message.module_spec.id, new_data);
-                            }
+                            let mut new_data = MonitoringData::new(message.module_spec.id.clone(), message.display_options);
+                            new_data.values.push_back(message_data_point.clone());
+                            host_state.monitor_data.insert(message.module_spec.id.clone(), new_data);
                         }
-                    }
-                    else if let Some(command_result) = message.command_result {
-                        host_state.command_results.insert(message.module_spec.id, command_result);
-                    }
 
-                    host_state.update_status();
-
-                    // Send the state update to the front end.
-                    let observers = observers.lock().unwrap();
-                    for observer in observers.iter() {
-                        observer.send(frontend::HostDisplayData {
-                            name: host_state.host.name.clone(),
-                            domain_name: host_state.host.fqdn.clone(),
-                            platform: host_state.host.platform.clone(),
-                            ip_address: host_state.host.ip_address.clone(),
-                            monitoring_data: host_state.monitor_data.clone(),
-                            command_results: host_state.command_results.clone(),
-                            status: host_state.status,
-                            exit_thread: false,
-                        }).unwrap();
+                        let mut new = host_state.monitor_data.get(&message.module_spec.id).unwrap().clone();
+                        new.values = VecDeque::from(vec![message_data_point.clone()]);
+                        new_monitoring_data = Some(new);
                     }
                 }
-                else {
-                    log::error!("Data for host {} does not exist.", message.host_name);
+                else if let Some(command_result) = message.command_result {
+                    host_state.command_results.insert(message.module_spec.id, command_result.clone());
+                    new_command_results = Some(command_result);
+                }
+
+                host_state.update_status();
+
+                // Send the state update to the front end.
+                let observers = observers.lock().unwrap();
+                for observer in observers.iter() {
+                    observer.send(frontend::HostDisplayData {
+                        name: host_state.host.name.clone(),
+                        domain_name: host_state.host.fqdn.clone(),
+                        platform: host_state.host.platform.clone(),
+                        ip_address: host_state.host.ip_address.clone(),
+                        monitoring_data: host_state.monitor_data.clone(),
+                        new_monitoring_data: new_monitoring_data.clone(),
+                        command_results: host_state.command_results.clone(),
+                        new_command_results: new_command_results.clone(),
+                        status: host_state.status,
+                        exit_thread: false,
+                    }).unwrap();
                 }
             }
         })
@@ -180,7 +186,9 @@ impl HostManager {
                 platform: state.host.platform.clone(),
                 ip_address: state.host.ip_address.clone(),
                 monitoring_data: state.monitor_data.clone(),
+                new_monitoring_data: None,
                 command_results: state.command_results.clone(),
+                new_command_results: None,
                 status: state.status,
                 exit_thread: false,
             });

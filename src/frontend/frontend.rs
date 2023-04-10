@@ -39,7 +39,9 @@ pub struct HostDisplayData {
     pub status: HostStatus,
     pub ip_address: IpAddr,
     pub monitoring_data: HashMap<String, MonitoringData>,
+    pub new_monitoring_data: Option<MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
+    pub new_command_results: Option<CommandResult>,
     pub exit_thread: bool,
 }
 
@@ -61,7 +63,9 @@ impl Default for HostDisplayData {
             status: HostStatus::Down,
             ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             monitoring_data: HashMap::new(),
+            new_monitoring_data: None,
             command_results: HashMap::new(),
+            new_command_results: None,
             exit_thread: false,
         }
     }

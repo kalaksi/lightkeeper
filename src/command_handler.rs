@@ -107,10 +107,10 @@ impl CommandHandler {
         }
     }
 
-    pub fn get_command_for_host(&self, host_id: String, command_id: String) -> CommandData {
-        let command_collection = self.commands.get(&host_id).unwrap();
-        let command = command_collection.get(&command_id).unwrap();
-        CommandData::new(command_id, command.get_display_options())
+    pub fn get_command_for_host(&self, host_id: &String, command_id: &String) -> CommandData {
+        let command_collection = self.commands.get(host_id).unwrap();
+        let command = command_collection.get(command_id).unwrap();
+        CommandData::new(command_id.clone(), command.get_display_options())
     }
 
     fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
@@ -124,6 +124,7 @@ impl CommandHandler {
                         Ok(mut result) => {
                             log::debug!("Command result received: {}", result.message);
                             result.invocation_id = invocation_id;
+                            result.command_id = command.get_module_spec().id;
                             result
                         },
                         Err(error) => {
