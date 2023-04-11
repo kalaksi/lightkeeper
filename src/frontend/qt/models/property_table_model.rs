@@ -24,6 +24,7 @@ pub struct PropertyTableModel {
     // init: qt_method!(fn(&mut self, monitoring_datas: QVariantList, command_datas: QVariantList)),
     update: qt_method!(fn(&mut self, monitoring_data: QVariant)),
     get_separator_label: qt_method!(fn(&mut self, row: QVariant) -> QString),
+    get_row_height: qt_method!(fn(&mut self, row: QVariant) -> u32),
 
     // For command cooldown mechanism.
     // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
@@ -96,6 +97,25 @@ impl PropertyTableModel {
             }
         }
         QString::from("")
+    }
+
+    // Higher row if description is present.
+    fn get_row_height(&mut self, row: QVariant) -> u32 {
+        let row = usize::from_qvariant(row).unwrap();
+        if let Some(row_data) = self.row_datas.get(row) {
+            if row_data.value.value == SEPARATOR_TOKEN {
+                54
+            }
+            else if !row_data.value.description.is_empty() {
+                32
+            }
+            else {
+                22
+            }
+        }
+        else {
+            0
+        }
     }
 
     // Practically flattens multivalue data and does some filtering.
@@ -252,12 +272,18 @@ impl QAbstractTableModel for PropertyTableModel {
             data_point: row_data.value.clone(),
             display_options: row_data.display_options.clone()
         };
+        let styled_value_json = serde_json::to_string(&styled_value).unwrap();
 
         let label = match row_data.display_options.use_multivalue {
             true => row_data.value.label.clone(),
             false => row_data.display_options.display_text.clone()
         };
-        let styled_value_json = serde_json::to_string(&styled_value).unwrap();
+        let label_with_description = LabelAndDescription {
+            label: label,
+            description: row_data.value.description.clone()
+        };
+        let label_with_description_json = serde_json::to_string(&label_with_description).unwrap();
+
 
         // Filters out commands that depend on specific criticality or value that isn't present currently.
         let command_datas = row_data.command_datas.into_iter()
@@ -268,7 +294,7 @@ impl QAbstractTableModel for PropertyTableModel {
             .collect::<Vec<CommandData>>();
  
         match index.column() {
-            0 => label.to_qvariant(),
+            0 => label_with_description_json.to_qvariant(),
             1 => styled_value_json.to_qvariant(),
             // TODO: Maybe avoid using JSON encoding here too?
             2 => serde_json::to_string(&command_datas).unwrap().to_qvariant(),
@@ -293,4 +319,11 @@ struct RowData {
 struct StyledValue {
     data_point: DataPoint,
     display_options: frontend::DisplayOptions,
+}
+
+
+#[derive(Default, Clone, Serialize)]
+struct LabelAndDescription {
+    label: String,
+    description: String,
 }

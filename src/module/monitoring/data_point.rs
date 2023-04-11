@@ -4,13 +4,17 @@ use chrono::{DateTime, Utc};
 use serde_derive::{Serialize, Deserialize};
 use crate::enums::Criticality;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DataPoint {
     /// With multivalue, value can be a composite result/value of all of the values.
     /// For example, with service statuses, this can show the worst state in the multivalue group.
     pub value: String,
     /// Optional. Used with multivalue-data and usually filled programmatically.
     pub label: String,
+    /// Optional description for label.
+    pub description: String,
+    /// Tags can be used for additional data that will be displayed alongside the value.
+    pub tags: Vec<String>,
     /// This data is passed to commands. Contents depend on the monitoring module.
     /// Usually contains an identifier of the source of this data,
     /// e.g. container ID or service name, so that attached commands can target the correct identity.
@@ -19,6 +23,7 @@ pub struct DataPoint {
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
+    /// Unique invocation ID. Used by UI as an identifier for asynchronously executed requests and received results.
     pub invocation_id: u64,
 }
 
@@ -89,6 +94,8 @@ impl Default for DataPoint {
         DataPoint {
             value: String::from(""),
             label: String::from(""),
+            description: String::from(""),
+            tags: Vec::new(),
             command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,

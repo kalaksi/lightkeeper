@@ -21,7 +21,6 @@ TableView {
     property var monitoring_datas: []
     // CommandDatas as QVariants.
     property var command_datas: []
-    property int rowHeight: 24
 
     // Number of the row that has command row menu expanded.
     // Only one menu can be open at a time.
@@ -38,7 +37,10 @@ TableView {
     clip: true
     topMargin: Theme.groupbox_margins()
     bottomMargin: Theme.groupbox_margins()
-    implicitHeight: rowHeight * model.rowCount()
+
+    rowHeightProvider: function(row) {
+        return root.model.get_row_height(row)
+    }
 
     model: PropertyTableModel {
         monitoring_datas: root.monitoring_datas
@@ -63,20 +65,21 @@ TableView {
     delegate: DelegateChooser {
         id: delegateChooser
 
+        // First delegate is used for labels and descriptions.
         DelegateChoice {
             column: 0
             delegate: Item {
                 property string separatorLabel: root.model.get_separator_label(row)
                 property bool isSeparator: separatorLabel !== ""
+                property var labelAndDescription: JSON.parse(model.value)
 
                 implicitWidth: root.width * 0.5
-                implicitHeight: isSeparator ? root.rowHeight * 2.5 : root.rowHeight
 
                 // Header text for multivalues.
                 Label {
                     visible: parent.isSeparator
                     width: root.width
-                    height: root.rowHeight * 2
+                    height: parent.height
                     padding: 5
                     topPadding: 10
                     horizontalAlignment: Text.AlignHCenter
@@ -95,15 +98,26 @@ TableView {
                     }
                 }
 
-                Label {
-                    id: labelComponent
+                Column {
                     visible: !parent.isSeparator
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: model.value
+                    spacing: -4
+                    padding: 0
+
+                    NormalText {
+                        id: labelComponent
+                        text: parent.parent.labelAndDescription.label
+                    }
+
+                    SmallerText {
+                        visible: parent.parent.labelAndDescription.description !== ""
+                        opacity: 0.6
+                        text: parent.parent.labelAndDescription.description
+                    }
                 }
             }
         }
 
+        // Second delegate is used for values and tags.
         DelegateChoice {
             column: 1
             delegate: Item {
@@ -113,8 +127,6 @@ TableView {
 
                 visible: !isSeparator
                 implicitWidth: _hasNoChildCommands ? root.width * 0.5 : root.width * 0.3
-                implicitHeight: root.rowHeight
-
 
                 // Used to clip overflowing text from the label.
                 // Avoiding clip-property on the label itself, since it could cause performance issues.
@@ -132,35 +144,49 @@ TableView {
                 }
 
                 Row {
-                    visible: styledValue.display_options.display_style === "ProgressBar"
-                    spacing: 5
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
 
-                    ProgressBar {
-                        width: parent.parent.width * 0.75
-                        value: parseInt(styledValue.data_point.value, 10) / 100.0
+                    Row {
+                        visible: styledValue.display_options.display_style === "ProgressBar"
+                        spacing: 5
+
+                        ProgressBar {
+                            width: parent.parent.width * 0.75
+                            value: parseInt(styledValue.data_point.value, 10) / 100.0
+                        }
+
+                        SmallerText {
+                            text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
+                            anchors.verticalCenter: parent.verticalCenter
+                            lineHeight: 0.9
+                        }
                     }
 
-                    SmallerText {
+                    SmallText {
+                        visible: styledValue.display_options.display_style === "Text"
                         text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
+
                         anchors.verticalCenter: parent.verticalCenter
                         lineHeight: 0.9
                     }
-                }
 
-                SmallText {
-                    visible: styledValue.display_options.display_style === "Text"
-                    text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
+                    PillText {
+                        visible: styledValue.display_options.display_style === "CriticalityLevel"
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
+                        pillColor: Theme.pill_color_for_criticality(styledValue.data_point.criticality)
+                    }
 
-                    anchors.verticalCenter: parent.verticalCenter
-                    lineHeight: 0.9
-                }
+                    Repeater {
+                        model: styledValue.data_point.tags
 
-                PillText {
-                    visible: styledValue.display_options.display_style === "CriticalityLevel"
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
-                    pillColor: Theme.pill_color_for_criticality(styledValue.data_point.criticality)
-                    height: root.rowHeight * 0.9
+                        PillText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData
+                            pillColor: Theme.pill_color_for_criticality("Info")
+                        }
+                    }
                 }
             }
         }
@@ -174,8 +200,8 @@ TableView {
                 property bool _hasNoChildCommands: CommandHandler.get_child_command_count(root.hostId, root.category) === 0
 
                 visible: !isSeparator
+                // Hidden if there are no related commands.
                 implicitWidth: _hasNoChildCommands ? 1 : root.width * 0.2
-                implicitHeight: root.rowHeight
 
                 // Reason for this Rectangle is the same as with delegate 1.
                 Rectangle {
@@ -193,6 +219,7 @@ TableView {
                 // Row-level command buttons, aligned to the right.
                 CommandButtonRow {
                     id: commandButtonRow
+                    anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
                     // TODO: how to account for scrollbar so margin is not used when scrollbar is not visible?
                     // For scrollbar.
@@ -200,7 +227,7 @@ TableView {
                     visible: parsedCommands.length > 0
 
                     hostId: root.hostId
-                    size: root.rowHeight
+                    size: Math.min(parent.height, 28)
                     collapsible: true
                     menuTooltip: "More commands..."
                     commands: parsedCommands

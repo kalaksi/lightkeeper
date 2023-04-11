@@ -25,6 +25,7 @@ impl Module for Service {
             included_services: vec![
                 String::from("acpid.service"),
                 String::from("cron.service"),
+                String::from("collectd.service"),
                 String::from("dbus.service"),
                 String::from("ntp.service"),
                 String::from("chrony.service"),
@@ -72,6 +73,13 @@ impl MonitoringModule for Service {
             result.multivalue = services.iter().map(|service| {
                 let mut point = DataPoint::labeled_value(service.unit.clone(), service.sub.clone());
 
+                point.description = service.description.clone();
+
+                // Add some states as tags for the UI.
+                if ["masked"].contains(&service.load.as_str()) {
+                    point.tags.push(service.load.clone());
+                }
+
                 point.criticality = match service.sub.as_str() {
                     "dead" => enums::Criticality::Critical,
                     "exited" => enums::Criticality::Error,
@@ -101,8 +109,8 @@ impl MonitoringModule for Service {
 #[derive(Deserialize)]
 struct ServiceUnit {
     unit: String,
-    // load: String,
+    load: String,
     // active: String,
     sub: String,
-    // description: String,
+    description: String,
 }

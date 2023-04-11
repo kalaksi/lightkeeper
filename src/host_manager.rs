@@ -129,13 +129,16 @@ impl HostManager {
                             host_state.monitor_data.insert(message.module_spec.id.clone(), new_data);
                         }
 
+                        // Also add to a list of new data points.
                         let mut new = host_state.monitor_data.get(&message.module_spec.id).unwrap().clone();
                         new.values = VecDeque::from(vec![message_data_point.clone()]);
-                        new_monitoring_data = Some(new);
+                        new_monitoring_data = Some(new.clone());
+                        log::debug!("TAGS: {:?}", new.values.front().unwrap().tags);
                     }
                 }
                 else if let Some(command_result) = message.command_result {
                     host_state.command_results.insert(message.module_spec.id, command_result.clone());
+                    // Also add to a list of new command results.
                     new_command_results = Some(command_result);
                 }
 
