@@ -28,7 +28,10 @@ templates:
     monitors:
       systemd-service: {}
     commands:
+      systemd-service-start: {}
       systemd-service-stop: {}
+      systemd-service-mask: {}
+      systemd-service-unmask: {}
   linux:
     monitors:
       kernel: {}

@@ -133,7 +133,6 @@ impl HostManager {
                         let mut new = host_state.monitor_data.get(&message.module_spec.id).unwrap().clone();
                         new.values = VecDeque::from(vec![message_data_point.clone()]);
                         new_monitoring_data = Some(new.clone());
-                        log::debug!("TAGS: {:?}", new.values.front().unwrap().tags);
                     }
                 }
                 else if let Some(command_result) = message.command_result {

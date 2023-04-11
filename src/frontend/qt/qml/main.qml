@@ -69,7 +69,7 @@ ApplicationWindow {
         // Set up confirmation dialog on signal.
         function onConfirmation_dialog_opened(text, hostId, commandId, commandParams) {
             confirmationDialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
-            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.execute_confirmed(host_id, command_id, command_params))
+            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.execute_confirmed(hostId, commandId, commandParams))
         }
 
         function onDetails_dialog_opened(invocationId) {
