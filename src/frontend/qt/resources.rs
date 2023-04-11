@@ -38,6 +38,8 @@ pub fn init_resources() {
             "images/breeze/dark/story-editor.svg" as "images/button/story-editor",
             "images/breeze/dark/download.svg" as "images/button/download",
             "images/breeze/dark/overflow-menu.svg" as "images/button/overflow-menu",
+            "images/breeze/dark/dialog-ok.svg" as "images/button/ok",
+            "images/breeze/dark/dialog-cancel.svg" as "images/button/cancel",
 
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
@@ -94,6 +96,8 @@ pub fn init_resources() {
             "images/breeze/light/story-editor.svg" as "images/button/story-editor",
             "images/breeze/light/download.svg" as "images/button/download",
             "images/breeze/light/overflow-menu.svg" as "images/button/overflow-menu",
+            "images/breeze/light/dialog-ok.svg" as "images/button/ok",
+            "images/breeze/light/dialog-cancel.svg" as "images/button/cancel",
 
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",

@@ -27,7 +27,7 @@ impl CommandModule for Unmask {
             category: String::from("systemd"),
             parent_id: String::from("systemd-service"),
             display_style: frontend::DisplayStyle::Icon,
-            display_icon: String::from("unmask"),
+            display_icon: String::from("ok"),
             display_text: String::from("unmask"),
             depends_on_tags: vec![String::from("masked")],
             ..Default::default()
