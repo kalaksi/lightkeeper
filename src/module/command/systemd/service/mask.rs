@@ -28,7 +28,7 @@ impl CommandModule for Mask {
             parent_id: String::from("systemd-service"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("cancel"),
-            display_text: String::from("mask"),
+            display_text: String::from("Mask"),
             depends_on_no_tags: vec![String::from("masked")],
             ..Default::default()
         }
