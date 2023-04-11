@@ -60,11 +60,11 @@ impl ThemeModel {
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
-        if self.display_options.non_collapsible_commands.contains(&command_id.to_string()) {
-            QString::from("0")
+        if self.display_options.collapsible_commands.contains(&command_id.to_string()) {
+            QString::from("1")
         }
         else {
-            QString::from("1")
+            QString::from("0")
         }
     }
 

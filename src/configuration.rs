@@ -42,7 +42,7 @@ pub struct Preferences {
 pub struct DisplayOptions {
     pub group_multivalue: bool,
     pub command_order: Vec<String>,
-    pub non_collapsible_commands: Vec<String>,
+    pub collapsible_commands: Vec<String>,
     pub categories: HashMap<String, Category>,
 }
 

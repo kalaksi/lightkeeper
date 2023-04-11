@@ -21,9 +21,10 @@ display_options:
     "reboot", "shutdown",
     "docker-compose-edit", "docker-compose-pull", "docker-compose-up", "docker-compose-play", "docker-compose-stop",
   ]
-  non_collapsible_commands: 
-    - "docker-compose-start"
-    - "docker-compose-stop"
+  collapsible_commands:
+    - docker-compose-up
+    - docker-compose-pull
+    - docker-compose-edit
   categories:
     host:
       priority: 1

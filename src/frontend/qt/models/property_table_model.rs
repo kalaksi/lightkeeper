@@ -212,7 +212,7 @@ impl PropertyTableModel {
         for (button_identifier, cooldown_time) in self.command_cooldown_times.iter_mut() {
             // Quickly decrease cooldown if command is finished.
             let actual_decrement = match self.command_cooldowns_finishing.contains(button_identifier) {
-                true => 15 * cooldown_decrement,
+                true => 20 * cooldown_decrement,
                 false => cooldown_decrement,
             };
 
