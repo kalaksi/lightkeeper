@@ -34,6 +34,9 @@ pub struct DisplayOptions {
     pub depends_on_criticality: Vec<Criticality>,
     /// Show only if related monitor's value is one of these.
     pub depends_on_value: Vec<String>,
+    /// Show only if related monitor's tags contain one of these.
+    pub depends_on_tags: Vec<String>,
+    pub depends_on_no_tags: Vec<String>,
 
     /// For multi-level multivalues. Limits this command to specific level (i.e. specific rows) so it's not displayed on every line.
     /// Default is 0 which means that this limit is disabled.

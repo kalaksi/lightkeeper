@@ -285,12 +285,14 @@ impl QAbstractTableModel for PropertyTableModel {
         let label_with_description_json = serde_json::to_string(&label_with_description).unwrap();
 
 
-        // Filters out commands that depend on specific criticality or value that isn't present currently.
+        // Filters out commands that depend on specific criticality, value or tag that isn't present currently.
         let command_datas = row_data.command_datas.into_iter()
             .filter(|command| command.display_options.depends_on_criticality.is_empty() ||
-                            command.display_options.depends_on_criticality.contains(&row_data.value.criticality))
+                              command.display_options.depends_on_criticality.contains(&row_data.value.criticality))
             .filter(|command| command.display_options.depends_on_value.is_empty() ||
-                            command.display_options.depends_on_value.contains(&row_data.value.value))
+                              command.display_options.depends_on_value.contains(&row_data.value.value))
+            .filter(|command| command.display_options.depends_on_tags.iter().all(|tag| row_data.value.tags.contains(tag)))
+            .filter(|command| command.display_options.depends_on_no_tags.iter().all(|tag| !row_data.value.tags.contains(tag)))
             .collect::<Vec<CommandData>>();
  
         match index.column() {
