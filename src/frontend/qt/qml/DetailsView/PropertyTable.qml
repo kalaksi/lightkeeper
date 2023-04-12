@@ -219,14 +219,13 @@ TableView {
                 // Row-level command buttons, aligned to the right.
                 CommandButtonRow {
                     id: commandButtonRow
+                    visible: parsedCommands.length > 0
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
                     // TODO: how to account for scrollbar so margin is not used when scrollbar is not visible?
                     // For scrollbar.
                     anchors.rightMargin: _marginRight
-                    visible: parsedCommands.length > 0
 
-                    hostId: root.hostId
                     size: Math.min(parent.height, 28)
                     collapsible: true
                     menuTooltip: "More commands..."

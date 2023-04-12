@@ -8,7 +8,6 @@ import "../Buttons"
 
 Item {
     id: root
-    property string hostId: ""
     property var commands: []
     property int size: 24
     property int buttonSize: size * 0.95
@@ -49,8 +48,6 @@ Item {
         id: background
         anchors.verticalCenter: parent.verticalCenter
         anchors.fill: parent
-        // width: root.width
-        // height: root.height
         radius: root.size * 0.5
         color: root._showBackground ? Qt.lighter(Theme.category_background_color(), 1.4) : "transparent"
         border.color: root._showBackground ? Qt.darker(Theme.category_background_color(), 1.2) : "transparent"
