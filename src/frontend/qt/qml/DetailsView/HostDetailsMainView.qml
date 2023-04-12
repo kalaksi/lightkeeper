@@ -96,6 +96,7 @@ Item {
                             target: HostDataManager
                             function onMonitoring_data_received(invocation_id, category, monitoring_data_qv) {
                                 // Keep track of ongoing monitor invocations.
+                                // TODO: move these to HostDataManager? Easier to track pending invocations that come from elsewhere.
                                 if (category === modelData &&
                                     root._pendingMonitorInvocations[category] !== undefined &&
                                     root._maximumPendingInvocations[category] !== undefined) {
@@ -123,13 +124,17 @@ Item {
 
                         // Category-level command buttons (buttons on top of the category area).
                         CommandButtonRow {
+                            visible: commands.length > 0
                             size: 34
                             flatButtons: false
                             roundButtons: false
                             commands: Parse.ListOfJsons(CommandHandler.get_commands_on_level(root.hostId, modelData, "", 0))
-                            visible: commands.length > 0
 
                             Layout.alignment: Qt.AlignHCenter
+
+                            onClicked: function(commandId, params) {
+                                let invocationId = CommandHandler.execute(root.hostId, commandId, params)
+                            }
                         }
 
                         // Host data is a bit different from monitor data, so handling it separately here.
