@@ -66,15 +66,20 @@ impl CommandHandlerModel {
 
         let mut result = QVariantList::default();
 
+        let command_order = match &self.ui_display_options.categories.get(&category_string) {
+            Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
+            None => Vec::new(),
+        };
+
         // First, add commands in the order specified in the config.
-        for command_id in self.ui_display_options.command_order.iter() {
+        for command_id in command_order.iter() {
             if let Some(command_data) = category_commands.get(command_id) {
                 result.push(command_data.to_qvariant());
             }
         }
 
         // Append the rest of the commands in alphabetical order.
-        let mut rest = category_commands.keys().filter(|key| !self.ui_display_options.command_order.contains(key)).collect::<Vec<&String>>();
+        let mut rest = category_commands.keys().filter(|key| !command_order.contains(key)).collect::<Vec<&String>>();
         rest.sort();
 
         for command_id in rest {
@@ -101,7 +106,13 @@ impl CommandHandlerModel {
                                    .collect::<HashMap<String, CommandData>>();
 
         let mut valid_commands_sorted = Vec::<CommandData>::new();
-        for command_id in self.ui_display_options.command_order.iter() {
+
+        let command_order = match &self.ui_display_options.categories.get(&category_string) {
+            Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
+            None => Vec::new(),
+        };
+
+        for command_id in command_order.iter() {
             if let Some(command_data) = all_commands.remove(command_id) {
                 valid_commands_sorted.push(command_data);
             }

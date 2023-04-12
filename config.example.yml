@@ -14,30 +14,26 @@ general:
 display_options:
   # Group monitors with multiple values into one column (or similar) or display everything separately.
   group_multivalue: true
-  category_order: []
-  command_order: [
-    "logs",
-    "docker-inspect", "docker-restart", "docker-shell", "docker-image-remove",
-    "reboot", "shutdown",
-    "docker-compose-edit", "docker-compose-pull", "docker-compose-up", "docker-compose-play", "docker-compose-stop",
-  ]
-  collapsible_commands:
-    - docker-compose-up
-    - docker-compose-pull
-    - docker-compose-edit
   categories:
     host:
       priority: 1
+      color: "#80b3825d"
+      command_order: ["reboot", "shutdown", "logs"]
     network:
       priority: 2
+      color: "#80b3825d"
     systemd:
       priority: 3
+      color: "#8030d475"
+      command_order: ["systemd-service-stop", "systemd-service-start"]
     package:
       priority: 4
     docker-compose:
       priority: 5
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
+      command_order: ["docker-compose-edit", "docker-compose-pull", "docker-compose-up", "docker-compose-play", "docker-compose-stop"]
+      collapsible_commands: [ "docker-compose-up", "docker-compose-pull", "docker-compose-edit" ]
     docker-containers:
       priority: 6
       icon: "qrc:///main/images/docker"
@@ -46,3 +42,4 @@ display_options:
       priority: 7
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
+      command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remove"]

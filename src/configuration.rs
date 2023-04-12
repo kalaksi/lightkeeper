@@ -41,8 +41,6 @@ pub struct Preferences {
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
     pub group_multivalue: bool,
-    pub command_order: Vec<String>,
-    pub collapsible_commands: Vec<String>,
     pub categories: HashMap<String, Category>,
 }
 
@@ -52,6 +50,8 @@ pub struct Category {
     pub priority: u16,
     pub icon: Option<String>,
     pub color: Option<String>,
+    pub command_order: Option<Vec<String>>,
+    pub collapsible_commands: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

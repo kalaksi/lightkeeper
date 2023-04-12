@@ -60,7 +60,15 @@ impl ThemeModel {
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
-        if self.display_options.collapsible_commands.contains(&command_id.to_string()) {
+        // TODO: take category into consideration instead of accepting matching id from any of them.
+        let allows_collapsing = self.display_options.categories.values().any(|category| {
+            match &category.collapsible_commands {
+                Some(collapsible_commands) => collapsible_commands.contains(&command_id.to_string()),
+                None => false,
+            }
+        });
+
+        if allows_collapsing {
             QString::from("1")
         }
         else {
