@@ -6,6 +6,7 @@ import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
 import ".."
+import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../js/Parse.js" as Parse
 
@@ -59,8 +60,8 @@ Item {
 
                 GroupBox {
                     id: groupBox
-                    leftPadding: Theme.groupbox_margins()
-                    rightPadding: Theme.groupbox_margins()
+                    leftPadding: Theme.groupbox_padding()
+                    rightPadding: Theme.groupbox_padding()
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.preferredWidth: root.columnMinimumWidth +
@@ -120,7 +121,9 @@ Item {
                     }
 
                     ColumnLayout {
+                        id: column
                         anchors.fill: parent
+                        spacing: 0
 
                         // Category-level command buttons (buttons on top of the category area).
                         CommandButtonRow {
@@ -131,30 +134,66 @@ Item {
                             commands: Parse.ListOfJsons(CommandHandler.get_commands_on_level(root.hostId, modelData, "", 0))
 
                             Layout.alignment: Qt.AlignHCenter
+                            Layout.topMargin: size * 0.25
+                            Layout.bottomMargin: size * 0.40
 
                             onClicked: function(commandId, params) {
                                 let invocationId = CommandHandler.execute(root.hostId, commandId, params)
                             }
                         }
 
-                        // Host data is a bit different from monitor data, so handling it separately here.
-                        /*
-                        Repeater {
-                            model: modelData === "host" && root._hostDetails !== null ?
-                                [
-                                    [ "Status", root._hostDetails.status ],
-                                    [ "Name", root._hostDetails.name ],
-                                    [ "FQDN", root._hostDetails.domain_name ],
-                                    [ "IP Address", root._hostDetails.ip_address ],
-                                ] : []
+                        // Host details are a bit different from monitor data, so handling it separately here.
+                        Item {
+                            id: hostDetails
+                            visible: modelData === "host"
+                            width: parent.width
+                            height: 80
 
-                            // TODO: get rid
-                            PropertyRow {
-                                label: modelData[0]
-                                value: modelData[1]
+                            Row {
+                                anchors.fill: parent
+                                spacing: 20
+                                leftPadding: 20
+
+                                Image {
+                                    id: hostIcon
+                                    source: "qrc:/main/images/host/linux"
+                                    width: 60
+                                    height: 60
+                                }
+
+                                Column {
+                                    Repeater {
+                                        width: 0.7 * parent.width
+                                        model: root._hostDetails !== null ?
+                                            [
+                                                [ "Status", root._hostDetails.status ],
+                                                [ "Name", root._hostDetails.name ],
+                                                [ "FQDN", root._hostDetails.domain_name ],
+                                                [ "IP Address", root._hostDetails.ip_address ],
+                                            ] : []
+
+                                        Row {
+                                            visible: modelData[1] !== ""
+                                            width: column.width
+                                            rightPadding: 0.1 * column.width
+                                            spacing: 0.075 * column.width
+
+                                            Label {
+                                                width: 0.3 * parent.width
+                                                verticalAlignment: Text.AlignVCenter
+                                                lineHeight: 0.6
+                                                text: modelData[0]
+                                            }
+
+                                            SmallText {
+                                                width: 0.3 * parent.width
+                                                text: modelData[1]
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                        */
 
 
                         PropertyTable {
@@ -192,7 +231,6 @@ Item {
 
             if (root.hideEmptyCategories) {
                 categories = categories.filter(category => !HostDataManager.is_empty_category(root.hostId, category))
-
             }
 
             return categories

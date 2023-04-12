@@ -12,7 +12,7 @@ pub struct ThemeModel {
     category_color: qt_method!(fn(&self, category: QString) -> QString),
     category_background_color: qt_method!(fn(&self) -> QString),
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
-    groupbox_margins: qt_method!(fn(&self) -> i8),
+    groupbox_padding: qt_method!(fn(&self) -> i8),
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     pill_color_for_criticality: qt_method!(fn(&self, criticality: QString) -> QString),
@@ -55,8 +55,8 @@ impl ThemeModel {
         }
     }
 
-    fn groupbox_margins(&self) -> i8 {
-        5
+    fn groupbox_padding(&self) -> i8 {
+        8
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {

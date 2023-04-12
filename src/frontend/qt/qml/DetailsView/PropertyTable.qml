@@ -35,8 +35,8 @@ TableView {
     onWidthChanged: forceLayout()
     onHeightChanged: forceLayout()
     clip: true
-    topMargin: Theme.groupbox_margins()
-    bottomMargin: Theme.groupbox_margins()
+    topMargin: Theme.groupbox_padding()
+    bottomMargin: Theme.groupbox_padding()
 
     rowHeightProvider: function(row) {
         return root.model.get_row_height(row)
