@@ -41,6 +41,9 @@ pub fn init_resources() {
             "images/breeze/dark/dialog-ok.svg" as "images/button/ok",
             "images/breeze/dark/dialog-cancel.svg" as "images/button/cancel",
 
+            // Host icons
+            "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
+
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
 
@@ -98,6 +101,9 @@ pub fn init_resources() {
             "images/breeze/light/overflow-menu.svg" as "images/button/overflow-menu",
             "images/breeze/light/dialog-ok.svg" as "images/button/ok",
             "images/breeze/light/dialog-cancel.svg" as "images/button/cancel",
+
+            // Host icons
+            "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
 
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
