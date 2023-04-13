@@ -134,8 +134,8 @@ Item {
                             commands: Parse.ListOfJsons(CommandHandler.get_commands_on_level(root.hostId, modelData, "", 0))
 
                             Layout.alignment: Qt.AlignHCenter
-                            Layout.topMargin: size * 0.25
-                            Layout.bottomMargin: size * 0.40
+                            Layout.topMargin: size * 0.20
+                            Layout.bottomMargin: size * 0.30
 
                             onClicked: function(commandId, params) {
                                 let invocationId = CommandHandler.execute(root.hostId, commandId, params)
@@ -179,14 +179,14 @@ Item {
                                             spacing: 0.075 * column.width
 
                                             Label {
-                                                width: 0.3 * parent.width
+                                                width: 0.25 * parent.width
                                                 verticalAlignment: Text.AlignVCenter
                                                 lineHeight: 0.6
                                                 text: modelData[0]
                                             }
 
                                             SmallText {
-                                                width: 0.3 * parent.width
+                                                width: 0.35 * parent.width
                                                 text: modelData[1]
                                             }
                                         }
