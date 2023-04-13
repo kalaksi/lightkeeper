@@ -8,7 +8,7 @@ use crate::{configuration, enums::Criticality};
 #[derive(QObject, Default)]
 pub struct ThemeModel {
     base: qt_base_class!(trait QObject),
-    group_multivalue: qt_method!(fn(&self) -> QString),
+
     category_color: qt_method!(fn(&self, category: QString) -> QString),
     category_background_color: qt_method!(fn(&self) -> QString),
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
@@ -16,25 +16,21 @@ pub struct ThemeModel {
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     pill_color_for_criticality: qt_method!(fn(&self, criticality: QString) -> QString),
+    get_display_options: qt_method!(fn(&self) -> QVariant),
 
-    display_options: configuration::DisplayOptions,
+    i_display_options: configuration::DisplayOptions,
 }
 
 impl ThemeModel {
     pub fn new(display_options: configuration::DisplayOptions) -> ThemeModel {
         ThemeModel {
-            display_options: display_options,
+            i_display_options: display_options,
             ..Default::default()
         }
     }
 
-    fn group_multivalue(&self) -> QString {
-        QString::from(self.display_options.group_multivalue.to_string())
-    }
-
-
     fn category_color(&self, category: QString) -> QString {
-        if let Some(category) = self.display_options.categories.get(&category.to_string()) {
+        if let Some(category) = self.i_display_options.categories.get(&category.to_string()) {
             QString::from(category.color.clone().unwrap_or_else(|| String::from("#505050")))
         }
         else {
@@ -47,7 +43,7 @@ impl ThemeModel {
     }
 
     fn category_icon(&self, category: QString) -> QString {
-        if let Some(category) = self.display_options.categories.get(&category.to_string()) {
+        if let Some(category) = self.i_display_options.categories.get(&category.to_string()) {
             QString::from(category.icon.clone().unwrap_or_default())
         }
         else {
@@ -61,7 +57,7 @@ impl ThemeModel {
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
         // TODO: take category into consideration instead of accepting matching id from any of them.
-        let allows_collapsing = self.display_options.categories.values().any(|category| {
+        let allows_collapsing = self.i_display_options.categories.values().any(|category| {
             match &category.collapsible_commands {
                 Some(collapsible_commands) => collapsible_commands.contains(&command_id.to_string()),
                 None => false,
@@ -89,5 +85,9 @@ impl ThemeModel {
             Criticality::Info => QString::from("#60ffffff"),
             _ => QString::from("#60ffffff"),
         }
+    }
+
+    fn get_display_options(&self) -> QVariant {
+        self.i_display_options.to_qvariant()
     }
 }

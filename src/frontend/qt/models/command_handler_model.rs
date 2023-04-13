@@ -60,34 +60,30 @@ impl CommandHandlerModel {
     fn get_category_commands(&self, host_id: QString, category: QString) -> QVariantList {
         let category_string = category.to_string();
 
-        let category_commands = self.command_handler.get_commands_for_host(host_id.to_string())
-                                                    .into_iter().filter(|(_, data)| data.display_options.category == category_string)
-                                                    .collect::<HashMap<String, CommandData>>();
-
-        let mut result = QVariantList::default();
+        let mut category_commands = self.command_handler.get_commands_for_host(host_id.to_string())
+                                                        .into_iter().filter(|(_, data)| data.display_options.category == category_string)
+                                                        .map(|(_, data)| data)
+                                                        .collect::<Vec<CommandData>>();
 
         let command_order = match &self.ui_display_options.categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
             None => Vec::new(),
         };
 
-        // First, add commands in the order specified in the config.
-        for command_id in command_order.iter() {
-            if let Some(command_data) = category_commands.get(command_id) {
-                result.push(command_data.to_qvariant());
-            }
+        // Orders first by predefined order and then alphabetically.
+        category_commands.sort_by_key(|command_data| {
+            // Priority will be the position in the predefined order or (shared) last priority if not found.
+            let priority = command_order.iter().position(|id| id == &command_data.command_id)
+                                               .unwrap_or(command_order.len());
+
+            // Tuple for sorting by priority and then by id.
+            (priority, command_data.command_id.clone())
+        });
+
+        let mut result = QVariantList::default();
+        for command_data in category_commands {
+            result.push(command_data.to_qvariant());
         }
-
-        // Append the rest of the commands in alphabetical order.
-        let mut rest = category_commands.keys().filter(|key| !command_order.contains(key)).collect::<Vec<&String>>();
-        rest.sort();
-
-        for command_id in rest {
-            if let Some(command_data) = category_commands.get(command_id) {
-                result.push(command_data.to_qvariant());
-            }
-        }
-
         result
     }
 

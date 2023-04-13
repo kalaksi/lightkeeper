@@ -51,6 +51,7 @@ pub struct Category {
     pub icon: Option<String>,
     pub color: Option<String>,
     pub command_order: Option<Vec<String>>,
+    pub monitor_order: Option<Vec<String>>,
     pub collapsible_commands: Option<Vec<String>>,
 }
 

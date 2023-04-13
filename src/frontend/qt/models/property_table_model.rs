@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use crate::command_handler::CommandData;
 use crate::enums::Criticality;
-use crate::frontend;
+use crate::{frontend, configuration};
 use crate::module::monitoring::{DataPoint, MonitoringData};
 
 
@@ -20,6 +20,7 @@ pub struct PropertyTableModel {
     // Monitoring and command data properties.
     monitoring_datas: qt_property!(QVariantList; WRITE set_monitoring_datas),
     command_datas: qt_property!(QVariantList; WRITE set_command_datas),
+    display_options: qt_property!(QVariant; WRITE set_display_options),
 
     // init: qt_method!(fn(&mut self, monitoring_datas: QVariantList, command_datas: QVariantList)),
     update: qt_method!(fn(&mut self, monitoring_data: QVariant)),
@@ -37,12 +38,13 @@ pub struct PropertyTableModel {
     // Internal data structures.
     i_monitoring_datas: Vec<MonitoringData>,
     i_command_datas: Vec<CommandData>,
+    i_display_options: configuration::DisplayOptions,
     command_cooldown_times: HashMap<String, u32>,
     command_cooldowns_finishing: Vec<String>,
     command_invocations: HashMap<u64, String>,
 
     /// Holds preprocessed data more fitting for table rows.
-    row_datas: Vec<RowData>
+    row_datas: Vec<RowData>,
 }
 
 impl PropertyTableModel {
@@ -58,34 +60,36 @@ impl PropertyTableModel {
             self.i_monitoring_datas.push(new_data);
         }
 
-        let mut row_datas: Vec<RowData> = self.i_monitoring_datas.iter().flat_map(|m_data| Self::convert_to_row_data(&m_data, &self.i_command_datas))
-                                                                 .collect();
-        Self::insert_multivalue_separator_rows(&mut row_datas);
-        self.row_datas = row_datas;
-
+        self.update_row_datas();
         self.end_reset_model();
     }
 
     fn set_monitoring_datas(&mut self, monitoring_datas: QVariantList) {
         self.begin_reset_model();
         self.i_monitoring_datas = monitoring_datas.into_iter().map(|qv| MonitoringData::from_qvariant(qv.clone()).unwrap()).collect();
-
-        let mut row_datas: Vec<RowData> = self.i_monitoring_datas.iter().flat_map(|m_data| Self::convert_to_row_data(&m_data, &self.i_command_datas))
-                                                                 .collect();
-        Self::insert_multivalue_separator_rows(&mut row_datas);
-        self.row_datas = row_datas;
+        self.update_row_datas();
         self.end_reset_model();
     }
 
     fn set_command_datas(&mut self, command_datas: QVariantList) {
         self.begin_reset_model();
         self.i_command_datas = command_datas.into_iter().map(|qv| CommandData::from_qvariant(qv.clone()).unwrap()).collect();
+        self.update_row_datas();
+        self.end_reset_model();
+    }
 
+    fn set_display_options(&mut self, display_options: QVariant) {
+        self.begin_reset_model();
+        self.i_display_options = configuration::DisplayOptions::from_qvariant(display_options).unwrap();
+        self.update_row_datas();
+        self.end_reset_model();
+    }
+
+    fn update_row_datas(&mut self) {
         let mut row_datas = self.i_monitoring_datas.iter().flat_map(|m_data| Self::convert_to_row_data(&m_data, &self.i_command_datas)).collect();
+        self.sort_row_data(&mut row_datas);
         Self::insert_multivalue_separator_rows(&mut row_datas);
         self.row_datas = row_datas;
-
-        self.end_reset_model();
     }
 
     fn get_separator_label(&mut self, row: QVariant) -> QString {
@@ -146,6 +150,24 @@ impl PropertyTableModel {
         return row_datas;
     }
 
+    fn sort_row_data(&self, row_datas: &mut Vec<RowData>) {
+        let category = &row_datas.first().unwrap().display_options.category;
+        let monitor_order = match &self.i_display_options.categories.get(category) {
+            Some(category_data) => category_data.monitor_order.clone().unwrap_or_default(),
+            None => Vec::new(),
+        };
+
+        // Orders first by predefined order and then alphabetically.
+        row_datas.sort_by_key(|row_data| {
+            // Priority will be the position in the predefined order or (shared) last priority if not found.
+            let priority = monitor_order.iter().position(|id| id == &row_data.monitor_id)
+                                               .unwrap_or(monitor_order.len());
+
+            // Tuple for sorting by priority and then by name.
+            (priority, row_data.monitor_id.clone())
+        });
+    }
+
     fn create_single_row_data(monitoring_data: &MonitoringData, mut data_point: DataPoint, multivalue_level: u8,
                               command_datas: &Vec<CommandData>) -> Option<RowData> {
         if data_point.criticality == Criticality::Ignore {
@@ -170,6 +192,7 @@ impl PropertyTableModel {
         }
 
         Some(RowData {
+            monitor_id: monitoring_data.monitor_id.clone(),
             value: data_point,
             display_options: monitoring_data.display_options.clone(),
             command_datas: level_commands,
@@ -268,38 +291,43 @@ impl QAbstractTableModel for PropertyTableModel {
         }
 
         let row_data = self.row_datas.get(index.row() as usize).unwrap().clone();
-        let styled_value = StyledValue {
-            data_point: row_data.value.clone(),
-            display_options: row_data.display_options.clone()
-        };
-        let styled_value_json = serde_json::to_string(&styled_value).unwrap();
-
-        let label = match row_data.display_options.use_multivalue {
-            true => row_data.value.label.clone(),
-            false => row_data.display_options.display_text.clone()
-        };
-        let label_with_description = LabelAndDescription {
-            label: label,
-            description: row_data.value.description.clone()
-        };
-        let label_with_description_json = serde_json::to_string(&label_with_description).unwrap();
-
-
-        // Filters out commands that depend on specific criticality, value or tag that isn't present currently.
-        let command_datas = row_data.command_datas.into_iter()
-            .filter(|command| command.display_options.depends_on_criticality.is_empty() ||
-                              command.display_options.depends_on_criticality.contains(&row_data.value.criticality))
-            .filter(|command| command.display_options.depends_on_value.is_empty() ||
-                              command.display_options.depends_on_value.contains(&row_data.value.value))
-            .filter(|command| command.display_options.depends_on_tags.iter().all(|tag| row_data.value.tags.contains(tag)))
-            .filter(|command| command.display_options.depends_on_no_tags.iter().all(|tag| !row_data.value.tags.contains(tag)))
-            .collect::<Vec<CommandData>>();
  
+        // TODO: avoid JSON encoding?
         match index.column() {
-            0 => label_with_description_json.to_qvariant(),
-            1 => styled_value_json.to_qvariant(),
-            // TODO: Maybe avoid using JSON encoding here too?
-            2 => serde_json::to_string(&command_datas).unwrap().to_qvariant(),
+            0 => {
+                let label = match row_data.display_options.use_multivalue {
+                    true => row_data.value.label.clone(),
+                    false => row_data.display_options.display_text.clone()
+                };
+                let label_with_description = LabelAndDescription {
+                    label: label,
+                    description: row_data.value.description.clone()
+                };
+                let label_with_description_json = serde_json::to_string(&label_with_description).unwrap();
+                label_with_description_json.to_qvariant()
+            },
+            1 => {
+                let styled_value = StyledValue {
+                    data_point: row_data.value.clone(),
+                    display_options: row_data.display_options.clone()
+                };
+
+                let styled_value_json = serde_json::to_string(&styled_value).unwrap();
+                styled_value_json.to_qvariant()
+            },
+            2 => {
+                // Filters out commands that depend on specific criticality, value or tag that isn't present currently.
+                let command_datas = row_data.command_datas.into_iter()
+                    .filter(|command| command.display_options.depends_on_criticality.is_empty() ||
+                                    command.display_options.depends_on_criticality.contains(&row_data.value.criticality))
+                    .filter(|command| command.display_options.depends_on_value.is_empty() ||
+                                    command.display_options.depends_on_value.contains(&row_data.value.value))
+                    .filter(|command| command.display_options.depends_on_tags.iter().all(|tag| row_data.value.tags.contains(tag)))
+                    .filter(|command| command.display_options.depends_on_no_tags.iter().all(|tag| !row_data.value.tags.contains(tag)))
+                    .collect::<Vec<CommandData>>();
+
+                serde_json::to_string(&command_datas).unwrap().to_qvariant()
+            },
             _ => panic!(),
         }
     }
@@ -312,6 +340,7 @@ impl QAbstractTableModel for PropertyTableModel {
 
 #[derive(Default, Clone, Serialize)]
 struct RowData {
+    monitor_id: String,
     value: DataPoint,
     display_options: frontend::DisplayOptions,
     command_datas: Vec<CommandData>,

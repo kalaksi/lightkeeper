@@ -19,9 +19,11 @@ display_options:
       priority: 1
       color: "#80b3825d"
       command_order: ["reboot", "shutdown", "logs"]
+      monitor_order: ["uptime", "os", "kernel", "filesystem"]
     network:
       priority: 2
       color: "#80b3825d"
+      monitor_order: ["ping", "ssh", "interface"]
     systemd:
       priority: 3
       color: "#8030d475"

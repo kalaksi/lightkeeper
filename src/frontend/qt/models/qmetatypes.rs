@@ -13,3 +13,6 @@ impl QMetaType for crate::command_handler::CommandData {
 
 impl QMetaType for crate::frontend::DisplayData {
 }
+
+impl QMetaType for crate::configuration::DisplayOptions {
+}

@@ -45,6 +45,7 @@ TableView {
     model: PropertyTableModel {
         monitoring_datas: root.monitoring_datas
         command_datas: root.command_datas
+        display_options: Theme.get_display_options()
     }
 
 
