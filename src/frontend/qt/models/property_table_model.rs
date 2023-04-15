@@ -186,6 +186,10 @@ impl PropertyTableModel {
     }
 
     fn sort_row_data(&self, row_datas: &mut Vec<RowData>) {
+        if row_datas.is_empty() {
+            return;
+        }
+
         let category = &row_datas.first().unwrap().display_options.category;
         let monitor_order = match &self.i_display_options.categories.get(category) {
             Some(category_data) => category_data.monitor_order.clone().unwrap_or_default(),

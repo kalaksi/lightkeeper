@@ -16,13 +16,12 @@ pub struct Interface {
 }
 
 impl Module for Interface {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         Interface {
-            ignored_interfaces: vec![
-                String::from("br-"),
-                String::from("docker"),
-                String::from("lo")
-            ]
+            ignored_interfaces: settings.get("ignored_interfaces").unwrap_or(&String::from(""))
+                                        .split(',')
+                                        .map(|value| value.parse().unwrap())
+                                        .collect(),
         }
     }
 }
