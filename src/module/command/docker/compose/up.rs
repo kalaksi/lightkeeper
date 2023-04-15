@@ -29,7 +29,7 @@ impl CommandModule for Up {
             category: String::from("docker-compose"),
             parent_id: String::from("docker-compose"),
             display_style: frontend::DisplayStyle::Icon,
-            display_icon: String::from("update-none"),
+            display_icon: String::from("update"),
             display_text: String::from("Up"),
             action: UIAction::None,
             ..Default::default()

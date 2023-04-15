@@ -7,16 +7,16 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("linux-packages-update", "0.0.1")]
-pub struct Update;
+#[command_module("linux-packages-update-all", "0.0.1")]
+pub struct UpdateAll;
 
-impl Module for Update {
+impl Module for UpdateAll {
     fn new(_settings: &HashMap<String, String>) -> Self {
         Self { }
     }
 }
 
-impl CommandModule for Update {
+impl CommandModule for UpdateAll {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
@@ -24,21 +24,19 @@ impl CommandModule for Update {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             category: String::from("packages"),
-            parent_id: String::from("package"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("update"),
-            display_text: String::from("Upgrade package"),
+            display_text: String::from("Upgrade all packages"),
+            confirmation_text: String::from("Really upgrade all packages?"),
             ..Default::default()
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
-        let package = parameters.first().unwrap();
-
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
         let mut command = ShellCommand::new();
         if host.platform.os == platform_info::OperatingSystem::Linux {
             if host.platform.is_newer_than(platform_info::Flavor::Debian, "7") {
-                command.arguments(vec!["apt", "--only-upgrade", "install", package]); 
+                command.arguments(vec!["apt", "upgrade", "-y"]); 
             }
 
             command.use_sudo = host.settings.contains(&HostSetting::UseSudo);

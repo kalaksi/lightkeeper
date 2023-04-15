@@ -9,3 +9,6 @@ pub use uninstall::Uninstall;
 
 pub mod update;
 pub use update::Update;
+
+pub mod update_all;
+pub use update_all::UpdateAll;

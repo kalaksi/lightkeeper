@@ -127,6 +127,8 @@ impl ModuleFactory {
         self.command_constructors.insert(command::linux::Reboot::get_metadata().module_spec, command::linux::Reboot::new_command_module);
         self.command_constructors.insert(command::linux::Shutdown::get_metadata().module_spec, command::linux::Shutdown::new_command_module);
         self.command_constructors.insert(command::linux::packages::Clean::get_metadata().module_spec, command::linux::packages::Clean::new_command_module);
+        self.command_constructors.insert(command::linux::packages::Update::get_metadata().module_spec, command::linux::packages::Update::new_command_module);
+        self.command_constructors.insert(command::linux::packages::UpdateAll::get_metadata().module_spec, command::linux::packages::UpdateAll::new_command_module);
         self.command_constructors.insert(command::docker::Restart::get_metadata().module_spec, command::docker::Restart::new_command_module);
         self.command_constructors.insert(command::docker::Inspect::get_metadata().module_spec, command::docker::Inspect::new_command_module);
         self.command_constructors.insert(command::docker::Shell::get_metadata().module_spec, command::docker::Shell::new_command_module);

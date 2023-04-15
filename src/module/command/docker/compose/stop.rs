@@ -32,6 +32,7 @@ impl CommandModule for Stop {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("stop"),
             display_text: String::from("Stop"),
+            confirmation_text: String::from("Really stop service?"),
             // Only displayed if the service is running.
             depends_on_criticality: vec![Criticality::Normal, Criticality::Info, Criticality::Warning],
             ..Default::default()

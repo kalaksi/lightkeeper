@@ -49,7 +49,7 @@ pub fn init_resources() {
 
             "images/breeze/dark/media-playback-start.svg" as "images/button/start",
             "images/breeze/dark/media-playback-stop.svg" as "images/button/stop",
-            "images/breeze/dark/update-none.svg" as "images/button/update-none",
+            "images/breeze/dark/update-none.svg" as "images/button/update",
             "images/breeze/dark/update-low.svg" as "images/button/update-low",
             "images/breeze/dark/update-high.svg" as "images/button/update-high",
 
@@ -110,7 +110,7 @@ pub fn init_resources() {
 
             "images/breeze/light/media-playback-start.svg" as "images/button/start",
             "images/breeze/light/media-playback-stop.svg" as "images/button/stop",
-            "images/breeze/light/update-none.svg" as "images/button/update-none",
+            "images/breeze/light/update-none.svg" as "images/button/update",
             "images/breeze/light/update-low.svg" as "images/button/update-low",
             "images/breeze/light/update-high.svg" as "images/button/update-high",
 
