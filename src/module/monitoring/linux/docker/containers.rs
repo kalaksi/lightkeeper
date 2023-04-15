@@ -9,6 +9,7 @@ use crate::{ Host, enums::Criticality, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
+use crate::utils::ShellCommand;
 
 #[monitoring_module("docker-containers", "0.0.1")]
 pub struct Containers {
@@ -40,20 +41,15 @@ impl MonitoringModule for Containers {
     }
 
     fn get_connector_message(&self, host: Host) -> String {
+        let mut command = ShellCommand::new();
+
         if host.platform.os == platform_info::OperatingSystem::Linux {
             // TODO: somehow connect directly to the unix socket instead of using curl?
-            let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
+            command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
+            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        }
 
-            if host.settings.contains(&crate::host::HostSetting::UseSudo) {
-                format!("sudo {}", command)
-            }
-            else {
-                command
-            }
-        }
-        else {
-            String::new()
-        }
+        command.to_string()
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {

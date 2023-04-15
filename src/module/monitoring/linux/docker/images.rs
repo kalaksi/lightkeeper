@@ -11,6 +11,7 @@ use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
+use crate::utils::ShellCommand;
 
 const LEVEL_WARNING: usize = 0;
 const LEVEL_ERROR: usize = 1;
@@ -48,20 +49,15 @@ impl MonitoringModule for Images {
     }
 
     fn get_connector_message(&self, host: Host) -> String {
+        let mut command = ShellCommand::new();
+
         if host.platform.os == platform_info::OperatingSystem::Linux {
             // TODO: somehow connect directly to the unix socket instead of using curl?
-            let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/images/json");
+            command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);
+            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        }
 
-            if host.settings.contains(&crate::host::HostSetting::UseSudo) {
-                format!("sudo {}", command)
-            }
-            else {
-                command
-            }
-        }
-        else {
-            String::new()
-        }
+        command.to_string()
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {

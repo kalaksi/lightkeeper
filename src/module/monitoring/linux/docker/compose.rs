@@ -9,24 +9,21 @@ use lightkeeper_module::monitoring_module;
 use crate::module::monitoring::docker::containers::ContainerDetails;
 use crate::module::*;
 use crate::module::monitoring::*;
+use crate::utils::ShellCommand;
 
 #[monitoring_module("docker-compose", "0.0.1")]
 pub struct Compose {
-    // TODO: these are unused atm
     pub compose_file_name: String,
-    /// If you have one directory under which all the compose projects are, use this.
+    /// Earlier docker-compose versions don't include working_dir label so this can be used instead.
+    /// Currently, a single directory is supported.
     pub main_dir: String, 
-    /// If you have project directories all over the place, use this.
-    pub project_directories: Vec<String>, 
 }
 
 impl Module for Compose {
     fn new(settings: &HashMap<String, String>) -> Self {
         Compose {
             compose_file_name: String::from("docker-compose.yml"),
-            main_dir: settings.get("main_dir").unwrap_or(&String::new()).clone(),
-            project_directories: settings.get("project_directories").unwrap_or(&String::new()).clone()
-                                         .split(",").map(|value| value.to_string()).collect(),
+            main_dir: settings.get("main_directory").unwrap_or(&String::new()).clone()
         }
     }
 }
@@ -47,30 +44,25 @@ impl MonitoringModule for Compose {
     }
 
     fn get_connector_message(&self, host: Host) -> String {
+        let mut command = ShellCommand::new();
+
         if host.platform.os == platform_info::OperatingSystem::Linux {
             // Docker API is much better suited for this than using the docker-compose CLI.
             // More effective too.
             // TODO: Reuse command results between docker-compose and docker monitors (a global command cache?)
             // TODO: find down-status compose-projects with find-command?
-            let command = String::from("curl --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true");
+            command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
+            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        }
 
-            if host.settings.contains(&crate::host::HostSetting::UseSudo) {
-                format!("sudo {}", command)
-            }
-            else {
-                command
-            }
-        }
-        else {
-            String::new()
-        }
+        command.to_string()
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+        // TODO: Check for docker-compose version for a more controlled approach?
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
             containers.retain(|container| container.labels.contains_key("com.docker.compose.config-hash"));
-
 
             // There will be 2 levels of multivalues (services under projects).
             let mut projects_datapoint = DataPoint::empty();
@@ -95,9 +87,17 @@ impl MonitoringModule for Compose {
                 let working_dir = match container.labels.get("com.docker.compose.project.working_dir") {
                     Some(working_dir) => working_dir.clone(),
                     None => {
-                        // Some earlier Docker Compose versions don't include this label.
-                        log::error!("Container {} has no com.docker.compose.project.working_dir label and therefore can't be used", container.id);
-                        continue;
+                        log::warn!("Container {} has no com.docker.compose.project.working_dir label set.", container.id);
+                        if !self.main_dir.is_empty() {
+                            let working_dir = format!("{}/{}", self.main_dir, project);
+                            log::warn!("User-defined working_dir \"{}\" is used instead. It isn't guaranteed that this is correct.", working_dir);
+                            working_dir
+                        }
+                        else {
+                            // Some earlier Docker Compose versions don't include this label.
+                            log::error!("User-defined main_directory setting is unset. Container can't be used.");
+                            continue;
+                        }
                     }
                 };
 
