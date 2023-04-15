@@ -26,6 +26,7 @@ pub struct PropertyTableModel {
     update: qt_method!(fn(&mut self, monitoring_data: QVariant)),
     get_separator_label: qt_method!(fn(&mut self, row: QVariant) -> QString),
     get_row_height: qt_method!(fn(&mut self, row: QVariant) -> u32),
+    get_column_width_ratio: qt_method!(fn(&self, row: QVariant, column: QVariant) -> f32),
 
     // For command cooldown mechanism.
     // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
@@ -119,6 +120,39 @@ impl PropertyTableModel {
         }
         else {
             0
+        }
+    }
+
+    fn get_column_width_ratio(&self, row: QVariant, column: QVariant) -> f32 {
+        let row = usize::from_qvariant(row).unwrap();
+        let column = usize::from_qvariant(column).unwrap();
+        let width_for_commands = 0.175;
+
+        if let Some(row_data) = self.row_datas.get(row) {
+            match column {
+                0 => 0.45,
+                1 => {
+                    if row_data.command_datas.len() > 0 {
+                        0.55 - width_for_commands
+                    }
+                    else {
+                        0.55
+                    }
+                },
+                2 => {
+                    if row_data.command_datas.len() > 0 {
+                        width_for_commands
+                    }
+                    // Hidden if there are no related commands.
+                    else {
+                        0.0
+                    }
+                }
+                _ => 0.0,
+            }
+        }
+        else {
+            0.0
         }
     }
 

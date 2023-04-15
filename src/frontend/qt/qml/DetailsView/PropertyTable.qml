@@ -38,9 +38,7 @@ TableView {
     topMargin: Theme.groupbox_padding()
     bottomMargin: Theme.groupbox_padding()
 
-    rowHeightProvider: function(row) {
-        return root.model.get_row_height(row)
-    }
+    rowHeightProvider: (row) => root.model.get_row_height(row)
 
     model: PropertyTableModel {
         monitoring_datas: root.monitoring_datas
@@ -74,7 +72,7 @@ TableView {
                 property bool isSeparator: separatorLabel !== ""
                 property var labelAndDescription: JSON.parse(model.value)
 
-                implicitWidth: root.width * 0.5
+                implicitWidth: root.width * root.model.get_column_width_ratio(row, column)
 
                 // Header text for multivalues.
                 Label {
@@ -124,10 +122,9 @@ TableView {
             delegate: Item {
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var styledValue: JSON.parse(model.value)
-                property bool _hasNoChildCommands: CommandHandler.get_child_command_count(root.hostId, root.category) === 0
 
                 visible: !isSeparator
-                implicitWidth: _hasNoChildCommands ? root.width * 0.5 : root.width * 0.3
+                implicitWidth: root.width * root.model.get_column_width_ratio(row, column)
 
                 // Used to clip overflowing text from the label.
                 // Avoiding clip-property on the label itself, since it could cause performance issues.
@@ -198,11 +195,9 @@ TableView {
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var parsedCommands: JSON.parse(model.value)
                 property real _marginRight: scrollBar.width + 8
-                property bool _hasNoChildCommands: CommandHandler.get_child_command_count(root.hostId, root.category) === 0
 
                 visible: !isSeparator
-                // Hidden if there are no related commands.
-                implicitWidth: _hasNoChildCommands ? 1 : root.width * 0.2
+                implicitWidth: root.width * root.model.get_column_width_ratio(row, column)
 
                 // Reason for this Rectangle is the same as with delegate 1.
                 Rectangle {
