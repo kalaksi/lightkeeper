@@ -96,7 +96,7 @@ pub fn cleanup_name(container_name: &String) -> String {
 }
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct ContainerDetails {
     pub id: String,
@@ -104,10 +104,19 @@ pub struct ContainerDetails {
     pub image: String,
     pub state: ContainerState,
     pub status: String,
+    pub ports: Vec<ContainerPort>,
     pub labels: HashMap<String, String>,
 }
 
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize)]
+pub struct ContainerPort {
+    pub ip: Option<String>,
+    pub private_port: Option<u16>,
+    pub public_port: Option<u16>,
+    pub type_: Option<String>,
+}
+
+#[derive(Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ContainerState {
     Created,

@@ -6,7 +6,7 @@ use std::{
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
-use crate::module::monitoring::docker::containers::ContainerDetails;
+use crate::module::monitoring::docker::containers::{ ContainerDetails, ContainerPort };
 use crate::module::*;
 use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
