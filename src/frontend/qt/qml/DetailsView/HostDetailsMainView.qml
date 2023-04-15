@@ -147,7 +147,15 @@ Item {
                             id: hostDetails
                             visible: modelData === "host"
                             width: parent.width
-                            height: 80
+                            height: 90
+
+                            // Background.
+                            Rectangle {
+                                x: -(groupBox.width - column.width) / 2
+                                width: groupBox.width
+                                height: parent.height
+                                color: "#50808080"
+                            }
 
                             Row {
                                 anchors.fill: parent
@@ -156,12 +164,15 @@ Item {
 
                                 Image {
                                     id: hostIcon
+                                    anchors.verticalCenter: parent.verticalCenter
                                     source: "qrc:/main/images/host/linux"
                                     width: 60
                                     height: 60
                                 }
 
                                 Column {
+                                    anchors.verticalCenter: parent.verticalCenter
+
                                     Repeater {
                                         width: 0.7 * parent.width
                                         model: root._hostDetails !== null ?

@@ -72,15 +72,15 @@ TableView {
                 property bool isSeparator: separatorLabel !== ""
                 property var labelAndDescription: JSON.parse(model.value)
 
-                implicitWidth: root.width * root.model.get_column_width_ratio(row, column)
+                implicitWidth: root.width * root.model.get_column_width(row, column)
 
                 // Header text for multivalues.
                 Label {
                     visible: parent.isSeparator
+                    anchors.bottom: parent.bottom
+                    bottomPadding: 8
                     width: root.width
-                    height: parent.height
-                    padding: 5
-                    topPadding: 10
+                    
                     horizontalAlignment: Text.AlignHCenter
                     text: parent.separatorLabel
 
@@ -91,7 +91,7 @@ TableView {
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
                             GradientStop { position: 0.0; color: "#404040" }
-                            GradientStop { position: 0.5; color: "#555555" }
+                            GradientStop { position: 0.5; color: "#606060" }
                             GradientStop { position: 1.0; color: "#404040" }
                         }
                     }
@@ -99,7 +99,8 @@ TableView {
 
                 Column {
                     visible: !parent.isSeparator
-                    spacing: -4
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: -3
                     padding: 0
 
                     NormalText {
@@ -124,7 +125,7 @@ TableView {
                 property var styledValue: JSON.parse(model.value)
 
                 visible: !isSeparator
-                implicitWidth: root.width * root.model.get_column_width_ratio(row, column)
+                implicitWidth: root.width * root.model.get_column_width(row, column)
 
                 // Used to clip overflowing text from the label.
                 // Avoiding clip-property on the label itself, since it could cause performance issues.
@@ -197,7 +198,7 @@ TableView {
                 property real _marginRight: scrollBar.width + 8
 
                 visible: !isSeparator
-                implicitWidth: root.width * root.model.get_column_width_ratio(row, column)
+                implicitWidth: root.width * root.model.get_column_width(row, column)
 
                 // Reason for this Rectangle is the same as with delegate 1.
                 Rectangle {

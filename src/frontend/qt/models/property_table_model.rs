@@ -26,7 +26,7 @@ pub struct PropertyTableModel {
     update: qt_method!(fn(&mut self, monitoring_data: QVariant)),
     get_separator_label: qt_method!(fn(&mut self, row: QVariant) -> QString),
     get_row_height: qt_method!(fn(&mut self, row: QVariant) -> u32),
-    get_column_width_ratio: qt_method!(fn(&self, row: QVariant, column: QVariant) -> f32),
+    get_column_width: qt_method!(fn(&self, row: QVariant, column: QVariant) -> f32),
 
     // For command cooldown mechanism.
     // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
@@ -109,10 +109,11 @@ impl PropertyTableModel {
         let row = usize::from_qvariant(row).unwrap();
         if let Some(row_data) = self.row_datas.get(row) {
             if row_data.value.value == SEPARATOR_TOKEN {
-                54
+                50
             }
-            else if !row_data.value.description.is_empty() {
-                32
+            // If any row has description set, use a higher row height.
+            else if self.row_datas.iter().any(|row_data| !row_data.value.description.is_empty()) {
+                30
             }
             else {
                 22
@@ -123,7 +124,7 @@ impl PropertyTableModel {
         }
     }
 
-    fn get_column_width_ratio(&self, row: QVariant, column: QVariant) -> f32 {
+    fn get_column_width(&self, row: QVariant, column: QVariant) -> f32 {
         let row = usize::from_qvariant(row).unwrap();
         let column = usize::from_qvariant(column).unwrap();
         let width_for_commands = 0.175;
@@ -221,8 +222,13 @@ impl PropertyTableModel {
             .collect::<Vec<CommandData>>();
 
         if multivalue_level > 1 {
+            // TODO: proper padding with QML instead of spaces.
             let indent = "    ".repeat((multivalue_level - 1).into());
             data_point.label = format!("{}{}", indent, data_point.label);
+            if !data_point.description.is_empty() {
+                let indent_d = "      ".repeat((multivalue_level - 1).into());
+                data_point.description = format!("{}{}", indent_d, data_point.description);
+            }
         }
 
         Some(RowData {

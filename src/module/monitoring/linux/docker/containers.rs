@@ -105,7 +105,9 @@ pub fn cleanup_name(container_name: &String) -> String {
 pub struct ContainerDetails {
     pub id: String,
     pub names: Vec<String>,
+    pub image: String,
     pub state: ContainerState,
+    pub status: String,
     pub labels: HashMap<String, String>,
 }
 
