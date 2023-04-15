@@ -143,6 +143,7 @@ TableView {
                 }
 
                 Row {
+                    width: parent.width
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
 
@@ -151,7 +152,7 @@ TableView {
                         spacing: 5
 
                         ProgressBar {
-                            width: parent.parent.width * 0.75
+                            width: parent.parent.width * 0.8
                             value: parseInt(styledValue.data_point.value, 10) / 100.0
                         }
 
