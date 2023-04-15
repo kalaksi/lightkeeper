@@ -72,11 +72,16 @@ impl MonitoringModule for Service {
             let mut result = DataPoint::empty();
 
             let services = response.data.first().unwrap().iter().filter(|unit| unit.id.ends_with(".service"));
-            let allowed_services = services
+            let mut allowed_services = services
                 .filter(|unit| self.included_services.is_empty() || self.included_services.iter().any(|id| unit.id.starts_with(id)))
-                .filter(|unit| self.excluded_services.is_empty() || !self.excluded_services.iter().any(|id| unit.id.starts_with(id)));
+                .filter(|unit| self.excluded_services.is_empty() || !self.excluded_services.iter().any(|id| unit.id.starts_with(id)))
+                .collect::<Vec<&UnitData>>();
 
-            result.multivalue = allowed_services.map(|unit| {
+            // Sort alphabetically by ID.
+            allowed_services.sort_by_key(|unit| &unit.id);
+
+
+            result.multivalue = allowed_services.iter().map(|unit| {
                 let mut point = DataPoint::labeled_value(unit.id.clone(), unit.sub_state.clone());
                 point.description = unit.name.clone();
 
