@@ -156,8 +156,6 @@ impl ConnectionManager {
 
                     for response in responses.iter() {
                         if let Err(error) = response {
-                            // Make sure the status is up-to-date.
-                            connector.is_connected();
                             log::error!("[{}] error while processing request: {}", request.host.name, error);
                             break;
                         }

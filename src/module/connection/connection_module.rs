@@ -13,7 +13,7 @@ pub trait ConnectionModule : MetadataSupport + Module {
     fn connect(&mut self, address: &IpAddr) -> Result<(), String>;
 
     /// Send message over the established connection.
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, String>;
+    fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String>;
 
     fn download_file(&self, source: &String) -> io::Result<Vec<u8>>;
     fn upload_file(&self, destination: &String, contents: Vec<u8>) -> io::Result<()>;
@@ -22,6 +22,10 @@ pub trait ConnectionModule : MetadataSupport + Module {
     fn is_connected(&self) -> bool {
         false
     }
+
+    fn disconnect(&mut self);
+
+    fn reconnect(&mut self) -> Result<(), String>;
 
     fn new_connection_module(settings: &HashMap<String, String>) -> Connector where Self: Sized + 'static + Send {
         Box::new(Self::new(settings))

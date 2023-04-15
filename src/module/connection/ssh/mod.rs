@@ -1,6 +1,7 @@
 use std::{
     net::TcpStream,
     net::IpAddr,
+    net::Ipv4Addr,
     io::Read,
     collections::HashMap,
     path::Path,
@@ -18,6 +19,7 @@ use crate::module::connection::*;
 pub struct Ssh2 {
     session: Session,
     is_initialized: bool,
+    address: IpAddr,
     port: u16,
     username: String,
     password: Option<String>,
@@ -53,6 +55,7 @@ impl Module for Ssh2 {
         Ssh2 {
             session: session,
             is_initialized: false,
+            address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             port: 22,
             username: settings.get("username").unwrap().clone(),
             password: settings.get("password").map(|s| s.clone()),
@@ -62,19 +65,20 @@ impl Module for Ssh2 {
 
 impl ConnectionModule for Ssh2 {
     fn connect(&mut self, address: &IpAddr) -> Result<(), String> {
-        // TODO: reconnect when server side has disconnected
-
         if self.is_initialized {
             return Ok(())
         }
+
+        self.address = address.clone();
 
         let stream = match TcpStream::connect(format!("{}:{}", address, self.port)) {
             Ok(stream) => stream,
             Err(error) => return Err(format!("Connection error: {}", error))
         };
 
-        log::info!("Connected to {} as user {}", address, self.username);
+        log::info!("Connected to {}:{}", address, self.port);
 
+        self.session = Session::new().unwrap();
         self.session.set_tcp_stream(stream);
         if let Err(error) = self.session.handshake() {
             return Err(format!("Handshake error: {}", error));
@@ -96,15 +100,25 @@ impl ConnectionModule for Ssh2 {
         Ok(())
     }
 
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, String>
-    {
+    fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String> {
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }
 
         let mut channel = match self.session.channel_session() {
             Ok(channel) => channel,
-            Err(error) => return Err(format!("Error opening'{}'", error))
+            Err(error) => {
+                // Error is likely duo to disconnected or timeouted session. Try to reconnect once.
+                log::error!("Reconnecting channel due to error: {}", error);
+                if let Err(error) = self.reconnect() {
+                    return Err(format!("Error reconnecting: {}", error));
+                }
+
+                match self.session.channel_session() {
+                    Ok(channel) => channel,
+                    Err(error) => return Err(format!("Error opening channel: {}", error))
+                }
+            }
         };
 
         if let Err(error) = channel.exec(message) {
@@ -174,15 +188,18 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn is_connected(&self) -> bool {
-        if !self.is_initialized {
-            return false;
-        }
+        self.is_initialized
+    }
 
-        // There didn't seem to be a better way to check the connection status.
-        match self.session.banner_bytes() {
-            Some(_) => true,
-            None => false,
-        }
+    fn reconnect(&mut self) -> Result<(), String> {
+        self.disconnect();
+        log::debug!("Disconnected");
+        self.connect(&self.address.clone())
+    }
+
+    fn disconnect(&mut self) {
+        let _ = self.session.disconnect(None, "", None);
+        self.is_initialized = false;
     }
 }
 
