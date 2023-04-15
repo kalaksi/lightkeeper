@@ -20,7 +20,8 @@ impl Module for Interface {
         Interface {
             ignored_interfaces: settings.get("ignored_interfaces").unwrap_or(&String::from(""))
                                         .split(',')
-                                        .map(|value| value.parse().unwrap())
+                                        .filter(|value| !value.is_empty())
+                                        .map(|value| value.to_string())
                                         .collect(),
         }
     }

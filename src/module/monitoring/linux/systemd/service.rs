@@ -17,23 +17,22 @@ use crate::utils::ShellCommand;
 #[monitoring_module("systemd-service", "0.0.1")]
 pub struct Service {
     included_services: Vec<String>,
+    excluded_services: Vec<String>,
 }
 
 impl Module for Service {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         Service {
-            // TODO: configurable (remember to automatically add .service suffix)
-            included_services: vec![
-                String::from("acpid.service"),
-                String::from("cron.service"),
-                String::from("collectd.service"),
-                String::from("dbus.service"),
-                String::from("ntp.service"),
-                String::from("chrony.service"),
-                String::from("systemd-journald.service"),
-                String::from("containerd.service"),
-                String::from("docker.service"),
-            ]
+            included_services: settings.get("included_services").unwrap_or(&String::from(""))
+                                       .split(',')
+                                       .filter(|value| !value.is_empty())
+                                       .map(|value| value.to_string())
+                                       .collect(),
+            excluded_services: settings.get("excluded_services").unwrap_or(&String::from(""))
+                                       .split(',')
+                                       .filter(|value| !value.is_empty())
+                                       .map(|value| value.to_string())
+                                       .collect(),
         }
     }
 }
@@ -73,7 +72,9 @@ impl MonitoringModule for Service {
             let mut result = DataPoint::empty();
 
             let services = response.data.first().unwrap().iter().filter(|unit| unit.id.ends_with(".service"));
-            let allowed_services = services.filter(|unit| self.included_services.contains(&unit.id));
+            let allowed_services = services
+                .filter(|unit| self.included_services.is_empty() || self.included_services.iter().any(|id| unit.id.starts_with(id)))
+                .filter(|unit| self.excluded_services.is_empty() || !self.excluded_services.iter().any(|id| unit.id.starts_with(id)));
 
             result.multivalue = allowed_services.map(|unit| {
                 let mut point = DataPoint::labeled_value(unit.id.clone(), unit.sub_state.clone());
@@ -96,8 +97,11 @@ impl MonitoringModule for Service {
                 point
             }).collect();
 
-            let most_critical = result.multivalue.iter().max_by_key(|value| value.criticality).unwrap();
-            result.criticality = most_critical.criticality;
+            if !result.multivalue.is_empty() {
+                let most_critical = result.multivalue.iter().max_by_key(|value| value.criticality).unwrap();
+                result.criticality = most_critical.criticality;
+            }
+
             Ok(result)
         }
         else {
