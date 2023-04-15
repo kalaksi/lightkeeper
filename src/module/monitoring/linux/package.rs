@@ -58,11 +58,15 @@ impl MonitoringModule for Package {
                 let package = parts.next().unwrap().to_string();
                 let package_name = package.split('/').next().unwrap().to_string();
                 let new_version = parts.next().unwrap().to_string();
-                // let mut old_version = parts.nth(3).unwrap().to_string();
-                // Last character is ']'.
-                // old_version.pop();
+                // let arch = parts.next().unwrap().to_string();
+
+                // Current version needs some more work.
+                let start_index =  line.find("[upgradable from: ").unwrap() + "[upgradable from: ".len();
+                let end_index = line[start_index..].find("]").unwrap();
+                let old_version = line[start_index..(start_index + end_index)].to_string();
                 
-                let data_point = DataPoint::labeled_value(package_name, new_version);
+                let mut data_point = DataPoint::labeled_value(package_name, new_version);
+                data_point.description = old_version;
                 result.multivalue.push(data_point);
             }
 
