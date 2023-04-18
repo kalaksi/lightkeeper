@@ -198,8 +198,8 @@ impl CommandHandlerModel {
     fn refresh_monitors(&mut self, host_id: QString) -> QVariantList {
         let host_id = host_id.to_string();
         let invocation_ids = match host_id.is_empty() {
-            true => self.monitor_manager.refresh_all_monitors(None),
-            false => self.monitor_manager.refresh_all_monitors(Some(&host_id))
+            true => self.monitor_manager.refresh_host_monitors(None),
+            false => self.monitor_manager.refresh_host_monitors(Some(&host_id))
         };
         QVariantList::from_iter(invocation_ids)
     }

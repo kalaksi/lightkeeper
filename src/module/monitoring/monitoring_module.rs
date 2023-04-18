@@ -47,11 +47,6 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
         Err(String::from("Not implemented"))
     }
 
-    // TODO: Include in the macro?
-    fn uses_multiple_commands(&self) -> bool {
-        false
-    }
-
     fn error_unsupported(&self) -> Result<DataPoint, String> {
         Err(String::from("Unsupported platform"))
     }
