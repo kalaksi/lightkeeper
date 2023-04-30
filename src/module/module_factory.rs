@@ -91,6 +91,8 @@ impl ModuleFactory {
     }
 
     pub fn validate_modules(&self) {
+        log::info!("Validating module configuration");
+
         // Validate monitoring modules.
         for (metadata, constructor) in self.monitor_modules.iter() {
             let new_monitor = constructor(&HashMap::new());
@@ -98,11 +100,22 @@ impl ModuleFactory {
                 panic!("Error in monitoring module '{}' display_options: {}", metadata.module_spec.id, error);
             }
 
+            if let Some(connector_spec) = new_monitor.get_connector_spec() {
+                self.connector_modules.iter()
+                    .find(|(metadata, _ctor)| metadata.module_spec == connector_spec)
+                    .unwrap_or_else(|| panic!("Connector module '{}' for monitoring module '{}' was not found.",
+                        connector_spec.id, metadata.module_spec.id));
+            }
+
             if let Some(parent_spec) = &metadata.parent_module {
-                self.monitor_modules.iter()
-                    .find(|(metadata, _)| &metadata.module_spec == parent_spec)
-                    .unwrap_or_else(|| panic!("Parent module '{}' for monitoring extension module '{}' was not found.",
-                        parent_spec.id, metadata.module_spec.id));
+                let matches = self.monitor_modules.iter().filter(|(metadata, _)| &metadata.module_spec == parent_spec).collect::<Vec<_>>();
+                if matches.len() == 0 {
+                    panic!("Parent module '{}' for monitoring extension module '{}' was not found.", parent_spec.id, metadata.module_spec.id);
+                }
+                else if matches.len() > 1 {
+                    let extension_modules = matches.iter().map(|(metadata, _)| metadata.module_spec.clone().id).collect::<Vec<_>>().join(", ");
+                    panic!("Multiple extension modules for monitoring module '{}' were found ({})", parent_spec.id, extension_modules);
+                }
             }
         }
 
@@ -112,13 +125,21 @@ impl ModuleFactory {
             if let Err(error) = new_command.get_display_options().validate() {
                 panic!("Error in command module '{}' display_options: {}", metadata.module_spec.id, error);
             }
+
+            if let Some(connector_spec) = new_command.get_connector_spec() {
+                self.connector_modules.iter()
+                    .find(|(metadata, _ctor)| metadata.module_spec == connector_spec)
+                    .unwrap_or_else(|| panic!("Connector module '{}' for command module '{}' was not found.",
+                        connector_spec.id, metadata.module_spec.id));
+            }
+
         }
     }
 
     fn load_modules(&mut self) {
         // Connection modules.
         self.connector_modules = vec![
-            (connection::Ssh2::get_metadata(), connection::Ssh2::new_connection_module)
+            (connection::Ssh2::get_metadata(), connection::Ssh2::new_connection_module),
         ];
 
         // Monitoring modules.
@@ -135,6 +156,9 @@ impl ModuleFactory {
             (monitoring::docker::Compose::get_metadata(), monitoring::docker::Compose::new_monitoring_module),
             (monitoring::docker::Containers::get_metadata(), monitoring::docker::Containers::new_monitoring_module),
             (monitoring::docker::Images::get_metadata(), monitoring::docker::Images::new_monitoring_module),
+
+            // Monitoring extension modules.
+            (monitoring::docker::ImageUpdates::get_metadata(), monitoring::docker::ImageUpdates::new_monitoring_module),
         ];
 
         // Command modules.
