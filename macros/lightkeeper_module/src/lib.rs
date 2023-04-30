@@ -33,6 +33,10 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     }
                 }
 
+                fn get_metadata_self(&self) -> Metadata {
+                    Self::get_metadata()
+                }
+
                 fn get_module_spec(&self) -> ModuleSpecification {
                     Self::get_metadata().module_spec
                 }
@@ -83,6 +87,10 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                     }
                 }
 
+                fn get_metadata_self(&self) -> Metadata {
+                    Self::get_metadata()
+                }
+
                 fn get_module_spec(&self) -> ModuleSpecification {
                     Self::get_metadata().module_spec
                 }
@@ -130,6 +138,10 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     }
                 }
 
+                fn get_metadata_self(&self) -> Metadata {
+                    Self::get_metadata()
+                }
+
                 fn get_module_spec(&self) -> ModuleSpecification {
                     Self::get_metadata().module_spec
                 }
@@ -174,6 +186,10 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
                         url: String::from(""),
                         parent_module: None,
                     }
+                }
+
+                fn get_metadata_self(&self) -> Metadata {
+                    Self::get_metadata()
                 }
 
                 fn get_module_spec(&self) -> ModuleSpecification {

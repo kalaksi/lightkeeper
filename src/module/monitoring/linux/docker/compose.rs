@@ -6,7 +6,7 @@ use std::{
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
-use crate::module::monitoring::docker::containers::{ ContainerDetails, ContainerPort };
+use crate::module::monitoring::docker::containers::ContainerDetails;
 use crate::module::*;
 use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
@@ -43,7 +43,7 @@ impl MonitoringModule for Compose {
         }
     }
 
-    fn get_connector_message(&self, host: Host) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
         let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
@@ -58,7 +58,7 @@ impl MonitoringModule for Compose {
         command.to_string()
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         // TODO: Check for docker-compose version for a more controlled approach?
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;

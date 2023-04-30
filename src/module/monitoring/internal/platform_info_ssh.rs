@@ -24,11 +24,11 @@ impl MonitoringModule for PlatformInfoSsh {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
+    fn get_connector_message(&self, _host: Host, _result: DataPoint) -> String {
         String::from("cat /proc/version")
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         let mut platform = PlatformInfo::default();
         platform.os = platform_info::OperatingSystem::Linux;
 
@@ -60,11 +60,17 @@ impl MonitoringModule for PlatformInfoSsh {
             platform.os_flavor = platform_info::Flavor::Unknown;
         }
 
+        // TODO: this is a crude approach. Run uname too?
+        if response.message.contains("amd64") || response.message.contains("x86_64") {
+            platform.architecture = platform_info::Architecture::X86_64;
+        }
+
         // Special kind of datapoint for internal use.
         let mut datapoint = DataPoint::new(String::from("_platform_info"));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os"), platform.os.to_string()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_version"), platform.os_version.to_string()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_flavor"), platform.os_flavor.to_string()));
+        datapoint.multivalue.push(DataPoint::labeled_value(String::from("architecture"), platform.architecture.to_string()));
         Ok(datapoint)
     }
 }

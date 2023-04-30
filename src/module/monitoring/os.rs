@@ -30,7 +30,7 @@ impl MonitoringModule for Os {
         }
     }
 
-    fn process_response(&self, host: Host, _response: ResponseMessage) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, _response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         Ok(DataPoint::new(format!("{} ({} {})", host.platform.os, host.platform.os_flavor, host.platform.os_version)))
     }
 }

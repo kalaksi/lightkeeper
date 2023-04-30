@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::mpsc::{self, Sender};
 
 use crate::Host;
+use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::*;
 use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestType };
@@ -54,7 +55,8 @@ impl MonitorManager {
                     messages: Vec::new(),
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
-                        host.clone(), monitor.box_clone(), self.invocation_id_counter, self.request_sender.clone(), self.state_update_sender.clone()
+                        host.clone(), vec![monitor.box_clone()], self.invocation_id_counter,
+                        self.request_sender.clone(), self.state_update_sender.clone(), DataPoint::empty_and_critical()
                     )
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to connector: {}", error);
@@ -89,10 +91,11 @@ impl MonitorManager {
                     connector_id: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
-                    messages: vec![info_provider.get_connector_message(host.clone())],
+                    messages: vec![info_provider.get_connector_message(host.clone(), DataPoint::empty())],
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
-                        host.clone(), info_provider, self.invocation_id_counter, self.request_sender.clone(), self.state_update_sender.clone()
+                        host.clone(), vec![info_provider], self.invocation_id_counter,
+                        self.request_sender.clone(), self.state_update_sender.clone(), DataPoint::empty_and_critical()
                     )
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to connector: {}", error);
@@ -151,59 +154,104 @@ impl MonitorManager {
 
         let mut current_invocation_id = self.invocation_id_counter;
         let mut invocation_ids = Vec::new();
-        for monitor in monitors.values() {
+
+        // Split into 2: base modules and extension modules.
+        let (extensions, bases): (Vec<&Monitor>, Vec<&Monitor>) = 
+            monitors.values().partition(|monitor| monitor.get_metadata_self().parent_module.is_some());
+
+        for monitor in bases {
             current_invocation_id += 1;
             invocation_ids.push(current_invocation_id);
 
-            let messages = [monitor.get_connector_messages(host.clone()), vec![monitor.get_connector_message(host.clone())]].concat();
-            let response_handler = Self::get_response_handler(
-                host.clone(), monitor.box_clone(), current_invocation_id, self.request_sender.clone(), self.state_update_sender.clone()
-            );
+            let mut request_monitors = vec![monitor.box_clone()];
+            if let Some(extension) = extensions.iter().find(|ext| ext.get_metadata_self().parent_module.unwrap() == monitor.get_module_spec()) {
+                request_monitors.push(extension.box_clone());
+            }
 
-            self.request_sender.send(ConnectorRequest {
-                connector_id: monitor.get_connector_spec(),
-                source_id: monitor.get_module_spec().id,
-                host: host.clone(),
-                messages: messages,
-                request_type: RequestType::Command,
-                response_handler: response_handler,
-            }).unwrap_or_else(|error| {
-                log::error!("Couldn't send message to connector: {}", error);
-            });
+            Self::send_connector_request(
+                host.clone(), request_monitors, current_invocation_id,
+                self.request_sender.clone(), self.state_update_sender.clone(), DataPoint::empty_and_critical() 
+            );
         }
 
         invocation_ids
     }
 
-    fn get_response_handler(host: Host, monitor: Monitor, invocation_id: u64,
-                            request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+    /// Send a connector request to ConnectionManager.
+    fn send_connector_request(host: Host, monitors: Vec<Monitor>, invocation_id: u64,
+                              request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>,
+                              parent_result: DataPoint) {
+        let monitor = monitors[0].box_clone();
+        let messages = [monitor.get_connector_messages(host.clone(), parent_result.clone()),
+                        vec![monitor.get_connector_message(host.clone(), parent_result.clone())]].concat();
+        let response_handler = Self::get_response_handler(
+            host.clone(), monitors, invocation_id, request_sender.clone(), state_update_sender.clone(), parent_result
+        );
+
+        request_sender.send(ConnectorRequest {
+            connector_id: monitor.get_connector_spec(),
+            source_id: monitor.get_module_spec().id,
+            host: host.clone(),
+            messages: messages,
+            request_type: RequestType::Command,
+            response_handler: response_handler,
+        }).unwrap_or_else(|error| {
+            log::error!("Couldn't send message to connector: {}", error);
+        });
+    }
+
+    fn get_response_handler(host: Host, mut monitors: Vec<Monitor>, invocation_id: u64,
+                            request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>,
+                            parent_result: DataPoint) -> ResponseHandlerCallback {
 
         Box::new(move |results| {
+            let monitor = monitors.remove(0);
             let monitor_id = monitor.get_module_spec().id;
-            let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
 
-            let mut result = DataPoint::empty_and_critical();
-            if !responses.is_empty() {
-                // TODO: are multiple responses needed anywhere?
-                let process_result = monitor.process_response(host.clone(), responses[0].to_owned().unwrap());
+            let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
+            let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
+            let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+
+            let mut new_result = parent_result.clone();
+            if errors.is_empty() {
+                let process_result = if responses.len() > 1 {
+                    monitor.process_responses(host.clone(), responses.clone(), parent_result.clone())
+                }
+                else if responses.len() == 1 {
+                    monitor.process_response(host.clone(), responses[0].to_owned(), parent_result)
+                }
+                else {
+                    // Some special modules require no connectors and receive no response messages.
+                    monitor.process_response(host.clone(), ResponseMessage::empty(), parent_result)
+                };
 
                 match process_result {
                     Ok(data_point) => {
                         log::debug!("[{}] Data point received for monitor {}: {} {}", host.name, monitor_id, data_point.label, data_point);
-                        result = data_point;
+
+                        new_result = data_point;
                     },
                     Err(error) => {
                         log::error!("[{}] Error from monitor {}: {}", host.name, monitor_id, error);
                     }
                 }
             }
-
-            for error in errors {
-                log::error!("[{}] Error refreshing monitor {}: {}", host.name, monitor_id, error.unwrap_err());
+            else {
+                for error in errors {
+                    log::error!("[{}] Error refreshing monitor {}: {}", host.name, monitor_id, error);
+                }
             }
 
-            result.invocation_id = invocation_id;
-            Self::send_state_update(&host, &monitor, state_update_sender, result);
+
+            new_result.invocation_id = invocation_id;
+
+            if !monitors.is_empty() {
+                // Process extension modules recursively until the final result is reached.
+                Self::send_connector_request(host, monitors, invocation_id, request_sender, state_update_sender, new_result);
+            }
+            else {
+                Self::send_state_update(&host, &monitor, state_update_sender, new_result);
+            }
         })
     }
 

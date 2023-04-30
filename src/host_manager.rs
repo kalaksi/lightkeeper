@@ -203,11 +203,18 @@ impl HostManager {
         let mut platform = platform_info::PlatformInfo::default();
         for data in data_point.multivalue.iter() {
             match data.label.as_str() {
-                "os" => platform.os = platform_info::OperatingSystem::from_str(data.value.as_str())
-                                                                     .map_err(|error| error.to_string())?,
-                "os_version" => platform.os_version = VersionNumber::from_string(&data.value),
-                "os_flavor" => platform.os_flavor = platform_info::Flavor::from_str(data.value.as_str())
-                                                                          .map_err(|error| error.to_string())?,
+                "os" => {
+                    platform.os = platform_info::OperatingSystem::from_str(data.value.as_str()).map_err(|error| error.to_string())?
+                },
+                "os_version" => {
+                    platform.os_version = VersionNumber::from_string(&data.value)
+                },
+                "os_flavor" => {
+                    platform.os_flavor = platform_info::Flavor::from_str(data.value.as_str()).map_err(|error| error.to_string())?
+                },
+                "architecture" => {
+                    platform.architecture = platform_info::Architecture::from(&data.value)
+                },
                 _ => return Err(String::from("Invalid platform info data"))
             }
         }

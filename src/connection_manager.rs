@@ -110,7 +110,7 @@ impl ConnectionManager {
                             response_result = connector.send_message(&request_message);
                             if response_result.is_ok() {
                                 // Don't continue if any of the commands fail unexpectedly.
-                                if response_result.clone().unwrap().return_code != 0 {
+                                if response_result.as_ref().unwrap().return_code != 0 {
                                     break;
                                 }
                             }

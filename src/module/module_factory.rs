@@ -112,6 +112,7 @@ impl ModuleFactory {
                 if matches.len() == 0 {
                     panic!("Parent module '{}' for monitoring extension module '{}' was not found.", parent_spec.id, metadata.module_spec.id);
                 }
+                // Currently, multiple extension modules for the same parent/base are not supported.
                 else if matches.len() > 1 {
                     let extension_modules = matches.iter().map(|(metadata, _)| metadata.module_spec.clone().id).collect::<Vec<_>>().join(", ");
                     panic!("Multiple extension modules for monitoring module '{}' were found ({})", parent_spec.id, extension_modules);
@@ -140,6 +141,7 @@ impl ModuleFactory {
         // Connection modules.
         self.connector_modules = vec![
             (connection::Ssh2::get_metadata(), connection::Ssh2::new_connection_module),
+            (connection::Http::get_metadata(), connection::Http::new_connection_module),
         ];
 
         // Monitoring modules.

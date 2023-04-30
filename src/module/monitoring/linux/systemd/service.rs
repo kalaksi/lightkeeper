@@ -52,7 +52,7 @@ impl MonitoringModule for Service {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
         let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
@@ -65,7 +65,7 @@ impl MonitoringModule for Service {
         command.to_string()
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
             let response: DbusResponse = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 

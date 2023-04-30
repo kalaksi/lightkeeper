@@ -8,5 +8,6 @@ pub trait Module {
 
 pub trait MetadataSupport {
     fn get_metadata() -> Metadata where Self: Sized;
+    fn get_metadata_self(&self) -> Metadata;
     fn get_module_spec(&self) -> ModuleSpecification;
 }

@@ -41,7 +41,7 @@ impl MonitoringModule for Filesystem {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             String::from("df -P")
         }
@@ -50,7 +50,7 @@ impl MonitoringModule for Filesystem {
         }
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let mut result = DataPoint::empty();
 

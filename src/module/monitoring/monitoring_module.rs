@@ -31,19 +31,19 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
         }
     }
 
-    fn get_connector_message(&self, _host: Host) -> String {
+    fn get_connector_message(&self, _host: Host, _parent_result: DataPoint) -> String {
         String::from("")
     }
 
-    fn get_connector_messages(&self, _host: Host) -> Vec<String> {
+    fn get_connector_messages(&self, _host: Host, _parent_result: DataPoint) -> Vec<String> {
         Vec::new()
     }
 
-    fn process_response(&self, _host: Host, _response: ResponseMessage) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, _response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
         Err(String::from("Not implemented"))
     }
 
-    fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>) -> Result<DataPoint, String> {
+    fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>, _parent_result: DataPoint) -> Result<DataPoint, String> {
         Err(String::from("Not implemented"))
     }
 

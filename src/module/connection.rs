@@ -7,3 +7,6 @@ pub use response_message::ResponseMessage;
 
 pub mod ssh;
 pub use ssh::Ssh2;
+
+pub mod http;
+pub use http::Http;

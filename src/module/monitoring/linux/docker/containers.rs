@@ -40,7 +40,7 @@ impl MonitoringModule for Containers {
         }
     }
 
-    fn get_connector_message(&self, host: Host) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
         let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
@@ -52,7 +52,7 @@ impl MonitoringModule for Containers {
         command.to_string()
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 

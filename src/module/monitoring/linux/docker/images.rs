@@ -48,7 +48,7 @@ impl MonitoringModule for Images {
         }
     }
 
-    fn get_connector_message(&self, host: Host) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
         let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
@@ -60,22 +60,30 @@ impl MonitoringModule for Images {
         command.to_string()
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let images: Vec<ImageDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
-            let mut parent_data = DataPoint::empty();
+            let mut root_point = DataPoint::empty();
 
-            parent_data.multivalue = images.iter().map(|image| {
-                let label = match &image.repo_tags {
+            for image in images.iter() {
+                let repo_tag = match &image.repo_tags {
                     Some(repo_tags) => repo_tags.first().unwrap().clone(),
-                    None => image.id.clone(),
+                    None => String::from(""),
                 };
+
+                let label = if repo_tag.is_empty() {
+                    image.id.clone()
+                }
+                else {
+                    repo_tag.clone()
+                };
+
                 let mut point = DataPoint::labeled_value(label, image.created.to_string());
-                point.command_params = vec![image.id.clone()];
+                point.command_params = vec![image.id.clone(), repo_tag];
 
                 // TODO: make sure timezone is accounted for correctly?
-                let creation_time = Utc.timestamp(point.value.parse::<i64>().unwrap(), 0);
+                let creation_time = Utc.timestamp_opt(point.value.parse::<i64>().unwrap(), 0).unwrap();
                 let duration_days = Utc::now().signed_duration_since(creation_time).num_days();
 
                 if duration_days > self.criticality_levels[LEVEL_CRITICAL].into() {
@@ -88,12 +96,11 @@ impl MonitoringModule for Images {
                     point.criticality = Criticality::Warning;
                 }
 
-                point.value = format!("{} days", duration_days);
+                point.value = format!("{} days old", duration_days);
+                root_point.multivalue.push(point);
+            }
 
-                point
-            }).collect();
-
-            Ok(parent_data)
+            Ok(root_point)
         }
         else {
             self.error_unsupported()
