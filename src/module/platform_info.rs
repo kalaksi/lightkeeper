@@ -15,6 +15,8 @@ pub struct PlatformInfo {
 
     /// Flavor covers different Windows OSes and Linux distributions.
     pub os_flavor: Flavor,
+
+    pub architecture: Architecture,
 }
 
 impl PlatformInfo {
@@ -68,5 +70,28 @@ pub enum Flavor {
 impl Default for Flavor {
     fn default() -> Self {
         Self::Unknown
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
+pub enum Architecture {
+    Unknown,
+    X86_64,
+}
+
+impl Default for Architecture {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+impl From<&String> for Architecture {
+    fn from(value: &String) -> Self {
+        match value.to_lowercase().as_str() {
+            "x86_64" => Self::X86_64,
+            "x86-64" => Self::X86_64,
+            "amd64" => Self::X86_64,
+            _ => Self::Unknown,
+        }
     }
 }
