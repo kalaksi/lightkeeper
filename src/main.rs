@@ -111,6 +111,8 @@ fn main() {
         }
     }
 
+    connection_manager.start(module_factory);
+
     if config.preferences.refresh_hosts_on_start {
         monitor_manager.refresh_platform_info(None);
     }

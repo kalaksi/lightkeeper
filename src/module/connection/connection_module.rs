@@ -9,7 +9,6 @@ use crate::module::connection::ResponseMessage;
 pub type Connector = Box<dyn ConnectionModule + Send>;
 
 pub trait ConnectionModule : MetadataSupport + Module {
-    /// Send message over the established connection.
     fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String>;
 
     fn download_file(&self, _source: &String) -> io::Result<Vec<u8>> {

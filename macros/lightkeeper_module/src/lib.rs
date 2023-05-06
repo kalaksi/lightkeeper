@@ -30,6 +30,7 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
                         description: String::from(""),
                         url: String::from(""),
                         parent_module: None,
+                        is_stateless: true,
                     }
                 }
 
@@ -42,10 +43,10 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
                 }
             }
 
-             impl BoxCloneableMonitor for #struct_name {
-                 fn box_clone(&self) -> Box<dyn MonitoringModule + Send + Sync> {
-                     Box::new(self.clone())
-                 }
+            impl BoxCloneableMonitor for #struct_name {
+                fn box_clone(&self) -> Box<dyn MonitoringModule + Send + Sync> {
+                    Box::new(self.clone())
+                }
             }
         }.into()
     }
@@ -84,6 +85,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                         description: String::from(""),
                         url: String::from(""),
                         parent_module: Some(ModuleSpecification::new(#parent_module_name, #parent_module_version)),
+                        is_stateless: true,
                     }
                 }
 
@@ -135,6 +137,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
                         description: String::from(""),
                         url: String::from(""),
                         parent_module: None,
+                        is_stateless: true,
                     }
                 }
 
@@ -185,6 +188,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
                         description: String::from(""),
                         url: String::from(""),
                         parent_module: None,
+                        is_stateless: false,
                     }
                 }
 

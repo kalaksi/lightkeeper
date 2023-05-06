@@ -21,7 +21,7 @@ cstr = "0.2.10"
 sha256 = "1.1.1"
 strum = "0.24"
 strum_macros = "0.24"
-# reqwest = { version = "0.11.16", features = ["blocking"]}
 ureq = "2.6.2"
+rayon = "1.7"
 
 lightkeeper_module = { path = "macros/lightkeeper_module" }

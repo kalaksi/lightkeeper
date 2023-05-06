@@ -49,7 +49,7 @@ impl MonitorManager {
                 self.invocation_id_counter += 1;
 
                 self.request_sender.send(ConnectorRequest {
-                    connector_id: None,
+                    connector_spec: None,
                     source_id: monitor.get_module_spec().id,
                     host: host.clone(),
                     messages: Vec::new(),
@@ -88,7 +88,7 @@ impl MonitorManager {
                 // TODO: remove hardcoding and execute once per connector type.
                 let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
                 self.request_sender.send(ConnectorRequest {
-                    connector_id: info_provider.get_connector_spec(),
+                    connector_spec: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
                     messages: vec![info_provider.get_connector_message(host.clone(), DataPoint::empty())],
@@ -189,7 +189,7 @@ impl MonitorManager {
         );
 
         request_sender.send(ConnectorRequest {
-            connector_id: monitor.get_connector_spec(),
+            connector_spec: monitor.get_connector_spec(),
             source_id: monitor.get_module_spec().id,
             host: host.clone(),
             messages: messages,

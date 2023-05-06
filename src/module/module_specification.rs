@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Default, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ModuleSpecification {
     pub id: String,
     pub version: String,
