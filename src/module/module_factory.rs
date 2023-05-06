@@ -90,6 +90,18 @@ impl ModuleFactory {
         all_versions.last().unwrap_or_else(|| panic!("Connector module '{}' was not found.", module_id)).to_owned()
     }
 
+    pub fn get_connector_module_metadata(&self, module_spec: &ModuleSpecification) -> Metadata {
+        self.connector_modules.iter().find(|(metadata, _ctor)| &metadata.module_spec == module_spec).unwrap().0.clone()
+    }
+
+    pub fn get_monitor_module_metadata(&self, module_spec: &ModuleSpecification) -> Metadata {
+        self.monitor_modules.iter().find(|(metadata, _ctor)| &metadata.module_spec == module_spec).unwrap().0.clone()
+    }
+
+    pub fn get_command_module_metadata(&self, module_spec: &ModuleSpecification) -> Metadata {
+        self.command_modules.iter().find(|(metadata, _ctor)| &metadata.module_spec == module_spec).unwrap().0.clone()
+    }
+
     pub fn validate_modules(&self) {
         log::info!("Validating module configuration");
 
