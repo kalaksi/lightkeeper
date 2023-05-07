@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use ureq;
 
-use lightkeeper_module::connection_module;
+use lightkeeper_module::stateless_connection_module;
 use crate::module::*;
 use crate::module::connection::*;
 
-#[connection_module("http", "0.0.1")]
+#[stateless_connection_module("http", "0.0.1")]
 pub struct Http {
 }
 
