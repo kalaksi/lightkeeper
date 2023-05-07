@@ -42,7 +42,7 @@ impl ConnectionManager {
 
     // Adds a connector but only if a connector with the same ID doesn't exist.
     pub fn add_connector(&mut self, host: &Host, connector: Connector) {
-        let mut connectors = self.stateful_connectors.as_mut().unwrap();
+        let connectors = self.stateful_connectors.as_mut().unwrap();
         connectors.entry(host.name.clone()).or_insert(HashMap::new());
 
         if let Some(host_connectors) = connectors.get_mut(&host.name) {
@@ -113,6 +113,7 @@ impl ConnectionManager {
 
                         worker_pool.install(|| {
                             let responses = request_messages.par_iter().map(|request_message| {
+                                log::debug!("Worker {} processing stateless request {}", rayon::current_thread_index().unwrap(), request_message);
                                 let connector = module_factory.new_connector(&connector_spec, &HashMap::new());
                                 Self::process_request(mutex_request.clone(), &request_message, Arc::new(Mutex::new(connector)))
                             }).collect();
@@ -125,8 +126,8 @@ impl ConnectionManager {
                     else {
                         // TODO: This will block the thread unnecessarily. Need better solution. Imagine
                         // MAX_WORKERS amount of requests sequentially for the same host and connector.
-                        let mut connector_mutex = stateful_connectors.get_mut(&request.host.name)
-                                                                     .and_then(|connections| connections.get_mut(&connector_spec)).unwrap();
+                        let connector_mutex = stateful_connectors.get_mut(&request.host.name)
+                                                                 .and_then(|connections| connections.get_mut(&connector_spec)).unwrap();
 
                         let mut connector = connector_mutex.lock().unwrap();
                         if !connector.is_connected() {
@@ -138,13 +139,14 @@ impl ConnectionManager {
                         }
                         drop(connector);
 
-                        let mutex_request = Arc::new(Mutex::new(request));
+                        let request_mutex = Arc::new(Mutex::new(request));
                         worker_pool.install(|| {
                             let responses = request_messages.iter().map(|request_message| {
-                                Self::process_request(mutex_request.clone(), &request_message, connector_mutex.clone())
+                                log::debug!("Worker {} processing stateful request {}", rayon::current_thread_index().unwrap(), request_message);
+                                Self::process_request(request_mutex.clone(), &request_message, connector_mutex.clone())
                             }).collect();
 
-                            let request = Arc::try_unwrap(mutex_request).unwrap().into_inner().unwrap();
+                            let request = Arc::try_unwrap(request_mutex).unwrap().into_inner().unwrap();
                             (request.response_handler)(responses);
                         });
                     }
