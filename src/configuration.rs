@@ -9,6 +9,7 @@ use crate::host::HostSetting;
 pub struct Configuration {
     pub preferences: Preferences,
     pub display_options: DisplayOptions,
+    pub cache_settings: CacheSettings,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -42,6 +43,17 @@ pub struct Preferences {
 pub struct DisplayOptions {
     pub group_multivalue: bool,
     pub categories: HashMap<String, Category>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct CacheSettings {
+    /// Cache provides an initial value before receiving the up-to-date value.
+    pub provide_initial_value: bool,
+    /// Value is never returned from cache, except for the initial value if provide_initial_value is true.
+    pub bypass_cache: bool,
+    /// How long entries in cache are considered valid.
+    pub time_to_live: u64,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]

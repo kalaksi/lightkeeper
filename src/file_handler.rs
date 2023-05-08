@@ -1,7 +1,9 @@
 use std::{
     path::Path,
+    path::PathBuf,
     fs,
     io,
+    env,
 };
 use sha256;
 use serde_derive::{ Serialize, Deserialize };
@@ -12,6 +14,13 @@ use crate::Host;
 
 const MAX_PATH_COMPONENTS: u8 = 2;
 
+
+pub fn get_config_dir() -> io::Result<PathBuf> {
+    match env::var_os("HOME") {
+        Some(home_path) => Ok(PathBuf::from(home_path).join(".config").join("lightkeeper")),
+        None => Err(io::Error::new(io::ErrorKind::Other, "Cannot find home directory. $HOME is not set.")), 
+    }
+}
 
 /// Create a local file. Local path is based on remote host name and remote file path.
 /// Will overwrite any existing files.

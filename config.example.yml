@@ -45,3 +45,8 @@ display_options:
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remove"]
+
+cache_settings:
+  provide_initial_value: true
+  bypass_cache: true
+  time_to_live: 604800

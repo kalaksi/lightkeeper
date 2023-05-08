@@ -99,6 +99,10 @@ impl ConnectionManager {
 
                 if request.request_type == RequestType::Exit {
                     log::debug!("Gracefully exiting connection manager thread");
+                    // Not sure if waiting for a bit for workers to finish is needed but a couple of seconds won't hurt.
+                    thread::sleep(std::time::Duration::from_secs(2));
+                    // Write cache to disk.
+                    command_cache.lock().unwrap().write_to_disk().unwrap();
                     return;
                 }
 
@@ -172,14 +176,20 @@ impl ConnectionManager {
             RequestType::Command => {
                 log::debug!("[{}] Processing command: {}", request.host.name, request_message);
 
-                    let cache_key = match connector.get_metadata_self().cache_scope {
-                        CacheScope::Global => format!("{:?}{}", request.connector_spec, request_message),
-                        CacheScope::Host => format!("{}{:?}{}", request.host.name, request.connector_spec, request_message),
-                    };
+                let cache_key = match connector.get_metadata_self().cache_scope {
+                    CacheScope::Global => format!("{:?}{}", request.connector_spec, request_message),
+                    CacheScope::Host => format!("{}{:?}{}", request.host.name, request.connector_spec, request_message),
+                };
 
-                if let Some(cached_result) = command_cache.get(request_message) {
-                    log::debug!("[{}] Using cached result for command {}", request.host.name, request_message);
-                    return Ok(cached_result);
+                // TODO: handle provide_initial_value config option etc.
+                if let Some(cached_request) = command_cache.get(request_message) {
+                    if cached_request.is_success() {
+                        log::debug!("[{}] Using cached result for command {}", request.host.name, request_message);
+                        return Ok(cached_request);
+                    }
+                    else {
+                        return Err(cached_request.message);
+                    }
                 }
                 else {
                     let response_result = connector.send_message(&request_message);
@@ -232,6 +242,7 @@ impl ConnectionManager {
                     Err(error) => Err(error.to_string()),
                 }
             },
+            // Exit is handled earlier.
             RequestType::Exit => panic!(),
         }
     }
