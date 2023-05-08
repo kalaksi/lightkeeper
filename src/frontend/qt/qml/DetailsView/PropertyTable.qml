@@ -110,7 +110,7 @@ TableView {
 
                     SmallerText {
                         visible: parent.parent.labelAndDescription.description !== ""
-                        opacity: 0.6
+                        opacity: 0.7
                         text: parent.parent.labelAndDescription.description
                     }
                 }
