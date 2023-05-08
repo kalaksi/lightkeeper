@@ -15,11 +15,13 @@ use crate::file_handler;
 use crate::module::ModuleFactory;
 use crate::module::ModuleSpecification;
 use crate::module::connection::*;
+use crate::cache::{Cache, CacheScope};
 
 pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, String>>) + Send + 'static>;
 type ConnectorStates = HashMap<ModuleSpecification, Arc<Mutex<Connector>>>;
 
-const MAX_WORKER_THREADS: usize = 4;
+const MAX_WORKER_THREADS: usize = 8;
+const CACHE_TIME_TO_LIVE: std::time::Duration = std::time::Duration::from_secs(20);
 
 pub struct ConnectionManager {
     stateful_connectors: Option<HashMap<String, ConnectorStates>>,
@@ -79,10 +81,13 @@ impl ConnectionManager {
         module_factory: ModuleFactory
     ) -> thread::JoinHandle<()> {
 
-        let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build().unwrap();
-        log::debug!("Created worker pool with {} threads", MAX_WORKER_THREADS);
-
         thread::spawn(move || {
+            let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build().unwrap();
+            log::debug!("Created worker pool with {} threads", MAX_WORKER_THREADS);
+
+            let command_cache = Arc::new(Mutex::new(Cache::<String, ResponseMessage>::new(CACHE_TIME_TO_LIVE)));
+            log::debug!("Initialized cache with TTL of {} seconds", CACHE_TIME_TO_LIVE.as_secs());
+
             loop {
                 let request = match receiver.recv() {
                     Ok(data) => data,
@@ -114,8 +119,8 @@ impl ConnectionManager {
                         worker_pool.install(|| {
                             let responses = request_messages.par_iter().map(|request_message| {
                                 log::debug!("Worker {} processing stateless request {}", rayon::current_thread_index().unwrap(), request_message);
-                                let connector = module_factory.new_connector(&connector_spec, &HashMap::new());
-                                Self::process_request(mutex_request.clone(), &request_message, Arc::new(Mutex::new(connector)))
+                                let connector = Arc::new(Mutex::new(module_factory.new_connector(&connector_spec, &HashMap::new())));
+                                Self::process_request(mutex_request.clone(), &request_message, connector.clone(), command_cache.clone())
                             }).collect();
 
                             let request = Arc::try_unwrap(mutex_request).unwrap().into_inner().unwrap();
@@ -143,7 +148,7 @@ impl ConnectionManager {
                         worker_pool.install(|| {
                             let responses = request_messages.iter().map(|request_message| {
                                 log::debug!("Worker {} processing stateful request {}", rayon::current_thread_index().unwrap(), request_message);
-                                Self::process_request(request_mutex.clone(), &request_message, connector_mutex.clone())
+                                Self::process_request(request_mutex.clone(), &request_message, connector_mutex.clone(), command_cache.clone())
                             }).collect();
 
                             let request = Arc::try_unwrap(request_mutex).unwrap().into_inner().unwrap();
@@ -156,20 +161,43 @@ impl ConnectionManager {
     }
 
 
-    fn process_request(request: Arc<Mutex<ConnectorRequest>>, request_message: &String, connector: Arc<Mutex<Connector>>) -> Result<ResponseMessage, String> {
+    fn process_request(request: Arc<Mutex<ConnectorRequest>>, request_message: &String, connector: Arc<Mutex<Connector>>,
+                       command_cache: Arc<Mutex<Cache<String, ResponseMessage>>>) -> Result<ResponseMessage, String> { 
+
         let request = request.lock().unwrap();
         let mut connector = connector.lock().unwrap();
+        let mut command_cache = command_cache.lock().unwrap();
 
         match &request.request_type {
             RequestType::Command => {
                 log::debug!("[{}] Processing command: {}", request.host.name, request_message);
-                let response_result = connector.send_message(&request_message);
-                    // Don't continue if any of the commands fail unexpectedly.
-                if response_result.is_ok() && response_result.as_ref().unwrap().return_code != 0 {
-                    Err(String::from("Command returned non-zero exit code"))
+
+                    let cache_key = match connector.get_metadata_self().cache_scope {
+                        CacheScope::Global => format!("{:?}{}", request.connector_spec, request_message),
+                        CacheScope::Host => format!("{}{:?}{}", request.host.name, request.connector_spec, request_message),
+                    };
+
+                if let Some(cached_result) = command_cache.get(request_message) {
+                    log::debug!("[{}] Using cached result for command {}", request.host.name, request_message);
+                    return Ok(cached_result);
                 }
                 else {
-                    response_result
+                    let response_result = connector.send_message(&request_message);
+
+                    // Don't continue if any of the commands fail unexpectedly.
+                    if response_result.is_ok() {
+                        if response_result.as_ref().unwrap().return_code != 0 {
+                            Err(String::from("Command returned non-zero exit code"))
+                        }
+                        else {
+                            let response = response_result.as_ref().unwrap().clone();
+                            command_cache.insert(cache_key, response.clone());
+                            Ok(response)
+                        }
+                    }
+                    else {
+                        response_result
+                    }
                 }
             },
             RequestType::Download => {

@@ -9,6 +9,7 @@ mod frontend;
 mod connection_manager;
 mod command_handler;
 mod file_handler;
+mod cache;
 
 use std::collections::HashMap;
 use std::cell::RefCell;
