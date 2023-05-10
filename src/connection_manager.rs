@@ -11,6 +11,7 @@ use rayon;
 use rayon::prelude::*;
 
 use crate::Host;
+use crate::configuration::CacheSettings;
 use crate::file_handler;
 use crate::module::ModuleFactory;
 use crate::module::ModuleSpecification;
@@ -20,18 +21,20 @@ use crate::cache::{Cache, CacheScope};
 pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, String>>) + Send + 'static>;
 type ConnectorStates = HashMap<ModuleSpecification, Arc<Mutex<Connector>>>;
 
+
 const MAX_WORKER_THREADS: usize = 8;
-const CACHE_TIME_TO_LIVE: std::time::Duration = std::time::Duration::from_secs(20);
+
 
 pub struct ConnectionManager {
     stateful_connectors: Option<HashMap<String, ConnectorStates>>,
     request_receiver: Option<mpsc::Receiver<ConnectorRequest>>,
     request_sender_prototype: mpsc::Sender<ConnectorRequest>,
     receiver_thread: Option<thread::JoinHandle<()>>,
+    cache_settings: CacheSettings,
 }
 
 impl ConnectionManager {
-    pub fn new() -> Self {
+    pub fn new(cache_settings: CacheSettings) -> Self {
         let (sender, receiver) = mpsc::channel::<ConnectorRequest>();
 
         ConnectionManager {
@@ -39,6 +42,7 @@ impl ConnectionManager {
             request_receiver: Some(receiver),
             request_sender_prototype: sender,
             receiver_thread: None,
+            cache_settings: cache_settings,
         }
     }
 
@@ -65,7 +69,8 @@ impl ConnectionManager {
         let thread = Self::start_receiving_requests(
             self.stateful_connectors.take().unwrap(),
             self.request_receiver.take().unwrap(),
-            module_factory
+            module_factory,
+            self.cache_settings.clone()
         );
         self.receiver_thread = Some(thread);
     }
@@ -78,15 +83,21 @@ impl ConnectionManager {
     fn start_receiving_requests(
         mut stateful_connectors: HashMap<String, ConnectorStates>,
         receiver: mpsc::Receiver<ConnectorRequest>,
-        module_factory: ModuleFactory
-    ) -> thread::JoinHandle<()> {
+        module_factory: ModuleFactory,
+        cache_settings: CacheSettings) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
             let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build().unwrap();
             log::debug!("Created worker pool with {} threads", MAX_WORKER_THREADS);
 
-            let command_cache = Arc::new(Mutex::new(Cache::<String, ResponseMessage>::new(CACHE_TIME_TO_LIVE)));
-            log::debug!("Initialized cache with TTL of {} seconds", CACHE_TIME_TO_LIVE.as_secs());
+            let mut new_command_cache = Cache::<String, ResponseMessage>::new(cache_settings.time_to_live);
+            match new_command_cache.read_from_disk() {
+                Ok(count) => log::debug!("Added {} entries from cache file", count),
+                // Failing to read cache file is not critical.
+                Err(error) => log::error!("{}", error),
+            }
+            let command_cache = Arc::new(Mutex::new(new_command_cache));
+            log::debug!("Initialized cache with TTL of {} seconds", cache_settings.time_to_live);
 
             loop {
                 let request = match receiver.recv() {
@@ -101,8 +112,12 @@ impl ConnectionManager {
                     log::debug!("Gracefully exiting connection manager thread");
                     // Not sure if waiting for a bit for workers to finish is needed but a couple of seconds won't hurt.
                     thread::sleep(std::time::Duration::from_secs(2));
-                    // Write cache to disk.
-                    command_cache.lock().unwrap().write_to_disk().unwrap();
+
+                    match command_cache.lock().unwrap().write_to_disk() {
+                        Ok(count) => log::debug!("Wrote {} entries to cache file", count),
+                        // Failing to write the file is not critical.
+                        Err(error) => log::error!("{}", error),
+                    }
                     return;
                 }
 
@@ -177,19 +192,14 @@ impl ConnectionManager {
                 log::debug!("[{}] Processing command: {}", request.host.name, request_message);
 
                 let cache_key = match connector.get_metadata_self().cache_scope {
-                    CacheScope::Global => format!("{:?}{}", request.connector_spec, request_message),
-                    CacheScope::Host => format!("{}{:?}{}", request.host.name, request.connector_spec, request_message),
+                    CacheScope::Global => format!("{}|{}", connector.get_module_spec(), request_message),
+                    CacheScope::Host => format!("{}|{}|{}", request.host.name, connector.get_module_spec(), request_message),
                 };
 
                 // TODO: handle provide_initial_value config option etc.
-                if let Some(cached_request) = command_cache.get(request_message) {
-                    if cached_request.is_success() {
-                        log::debug!("[{}] Using cached result for command {}", request.host.name, request_message);
-                        return Ok(cached_request);
-                    }
-                    else {
-                        return Err(cached_request.message);
-                    }
+                if let Some(cached_request) = command_cache.get(&cache_key) {
+                    log::debug!("[{}] Using cached result for command {}", request.host.name, request_message);
+                    return Ok(cached_request);
                 }
                 else {
                     let response_result = connector.send_message(&request_message);
