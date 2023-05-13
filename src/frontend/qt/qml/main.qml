@@ -33,7 +33,7 @@ ApplicationWindow {
         }
 
         function onHost_platform_initialized(hostId) {
-            CommandHandler.refresh_monitors(hostId)
+            CommandHandler.initial_refresh_monitors(hostId)
         }
 
         function onMonitor_state_changed(hostId, monitorId, newCriticality) {

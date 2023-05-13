@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::mpsc::{self, Sender};
 
 use crate::Host;
+use crate::configuration::CacheSettings;
 use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::*;
 use crate::host_manager::{StateUpdateMessage, HostManager};
@@ -19,16 +20,21 @@ pub struct MonitorManager {
     host_manager: Rc<RefCell<HostManager>>,
     /// Every refresh operation gets an invocation ID. Valid ID numbers begin from 1.
     invocation_id_counter: u64,
+    cache_settings: CacheSettings,
 }
 
 impl MonitorManager {
-    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>, host_manager: Rc<RefCell<HostManager>>) -> Self {
+    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>,
+               host_manager: Rc<RefCell<HostManager>>,
+               cache_settings: CacheSettings) -> Self {
+
         MonitorManager {
             monitors: HashMap::new(),
             request_sender: request_sender,
             host_manager: host_manager.clone(),
             state_update_sender: host_manager.borrow().new_state_update_sender(),
             invocation_id_counter: 0,
+            cache_settings: cache_settings,
         }
     }
 
@@ -47,6 +53,7 @@ impl MonitorManager {
             // They don't depend on platform info or connectors.
             if monitor.get_connector_spec().is_none() {
                 self.invocation_id_counter += 1;
+                let ignore_cache = self.cache_settings.provide_initial_value == false;
 
                 self.request_sender.send(ConnectorRequest {
                     connector_spec: None,
@@ -55,9 +62,10 @@ impl MonitorManager {
                     messages: Vec::new(),
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
-                        host.clone(), vec![monitor.box_clone()], self.invocation_id_counter,
-                        self.request_sender.clone(), self.state_update_sender.clone(), DataPoint::empty_and_critical()
-                    )
+                        host.clone(), vec![monitor.box_clone()], self.invocation_id_counter, self.request_sender.clone(),
+                        self.state_update_sender.clone(), DataPoint::empty_and_critical(), ignore_cache
+                    ),
+                    ignore_cache
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to connector: {}", error);
                 });
@@ -70,7 +78,7 @@ impl MonitorManager {
         }
     }
 
-    pub fn refresh_platform_info(&mut self, host_id: Option<&String>) {
+    pub fn refresh_platform_info(&mut self, host_id: Option<&String>, initial_refresh: bool) {
         for (host_name, monitor_collection) in self.monitors.iter() {
             if let Some(host_filter) = host_id {
                 if host_name != host_filter {
@@ -84,6 +92,8 @@ impl MonitorManager {
             // Executed only if required connector is available.
             if monitor_collection.iter().any(|(_, monitor)| monitor.get_connector_spec().unwrap_or_default().id == "ssh") {
                 self.invocation_id_counter += 1;
+                let ignore_cache = (initial_refresh && !self.cache_settings.provide_initial_value) ||
+                                   (!initial_refresh && self.cache_settings.bypass_cache);
 
                 // TODO: remove hardcoding and execute once per connector type.
                 let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
@@ -94,9 +104,10 @@ impl MonitorManager {
                     messages: vec![info_provider.get_connector_message(host.clone(), DataPoint::empty())],
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
-                        host.clone(), vec![info_provider], self.invocation_id_counter,
-                        self.request_sender.clone(), self.state_update_sender.clone(), DataPoint::empty_and_critical()
-                    )
+                        host.clone(), vec![info_provider], self.invocation_id_counter, self.request_sender.clone(),
+                        self.state_update_sender.clone(), DataPoint::empty_and_critical(), ignore_cache
+                    ),
+                    ignore_cache,
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to connector: {}", error);
                 });
@@ -112,7 +123,7 @@ impl MonitorManager {
                                                 .filter(|(_, monitor)| &monitor.get_display_options().category == category)
                                                 .collect();
 
-        let invocation_ids = self.refresh_monitors(host, monitors_by_category);
+        let invocation_ids = self.refresh_monitors(host, monitors_by_category, false);
         self.invocation_id_counter = invocation_ids.last().unwrap().clone();
         invocation_ids
     }
@@ -125,13 +136,13 @@ impl MonitorManager {
                                    .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
                                    .collect();
 
-        let invocation_ids = self.refresh_monitors(host, monitor);
+        let invocation_ids = self.refresh_monitors(host, monitor, false);
         self.invocation_id_counter = invocation_ids.last().unwrap().clone();
         invocation_ids
     }
 
     /// Use `None` to refresh all monitors on every host or limit by host.
-    pub fn refresh_host_monitors(&mut self, host_filter: Option<&String>) -> Vec<u64> {
+    pub fn refresh_host_monitors(&mut self, host_filter: Option<&String>, initial_refresh: bool) -> Vec<u64> {
         let monitors: HashMap<&String, &HashMap<String, Monitor>> = match host_filter {
             Some(host_filter) => self.monitors.iter().filter(|(host_id, _)| host_id == &host_filter).collect(),
             None => self.monitors.iter().collect(),
@@ -140,17 +151,21 @@ impl MonitorManager {
         let mut invocation_ids = Vec::new();
         for (host_id, monitor_collection) in monitors {
             let host = self.host_manager.borrow().get_host(host_id);
-            invocation_ids.extend(self.refresh_monitors(host, monitor_collection.iter().collect()));
+            let new_ids = self.refresh_monitors(host, monitor_collection.iter().collect(), initial_refresh);
+            invocation_ids.extend(new_ids);
         }
 
         self.invocation_id_counter = invocation_ids.last().unwrap().clone();
         invocation_ids
     }
 
-    fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>) -> Vec<u64> {
+    fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>, initial_refresh: bool) -> Vec<u64> {
         if host.platform.is_unset() {
             log::warn!("[{}] Refreshing monitors despite missing platform info", host.name);
         }
+
+        let ignore_cache = (initial_refresh && !self.cache_settings.provide_initial_value) ||
+                            (!initial_refresh && self.cache_settings.bypass_cache);
 
         let mut current_invocation_id = self.invocation_id_counter;
         let mut invocation_ids = Vec::new();
@@ -164,28 +179,29 @@ impl MonitorManager {
             invocation_ids.push(current_invocation_id);
 
             let mut request_monitors = vec![monitor.box_clone()];
-            if let Some(extension) = extensions.iter().find(|ext| ext.get_metadata_self().parent_module.unwrap() == monitor.get_module_spec()) {
-                request_monitors.push(extension.box_clone());
-            }
+            extensions.iter().filter(|ext| ext.get_metadata_self().parent_module.unwrap() == monitor.get_module_spec())
+                             .for_each(|extension| request_monitors.push(extension.box_clone()));
 
             Self::send_connector_request(
-                host.clone(), request_monitors, current_invocation_id,
-                self.request_sender.clone(), self.state_update_sender.clone(), DataPoint::empty_and_critical() 
+                host.clone(), request_monitors, current_invocation_id, self.request_sender.clone(),
+                self.state_update_sender.clone(), DataPoint::empty_and_critical(), ignore_cache
             );
         }
 
         invocation_ids
     }
 
+    // TODO: maybe refactor so there's less parameters to pass?
     /// Send a connector request to ConnectionManager.
     fn send_connector_request(host: Host, monitors: Vec<Monitor>, invocation_id: u64,
                               request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>,
-                              parent_result: DataPoint) {
+                              parent_result: DataPoint, ignore_cache: bool) {
+
         let monitor = monitors[0].box_clone();
         let messages = [monitor.get_connector_messages(host.clone(), parent_result.clone()),
                         vec![monitor.get_connector_message(host.clone(), parent_result.clone())]].concat();
         let response_handler = Self::get_response_handler(
-            host.clone(), monitors, invocation_id, request_sender.clone(), state_update_sender.clone(), parent_result
+            host.clone(), monitors, invocation_id, request_sender.clone(), state_update_sender.clone(), parent_result, ignore_cache
         );
 
         request_sender.send(ConnectorRequest {
@@ -195,6 +211,7 @@ impl MonitorManager {
             messages: messages,
             request_type: RequestType::Command,
             response_handler: response_handler,
+            ignore_cache,
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
         });
@@ -202,7 +219,7 @@ impl MonitorManager {
 
     fn get_response_handler(host: Host, mut monitors: Vec<Monitor>, invocation_id: u64,
                             request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>,
-                            parent_result: DataPoint) -> ResponseHandlerCallback {
+                            parent_result: DataPoint, ignore_cache: bool) -> ResponseHandlerCallback {
 
         Box::new(move |results| {
             let monitor = monitors.remove(0);
@@ -228,7 +245,6 @@ impl MonitorManager {
                 match process_result {
                     Ok(data_point) => {
                         log::debug!("[{}] Data point received for monitor {}: {} {}", host.name, monitor_id, data_point.label, data_point);
-
                         new_result = data_point;
                     },
                     Err(error) => {
@@ -242,12 +258,11 @@ impl MonitorManager {
                 }
             }
 
-
             new_result.invocation_id = invocation_id;
 
             if !monitors.is_empty() {
                 // Process extension modules recursively until the final result is reached.
-                Self::send_connector_request(host, monitors, invocation_id, request_sender, state_update_sender, new_result);
+                Self::send_connector_request(host, monitors, invocation_id, request_sender, state_update_sender, new_result, ignore_cache);
             }
             else {
                 Self::send_state_update(&host, &monitor, state_update_sender, new_result);
@@ -282,6 +297,7 @@ impl Default for MonitorManager {
             host_manager: Rc::new(RefCell::new(HostManager::default())),
             invocation_id_counter: 0,
             monitors: HashMap::new(),
+            cache_settings: CacheSettings::default(),
         }
     }
 }

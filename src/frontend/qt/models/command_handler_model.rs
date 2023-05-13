@@ -19,6 +19,7 @@ pub struct CommandHandlerModel {
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     refresh_platform_info: qt_method!(fn(&self, host_id: QString)),
+    initial_refresh_monitors: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     refresh_monitors: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
@@ -192,14 +193,23 @@ impl CommandHandlerModel {
     }
 
     fn refresh_platform_info(&mut self, host_id: QString) {
-        self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()));
+        self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()), false);
+    }
+
+    fn initial_refresh_monitors(&mut self, host_id: QString) -> QVariantList {
+        let host_id = host_id.to_string();
+        let invocation_ids = match host_id.is_empty() {
+            true => self.monitor_manager.refresh_host_monitors(None, true),
+            false => self.monitor_manager.refresh_host_monitors(Some(&host_id), true)
+        };
+        QVariantList::from_iter(invocation_ids)
     }
 
     fn refresh_monitors(&mut self, host_id: QString) -> QVariantList {
         let host_id = host_id.to_string();
         let invocation_ids = match host_id.is_empty() {
-            true => self.monitor_manager.refresh_host_monitors(None),
-            false => self.monitor_manager.refresh_host_monitors(Some(&host_id))
+            true => self.monitor_manager.refresh_host_monitors(None, false),
+            false => self.monitor_manager.refresh_host_monitors(Some(&host_id), false)
         };
         QVariantList::from_iter(invocation_ids)
     }

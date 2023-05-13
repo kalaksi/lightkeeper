@@ -137,7 +137,10 @@ impl ConnectionManager {
 
                         worker_pool.install(|| {
                             let responses = request_messages.par_iter().map(|request_message| {
-                                log::debug!("Worker {} processing stateless request {}", rayon::current_thread_index().unwrap(), request_message);
+                                if request_message.is_empty() {
+                                    return Ok(ResponseMessage::empty());
+                                }
+
                                 let connector = Arc::new(Mutex::new(module_factory.new_connector(&connector_spec, &HashMap::new())));
                                 Self::process_request(mutex_request.clone(), &request_message, connector.clone(), command_cache.clone())
                             }).collect();
@@ -166,6 +169,10 @@ impl ConnectionManager {
                         let request_mutex = Arc::new(Mutex::new(request));
                         worker_pool.install(|| {
                             let responses = request_messages.iter().map(|request_message| {
+                                if request_message.is_empty() {
+                                    return Ok(ResponseMessage::empty());
+                                }
+
                                 log::debug!("Worker {} processing stateful request {}", rayon::current_thread_index().unwrap(), request_message);
                                 Self::process_request(request_mutex.clone(), &request_message, connector_mutex.clone(), command_cache.clone())
                             }).collect();
@@ -196,8 +203,12 @@ impl ConnectionManager {
                     CacheScope::Host => format!("{}|{}|{}", request.host.name, connector.get_module_spec(), request_message),
                 };
 
-                // TODO: handle provide_initial_value config option etc.
-                if let Some(cached_request) = command_cache.get(&cache_key) {
+                let cached_request = match request.ignore_cache {
+                    true => None,
+                    false => command_cache.get(&cache_key),
+                };
+
+                if let Some(cached_request) = cached_request {
                     log::debug!("[{}] Using cached result for command {}", request.host.name, request_message);
                     return Ok(cached_request);
                 }
@@ -265,6 +276,7 @@ pub struct ConnectorRequest {
     pub messages: Vec<String>,
     pub request_type: RequestType,
     pub response_handler: ResponseHandlerCallback,
+    pub ignore_cache: bool,
 }
 
 impl ConnectorRequest {
@@ -276,6 +288,7 @@ impl ConnectorRequest {
             messages: Vec::new(),
             request_type: RequestType::Exit,
             response_handler: Box::new(|_| ()),
+            ignore_cache: true,
         }
     }
 }
