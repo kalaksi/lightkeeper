@@ -34,6 +34,7 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
             None
         }
         else {
+            // Update last access time.
             self.data.insert(key.clone(), CacheEntry {
                 value: entry.value.clone(),
                 last_access: Instant::now(),

@@ -35,8 +35,7 @@ pub struct CommandHandlerModel {
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
     ui_display_options: configuration::DisplayOptions,
-
-
+    // TODO
     // refresh_after_execution: bool,
 }
 
