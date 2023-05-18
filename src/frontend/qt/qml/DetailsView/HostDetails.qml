@@ -14,6 +14,7 @@ import "../js/ValueUnit.js" as ValueUnit
 Item {
     id: root
     property string hostId: ""
+    property bool hostIsInitialized: false
     property real _subviewSize: 0.0
     // Only one subview can be open at one time, but in case a DetailsDialog is opened using openInNewWindowClicked(),
     // we need to provide the invocation id for state updates since there can be multiple dialogs open.
@@ -65,6 +66,7 @@ Item {
         anchors.margins: 10
 
         hostId: root.hostId
+        hostIsInitialized: root.hostIsInitialized
     }
 
     Item {

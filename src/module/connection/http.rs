@@ -38,10 +38,7 @@ impl ConnectionModule for Http {
 
         let response_string = response.into_string().map_err(|error| format!("Error while reading response: {}", error))?;
 
-        Ok(ResponseMessage {
-            message: response_string,
-            return_code: 0,
-        })
+        Ok(ResponseMessage::new_success(response_string))
     }
 
 

@@ -42,6 +42,7 @@ pub struct HostDisplayData {
     pub new_monitoring_data: Option<MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
     pub new_command_results: Option<CommandResult>,
+    pub is_initialized: bool,
     pub exit_thread: bool,
 }
 
@@ -66,6 +67,7 @@ impl Default for HostDisplayData {
             new_monitoring_data: None,
             command_results: HashMap::new(),
             new_command_results: None,
+            is_initialized: false,
             exit_thread: false,
         }
     }

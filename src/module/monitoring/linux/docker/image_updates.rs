@@ -73,6 +73,9 @@ impl MonitoringModule for ImageUpdates {
 
             // Responses are in the same order as the connector messages in get_connector_messages.
             let response = responses.get(index).unwrap();
+
+            new_point.is_from_cache = response.is_from_cache && old_point.is_from_cache;
+
             if response.is_empty() {
                 new_point.description = old_point.value;
                 if self.local_tag_prefixes.iter().any(|prefix| image_repo_tag.starts_with(prefix)) {

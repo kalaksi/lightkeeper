@@ -11,6 +11,7 @@ pub struct ThemeModel {
 
     category_color: qt_method!(fn(&self, category: QString) -> QString),
     category_background_color: qt_method!(fn(&self) -> QString),
+    category_refresh_mask: qt_method!(fn(&self) -> QString),
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
     groupbox_padding: qt_method!(fn(&self) -> i8),
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
@@ -40,6 +41,10 @@ impl ThemeModel {
 
     fn category_background_color(&self) -> QString {
         QString::from(String::from("#404040"))
+    }
+
+    fn category_refresh_mask(&self) -> QString {
+        QString::from(String::from("#80404040"))
     }
 
     fn category_icon(&self, category: QString) -> QString {

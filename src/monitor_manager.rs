@@ -65,7 +65,7 @@ impl MonitorManager {
                         host.clone(), vec![monitor.box_clone()], self.invocation_id_counter, self.request_sender.clone(),
                         self.state_update_sender.clone(), DataPoint::empty_and_critical(), ignore_cache
                     ),
-                    ignore_cache
+                    ignore_cache: ignore_cache
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to connector: {}", error);
                 });
@@ -107,7 +107,7 @@ impl MonitorManager {
                         host.clone(), vec![info_provider], self.invocation_id_counter, self.request_sender.clone(),
                         self.state_update_sender.clone(), DataPoint::empty_and_critical(), ignore_cache
                     ),
-                    ignore_cache,
+                    ignore_cache: ignore_cache,
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to connector: {}", error);
                 });
@@ -211,7 +211,7 @@ impl MonitorManager {
             messages: messages,
             request_type: RequestType::Command,
             response_handler: response_handler,
-            ignore_cache,
+            ignore_cache: ignore_cache,
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
         });
@@ -231,18 +231,20 @@ impl MonitorManager {
 
             let mut new_result = parent_result.clone();
             if errors.is_empty() {
-                let process_result = if responses.len() > 1 {
-                    monitor.process_responses(host.clone(), responses.clone(), parent_result.clone())
+                let datapoint_result = if responses.len() > 1 {
+                    monitor.process_responses(host.clone(), responses.clone(), parent_result)
                 }
                 else if responses.len() == 1 {
-                    monitor.process_response(host.clone(), responses[0].to_owned(), parent_result)
+                    let response = &responses[0];
+                    monitor.process_response(host.clone(), response.clone(), parent_result)
+                           .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point })
                 }
                 else {
                     // Some special modules require no connectors and receive no response messages.
                     monitor.process_response(host.clone(), ResponseMessage::empty(), parent_result)
                 };
 
-                match process_result {
+                match datapoint_result {
                     Ok(data_point) => {
                         log::debug!("[{}] Data point received for monitor {}: {} {}", host.name, monitor_id, data_point.label, data_point);
                         new_result = data_point;

@@ -5,13 +5,23 @@ use serde_derive::{Serialize, Deserialize};
 pub struct ResponseMessage {
     pub message: String,
     pub return_code: i32,
+    pub is_from_cache: bool,
 }
 
 impl ResponseMessage {
-    pub fn new(message: String) -> ResponseMessage {
+    pub fn new(message: String, return_code: i32) -> ResponseMessage {
+        ResponseMessage {
+            message: message,
+            return_code: return_code,
+            is_from_cache: false,
+        }
+    }
+
+    pub fn new_success(message: String) -> ResponseMessage {
         ResponseMessage {
             message: message,
             return_code: 0,
+            is_from_cache: false,
         }
     }
 
@@ -19,6 +29,7 @@ impl ResponseMessage {
         ResponseMessage {
             message: String::new(),
             return_code: 0,
+            is_from_cache: false,
         }
     }
 

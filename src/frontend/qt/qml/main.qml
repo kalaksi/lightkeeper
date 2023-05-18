@@ -36,6 +36,14 @@ ApplicationWindow {
             CommandHandler.initial_refresh_monitors(hostId)
         }
 
+        function onHost_initialized(hostId, refresh_monitors) {
+            detailsView.hostIsInitialized = true
+
+            if (refresh_monitors === true) {
+                CommandHandler.refresh_monitors(hostId)
+            }
+        }
+
         function onMonitor_state_changed(hostId, monitorId, newCriticality) {
             hostTable.highlightMonitor(hostId, monitorId, newCriticality)
         }
@@ -85,7 +93,7 @@ ApplicationWindow {
             detailsView.hostId = _hostTableModel.get_selected_host_id()
 
             if (detailsView.hostId !== "") {
-                if (!HostDataManager.host_is_initialized(detailsView.hostId)) {
+                if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
                     CommandHandler.refresh_platform_info(detailsView.hostId)
                 }
             }
@@ -138,6 +146,7 @@ ApplicationWindow {
                 SplitView.maximumHeight: 1.5 * body.splitSize * body.height
 
                 hostId: _hostTableModel.get_selected_host_id()
+                hostIsInitialized: HostDataManager.is_host_initialized(hostId)
 
                 onMinimizeClicked: animateMinimizeDetails.start()
                 onMaximizeClicked: animateMaximizeDetails.start()

@@ -14,6 +14,7 @@ Item {
     id: root
     property string hostId: ""
     property bool hideEmptyCategories: true
+    property bool hostIsInitialized: false
     property int columnMinimumWidth: 400
     property int columnMaximumWidth: 600
     property int columnMinimumHeight: 450
@@ -229,6 +230,12 @@ Item {
                             Layout.fillHeight: true
                             Layout.fillWidth: true
                         }
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color: Theme.category_refresh_mask()
+                        visible: groupBoxLabel.refreshProgress < 1.0
                     }
                 }
             }

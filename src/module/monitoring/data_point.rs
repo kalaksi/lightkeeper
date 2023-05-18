@@ -25,6 +25,7 @@ pub struct DataPoint {
     pub time: DateTime<Utc>,
     /// Unique invocation ID. Used by UI as an identifier for asynchronously executed requests and received results.
     pub invocation_id: u64,
+    pub is_from_cache: bool,
 }
 
 impl DataPoint {
@@ -101,6 +102,7 @@ impl Default for DataPoint {
             criticality: Criticality::Normal,
             time: Utc::now(),
             invocation_id: 0,
+            is_from_cache: false,
         }
     }
 }

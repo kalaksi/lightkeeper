@@ -5,6 +5,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::sync::{Arc, Mutex};
 
+use crate::configuration::CacheSettings;
 use crate::module::platform_info;
 use crate::module::{
     ModuleSpecification,
@@ -34,12 +35,12 @@ pub struct HostManager {
 }
 
 impl HostManager {
-    pub fn new() -> HostManager {
+    pub fn new(cache_settings: CacheSettings) -> HostManager {
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
         let shared_hosts = Arc::new(Mutex::new(HostCollection::new()));
         let observers = Arc::new(Mutex::new(Vec::new()));
 
-        let handle = Self::start_receiving_updates(shared_hosts.clone(), receiver, observers.clone());
+        let handle = Self::start_receiving_updates(shared_hosts.clone(), receiver, observers.clone(), cache_settings);
 
         HostManager {
             hosts: shared_hosts,
@@ -75,8 +76,12 @@ impl HostManager {
         self.observers.lock().unwrap().push(sender);
     }
 
-    fn start_receiving_updates(hosts: Arc<Mutex<HostCollection>>, receiver: mpsc::Receiver<StateUpdateMessage>,
-        observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
+    fn start_receiving_updates(
+        hosts: Arc<Mutex<HostCollection>>,
+        receiver: mpsc::Receiver<StateUpdateMessage>,
+        observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
+        cache_settings: CacheSettings) -> thread::JoinHandle<()> {
+
         thread::spawn(move || {
             loop {
                 let message = match receiver.recv() {
@@ -114,6 +119,11 @@ impl HostManager {
                         }
                     }
                     else {
+                        // The first received value is always empty (and NoData-level),
+                        // but, depending on settings, cache can provide another initial value after that.
+                        host_state.is_initialized = (cache_settings.provide_initial_value && !message_data_point.is_from_cache) ||
+                                                    (!cache_settings.provide_initial_value && message_data_point.criticality == Criticality::NoData);
+
                         // Check first if there already exists a key for monitor id.
                         if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
 
@@ -132,7 +142,7 @@ impl HostManager {
                         // Also add to a list of new data points.
                         let mut new = host_state.monitor_data.get(&message.module_spec.id).unwrap().clone();
                         new.values = VecDeque::from(vec![message_data_point.clone()]);
-                        new_monitoring_data = Some(new.clone());
+                        new_monitoring_data = Some(new);
                     }
                 }
                 else if let Some(command_result) = message.command_result {
@@ -156,6 +166,7 @@ impl HostManager {
                         command_results: host_state.command_results.clone(),
                         new_command_results: new_command_results.clone(),
                         status: host_state.status,
+                        is_initialized: host_state.is_initialized,
                         exit_thread: false,
                     }).unwrap();
                 }
@@ -192,6 +203,7 @@ impl HostManager {
                 command_results: state.command_results.clone(),
                 new_command_results: None,
                 status: state.status,
+                is_initialized: state.is_initialized,
                 exit_thread: false,
             });
         }
@@ -224,7 +236,7 @@ impl HostManager {
 
 impl Default for HostManager {
     fn default() -> Self {
-        HostManager::new()
+        HostManager::new(CacheSettings::default())
     }
 }
 
@@ -274,6 +286,8 @@ impl HostCollection {
 struct HostState {
     host: Host,
     status: HostStatus,
+    /// Host has received initial values for monitors.
+    is_initialized: bool,
     monitor_data: HashMap<String, MonitoringData>,
     command_results: HashMap<String, CommandResult>,
 }
@@ -282,9 +296,10 @@ impl HostState {
     fn from_host(host: Host, status: HostStatus) -> Self {
         HostState {
             host: host,
+            status: status,
+            is_initialized: false,
             monitor_data: HashMap::new(),
             command_results: HashMap::new(),
-            status: status,
         }
     }
 

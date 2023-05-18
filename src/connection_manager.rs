@@ -203,14 +203,15 @@ impl ConnectionManager {
                     CacheScope::Host => format!("{}|{}|{}", request.host.name, connector.get_module_spec(), request_message),
                 };
 
-                let cached_request = match request.ignore_cache {
+                let cached_response = match request.ignore_cache {
                     true => None,
                     false => command_cache.get(&cache_key),
                 };
 
-                if let Some(cached_request) = cached_request {
-                    log::debug!("[{}] Using cached result for command {}", request.host.name, request_message);
-                    return Ok(cached_request);
+                if let Some(mut cached_response) = cached_response {
+                    log::debug!("[{}] Using cached response for command {}", request.host.name, request_message);
+                    cached_response.is_from_cache = true;
+                    return Ok(cached_response);
                 }
                 else {
                     let response_result = connector.send_message(&request_message);
@@ -236,7 +237,7 @@ impl ConnectionManager {
                 match connector.download_file(&request_message) {
                     Ok(contents) => {
                         match file_handler::create_file(&request.host, &request_message, contents) {
-                            Ok(file_path) => Ok(ResponseMessage::new(file_path)),
+                            Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
                             Err(error) => Err(error.to_string()),
                         }
                     },

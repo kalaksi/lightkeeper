@@ -136,10 +136,7 @@ impl ConnectionModule for Ssh2 {
             log::error!("Error while closing channel: {}", error);
         };
 
-        Ok(ResponseMessage {
-            message: strip_newline(&output),
-            return_code: exit_status,
-        })
+        Ok(ResponseMessage::new(strip_newline(&output), exit_status))
     }
 
     fn download_file(&self, source: &String) -> io::Result<Vec<u8>> {

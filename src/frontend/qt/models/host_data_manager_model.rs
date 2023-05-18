@@ -20,6 +20,7 @@ pub struct HostDataManagerModel {
     update_received: qt_signal!(host_id: QString),
 
     host_platform_initialized: qt_signal!(host_id: QString),
+    host_initialized: qt_signal!(host_id: QString, refresh_monitors: bool),
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     command_result_received: qt_signal!(command_result: QString),
 
@@ -31,7 +32,7 @@ pub struct HostDataManagerModel {
     get_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
-    host_is_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
+    is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
     // These methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
@@ -42,6 +43,7 @@ pub struct HostDataManagerModel {
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
     i_refresh_hosts_on_start: bool,
+    i_bypass_cache: bool,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 }
@@ -63,6 +65,7 @@ impl HostDataManagerModel {
             // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             i_refresh_hosts_on_start: config.preferences.refresh_hosts_on_start,
+            i_bypass_cache: config.cache_settings.bypass_cache,
             ..Default::default()
         };
 
@@ -82,9 +85,15 @@ impl HostDataManagerModel {
                     // There should always be old data.
                     let old_data = self_pinned.borrow_mut().display_data.hosts.insert(new_display_data.name.clone(), new_display_data.clone()).unwrap();
 
-                    // If the platform data was unset before, it means that the host was just initialized.
+                    // If the platform data was unset before, it means that the host platform info was just initialized.
                     if old_data.platform.is_unset() && !new_display_data.platform.is_unset() {
                         self_pinned.borrow().host_platform_initialized(QString::from(old_data.name.clone()));
+                    }
+
+                    if !old_data.is_initialized && new_display_data.is_initialized {
+                        ::log::debug!("Host {} initialized", new_display_data.name);
+                        let self_borrowed = self_pinned.borrow();
+                        self_borrowed.host_initialized(QString::from(old_data.name.clone()), self_borrowed.i_bypass_cache);
                     }
 
                     if let Some(command_result) = new_display_data.new_command_results {
@@ -184,9 +193,13 @@ impl HostDataManagerModel {
         self.i_refresh_hosts_on_start
     }
 
-    fn host_is_initialized(&self, host_id: QString) -> bool {
-        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
-        !host.platform.is_unset()
+    fn is_host_initialized(&self, host_id: QString) -> bool {
+        if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
+            host.is_initialized
+        }
+        else {
+            false
+        }
     }
 
     fn is_empty_category(&self, host_id: QString, category: QString) -> bool {

@@ -55,7 +55,7 @@ fn main() {
 
     let module_factory = ModuleFactory::new();
 
-    let host_manager = Rc::new(RefCell::new(HostManager::new()));
+    let host_manager = Rc::new(RefCell::new(HostManager::new(config.cache_settings.clone())));
     let mut connection_manager = ConnectionManager::new(config.cache_settings.clone());
     let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.clone(), config.cache_settings.clone());
     let mut command_handler = CommandHandler::new(&config.preferences, connection_manager.new_request_sender(), host_manager.clone());
