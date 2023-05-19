@@ -44,7 +44,7 @@ impl ThemeModel {
     }
 
     fn category_refresh_mask(&self) -> QString {
-        QString::from(String::from("#80404040"))
+        QString::from(String::from("#60404040"))
     }
 
     fn category_icon(&self, category: QString) -> QString {

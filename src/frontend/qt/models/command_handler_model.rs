@@ -31,6 +31,7 @@ pub struct CommandHandlerModel {
     logs_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
     text_editor_opened: qt_signal!(headerText: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
+    host_initializing: qt_signal!(host_id: QString),
 
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
@@ -193,6 +194,7 @@ impl CommandHandlerModel {
 
     fn initialize_host(&mut self, host_id: QString) {
         self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()), false);
+        self.host_initializing(host_id);
     }
 
     // Finds related monitors for a command and refresh them.
