@@ -11,10 +11,8 @@ use crate::{
     configuration::Preferences,
     Host,
     host_manager::StateUpdateMessage,
-    connection_manager::ConnectorRequest, 
-    connection_manager::ResponseHandlerCallback,
     frontend::DisplayOptions,
-    connection_manager::RequestType,
+    connection_manager::*, 
 };
 
 use crate::module::{
@@ -88,7 +86,7 @@ impl CommandHandler {
                 vec![command.get_connector_message(host.clone(), parameters)]
             ].concat(),
             response_handler: Self::get_response_handler(host, command.box_clone(), self.invocation_id_counter, state_update_sender),
-            ignore_cache: true,
+            cache_policy: CachePolicy::BypassCache, 
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
         });
@@ -223,7 +221,7 @@ impl CommandHandler {
                     host, command.box_clone(), self.preferences.clone(),
                     self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
                 ),
-                ignore_cache: true,
+                cache_policy: CachePolicy::BypassCache,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to connector: {}", error);
             });
@@ -255,7 +253,7 @@ impl CommandHandler {
                         request_type: RequestType::Upload,
                         messages: vec![response_message.message.clone()],
                         response_handler: Self::get_response_handler_upload_file(host, command, state_update_sender),
-                        ignore_cache: true,
+                        cache_policy: CachePolicy::BypassCache,
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to connector: {}", error);
                     });

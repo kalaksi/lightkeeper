@@ -14,7 +14,6 @@ Item {
     id: root
     property string hostId: ""
     property bool hideEmptyCategories: true
-    property bool hostIsInitialized: false
     property int columnMinimumWidth: 400
     property int columnMaximumWidth: 600
     property int columnMinimumHeight: 450
@@ -23,25 +22,18 @@ Item {
     property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
     property var _categories: getCategories()
-    // Contains invocation IDs. Keeps track of monitoring data refresh progress. Empty when all is done.
-    property var _pendingMonitorInvocations: {}
-    property var _maximumPendingInvocations: {}
 
 
     onHostIdChanged: {
         root._categories = getCategories()
     }
 
-    Component.onCompleted: {
-        root._pendingMonitorInvocations = {}
-        root._maximumPendingInvocations = {}
-    }
-
     Connections {
         target: HostDataManager
-        function onMonitoring_data_received(invocation_id, category, monitoring_data_qv) {
-            // Refresh list of categories.
-            root._categories = getCategories()
+        function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
+            if (host_id === root.hostId) {
+                root._categories = getCategories()
+            }
         }
     }
 
@@ -85,37 +77,13 @@ Item {
                         text: TextTransform.capitalize(modelData)
                         icon: Theme.category_icon(modelData)
                         color: Theme.category_color(modelData)
-                        onRefreshClicked: function() {
-                            let invocation_ids = CommandHandler.refresh_monitors_of_category(root.hostId, modelData)
-                            if (invocation_ids.length > 0) {
-                                root._pendingMonitorInvocations[modelData] = invocation_ids
-                                root._maximumPendingInvocations[modelData] = invocation_ids.length
-                                groupBoxLabel.refreshProgress = 0.0
-                            }
-                        }
+                        onRefreshClicked: CommandHandler.refresh_monitors_of_category(root.hostId, modelData)
 
                         Connections {
                             target: HostDataManager
-                            function onMonitoring_data_received(invocation_id, category, monitoring_data_qv) {
-                                // Keep track of ongoing monitor invocations.
-                                // TODO: move these to HostDataManager? Easier to track pending invocations that come from elsewhere.
-                                if (category === modelData &&
-                                    root._pendingMonitorInvocations[category] !== undefined &&
-                                    root._maximumPendingInvocations[category] !== undefined) {
-
-                                    let index = root._pendingMonitorInvocations[category].indexOf(invocation_id)
-                                    if (index >= 0) {
-                                        // Remove from array of pending monitor invocations.
-                                        root._pendingMonitorInvocations[category].splice(index, 1)
-                                    }
-
-                                    if (root._maximumPendingInvocations[category] > 0) {
-                                        groupBoxLabel.refreshProgress = 1.0 - root._pendingMonitorInvocations[category].length /
-                                                                              root._maximumPendingInvocations[category]
-                                    }
-                                    else {
-                                        groupBoxLabel.refreshProgress = 1.0
-                                    }
+                            function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
+                                if (host_id === root.hostId && category === modelData) {
+                                    groupBoxLabel.refreshProgress = HostDataManager.get_pending_monitor_progress(root.hostId, category)
                                 }
                             }
                         }
@@ -138,9 +106,7 @@ Item {
                             Layout.topMargin: size * 0.20
                             Layout.bottomMargin: size * 0.30
 
-                            onClicked: function(commandId, params) {
-                                let invocationId = CommandHandler.execute(root.hostId, commandId, params)
-                            }
+                            onClicked: (commandId, params) => CommandHandler.execute(root.hostId, commandId, params)
                         }
 
                         // Host details are a bit different from monitor data, so handling it separately here.
@@ -220,8 +186,8 @@ Item {
 
                             Connections {
                                 target: HostDataManager
-                                function onMonitoring_data_received(invocation_id, category, monitoring_data_qv) {
-                                    if (category === modelData) {
+                                function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
+                                    if (host_id === root.hostId && category === modelData) {
                                         propertyTable.model.update(monitoring_data_qv)
                                     }
                                 }
@@ -235,7 +201,13 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         color: Theme.category_refresh_mask()
-                        visible: groupBoxLabel.refreshProgress < 1.0
+                        visible: !HostDataManager.is_host_initialized(root.hostId) ||
+                                 HostDataManager.get_pending_monitor_progress(root.hostId, modelData) < 100
+
+                        MouseArea {
+                            anchors.fill: parent
+                            preventStealing: true
+                        }
                     }
                 }
             }
@@ -244,14 +216,8 @@ Item {
 
     function getCategories() {
         if (root.hostId !== "") {
-            let categories = HostDataManager.get_categories(root.hostId)
-                                            .map(category_qv => category_qv.toString())
-
-            if (root.hideEmptyCategories) {
-                categories = categories.filter(category => !HostDataManager.is_empty_category(root.hostId, category))
-            }
-
-            return categories
+            return HostDataManager.get_categories(root.hostId, root.hideEmptyCategories)
+                                  .map(category_qv => category_qv.toString())
         }
         return []
     }

@@ -94,7 +94,10 @@ impl MonitoringModule for ImageUpdates {
                     .collect::<Vec<_>>();
 
                 if images_for_arch.len() > 1 {
-                    panic!("Multiple images for {} ({}) found", tag_details.name, host.platform.architecture);
+                    // Multiple images for arch found.
+                    new_point.criticality = Criticality::Warning;
+                    new_point.label = String::from("Unknown");
+                    new_point.description = old_point.value;
                 }
                 else if images_for_arch.len() == 1 {
                     let image_details = images_for_arch.first().unwrap();

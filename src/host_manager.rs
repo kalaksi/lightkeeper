@@ -5,7 +5,6 @@ use std::sync::mpsc;
 use std::thread;
 use std::sync::{Arc, Mutex};
 
-use crate::configuration::CacheSettings;
 use crate::module::platform_info;
 use crate::module::{
     ModuleSpecification,
@@ -35,12 +34,12 @@ pub struct HostManager {
 }
 
 impl HostManager {
-    pub fn new(cache_settings: CacheSettings) -> HostManager {
+    pub fn new() -> HostManager {
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
         let shared_hosts = Arc::new(Mutex::new(HostCollection::new()));
         let observers = Arc::new(Mutex::new(Vec::new()));
 
-        let handle = Self::start_receiving_updates(shared_hosts.clone(), receiver, observers.clone(), cache_settings);
+        let handle = Self::start_receiving_updates(shared_hosts.clone(), receiver, observers.clone());
 
         HostManager {
             hosts: shared_hosts,
@@ -79,8 +78,7 @@ impl HostManager {
     fn start_receiving_updates(
         hosts: Arc<Mutex<HostCollection>>,
         receiver: mpsc::Receiver<StateUpdateMessage>,
-        observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
-        cache_settings: CacheSettings) -> thread::JoinHandle<()> {
+        observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
             loop {
@@ -102,6 +100,9 @@ impl HostManager {
 
                 let mut hosts = hosts.lock().unwrap();
                 let host_state = hosts.hosts.get_mut(&message.host_name).unwrap();
+
+                host_state.just_initialized = false;
+                host_state.just_initialized_from_cache = false;
                 let mut new_monitoring_data: Option<MonitoringData> = None;
                 let mut new_command_results: Option<CommandResult> = None;
 
@@ -110,20 +111,24 @@ impl HostManager {
                     // Specially structured data point for passing platform info here.
                     // TODO: remove hardcoding?
                     if message_data_point.value == "_platform_info" {
-                        if let Ok(platform) = Self::read_platform_info(message_data_point) {
+                        if let Ok(platform) = Self::read_platform_info(&message_data_point) {
                             host_state.host.platform = platform;
                             log::debug!("[{}] Platform info updated", host_state.host.name);
+
+                            // TODO: handle multiple platform info's.
+                            if !message_data_point.is_from_cache {
+                                host_state.just_initialized = true;
+                                host_state.is_initialized = true;
+                            }
+                            else {
+                                host_state.just_initialized_from_cache = true;
+                            }
                         }
                         else {
                             log::error!("[{}] Invalid platform info received", host_state.host.name);
                         }
                     }
                     else {
-                        // The first received value is always empty (and NoData-level),
-                        // but, depending on settings, cache can provide another initial value after that.
-                        host_state.is_initialized = (cache_settings.provide_initial_value && !message_data_point.is_from_cache) ||
-                                                    (!cache_settings.provide_initial_value && message_data_point.criticality == Criticality::NoData);
-
                         // Check first if there already exists a key for monitor id.
                         if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
 
@@ -166,6 +171,8 @@ impl HostManager {
                         command_results: host_state.command_results.clone(),
                         new_command_results: new_command_results.clone(),
                         status: host_state.status,
+                        just_initialized: host_state.just_initialized,
+                        just_initialized_from_cache: host_state.just_initialized_from_cache,
                         is_initialized: host_state.is_initialized,
                         exit_thread: false,
                     }).unwrap();
@@ -203,6 +210,8 @@ impl HostManager {
                 command_results: state.command_results.clone(),
                 new_command_results: None,
                 status: state.status,
+                just_initialized: state.just_initialized,
+                just_initialized_from_cache: state.just_initialized_from_cache,
                 is_initialized: state.is_initialized,
                 exit_thread: false,
             });
@@ -211,7 +220,7 @@ impl HostManager {
         display_data
     }
 
-    fn read_platform_info(data_point: DataPoint) -> Result<platform_info::PlatformInfo, String> {
+    fn read_platform_info(data_point: &DataPoint) -> Result<platform_info::PlatformInfo, String> {
         let mut platform = platform_info::PlatformInfo::default();
         for data in data_point.multivalue.iter() {
             match data.label.as_str() {
@@ -236,7 +245,7 @@ impl HostManager {
 
 impl Default for HostManager {
     fn default() -> Self {
-        HostManager::new(CacheSettings::default())
+        HostManager::new()
     }
 }
 
@@ -286,7 +295,9 @@ impl HostCollection {
 struct HostState {
     host: Host,
     status: HostStatus,
-    /// Host has received initial values for monitors.
+    /// Host has received a real-time update for platform info (not a cached initial value).
+    just_initialized: bool,
+    just_initialized_from_cache: bool,
     is_initialized: bool,
     monitor_data: HashMap<String, MonitoringData>,
     command_results: HashMap<String, CommandResult>,
@@ -297,6 +308,8 @@ impl HostState {
         HostState {
             host: host,
             status: status,
+            just_initialized: false,
+            just_initialized_from_cache: false,
             is_initialized: false,
             monitor_data: HashMap::new(),
             command_results: HashMap::new(),

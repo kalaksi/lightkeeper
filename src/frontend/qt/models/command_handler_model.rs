@@ -12,16 +12,16 @@ use crate::utils::string_validation;
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
+    get_all_host_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     get_commands_on_level: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
-    refresh_platform_info: qt_method!(fn(&self, host_id: QString)),
-    initial_refresh_monitors: qt_method!(fn(&self, host_id: QString) -> QVariantList),
-    refresh_monitors: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    initialize_host: qt_method!(fn(&self, host_id: QString)),
     refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
+    cached_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
@@ -191,26 +191,8 @@ impl CommandHandlerModel {
         return invocation_id
     }
 
-    fn refresh_platform_info(&mut self, host_id: QString) {
+    fn initialize_host(&mut self, host_id: QString) {
         self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()), false);
-    }
-
-    fn initial_refresh_monitors(&mut self, host_id: QString) -> QVariantList {
-        let host_id = host_id.to_string();
-        let invocation_ids = match host_id.is_empty() {
-            true => self.monitor_manager.refresh_host_monitors(None, true),
-            false => self.monitor_manager.refresh_host_monitors(Some(&host_id), true)
-        };
-        QVariantList::from_iter(invocation_ids)
-    }
-
-    fn refresh_monitors(&mut self, host_id: QString) -> QVariantList {
-        let host_id = host_id.to_string();
-        let invocation_ids = match host_id.is_empty() {
-            true => self.monitor_manager.refresh_host_monitors(None, false),
-            false => self.monitor_manager.refresh_host_monitors(Some(&host_id), false)
-        };
-        QVariantList::from_iter(invocation_ids)
     }
 
     // Finds related monitors for a command and refresh them.
@@ -227,8 +209,22 @@ impl CommandHandlerModel {
         QVariantList::from_iter(invocation_ids)
     }
 
+    fn cached_refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
+        let invocation_ids = self.monitor_manager.cached_refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
+        QVariantList::from_iter(invocation_ids)
+    }
+
     fn refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
         let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
         QVariantList::from_iter(invocation_ids)
+    }
+
+    fn get_all_host_categories(&self, host_id: QString) -> QVariantList {
+        if host_id.is_empty() {
+            return QVariantList::default()
+        }
+
+        self.monitor_manager.get_all_host_categories(&host_id.to_string())
+                            .iter().map(|category| category.to_qvariant()).collect()
     }
 }

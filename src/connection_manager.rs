@@ -203,17 +203,22 @@ impl ConnectionManager {
                     CacheScope::Host => format!("{}|{}|{}", request.host.name, connector.get_module_spec(), request_message),
                 };
 
-                let cached_response = match request.ignore_cache {
-                    true => None,
-                    false => command_cache.get(&cache_key),
+                let cached_response = if request.cache_policy == CachePolicy::OnlyCache || request.cache_policy == CachePolicy::PreferCache {
+                    command_cache.get(&cache_key)
+                }
+                else {
+                    None
                 };
 
-                if let Some(mut cached_response) = cached_response {
+                if let Some(cached_response) = cached_response {
                     log::debug!("[{}] Using cached response for command {}", request.host.name, request_message);
-                    cached_response.is_from_cache = true;
                     return Ok(cached_response);
                 }
                 else {
+                    if request.cache_policy == CachePolicy::OnlyCache {
+                        return Ok(ResponseMessage::not_found());
+                    }
+
                     let response_result = connector.send_message(&request_message);
 
                     // Don't continue if any of the commands fail unexpectedly.
@@ -222,8 +227,11 @@ impl ConnectionManager {
                             Err(String::from("Command returned non-zero exit code"))
                         }
                         else {
+                            // Doesn't cache failed commands.
                             let response = response_result.as_ref().unwrap().clone();
-                            command_cache.insert(cache_key, response.clone());
+                            let mut cached_response = response.clone();
+                            cached_response.is_from_cache = true;
+                            command_cache.insert(cache_key, cached_response);
                             Ok(response)
                         }
                     }
@@ -277,7 +285,7 @@ pub struct ConnectorRequest {
     pub messages: Vec<String>,
     pub request_type: RequestType,
     pub response_handler: ResponseHandlerCallback,
-    pub ignore_cache: bool,
+    pub cache_policy: CachePolicy,
 }
 
 impl ConnectorRequest {
@@ -289,7 +297,7 @@ impl ConnectorRequest {
             messages: Vec::new(),
             request_type: RequestType::Exit,
             response_handler: Box::new(|_| ()),
-            ignore_cache: true,
+            cache_policy: CachePolicy::BypassCache,
         }
     }
 }
@@ -300,10 +308,17 @@ impl Debug for ConnectorRequest {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum RequestType {
     Command,
     Download,
     Upload,
     Exit,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum CachePolicy {
+    BypassCache,
+    PreferCache,
+    OnlyCache,
 }

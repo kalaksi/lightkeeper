@@ -32,15 +32,19 @@ ApplicationWindow {
             }
         }
 
-        function onHost_platform_initialized(hostId) {
-            CommandHandler.initial_refresh_monitors(hostId)
+        function onHost_initialized(hostId) {
+            let categories = CommandHandler.get_all_host_categories(hostId)
+            for (const category of categories) {
+                let invocation_ids = CommandHandler.refresh_monitors_of_category(hostId, category)
+                HostDataManager.add_pending_monitor_invocations(hostId, category, invocation_ids)
+            }
         }
 
-        function onHost_initialized(hostId, refresh_monitors) {
-            detailsView.hostIsInitialized = true
-
-            if (refresh_monitors === true) {
-                CommandHandler.refresh_monitors(hostId)
+        function onHost_initialized_from_cache(hostId) {
+            let categories = CommandHandler.get_all_host_categories(hostId)
+            for (const category of categories) {
+                let invocation_ids = CommandHandler.cached_refresh_monitors_of_category(hostId, category)
+                HostDataManager.add_pending_monitor_invocations(hostId, category, invocation_ids)
             }
         }
 
@@ -94,7 +98,7 @@ ApplicationWindow {
 
             if (detailsView.hostId !== "") {
                 if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
-                    CommandHandler.refresh_platform_info(detailsView.hostId)
+                    CommandHandler.initialize_host(detailsView.hostId)
                 }
             }
         }
@@ -146,7 +150,6 @@ ApplicationWindow {
                 SplitView.maximumHeight: 1.5 * body.splitSize * body.height
 
                 hostId: _hostTableModel.get_selected_host_id()
-                hostIsInitialized: HostDataManager.is_host_initialized(hostId)
 
                 onMinimizeClicked: animateMinimizeDetails.start()
                 onMaximizeClicked: animateMaximizeDetails.start()

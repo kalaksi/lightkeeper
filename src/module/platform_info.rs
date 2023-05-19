@@ -5,7 +5,7 @@ use serde_derive::{ Serialize, Deserialize };
 
 use crate::utils::VersionNumber;
 
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PlatformInfo {
     /// Operating system, i.e. Windows, Linux...
     pub os: OperatingSystem,

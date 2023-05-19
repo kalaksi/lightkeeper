@@ -10,7 +10,7 @@ Rectangle {
     id: root
     property string text: ""
     property string icon: ""
-    property real refreshProgress: 1.0
+    property real refreshProgress: 100
 
     color: "#00000000"
     implicitWidth: label.implicitWidth
@@ -61,7 +61,7 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
         onClicked: root.refreshClicked()
-        spinning: root.refreshProgress <= 0.99
+        spinning: root.refreshProgress < 100
     }
 
     function cleanupLabel(text) {

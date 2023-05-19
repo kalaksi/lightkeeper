@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::thread;
 use std::sync::mpsc;
 
@@ -19,20 +19,20 @@ pub struct HostDataManagerModel {
     receive_updates: qt_method!(fn(&self)),
     update_received: qt_signal!(host_id: QString),
 
-    host_platform_initialized: qt_signal!(host_id: QString),
-    host_initialized: qt_signal!(host_id: QString, refresh_monitors: bool),
+    host_initialized: qt_signal!(host_id: QString),
+    host_initialized_from_cache: qt_signal!(host_id: QString),
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     command_result_received: qt_signal!(command_result: QString),
-
-    monitoring_data_received: qt_signal!(invocation_id: u64, category: QString, monitoring_data: QVariant),
+    monitoring_data_received: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant),
 
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     get_display_data: qt_method!(fn(&self) -> QVariant),
-    is_empty_category: qt_method!(fn(&self, host_id: QString, category: QString) -> bool),
-    get_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_categories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QVariantList),
     get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
+    get_pending_monitor_progress: qt_method!(fn(&self, host_id: QString, category: QString) -> i8),
+    add_pending_monitor_invocations: qt_method!(fn(&self, host_id: QString, monitor_id: QString, invocation_ids: QVariantList)),
 
     // These methods are used to get the data in JSON and parsed in QML side.
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
@@ -42,8 +42,10 @@ pub struct HostDataManagerModel {
     // Basically contains the state of hosts and relevant data. Received from HostManager.
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
+    /// Contains invocation IDs. Keeps track of monitoring data refresh progress. Empty when all is done.
+    /// First key is host id, second key is category id. Value is a list of invocation IDs and the number of maximum pending invocations.
+    pending_monitor_invocations: HashMap<String, HashMap<String, (Vec<u64>, usize)>>,
     i_refresh_hosts_on_start: bool,
-    i_bypass_cache: bool,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 }
@@ -65,7 +67,6 @@ impl HostDataManagerModel {
             // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             i_refresh_hosts_on_start: config.preferences.refresh_hosts_on_start,
-            i_bypass_cache: config.cache_settings.bypass_cache,
             ..Default::default()
         };
 
@@ -81,19 +82,16 @@ impl HostDataManagerModel {
                 self_ptr.as_pinned().map(|self_pinned| {
                     // HostDataModel cannot be passed between threads so parsing happens here.
 
-                    // Update host data.
-                    // There should always be old data.
+                    // Update host data. There should always be old data.
                     let old_data = self_pinned.borrow_mut().display_data.hosts.insert(new_display_data.name.clone(), new_display_data.clone()).unwrap();
 
-                    // If the platform data was unset before, it means that the host platform info was just initialized.
-                    if old_data.platform.is_unset() && !new_display_data.platform.is_unset() {
-                        self_pinned.borrow().host_platform_initialized(QString::from(old_data.name.clone()));
+                    if new_display_data.just_initialized {
+                        ::log::debug!("Host {} initialized", old_data.name);
+                        self_pinned.borrow().host_initialized(QString::from(old_data.name.clone()));
                     }
-
-                    if !old_data.is_initialized && new_display_data.is_initialized {
-                        ::log::debug!("Host {} initialized", new_display_data.name);
-                        let self_borrowed = self_pinned.borrow();
-                        self_borrowed.host_initialized(QString::from(old_data.name.clone()), self_borrowed.i_bypass_cache);
+                    else if new_display_data.just_initialized_from_cache {
+                        ::log::debug!("Host {} initialized from cache", old_data.name);
+                        self_pinned.borrow().host_initialized_from_cache(QString::from(old_data.name.clone()));
                     }
 
                     if let Some(command_result) = new_display_data.new_command_results {
@@ -103,7 +101,15 @@ impl HostDataManagerModel {
 
                     if let Some(new_monitor_data) = new_display_data.new_monitoring_data {
                         let last_data_point = new_monitor_data.values.back().unwrap();
-                        self_pinned.borrow().monitoring_data_received(last_data_point.invocation_id,
+
+                        // Initial values (invoked internally) have invocation_id of 0.
+                        if last_data_point.invocation_id > 0 {
+                            self_pinned.borrow_mut().remove_pending_monitor_invocation(&new_display_data.name,
+                                                                                       &new_monitor_data.display_options.category,
+                                                                                       last_data_point.invocation_id);
+                        }
+
+                        self_pinned.borrow().monitoring_data_received(QString::from(new_display_data.name.clone()),
                                                                       QString::from(new_monitor_data.display_options.category.clone()),
                                                                       new_monitor_data.to_qvariant());
 
@@ -202,10 +208,49 @@ impl HostDataManagerModel {
         }
     }
 
-    fn is_empty_category(&self, host_id: QString, category: QString) -> bool {
-        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+    fn get_pending_monitor_progress(&self, host_id: QString, category: QString) -> i8 {
+        let host_id = host_id.to_string();
         let category = category.to_string();
 
+        if let Some(categories) = self.pending_monitor_invocations.get(&host_id) {
+            if let Some((invocation_ids, max_invocations)) = categories.get(&category) {
+                return (invocation_ids.len() as f32 / *max_invocations as f32 * 100.0).floor() as i8;
+            }
+        }
+
+        return 100;
+    }
+
+    fn add_pending_monitor_invocations(&mut self, host_id: QString, category: QString, invocation_ids: QVariantList) {
+        let host_id = host_id.to_string();
+        let category = category.to_string();
+        let invocation_ids = invocation_ids.into_iter().map(|id| u64::from_qvariant(id.clone()).unwrap()).collect::<Vec<u64>>();
+
+        let categories = self.pending_monitor_invocations.entry(host_id.clone()).or_insert_with(HashMap::new);
+
+        if let Some((existing_invocation_ids, max_invocations)) = categories.get_mut(&category) {
+            *max_invocations += invocation_ids.len();
+            existing_invocation_ids.extend(invocation_ids);
+        }
+    }
+
+    fn remove_pending_monitor_invocation(&mut self, host_id: &String, category: &String, invocation_id: u64) {
+        if let Some(categories) = self.pending_monitor_invocations.get_mut(host_id) {
+            if let Some((invocation_ids, max_invocations)) = categories.get_mut(category) {
+                invocation_ids.retain(|id| *id != invocation_id);
+
+                if invocation_ids.is_empty() {
+                    *max_invocations = 0;
+                }
+            }
+        }
+        else {
+            ::log::warn!("[{}] Trying to remove nonexisting monitor invocation ID {}", host_id, invocation_id);
+        }
+    }
+
+    fn is_empty_category(&self, host_id: String, category: String) -> bool {
+        let host = self.display_data.hosts.get(&host_id).unwrap();
         host.monitoring_data.values()
                             .filter(|monitor_data| monitor_data.display_options.category == category)
                             .all(|monitor_data| monitor_data.values.iter().all(|data_point| data_point.criticality == Criticality::Ignore ||
@@ -213,27 +258,30 @@ impl HostDataManagerModel {
     }
 
     // Get a readily sorted list of unique categories for a host. Gathered from the monitoring data.
-    fn get_categories(&self, host_id: QString) -> QVariantList {
+    fn get_categories(&self, host_id: QString, ignore_empty: bool) -> QVariantList {
         let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
 
         // Get unique categories from monitoring datas, and sort them according to config and alphabetically.
-        let mut categories = host.monitoring_data.values().map(|monitor_data| monitor_data.display_options.category.clone())
-                                                 .collect::<HashSet<String>>()
-                                                 .into_iter().collect::<Vec<String>>();
+        let mut categories = host.monitoring_data.values().map(|monitor_data| monitor_data.display_options.category.clone()).collect::<Vec<String>>();
         categories.sort();
+        categories.dedup();
 
         let mut result = QVariantList::default();
 
         // First add categories in the order they are defined in the config.
         for prioritized_category in self.display_options_category_order.iter() {
             if categories.contains(prioritized_category) {
-                result.push(prioritized_category.to_qvariant());
+                if !ignore_empty || !self.is_empty_category(host_id.to_string(), prioritized_category.to_string()) {
+                    result.push(prioritized_category.to_qvariant());
+                }
             }
         }
 
         for remaining_category in categories.iter() {
             if !self.display_options_category_order.contains(remaining_category) {
-                result.push(remaining_category.to_qvariant());
+                if !ignore_empty || !self.is_empty_category(host_id.to_string(), remaining_category.to_string()) {
+                    result.push(remaining_category.to_qvariant());
+                }
             }
         }
 
