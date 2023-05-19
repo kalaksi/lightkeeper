@@ -214,7 +214,9 @@ impl HostDataManagerModel {
 
         if let Some(categories) = self.pending_monitor_invocations.get(&host_id) {
             if let Some((invocation_ids, max_invocations)) = categories.get(&category) {
-                return (invocation_ids.len() as f32 / *max_invocations as f32 * 100.0).floor() as i8;
+                if *max_invocations > 0 {
+                    return 100 - ((invocation_ids.len() as f32 / *max_invocations as f32 * 100.0).floor() as i8);
+                }
             }
         }
 
@@ -227,11 +229,10 @@ impl HostDataManagerModel {
         let invocation_ids = invocation_ids.into_iter().map(|id| u64::from_qvariant(id.clone()).unwrap()).collect::<Vec<u64>>();
 
         let categories = self.pending_monitor_invocations.entry(host_id.clone()).or_insert_with(HashMap::new);
+        let (existing_invocation_ids, max_invocations) = categories.entry(category.clone()).or_insert((Vec::new(), 0));
 
-        if let Some((existing_invocation_ids, max_invocations)) = categories.get_mut(&category) {
-            *max_invocations += invocation_ids.len();
-            existing_invocation_ids.extend(invocation_ids);
-        }
+        *max_invocations += invocation_ids.len();
+        existing_invocation_ids.extend(invocation_ids);
     }
 
     fn remove_pending_monitor_invocation(&mut self, host_id: &String, category: &String, invocation_id: u64) {

@@ -22,10 +22,12 @@ Item {
     property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
     property var _categories: getCategories()
+    property var _maskedCategories: []
 
 
     onHostIdChanged: {
         root._categories = getCategories()
+        root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
     }
 
     Connections {
@@ -33,6 +35,7 @@ Item {
         function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
             if (host_id === root.hostId) {
                 root._categories = getCategories()
+                root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
             }
         }
     }
@@ -84,6 +87,7 @@ Item {
                             function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
                                 if (host_id === root.hostId && category === modelData) {
                                     groupBoxLabel.refreshProgress = HostDataManager.get_pending_monitor_progress(root.hostId, category)
+                                    console.log("Progress: " + groupBoxLabel.refreshProgress)
                                 }
                             }
                         }
@@ -201,8 +205,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         color: Theme.category_refresh_mask()
-                        visible: !HostDataManager.is_host_initialized(root.hostId) ||
-                                 HostDataManager.get_pending_monitor_progress(root.hostId, modelData) < 100
+                        visible: root._maskedCategories.includes(modelData)
 
                         MouseArea {
                             anchors.fill: parent
@@ -225,5 +228,10 @@ Item {
     function refresh() {
         root._hostDetailsJson = HostDataManager.get_host_data_json(hostId)
         root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
+    }
+
+    function isCategoryReady(category) {
+        return HostDataManager.is_host_initialized(root.hostId) &&
+               HostDataManager.get_pending_monitor_progress(root.hostId, category) >= 100
     }
 }
