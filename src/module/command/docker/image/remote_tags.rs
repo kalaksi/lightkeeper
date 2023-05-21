@@ -83,9 +83,15 @@ impl CommandModule for RemoteTags {
                 }
                 else if images_for_arch.len() == 1 {
                     let image_details = images_for_arch.first().unwrap();
-                    let last_pushed = Utc.datetime_from_str(image_details.last_pushed.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap();
-                    // TODO: format according to locale.
-                    let last_pushed_formatted = last_pushed.format("%d.%m.%Y %H:%M:%S").to_string();
+                    let last_pushed_formatted = if let Some(last_pushed_str) = &image_details.last_pushed {
+                        let datetime = Utc.datetime_from_str(last_pushed_str.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap();
+                        // TODO: format according to locale.
+                        datetime.format("%d.%m.%Y %H:%M:%S").to_string()
+                    }
+                    else {
+                        String::from("(Unknown)")
+                    };
+
                     let image_size_in_mb = image_details.size / 1024 / 1024;
                     result_rows.push(format!("- **{}**, last pushed {} UTC ({} MB)", tag_details.name, last_pushed_formatted, image_size_in_mb));
                 }
@@ -117,5 +123,5 @@ pub struct ImageDetails {
     pub variant: Option<String>,
     pub size: i64,
     pub status: String,
-    pub last_pushed: String,
+    pub last_pushed: Option<String>,
 }
