@@ -75,16 +75,18 @@ impl CommandHandler {
                                    .get(&command_id).unwrap();
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
 
+        // Only one of these should be implemented, but it doesn't matter if both are.
+        let messages = [
+            command.get_connector_messages(host.clone(), parameters.clone()),
+            vec![command.get_connector_message(host.clone(), parameters)]
+        ].concat();
+
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
             request_type: RequestType::Command,
-            // Only one of these should be implemented, but it doesn't matter if both are.
-            messages: [
-                command.get_connector_messages(host.clone(), parameters.clone()),
-                vec![command.get_connector_message(host.clone(), parameters)]
-            ].concat(),
+            messages: messages,
             response_handler: Self::get_response_handler(host, command.box_clone(), self.invocation_id_counter, state_update_sender),
             cache_policy: CachePolicy::BypassCache, 
         }).unwrap_or_else(|error| {
@@ -113,28 +115,32 @@ impl CommandHandler {
     }
 
     fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        Box::new(move |responses| {
-            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
-            let response = responses.first().unwrap();
+        Box::new(move |results| {
+            let results_len = results.len();
+            let (responses, _errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
+            let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
+            // let _errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
-            let command_result = match response {
-                Ok(response) => {
-                    match command.process_response(host.clone(), &response) {
-                        Ok(mut result) => {
-                            log::debug!("Command result received: {}", result.message);
-                            result.invocation_id = invocation_id;
-                            result.command_id = command.get_module_spec().id;
-                            result
-                        },
-                        Err(error) => {
-                            log::error!("Error from command: {}", error);
-                            CommandResult::new_critical_error(error)
-                        }
-                    }
+            let command_result = if results_len > 1 && responses.len() > 0 {
+                command.process_responses(host.clone(), responses)
+            }
+            else if results_len == 1 && responses.len() == 1 {
+                command.process_response(host.clone(), responses.first().unwrap())
+            }
+            else {
+                Err(String::from("No response received"))
+            };
+
+            let result = match command_result {
+                Ok(mut result) => {
+                    log::debug!("[{}] Command result received: {}", host.name, result.message);
+                    result.invocation_id = invocation_id;
+                    result.command_id = command.get_module_spec().id;
+                    result
                 },
                 Err(error) => {
-                    log::error!("Error sending command: {}", error);
-                    CommandResult::new_critical_error(error.clone())
+                    log::error!("[{}] Error from command: {}", host.name, error);
+                    CommandResult::new_critical_error(error)
                 }
             };
 
@@ -143,7 +149,7 @@ impl CommandHandler {
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 data_point: None,
-                command_result: Some(command_result),
+                command_result: Some(result),
                 exit_thread: false,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
