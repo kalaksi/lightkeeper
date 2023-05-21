@@ -19,6 +19,7 @@ Item {
     property bool forceCollapse: false
     property string menuTooltip: "More..."
     property int animationDuration: 150
+    property bool hoverEnabled: true
 
     property var _commandCooldowns: {}
     property bool _showBackground: false
@@ -71,6 +72,7 @@ Item {
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
                     cooldownPercent: root._getButtonCooldown(buttonIdentifier)
                     onClicked: () => root.clicked(modelData.command_id, modelData.command_params)
+                    hoverEnabled: root.hoverEnabled
 
                     Connections {
                         target: root
@@ -93,6 +95,7 @@ Item {
                 flatButton: root.flatButtons
                 roundButton: root.roundButtons
                 tooltip: root.menuTooltip
+                hoverEnabled: root.hoverEnabled
                 imageSource: "qrc:/main/images/button/overflow-menu"
 
                 onClicked: !root._showCommands ? root.expand() : root.collapse()

@@ -11,17 +11,19 @@ const CACHE_FILE_NAME: &str = "cache.yml";
 
 
 // Simple cache implementation.
-// cached-package was tested but it required a lot of dependencies.
+// cached-crate was tested but it required a lot of dependencies.
 // The needs are currently simple, so this is subjectively a better approach.
 pub struct Cache<K, V> {
     time_to_live: Duration,
+    final_time_to_live: Duration,
     data: HashMap<K, CacheEntry<V>>,
 }
 
 impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
-    pub fn new(time_to_live: u64) -> Self {
+    pub fn new(time_to_live: u64, final_time_to_live: u64) -> Self {
         Self {
             time_to_live: Duration::from_secs(time_to_live),
+            final_time_to_live: Duration::from_secs(final_time_to_live),
             data: HashMap::new(),
         }
     }
@@ -29,8 +31,11 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
     pub fn get(&mut self, key: &K) -> Option<V> {
         let entry = self.data.get(key)?.clone();
 
-        if entry.last_access.elapsed() > self.time_to_live {
+        if entry.last_access.elapsed() > self.final_time_to_live {
             self.data.remove(key);
+            None
+        }
+        else if entry.last_access.elapsed() > self.time_to_live {
             None
         }
         else {

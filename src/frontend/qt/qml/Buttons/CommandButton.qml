@@ -11,6 +11,7 @@ Item {
     property alias tooltip: imageButton.tooltip
     property alias imageSource: imageButton.imageSource
     property alias roundButton: imageButton.roundButton
+    property alias hoverEnabled: imageButton.hoverEnabled
     property real cooldownPercent: 0.0
 
     onCooldownPercentChanged: {

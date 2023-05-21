@@ -88,10 +88,10 @@ impl MonitorManager {
             }
 
             let host = self.host_manager.borrow().get_host(host_name);
-            let cache_policy = match (self.cache_settings.bypass_cache, from_cache_only) {
+            let cache_policy = match (self.cache_settings.use_cache, from_cache_only) {
                 (_, true) => CachePolicy::OnlyCache,
-                (true, false) => CachePolicy::BypassCache,
-                (false, false) => CachePolicy::PreferCache,
+                (false, false) => CachePolicy::BypassCache,
+                (true, false) => CachePolicy::PreferCache,
             };
 
             if from_cache_only {
@@ -152,9 +152,9 @@ impl MonitorManager {
                                                 .filter(|(_, monitor)| &monitor.get_display_options().category == category)
                                                 .collect();
 
-        let cache_policy = match &self.cache_settings.bypass_cache {
-            true => CachePolicy::BypassCache,
-            false => CachePolicy::PreferCache,
+        let cache_policy = match &self.cache_settings.use_cache {
+            true => CachePolicy::PreferCache,
+            false => CachePolicy::BypassCache,
         };
 
         let invocation_ids = self.refresh_monitors(host, monitors_by_category, cache_policy);
@@ -170,9 +170,9 @@ impl MonitorManager {
                                    .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
                                    .collect();
 
-        let cache_policy = match &self.cache_settings.bypass_cache {
-            true => CachePolicy::BypassCache,
-            false => CachePolicy::PreferCache,
+        let cache_policy = match &self.cache_settings.use_cache {
+            true => CachePolicy::PreferCache,
+            false => CachePolicy::BypassCache,
         };
 
         let invocation_ids = self.refresh_monitors(host, monitor, cache_policy);

@@ -116,6 +116,7 @@ Item {
                             flatButtons: false
                             roundButtons: false
                             commands: Parse.ListOfJsons(CommandHandler.get_commands_on_level(root.hostId, modelData, "", 0))
+                            hoverEnabled: !root._maskedCategories.includes(modelData)
 
                             Layout.alignment: Qt.AlignHCenter
                             Layout.topMargin: size * 0.20

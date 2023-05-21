@@ -50,8 +50,10 @@ pub struct DisplayOptions {
 pub struct CacheSettings {
     /// Cache provides an initial value before receiving the up-to-date value.
     pub provide_initial_value: bool,
-    /// Value is never returned from cache, except for the initial value if provide_initial_value is true.
-    pub bypass_cache: bool,
+    /// How long entries in cache are considered valid.
+    pub initial_value_time_to_live: u64,
+    /// If enabled, value is returned only from cache if it is available.
+    pub use_cache: bool,
     /// How long entries in cache are considered valid.
     pub time_to_live: u64,
 }

@@ -13,6 +13,7 @@ Item {
     property string tooltip: ""
     property bool roundButton: false
     property bool flatButton: false
+    property bool hoverEnabled: true
 
     width: 0.8 * parent.height
     height: width
@@ -26,6 +27,7 @@ Item {
         visible: roundButton === false
         onClicked: root.clicked()
         focusPolicy: Qt.NoFocus
+        hoverEnabled: root.hoverEnabled
 
         ToolTip.visible: root.tooltip !== "" && hovered
         ToolTip.delay: Theme.tooltip_delay()
@@ -56,6 +58,7 @@ Item {
         visible: roundButton === true
         onClicked: root.clicked()
         focusPolicy: Qt.NoFocus
+        hoverEnabled: root.hoverEnabled
 
         ToolTip.visible: root.tooltip !== "" && hovered
         ToolTip.delay: Theme.tooltip_delay()

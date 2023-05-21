@@ -90,14 +90,14 @@ impl ConnectionManager {
             let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build().unwrap();
             log::debug!("Created worker pool with {} threads", MAX_WORKER_THREADS);
 
-            let mut new_command_cache = Cache::<String, ResponseMessage>::new(cache_settings.time_to_live);
+            let mut new_command_cache = Cache::<String, ResponseMessage>::new(cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
             match new_command_cache.read_from_disk() {
                 Ok(count) => log::debug!("Added {} entries from cache file", count),
                 // Failing to read cache file is not critical.
                 Err(error) => log::error!("{}", error),
             }
             let command_cache = Arc::new(Mutex::new(new_command_cache));
-            log::debug!("Initialized cache with TTL of {} seconds", cache_settings.time_to_live);
+            log::debug!("Initialized cache with TTL of {} ({}) seconds", cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
 
             loop {
                 let request = match receiver.recv() {
