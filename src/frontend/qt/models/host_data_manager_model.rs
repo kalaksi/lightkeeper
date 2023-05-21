@@ -45,7 +45,8 @@ pub struct HostDataManagerModel {
     /// Contains invocation IDs. Keeps track of monitoring data refresh progress. Empty when all is done.
     /// First key is host id, second key is category id. Value is a list of invocation IDs and the number of maximum pending invocations.
     pending_monitor_invocations: HashMap<String, HashMap<String, (Vec<u64>, usize)>>,
-    i_refresh_hosts_on_start: bool,
+    configuration_preferences: configuration::Preferences,
+    configuration_cache_settings: configuration::CacheSettings,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 }
@@ -66,7 +67,8 @@ impl HostDataManagerModel {
             update_receiver_thread: None,
             // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
-            i_refresh_hosts_on_start: config.preferences.refresh_hosts_on_start,
+            configuration_preferences: config.preferences,
+            configuration_cache_settings: config.cache_settings,
             ..Default::default()
         };
 
@@ -196,12 +198,17 @@ impl HostDataManagerModel {
     }
 
     fn refresh_hosts_on_start(&self) -> bool {
-        self.i_refresh_hosts_on_start
+        self.configuration_preferences.refresh_hosts_on_start
     }
 
     fn is_host_initialized(&self, host_id: QString) -> bool {
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            host.is_initialized
+            if self.configuration_cache_settings.prefer_cache {
+                return !host.platform.is_unset()
+            }
+            else {
+                host.is_initialized
+            }
         }
         else {
             false

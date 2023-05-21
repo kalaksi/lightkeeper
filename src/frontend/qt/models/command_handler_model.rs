@@ -5,6 +5,7 @@ use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
 use crate::configuration;
+use crate::connection_manager::CachePolicy;
 use crate::module::command::UIAction;
 use crate::monitor_manager::MonitorManager;
 use crate::utils::string_validation;
@@ -23,6 +24,7 @@ pub struct CommandHandlerModel {
     refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
     cached_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+    force_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
@@ -212,12 +214,17 @@ impl CommandHandlerModel {
     }
 
     fn cached_refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
-        let invocation_ids = self.monitor_manager.cached_refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
+        let invocation_ids = self.monitor_manager.refresh_monitors_of_category_control(&host_id.to_string(), &category.to_string(), CachePolicy::OnlyCache);
         QVariantList::from_iter(invocation_ids)
     }
 
     fn refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
         let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
+        QVariantList::from_iter(invocation_ids)
+    }
+
+    fn force_refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
+        let invocation_ids = self.monitor_manager.refresh_monitors_of_category_control(&host_id.to_string(), &category.to_string(), CachePolicy::BypassCache);
         QVariantList::from_iter(invocation_ids)
     }
 

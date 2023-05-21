@@ -53,7 +53,7 @@ pub struct CacheSettings {
     /// How long entries in cache are considered valid.
     pub initial_value_time_to_live: u64,
     /// If enabled, value is returned only from cache if it is available.
-    pub use_cache: bool,
+    pub prefer_cache: bool,
     /// How long entries in cache are considered valid.
     pub time_to_live: u64,
 }

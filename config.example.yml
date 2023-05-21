@@ -48,5 +48,6 @@ display_options:
 
 cache_settings:
   provide_initial_value: true
-  bypass_cache: true
-  time_to_live: 604800
+  initial_value_time_to_live: 604800
+  prefer_cache: false
+  time_to_live: 8400

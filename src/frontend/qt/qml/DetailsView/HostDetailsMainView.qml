@@ -78,7 +78,7 @@ Item {
                         color: Theme.category_color(modelData)
                         onRefreshClicked: function() {
                             // This may be racy.
-                            let invocation_ids = CommandHandler.refresh_monitors_of_category(root.hostId, modelData)
+                            let invocation_ids = CommandHandler.force_refresh_monitors_of_category(root.hostId, modelData)
                             HostDataManager.add_pending_monitor_invocations(root.hostId, modelData, invocation_ids)
                             groupBoxLabel.refreshProgress = 0
                             refresh_categories()

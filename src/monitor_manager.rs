@@ -88,7 +88,7 @@ impl MonitorManager {
             }
 
             let host = self.host_manager.borrow().get_host(host_name);
-            let cache_policy = match (self.cache_settings.use_cache, from_cache_only) {
+            let cache_policy = match (self.cache_settings.prefer_cache, from_cache_only) {
                 (_, true) => CachePolicy::OnlyCache,
                 (false, false) => CachePolicy::BypassCache,
                 (true, false) => CachePolicy::PreferCache,
@@ -134,13 +134,13 @@ impl MonitorManager {
     }
 
     /// Returns the invocation IDs of the refresh operations.
-    pub fn cached_refresh_monitors_of_category(&mut self, host_id: &String, category: &String) -> Vec<u64> {
+    pub fn refresh_monitors_of_category_control(&mut self, host_id: &String, category: &String, cache_policy: CachePolicy) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let monitors_by_category = self.monitors.get(host_id).unwrap().iter()
                                                 .filter(|(_, monitor)| &monitor.get_display_options().category == category)
                                                 .collect();
 
-        let invocation_ids = self.refresh_monitors(host, monitors_by_category, CachePolicy::OnlyCache);
+        let invocation_ids = self.refresh_monitors(host, monitors_by_category, cache_policy);
         self.invocation_id_counter = invocation_ids.last().unwrap().clone();
         invocation_ids
     }
@@ -152,7 +152,7 @@ impl MonitorManager {
                                                 .filter(|(_, monitor)| &monitor.get_display_options().category == category)
                                                 .collect();
 
-        let cache_policy = match &self.cache_settings.use_cache {
+        let cache_policy = match &self.cache_settings.prefer_cache {
             true => CachePolicy::PreferCache,
             false => CachePolicy::BypassCache,
         };
@@ -170,7 +170,7 @@ impl MonitorManager {
                                    .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
                                    .collect();
 
-        let cache_policy = match &self.cache_settings.use_cache {
+        let cache_policy = match &self.cache_settings.prefer_cache {
             true => CachePolicy::PreferCache,
             false => CachePolicy::BypassCache,
         };
