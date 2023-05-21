@@ -25,17 +25,13 @@ Item {
     property var _maskedCategories: []
 
 
-    onHostIdChanged: {
-        root._categories = getCategories()
-        root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
-    }
+    onHostIdChanged: refresh_categories()
 
     Connections {
         target: HostDataManager
         function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
             if (host_id === root.hostId) {
-                root._categories = getCategories()
-                root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
+                refresh_categories()
             }
         }
     }
@@ -80,7 +76,12 @@ Item {
                         text: TextTransform.capitalize(modelData)
                         icon: Theme.category_icon(modelData)
                         color: Theme.category_color(modelData)
-                        onRefreshClicked: CommandHandler.refresh_monitors_of_category(root.hostId, modelData)
+                        onRefreshClicked: function() {
+                            let invocation_ids = CommandHandler.refresh_monitors_of_category(root.hostId, modelData)
+                            HostDataManager.add_pending_monitor_invocations(root.hostId, modelData, invocation_ids)
+                            groupBoxLabel.refreshProgress = 0
+                            refresh_categories()
+                        }
 
                         Connections {
                             target: HostDataManager
@@ -96,6 +97,7 @@ Item {
                             function onHost_initializing(host_id) {
                                 if (host_id === root.hostId) {
                                     groupBoxLabel.refreshProgress = 0
+                                    refresh_categories()
                                 }
                             }
                         }
@@ -236,6 +238,11 @@ Item {
     function refresh() {
         root._hostDetailsJson = HostDataManager.get_host_data_json(hostId)
         root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
+    }
+
+    function refresh_categories() {
+        root._categories = getCategories()
+        root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
     }
 
     function isCategoryReady(category) {
