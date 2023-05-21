@@ -141,7 +141,7 @@ impl MonitorManager {
                                                 .collect();
 
         let invocation_ids = self.refresh_monitors(host, monitors_by_category, cache_policy);
-        self.invocation_id_counter = invocation_ids.last().unwrap().clone();
+        self.invocation_id_counter += invocation_ids.len() as u64;
         invocation_ids
     }
 
@@ -158,7 +158,7 @@ impl MonitorManager {
         };
 
         let invocation_ids = self.refresh_monitors(host, monitors_by_category, cache_policy);
-        self.invocation_id_counter = invocation_ids.last().unwrap().clone();
+        self.invocation_id_counter += invocation_ids.len() as u64;
         invocation_ids
     }
 
@@ -176,7 +176,7 @@ impl MonitorManager {
         };
 
         let invocation_ids = self.refresh_monitors(host, monitor, cache_policy);
-        self.invocation_id_counter = invocation_ids.last().unwrap().clone();
+        self.invocation_id_counter += invocation_ids.len() as u64;
         invocation_ids
     }
 
@@ -244,9 +244,10 @@ impl MonitorManager {
             let monitor = monitors.remove(0);
             let monitor_id = monitor.get_module_spec().id;
 
-            let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
+            let results_len = results.len();
+            let (responses, _errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
             let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-            let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+            // let _errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
             // If CachePolicy::OnlyCache is used and an entry is not found, don't continue.
             if responses.iter().any(|response| response.is_not_found()) {
@@ -255,20 +256,20 @@ impl MonitorManager {
 
             let mut new_data_point = parent_result.clone();
 
-            let datapoint_result = if responses.len() > 1 {
+            let datapoint_result = if results_len > 1 && responses.len() > 0 {
                 monitor.process_responses(host.clone(), responses.clone(), parent_result)
             }
-            else if responses.len() == 1 {
+            else if results_len == 1 && responses.len() == 1 {
                 let response = &responses[0];
                 monitor.process_response(host.clone(), response.clone(), parent_result)
                        .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point })
             }
-            else if responses.len() == 0 && errors.len() == 0 {
+            else if results_len == 0 {
                 // Some special modules require no connectors and receive no response messages.
                 monitor.process_response(host.clone(), ResponseMessage::empty(), parent_result)
             }
             else {
-                Err(format!("[{}]] Response missing for monitor {}", host.name, monitor_id))
+                Err(format!("Didn't receive any responses for monitor {}", monitor_id))
             };
 
             match datapoint_result {
