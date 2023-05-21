@@ -29,7 +29,7 @@ impl CommandModule for Remove {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             category: String::from("docker-images"),
-            parent_id: String::from("docker-images"),
+            parent_id: String::from("docker-image-updates"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("delete"),
             display_text: String::from("Delete"),
@@ -47,7 +47,7 @@ impl CommandModule for Remove {
         let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            let url = format!("http://localhost/images/{}/remove", target_id);
+            let url = format!("http://localhost/images/{}", target_id);
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "-X", "DELETE", &url]);
             command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
         }
@@ -57,14 +57,36 @@ impl CommandModule for Remove {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.message.len() > 0 {
-            let docker_response: JsonMessage = serde_json::from_str(&response.message).unwrap();
-            return Ok(CommandResult::new_error(docker_response.message));
+            if let Ok(deletion_details) = serde_json::from_str::<Vec<DeletionDetails>>(&response.message) {
+                let response_message = deletion_details.iter().map(|details| {
+                    if let Some(deleted) = &details.deleted {
+                        format!("Deleted: {}", deleted)
+                    }
+                    else if let Some(untagged) = &details.untagged {
+                        format!("Untagged: {}", untagged)
+                    }
+                    else {
+                        String::from("")
+                    }
+                }).collect::<Vec<String>>().join("\n");
+
+                return Ok(CommandResult::new(response_message));
+            }
+            else if let Ok(docker_response) = serde_json::from_str::<ErrorMessage>(&response.message) {
+                return Ok(CommandResult::new_error(docker_response.message));
+            }
         }
         Ok(CommandResult::new(response.message.clone()))
     }
 }
 
 #[derive(Deserialize)]
-struct JsonMessage {
+struct DeletionDetails {
+    untagged: Option<String>,
+    deleted: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ErrorMessage {
     message: String,
 }
