@@ -12,10 +12,10 @@ import "./DetailsView"
 ApplicationWindow {
     id: root
     visible: true
-    minimumWidth: 1280
-    minimumHeight: 768
-    width: 1280
-    height: 768
+    minimumWidth: 1400
+    minimumHeight: 800
+    width: 1400
+    height: 800
 
     property var _dialogInvocationIds: {}
 
