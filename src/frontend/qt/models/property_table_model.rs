@@ -131,13 +131,13 @@ impl PropertyTableModel {
 
         if let Some(row_data) = self.row_datas.get(row) {
             match column {
-                0 => 0.45,
+                0 => 0.48,
                 1 => {
                     if row_data.command_datas.len() > 0 {
-                        0.55 - width_for_commands
+                        0.52 - width_for_commands
                     }
                     else {
-                        0.55
+                        0.52
                     }
                 },
                 2 => {
