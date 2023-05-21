@@ -90,9 +90,9 @@ TableView {
                         anchors.bottom: parent.bottom
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: "#404040" }
+                            GradientStop { position: 0.0; color: Theme.category_background_color() }
                             GradientStop { position: 0.5; color: "#606060" }
-                            GradientStop { position: 1.0; color: "#404040" }
+                            GradientStop { position: 1.0; color: Theme.category_background_color() }
                         }
                     }
                 }
