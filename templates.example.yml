@@ -9,6 +9,7 @@ templates:
     monitors:
       docker-containers: {}
       docker-images: {}
+      docker-image-updates: {}
     commands:
       docker-image-prune: {}
       docker-restart: {}
@@ -38,6 +39,7 @@ templates:
       kernel: {}
       filesystem: {}
       uptime: {}
+      filesystem: {}
       interface: {}
       package: {}
       ssh: {}
@@ -45,3 +47,6 @@ templates:
       logs: {}
       shutdown: {}
       reboot: {}
+      linux-packages-clean: {}
+      linux-packages-update: {}
+      linux-packages-update-all: {}

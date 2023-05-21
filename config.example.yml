@@ -7,10 +7,6 @@ preferences:
   terminal: "/usr/bin/konsole"
   terminal_args: ["-e"]
 
-general:
-  # Assume hosts are down (or up) until a critical monitor says otherwise.
-  default_host_status: "down"
-
 display_options:
   # Group monitors with multiple values into one column (or similar) or display everything separately.
   group_multivalue: true
@@ -44,10 +40,10 @@ display_options:
       priority: 7
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
-      command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remove"]
+      command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
 
 cache_settings:
   provide_initial_value: true
   initial_value_time_to_live: 604800
-  prefer_cache: false
+  prefer_cache: true
   time_to_live: 8400
