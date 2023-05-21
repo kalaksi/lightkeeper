@@ -31,6 +31,7 @@ Item {
             Item {
                 property var monitorData: JSON.parse(modelData)
                 property string criticality: monitorData.values.slice(-1)[0].criticality.toLowerCase()
+                property bool isFromCache: monitorData.values.slice(-1)[0].is_from_cache
                 property string monitorId: monitorData.display_options.display_text.toLowerCase()
                 property string color: getColor(criticality)
                 height: root.height
@@ -71,17 +72,28 @@ Item {
                 PixelatedText {
                     id: label
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: parent.monitorId
+                    text: parent.isFromCache ? parent.monitorId + " (CACHED)" : parent.monitorId
                     opacity: 0
                 }
 
                 PingAnimation {
                     anchors.centerIn: statusImage
                     color: parent.color
-                    visible: parent.monitorId in root.highlights
+                    visible: parent.monitorId in root.highlights && !parent.isFromCache
                 }
 
+                Rectangle {
+                    anchors.fill: statusImage
+                    color: Theme.category_refresh_mask()
+                    visible: parent.isFromCache
+
+                    MouseArea {
+                        anchors.fill: parent
+                        preventStealing: true
+                    }
+                }
             }
+
         }
     }
 
