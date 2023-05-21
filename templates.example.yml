@@ -15,6 +15,7 @@ templates:
       docker-inspect: {}
       docker-shell: {}
       docker-image-remove: {}
+      docker-image-remote-tags: {}
   docker-compose:
     monitors:
       docker-compose: {}

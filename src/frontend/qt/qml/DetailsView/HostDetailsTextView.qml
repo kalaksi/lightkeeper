@@ -6,12 +6,15 @@ import QtQuick.Controls.Material 2.15
 
 import ".."
 import "../js/Parse.js" as Parse
+import "../Text"
 
 Item {
     id: root
     property var text: ""
+    property var jsonText: ""
     property var errorText: ""
     property var criticality: ""
+
 
     Rectangle {
         color: Material.background
@@ -23,11 +26,26 @@ Item {
     }
 
     ScrollView {
-        visible: root.text !== ""
+        visible: root.jsonText !== ""
         anchors.fill: parent
 
         JsonTextFormat {
-            jsonText: root.text
+            anchors.fill: parent
+            anchors.margins: 20
+            jsonText: root.jsonText
+        }
+    }
+
+    ScrollView {
+        visible: root.text !== ""
+        anchors.fill: parent
+
+        NormalText {
+            anchors.fill: parent
+            anchors.margins: 20
+            wrapMode: Text.WordWrap
+            textFormat: Text.MarkdownText
+            text: root.text
         }
     }
 

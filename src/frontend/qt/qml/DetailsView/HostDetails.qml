@@ -78,8 +78,7 @@ Item {
             id: subviewHeader
 
             showOpenInWindowButton: true
-            showMinimizeButton: true 
-            showMaximizeButton: true
+            showCloseButton: true
             onOpenInWindowClicked: {
                 root.openInNewWindowClicked(root._subviewInvocationId, subviewContent.text, subviewContent.errorText, subviewContent.criticality)
                 animateHideSubview.start()
@@ -201,7 +200,13 @@ Item {
 
     function refreshSubview(commandResult) {
         if (textView.visible) {
-            textView.text = commandResult.message
+            // If message seems to contain JSON...
+            if (commandResult.message.startsWith("{")) {
+                textView.jsonText = commandResult.message
+            }
+            else {
+                textView.text = commandResult.message
+            }
             textView.errorText = commandResult.error
             textView.criticality = commandResult.criticality
         }

@@ -180,6 +180,7 @@ impl ModuleFactory {
             (command::docker::Shell::get_metadata(), command::docker::Shell::new_command_module),
             (command::docker::image::Remove::get_metadata(), command::docker::image::Remove::new_command_module),
             (command::docker::image::Prune::get_metadata(), command::docker::image::Prune::new_command_module),
+            (command::docker::image::RemoteTags::get_metadata(), command::docker::image::RemoteTags::new_command_module),
             (command::docker::compose::Edit::get_metadata(), command::docker::compose::Edit::new_command_module),
             (command::docker::compose::Pull::get_metadata(), command::docker::compose::Pull::new_command_module),
             (command::docker::compose::Up::get_metadata(), command::docker::compose::Up::new_command_module),
