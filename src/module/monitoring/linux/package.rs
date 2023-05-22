@@ -8,6 +8,7 @@ use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
+use crate::utils::ShellCommand;
 
 #[monitoring_module("package", "0.0.1")]
 pub struct Package;
@@ -34,19 +35,14 @@ impl MonitoringModule for Package {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
-        if host.platform.version_is_newer_than(Flavor::Debian, "8") {
-            let command = String::from("apt list --upgradable");
+        let mut command = ShellCommand::new();
 
-            if host.settings.contains(&HostSetting::UseSudo) {
-                format!("sudo {}", command)
-            }
-            else {
-                command
-            }
+        if host.platform.version_is_newer_than(Flavor::Debian, "8") {
+            command.arguments(vec!["apt", "list", "--upgradable"]);
+            command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
         }
-        else {
-            String::new()
-        }
+
+        command.to_string()
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
