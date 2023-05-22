@@ -46,7 +46,7 @@ impl CommandModule for Start {
         let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
+            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
                 command.arguments(vec!["systemctl", "start", service]);
             }
 

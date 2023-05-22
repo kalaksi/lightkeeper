@@ -24,16 +24,26 @@ impl PlatformInfo {
         Self::default()
     }
 
-    pub fn is_unset(&self) -> bool {
-        self.os == OperatingSystem::Unknown
+    pub fn is_set(&self) -> bool {
+        self.os != OperatingSystem::Unknown
     }
 
     // Version is given as str for convenience.
-    pub fn is_newer_than(&self, flavor: Flavor, version: &str) -> bool {
+    pub fn version_is_newer_than(&self, flavor: Flavor, version: &str) -> bool {
         let parsed_version = VersionNumber::from_str(version).unwrap();
+        self.os_flavor == flavor && self.os_version > parsed_version
+    }
 
-        self.os_flavor == flavor &&
-        self.os_version > parsed_version
+    // Version is given as str for convenience.
+    pub fn version_is_same_as(&self, flavor: Flavor, version: &str) -> bool {
+        let parsed_version = VersionNumber::from_str(version).unwrap();
+        self.os_flavor == flavor && self.os_version == parsed_version
+    }
+
+    // Version is given as str for convenience.
+    pub fn version_is_older_than(&self, flavor: Flavor, version: &str) -> bool {
+        let parsed_version = VersionNumber::from_str(version).unwrap();
+        self.os_flavor == flavor && self.os_version < parsed_version
     }
 }
 

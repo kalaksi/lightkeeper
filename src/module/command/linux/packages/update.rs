@@ -37,7 +37,7 @@ impl CommandModule for Update {
 
         let mut command = ShellCommand::new();
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.is_newer_than(platform_info::Flavor::Debian, "7") {
+            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "7") {
                 command.arguments(vec!["apt", "--only-upgrade", "install", package]); 
             }
 

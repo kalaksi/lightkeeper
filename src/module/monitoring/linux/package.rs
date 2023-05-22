@@ -34,7 +34,7 @@ impl MonitoringModule for Package {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
-        if host.platform.is_newer_than(Flavor::Debian, "8") {
+        if host.platform.version_is_newer_than(Flavor::Debian, "8") {
             let command = String::from("apt list --upgradable");
 
             if host.settings.contains(&HostSetting::UseSudo) {
@@ -50,7 +50,7 @@ impl MonitoringModule for Package {
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.is_newer_than(Flavor::Debian, "8") {
+        if host.platform.version_is_newer_than(Flavor::Debian, "8") {
             let mut result = DataPoint::empty();
             let lines = response.message.split('\n').filter(|line| line.contains("[upgradable"));
             for line in lines {

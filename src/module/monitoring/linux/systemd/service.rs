@@ -56,7 +56,7 @@ impl MonitoringModule for Service {
         let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
+            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
                 command.arguments(vec!["busctl", "--no-pager", "--json=short", "call", "org.freedesktop.systemd1",
                                        "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
             }
@@ -66,7 +66,7 @@ impl MonitoringModule for Service {
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.is_newer_than(platform_info::Flavor::Debian, "8") {
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
             let response: DbusResponse = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
             let mut result = DataPoint::empty();
