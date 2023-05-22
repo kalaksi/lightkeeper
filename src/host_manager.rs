@@ -82,7 +82,7 @@ impl HostManager {
 
         thread::spawn(move || {
             loop {
-                let message = match receiver.recv() {
+                let state_update = match receiver.recv() {
                     Ok(data) => data,
                     Err(error) => {
                         log::error!("Stopped receiver thread: {}", error);
@@ -90,7 +90,7 @@ impl HostManager {
                     }
                 };
 
-                if message.exit_thread {
+                if state_update.exit_thread {
                     log::debug!("Gracefully exiting state manager thread.");
                     for observer in observers.lock().unwrap().iter() {
                         observer.send(frontend::HostDisplayData::exit_token()).unwrap();
@@ -99,14 +99,14 @@ impl HostManager {
                 }
 
                 let mut hosts = hosts.lock().unwrap();
-                let host_state = hosts.hosts.get_mut(&message.host_name).unwrap();
+                let host_state = hosts.hosts.get_mut(&state_update.host_name).unwrap();
 
                 host_state.just_initialized = false;
                 host_state.just_initialized_from_cache = false;
                 let mut new_monitoring_data: Option<MonitoringData> = None;
                 let mut new_command_results: Option<CommandResult> = None;
 
-                if let Some(message_data_point) = message.data_point {
+                if let Some(message_data_point) = state_update.data_point {
 
                     // Specially structured data point for passing platform info here.
                     // TODO: remove hardcoding?
@@ -130,7 +130,7 @@ impl HostManager {
                     }
                     else {
                         // Check first if there already exists a key for monitor id.
-                        if let Some(monitoring_data) = host_state.monitor_data.get_mut(&message.module_spec.id) {
+                        if let Some(monitoring_data) = host_state.monitor_data.get_mut(&state_update.module_spec.id) {
 
                             monitoring_data.values.push_back(message_data_point.clone());
 
@@ -139,19 +139,19 @@ impl HostManager {
                             }
                         }
                         else {
-                            let mut new_data = MonitoringData::new(message.module_spec.id.clone(), message.display_options);
+                            let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
                             new_data.values.push_back(message_data_point.clone());
-                            host_state.monitor_data.insert(message.module_spec.id.clone(), new_data);
+                            host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
                         }
 
                         // Also add to a list of new data points.
-                        let mut new = host_state.monitor_data.get(&message.module_spec.id).unwrap().clone();
+                        let mut new = host_state.monitor_data.get(&state_update.module_spec.id).unwrap().clone();
                         new.values = VecDeque::from(vec![message_data_point.clone()]);
                         new_monitoring_data = Some(new);
                     }
                 }
-                else if let Some(command_result) = message.command_result {
-                    host_state.command_results.insert(message.module_spec.id, command_result.clone());
+                else if let Some(command_result) = state_update.command_result {
+                    host_state.command_results.insert(state_update.module_spec.id, command_result.clone());
                     // Also add to a list of new command results.
                     new_command_results = Some(command_result);
                 }

@@ -67,7 +67,7 @@ impl CommandHandler {
 
         let host = self.host_manager.borrow().get_host(&host_id);
 
-        if host.platform.is_set() {
+        if !host.platform.is_set() {
             log::warn!("[{}] Executing command \"{}\" despite missing platform info", host_id, command_id);
         }
 

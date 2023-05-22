@@ -204,7 +204,7 @@ impl HostDataManagerModel {
     fn is_host_initialized(&self, host_id: QString) -> bool {
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
             if self.configuration_cache_settings.prefer_cache {
-                return !host.platform.is_set()
+                return host.platform.is_set()
             }
             else {
                 host.is_initialized

@@ -30,7 +30,7 @@ impl MonitoringModule for Ssh {
     }
 
     fn process_response(&self, host: Host, _responses: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.is_set() {
+        if !host.platform.is_set() {
             Ok(DataPoint::value_with_level(String::from("down"), Criticality::Critical))
         }
         else {

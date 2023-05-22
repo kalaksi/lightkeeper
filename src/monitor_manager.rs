@@ -181,7 +181,7 @@ impl MonitorManager {
     }
 
     fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>, cache_policy: CachePolicy) -> Vec<u64> {
-        if host.platform.is_set() {
+        if !host.platform.is_set() {
             log::warn!("[{}] Refreshing monitors despite missing platform info", host.name);
         }
 
