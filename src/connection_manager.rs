@@ -141,6 +141,7 @@ impl ConnectionManager {
                                     return Ok(ResponseMessage::empty());
                                 }
 
+                                log::debug!("Worker {} processing a stateless request", rayon::current_thread_index().unwrap());
                                 let connector = Arc::new(Mutex::new(module_factory.new_connector(&connector_spec, &HashMap::new())));
                                 Self::process_request(mutex_request.clone(), &request_message, connector.clone(), command_cache.clone())
                             }).collect();
@@ -173,7 +174,7 @@ impl ConnectionManager {
                                     return Ok(ResponseMessage::empty());
                                 }
 
-                                log::debug!("Worker {} processing stateful request {}", rayon::current_thread_index().unwrap(), request_message);
+                                log::debug!("Worker {} processing a stateful request", rayon::current_thread_index().unwrap());
                                 Self::process_request(request_mutex.clone(), &request_message, connector_mutex.clone(), command_cache.clone())
                             }).collect();
 
