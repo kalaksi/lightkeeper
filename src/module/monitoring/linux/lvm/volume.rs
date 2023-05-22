@@ -82,18 +82,19 @@ impl MonitoringModule for Volume {
                 let mut data_point = DataPoint::labeled_value(lv_name.clone(), String::from("OK"));
                 data_point.description = format!("{} | size: {}", vg_name, lv_size);
 
-                if lv_attr.starts_with("r") || lv_attr.starts_with("R") || !sync_percent.is_empty() {
-                    data_point.tags.push(String::from("RAID"));
-                }
-                else if lv_attr.starts_with("s") {
-                    data_point.tags.push(String::from("Snapshot"));
-                }
-                else if lv_attr.starts_with("p") {
-                    data_point.tags.push(String::from("pvmove"));
+                match lv_attr.chars().nth(0).unwrap() {
+                    'r' => data_point.tags.push(String::from("RAID")),
+                    'R' => data_point.tags.push(String::from("RAID")),
+                    'm' => data_point.tags.push(String::from("Mirror")),
+                    'M' => data_point.tags.push(String::from("Mirror")),
+                    's' => data_point.tags.push(String::from("Snapshot")),
+                    'p' => data_point.tags.push(String::from("pvmove")),
+                    _ => {}
                 }
 
-                if lv_attr.chars().nth(1).unwrap() == 'p' {
-                    data_point.tags.push(String::from("Read-only"));
+                match lv_attr.chars().nth(1).unwrap() {
+                    'r' => data_point.tags.push(String::from("Read-only")),
+                    _ => {}
                 }
 
                 if lv_attr.chars().nth(5).unwrap() == 'o' {
@@ -110,7 +111,7 @@ impl MonitoringModule for Volume {
                 }
 
                 if !raid_mismatch_count.is_empty() && raid_mismatch_count != "0" {
-                    data_point.value = format!("{} mismatch", raid_mismatch_count);
+                    data_point.value = format!("{} mismatches", raid_mismatch_count);
                     if data_point.criticality < Criticality::Warning {
                         data_point.criticality = Criticality::Warning;
                     }
