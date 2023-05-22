@@ -243,13 +243,18 @@ impl PropertyTableModel {
         })
     }
 
-    // Adds a special table row for labeled separators between non-multivalue and multivalue monitoring data.
+    // Adds a special table row for labeled separators before multivalue monitoring data.
     fn insert_multivalue_separator_rows(row_data: &mut Vec<RowData>) {
         // Iterate backwards so that indices don't get messed up when inserting.
         for i in (0..row_data.len()).rev() {
+            // Older behavior:
             // Insert separator between multivalue and non-multivalue data, but not on the first row.
-            if row_data[i].display_options.use_multivalue &&
-               (i > 0 && row_data[i-1].display_options.use_multivalue == false) {
+            // if row_data[i].display_options.use_multivalue &&
+            //    (i > 0 && row_data[i-1].display_options.use_multivalue == false) {
+
+            if i > 0 &&
+               row_data[i].display_options.use_multivalue &&
+               row_data[i-1].monitor_id != row_data[i].monitor_id {
 
                 let separator_row = RowData {
                     value: DataPoint {
