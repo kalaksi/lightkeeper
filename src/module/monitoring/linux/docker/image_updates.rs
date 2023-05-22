@@ -76,7 +76,10 @@ impl MonitoringModule for ImageUpdates {
 
             new_point.is_from_cache = response.is_from_cache && old_point.is_from_cache;
 
-            if response.is_empty() {
+            if response.is_error() {
+                new_point = DataPoint::empty_and_critical();
+            }
+            else if response.is_empty() {
                 new_point.description = old_point.value;
                 if self.local_tag_prefixes.iter().any(|prefix| image_repo_tag.starts_with(prefix)) {
                     new_point.criticality = Criticality::Normal;
