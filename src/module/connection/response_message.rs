@@ -40,6 +40,10 @@ impl ResponseMessage {
         }
     }
 
+    pub fn is_error(&self) -> bool {
+        self.return_code != 0
+    }
+
     pub fn is_empty(&self) -> bool {
         self.message.is_empty() && self.return_code == 0
     }
