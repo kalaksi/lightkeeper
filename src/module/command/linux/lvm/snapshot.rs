@@ -35,7 +35,6 @@ impl CommandModule for Snapshot {
         frontend::DisplayOptions {
             category: String::from("storage"),
             parent_id: String::from("linux-lvm-volume"),
-            multivalue_level: 1,
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("copy"),
             display_text: String::from("Create a snapshot"),
