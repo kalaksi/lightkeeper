@@ -44,7 +44,7 @@ impl MonitoringModule for Filesystem {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            String::from("df -P")
+            String::from("df -hPT")
         }
         else {
             String::new()
@@ -61,9 +61,10 @@ impl MonitoringModule for Filesystem {
             for line in lines {
                 let mut parts = line.split_whitespace();
                 let _source = parts.next().unwrap().to_string();
-                let _size_m = parts.next().unwrap().to_string();
-                let _used_m = parts.next().unwrap().to_string();
-                let _available_m = parts.next().unwrap().to_string();
+                let fs_type = parts.next().unwrap().to_string();
+                let size_h = parts.next().unwrap().to_string();
+                let used_h = parts.next().unwrap().to_string();
+                let _available_h = parts.next().unwrap().to_string();
                 let mut used_percent = parts.next().unwrap().to_string();
                 let mountpoint = parts.next().unwrap().to_string();
 
@@ -73,7 +74,8 @@ impl MonitoringModule for Filesystem {
 
                 // Remove percent symbol from the end.
                 used_percent.pop();
-                let data_point = DataPoint::labeled_value(mountpoint, used_percent);
+                let mut data_point = DataPoint::labeled_value(mountpoint, used_percent);
+                data_point.description = format!("{} | {} / {} used", fs_type, used_h, size_h);
                 result.multivalue.push(data_point);
 
             }
