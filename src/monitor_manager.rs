@@ -164,16 +164,11 @@ impl MonitorManager {
 
     /// Refresh by monitor ID.
     /// Returns the invocation IDs of the refresh operations.
-    pub fn refresh_monitors_by_id(&mut self, host_id: &String, monitor_id: &String) -> Vec<u64> {
+    pub fn refresh_monitors_by_id(&mut self, host_id: &String, monitor_id: &String, cache_policy: CachePolicy) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let monitor = self.monitors.get(host_id).unwrap().iter()
                                    .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
                                    .collect();
-
-        let cache_policy = match &self.cache_settings.prefer_cache {
-            true => CachePolicy::PreferCache,
-            false => CachePolicy::BypassCache,
-        };
 
         let invocation_ids = self.refresh_monitors(host, monitor, cache_policy);
         self.invocation_id_counter += invocation_ids.len() as u64;

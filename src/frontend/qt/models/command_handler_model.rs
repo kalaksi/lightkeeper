@@ -21,7 +21,7 @@ pub struct CommandHandlerModel {
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     initialize_host: qt_method!(fn(&self, host_id: QString)),
-    refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
+    force_refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
     cached_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     force_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
@@ -200,7 +200,7 @@ impl CommandHandlerModel {
     }
 
     // Finds related monitors for a command and refresh them.
-    fn refresh_monitors_of_command(&mut self, host_id: QString, command_id: QString) -> QVariantList  {
+    fn force_refresh_monitors_of_command(&mut self, host_id: QString, command_id: QString) -> QVariantList  {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
 
@@ -209,7 +209,7 @@ impl CommandHandlerModel {
         let command = self.command_handler.get_command_for_host(&host_id, &command_id);
         let monitor_id = command.display_options.parent_id;
 
-        let invocation_ids = self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id);
+        let invocation_ids = self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id, CachePolicy::BypassCache);
         QVariantList::from_iter(invocation_ids)
     }
 

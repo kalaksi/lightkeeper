@@ -270,7 +270,7 @@ TableView {
 
                 // Refresh the monitor(s) related to commands that were executed.
                 for (const command_id of root.pendingRefreshAfterCommand) {
-                    CommandHandler.refresh_monitors_of_command(root.hostId, command_id)
+                    CommandHandler.force_refresh_monitors_of_command(root.hostId, command_id)
                 }
 
                 root.pendingRefreshAfterCommand = []
