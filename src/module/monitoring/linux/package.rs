@@ -37,7 +37,8 @@ impl MonitoringModule for Package {
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
         let mut command = ShellCommand::new();
 
-        if host.platform.version_is_newer_than(Flavor::Debian, "8") {
+        if host.platform.version_is_newer_than(Flavor::Debian, "8") &&
+           host.platform.version_is_older_than(Flavor::Debian, "11") {
             command.arguments(vec!["apt", "list", "--upgradable"]);
             command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
         }
@@ -51,8 +52,10 @@ impl MonitoringModule for Package {
             let lines = response.message.split('\n').filter(|line| line.contains("[upgradable"));
             for line in lines {
                 let mut parts = line.split_whitespace();
-                let package = parts.next().unwrap().to_string();
-                let package_name = package.split('/').next().unwrap().to_string();
+                let full_package = parts.next().unwrap().to_string();
+                let package = full_package.split(',').nth(0).map(|s| s.to_string())
+                                          .unwrap_or(full_package.clone());
+                let package_name = full_package.split('/').next().unwrap().to_string();
                 let new_version = parts.next().unwrap().to_string();
                 // let arch = parts.next().unwrap().to_string();
 
@@ -63,6 +66,7 @@ impl MonitoringModule for Package {
                 
                 let mut data_point = DataPoint::labeled_value(package_name, new_version);
                 data_point.description = old_version;
+                data_point.command_params = vec![package];
                 result.multivalue.push(data_point);
             }
 

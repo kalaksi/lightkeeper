@@ -50,7 +50,7 @@ impl CommandModule for Clean {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        if response.return_code >= 0 {
+        if response.return_code == 0 {
             Ok(CommandResult::new(String::new()))
         }
         else {

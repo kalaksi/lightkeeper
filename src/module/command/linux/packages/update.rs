@@ -37,8 +37,9 @@ impl CommandModule for Update {
 
         let mut command = ShellCommand::new();
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "7") {
-                command.arguments(vec!["apt", "--only-upgrade", "install", package]); 
+            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "7") &&
+               host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
+                command.arguments(vec!["apt", "--only-upgrade", "-y", "install", package]); 
             }
 
             command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
