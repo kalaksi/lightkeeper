@@ -28,7 +28,7 @@ impl MonitoringModule for Volume {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::CriticalityLevel,
-            display_text: String::from("LVM logical volumes"),
+            display_text: String::from("Logical Volumes"),
             category: String::from("storage"),
             use_multivalue: true,
             ..Default::default()

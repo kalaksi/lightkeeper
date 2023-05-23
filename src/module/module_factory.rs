@@ -159,6 +159,7 @@ impl ModuleFactory {
             (monitoring::linux::Uptime::get_metadata(), monitoring::linux::Uptime::new_monitoring_module),
             (monitoring::linux::lvm::Volume::get_metadata(), monitoring::linux::lvm::Volume::new_monitoring_module),
             (monitoring::linux::lvm::VolumeGroup::get_metadata(), monitoring::linux::lvm::VolumeGroup::new_monitoring_module),
+            (monitoring::linux::lvm::PhysicalVolume::get_metadata(), monitoring::linux::lvm::PhysicalVolume::new_monitoring_module),
             (monitoring::network::Ping::get_metadata(), monitoring::network::Ping::new_monitoring_module),
             (monitoring::network::Ssh::get_metadata(), monitoring::network::Ssh::new_monitoring_module),
             (monitoring::docker::Compose::get_metadata(), monitoring::docker::Compose::new_monitoring_module),
