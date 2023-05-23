@@ -13,7 +13,7 @@ use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
 use crate::host::HostSetting;
 
-#[monitoring_module("lvm-volume", "0.0.1")]
+#[monitoring_module("linux-lvm-volume", "0.0.1")]
 pub struct Volume {
 }
 
@@ -46,7 +46,7 @@ impl MonitoringModule for Volume {
             if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
                host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
                 command.arguments(vec![
-                    "lvs", "--separator", "|", "--options", "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent"
+                    "lvs", "--separator", "|", "--options", "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent", "--units", "H"
                 ]);
             }
 
@@ -69,7 +69,7 @@ impl MonitoringModule for Volume {
             let lines = response.message.split('\n').skip(1);
             for line in lines {
                 let mut parts = line.split("|");
-                let _lv_path = parts.next().unwrap().to_string();
+                let lv_path = parts.next().unwrap().to_string();
                 let lv_name = parts.next().unwrap().to_string();
                 let vg_name = parts.next().unwrap().to_string();
                 let lv_size = parts.next().unwrap().to_string();
@@ -135,6 +135,8 @@ impl MonitoringModule for Volume {
                         data_point.criticality = Criticality::Error;
                     }
                 }
+
+                data_point.command_params = vec![lv_path];
                 result.multivalue.push(data_point);
             }
 

@@ -41,6 +41,7 @@ pub fn init_resources() {
             "images/breeze/dark/dialog-ok.svg" as "images/button/ok",
             "images/breeze/dark/dialog-cancel.svg" as "images/button/cancel",
             "images/breeze/dark/tag.svg" as "images/button/tag",
+            "images/breeze/dark/edit-copy.svg" as "images/button/copy",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -103,6 +104,7 @@ pub fn init_resources() {
             "images/breeze/light/dialog-ok.svg" as "images/button/ok",
             "images/breeze/light/dialog-cancel.svg" as "images/button/cancel",
             "images/breeze/light/tag.svg" as "images/light/tag",
+            "images/breeze/light/edit-copy.svg" as "images/light/copy",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
