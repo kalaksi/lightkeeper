@@ -7,6 +7,7 @@ import QtQuick.Layouts 1.11
 
 import HostTableModel 1.0
 
+import "./Dialog"
 import "./DetailsView"
 
 ApplicationWindow {
@@ -80,7 +81,7 @@ ApplicationWindow {
 
         // Set up confirmation dialog on signal.
         function onConfirmation_dialog_opened(text, hostId, commandId, commandParams) {
-            confirmationDialogLoader.setSource("ConfirmationDialog.qml", { text: text }) 
+            confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text }) 
             confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.execute_confirmed(hostId, commandId, commandParams))
         }
 
