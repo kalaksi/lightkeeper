@@ -3,7 +3,6 @@ import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
 import QtQuick.Controls.Material 2.15
 
-import "js/Parse.js" as Parse
 
 Window {
     property var identifier: ""

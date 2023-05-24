@@ -4,7 +4,7 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
-import "../Buttons"
+import "../Button"
 import "../Text"
 
 Item {
