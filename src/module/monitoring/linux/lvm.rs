@@ -1,6 +1,6 @@
 
-pub mod volume;
-pub use volume::Volume;
+pub mod logical_volume;
+pub use logical_volume::LogicalVolume;
 
 pub mod volume_group;
 pub use volume_group::VolumeGroup;

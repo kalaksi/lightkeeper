@@ -13,18 +13,18 @@ use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
 use crate::host::HostSetting;
 
-#[monitoring_module("linux-lvm-volume", "0.0.1")]
-pub struct Volume {
+#[monitoring_module("linux-lvm-logical-volume", "0.0.1")]
+pub struct LogicalVolume {
 }
 
-impl Module for Volume {
+impl Module for LogicalVolume {
     fn new(_settings: &HashMap<String, String>) -> Self {
-        Volume {
+        LogicalVolume {
         }
     }
 }
 
-impl MonitoringModule for Volume {
+impl MonitoringModule for LogicalVolume {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::CriticalityLevel,

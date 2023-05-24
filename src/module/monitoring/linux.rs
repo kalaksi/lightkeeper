@@ -21,4 +21,4 @@ pub mod systemd;
 pub use systemd::Service;
 
 pub mod lvm;
-pub use lvm::Volume;
+pub use lvm::LogicalVolume;
