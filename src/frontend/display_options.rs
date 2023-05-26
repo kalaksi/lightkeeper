@@ -26,6 +26,8 @@ pub struct DisplayOptions {
     /// Display confirmation dialog with this text.
     pub confirmation_text: String,
 
+    pub user_parameters: Vec<UserInputField>,
+
     /// Monitor id to attach commands to, instead of displaying on just category-level.
     pub parent_id: String,
 
@@ -88,5 +90,73 @@ pub enum DisplayStyle {
 impl Default for DisplayStyle {
     fn default() -> Self {
         DisplayStyle::Text
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Display, PartialEq)]
+pub enum UserInputFieldType {
+    Text,
+    Integer,
+    DecimalNumber
+}
+
+impl Default for UserInputFieldType {
+    fn default() -> Self {
+        UserInputFieldType::Text
+    }
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+pub struct UserInputField {
+    pub field_type: UserInputFieldType,
+    pub label: String,
+    pub default_value: String,
+    pub units: Vec<String>,
+}
+
+impl UserInputField {
+    pub fn new<Stringable: ToString>(field_type: UserInputFieldType, label: Stringable, default_value: Stringable) -> Self {
+        UserInputField {
+            field_type: field_type,
+            label: label.to_string(),
+            default_value: default_value.to_string(),
+            units: Vec::new(),
+        }
+    }
+
+    pub fn number<Stringable: ToString>(label: Stringable, default_value: Stringable) -> Self {
+        UserInputField {
+            field_type: UserInputFieldType::Integer,
+            label: label.to_string(),
+            default_value: default_value.to_string(),
+            units: Vec::new(),
+        }
+    }
+
+    pub fn decimal_number<Stringable: ToString>(label: Stringable, default_value: Stringable) -> Self {
+        UserInputField {
+            field_type: UserInputFieldType::DecimalNumber,
+            label: label.to_string(),
+            default_value: default_value.to_string(),
+            units: Vec::new(),
+        }
+    }
+
+    pub fn number_with_units<Stringable: ToString>(label: Stringable, default_value: Stringable, units: Vec<String>) -> Self {
+        UserInputField {
+            field_type: UserInputFieldType::Integer,
+            label: label.to_string(),
+            default_value: default_value.to_string(),
+            units: units,
+        }
+    }
+
+    pub fn decimal_number_with_units<Stringable: ToString>(label: Stringable, default_value: Stringable, units: Vec<String>) -> Self {
+        UserInputField {
+            field_type: UserInputFieldType::DecimalNumber,
+            label: label.to_string(),
+            default_value: default_value.to_string(),
+            units: units,
+        }
     }
 }
