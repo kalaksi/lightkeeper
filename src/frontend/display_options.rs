@@ -26,7 +26,11 @@ pub struct DisplayOptions {
     /// Display confirmation dialog with this text.
     pub confirmation_text: String,
 
+    /// If set, a dialog will pop up before execution to ask the user for some parameters.
     pub user_parameters: Vec<UserInputField>,
+
+    /// Provide a better default for cooldown max duration.
+    pub cooldown_max: u32,
 
     /// Monitor id to attach commands to, instead of displaying on just category-level.
     pub parent_id: String,
