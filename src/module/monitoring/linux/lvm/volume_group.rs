@@ -30,6 +30,7 @@ impl MonitoringModule for VolumeGroup {
             display_text: String::from("Volume Groups"),
             category: String::from("storage"),
             use_multivalue: true,
+            ignore_from_summary: true,
             ..Default::default()
         }
     }
