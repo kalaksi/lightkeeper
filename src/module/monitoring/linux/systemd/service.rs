@@ -90,15 +90,28 @@ impl MonitoringModule for Service {
                     point.tags.push(unit.load_state.clone());
                 }
 
-                point.criticality = match unit.sub_state.as_str() {
-                    "dead" => enums::Criticality::Critical,
-                    "exited" => enums::Criticality::Error,
-                    "running" => enums::Criticality::Normal,
-                    _ => enums::Criticality::Warning,
+                match unit.sub_state.as_str() {
+                    "dead" => {
+                        point.criticality = enums::Criticality::Critical;
+                    },
+                    "exited" => {
+                        if unit.active_state == "active" {
+                            point.criticality = enums::Criticality::Normal;
+                            point.value = format!("{} ({})", unit.sub_state.clone(), unit.active_state.clone());
+                        }
+                        else {
+                            point.criticality = enums::Criticality::Warning;
+                        }
+                    },
+                    "running" => {
+                        point.criticality = enums::Criticality::Normal;
+                    },
+                    _ => {
+                        point.criticality = enums::Criticality::Warning;
+                    }
                 };
 
                 point.command_params.push(unit.id.clone());
-
                 point
             }).collect();
 
@@ -127,7 +140,7 @@ struct UnitData {
     id: String,
     name: String,
     load_state: String,
-    _active_state: String,
+    active_state: String,
     sub_state: String,
     _follows: String,
     _unit_path: String,
