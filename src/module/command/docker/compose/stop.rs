@@ -55,4 +55,12 @@ impl CommandModule for Stop {
 
         command.to_string()
     }
+
+    fn process_response(&self, _host: Host, response: &connection::ResponseMessage) -> Result<CommandResult, String> {
+        if response.return_code == 0 {
+            Ok(CommandResult::default())
+        } else {
+            Err(response.message.clone())
+        }
+    }
 }
