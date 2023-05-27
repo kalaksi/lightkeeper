@@ -25,13 +25,13 @@ Item {
     property var _maskedCategories: []
 
 
-    onHostIdChanged: refresh_categories()
+    onHostIdChanged: refreshCategories()
 
     Connections {
         target: HostDataManager
         function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
             if (host_id === root.hostId) {
-                refresh_categories()
+                refreshCategories()
             }
         }
     }
@@ -80,8 +80,9 @@ Item {
                             // This may be racy.
                             let invocation_ids = CommandHandler.force_refresh_monitors_of_category(root.hostId, modelData)
                             HostDataManager.add_pending_monitor_invocations(root.hostId, modelData, invocation_ids)
+
                             groupBoxLabel.refreshProgress = 0
-                            refresh_categories()
+                            refreshCategories()
                         }
 
                         Connections {
@@ -98,7 +99,7 @@ Item {
                             function onHost_initializing(host_id) {
                                 if (host_id === root.hostId) {
                                     groupBoxLabel.refreshProgress = 0
-                                    refresh_categories()
+                                    refreshCategories()
                                 }
                             }
                         }
@@ -242,7 +243,7 @@ Item {
         root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
     }
 
-    function refresh_categories() {
+    function refreshCategories() {
         root._categories = getCategories()
         root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
     }
