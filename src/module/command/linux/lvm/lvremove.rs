@@ -31,6 +31,7 @@ impl CommandModule for LVRemove {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("delete"),
             display_text: String::from("Remove"),
+            confirmation_text: String::from("Are you sure you want to remove this logical volume?"),
             ..Default::default()
         }
     }

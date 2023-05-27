@@ -180,6 +180,7 @@ impl ModuleFactory {
             (command::linux::packages::UpdateAll::get_metadata(), command::linux::packages::UpdateAll::new_command_module),
             (command::linux::lvm::Snapshot::get_metadata(), command::linux::lvm::Snapshot::new_command_module),
             (command::linux::lvm::LVResize::get_metadata(), command::linux::lvm::LVResize::new_command_module),
+            (command::linux::lvm::LVRemove::get_metadata(), command::linux::lvm::LVRemove::new_command_module),
             (command::docker::Restart::get_metadata(), command::docker::Restart::new_command_module),
             (command::docker::Inspect::get_metadata(), command::docker::Inspect::new_command_module),
             (command::docker::Shell::get_metadata(), command::docker::Shell::new_command_module),
