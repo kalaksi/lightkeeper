@@ -67,6 +67,10 @@ impl MonitoringModule for ImageUpdates {
     fn process_responses(&self, host: Host, responses: Vec<ResponseMessage>, parent_result: DataPoint) -> Result<DataPoint, String> {
         let mut new_result = parent_result;
 
+        if responses.len() != new_result.multivalue.len() {
+            return Err(String::from("Invalid amount of responses"));
+        }
+
         new_result.multivalue = new_result.multivalue.into_iter().enumerate().map(|(index, old_point)| {
             let mut new_point = old_point.clone();
             let image_repo_tag = old_point.command_params.get(1).unwrap();
