@@ -129,11 +129,13 @@ impl PropertyTableModel {
         let column = usize::from_qvariant(column).unwrap();
         let width_for_commands = 0.175;
 
+        let show_commands = self.row_datas.iter().any(|row_data| row_data.command_datas.len() > 0);
+
         if let Some(row_data) = self.row_datas.get(row) {
             match column {
                 0 => 0.48,
                 1 => {
-                    if row_data.command_datas.len() > 0 {
+                    if show_commands {
                         0.52 - width_for_commands
                     }
                     else {
@@ -141,7 +143,7 @@ impl PropertyTableModel {
                     }
                 },
                 2 => {
-                    if row_data.command_datas.len() > 0 {
+                    if show_commands {
                         width_for_commands
                     }
                     // Hidden if there are no related commands.
