@@ -36,13 +36,18 @@ templates:
       systemd-service-unmask: {}
   linux:
     monitors:
+      os: {}
       kernel: {}
-      filesystem: {}
       uptime: {}
       filesystem: {}
-      interface: {}
+      interface:
+        settings:
+          ignored_interfaces: "br-,docker,lo,veth"
       package: {}
       ssh: {}
+      linux-lvm-logical-volume: {}
+      linux-lvm-volume-group: {}
+      linux-lvm-physical-volume: {}
     commands:
       logs: {}
       shutdown: {}
@@ -50,3 +55,6 @@ templates:
       linux-packages-clean: {}
       linux-packages-update: {}
       linux-packages-update-all: {}
+      linux-lvm-snapshot: {}
+      linux-lvm-lvresize: {}
+      linux-lvm-lvremove: {}
