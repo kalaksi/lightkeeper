@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use crate::frontend;
-use crate::frontend::UserInputField;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
@@ -34,7 +33,7 @@ impl CommandModule for LVResize {
             display_icon: String::from("resize-column-2"),
             display_text: String::from("Resize"),
             user_parameters: vec![
-                UserInputField::decimal_number_with_units("New size", "20G", vec![
+                frontend::UserInputField::decimal_number_with_units("New size", "20G", vec![
                     String::from("r"), String::from("R"),
                     String::from("b"), String::from("B"),
                     String::from("s"), String::from("S"),

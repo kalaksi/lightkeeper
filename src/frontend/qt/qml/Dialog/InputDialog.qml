@@ -72,7 +72,13 @@ Dialog {
             // For some reason the validator fails to perform correctly in all cases.
             // Here we make sure no invalid values get passed.
             let validator = RegExp(root.inputSpecs[i].validator_regexp)
-            if (!validator.test(nextValue)) {
+
+            // Additional validator is optional.
+            let additionalValidator = RegExp(root.inputSpecs[i].additional_validator_regexp)
+
+            if (!validator.test(nextValue) || 
+                (root.inputSpecs[i].additional_validator_regexp !== "" && !additionalValidator.test(nextValue))) {
+
                 console.log(`Invalid value for "${root.inputSpecs[i].label}": ${nextValue}`)
                 root._errorText = "Invalid value"
                 root.open()

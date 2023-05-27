@@ -7,21 +7,19 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
+use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 
 #[command_module("linux-lvm-snapshot", "0.0.1")]
 pub struct Snapshot {
     pub snapshot_suffix: String,
-    // Size in megabytes (unit M in LVM).
-    pub snapshot_size_m: u32,
 }
 
 impl Module for Snapshot {
     fn new(settings: &HashMap<String, String>) -> Self {
         Snapshot {
             snapshot_suffix: settings.get("snapshot_suffix").unwrap_or(&String::from("_snapshot_TIME")).clone(),
-            snapshot_size_m: settings.get("snapshot_size_m").unwrap_or(&String::from("2000")).parse::<u32>().unwrap(),
         }
     }
 }
@@ -39,6 +37,19 @@ impl CommandModule for Snapshot {
             display_icon: String::from("copy"),
             display_text: String::from("Create a snapshot"),
             depends_on_no_tags: vec![String::from("Snapshot")],
+            user_parameters: vec![
+                frontend::UserInputField::decimal_number_with_units("Snapshot size", "3G", vec![
+                    String::from("r"), String::from("R"),
+                    String::from("b"), String::from("B"),
+                    String::from("s"), String::from("S"),
+                    String::from("k"), String::from("K"),
+                    String::from("m"), String::from("M"),
+                    String::from("g"), String::from("G"),
+                    String::from("t"), String::from("T"),
+                    String::from("p"), String::from("P"),
+                    String::from("e"), String::from("E")
+                ]),
+            ],
             ..Default::default()
         }
     }
@@ -48,11 +59,16 @@ impl CommandModule for Snapshot {
         let _vg_name = parameters.get(1).unwrap();
         let lv_name = parameters.get(2).unwrap();
         let _lv_size = parameters.get(3).unwrap();
+        let new_size = crate::utils::remove_whitespace(parameters.get(4).unwrap());
+
+        if !string_validation::is_numeric_with_unit(&new_size, &self.get_display_options().user_parameters[0].units) {
+            panic!("Invalid size: {}", new_size);
+        }
+
 
         let timestamp = chrono::Utc::now().format("%Y%m%d%H%M%S").to_string();
         let snapshot_suffix_with_timestamp = self.snapshot_suffix.replace("TIME", &timestamp);
         let snapshot_name = format!("{}{}", lv_name, snapshot_suffix_with_timestamp);
-        let size_string = format!("{}M", self.snapshot_size_m);
 
         let mut command = ShellCommand::new();
 
@@ -60,7 +76,7 @@ impl CommandModule for Snapshot {
             if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
                host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
                  command.arguments(vec![
-                      "lvcreate", "--snapshot", "--name", &snapshot_name, "--size", &size_string, lv_path
+                      "lvcreate", "--snapshot", "--name", &snapshot_name, "--size", &new_size, lv_path
                  ]);
             };
 

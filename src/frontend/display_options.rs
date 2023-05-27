@@ -123,6 +123,7 @@ pub struct UserInputField {
     pub default_value: String,
     pub units: Vec<String>,
     pub validator_regexp: String,
+    pub additional_validator_regexp: String,
 }
 
 impl UserInputField {
@@ -133,6 +134,7 @@ impl UserInputField {
             default_value: default_value.to_string(),
             units: Vec::new(),
             validator_regexp: String::new(),
+            additional_validator_regexp: String::new(),
         }
     }
 
@@ -142,7 +144,8 @@ impl UserInputField {
             label: label.to_string(),
             default_value: default_value.to_string(),
             units: Vec::new(),
-            validator_regexp: String::from("^\\d+$")
+            validator_regexp: String::from("^\\d+$"),
+            additional_validator_regexp: String::new(),
         }
     }
 
@@ -152,7 +155,8 @@ impl UserInputField {
             label: label.to_string(),
             default_value: default_value.to_string(),
             units: Vec::new(),
-            validator_regexp: String::from("^\\d+(\\.\\d+)?$")
+            validator_regexp: String::from("^\\d+(\\.\\d+)?$"),
+            additional_validator_regexp: String::new(),
         }
     }
 
@@ -162,6 +166,7 @@ impl UserInputField {
             label: label.to_string(),
             default_value: default_value.to_string(),
             validator_regexp: format!("^\\d+ ?({})$", units.join("|")),
+            additional_validator_regexp: String::new(),
             units: units,
         }
     }
@@ -171,7 +176,10 @@ impl UserInputField {
             field_type: UserInputFieldType::DecimalNumber,
             label: label.to_string(),
             default_value: default_value.to_string(),
-            validator_regexp: format!("^\\d+(\\.\\d+)? ?({})$", units.join("|")),
+            // Also allows decimal point without trailing number.
+            // Otherwise, the field is too restrictive for normal use as user can't even temporarily remove numbers after the decimal point.
+            validator_regexp: format!("^\\d+(\\.\\d*)? ?({})$", units.join("|")),
+            additional_validator_regexp: format!("^\\d+(\\.\\d+)? ?({})$", units.join("|")),
             units: units,
         }
     }
