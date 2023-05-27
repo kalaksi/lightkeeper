@@ -1,12 +1,13 @@
 
-pub fn strip_newline(input: &String) -> String
+pub fn strip_newline<Stringable: ToString>(input: &Stringable) -> String
 {
+    let input = input.to_string();
     input.strip_suffix("\r\n")
          .or(input.strip_suffix("\n"))
          .unwrap_or(&input)
          .to_string()
 }
 
-fn remove_whitespace(input: &str) -> String {
-    input.chars().filter(|&c| !c.is_whitespace()).collect()
+pub fn remove_whitespace<Stringable: ToString>(input: &Stringable) -> String {
+    input.to_string().chars().filter(|&c| !c.is_whitespace()).collect()
 }
