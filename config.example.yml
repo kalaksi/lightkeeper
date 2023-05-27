@@ -16,28 +16,32 @@ display_options:
       color: "#80b3825d"
       command_order: ["reboot", "shutdown", "logs"]
       monitor_order: ["uptime", "os", "kernel", "filesystem"]
-    network:
+    storage:
       priority: 2
+      color: "#80b3825d"
+      command_order: ["linux-lvm-snapshot", "linux-lvm-lvresize"]
+    network:
+      priority: 3
       color: "#80b3825d"
       monitor_order: ["ping", "ssh", "interface"]
     systemd:
-      priority: 3
+      priority: 4
       color: "#8030d475"
       command_order: ["systemd-service-stop", "systemd-service-start"]
     package:
-      priority: 4
-    docker-compose:
       priority: 5
+    docker-compose:
+      priority: 6
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-compose-edit", "docker-compose-pull", "docker-compose-up", "docker-compose-play", "docker-compose-stop"]
       collapsible_commands: [ "docker-compose-up", "docker-compose-pull", "docker-compose-edit" ]
     docker-containers:
-      priority: 6
+      priority: 7
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
     docker-images:
-      priority: 7
+      priority: 8
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
