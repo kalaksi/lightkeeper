@@ -74,6 +74,16 @@ impl DisplayOptions {
             return Err(String::from("Category must be set."));
         }
 
+        for user_input_field in &self.user_parameters {
+            if user_input_field.label.is_empty() {
+                return Err(String::from("User input field label must be set."));
+            }
+
+            if user_input_field.units.iter().any(|unit| !string_validation::is_alphanumeric(unit)) {
+                return Err(String::from("Input field units must only contain alphanumeric characters."));
+            }
+        }
+
         Ok(())
     }
 }
@@ -112,6 +122,7 @@ pub struct UserInputField {
     pub label: String,
     pub default_value: String,
     pub units: Vec<String>,
+    pub validator_regexp: String,
 }
 
 impl UserInputField {
@@ -121,6 +132,7 @@ impl UserInputField {
             label: label.to_string(),
             default_value: default_value.to_string(),
             units: Vec::new(),
+            validator_regexp: String::new(),
         }
     }
 
@@ -130,6 +142,7 @@ impl UserInputField {
             label: label.to_string(),
             default_value: default_value.to_string(),
             units: Vec::new(),
+            validator_regexp: String::from("^\\d+$")
         }
     }
 
@@ -139,6 +152,7 @@ impl UserInputField {
             label: label.to_string(),
             default_value: default_value.to_string(),
             units: Vec::new(),
+            validator_regexp: String::from("^\\d+(\\.\\d+)?$")
         }
     }
 
@@ -147,6 +161,7 @@ impl UserInputField {
             field_type: UserInputFieldType::Integer,
             label: label.to_string(),
             default_value: default_value.to_string(),
+            validator_regexp: format!("^\\d+ ?({})$", units.join("|")),
             units: units,
         }
     }
@@ -156,6 +171,7 @@ impl UserInputField {
             field_type: UserInputFieldType::DecimalNumber,
             label: label.to_string(),
             default_value: default_value.to_string(),
+            validator_regexp: format!("^\\d+(\\.\\d+)? ?({})$", units.join("|")),
             units: units,
         }
     }
