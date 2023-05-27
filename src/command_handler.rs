@@ -109,8 +109,8 @@ impl CommandHandler {
     }
 
     pub fn get_command_for_host(&self, host_id: &String, command_id: &String) -> CommandData {
-        let command_collection = self.commands.get(host_id).unwrap();
-        let command = command_collection.get(command_id).unwrap();
+        let command_collection = self.commands.get(host_id).expect(&format!("Host '{}' not found", host_id));
+        let command = command_collection.get(command_id).expect(&format!("Command '{}' not found for host {}", command_id, host_id));
         CommandData::new(command_id.clone(), command.get_display_options())
     }
 
