@@ -38,6 +38,7 @@ impl CommandModule for Snapshot {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("copy"),
             display_text: String::from("Create a snapshot"),
+            depends_on_no_tags: vec![String::from("Snapshot")],
             ..Default::default()
         }
     }
