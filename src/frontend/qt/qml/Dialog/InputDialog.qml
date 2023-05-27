@@ -85,10 +85,5 @@ Dialog {
 
         root._errorText = ""
         root.inputValuesGiven(values)
-        root.close()
-    }
-
-    onRejected: {
-        root.close()
     }
 }

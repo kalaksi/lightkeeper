@@ -216,6 +216,11 @@ impl CommandHandlerModel {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
 
+        if host_id.is_empty() || command_id.is_empty() {
+            ::log::error!("Invalid parameters: {}, {}", host_id, command_id);
+            return QVariantList::default();
+        }
+
         ::log::debug!("[{}] Refreshing monitors related to command {}", host_id, command_id);
 
         let command = self.command_handler.get_command_for_host(&host_id, &command_id);
