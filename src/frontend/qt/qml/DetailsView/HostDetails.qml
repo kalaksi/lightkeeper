@@ -50,7 +50,7 @@ Item {
         showMinimizeButton: true
         showMaximizeButton: true
         showCloseButton: true
-        onRefreshClicked: CommandHandler.initialize_host(hostId)
+        onRefreshClicked: CommandHandler.force_initialize_host(hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.closeClicked()

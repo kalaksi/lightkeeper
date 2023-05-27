@@ -39,6 +39,7 @@ impl CommandModule for LVRemove {
         let lv_path = parameters.get(0).unwrap();
         let _vg_name = parameters.get(1).unwrap();
         let _lv_name = parameters.get(2).unwrap();
+        let _lv_size = parameters.get(3).unwrap();
 
         let mut command = ShellCommand::new();
 

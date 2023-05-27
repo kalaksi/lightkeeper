@@ -25,6 +25,8 @@ use host::Host;
 use configuration::Configuration;
 use module::{ ModuleFactory, ModuleSpecification };
 
+use crate::connection_manager::CachePolicy;
+
 #[derive(Parser)]
 #[clap()]
 struct Args {
@@ -115,10 +117,10 @@ fn main() {
     connection_manager.start(module_factory);
 
     if config.cache_settings.provide_initial_value {
-        monitor_manager.refresh_platform_info(None, true);
+        monitor_manager.refresh_platform_info(None, Some(CachePolicy::OnlyCache));
     }
     if config.preferences.refresh_hosts_on_start {
-        monitor_manager.refresh_platform_info(None, false);
+        monitor_manager.refresh_platform_info(None, None);
     }
 
     let mut initial_display_data = host_manager.borrow().get_display_data();

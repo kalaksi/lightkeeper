@@ -89,6 +89,16 @@ ApplicationWindow {
             let instanceId = detailsDialogManager.create()
             _dialogInvocationIds[invocationId] = instanceId
         }
+
+        function onInput_dialog_opened(input_specs_json, hostId, commandId, commandParams) {
+            let inputSpecs = JSON.parse(input_specs_json)
+
+            inputDialog.inputSpecs = inputSpecs
+            inputDialog.onInputValuesGiven.connect((inputValues) => {
+                CommandHandler.execute_confirmed(hostId, commandId, commandParams.concat(inputValues))
+            })
+            inputDialog.open()
+        }
     }
 
     Connections {
@@ -246,6 +256,11 @@ ApplicationWindow {
                 }
             }
         ]
+    }
 
+    InputDialog {
+        id: inputDialog
+        anchors.centerIn: parent
+        visible: false
     }
 }

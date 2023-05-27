@@ -46,6 +46,7 @@ impl CommandModule for Snapshot {
         let lv_path = parameters.get(0).unwrap();
         let _vg_name = parameters.get(1).unwrap();
         let lv_name = parameters.get(2).unwrap();
+        let _lv_size = parameters.get(3).unwrap();
 
         let timestamp = chrono::Utc::now().format("%Y%m%d%H%M%S").to_string();
         let snapshot_suffix_with_timestamp = self.snapshot_suffix.replace("TIME", &timestamp);

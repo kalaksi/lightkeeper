@@ -21,6 +21,7 @@ pub struct CommandHandlerModel {
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     initialize_host: qt_method!(fn(&self, host_id: QString)),
+    force_initialize_host: qt_method!(fn(&self, host_id: QString)),
     force_refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
     cached_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
@@ -28,6 +29,7 @@ pub struct CommandHandlerModel {
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
+    input_dialog_opened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QVariantList),
     details_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
     // TODO: dialog for logs (refactor so doesn't need dedicated)
     logs_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
@@ -138,8 +140,13 @@ impl CommandHandlerModel {
     fn execute(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64 {
         let display_options = self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()).display_options;
 
-        if display_options.confirmation_text.is_empty() {
+        if display_options.confirmation_text.is_empty() && display_options.user_parameters.is_empty() {
             return self.execute_confirmed(host_id, command_id, parameters);
+        }
+        else if !display_options.user_parameters.is_empty() {
+            let input_specs: QString = QString::from(serde_json::to_string(&display_options.user_parameters).unwrap());
+            self.input_dialog_opened(input_specs, host_id, command_id, parameters);
+            return 0
         }
         else {
             self.confirmation_dialog_opened(QString::from(display_options.confirmation_text), host_id, command_id, parameters);
@@ -156,7 +163,7 @@ impl CommandHandlerModel {
             UIAction::None => {
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
             },
-            UIAction::Dialog => {
+            UIAction::DetailsDialog => {
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.details_dialog_opened(invocation_id)
             },
@@ -195,7 +202,12 @@ impl CommandHandlerModel {
     }
 
     fn initialize_host(&mut self, host_id: QString) {
-        self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()), false);
+        self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()), None);
+        self.host_initializing(host_id);
+    }
+
+    fn force_initialize_host(&mut self, host_id: QString) {
+        self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()), Some(CachePolicy::BypassCache));
         self.host_initializing(host_id);
     }
 

@@ -69,7 +69,7 @@ impl MonitoringModule for LogicalVolume {
             let lines = response.message.split('\n').skip(1);
             for line in lines {
                 let mut parts = line.split("|");
-                let lv_path = parts.next().unwrap().to_string();
+                let lv_path = parts.next().unwrap().trim().to_string();
                 let lv_name = parts.next().unwrap().to_string();
                 let vg_name = parts.next().unwrap().to_string();
                 let lv_size = parts.next().unwrap().to_string();
@@ -136,7 +136,7 @@ impl MonitoringModule for LogicalVolume {
                     }
                 }
 
-                data_point.command_params = vec![lv_path];
+                data_point.command_params = vec![lv_path, vg_name, lv_name, lv_size];
                 result.multivalue.push(data_point);
             }
 

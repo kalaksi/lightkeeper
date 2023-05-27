@@ -79,7 +79,7 @@ impl MonitorManager {
     }
 
     /// Refreshes platform info and such in preparation for actual monitor refresh.
-    pub fn refresh_platform_info(&mut self, host_id: Option<&String>, from_cache_only: bool) {
+    pub fn refresh_platform_info(&mut self, host_id: Option<&String>, bypass_cache_policy: Option<CachePolicy>) {
         for (host_name, monitor_collection) in self.monitors.iter() {
             if let Some(host_filter) = host_id {
                 if host_name != host_filter {
@@ -88,18 +88,15 @@ impl MonitorManager {
             }
 
             let host = self.host_manager.borrow().get_host(host_name);
-            let cache_policy = match (self.cache_settings.prefer_cache, from_cache_only) {
-                (_, true) => CachePolicy::OnlyCache,
-                (false, false) => CachePolicy::BypassCache,
-                (true, false) => CachePolicy::PreferCache,
-            };
-
-            if from_cache_only {
-                log::debug!("[{}] Fetching platform info from cache", host_name);
+            let cache_policy = if let Some(cache_policy) = bypass_cache_policy {
+                cache_policy
+            }
+            else if self.cache_settings.prefer_cache {
+                CachePolicy::PreferCache
             }
             else {
-                log::debug!("[{}] Refreshing platform info", host_name);
-            }
+                CachePolicy::BypassCache
+            };
 
             // Executed only if required connector is available.
             // TODO: remove hardcoding and execute once per connector type.
