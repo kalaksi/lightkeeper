@@ -1,3 +1,4 @@
+const DECIMAL_SEPARATOR: char = '.';
 
 pub fn is_alphanumeric(string: &String) -> bool {
     // chars() also handles multibyte correctly.
@@ -10,4 +11,19 @@ pub fn is_alphanumeric_with(string: &String, allowed_chars: &str) -> bool {
 
 pub fn begins_with_dash(string: &String) -> bool {
     string.chars().next().unwrap_or(' ') == '-'
+}
+
+pub fn is_numeric(string: &String) -> bool {
+    string.parse::<f64>().is_ok()
+}
+
+// Numeric value with unit (e.g. 100M, 1.5GB, 5 m). May contain a space between number and unit.
+pub fn is_numeric_with_unit(string: &String, valid_units: &Vec<String>) -> bool {
+    if !is_numeric(string) {
+        return false;
+    }
+
+    let unit_chars = string.chars().skip_while(|char| char.is_numeric() || *char == DECIMAL_SEPARATOR).collect::<String>();
+    let unit_string = unit_chars.trim().to_string();
+    !unit_string.is_empty() && valid_units.contains(&unit_string)
 }
