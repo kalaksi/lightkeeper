@@ -19,7 +19,8 @@ pub fn is_numeric(string: &String) -> bool {
 
 // Numeric value with unit (e.g. 100M, 1.5GB, 5 m). May contain a space between number and unit.
 pub fn is_numeric_with_unit(string: &String, valid_units: &Vec<String>) -> bool {
-    if !is_numeric(string) {
+    let value_chars = string.chars().take_while(|char| char.is_numeric() || *char == DECIMAL_SEPARATOR).collect::<String>();
+    if !is_numeric(&value_chars) {
         return false;
     }
 
