@@ -123,7 +123,9 @@ Item {
                             Layout.topMargin: size * 0.20
                             Layout.bottomMargin: size * 0.30
 
-                            onClicked: (commandId, params) => CommandHandler.execute(root.hostId, commandId, params)
+                            onClicked: function(commandId, params) {
+                                CommandHandler.execute(root.hostId, commandId, params)
+                            }
                         }
 
                         // Host details are a bit different from monitor data, so handling it separately here.

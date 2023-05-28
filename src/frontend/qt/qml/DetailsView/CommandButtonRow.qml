@@ -71,7 +71,10 @@ Item {
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
                     cooldownPercent: root._getButtonCooldown(buttonIdentifier)
-                    onClicked: () => root.clicked(modelData.command_id, modelData.command_params)
+                    onClicked: function() {
+                        root.clicked(modelData.command_id, modelData.command_params)
+                    }
+
                     hoverEnabled: root.hoverEnabled
 
                     Connections {

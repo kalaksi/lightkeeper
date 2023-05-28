@@ -131,7 +131,7 @@ impl PropertyTableModel {
 
         let show_commands = self.row_datas.iter().any(|row_data| row_data.command_datas.len() > 0);
 
-        if let Some(row_data) = self.row_datas.get(row) {
+        if self.row_datas.get(row).is_some() {
             match column {
                 0 => 0.48,
                 1 => {
