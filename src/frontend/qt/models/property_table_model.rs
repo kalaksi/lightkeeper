@@ -316,7 +316,7 @@ impl PropertyTableModel {
 
         let mut cooldowns = HashMap::<String, f32>::new();
         for command_data in command_datas {
-            let button_identifier = format!("{}{}", command_data.command_id, command_data.command_params.join(""));
+            let button_identifier = format!("{}|{}", command_data.command_id, command_data.command_params.first().unwrap_or(&String::new()));
             let remaining_time = self.command_cooldown_times.get(&button_identifier).unwrap_or(&0);
             let remaining_percentage = *remaining_time as f32 / COOLDOWN_LENGTH as f32;
             cooldowns.insert(button_identifier, remaining_percentage);

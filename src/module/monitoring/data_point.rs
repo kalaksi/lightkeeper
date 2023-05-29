@@ -16,8 +16,8 @@ pub struct DataPoint {
     /// Tags can be used for additional data that will be displayed alongside the value.
     pub tags: Vec<String>,
     /// This data is passed to commands. Contents depend on the monitoring module.
-    /// Usually contains an identifier of the source of this data,
-    /// e.g. container ID or service name, so that attached commands can target the correct identity.
+    /// First parameter has to contain a unique attribute (per DataPoint), e.g. container ID or service name,
+    /// since it will be used for creating button identifiers. This restriction will probably change at some point.
     pub command_params: Vec<String>,
     // TODO: rename to children?
     pub multivalue: Vec<DataPoint>,

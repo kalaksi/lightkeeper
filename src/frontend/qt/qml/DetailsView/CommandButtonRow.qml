@@ -63,7 +63,8 @@ Item {
                 model: !root.collapsible || root._showCommands ?  root.commands : root._alwaysShownCommands
 
                 CommandButton {
-                    property string buttonIdentifier: modelData.command_id + modelData.command_params.join("")
+                    property string buttonIdentifier: modelData.command_params.length > 0 ?
+                        modelData.command_id + '|' + modelData.command_params[0] : modelData.command_id
 
                     id: commandButton
                     size: root.buttonSize

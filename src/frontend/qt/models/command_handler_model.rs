@@ -18,7 +18,7 @@ pub struct CommandHandlerModel {
     get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     get_commands_on_level: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
-    execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
+    execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList)),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
     initialize_host: qt_method!(fn(&self, host_id: QString)),
     force_initialize_host: qt_method!(fn(&self, host_id: QString)),
@@ -35,6 +35,7 @@ pub struct CommandHandlerModel {
     logs_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
     text_editor_opened: qt_signal!(headerText: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
+    command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     host_initializing: qt_signal!(host_id: QString),
 
     command_handler: CommandHandler,
@@ -137,20 +138,18 @@ impl CommandHandlerModel {
                             .count() as u32
     }
 
-    fn execute(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64 {
+    fn execute(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) {
         let display_options = self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()).display_options;
 
-        if display_options.confirmation_text.is_empty() && display_options.user_parameters.is_empty() {
-            return self.execute_confirmed(host_id, command_id, parameters);
-        }
-        else if !display_options.user_parameters.is_empty() {
+        if !display_options.user_parameters.is_empty() {
             let input_specs: QString = QString::from(serde_json::to_string(&display_options.user_parameters).unwrap());
             self.input_dialog_opened(input_specs, host_id, command_id, parameters);
-            return 0
+        }
+        else if !display_options.confirmation_text.is_empty() {
+            self.confirmation_dialog_opened(QString::from(display_options.confirmation_text), host_id, command_id, parameters);
         }
         else {
-            self.confirmation_dialog_opened(QString::from(display_options.confirmation_text), host_id, command_id, parameters);
-            return 0
+            self.execute_confirmed(host_id, command_id, parameters);
         }
     }
 
@@ -161,7 +160,9 @@ impl CommandHandlerModel {
         let display_options = self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()).display_options;
         match display_options.action {
             UIAction::None => {
-                invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
+                invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters.clone());
+                let button_identifier = format!("{}|{}", command_id, parameters.first().unwrap_or(&String::new()));
+                self.command_executed(invocation_id, host_id, command_id, QString::from(display_options.category), QString::from(button_identifier));
             },
             UIAction::DetailsDialog => {
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);

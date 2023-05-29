@@ -38,7 +38,7 @@ TableView {
     topMargin: Theme.groupbox_padding()
     bottomMargin: Theme.groupbox_padding()
 
-    rowHeightProvider: (row) => root.model.get_row_height(row)
+    rowHeightProvider: root.model.get_row_height
 
     model: PropertyTableModel {
         monitoring_datas: root.monitoring_datas
@@ -58,6 +58,18 @@ TableView {
             root.model.end_command_cooldown(commandResult.invocation_id)
 
             root.pendingRefreshAfterCommand.push(commandResult.command_id);
+        }
+    }
+    Connections {
+        target: CommandHandler
+
+        function onCommand_executed(invocationId, hostId, commandId, category, buttonIdentifier) {
+            if (hostId === root.hostId && category === root.category) {
+                root.model.start_command_cooldown(buttonIdentifier, invocationId)
+
+                // Does nothing if timer is already running.
+                cooldownTimer.start()
+            }
         }
     }
 
@@ -234,12 +246,7 @@ TableView {
                     }
 
                     onClicked: function(commandId, params) {
-                        let invocationId = CommandHandler.execute(root.hostId, commandId, params)
-                        let buttonIdentifier = commandId + params.join("")
-                        root.model.start_command_cooldown(buttonIdentifier, invocationId)
-
-                        // Does nothing if timer is already running.
-                        cooldownTimer.start()
+                        CommandHandler.execute(root.hostId, commandId, params)
                     }
 
                     Connections {
