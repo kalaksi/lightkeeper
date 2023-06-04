@@ -136,19 +136,18 @@ impl PropertyTableModel {
                 0 => 0.48,
                 1 => {
                     if show_commands {
-                        0.52 - width_for_commands
+                        0.47 - width_for_commands
                     }
                     else {
-                        0.52
+                        0.47
                     }
                 },
                 2 => {
                     if show_commands {
                         width_for_commands
                     }
-                    // Hidden if there are no related commands.
                     else {
-                        0.0
+                        0.05
                     }
                 }
                 _ => 0.0,

@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
 import QtQuick.Controls.Material 2.15
+import QtQuick.Controls.Styles 1.4
 
 import PropertyTableModel 1.0
 
@@ -29,6 +30,7 @@ TableView {
     // Automatic refresh is done after all commands have been executed.
     // This keeps track which commands were executed.
     property var pendingRefreshAfterCommand: []
+    property int selectedRow: -1
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
@@ -79,7 +81,11 @@ TableView {
         // First delegate is used for labels and descriptions.
         DelegateChoice {
             column: 0
-            delegate: Item {
+            delegate: PropertyTableCell {
+                firstItem: true
+                selected: root.selectedRow === row && !isSeparator
+                onClicked: toggleRow(row)
+
                 property string separatorLabel: root.model.get_separator_label(row)
                 property bool isSeparator: separatorLabel !== ""
                 property var labelAndDescription: JSON.parse(model.value)
@@ -114,6 +120,7 @@ TableView {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: -3
                     padding: 0
+                    leftPadding: 5
 
                     NormalText {
                         id: labelComponent
@@ -132,27 +139,16 @@ TableView {
         // Second delegate is used for values and tags.
         DelegateChoice {
             column: 1
-            delegate: Item {
+            delegate: PropertyTableCell {
+                gradient: true
+                selected: root.selectedRow === row && !isSeparator
+                onClicked: toggleRow(row)
+
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var styledValue: JSON.parse(model.value)
 
                 visible: !isSeparator
                 implicitWidth: root.width * root.model.get_column_width(row, column)
-
-                // Used to clip overflowing text from the label.
-                // Avoiding clip-property on the label itself, since it could cause performance issues.
-                // This also allows more customized style for the clipping.
-                Rectangle {
-                    x: -parent.width * 0.3
-                    width: parent.width * 1.3
-                    height: parent.height
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: "#00000000" }
-                        GradientStop { position: 0.15; color: Theme.category_background_color() }
-                        GradientStop { position: 1.0; color: Theme.category_background_color() }
-                    }
-                }
 
                 Row {
                     width: parent.width
@@ -205,26 +201,17 @@ TableView {
 
         DelegateChoice {
             column: 2
-            delegate: Item {
+            delegate: PropertyTableCell {
+                selected: root.selectedRow === row && !isSeparator
+                onClicked: toggleRow(row)
+                lastItem: true
+
                 property bool isSeparator: root.model.get_separator_label(row) !== ""
                 property var parsedCommands: JSON.parse(model.value)
                 property real _marginRight: scrollBar.width + 8
 
                 visible: !isSeparator
                 implicitWidth: root.width * root.model.get_column_width(row, column)
-
-                // Reason for this Rectangle is the same as with delegate 1.
-                Rectangle {
-                    x: -parent.width * 0.3
-                    width: parent.width * 1.35
-                    height: parent.height
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: "#00000000" }
-                        GradientStop { position: 0.15; color: Theme.category_background_color() }
-                        GradientStop { position: 1.0; color: Theme.category_background_color() }
-                    }
-                }
 
                 // Row-level command buttons, aligned to the right.
                 CommandButtonRow {
@@ -282,6 +269,14 @@ TableView {
 
                 root.pendingRefreshAfterCommand = []
             }
+        }
+    }
+
+    function toggleRow(row) {
+        if (selectedRow === row) {
+            selectedRow = -1
+        } else {
+            selectedRow = row
         }
     }
 }
