@@ -2,6 +2,9 @@ import QtQuick 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Controls.Material 2.15
 
+import "../Misc"
+
+
 Item {
     id: root
     property bool selected: false
@@ -13,14 +16,22 @@ Item {
 
     signal clicked()
 
-    // Make sure left side is not rounded
+    // Background for semicircle.
     Rectangle {
-        visible: root.lastItem
+        visible: root.firstItem && root.selected
+        height: leftRounding.height
+        width: leftRounding.width / 2
+        color: getBackgroundColor(false)
+        z: 1
+    }
+
+    SemiCircle {
+        id: leftRounding
+        visible: root.firstItem && root.selected
+        radius: root.radius
         color: getBackgroundColor(root.selected)
-        width: background.radius
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
+        // Force on top so that scrolling text is cut neatly.
+        z: 2
     }
 
     Rectangle {
@@ -28,7 +39,6 @@ Item {
         visible: root.gradient === false
         anchors.fill: parent
         color: getBackgroundColor(root.selected)
-        radius: root.firstItem || root.lastItem ? root.radius : 0
 
         MouseArea {
             anchors.fill: parent

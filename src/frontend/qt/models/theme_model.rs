@@ -57,7 +57,7 @@ impl ThemeModel {
     }
 
     fn groupbox_padding(&self) -> i8 {
-        3
+        2
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {

@@ -122,7 +122,7 @@ TableView {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: -3
                     padding: 0
-                    leftPadding: 5
+                    leftPadding: parent.radius
 
                     ScrollableNormalText {
                         id: labelComponent
