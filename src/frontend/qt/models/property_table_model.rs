@@ -144,7 +144,7 @@ impl PropertyTableModel {
                 },
                 2 => {
                     if show_commands {
-                        width_for_commands
+                        0.05 + width_for_commands
                     }
                     else {
                         0.05

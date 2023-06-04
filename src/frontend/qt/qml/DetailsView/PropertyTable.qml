@@ -85,12 +85,14 @@ TableView {
                 firstItem: true
                 selected: root.selectedRow === row && !isSeparator
                 onClicked: toggleRow(row)
+                implicitWidth: root.width * root.model.get_column_width(row, column)
 
                 property string separatorLabel: root.model.get_separator_label(row)
                 property bool isSeparator: separatorLabel !== ""
                 property var labelAndDescription: JSON.parse(model.value)
+                // Gradient blocks part of the effective display width so compensate here for scrolling detection.
+                property int scrollableWidth: implicitWidth - 20
 
-                implicitWidth: root.width * root.model.get_column_width(row, column)
 
                 // Header text for multivalues.
                 Label {
@@ -122,15 +124,19 @@ TableView {
                     padding: 0
                     leftPadding: 5
 
-                    NormalText {
+                    ScrollableNormalText {
                         id: labelComponent
+                        width: parent.parent.scrollableWidth
                         text: parent.parent.labelAndDescription.label
+                        scrollAnimation: root.selectedRow === row
                     }
 
-                    SmallerText {
+                    ScrollableSmallerText {
                         visible: parent.parent.labelAndDescription.description !== ""
                         opacity: 0.7
+                        width: parent.parent.scrollableWidth
                         text: parent.parent.labelAndDescription.description
+                        scrollAnimation: root.selectedRow === row
                     }
                 }
             }
