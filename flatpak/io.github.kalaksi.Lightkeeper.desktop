@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+
+Name=Lightkeeper
+Comment=A standalone, customizable server management tool.
+Categories=Network;RemoteAccess;
+
+Icon=io.github.kalaksi.Lightkeeper
+Exec=lightkeeper
+Terminal=false

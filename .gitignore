@@ -1,4 +1,5 @@
 /target
+/flatpak/build
 .*
 vendor
 config.yml
