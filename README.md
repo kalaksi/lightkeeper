@@ -35,3 +35,23 @@ Running:
 ```
 ./target/debug/lightkeeper
 ```
+
+# License
+## Lightkeeper
+This software is licensed under GNU General Public License 3.
+
+## Crate dependencies
+All crate dependencies contain permissive licenses (mostly MIT license).  
+You can check the licenses with:
+```
+cargo tree --format "{p} {l}" --prefix none
+```
+
+Or, to quickly see what different licenses are being used by printing only unique license strings:
+```
+cargo tree --format "{l}" --prefix none | sort | uniq
+```
+
+## Liboping
+Liboping 1.10 (https://noping.cc/) is redistributed inside the flatpak package.
+It's a separate C library dependency needed by oping-crate and is distributed under LGPL-2.1 license.
