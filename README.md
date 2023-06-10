@@ -25,3 +25,13 @@ If you're using the ping monitor, you need to give the lighthouse binary more ne
 ```
 $ setcap cap_net_raw+ep $MY_BINARY
 ```
+
+# Building from source
+```
+cargo build
+```
+
+Running:
+```
+./target/debug/lightkeeper
+```
