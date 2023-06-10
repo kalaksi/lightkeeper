@@ -16,9 +16,32 @@ const MAX_PATH_COMPONENTS: u8 = 2;
 
 
 pub fn get_config_dir() -> io::Result<PathBuf> {
-    match env::var_os("HOME") {
-        Some(home_path) => Ok(PathBuf::from(home_path).join(".config").join("lightkeeper")),
-        None => Err(io::Error::new(io::ErrorKind::Other, "Cannot find home directory. $HOME is not set.")), 
+    if let Some(home_path) = env::var_os("XDG_CONFIG_HOME") {
+        // If running inside flatpak, there's no need to add a separate subdir for the app.
+        if env::var("FLATPAK_ID").is_ok() {
+            Ok(PathBuf::from(home_path))
+        }
+        else {
+            Ok(PathBuf::from(home_path).join("lightkeeper"))
+        }
+    }
+    else {
+        Err(io::Error::new(io::ErrorKind::Other, "Cannot find configuration directory. $XDG_CONFIG_HOME is not set."))
+    }
+}
+
+pub fn get_cache_dir() -> io::Result<PathBuf> {
+    if let Some(home_path) = env::var_os("XDG_CACHE_HOME") {
+        // If running inside flatpak, there's no need to add a separate subdir for the app.
+        if env::var("FLATPAK_ID").is_ok() {
+            Ok(PathBuf::from(home_path))
+        }
+        else {
+            Ok(PathBuf::from(home_path).join("lightkeeper"))
+        }
+    }
+    else {
+        Err(io::Error::new(io::ErrorKind::Other, "Cannot find cache directory. $XDG_CACHE_HOME is not set."))
     }
 }
 

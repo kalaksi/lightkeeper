@@ -1,5 +1,6 @@
 
 use std::sync::mpsc;
+use std::env;
 extern crate qmetaobject;
 use qmetaobject::*;
 use super::{
@@ -46,6 +47,15 @@ impl QmlFrontend {
     }
 
     pub fn start(&mut self) {
+        let main_qml_path = if env::var("FLATPAK_ID").is_ok() {
+            // Inside flatpak.
+            "/app/qml/main.qml"
+        }
+        else {
+            // If running from the source directory, use the QML file from there.
+            "src/frontend/qt/qml/main.qml"
+        };
+
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
 
@@ -57,7 +67,7 @@ impl QmlFrontend {
         engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
         engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
         engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
-        engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
+        engine.load_file(QString::from(main_qml_path));
         engine.exec();
     }
 

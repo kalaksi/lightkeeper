@@ -58,7 +58,7 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
     /// Writes cache contents to disk in YAML format so they can be loaded on application start.
     pub fn write_to_disk(&self) -> Result<usize, String> where K: serde::Serialize, V: serde::Serialize {
         // TODO: don't write sensitive information. Modules should define if they can contain sensitive info.
-        let config_dir = file_handler::get_config_dir().map_err(|error| format!("Cannot find cache directory: {}", error))?;
+        let config_dir = file_handler::get_cache_dir().map_err(|error| error.to_string())?;
         fs::create_dir_all(&config_dir).map_err(|error| format!("Error while creating configuration directory: {}", error))?;
         let file_path = config_dir.join(CACHE_FILE_NAME);
         let serialized = serde_yaml::to_string(&self.data).unwrap();
@@ -68,8 +68,9 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
 
     /// Read the cache from disk.
     pub fn read_from_disk(&mut self) -> Result<usize, String> where K: serde::de::DeserializeOwned, V: serde::de::DeserializeOwned {
-        let config_dir = file_handler::get_config_dir().map_err(|error| format!("Cannot find cache directory: {}", error))?;
+        let config_dir = file_handler::get_cache_dir().map_err(|error| error.to_string())?;
         let file_path = config_dir.join(CACHE_FILE_NAME);
+        log::debug!("Reading cache from file: {}", file_path.display());
 
         let serialized = fs::read_to_string(file_path).map_err(|error| format!("Error while reading cache from disk: {}", error))?;
         self.data = serde_yaml::from_str(&serialized).map_err(|error| format!("Cache is in invalid format: {}", error))?;

@@ -2,7 +2,7 @@ use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
 use std::{ fs, io, collections::HashMap };
 use crate::host::HostSetting;
-
+use crate::file_handler;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
@@ -137,18 +137,24 @@ pub struct ConnectorConfig {
 
 impl Configuration {
     pub fn read(config_file_name: &String, hosts_file_name: &String, templates_file_name: &String) -> io::Result<(Configuration, Hosts)> {
-        log::debug!("Reading general configuration from {}", config_file_name);
-        let config_contents = fs::read_to_string(config_file_name)?;
+
+        let config_dir = file_handler::get_config_dir().unwrap();
+        let main_config_file_path = config_dir.join(config_file_name);
+        let hosts_file_path = config_dir.join(hosts_file_name);
+        let templates_file_path = config_dir.join(templates_file_name);
+
+        log::debug!("Reading general configuration from {}", main_config_file_path.display());
+        let config_contents = fs::read_to_string(main_config_file_path)?;
         let main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
                                      .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
-        log::debug!("Reading host configuration from {}", hosts_file_name);
-        let hosts_contents = fs::read_to_string(hosts_file_name)?;
+        log::debug!("Reading host configuration from {}", hosts_file_path.display());
+        let hosts_contents = fs::read_to_string(hosts_file_path)?;
         let mut hosts = serde_yaml::from_str::<Hosts>(hosts_contents.as_str())
                                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
-        log::debug!("Reading template configuration from {}", templates_file_name);
-        let templates_contents = fs::read_to_string(templates_file_name)?;
+        log::debug!("Reading template configuration from {}", templates_file_path.display());
+        let templates_contents = fs::read_to_string(templates_file_path)?;
         let all_templates = serde_yaml::from_str::<Templates>(templates_contents.as_str())
                                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 

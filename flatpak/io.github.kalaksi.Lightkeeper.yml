@@ -10,6 +10,8 @@ finish-args:
   - "--socket=fallback-x11"
   - "--socket=wayland"
   - "--share=network"
+  - "--device=dri"
+  - "--socket=ssh-auth"
 build-options:
     append-path: /usr/lib/sdk/rust-stable/bin
     build-args:
@@ -48,6 +50,7 @@ modules:
     build-commands:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
       - cargo --offline build --release --verbose
+      - cp -r ./src/frontend/qt/qml /app/
       - install -Dm755 ./target/release/lightkeeper -t /app/bin/
       - install -Dm644 ./flatpak/${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo/
       - install -Dm644 ./flatpak/${FLATPAK_ID}.desktop -t /app/share/applications/
