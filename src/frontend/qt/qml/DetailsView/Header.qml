@@ -47,13 +47,8 @@ Item {
         anchors.rightMargin: 5
         spacing: 5
 
-        ImageButton {
+        RefreshButton {
             anchors.verticalCenter: parent.verticalCenter
-            imageSource: "qrc:/main/images/button/refresh"
-            imageRelativeWidth: 0.8
-            imageRelativeHeight: 0.8
-            flatButton: true
-            tooltip: "Refresh"
             onClicked: root.refreshClicked()
             visible: root.showRefreshButton
         }

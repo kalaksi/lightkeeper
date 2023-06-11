@@ -36,6 +36,7 @@ pub struct CommandHandlerModel {
     text_editor_opened: qt_signal!(headerText: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
+    // Platform info refresh was just triggered.
     host_initializing: qt_signal!(host_id: QString),
 
     command_handler: CommandHandler,

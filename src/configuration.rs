@@ -156,7 +156,7 @@ impl Configuration {
         log::debug!("Reading template configuration from {}", templates_file_path.display());
         let templates_contents = fs::read_to_string(templates_file_path)?;
         let all_templates = serde_yaml::from_str::<Templates>(templates_contents.as_str())
-                                   .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+                                       .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
         // Apply templates.
         for (_, host_config) in hosts.hosts.iter_mut() {

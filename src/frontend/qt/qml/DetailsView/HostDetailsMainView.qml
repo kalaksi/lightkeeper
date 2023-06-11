@@ -89,7 +89,7 @@ Item {
                             target: HostDataManager
                             function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
                                 if (host_id === root.hostId && category === modelData) {
-                                    groupBoxLabel.refreshProgress = HostDataManager.get_pending_monitor_progress(root.hostId, category)
+                                    groupBoxLabel.refreshProgress = HostDataManager.get_category_pending_monitor_progress(root.hostId, category)
                                 }
                             }
                         }
@@ -252,6 +252,6 @@ Item {
 
     function isCategoryReady(category) {
         return HostDataManager.is_host_initialized(root.hostId) &&
-               HostDataManager.get_pending_monitor_progress(root.hostId, category) == 100
+               HostDataManager.get_category_pending_monitor_progress(root.hostId, category) == 100
     }
 }

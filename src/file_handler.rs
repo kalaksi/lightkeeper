@@ -13,6 +13,7 @@ use crate::Host;
 
 
 const MAX_PATH_COMPONENTS: u8 = 2;
+const APP_DIR_NAME: &str = "lightkeeper";
 
 
 pub fn get_config_dir() -> io::Result<PathBuf> {
@@ -32,7 +33,7 @@ pub fn get_config_dir() -> io::Result<PathBuf> {
         Ok(config_dir)
     }
     else {
-        Ok(config_dir.join("lightkeeper"))
+        Ok(config_dir.join(APP_DIR_NAME))
     }
 }
 
@@ -53,7 +54,7 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
         Ok(cache_dir)
     }
     else {
-        Ok(cache_dir.join("lightkeeper"))
+        Ok(cache_dir.join(APP_DIR_NAME))
     }
 }
 

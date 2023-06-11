@@ -31,7 +31,8 @@ pub struct HostDataManagerModel {
     get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
-    get_pending_monitor_progress: qt_method!(fn(&self, host_id: QString, category: QString) -> i8),
+    get_pending_monitor_progress: qt_method!(fn(&self, host_id: QString) -> i8),
+    get_category_pending_monitor_progress: qt_method!(fn(&self, host_id: QString, category: QString) -> i8),
     add_pending_monitor_invocations: qt_method!(fn(&self, host_id: QString, monitor_id: QString, invocation_ids: QVariantList)),
 
     // These methods are used to get the data in JSON and parsed in QML side.
@@ -215,7 +216,22 @@ impl HostDataManagerModel {
         }
     }
 
-    fn get_pending_monitor_progress(&self, host_id: QString, category: QString) -> i8 {
+    fn get_pending_monitor_progress(&self, host_id: QString) -> i8 {
+        let host_id = host_id.to_string();
+
+        if let Some(categories) = self.pending_monitor_invocations.get(&host_id) {
+            let max_invocations = categories.values().map(|(_, max_invocations)| max_invocations).sum::<usize>();
+            let invocation_id_count = categories.values().map(|(invocation_ids, _)| invocation_ids.len()).sum::<usize>();
+
+            if max_invocations > 0 {
+                return 100 - ((invocation_id_count as f32 / max_invocations as f32 * 100.0).floor() as i8);
+            }
+        }
+
+        return 100;
+    }
+
+    fn get_category_pending_monitor_progress(&self, host_id: QString, category: QString) -> i8 {
         let host_id = host_id.to_string();
         let category = category.to_string();
 
