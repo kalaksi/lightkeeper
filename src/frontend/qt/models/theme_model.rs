@@ -86,7 +86,7 @@ impl ThemeModel {
             Criticality::Critical => QString::from("#60ff3300"),
             Criticality::Error => QString::from("#60ff3300"),
             Criticality::Warning => QString::from("#60ffcc00"),
-            Criticality::Normal => QString::from("#60388703"),
+            Criticality::Normal => QString::from("#6033cc33"),
             Criticality::Info => QString::from("#60ffffff"),
             _ => QString::from("#60ffffff"),
         }
