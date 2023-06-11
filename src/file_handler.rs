@@ -16,32 +16,44 @@ const MAX_PATH_COMPONENTS: u8 = 2;
 
 
 pub fn get_config_dir() -> io::Result<PathBuf> {
-    if let Some(home_path) = env::var_os("XDG_CONFIG_HOME") {
-        // If running inside flatpak, there's no need to add a separate subdir for the app.
-        if env::var("FLATPAK_ID").is_ok() {
-            Ok(PathBuf::from(home_path))
-        }
-        else {
-            Ok(PathBuf::from(home_path).join("lightkeeper"))
-        }
+    let config_dir;
+    if let Some(path) = env::var_os("XDG_CONFIG_HOME") {
+        config_dir = PathBuf::from(path);
+    }
+    else if let Some(path) = env::var_os("HOME") {
+        config_dir = PathBuf::from(path).join(".config");
     }
     else {
-        Err(io::Error::new(io::ErrorKind::Other, "Cannot find configuration directory. $XDG_CONFIG_HOME is not set."))
+        return Err(io::Error::new(io::ErrorKind::Other, "Cannot find configuration directory. $XDG_CONFIG_HOME or $HOME is not set."));
+    }
+
+    // If running inside flatpak, there's no need to add a separate subdir for the app.
+    if env::var("FLATPAK_ID").is_ok() {
+        Ok(config_dir)
+    }
+    else {
+        Ok(config_dir.join("lightkeeper"))
     }
 }
 
 pub fn get_cache_dir() -> io::Result<PathBuf> {
-    if let Some(home_path) = env::var_os("XDG_CACHE_HOME") {
-        // If running inside flatpak, there's no need to add a separate subdir for the app.
-        if env::var("FLATPAK_ID").is_ok() {
-            Ok(PathBuf::from(home_path))
-        }
-        else {
-            Ok(PathBuf::from(home_path).join("lightkeeper"))
-        }
+    let cache_dir;
+    if let Some(path) = env::var_os("XDG_CACHE_HOME") {
+        cache_dir = PathBuf::from(path);
+    }
+    else if let Some(home_path) = env::var_os("HOME") {
+        cache_dir = PathBuf::from(home_path).join(".cache");
     }
     else {
-        Err(io::Error::new(io::ErrorKind::Other, "Cannot find cache directory. $XDG_CACHE_HOME is not set."))
+        return Err(io::Error::new(io::ErrorKind::Other, "Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set."));
+    }
+
+    // If running inside flatpak, there's no need to add a separate subdir for the app.
+    if env::var("FLATPAK_ID").is_ok() {
+        Ok(cache_dir)
+    }
+    else {
+        Ok(cache_dir.join("lightkeeper"))
     }
 }
 
