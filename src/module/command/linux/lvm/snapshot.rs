@@ -19,7 +19,7 @@ pub struct Snapshot {
 impl Module for Snapshot {
     fn new(settings: &HashMap<String, String>) -> Self {
         Snapshot {
-            snapshot_suffix: settings.get("snapshot_suffix").unwrap_or(&String::from("_snapshot_TIME")).clone(),
+            snapshot_suffix: settings.get("snapshot_suffix").unwrap_or(&String::from("_snapshot_$TIME")).clone(),
         }
     }
 }
@@ -67,7 +67,7 @@ impl CommandModule for Snapshot {
 
 
         let timestamp = chrono::Utc::now().format("%Y%m%d%H%M%S").to_string();
-        let snapshot_suffix_with_timestamp = self.snapshot_suffix.replace("TIME", &timestamp);
+        let snapshot_suffix_with_timestamp = self.snapshot_suffix.replace("$TIME", &timestamp);
         let snapshot_name = format!("{}{}", lv_name, snapshot_suffix_with_timestamp);
 
         let mut command = ShellCommand::new();
