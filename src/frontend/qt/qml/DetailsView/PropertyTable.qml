@@ -62,6 +62,7 @@ TableView {
             root.pendingRefreshAfterCommand.push(commandResult.command_id);
         }
     }
+
     Connections {
         target: CommandHandler
 
@@ -123,6 +124,7 @@ TableView {
                     spacing: -3
                     padding: 0
                     leftPadding: parent.radius
+                    z: 0
 
                     ScrollableNormalText {
                         id: labelComponent
@@ -160,6 +162,7 @@ TableView {
                     width: parent.width
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
+                    z: 2
 
                     Row {
                         visible: styledValue.display_options.display_style === "ProgressBar"
@@ -228,6 +231,7 @@ TableView {
                     // TODO: how to account for scrollbar so margin is not used when scrollbar is not visible?
                     // For scrollbar.
                     anchors.rightMargin: _marginRight
+                    z: 2
 
                     size: Math.min(parent.height, 28)
                     collapsible: true

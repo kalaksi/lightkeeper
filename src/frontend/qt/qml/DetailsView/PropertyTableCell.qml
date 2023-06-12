@@ -22,7 +22,7 @@ Item {
         height: leftRounding.height
         width: leftRounding.width / 2
         color: getBackgroundColor(false)
-        z: 1
+        z: 11
     }
 
     SemiCircle {
@@ -31,7 +31,7 @@ Item {
         radius: root.radius
         color: getBackgroundColor(root.selected)
         // Force on top so that scrolling text is cut neatly.
-        z: 2
+        z: 12
     }
 
     Rectangle {
@@ -56,6 +56,9 @@ Item {
         width: parent.width * 1.3
         height: parent.height
         radius: root.lastItem ? root.radius : 0
+        // Sometimes drawing in order doesn't work correctly for some reason and this Rectangle doesn't cover the content like it should.
+        // Therefore, we need to play around with z indices a bit in PropertyTable and here.
+        z: 1
 
         gradient: Gradient {
             orientation: Gradient.Horizontal
