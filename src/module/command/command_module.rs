@@ -128,6 +128,7 @@ pub enum UIAction {
     None,
     DetailsDialog,
     TextView,
+    TextDialog,
     LogView,
     Terminal,
     TextEditor,

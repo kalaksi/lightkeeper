@@ -30,10 +30,11 @@ pub struct CommandHandlerModel {
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
     input_dialog_opened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QVariantList),
-    details_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
+    details_subview_opened: qt_signal!(header_text: QString, invocation_id: u64),
+    text_dialog_opened: qt_signal!(invocation_id: u64),
     // TODO: dialog for logs (refactor so doesn't need dedicated)
-    logs_subview_opened: qt_signal!(headerText: QString, invocation_id: u64),
-    text_editor_opened: qt_signal!(headerText: QString, invocation_id: u64),
+    logs_subview_opened: qt_signal!(header_text: QString, invocation_id: u64),
+    text_editor_opened: qt_signal!(header_text: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
@@ -173,6 +174,11 @@ impl CommandHandlerModel {
                 let target_id = parameters.first().unwrap().clone();
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.details_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
+            },
+            UIAction::TextDialog => {
+                let target_id = parameters.first().unwrap().clone();
+                invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
+                self.text_dialog_opened(invocation_id)
             },
             UIAction::LogView => {
                 let target_id = parameters.first().unwrap().clone();

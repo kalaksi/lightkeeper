@@ -33,6 +33,14 @@ Item {
         return instance
     }
 
+    function destroy(instanceId) {
+        let instance = root.get(instanceId)
+        if (typeof instance !== "undefined") {
+            instance.destroy()
+            delete _instances[instanceId]
+        }
+    }
+
     // Create Components from files instead of providing the Component using QML.
     // NOTE: currently not used and use is discouraged.
     function createComponent(parent, qmlPath, properties = {}, signalHandlers = {}) {

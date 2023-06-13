@@ -42,7 +42,7 @@ impl CommandModule for RemoteTags {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("tag"),
             display_text: String::from("Show available tags"),
-            action: UIAction::TextView,
+            action: UIAction::TextDialog,
             ..Default::default()
         }
     }

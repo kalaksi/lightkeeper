@@ -18,7 +18,8 @@ ApplicationWindow {
     width: 1400
     height: 800
 
-    property var _dialogInvocationIds: {}
+    property var _detailsDialogs: {}
+    property int _textDialogPendingInvocation: 0
 
     Material.theme: Material.System
 
@@ -63,12 +64,15 @@ ApplicationWindow {
                 })
             }
 
-            let dialogInstanceId = _dialogInvocationIds[commandResult.invocation_id]
+            let dialogInstanceId = _detailsDialogs[commandResult.invocation_id]
             if (typeof dialogInstanceId !== "undefined") {
                 let dialog = detailsDialogManager.get(dialogInstanceId)
                 dialog.text = commandResult.message
                 dialog.errorText = commandResult.error
                 dialog.criticality = commandResult.criticality
+            }
+            else if (_textDialogPendingInvocation === commandResult.invocation_id) {
+                textDialog.text = commandResult.message
             }
             else {
                 detailsView.refreshSubview(commandResult)
@@ -87,7 +91,12 @@ ApplicationWindow {
 
         function onDetails_dialog_opened(invocationId) {
             let instanceId = detailsDialogManager.create()
-            _dialogInvocationIds[invocationId] = instanceId
+            _detailsDialogs[invocationId] = instanceId
+        }
+
+        function onText_dialog_opened(invocationId) {
+            _textDialogPendingInvocation = invocationId
+            textDialog.open()
         }
 
         function onInput_dialog_opened(input_specs_json, hostId, commandId, commandParams) {
@@ -125,7 +134,7 @@ ApplicationWindow {
 
 
     Component.onCompleted: {
-        _dialogInvocationIds = {}
+        _detailsDialogs = {}
 
         // Starts the thread that receives host state updates in the backend.
         HostDataManager.receive_updates()
@@ -170,7 +179,7 @@ ApplicationWindow {
                         errorText: errorText,
                         criticality: criticality,
                     })
-                    root._dialogInvocationIds[invocationId] = instanceId
+                    root._detailsDialogs[invocationId] = instanceId
                 }
                 onCloseClicked: _hostTableModel.toggle_row(_hostTableModel.selected_row)
             }
@@ -198,7 +207,6 @@ ApplicationWindow {
                 height: root.height
             }
         }
-
         // Animations
         NumberAnimation {
             id: animateMaximizeDetails
@@ -258,9 +266,18 @@ ApplicationWindow {
         ]
     }
 
+    // Modal dialogs:
     InputDialog {
         id: inputDialog
         anchors.centerIn: parent
+        visible: false
+    }
+
+    TextDialog {
+        id: textDialog
+        anchors.centerIn: parent
+        width: root.width * 0.5
+        height: root.height * 0.5
         visible: false
     }
 }

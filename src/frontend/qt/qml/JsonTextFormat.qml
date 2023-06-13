@@ -19,6 +19,7 @@ Item {
         text: createMarkdown(root.jsonText)
     }
 
+    // TODO: Move these to a rust model?
     function createMarkdown(jsonText) {
         let text = ""
 
