@@ -18,6 +18,7 @@ pub struct ThemeModel {
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     pill_color_for_criticality: qt_method!(fn(&self, criticality: QString) -> QString),
     get_display_options: qt_method!(fn(&self) -> QVariant),
+    icon_for_criticality: qt_method!(fn(&self, alert_level: QString) -> QString),
 
     i_display_options: configuration::DisplayOptions,
 }
@@ -82,17 +83,42 @@ impl ThemeModel {
     }
 
     fn pill_color_for_criticality(&self, criticality: QString) -> QString {
-        match Criticality::from_str(&criticality.to_string()).unwrap() {
-            Criticality::Critical => QString::from("#60ff3300"),
-            Criticality::Error => QString::from("#60ff3300"),
-            Criticality::Warning => QString::from("#60ffcc00"),
+        let criticality = criticality.to_string();
+
+        if criticality.is_empty() {
+            return QString::from("#60ffffff");
+        }
+
+        match Criticality::from_str(&criticality).unwrap() {
+            Criticality::Ignore => QString::from("#60ffffff"),
             Criticality::Normal => QString::from("#6033cc33"),
             Criticality::Info => QString::from("#60ffffff"),
-            _ => QString::from("#60ffffff"),
+            Criticality::NoData => QString::from("#60ffffff"),
+            Criticality::Warning => QString::from("#60ffcc00"),
+            Criticality::Error => QString::from("#60ff3300"),
+            Criticality::Critical => QString::from("#60ff3300"),
         }
     }
 
     fn get_display_options(&self) -> QVariant {
         self.i_display_options.to_qvariant()
+    }
+
+    fn icon_for_criticality(&self, criticality: QString) -> QString {
+        let criticality = criticality.to_string();
+
+        if criticality.is_empty() {
+            return QString::from("qrc:/main/images/alert/info");
+        }
+
+        match Criticality::from_str(&criticality).unwrap() {
+            Criticality::Ignore => QString::from("qrc:/main/images/alert/info"),
+            Criticality::Normal => QString::from("qrc:/main/images/alert/info"),
+            Criticality::Info => QString::from("qrc:/main/images/alert/info"),
+            Criticality::NoData => QString::from("qrc:/main/images/alert/warning"),
+            Criticality::Warning => QString::from("qrc:/main/images/alert/warning"),
+            Criticality::Error => QString::from("qrc:/main/images/alert/error"),
+            Criticality::Critical => QString::from("qrc:/main/images/alert/error"),
+        }
     }
 }

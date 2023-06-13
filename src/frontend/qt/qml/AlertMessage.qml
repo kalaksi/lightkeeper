@@ -8,16 +8,6 @@ Item {
     required property string criticality
     property real imageScale: 2.0
 
-    property var _icons: {}
-    Component.onCompleted: _icons = {
-        normal: "qrc:/main/images/alert/info",
-        info: "qrc:/main/images/alert/info",
-        nodata: "qrc:/main/images/alert/warning",
-        warning: "qrc:/main/images/alert/warning",
-        error: "qrc:/main/images/alert/error",
-        critical: "qrc:/main/images/alert/error",
-    }
-
     implicitWidth: textContent.contentWidth + image.width
     implicitHeight: Math.max(textContent.implicitHeight, image.height)
 
@@ -30,7 +20,7 @@ Item {
         Image {
             id: image
             antialiasing: true
-            source: getIcon(root.criticality.toLowerCase())
+            source: Theme.icon_for_criticality(root.criticality)
             width: 22 * root.imageScale
             height: 22 * root.imageScale
             anchors.verticalCenter: parent.verticalCenter
@@ -43,12 +33,5 @@ Item {
             wrapMode: Text.Wrap
             width: root.width - image.width  - row.spacing - row.padding * 2
         }
-    }
-
-    function getIcon(criticality) {
-        if (criticality in root._icons) {
-            return root._icons[criticality]
-        }
-        return root._icons["nodata"]
     }
 }
