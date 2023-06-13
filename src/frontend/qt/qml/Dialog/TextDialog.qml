@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.11
 
+import ".."
 import "../Text"
 
 
@@ -19,6 +20,10 @@ Dialog {
         color: Material.background
         border.width: 1
         border.color: "#808080"
+    }
+
+    WorkingSprite {
+        visible: root.text === ""
     }
 
     ScrollView {
