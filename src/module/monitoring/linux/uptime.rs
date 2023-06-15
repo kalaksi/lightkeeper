@@ -35,7 +35,7 @@ impl MonitoringModule for Uptime {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> String {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             String::from("uptime -s")
         }
@@ -44,7 +44,7 @@ impl MonitoringModule for Uptime {
         }
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
                                             .map_err(|e| e.to_string())?;

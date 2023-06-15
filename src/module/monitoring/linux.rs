@@ -22,3 +22,6 @@ pub use systemd::Service;
 
 pub mod lvm;
 pub use lvm::LogicalVolume;
+
+pub mod who;
+pub use who::Who;

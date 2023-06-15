@@ -157,6 +157,7 @@ impl ModuleFactory {
             (monitoring::linux::Filesystem::get_metadata(), monitoring::linux::Filesystem::new_monitoring_module),
             (monitoring::linux::Interface::get_metadata(), monitoring::linux::Interface::new_monitoring_module),
             (monitoring::linux::Uptime::get_metadata(), monitoring::linux::Uptime::new_monitoring_module),
+            (monitoring::linux::Who::get_metadata(), monitoring::linux::Who::new_monitoring_module),
             (monitoring::linux::lvm::LogicalVolume::get_metadata(), monitoring::linux::lvm::LogicalVolume::new_monitoring_module),
             (monitoring::linux::lvm::VolumeGroup::get_metadata(), monitoring::linux::lvm::VolumeGroup::new_monitoring_module),
             (monitoring::linux::lvm::PhysicalVolume::get_metadata(), monitoring::linux::lvm::PhysicalVolume::new_monitoring_module),
