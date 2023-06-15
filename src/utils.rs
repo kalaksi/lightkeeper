@@ -1,6 +1,5 @@
 pub mod string_manipulation;
-pub use string_manipulation::strip_newline;
-pub use string_manipulation::remove_whitespace;
+pub use string_manipulation::*;
 
 pub mod version_number;
 pub use version_number::VersionNumber;

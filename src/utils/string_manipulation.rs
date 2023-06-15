@@ -11,3 +11,11 @@ pub fn strip_newline<Stringable: ToString>(input: &Stringable) -> String
 pub fn remove_whitespace<Stringable: ToString>(input: &Stringable) -> String {
     input.to_string().chars().filter(|&c| !c.is_whitespace()).collect()
 }
+
+pub fn get_string_between<Stringable: ToString>(input: &Stringable, start: &str, end: &str) -> String
+{
+    let input = input.to_string();
+    let start = input.find(start).unwrap() + start.len();
+    let end = input.find(end).unwrap();
+    input[start..end].to_string()
+}
