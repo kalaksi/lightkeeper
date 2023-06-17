@@ -48,6 +48,9 @@ pub struct DisplayOptions {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CacheSettings {
+    /// Enable cache. Set false to disable completely and make sure cache file is empty.
+    /// Otherwise, cache file is maintained even if it's not used at that moment. This setting will make sure it's not used at all.
+    pub enable_cache: bool,
     /// Cache provides an initial value before receiving the up-to-date value.
     pub provide_initial_value: bool,
     /// How long entries in cache are considered valid.
