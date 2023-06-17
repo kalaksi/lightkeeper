@@ -37,10 +37,10 @@ impl DataPoint {
         }
     }
 
-    pub fn labeled_value(label: String, value: String) -> Self {
+    pub fn labeled_value<Stringable: ToString>(label: Stringable, value: Stringable) -> Self {
         DataPoint {
-            value: value,
-            label: label,
+            value: value.to_string(),
+            label: label.to_string(),
             criticality: Criticality::Normal,
             ..Default::default()
         }
