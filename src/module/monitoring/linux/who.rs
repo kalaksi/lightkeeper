@@ -67,6 +67,10 @@ impl MonitoringModule for Who {
             result.multivalue.push(data_point);
         }
 
+        if result.multivalue.is_empty() {
+            result.multivalue.push(DataPoint::labeled_value("No users logged in", " "));
+        }
+
         Ok(result)
     }
 }
