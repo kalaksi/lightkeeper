@@ -176,7 +176,6 @@ impl CommandHandlerModel {
                 self.details_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
             },
             UIAction::TextDialog => {
-                let target_id = parameters.first().unwrap().clone();
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
                 self.text_dialog_opened(invocation_id)
             },
@@ -210,13 +209,20 @@ impl CommandHandlerModel {
     }
 
     fn initialize_host(&mut self, host_id: QString) {
-        self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()), None);
+        self.monitor_manager.refresh_platform_info(&host_id.to_string(), None);
         self.host_initializing(host_id);
     }
 
     fn force_initialize_host(&mut self, host_id: QString) {
-        self.monitor_manager.refresh_platform_info(Some(&host_id.to_string()), Some(CachePolicy::BypassCache));
+        self.monitor_manager.refresh_platform_info(&host_id.to_string(), Some(CachePolicy::BypassCache));
         self.host_initializing(host_id);
+    }
+
+    fn force_initialize_hosts(&mut self) {
+        let host_ids = self.monitor_manager.refresh_platform_info_all();
+        for host_id in host_ids {
+            self.host_initializing(QString::from(host_id));
+        }
     }
 
     // Finds related monitors for a command and refresh them.

@@ -248,7 +248,9 @@ Item {
 
     function refreshCategories() {
         root._categories = getCategories()
-        root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
+
+        // Uncomment to filter categories that are not ready yet.
+        // root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
     }
 
     function isCategoryReady(category) {

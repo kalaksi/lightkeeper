@@ -78,14 +78,25 @@ impl MonitorManager {
         }
     }
 
+    /// Intended to be run only once in the beginning when possibly refreshing all host data.
+    /// Returns list of host IDs that were refreshed.
+    pub fn refresh_platform_info_all(&mut self) -> Vec<String> {
+        let cache_policy = match self.cache_settings.prefer_cache {
+            true => CachePolicy::OnlyCache,
+            false => CachePolicy::BypassCache,
+        };
+        let host_ids = self.monitors.iter().map(|(name, _)| name.clone()).collect::<Vec<_>>();
+        for host_id in &host_ids {
+            self.refresh_platform_info(host_id, Some(cache_policy));
+        }
+
+        host_ids
+    }
+
     /// Refreshes platform info and such in preparation for actual monitor refresh.
-    pub fn refresh_platform_info(&mut self, host_id: Option<&String>, bypass_cache_policy: Option<CachePolicy>) {
-        for (host_name, monitor_collection) in self.monitors.iter() {
-            if let Some(host_filter) = host_id {
-                if host_name != host_filter {
-                    continue;
-                }
-            }
+    pub fn refresh_platform_info(&mut self, host_id: &String, bypass_cache_policy: Option<CachePolicy>) {
+        let monitors_for_host = self.monitors.iter().filter(|(name, _)| &host_id == name);
+        for (host_name, monitor_collection) in monitors_for_host {
 
             let host = self.host_manager.borrow().get_host(host_name);
             let cache_policy = if let Some(cache_policy) = bypass_cache_policy {

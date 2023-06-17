@@ -138,6 +138,10 @@ ApplicationWindow {
 
         // Starts the thread that receives host state updates in the backend.
         HostDataManager.receive_updates()
+
+        if (HostDataManager.refresh_hosts_on_start()) {
+            CommandHandler.force_initialize_hosts()
+        }
     }
 
     Item {
