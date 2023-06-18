@@ -9,16 +9,27 @@ import "Text"
 TableView {
     id: root 
     property int rowHeight: 40
-
     property var _monitorHighlights: {}
+    // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
+    boundsBehavior: Flickable.StopAtBounds
+    onWidthChanged: forceLayout()
+
     Component.onCompleted: {
         root._monitorHighlights = {}
     }
 
-    // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
-    boundsBehavior: Flickable.StopAtBounds
-    onWidthChanged: forceLayout()
-    ScrollBar.vertical: ScrollBar { }
+    Connections {
+        target: root.model
+
+        function onSelected_row_changed() {
+            centerRow()
+        }
+    }
+
+    ScrollBar.vertical: ScrollBar {
+        id: scrollBar
+        policy:ScrollBar.AlwaysOn
+    }
 
     delegate: DelegateChooser {
         id: delegateChooser
@@ -100,5 +111,10 @@ TableView {
         }
 
         root._monitorHighlights[hostId][monitorId] = newCriticality
+    }
+
+    function centerRow() {
+        // TODO: incomplete solution, finish later
+        root.contentY = root.model.selected_row * root.rowHeight - 80
     }
 }

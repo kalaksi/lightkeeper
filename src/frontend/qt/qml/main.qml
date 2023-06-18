@@ -237,6 +237,11 @@ ApplicationWindow {
             to: 0.8
             duration: 175
             easing.type: Easing.OutQuad
+
+            onFinished: {
+                // TODO: animate
+                hostTable.centerRow()
+            }
         }
 
         NumberAnimation {

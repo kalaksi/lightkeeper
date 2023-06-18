@@ -33,7 +33,7 @@ Item {
 
     function getBackgroundColor(selected) {
         if (selected === true) {
-            return Material.primary
+            return Qt.darker(Material.primary, 1.20)
         }
         else if (model.row % 2 == 0) {
             return Material.background
