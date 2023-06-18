@@ -23,15 +23,17 @@ Item {
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
     property var _categories: getCategories()
     property var _maskedCategories: []
+    property bool _showEmptyCategories: true
 
 
-    onHostIdChanged: refreshCategories()
+
+    onHostIdChanged: refreshCategories(false)
 
     Connections {
         target: HostDataManager
         function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
             if (host_id === root.hostId) {
-                refreshCategories()
+                refreshCategories(root._showEmptyCategories)
             }
         }
     }
@@ -83,7 +85,7 @@ Item {
                             HostDataManager.add_pending_monitor_invocations(root.hostId, modelData, invocation_ids)
 
                             groupBoxLabel.refreshProgress = 0
-                            refreshCategories()
+                            refreshCategories(root._showEmptyCategories)
                         }
 
                         Connections {
@@ -100,7 +102,7 @@ Item {
                             function onHost_initializing(host_id) {
                                 if (host_id === root.hostId) {
                                     groupBoxLabel.refreshProgress = 0
-                                    refreshCategories()
+                                    refreshCategories(root._showEmptyCategories)
                                 }
                             }
                         }
@@ -233,9 +235,9 @@ Item {
         }
     }
 
-    function getCategories() {
+    function getCategories(showEmptyCategories) {
         if (root.hostId !== "") {
-            return HostDataManager.get_categories(root.hostId, root.hideEmptyCategories)
+            return HostDataManager.get_categories(root.hostId, !showEmptyCategories)
                                   .map(category_qv => category_qv.toString())
         }
         return []
@@ -246,11 +248,9 @@ Item {
         root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
     }
 
-    function refreshCategories() {
-        root._categories = getCategories()
-
-        // Uncomment to filter categories that are not ready yet.
-        // root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
+    function refreshCategories(showEmptyCategories) {
+        root._categories = getCategories(showEmptyCategories)
+        root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
     }
 
     function isCategoryReady(category) {
