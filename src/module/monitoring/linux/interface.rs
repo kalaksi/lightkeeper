@@ -56,7 +56,7 @@ impl MonitoringModule for Interface {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let mut result = DataPoint::empty();
 
-            let lines = response.message.split('\n');
+            let lines = response.message.lines();
             for line in lines {
                 let mut parts = line.split_whitespace();
                 let if_name = parts.nth(1).unwrap().to_string();

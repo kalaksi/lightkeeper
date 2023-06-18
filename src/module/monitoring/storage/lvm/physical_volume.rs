@@ -66,7 +66,7 @@ impl MonitoringModule for PhysicalVolume {
 
             let mut result = DataPoint::empty();
 
-            let lines = response.message.split('\n').skip(1);
+            let lines = response.message.lines().skip(1);
             for line in lines {
                 let mut parts = line.split("|");
                 let pv_name = parts.next().unwrap().trim_start().to_string();

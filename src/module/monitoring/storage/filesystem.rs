@@ -55,9 +55,8 @@ impl MonitoringModule for Filesystem {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let mut result = DataPoint::empty();
 
-            let mut lines = response.message.split('\n');
             // First line contains headers
-            lines.nth(1).unwrap();
+            let mut lines = response.message.lines().skip(1);
             for line in lines {
                 let mut parts = line.split_whitespace();
                 let _source = parts.next().unwrap().to_string();
@@ -74,8 +73,9 @@ impl MonitoringModule for Filesystem {
 
                 // Remove percent symbol from the end.
                 used_percent.pop();
-                let mut data_point = DataPoint::labeled_value(mountpoint, used_percent);
+                let mut data_point = DataPoint::labeled_value(mountpoint.clone(), used_percent);
                 data_point.description = format!("{} | {} / {} used", fs_type, used_h, size_h);
+                data_point.command_params.push(mountpoint);
                 result.multivalue.push(data_point);
 
             }

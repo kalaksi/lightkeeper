@@ -47,12 +47,8 @@ impl MonitoringModule for Who {
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
         let mut result = DataPoint::empty();
 
-        let lines = response.message.split('\n');
+        let lines = response.message.lines().filter(|line| !line.is_empty());
         for line in lines {
-            if line.is_empty() {
-                continue;
-            }
-
             let mut parts = line.split_whitespace();
             let user = parts.next().unwrap().to_string();
             let _pts = parts.next().unwrap().to_string();

@@ -49,7 +49,7 @@ impl MonitoringModule for Package {
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if host.platform.version_is_newer_than(Flavor::Debian, "8") {
             let mut result = DataPoint::empty();
-            let lines = response.message.split('\n').filter(|line| line.contains("[upgradable"));
+            let lines = response.message.lines().filter(|line| line.contains("[upgradable"));
             for line in lines {
                 let mut parts = line.split_whitespace();
                 let full_package = parts.next().unwrap().to_string();
