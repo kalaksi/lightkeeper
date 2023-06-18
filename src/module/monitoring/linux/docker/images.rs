@@ -80,7 +80,6 @@ impl MonitoringModule for Images {
                 };
 
                 let mut point = DataPoint::labeled_value(label, image.created.to_string());
-                point.command_params = vec![image.id.clone(), repo_tag];
 
                 // TODO: make sure timezone is accounted for correctly?
                 let creation_time = Utc.timestamp_opt(point.value.parse::<i64>().unwrap(), 0).unwrap();
@@ -97,6 +96,7 @@ impl MonitoringModule for Images {
                 }
 
                 point.value = format!("{} days old", duration_days);
+                point.command_params = vec![image.id.clone(), repo_tag];
                 root_point.multivalue.push(point);
             }
 

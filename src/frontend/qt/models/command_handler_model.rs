@@ -20,8 +20,13 @@ pub struct CommandHandlerModel {
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList)),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
+
+    // Host initialization methods.
     initialize_host: qt_method!(fn(&self, host_id: QString)),
     force_initialize_host: qt_method!(fn(&self, host_id: QString)),
+    force_initialize_hosts: qt_method!(fn(&self)),
+
+    // Monitor refresh methods.
     force_refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
     cached_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),

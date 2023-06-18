@@ -10,8 +10,9 @@ use crate::{
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct DisplayOptions {
     pub display_style: DisplayStyle,
-    /// Text to display in front of the value.
-    /// For multi-values this gets displayed (not always displayed) as a header above the list of values.
+    /// For monitors: text to display in the left column. For multi-values this gets
+    ///               displayed (not always displayed) as a header above the list of values.
+    /// For commands: text to display in button tooltip.
     pub display_text: String,
     pub display_icon: String,
 
