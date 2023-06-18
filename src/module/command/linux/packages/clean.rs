@@ -37,9 +37,15 @@ impl CommandModule for Clean {
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             match host.platform.os_flavor {
-                Flavor::Debian => command.arguments(vec!["apt-get", "clean"]),
-                Flavor::Ubuntu => command.arguments(vec!["apt-get", "clean"]),
-                Flavor::RedHat => command.arguments(vec!["yum", "clean", "all"]),
+                Flavor::Debian => {
+                    command.arguments(vec!["apt-get", "clean"]);
+                },
+                Flavor::Ubuntu => {
+                    command.arguments(vec!["apt-get", "clean"]);
+                },
+                Flavor::RedHat => {
+                    command.arguments(vec!["yum", "clean", "all"]);
+                },
                 _ => (),
             };
 

@@ -60,6 +60,7 @@ templates:
       linux-packages-clean: {}
       linux-packages-update: {}
       linux-packages-update-all: {}
+      storage-file-space-usage: {}
       storage-lvm-snapshot: {}
       storage-lvm-lvresize: {}
       storage-lvm-lvremove: {}

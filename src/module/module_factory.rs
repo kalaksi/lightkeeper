@@ -179,6 +179,7 @@ impl ModuleFactory {
             (command::linux::packages::Clean::get_metadata(), command::linux::packages::Clean::new_command_module),
             (command::linux::packages::Update::get_metadata(), command::linux::packages::Update::new_command_module),
             (command::linux::packages::UpdateAll::get_metadata(), command::linux::packages::UpdateAll::new_command_module),
+            (command::storage::FileSpaceUsage::get_metadata(), command::storage::FileSpaceUsage::new_command_module),
             (command::storage::lvm::Snapshot::get_metadata(), command::storage::lvm::Snapshot::new_command_module),
             (command::storage::lvm::LVResize::get_metadata(), command::storage::lvm::LVResize::new_command_module),
             (command::storage::lvm::LVRemove::get_metadata(), command::storage::lvm::LVRemove::new_command_module),
