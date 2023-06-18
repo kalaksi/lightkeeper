@@ -38,9 +38,13 @@ impl HostTableModel {
         self.i_display_data = frontend::DisplayData::from_qvariant(display_data).unwrap();
         self.headers = self.i_display_data.table_headers.iter().map(|header| QString::from(header.clone())).collect::<Vec<QString>>();
 
+        let mut host_ids_ordered = self.i_display_data.hosts.keys().collect::<Vec<&String>>();
+        host_ids_ordered.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+
         self.host_row_map.clear();
         self.row_data.clear();
-        for (host_id, host_data) in self.i_display_data.hosts.iter() {
+        for host_id in host_ids_ordered {
+            let host_data = self.i_display_data.hosts.get(host_id).unwrap();
             self.host_row_map.insert(host_id.clone(), self.row_data.len());
             self.row_data.push(HostDataModel::from(&host_data));
         }
