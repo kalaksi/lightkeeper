@@ -81,8 +81,8 @@ impl MonitorManager {
     /// Intended to be run only once in the beginning when possibly refreshing all host data.
     /// Returns list of host IDs that were refreshed.
     pub fn refresh_platform_info_all(&mut self) -> Vec<String> {
-        let cache_policy = match self.cache_settings.prefer_cache {
-            true => CachePolicy::OnlyCache,
+        let cache_policy = match self.cache_settings.provide_initial_value {
+            true => CachePolicy::PreferCache,
             false => CachePolicy::BypassCache,
         };
         let host_ids = self.monitors.iter().map(|(name, _)| name.clone()).collect::<Vec<_>>();
@@ -102,7 +102,7 @@ impl MonitorManager {
             let cache_policy = if let Some(cache_policy) = bypass_cache_policy {
                 cache_policy
             }
-            else if self.cache_settings.prefer_cache {
+            else if self.cache_settings.provide_initial_value {
                 CachePolicy::PreferCache
             }
             else {
