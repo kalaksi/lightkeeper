@@ -33,7 +33,7 @@ impl CommandModule for FileSpaceUsage {
             category: String::from("storage"),
             parent_id: String::from("filesystem"),
             display_style: frontend::DisplayStyle::Icon,
-            display_icon: String::from("resize-column-2"),
+            display_icon: String::from("search"),
             display_text: String::from("Show file space usage"),
             action: UIAction::TextDialog,
             ..Default::default()
