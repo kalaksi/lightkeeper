@@ -47,8 +47,8 @@ impl CommandModule for FileSpaceUsage {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
             command.arguments(vec!["du", "-x", "--block-size=1MB", mountpoint])
-                   .pipe_with(vec!["sort", "-rn"])
-                   .pipe_with(vec!["head", "-n", self.line_count.to_string().as_str()]);
+                   .pipe_to(vec!["sort", "-rn"])
+                   .pipe_to(vec!["head", "-n", self.line_count.to_string().as_str()]);
         }
         command.to_string()
 
