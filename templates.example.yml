@@ -1,10 +1,10 @@
 templates:
   defaults:
-    connectors:
-      ssh:
-        settings:
-          username: "username"
-          password: ""
+    settings:
+      - use_sudo
+    monitors:
+      ping:
+        is_critical: true
   docker:
     monitors:
       docker-containers: {}
@@ -28,13 +28,17 @@ templates:
       docker-compose-stop: {}
   systemd-service:
     monitors:
-      systemd-service: {}
+      systemd-service:
+        settings:
+          included_services: "acpid.,cron.,collectd.,dbus.,ntp.,chrony.,systemd-journald.,containerd.,docker.,ufw.,rsyslog.,nullmailer.,ssh."
     commands:
       systemd-service-start: {}
       systemd-service-stop: {}
       systemd-service-mask: {}
       systemd-service-unmask: {}
   linux:
+    connectors:
+      ssh: {}
     monitors:
       os: {}
       kernel: {}
@@ -45,9 +49,10 @@ templates:
           ignored_interfaces: "br-,docker,lo,veth"
       package: {}
       ssh: {}
-      linux-lvm-logical-volume: {}
-      linux-lvm-volume-group: {}
-      linux-lvm-physical-volume: {}
+      who: {}
+      storage-lvm-logical-volume: {}
+      storage-lvm-volume-group: {}
+      storage-lvm-physical-volume: {}
     commands:
       logs: {}
       shutdown: {}
@@ -55,6 +60,6 @@ templates:
       linux-packages-clean: {}
       linux-packages-update: {}
       linux-packages-update-all: {}
-      linux-lvm-snapshot: {}
-      linux-lvm-lvresize: {}
-      linux-lvm-lvremove: {}
+      storage-lvm-snapshot: {}
+      storage-lvm-lvresize: {}
+      storage-lvm-lvremove: {}

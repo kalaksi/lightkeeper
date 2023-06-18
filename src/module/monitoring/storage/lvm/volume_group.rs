@@ -12,22 +12,22 @@ use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
 use crate::host::HostSetting;
 
-#[monitoring_module("linux-lvm-physical-volume", "0.0.1")]
-pub struct PhysicalVolume {
+#[monitoring_module("storage-lvm-volume-group", "0.0.1")]
+pub struct VolumeGroup {
 }
 
-impl Module for PhysicalVolume {
+impl Module for VolumeGroup {
     fn new(_settings: &HashMap<String, String>) -> Self {
-        PhysicalVolume {
+        VolumeGroup {
         }
     }
 }
 
-impl MonitoringModule for PhysicalVolume {
+impl MonitoringModule for VolumeGroup {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::CriticalityLevel,
-            display_text: String::from("Physical Volumes"),
+            display_text: String::from("Volume Groups"),
             category: String::from("storage"),
             use_multivalue: true,
             ignore_from_summary: true,
@@ -46,7 +46,7 @@ impl MonitoringModule for PhysicalVolume {
             if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
                host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
                 command.arguments(vec![
-                    "pvs", "--separator", "|", "--options", "pv_name,pv_attr,pv_size", "--units", "H"
+                    "vgs", "--separator", "|", "--options", "vg_name,vg_attr,vg_size", "--units", "H"
                 ]);
             }
 
@@ -69,19 +69,24 @@ impl MonitoringModule for PhysicalVolume {
             let lines = response.message.split('\n').skip(1);
             for line in lines {
                 let mut parts = line.split("|");
-                let pv_name = parts.next().unwrap().trim_start().to_string();
-                let pv_attr = parts.next().unwrap().to_string();
-                let pv_size = parts.next().unwrap().to_string();
+                let vg_name = parts.next().unwrap().trim_start().to_string();
+                let vg_attr = parts.next().unwrap().to_string();
+                let vg_size = parts.next().unwrap().to_string();
 
-                let mut data_point = DataPoint::labeled_value(pv_name.clone(), String::from("OK"));
-                data_point.description = format!("size: {}", pv_size);
+                let mut data_point = DataPoint::labeled_value(vg_name.clone(), String::from("OK"));
+                data_point.description = format!("size: {}", vg_size);
 
-                if pv_attr.chars().nth(2).unwrap() == 'm' {
-                    data_point.criticality = crate::enums::Criticality::Critical;
-                    data_point.value = String::from("Missing");
+                match vg_attr.chars().nth(0).unwrap() {
+                    'r' => data_point.tags.push(String::from("Read-only")),
+                    _ => {}
                 }
 
-                data_point.command_params = vec![pv_name];
+                if vg_attr.chars().nth(5).unwrap() == 'p' {
+                    data_point.criticality = crate::enums::Criticality::Error;
+                    data_point.value = String::from("Partial");
+                }
+
+                data_point.command_params = vec![vg_name];
                 result.multivalue.push(data_point);
             }
 

@@ -8,4 +8,6 @@ pub use command_module::BoxCloneableCommand;
 
 pub mod docker;
 pub mod linux;
+pub mod os;
+pub mod storage;
 pub mod systemd;

@@ -8,7 +8,7 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 
-#[command_module("linux-lvm-lvremove", "0.0.1")]
+#[command_module("storage-lvm-lvremove", "0.0.1")]
 pub struct LVRemove {
 }
 
@@ -27,7 +27,7 @@ impl CommandModule for LVRemove {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             category: String::from("storage"),
-            parent_id: String::from("linux-lvm-logical-volume"),
+            parent_id: String::from("storage-lvm-logical-volume"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("delete"),
             display_text: String::from("Remove"),
