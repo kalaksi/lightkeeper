@@ -279,9 +279,9 @@ ApplicationWindow {
 
     TextDialog {
         id: textDialog
-        anchors.centerIn: parent
-        width: root.width * 0.5
-        height: root.height * 0.5
         visible: false
+        anchors.centerIn: parent
+        width: Math.max(root.width * 0.5, Math.min(root.width * 0.8, implicitWidth))
+        height: Math.max(root.height * 0.5, Math.min(root.height * 0.8, implicitHeight))
     }
 }

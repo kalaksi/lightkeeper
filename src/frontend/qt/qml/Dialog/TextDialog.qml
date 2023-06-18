@@ -12,8 +12,9 @@ Dialog {
     id: root
     property string text: ""
     modal: true
-    implicitWidth: 600
-    implicitHeight: 400
+    // TODO: more accurate calculation?
+    implicitWidth: dialogText.implicitWidth + 100
+    implicitHeight: dialogText.implicitHeight + 100
     standardButtons: Dialog.Close
 
     background: Rectangle {
@@ -27,10 +28,12 @@ Dialog {
     }
 
     ScrollView {
+        id: scrollView
         visible: root.text !== ""
         anchors.fill: parent
 
         NormalText {
+            id: dialogText
             anchors.fill: parent
             wrapMode: Text.WordWrap
             textFormat: Text.MarkdownText

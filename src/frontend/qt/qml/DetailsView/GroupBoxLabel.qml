@@ -17,7 +17,7 @@ Rectangle {
     implicitHeight: label.implicitHeight + 10
     layer.enabled: true
     layer.effect: DropShadow {
-        color: "#40000000"
+        color: "#45000000"
         radius: 8
         horizontalOffset: 0
         verticalOffset: 2
