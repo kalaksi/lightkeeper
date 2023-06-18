@@ -24,7 +24,7 @@ impl MonitoringModule for Who {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::Text,
             display_text: String::from("User sessions"),
-            category: String::from("users"),
+            category: String::from("host"),
             use_multivalue: true,
             ignore_from_summary: true,
             ..Default::default()

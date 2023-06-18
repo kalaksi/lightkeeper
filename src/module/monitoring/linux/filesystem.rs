@@ -30,7 +30,7 @@ impl MonitoringModule for Filesystem {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::ProgressBar,
             display_text: String::from("Filesystem usage"),
-            category: String::from("host"),
+            category: String::from("storage"),
             unit: String::from("%"),
             use_multivalue: true,
             ignore_from_summary: true,
