@@ -1,11 +1,18 @@
 preferences:
   use_remote_editor: true
-  refresh_hosts_on_start: true
-  sudo_remote_editor: false
+  refresh_hosts_on_start: false
+  sudo_remote_editor: true
   remote_text_editor: "/usr/bin/vim"
   text_editor: "/usr/bin/kate"
   terminal: "/usr/bin/konsole"
   terminal_args: ["-e"]
+
+cache_settings:
+  enable_cache: false
+  provide_initial_value: true
+  initial_value_time_to_live: 604800
+  prefer_cache: true
+  time_to_live: 8400
 
 display_options:
   # Group monitors with multiple values into one column (or similar) or display everything separately.
@@ -19,7 +26,8 @@ display_options:
     storage:
       priority: 2
       color: "#80b3825d"
-      command_order: ["linux-lvm-snapshot", "linux-lvm-lvresize"]
+      command_order: ["linux-lvm-snapshot", "linux-lvm-lvresize", "linux-lvm-lvremove"]
+      monitor_order: ["filesystem", "linux-lvm-logical-volume", "linux-lvm-volume-group", "linux-lvm-physical-volume"]
     network:
       priority: 3
       color: "#80b3825d"
@@ -45,9 +53,3 @@ display_options:
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
-
-cache_settings:
-  provide_initial_value: true
-  initial_value_time_to_live: 604800
-  prefer_cache: true
-  time_to_live: 8400
