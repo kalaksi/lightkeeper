@@ -25,19 +25,12 @@ use host::Host;
 use configuration::Configuration;
 use module::{ ModuleFactory, ModuleSpecification };
 
-use crate::connection_manager::CachePolicy;
 
 #[derive(Parser)]
 #[clap()]
 struct Args {
-    #[clap(short, long, default_value = "config.yml")]
-    main_config_file: String,
-
-    #[clap(short, long, default_value = "hosts.yml")]
-    hosts_file: String,
-
-    #[clap(short, long, default_value = "templates.yml")]
-    templates_file: String,
+    #[clap(short, long, default_value = "")]
+    config_dir: String,
 }
 
 
@@ -47,7 +40,7 @@ fn main() {
 
     let args = Args::parse();
 
-    let (config, hosts_config) = match Configuration::read(&args.main_config_file, &args.hosts_file, &args.templates_file) {
+    let (config, hosts_config) = match Configuration::read(&args.config_dir) {
         Ok(configuration) => configuration,
         Err(error) => {
             log::error!("Error while reading configuration file: {}", error);

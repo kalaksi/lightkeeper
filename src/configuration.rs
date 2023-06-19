@@ -1,5 +1,6 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
+use std::path::Path;
 use std::{ fs, io, collections::HashMap };
 use crate::host::HostSetting;
 use crate::file_handler;
@@ -139,12 +140,22 @@ pub struct ConnectorConfig {
 }
 
 impl Configuration {
-    pub fn read(config_file_name: &String, hosts_file_name: &String, templates_file_name: &String) -> io::Result<(Configuration, Hosts)> {
+    pub fn read(config_dir: &String) -> io::Result<(Configuration, Hosts)> {
+        const MAIN_CONFIG_FILE: &str = "config.yml";
+        const HOSTS_FILE: &str = "hosts.yml";
+        const TEMPLATES_FILE: &str = "templates.yml";
 
-        let config_dir = file_handler::get_config_dir().unwrap();
-        let main_config_file_path = config_dir.join(config_file_name);
-        let hosts_file_path = config_dir.join(hosts_file_name);
-        let templates_file_path = config_dir.join(templates_file_name);
+
+        let config_dir = if config_dir.is_empty() {
+            file_handler::get_config_dir().unwrap()
+        }
+        else {
+            Path::new(config_dir).to_path_buf()
+        };
+
+        let main_config_file_path = config_dir.join(MAIN_CONFIG_FILE);
+        let hosts_file_path = config_dir.join(HOSTS_FILE);
+        let templates_file_path = config_dir.join(TEMPLATES_FILE);
 
         log::debug!("Reading general configuration from {}", main_config_file_path.display());
         let config_contents = fs::read_to_string(main_config_file_path)?;
