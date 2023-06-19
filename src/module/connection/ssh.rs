@@ -23,6 +23,7 @@ pub struct Ssh2 {
     port: u16,
     username: String,
     password: Option<String>,
+    private_key_path: Option<String>,
 }
 
 impl Ssh2 {
@@ -56,9 +57,10 @@ impl Module for Ssh2 {
             session: session,
             is_initialized: false,
             address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-            port: 22,
+            port: settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap(),
             username: settings.get("username").unwrap().clone(),
             password: settings.get("password").map(|s| s.clone()),
+            private_key_path: settings.get("private_key_path").map(|s| s.clone()),
         }
     }
 }
@@ -86,7 +88,13 @@ impl ConnectionModule for Ssh2 {
 
         if self.password.is_some() {
             if let Err(error) = self.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str()) {
-                return Err(format!("Authentication error: {}", error));
+                return Err(format!("Failed to authenticate with password: {}", error));
+            };
+        }
+        else if self.private_key_path.is_some() {
+            let path = Path::new(self.private_key_path.as_ref().unwrap());
+            if let Err(error) = self.session.userauth_pubkey_file(self.username.as_str(), None, path, None) {
+                return Err(format!("Failed to authenticate with private key: {}", error));
             };
         }
         else {
