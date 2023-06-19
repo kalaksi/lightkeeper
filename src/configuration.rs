@@ -16,13 +16,13 @@ pub struct Configuration {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Templates {
-    pub templates: HashMap<String, Host>,
+    pub templates: HashMap<String, HostSettings>,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Hosts {
-    pub hosts: HashMap<String, Host>,
+    pub hosts: HashMap<String, HostSettings>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -75,11 +75,11 @@ pub struct Category {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct Host {
+pub struct HostSettings {
     pub templates: Option<Vec<String>>,
-    #[serde(default = "Host::default_address")]
+    #[serde(default = "HostSettings::default_address")]
     pub address: String,
-    #[serde(default = "Host::default_fqdn")]
+    #[serde(default = "HostSettings::default_fqdn")]
     pub fqdn: String,
     #[serde(default)]
     pub monitors: HashMap<String, MonitorConfig>,
@@ -91,7 +91,7 @@ pub struct Host {
     pub settings: Vec<HostSetting>,
 }
 
-impl Host {
+impl HostSettings {
     pub fn default_address() -> String {
         String::from("0.0.0.0")
     }
@@ -117,6 +117,16 @@ impl MonitorConfig {
     }
 }
 
+impl Default for MonitorConfig {
+    fn default() -> Self {
+        MonitorConfig {
+            version: MonitorConfig::default_version(),
+            is_critical: None,
+            settings: HashMap::new(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CommandConfig {
@@ -132,7 +142,16 @@ impl CommandConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+impl Default for CommandConfig {
+    fn default() -> Self {
+        CommandConfig {
+            version: CommandConfig::default_version(),
+            settings: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ConnectorConfig {
     #[serde(default)]
@@ -172,30 +191,42 @@ impl Configuration {
         let all_templates = serde_yaml::from_str::<Templates>(templates_contents.as_str())
                                        .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
-        // Apply templates.
+        // Check there are no invalid template references.
+        let invalid_templates = hosts.hosts.values()
+            .filter(|host_config| host_config.templates.is_some())
+            .flat_map(|host_config| host_config.templates.clone().unwrap_or_else(|| Vec::new()))
+            .filter(|template_id| !all_templates.templates.contains_key(template_id))
+            .collect::<Vec<String>>();
+
+        if !invalid_templates.is_empty() {
+            let error_message = format!("Invalid template references: {}", invalid_templates.join(", "));
+            return Err(io::Error::new(io::ErrorKind::Other, error_message));
+        }
+
         for (_, host_config) in hosts.hosts.iter_mut() {
-            if let Some(host_templates) = host_config.templates.clone() {
-                for template_id in host_templates.iter().rev() {
-                    if let Some(template_config) = all_templates.templates.get(template_id) {
-                        let mut monitors = template_config.monitors.clone();
-                        monitors.extend(host_config.monitors.to_owned());
-                        host_config.monitors = monitors;
+            if let Some(host_template_ids) = host_config.templates.clone() {
+                for template_id in host_template_ids.iter() {
+                    let template_config = all_templates.templates.get(template_id).unwrap();
 
-                        let mut commands = template_config.commands.clone();
-                        commands.extend(host_config.commands.to_owned());
-                        host_config.commands = commands;
+                    // Merge templates.
+                    template_config.monitors.iter().for_each(|(monitor_id, new_config)| {
+                        // TODO: deal with conflicting version-settings?
+                        let mut merged_config = host_config.monitors.get(monitor_id).cloned().unwrap_or(MonitorConfig::default());
+                        merged_config.settings.extend(new_config.settings.clone());
+                        host_config.monitors.insert(monitor_id.clone(), merged_config);
+                    });
 
-                        let mut connectors = template_config.connectors.clone();
-                        connectors.extend(host_config.connectors.to_owned());
-                        host_config.connectors = connectors;
+                    template_config.commands.iter().for_each(|(command_id, new_config)| {
+                        let mut merged_config = host_config.commands.get(command_id).cloned().unwrap_or(CommandConfig::default());
+                        merged_config.settings.extend(new_config.settings.clone());
+                        host_config.commands.insert(command_id.clone(), merged_config);
+                    });
 
-                        let mut settings = template_config.settings.clone();
-                        settings.extend(host_config.settings.to_owned());
-                        host_config.settings = settings;
-                    }
-                    else {
-                        panic!("No such template");
-                    }
+                    template_config.connectors.iter().for_each(|(connector_id, new_config)| {
+                        let mut merged_config = host_config.connectors.get(connector_id).cloned().unwrap_or(ConnectorConfig::default());
+                        merged_config.settings.extend(new_config.settings.clone());
+                        host_config.connectors.insert(connector_id.clone(), merged_config);
+                    });
                 }
             }
         }
