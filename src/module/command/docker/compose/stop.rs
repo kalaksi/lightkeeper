@@ -39,9 +39,11 @@ impl CommandModule for Stop {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let compose_file = parameters.first().unwrap();
+
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["docker-compose", "-f", compose_file, "stop"]);
@@ -50,10 +52,11 @@ impl CommandModule for Stop {
                 command.argument(service_name);
             }
 
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+            Ok(command.to_string())
         }
-
-        command.to_string()
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &connection::ResponseMessage) -> Result<CommandResult, String> {

@@ -49,29 +49,26 @@ impl CommandModule for LVResize {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let lv_path = parameters.get(0).unwrap();
         let _vg_name = parameters.get(1).unwrap();
         let _lv_name = parameters.get(2).unwrap();
         let _lv_size = parameters.get(3).unwrap();
         let new_size = crate::utils::remove_whitespace(parameters.get(4).unwrap());
 
-        if !string_validation::is_numeric_with_unit(&new_size, &self.get_display_options().user_parameters[0].units) {
-            panic!("Invalid size: {}", new_size);
-        }
-
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
-               host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
-                 command.arguments(vec!["lvresize", "--size", &new_size, lv_path]);
-            };
-
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        if !string_validation::is_numeric_with_unit(&new_size, &self.get_display_options().user_parameters[0].units) {
+            Err(format!("Invalid size: {}", new_size))
         }
-
-        command.to_string()
+        else if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+            command.arguments(vec!["lvresize", "--size", &new_size, lv_path]);
+            Ok(command.to_string())
+        }
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

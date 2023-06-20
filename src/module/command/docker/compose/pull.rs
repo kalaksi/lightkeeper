@@ -35,8 +35,7 @@ impl CommandModule for Pull {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
-        // TODO: some indicator for unsupported command (for UI)? Use Result?
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let mut command = ShellCommand::new();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
@@ -48,9 +47,11 @@ impl CommandModule for Pull {
             }
 
             command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+            Ok(command.to_string())
         }
-
-        command.to_string()
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &connection::ResponseMessage) -> Result<CommandResult, String> {

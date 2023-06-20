@@ -32,15 +32,17 @@ impl CommandModule for Shutdown {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.argument("poweroff");
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+            Ok(command.to_string())
         }
-
-        command.to_string()
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

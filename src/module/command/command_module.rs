@@ -32,12 +32,12 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> String {
-        String::new()
+    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> Result<String, String> {
+        Err(String::new())
     }
 
-    fn get_connector_messages(&self, _host: Host, _parameters: Vec<String>) -> Vec<String> {
-        Vec::new()
+    fn get_connector_messages(&self, _host: Host, _parameters: Vec<String>) -> Result<Vec<String>, String> {
+        Err(String::new())
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

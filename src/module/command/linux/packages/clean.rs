@@ -5,7 +5,6 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use crate::module::platform_info::Flavor;
 use lightkeeper_module::command_module;
 
 #[command_module("linux-packages-clean", "0.0.1")]
@@ -32,27 +31,21 @@ impl CommandModule for Clean {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            match host.platform.os_flavor {
-                Flavor::Debian => {
-                    command.arguments(vec!["apt-get", "clean"]);
-                },
-                Flavor::Ubuntu => {
-                    command.arguments(vec!["apt-get", "clean"]);
-                },
-                Flavor::RedHat => {
-                    command.arguments(vec!["yum", "clean", "all"]);
-                },
-                _ => (),
-            };
-
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+            command.arguments(vec!["apt-get", "clean"]);
+            Ok(command.to_string())
         }
-
-        command.to_string()
+        else if host.platform.version_is_newer_than(platform_info::Flavor::RedHat, "6") {
+            command.arguments(vec!["yum", "clean", "all"]);
+            Ok(command.to_string())
+        }
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

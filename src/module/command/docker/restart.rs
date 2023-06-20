@@ -34,21 +34,22 @@ impl CommandModule for Restart {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         let target_id = parameters.first().unwrap();
         if !string_validation::is_alphanumeric(target_id) {
             panic!("Invalid container ID: {}", target_id)
         }
-
-        if host.platform.os == platform_info::OperatingSystem::Linux {
+        else if host.platform.os == platform_info::OperatingSystem::Linux {
             let url = format!("http://localhost/containers/{}/restart", target_id);
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "-X", "POST", &url]);
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+            Ok(command.to_string())
         }
-
-        command.to_string()
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

@@ -47,23 +47,23 @@ impl CommandModule for RemoteTags {
         }
     }
 
-    fn get_connector_messages(&self, _host: Host, parameters: Vec<String>) -> Vec<String> {
+    fn get_connector_messages(&self, _host: Host, parameters: Vec<String>) -> Result<Vec<String>, String> {
         let _image_id = &parameters[0];
         let image_repo_tag = &parameters[1];
 
         if image_repo_tag.is_empty() {
             // Containers without a tag can not be used.
-            Vec::new()
+            Err(String::from("Container has no tag and can not be used."))
         }
         else {
             let (image, _tag) = image_repo_tag.split_once(":").unwrap_or(("", ""));
             let (namespace, image) = image.split_once("/").unwrap_or(("library", image));
 
             // TODO: support other registries too.
-            (1..=self.page_count).map(|page| {
-                format!("https://registry.hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size={}&page={}",
-                        namespace, image, self.page_size, page)
-            }).collect()
+            let tags = (1..=self.page_count).map(|page| {
+                format!("https://registry.hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size={}&page={}", namespace, image, self.page_size, page)
+            }).collect();
+            Ok(tags)
         }
     }
 

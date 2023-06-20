@@ -38,21 +38,23 @@ impl CommandModule for Remove {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let target_id = parameters.first().unwrap();
+
+        let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+
         if !string_validation::is_alphanumeric_with(target_id, ":-.") {
             panic!("Invalid image ID: {}", target_id)
         }
-
-        let mut command = ShellCommand::new();
-
-        if host.platform.os == platform_info::OperatingSystem::Linux {
+        else if host.platform.os == platform_info::OperatingSystem::Linux {
             let url = format!("http://localhost/images/{}", target_id);
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "-X", "DELETE", &url]);
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+            Ok(command.to_string())
         }
-
-        command.to_string()
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

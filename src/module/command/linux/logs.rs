@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::frontend;
-use crate::host::Host;
+use crate::host::*;
 use crate::module::command::UIAction;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
@@ -36,8 +36,9 @@ impl CommandModule for Logs {
 
     // Parameter 1 is for unit selection and special values "all" and "dmesg".
     // Parameter 2 is for grepping. Filters rows based on regexp.
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["journalctl", "-q", "-n", "400"]);
@@ -64,9 +65,12 @@ impl CommandModule for Logs {
                     command.arguments(vec!["-g", parameter2]);
                 }
             }
-        }
 
-        command.to_string()
+            Ok(command.to_string())
+        }
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

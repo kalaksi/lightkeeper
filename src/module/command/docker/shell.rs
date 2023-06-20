@@ -33,7 +33,7 @@ impl CommandModule for Shell {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> Result<String, String> {
         let target_id = parameters.first().unwrap();
 
         if !string_validation::is_alphanumeric(target_id) {
@@ -41,7 +41,7 @@ impl CommandModule for Shell {
         }
 
         // TODO
-        String::new()
+        todo!()
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

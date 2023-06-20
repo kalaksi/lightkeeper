@@ -56,7 +56,7 @@ impl MonitoringModule for Filesystem {
             let mut result = DataPoint::empty();
 
             // First line contains headers
-            let mut lines = response.message.lines().skip(1);
+            let lines = response.message.lines().skip(1);
             for line in lines {
                 let mut parts = line.split_whitespace();
                 let _source = parts.next().unwrap().to_string();

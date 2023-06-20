@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::host_manager::HostManager;
+use crate::utils::ShellCommand;
 use crate::{
     configuration::Preferences,
     Host,
@@ -63,7 +64,6 @@ impl CommandHandler {
     }
 
     pub fn execute(&mut self, host_id: String, command_id: String, parameters: Vec<String>) -> u64 {
-        self.invocation_id_counter += 1;
 
         let host = self.host_manager.borrow().get_host(&host_id);
 
@@ -75,11 +75,15 @@ impl CommandHandler {
                                    .get(&command_id).unwrap();
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
 
-        // Only one of these should be implemented, but it doesn't matter if both are.
-        let messages = [
-            command.get_connector_messages(host.clone(), parameters.clone()),
-            vec![command.get_connector_message(host.clone(), parameters)]
-        ].concat();
+        let messages = match get_command_connector_messages(&host, &command, &parameters) {
+            Ok(messages) => messages,
+            Err(error) => {
+                log::error!("Command \"{}\" failed: {}", command_id, error);
+                return 0;
+            }
+        };
+
+        self.invocation_id_counter += 1;
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
             connector_spec: command.get_connector_spec(),
@@ -163,7 +167,6 @@ impl CommandHandler {
     //
 
     pub fn open_terminal(&self, args: Vec<String>) {
-        // TODO: other kind of terminals too
         // TODO: integrated interactive terminals with ssh2::request_pty() / shell?
 
         let mut command_args = self.preferences.terminal_args.clone();
@@ -179,31 +182,29 @@ impl CommandHandler {
         let command = self.commands.get(&host_id).unwrap()
                                    .get(&command_id).unwrap();
 
-        // Only one of these should be implemented, but it doesn't matter if both are.
-        let connector_messages = [
-            command.get_connector_messages(host.clone(), vec![remote_file_path.clone()]),
-            vec![command.get_connector_message(host.clone(), vec![remote_file_path])]
-        ].concat();
+        let connector_messages = match get_command_connector_messages(&host, &command, &vec![remote_file_path.clone()]) {
+            Ok(messages) => messages,
+            Err(error) => {
+                log::error!("Command \"{}\" failed: {}", command_id, error);
+                return;
+            }
+        };
 
         if self.preferences.use_remote_editor {
-            let mut command_args = self.preferences.terminal_args.clone();
-            command_args.extend(vec![
-                String::from("ssh"),
-                String::from("-t"),
-                host.name.clone(),
-            ]);
-
+            let mut shell_command = ShellCommand::new();
+            shell_command.argument(self.preferences.terminal.clone());
+            shell_command.arguments(self.preferences.terminal_args.clone());
+            shell_command.arguments(vec!["ssh", "-t", host.name.as_str()]);
 
             if self.preferences.sudo_remote_editor {
-                command_args.push(String::from("sudo"));
+                shell_command.argument("sudo");
             }
 
-            command_args.push(self.preferences.remote_text_editor.clone());
-            command_args.push(connector_messages.join(" "));
+            shell_command.argument(self.preferences.remote_text_editor.clone());
+            shell_command.arguments(connector_messages);
 
-            log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.join(" "));
-            process::Command::new(self.preferences.terminal.as_str()).args(command_args).output()
-                                .expect("Running command failed");
+            log::debug!("Starting local process: {}", shell_command.to_string());
+            shell_command.execute();
 
             self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
                 host_name: host.name,
@@ -310,6 +311,25 @@ impl CommandHandler {
         })
     }
 }
+
+fn get_command_connector_messages(host: &Host, command: &Command, parameters: &Vec<String>) -> Result<Vec<String>, String> {
+    let command_id = command.get_module_spec().id.clone();
+    let mut all_messages: Vec<String> = Vec::new();
+
+    match command.get_connector_messages(host.clone(), parameters.clone()) {
+        Ok(messages) => all_messages.extend(messages),
+        Err(error) => return Err(error),
+    }
+
+    match command.get_connector_message(host.clone(), parameters.clone()) {
+        Ok(message) => all_messages.push(message),
+        Err(error) => return Err(error),
+    }
+
+    all_messages.retain(|message| !message.is_empty());
+    Ok(all_messages)
+}
+
 
 
 #[derive(Default, Clone, Serialize, Deserialize)]

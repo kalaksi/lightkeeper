@@ -40,46 +40,44 @@ impl CommandModule for FileSpaceUsage {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let mountpoint = &parameters[0];
 
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
             command.arguments(vec!["du", "-x", "--block-size=1MB", mountpoint])
                    .pipe_to(vec!["sort", "-rn"])
                    .pipe_to(vec!["head", "-n", self.line_count.to_string().as_str()]);
+            Ok(command.to_string())
         }
-        command.to_string()
+        else {
+            Err(String::from("Unsupported platform"))
+        }
 
     }
 
-    fn process_response(&self, host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let mut result_rows = Vec::new();
-            let lines = response.message.lines();
+    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+        let mut result_rows = Vec::new();
+        let lines = response.message.lines();
 
-            if response.is_error() {
-                return Err(format!("Got exit code {} and {} lines of data", response.return_code, response.message));
-            }
-            else if lines.clone().count() == 0 {
-                return Err(String::from("Successful execution but no data returned"))
-            }
-
-            for line in lines {
-                let mut parts = line.split_whitespace();
-                let size = parts.next().unwrap().parse::<u64>().unwrap();
-                let path = parts.next().unwrap();
-
-                // Trailing space is so that newline gets added properly since this is markdown.
-                result_rows.push(format!("{} MB\t{}  ", size, path));
-            }
-
-            Ok(CommandResult::new(result_rows.join("\n")))
+        if response.is_error() {
+            return Err(format!("Got exit code {} and {} lines of data", response.return_code, response.message));
         }
-        else {
-            self.error_unsupported()
+        else if lines.clone().count() == 0 {
+            return Err(String::from("Successful execution but no data returned"))
         }
 
+        for line in lines {
+            let mut parts = line.split_whitespace();
+            let size = parts.next().unwrap().parse::<u64>().unwrap();
+            let path = parts.next().unwrap();
+
+            // Trailing space is so that newline gets added properly since this is markdown.
+            result_rows.push(format!("{} MB\t{}  ", size, path));
+        }
+
+        Ok(CommandResult::new(result_rows.join("\n")))
     }
 }

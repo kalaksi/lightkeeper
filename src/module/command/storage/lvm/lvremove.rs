@@ -36,24 +36,22 @@ impl CommandModule for LVRemove {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let lv_path = parameters.get(0).unwrap();
         let _vg_name = parameters.get(1).unwrap();
         let _lv_name = parameters.get(2).unwrap();
         let _lv_size = parameters.get(3).unwrap();
 
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
-               host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
-                 command.arguments(vec!["lvremove", "-y", lv_path]);
-            };
-
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+            command.arguments(vec!["lvremove", "-y", lv_path]);
+            Ok(command.to_string())
         }
-
-        command.to_string()
+        else {
+            Err(format!("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

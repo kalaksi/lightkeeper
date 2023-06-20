@@ -34,17 +34,24 @@ impl CommandModule for Mask {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let service = parameters.first().unwrap();
-        if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
-            string_validation::begins_with_dash(service){
-            panic!("Invalid unit name: {}", service)
-        }
 
         let mut command = ShellCommand::new();
-        command.arguments(vec!["systemctl", "mask", service]);
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
-        command.to_string()
+
+        if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
+            string_validation::begins_with_dash(service){
+
+            Err(format!("Invalid unit name: {}", service))
+        }
+        else if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+            command.arguments(vec!["systemctl", "mask", service]);
+            Ok(command.to_string())
+        }
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

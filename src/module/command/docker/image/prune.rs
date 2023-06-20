@@ -34,25 +34,22 @@ impl CommandModule for Prune {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "-X", "POST", "http://localhost/images/prune"]);
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
-        }
-
-        command.to_string()
-    }
-
-    fn process_response(&self, host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let result: PruneResult = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
-            Ok(CommandResult::new_info(format!("Total reclaimed space: {} B", result.space_reclaimed)))
+            Ok(command.to_string())
         }
         else {
-            self.error_unsupported()
+            Err(String::from("Unsupported platform"))
         }
+    }
+
+    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+        let result: PruneResult = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+        Ok(CommandResult::new_info(format!("Total reclaimed space: {} B", result.space_reclaimed)))
     }
 }
 

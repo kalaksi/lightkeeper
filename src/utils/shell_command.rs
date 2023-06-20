@@ -35,6 +35,23 @@ impl ShellCommand {
         self.piped_to.push_back(piped_with);
         self
     }
+
+    pub fn execute(&self) {
+        if self.arguments.is_empty() {
+            return;
+        }
+
+        let command = self.arguments.get(0).unwrap();
+        let arguments = self.arguments.iter().skip(1).collect::<Vec<&String>>();
+
+        if arguments.is_empty() {
+            process::Command::new(command).output().expect("Running command failed");
+        }
+        else {
+            process::Command::new(command).args(arguments).output().expect("Running command failed");
+        }
+    }
+
 }
 
 impl ToString for ShellCommand {

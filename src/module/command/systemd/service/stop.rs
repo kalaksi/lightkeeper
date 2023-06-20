@@ -37,25 +37,24 @@ impl CommandModule for Stop {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let service = parameters.first().unwrap();
-        if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
-            string_validation::begins_with_dash(service){
-            panic!("Invalid unit name: {}", service)
-        }
 
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
-                let service = parameters.first().unwrap();
-                command.arguments(vec!["systemctl", "stop", service]);
-            }
+        if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
+            string_validation::begins_with_dash(service){
 
-            command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+            Err(format!("Invalid unit name: {}", service))
         }
-
-        command.to_string()
+        else if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+            command.arguments(vec!["systemctl", "stop", service]);
+            Ok(command.to_string())
+        }
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

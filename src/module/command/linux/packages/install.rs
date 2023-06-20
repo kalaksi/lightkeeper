@@ -30,7 +30,7 @@ impl CommandModule for Install {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> String {
+    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> Result<String, String> {
         todo!()
     }
 
