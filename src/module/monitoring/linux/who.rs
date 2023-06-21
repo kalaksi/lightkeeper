@@ -35,12 +35,12 @@ impl MonitoringModule for Who {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            String::from("who -s")
+            Ok(String::from("who -s"))
         }
         else {
-            String::new()
+            Err(String::from("Unsupported platform"))
         }
     }
 

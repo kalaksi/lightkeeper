@@ -52,79 +52,74 @@ impl MonitoringModule for Service {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
-                command.arguments(vec!["busctl", "--no-pager", "--json=short", "call", "org.freedesktop.systemd1",
-                                       "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
-            }
-        }
-
-        command.to_string()
-    }
-
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
-            let response: DbusResponse = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
-
-            let mut result = DataPoint::empty();
-
-            let services = response.data.first().unwrap().iter().filter(|unit| unit.id.ends_with(".service"));
-            let mut allowed_services = services
-                .filter(|unit| self.included_services.is_empty() || self.included_services.iter().any(|id| unit.id.starts_with(id)))
-                .filter(|unit| self.excluded_services.is_empty() || !self.excluded_services.iter().any(|id| unit.id.starts_with(id)))
-                .collect::<Vec<&UnitData>>();
-
-            // Sort alphabetically by ID.
-            allowed_services.sort_by_key(|unit| &unit.id);
-
-
-            result.multivalue = allowed_services.iter().map(|unit| {
-                let mut point = DataPoint::labeled_value(unit.id.clone(), unit.sub_state.clone());
-                point.description = unit.name.clone();
-
-                // Add some states as tags for the UI.
-                if ["masked"].contains(&unit.load_state.as_str()) {
-                    point.tags.push(unit.load_state.clone());
-                }
-
-                match unit.sub_state.as_str() {
-                    "dead" => {
-                        point.criticality = enums::Criticality::Critical;
-                    },
-                    "exited" => {
-                        if unit.active_state == "active" {
-                            point.criticality = enums::Criticality::Normal;
-                            point.value = format!("{} ({})", unit.sub_state.clone(), unit.active_state.clone());
-                        }
-                        else {
-                            point.criticality = enums::Criticality::Warning;
-                        }
-                    },
-                    "running" => {
-                        point.criticality = enums::Criticality::Normal;
-                    },
-                    _ => {
-                        point.criticality = enums::Criticality::Warning;
-                    }
-                };
-
-                point.command_params.push(unit.id.clone());
-                point
-            }).collect();
-
-            if !result.multivalue.is_empty() {
-                let most_critical = result.multivalue.iter().max_by_key(|value| value.criticality).unwrap();
-                result.criticality = most_critical.criticality;
-            }
-
-            Ok(result)
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "9") {
+            command.arguments(vec!["busctl", "--no-pager", "--json=short", "call", "org.freedesktop.systemd1",
+                                    "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
+            Ok(command.to_string())
         }
         else {
-            self.error_unsupported()
+            Err(String::from("Unsupported platform"))
         }
+    }
+
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        let response: DbusResponse = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+
+        let mut result = DataPoint::empty();
+
+        let services = response.data.first().unwrap().iter().filter(|unit| unit.id.ends_with(".service"));
+        let mut allowed_services = services
+            .filter(|unit| self.included_services.is_empty() || self.included_services.iter().any(|id| unit.id.starts_with(id)))
+            .filter(|unit| self.excluded_services.is_empty() || !self.excluded_services.iter().any(|id| unit.id.starts_with(id)))
+            .collect::<Vec<&UnitData>>();
+
+        // Sort alphabetically by ID.
+        allowed_services.sort_by_key(|unit| &unit.id);
+
+
+        result.multivalue = allowed_services.iter().map(|unit| {
+            let mut point = DataPoint::labeled_value(unit.id.clone(), unit.sub_state.clone());
+            point.description = unit.name.clone();
+
+            // Add some states as tags for the UI.
+            if ["masked"].contains(&unit.load_state.as_str()) {
+                point.tags.push(unit.load_state.clone());
+            }
+
+            match unit.sub_state.as_str() {
+                "dead" => {
+                    point.criticality = enums::Criticality::Critical;
+                },
+                "exited" => {
+                    if unit.active_state == "active" {
+                        point.criticality = enums::Criticality::Normal;
+                        point.value = format!("{} ({})", unit.sub_state.clone(), unit.active_state.clone());
+                    }
+                    else {
+                        point.criticality = enums::Criticality::Warning;
+                    }
+                },
+                "running" => {
+                    point.criticality = enums::Criticality::Normal;
+                },
+                _ => {
+                    point.criticality = enums::Criticality::Warning;
+                }
+            };
+
+            point.command_params.push(unit.id.clone());
+            point
+        }).collect();
+
+        if !result.multivalue.is_empty() {
+            let most_critical = result.multivalue.iter().max_by_key(|value| value.criticality).unwrap();
+            result.criticality = most_critical.criticality;
+        }
+
+        Ok(result)
     }
 }
 

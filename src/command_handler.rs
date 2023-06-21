@@ -151,7 +151,7 @@ impl CommandHandler {
                 },
                 Err(error) => {
                     errors.push(error.clone());
-                    CommandResult::new_critical_error(error)
+                    CommandResult::new_critical_error(errors.first().unwrap().clone())
                 }
             };
 

@@ -24,11 +24,11 @@ impl MonitoringModule for PlatformInfoSsh {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_messages(&self, _host: Host, _result: DataPoint) -> Vec<String> {
-        vec![
+    fn get_connector_messages(&self, _host: Host, _result: DataPoint) -> Result<Vec<String>, String> {
+        Ok(vec![
             String::from("cat /etc/os-release"),
             String::from("uname -m"),
-        ]
+        ])
     }
 
     fn process_responses(&self, _host: Host, response: Vec<ResponseMessage>, _result: DataPoint) -> Result<DataPoint, String> {

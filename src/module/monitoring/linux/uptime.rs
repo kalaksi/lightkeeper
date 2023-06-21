@@ -35,25 +35,20 @@ impl MonitoringModule for Uptime {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            String::from("uptime -s")
+            Ok(String::from("uptime -s"))
         }
         else {
-            String::new()
+            Err(String::from("Unsupported platform"))
         }
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
-                                            .map_err(|e| e.to_string())?;
+    fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
+        let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
+                                        .map_err(|e| e.to_string())?;
 
-            let uptime = Utc::now().naive_utc() - boot_datetime;
-            Ok(DataPoint::new(uptime.num_days().to_string()))
-        }
-        else {
-            self.error_unsupported()
-        }
+        let uptime = Utc::now().naive_utc() - boot_datetime;
+        Ok(DataPoint::new(uptime.num_days().to_string()))
     }
 }

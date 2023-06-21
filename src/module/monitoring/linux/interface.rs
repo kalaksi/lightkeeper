@@ -43,37 +43,32 @@ impl MonitoringModule for Interface {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            String::from("ip -o addr show")
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+            Ok(String::from("ip -o addr show"))
         }
         else {
-            String::new()
+            Err(String::from("Unsupported platform"))
         }
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let mut result = DataPoint::empty();
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        let mut result = DataPoint::empty();
 
-            let lines = response.message.lines();
-            for line in lines {
-                let mut parts = line.split_whitespace();
-                let if_name = parts.nth(1).unwrap().to_string();
- 
-                if self.ignored_interfaces.iter().any(|item| if_name.starts_with(item)) {
-                    continue;
-                }
+        let lines = response.message.lines();
+        for line in lines {
+            let mut parts = line.split_whitespace();
+            let if_name = parts.nth(1).unwrap().to_string();
 
-                let if_address = parts.nth(1).unwrap_or_default().to_string();
-                let data_point = DataPoint::labeled_value(if_name, if_address);
-                result.multivalue.push(data_point);
-
+            if self.ignored_interfaces.iter().any(|item| if_name.starts_with(item)) {
+                continue;
             }
-            Ok(result)
+
+            let if_address = parts.nth(1).unwrap_or_default().to_string();
+            let data_point = DataPoint::labeled_value(if_name, if_address);
+            result.multivalue.push(data_point);
+
         }
-        else {
-            self.error_unsupported()
-        }
+        Ok(result)
     }
 }

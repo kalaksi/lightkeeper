@@ -39,61 +39,50 @@ impl MonitoringModule for VolumeGroup {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
-               host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
-                command.arguments(vec![
-                    "vgs", "--separator", "|", "--options", "vg_name,vg_attr,vg_size", "--units", "H"
-                ]);
-            }
-
-            command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
-        }
-
-        command.to_string()
-    }
-
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
-           host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
-
-            if response.message.is_empty() && response.return_code == 0 {
-                return Ok(DataPoint::empty());
-            }
-
-            let mut result = DataPoint::empty();
-
-            let lines = response.message.lines().skip(1);
-            for line in lines {
-                let mut parts = line.split("|");
-                let vg_name = parts.next().unwrap().trim_start().to_string();
-                let vg_attr = parts.next().unwrap().to_string();
-                let vg_size = parts.next().unwrap().to_string();
-
-                let mut data_point = DataPoint::labeled_value(vg_name.clone(), String::from("OK"));
-                data_point.description = format!("size: {}", vg_size);
-
-                match vg_attr.chars().nth(0).unwrap() {
-                    'r' => data_point.tags.push(String::from("Read-only")),
-                    _ => {}
-                }
-
-                if vg_attr.chars().nth(5).unwrap() == 'p' {
-                    data_point.criticality = crate::enums::Criticality::Error;
-                    data_point.value = String::from("Partial");
-                }
-
-                data_point.command_params = vec![vg_name];
-                result.multivalue.push(data_point);
-            }
-
-            Ok(result)
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+            command.arguments(vec![ "vgs", "--separator", "|", "--options", "vg_name,vg_attr,vg_size", "--units", "H" ]);
+            Ok(command.to_string())
         }
         else {
-            self.error_unsupported()
+            Err(String::from("Unsupported platform"))
         }
+    }
+
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.message.is_empty() && response.return_code == 0 {
+            return Ok(DataPoint::empty());
+        }
+
+        let mut result = DataPoint::empty();
+
+        let lines = response.message.lines().skip(1);
+        for line in lines {
+            let mut parts = line.split("|");
+            let vg_name = parts.next().unwrap().trim_start().to_string();
+            let vg_attr = parts.next().unwrap().to_string();
+            let vg_size = parts.next().unwrap().to_string();
+
+            let mut data_point = DataPoint::labeled_value(vg_name.clone(), String::from("OK"));
+            data_point.description = format!("size: {}", vg_size);
+
+            match vg_attr.chars().nth(0).unwrap() {
+                'r' => data_point.tags.push(String::from("Read-only")),
+                _ => {}
+            }
+
+            if vg_attr.chars().nth(5).unwrap() == 'p' {
+                data_point.criticality = crate::enums::Criticality::Error;
+                data_point.value = String::from("Partial");
+            }
+
+            data_point.command_params = vec![vg_name];
+            result.multivalue.push(data_point);
+        }
+
+        Ok(result)
     }
 }

@@ -39,56 +39,45 @@ impl MonitoringModule for PhysicalVolume {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
-               host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
-                command.arguments(vec![
-                    "pvs", "--separator", "|", "--options", "pv_name,pv_attr,pv_size", "--units", "H"
-                ]);
-            }
-
-            command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
-        }
-
-        command.to_string()
-    }
-
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") &&
-           host.platform.version_is_older_than(platform_info::Flavor::Debian, "11") {
-
-            if response.message.is_empty() && response.return_code == 0 {
-                return Ok(DataPoint::empty());
-            }
-
-            let mut result = DataPoint::empty();
-
-            let lines = response.message.lines().skip(1);
-            for line in lines {
-                let mut parts = line.split("|");
-                let pv_name = parts.next().unwrap().trim_start().to_string();
-                let pv_attr = parts.next().unwrap().to_string();
-                let pv_size = parts.next().unwrap().to_string();
-
-                let mut data_point = DataPoint::labeled_value(pv_name.clone(), String::from("OK"));
-                data_point.description = format!("size: {}", pv_size);
-
-                if pv_attr.chars().nth(2).unwrap() == 'm' {
-                    data_point.criticality = crate::enums::Criticality::Critical;
-                    data_point.value = String::from("Missing");
-                }
-
-                data_point.command_params = vec![pv_name];
-                result.multivalue.push(data_point);
-            }
-
-            Ok(result)
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+            command.arguments(vec!["pvs", "--separator", "|", "--options", "pv_name,pv_attr,pv_size", "--units", "H"]);
+            Ok(command.to_string())
         }
         else {
-            self.error_unsupported()
+            Err(String::from("Unsupported platform"))
         }
+    }
+
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.message.is_empty() && response.return_code == 0 {
+            return Ok(DataPoint::empty());
+        }
+
+        let mut result = DataPoint::empty();
+
+        let lines = response.message.lines().skip(1);
+        for line in lines {
+            let mut parts = line.split("|");
+            let pv_name = parts.next().unwrap().trim_start().to_string();
+            let pv_attr = parts.next().unwrap().to_string();
+            let pv_size = parts.next().unwrap().to_string();
+
+            let mut data_point = DataPoint::labeled_value(pv_name.clone(), String::from("OK"));
+            data_point.description = format!("size: {}", pv_size);
+
+            if pv_attr.chars().nth(2).unwrap() == 'm' {
+                data_point.criticality = crate::enums::Criticality::Critical;
+                data_point.value = String::from("Missing");
+            }
+
+            data_point.command_params = vec![pv_name];
+            result.multivalue.push(data_point);
+        }
+
+        Ok(result)
     }
 }

@@ -34,21 +34,16 @@ impl MonitoringModule for Kernel {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            String::from("uname -r -m")
+            Ok(String::from("uname -r -m"))
         }
         else {
-            String::new()
+            Err(String::from("Unsupported platform"))
         }
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            Ok(DataPoint::new(response.message.replace(" ", " (") + ")"))
-        }
-        else {
-            self.error_unsupported()
-        }
+        Ok(DataPoint::new(response.message.replace(" ", " (") + ")"))
     }
 }

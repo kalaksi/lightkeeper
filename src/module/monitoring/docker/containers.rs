@@ -40,48 +40,44 @@ impl MonitoringModule for Containers {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
             // TODO: somehow connect directly to the unix socket instead of using curl?
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
-        }
-
-        command.to_string()
-    }
-
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
-
-            if self.ignore_compose_managed {
-                containers.retain(|container| !container.labels.contains_key("com.docker.compose.config-hash"));
-            }
-
-            let mut parent_data = DataPoint::empty();
-
-            if !containers.is_empty() {
-                let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
-                parent_data.criticality = most_critical_container.state.to_criticality();
-
-                parent_data.multivalue = containers.iter().map(|container| {
-                    let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
-                    // Names may still contain a leading slash that can cause issues with docker commands.
-                    point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
-                    point.command_params = vec![cleanup_name(&container.names.first().unwrap_or(&container.id))];
-                    point
-                }).collect();
-            }
-
-            Ok(parent_data)
+            Ok(command.to_string())
         }
         else {
-            self.error_unsupported()
+            Err(String::from("Unsupported platform"))
         }
     }
 
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+
+        if self.ignore_compose_managed {
+            containers.retain(|container| !container.labels.contains_key("com.docker.compose.config-hash"));
+        }
+
+        let mut parent_data = DataPoint::empty();
+
+        if !containers.is_empty() {
+            let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
+            parent_data.criticality = most_critical_container.state.to_criticality();
+
+            parent_data.multivalue = containers.iter().map(|container| {
+                let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
+                // Names may still contain a leading slash that can cause issues with docker commands.
+                point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
+                point.command_params = vec![cleanup_name(&container.names.first().unwrap_or(&container.id))];
+                point
+            }).collect();
+        }
+
+        Ok(parent_data)
+    }
 }
 
 

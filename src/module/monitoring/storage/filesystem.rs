@@ -42,48 +42,43 @@ impl MonitoringModule for Filesystem {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            String::from("df -hPT")
+            Ok(String::from("df -hPT"))
         }
         else {
-            String::new()
+            Err(String::from("Unsupported platform"))
         }
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let mut result = DataPoint::empty();
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        let mut result = DataPoint::empty();
 
-            // First line contains headers
-            let lines = response.message.lines().skip(1);
-            for line in lines {
-                let mut parts = line.split_whitespace();
-                let _source = parts.next().unwrap().to_string();
-                let fs_type = parts.next().unwrap().to_string();
-                let size_h = parts.next().unwrap().to_string();
-                let used_h = parts.next().unwrap().to_string();
-                let _available_h = parts.next().unwrap().to_string();
-                let mut used_percent = parts.next().unwrap().to_string();
-                let mountpoint = parts.next().unwrap().to_string();
+        // First line contains headers
+        let lines = response.message.lines().skip(1);
+        for line in lines {
+            let mut parts = line.split_whitespace();
+            let _source = parts.next().unwrap().to_string();
+            let fs_type = parts.next().unwrap().to_string();
+            let size_h = parts.next().unwrap().to_string();
+            let used_h = parts.next().unwrap().to_string();
+            let _available_h = parts.next().unwrap().to_string();
+            let mut used_percent = parts.next().unwrap().to_string();
+            let mountpoint = parts.next().unwrap().to_string();
 
-                if self.ignored_filesystems.iter().any(|item| mountpoint.starts_with(item)) {
-                    continue;
-                }
-
-                // Remove percent symbol from the end.
-                used_percent.pop();
-                let mut data_point = DataPoint::labeled_value(mountpoint.clone(), used_percent);
-                data_point.description = format!("{} | {} / {} used", fs_type, used_h, size_h);
-                data_point.command_params.push(mountpoint);
-                result.multivalue.push(data_point);
-
+            if self.ignored_filesystems.iter().any(|item| mountpoint.starts_with(item)) {
+                continue;
             }
 
-            Ok(result)
+            // Remove percent symbol from the end.
+            used_percent.pop();
+            let mut data_point = DataPoint::labeled_value(mountpoint.clone(), used_percent);
+            data_point.description = format!("{} | {} / {} used", fs_type, used_h, size_h);
+            data_point.command_params.push(mountpoint);
+            result.multivalue.push(data_point);
+
         }
-        else {
-            self.error_unsupported()
-        }
+
+        Ok(result)
     }
 }

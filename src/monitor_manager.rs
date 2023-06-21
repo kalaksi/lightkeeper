@@ -115,11 +115,13 @@ impl MonitorManager {
                 // Note that these do not increment the invocation ID counter.
                 let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
 
-                let mut messages = vec![
-                    vec![info_provider.get_connector_message(host.clone(), DataPoint::empty())],
-                    info_provider.get_connector_messages(host.clone(), DataPoint::empty()),
-                ].concat();
-                messages.retain(|message| !message.is_empty());
+                let messages = match get_monitor_connector_messages(&host, &info_provider, &DataPoint::empty()) {
+                    Ok(messages) => messages,
+                    Err(error) => {
+                        log::error!("Monitor \"{}\" failed: {}", info_provider.get_module_spec().id, error);
+                        return;
+                    }
+                };
 
                 self.request_sender.send(ConnectorRequest {
                     connector_spec: info_provider.get_connector_spec(),
@@ -227,8 +229,15 @@ impl MonitorManager {
                               parent_result: DataPoint, cache_policy: CachePolicy) {
 
         let monitor = monitors[0].box_clone();
-        let messages = [monitor.get_connector_messages(host.clone(), parent_result.clone()),
-                        vec![monitor.get_connector_message(host.clone(), parent_result.clone())]].concat();
+
+        let messages = match get_monitor_connector_messages(&host, &monitor, &parent_result) {
+            Ok(messages) => messages,
+            Err(error) => {
+                log::error!("Monitor \"{}\" failed: {}", monitor.get_module_spec().id, error);
+                return;
+            }
+        };
+
         let response_handler = Self::get_response_handler(
             host.clone(), monitors, invocation_id, request_sender.clone(), state_update_sender.clone(), parent_result, cache_policy 
         );
@@ -248,7 +257,7 @@ impl MonitorManager {
 
     fn get_response_handler(host: Host, mut monitors: Vec<Monitor>, invocation_id: u64,
                             request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>,
-                            parent_result: DataPoint, cache_policy: CachePolicy) -> ResponseHandlerCallback {
+                            parent_datapoint: DataPoint, cache_policy: CachePolicy) -> ResponseHandlerCallback {
 
         Box::new(move |results| {
             let monitor = monitors.remove(0);
@@ -257,53 +266,51 @@ impl MonitorManager {
             let results_len = results.len();
             let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
             let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-            let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+            let mut errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
             // If CachePolicy::OnlyCache is used and an entry is not found, don't continue.
             if responses.iter().any(|response| response.is_not_found()) {
                 return;
             }
 
-            let mut new_data_point = parent_result.clone();
-
             let mut datapoint_result;
             if results_len == 0 {
                 // Some special modules require no connectors and receive no response messages.
                 // TODO: which modules?
-                datapoint_result = monitor.process_response(host.clone(), ResponseMessage::empty(), parent_result)
+                datapoint_result = monitor.process_response(host.clone(), ResponseMessage::empty(), parent_datapoint.clone())
             }
-            else {
-                if responses.len() > 0 {
-                    datapoint_result = monitor.process_responses(host.clone(), responses.clone(), parent_result.clone());
-                    if let Err(error) = datapoint_result {
-                        if error.is_empty() {
-                            // Was not implemented, so try the other method.
-                            let response = responses[0].clone();
-                            datapoint_result = monitor.process_response(host.clone(), response.clone(), parent_result.clone())
-                                                      .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point });
-                        }
-                        else {
-                            datapoint_result = Err(error);
-                        }
+            else if responses.len() > 0 {
+                datapoint_result = monitor.process_responses(host.clone(), responses.clone(), parent_datapoint.clone());
+                if let Err(error) = datapoint_result {
+                    if error.is_empty() {
+                        // Was not implemented, so try the other method.
+                        let response = responses[0].clone();
+                        datapoint_result = monitor.process_response(host.clone(), response.clone(), parent_datapoint.clone())
+                                                    .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point });
+                    }
+                    else {
+                        datapoint_result = Err(error);
                     }
                 }
-                else if errors.len() > 0 {
-                    datapoint_result = Err(errors.join(", "));
-                }
-                else {
-                    log::warn!("Didn't receive any responses for monitor {}", monitor_id);
-                    return;
-                }
+            }
+            else {
+                datapoint_result = Err(format!("No responses received for monitor {}", monitor_id));
             }
 
+            let mut new_data_point;
             match datapoint_result {
                 Ok(data_point) => {
                     log::debug!("[{}] Data point received for monitor {}: {} {}", host.name, monitor_id, data_point.label, data_point);
                     new_data_point = data_point;
                 },
                 Err(error) => {
-                    log::error!("[{}] Error from monitor {}: {}", host.name, monitor_id, error);
+                    errors.push(error);
+                    new_data_point = parent_datapoint.clone();
                 }
+            }
+
+            for error in errors {
+                log::error!("[{}] Error from monitor {}: {}", host.name, monitor_id, error);
             }
 
             new_data_point.invocation_id = invocation_id;
@@ -331,6 +338,30 @@ impl MonitorManager {
             log::error!("Couldn't send message to state manager: {}", error);
         });
     }
+}
+
+fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoint: &DataPoint) -> Result<Vec<String>, String> {
+    let mut all_messages: Vec<String> = Vec::new();
+
+    match monitor.get_connector_messages(host.clone(), parent_datapoint.clone()) {
+        Ok(messages) => all_messages.extend(messages),
+        Err(error) => {
+            if !error.is_empty() {
+                return Err(error);
+            }
+        }
+    }
+
+    match monitor.get_connector_message(host.clone(), parent_datapoint.clone()) {
+        Ok(message) => all_messages.push(message),
+        Err(error) => {
+            if !error.is_empty() {
+                return Err(error);
+            }
+        }
+    }
+
+    Ok(all_messages)
 }
 
 

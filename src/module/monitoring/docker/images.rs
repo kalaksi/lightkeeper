@@ -48,65 +48,61 @@ impl MonitoringModule for Images {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
+        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
             // TODO: somehow connect directly to the unix socket instead of using curl?
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);
-            command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+            Ok(command.to_string())
         }
-
-        command.to_string()
+        else {
+            Err(String::from("Unsupported platform"))
+        }
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let images: Vec<ImageDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+        let images: Vec<ImageDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
-            let mut root_point = DataPoint::empty();
+        let mut root_point = DataPoint::empty();
 
-            for image in images.iter() {
-                let repo_tag = match &image.repo_tags {
-                    Some(repo_tags) => repo_tags.first().unwrap().clone(),
-                    None => String::from(""),
-                };
+        for image in images.iter() {
+            let repo_tag = match &image.repo_tags {
+                Some(repo_tags) => repo_tags.first().unwrap().clone(),
+                None => String::from(""),
+            };
 
-                let label = if repo_tag.is_empty() {
-                    image.id.clone()
-                }
-                else {
-                    repo_tag.clone()
-                };
+            let label = if repo_tag.is_empty() {
+                image.id.clone()
+            }
+            else {
+                repo_tag.clone()
+            };
 
-                let mut point = DataPoint::labeled_value(label, image.created.to_string());
+            let mut point = DataPoint::labeled_value(label, image.created.to_string());
 
-                // TODO: make sure timezone is accounted for correctly?
-                let creation_time = Utc.timestamp_opt(point.value.parse::<i64>().unwrap(), 0).unwrap();
-                let duration_days = Utc::now().signed_duration_since(creation_time).num_days();
+            // TODO: make sure timezone is accounted for correctly?
+            let creation_time = Utc.timestamp_opt(point.value.parse::<i64>().unwrap(), 0).unwrap();
+            let duration_days = Utc::now().signed_duration_since(creation_time).num_days();
 
-                if duration_days > self.criticality_levels[LEVEL_CRITICAL].into() {
-                    point.criticality = Criticality::Critical;
-                }
-                else if duration_days > self.criticality_levels[LEVEL_ERROR].into() {
-                    point.criticality = Criticality::Error;
-                }
-                else if duration_days > self.criticality_levels[LEVEL_WARNING].into() {
-                    point.criticality = Criticality::Warning;
-                }
-
-                point.value = format!("{} days old", duration_days);
-                point.command_params = vec![image.id.clone(), repo_tag];
-                root_point.multivalue.push(point);
+            if duration_days > self.criticality_levels[LEVEL_CRITICAL].into() {
+                point.criticality = Criticality::Critical;
+            }
+            else if duration_days > self.criticality_levels[LEVEL_ERROR].into() {
+                point.criticality = Criticality::Error;
+            }
+            else if duration_days > self.criticality_levels[LEVEL_WARNING].into() {
+                point.criticality = Criticality::Warning;
             }
 
-            Ok(root_point)
+            point.value = format!("{} days old", duration_days);
+            point.command_params = vec![image.id.clone(), repo_tag];
+            root_point.multivalue.push(point);
         }
-        else {
-            self.error_unsupported()
-        }
-    }
 
+        Ok(root_point)
+    }
 }
 
 #[derive(Deserialize)]

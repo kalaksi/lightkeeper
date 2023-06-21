@@ -43,16 +43,16 @@ impl MonitoringModule for ImageUpdates {
         }
     }
 
-    fn get_connector_messages(&self, _host: Host, parent_result: DataPoint) -> Vec<String> {
-        parent_result.multivalue.iter().map(|data_point| {
+    fn get_connector_messages(&self, _host: Host, parent_result: DataPoint) -> Result<Vec<String>, String> {
+        let result = parent_result.multivalue.iter().map(|data_point| {
             let image_repo_tag = data_point.command_params.get(1).unwrap();
 
             if self.local_tag_prefixes.iter().any(|prefix| image_repo_tag.starts_with(prefix)) {
-                String::from("")
+                String::new()
             }
             else if image_repo_tag.is_empty() {
                 // Containers without a tag can not be used.
-                String::from("")
+                String::new()
             }
             else {
                 let (image, tag) = image_repo_tag.split_once(":").unwrap_or(("", ""));
@@ -61,7 +61,9 @@ impl MonitoringModule for ImageUpdates {
                 // TODO: support other registries too.
                 format!("https://registry.hub.docker.com/v2/repositories/{}/{}/tags/{}", namespace, image, tag)
             }
-        }).collect()
+        }).collect();
+
+        Ok(result)
     }
 
     fn process_responses(&self, host: Host, responses: Vec<ResponseMessage>, parent_result: DataPoint) -> Result<DataPoint, String> {

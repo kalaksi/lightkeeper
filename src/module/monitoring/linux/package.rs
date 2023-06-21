@@ -34,47 +34,42 @@ impl MonitoringModule for Package {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> String {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.version_is_newer_than(Flavor::Debian, "8") &&
-           host.platform.version_is_older_than(Flavor::Debian, "11") {
-            command.arguments(vec!["apt", "list", "--upgradable"]);
-            command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
-        }
-
-        command.to_string()
-    }
-
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if host.platform.version_is_newer_than(Flavor::Debian, "8") {
-            let mut result = DataPoint::empty();
-            let lines = response.message.lines().filter(|line| line.contains("[upgradable"));
-            for line in lines {
-                let mut parts = line.split_whitespace();
-                let full_package = parts.next().unwrap().to_string();
-                let package = full_package.split(',').nth(0).map(|s| s.to_string())
-                                          .unwrap_or(full_package.clone());
-                let package_name = full_package.split('/').next().unwrap().to_string();
-                let new_version = parts.next().unwrap().to_string();
-                // let arch = parts.next().unwrap().to_string();
-
-                // Current version needs some more work.
-                let start_index =  line.find("[upgradable from: ").unwrap() + "[upgradable from: ".len();
-                let end_index = line[start_index..].find("]").unwrap();
-                let old_version = line[start_index..(start_index + end_index)].to_string();
-                
-                let mut data_point = DataPoint::labeled_value(package_name, new_version);
-                data_point.description = old_version;
-                data_point.command_params = vec![package];
-                result.multivalue.push(data_point);
-            }
-
-            Ok(result)
+            command.arguments(vec!["apt", "list", "--upgradable"]);
+            Ok(command.to_string())
         }
         else {
-            self.error_unsupported()
+            Err(String::from("Unsupported platform"))
         }
     }
 
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        let mut result = DataPoint::empty();
+        let lines = response.message.lines().filter(|line| line.contains("[upgradable"));
+        for line in lines {
+            let mut parts = line.split_whitespace();
+            let full_package = parts.next().unwrap().to_string();
+            let package = full_package.split(',').nth(0).map(|s| s.to_string())
+                                        .unwrap_or(full_package.clone());
+            let package_name = full_package.split('/').next().unwrap().to_string();
+            let new_version = parts.next().unwrap().to_string();
+            // let arch = parts.next().unwrap().to_string();
+
+            // Current version needs some more work.
+            let start_index =  line.find("[upgradable from: ").unwrap() + "[upgradable from: ".len();
+            let end_index = line[start_index..].find("]").unwrap();
+            let old_version = line[start_index..(start_index + end_index)].to_string();
+            
+            let mut data_point = DataPoint::labeled_value(package_name, new_version);
+            data_point.description = old_version;
+            data_point.command_params = vec![package];
+            result.multivalue.push(data_point);
+        }
+
+        Ok(result)
+    }
 }
