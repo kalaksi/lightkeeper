@@ -240,8 +240,9 @@ impl ConnectionManager {
 
                     // Don't continue if any of the commands fail unexpectedly.
                     if response_result.is_ok() {
-                        if response_result.as_ref().unwrap().return_code != 0 {
-                            Err(String::from("Command returned non-zero exit code"))
+                        let exit_code = response_result.as_ref().unwrap().return_code;
+                        if exit_code != 0 {
+                            Err(format!("Command returned non-zero exit code: {}", exit_code))
                         }
                         else {
                             // Doesn't cache failed commands.
