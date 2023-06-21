@@ -19,3 +19,14 @@ pub fn get_string_between<Stringable: ToString>(input: &Stringable, start: &str,
     let end = input.find(end).unwrap();
     input[start..end].to_string()
 }
+
+pub fn remove_quotes<Stringable: ToString>(input: &Stringable) -> String
+{
+    let input = input.to_string();
+    input.strip_prefix("\"")
+         .or(input.strip_prefix("'"))
+         .and_then(|input| input.strip_suffix("\""))
+         .or(input.strip_suffix("'"))
+         .unwrap_or(&input)
+         .to_string()
+}
