@@ -313,17 +313,24 @@ impl CommandHandler {
 }
 
 fn get_command_connector_messages(host: &Host, command: &Command, parameters: &Vec<String>) -> Result<Vec<String>, String> {
-    let command_id = command.get_module_spec().id.clone();
     let mut all_messages: Vec<String> = Vec::new();
 
     match command.get_connector_messages(host.clone(), parameters.clone()) {
         Ok(messages) => all_messages.extend(messages),
-        Err(error) => return Err(error),
+        Err(error) => {
+            if !error.is_empty() {
+                return Err(error);
+            }
+        }
     }
 
     match command.get_connector_message(host.clone(), parameters.clone()) {
         Ok(message) => all_messages.push(message),
-        Err(error) => return Err(error),
+        Err(error) => {
+            if !error.is_empty() {
+                return Err(error);
+            }
+        }
     }
 
     all_messages.retain(|message| !message.is_empty());

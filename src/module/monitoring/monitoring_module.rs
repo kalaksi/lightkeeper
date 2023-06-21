@@ -40,11 +40,12 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
     }
 
     fn process_response(&self, _host: Host, _response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
-        Err(String::from("Not implemented"))
+        Err(String::new())
     }
 
+    // Note that if implementing this method, you will need to set is_from_cache yourself.
     fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>, _parent_result: DataPoint) -> Result<DataPoint, String> {
-        Err(String::from("Not implemented"))
+        Err(String::new())
     }
 
     fn error_unsupported(&self) -> Result<DataPoint, String> {

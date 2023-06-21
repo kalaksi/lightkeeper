@@ -44,11 +44,7 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
         Ok(CommandResult::new(response.message.clone()))
     }
     fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>) -> Result<CommandResult, String> {
-        Err(String::from("Not implemented"))
-    }
-
-    fn error_unsupported(&self) -> Result<CommandResult, String> {
-        Err(String::from("Unsupported platform"))
+        Err(String::new())
     }
 }
 

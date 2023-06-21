@@ -114,11 +114,18 @@ impl MonitorManager {
             if monitor_collection.iter().any(|(_, monitor)| monitor.get_connector_spec().unwrap_or_default().id == "ssh") {
                 // Note that these do not increment the invocation ID counter.
                 let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
+
+                let mut messages = vec![
+                    vec![info_provider.get_connector_message(host.clone(), DataPoint::empty())],
+                    info_provider.get_connector_messages(host.clone(), DataPoint::empty()),
+                ].concat();
+                messages.retain(|message| !message.is_empty());
+
                 self.request_sender.send(ConnectorRequest {
                     connector_spec: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
-                    messages: vec![info_provider.get_connector_message(host.clone(), DataPoint::empty())],
+                    messages: messages,
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
                         host.clone(), vec![info_provider], 0, self.request_sender.clone(),
@@ -248,9 +255,9 @@ impl MonitorManager {
             let monitor_id = monitor.get_module_spec().id;
 
             let results_len = results.len();
-            let (responses, _errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
+            let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
             let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-            // let _errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+            let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
             // If CachePolicy::OnlyCache is used and an entry is not found, don't continue.
             if responses.iter().any(|response| response.is_not_found()) {
@@ -259,21 +266,35 @@ impl MonitorManager {
 
             let mut new_data_point = parent_result.clone();
 
-            let datapoint_result = if results_len > 1 && responses.len() > 0 {
-                monitor.process_responses(host.clone(), responses.clone(), parent_result)
-            }
-            else if results_len == 1 && responses.len() == 1 {
-                let response = &responses[0];
-                monitor.process_response(host.clone(), response.clone(), parent_result)
-                       .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point })
-            }
-            else if results_len == 0 {
+            let mut datapoint_result;
+            if results_len == 0 {
                 // Some special modules require no connectors and receive no response messages.
-                monitor.process_response(host.clone(), ResponseMessage::empty(), parent_result)
+                // TODO: which modules?
+                datapoint_result = monitor.process_response(host.clone(), ResponseMessage::empty(), parent_result)
             }
             else {
-                Err(format!("Didn't receive any responses for monitor {}", monitor_id))
-            };
+                if responses.len() > 0 {
+                    datapoint_result = monitor.process_responses(host.clone(), responses.clone(), parent_result.clone());
+                    if let Err(error) = datapoint_result {
+                        if error.is_empty() {
+                            // Was not implemented, so try the other method.
+                            let response = responses[0].clone();
+                            datapoint_result = monitor.process_response(host.clone(), response.clone(), parent_result.clone())
+                                                      .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point });
+                        }
+                        else {
+                            datapoint_result = Err(error);
+                        }
+                    }
+                }
+                else if errors.len() > 0 {
+                    datapoint_result = Err(errors.join(", "));
+                }
+                else {
+                    log::warn!("Didn't receive any responses for monitor {}", monitor_id);
+                    return;
+                }
+            }
 
             match datapoint_result {
                 Ok(data_point) => {
