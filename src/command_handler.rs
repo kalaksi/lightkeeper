@@ -120,20 +120,27 @@ impl CommandHandler {
 
     fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
         Box::new(move |results| {
-            let results_len = results.len();
-            let (responses, _errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
+            let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
             let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-            // let _errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+            let mut errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+            let command_id = command.get_module_spec().id.clone();
 
-            let command_result = if results_len > 1 && responses.len() > 0 {
-                command.process_responses(host.clone(), responses)
-            }
-            else if results_len == 1 && responses.len() == 1 {
-                command.process_response(host.clone(), responses.first().unwrap())
+            let mut command_result;
+            if responses.len() > 0 {
+                command_result = command.process_responses(host.clone(), responses.clone());
+                if let Err(error) = command_result {
+                    if error.is_empty() {
+                        // Wasn't implemented, try the other method.
+                        command_result = command.process_response(host.clone(), responses.first().unwrap());
+                    }
+                    else {
+                        command_result = Err(error);
+                    }
+                }
             }
             else {
-                Err(String::from("No response received"))
-            };
+                command_result = Err(format!("No responses received for command {}", command_id));
+            }
 
             let result = match command_result {
                 Ok(mut result) => {
@@ -143,10 +150,14 @@ impl CommandHandler {
                     result
                 },
                 Err(error) => {
-                    log::error!("[{}] Error from command: {}", host.name, error);
+                    errors.push(error.clone());
                     CommandResult::new_critical_error(error)
                 }
             };
+
+            for error in errors {
+                log::error!("[{}] Error from command {}: {}", host.name, command_id, error);
+            }
 
             state_update_sender.send(StateUpdateMessage {
                 host_name: host.name,
