@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::module::connection::ResponseMessage;
 use crate::Host;
-use crate::utils::VersionNumber;
+use crate::utils::{VersionNumber, string_manipulation};
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
@@ -24,46 +24,19 @@ impl MonitoringModule for PlatformInfoSsh {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, _host: Host, _result: DataPoint) -> String {
-        String::from("cat /proc/version")
+    fn get_connector_messages(&self, _host: Host, _result: DataPoint) -> Vec<String> {
+        vec![
+            String::from("cat /etc/os-release"),
+            String::from("uname -m"),
+        ]
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+    fn process_responses(&self, _host: Host, response: Vec<ResponseMessage>, _result: DataPoint) -> Result<DataPoint, String> {
         let mut platform = PlatformInfo::default();
         platform.os = platform_info::OperatingSystem::Linux;
 
-        if let Some(index) = response.message.find("(Debian") {
-            platform.os_flavor = platform_info::Flavor::Debian;
-
-            if let Some(end_index) = response.message[index..].find(")") {
-                let version_index = index + "(Debian ".chars().count();
-                platform.os_version = VersionNumber::from_string(&response.message[version_index..(index + end_index)].to_string());
-            }
-        }
-        else if let Some(index) = response.message.find("(Ubuntu") {
-            platform.os_flavor = platform_info::Flavor::Ubuntu;
-
-            if let Some(end_index) = response.message[index..].find(")") {
-                let version_index = index + "(Ubuntu ".chars().count();
-                platform.os_version = VersionNumber::from_string(&response.message[version_index..(index + end_index)].to_string());
-            }
-        }
-        else if let Some(index) = response.message.find("(Red Hat") {
-            platform.os_flavor = platform_info::Flavor::RedHat;
-
-            if let Some(end_index) = response.message[index..].find(")") {
-                let version_index = index + "(Red Hat ".chars().count();
-                platform.os_version = VersionNumber::from_string(&response.message[version_index..(index + end_index)].to_string());
-            }
-        }
-        else {
-            platform.os_flavor = platform_info::Flavor::Unknown;
-        }
-
-        // TODO: this is a crude approach. Run uname too?
-        if response.message.contains("amd64") || response.message.contains("x86_64") {
-            platform.architecture = platform_info::Architecture::X86_64;
-        }
+        (platform.os_flavor, platform.os_version) = parse_os_release(&response[0].message);
+        platform.architecture = parse_architecture(&response[1].message);
 
         // Special kind of datapoint for internal use.
         let mut datapoint = DataPoint::new(String::from("_platform_info"));
@@ -72,5 +45,39 @@ impl MonitoringModule for PlatformInfoSsh {
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_flavor"), platform.os_flavor.to_string()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("architecture"), platform.architecture.to_string()));
         Ok(datapoint)
+    }
+}
+
+fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber) {
+    let mut flavor = platform_info::Flavor::default();
+    let mut version = VersionNumber::default();
+
+    let lines = message.lines();
+    for line in lines {
+        let mut parts = line.split('=');
+        let key = parts.next().unwrap_or_default();
+        let value = string_manipulation::remove_quotes(&parts.next().unwrap_or_default());
+
+        match key {
+            "ID" => {
+                match value.as_str() {
+                    "debian" => flavor = platform_info::Flavor::Debian,
+                    _ => ()
+                }
+            },
+            "VERSION_ID" => version = VersionNumber::from_string(&value.to_string()),
+            _ => ()
+        }
+    }
+
+    (flavor, version)
+}
+
+fn parse_architecture(message: &String) -> platform_info::Architecture {
+    if message.contains("x86_64") {
+        platform_info::Architecture::X86_64
+    }
+    else {
+        platform_info::Architecture::Unknown
     }
 }

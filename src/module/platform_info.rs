@@ -95,9 +95,9 @@ impl Default for Architecture {
     }
 }
 
-impl From<&String> for Architecture {
-    fn from(value: &String) -> Self {
-        match value.to_lowercase().as_str() {
+impl<Stringable: ToString> From<&Stringable> for Architecture {
+    fn from(value: &Stringable) -> Self {
+        match value.to_string().to_lowercase().as_str() {
             "x86_64" => Self::X86_64,
             "x86-64" => Self::X86_64,
             "amd64" => Self::X86_64,
