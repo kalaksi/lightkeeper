@@ -47,7 +47,7 @@ impl CommandModule for Start {
 
             Err(format!("Invalid unit name: {}", service))
         }
-        else if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
             command.arguments(vec!["systemctl", "start", service]);
             Ok(command.to_string())
         }

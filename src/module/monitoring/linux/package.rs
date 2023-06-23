@@ -38,7 +38,7 @@ impl MonitoringModule for Package {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.version_is_newer_than(Flavor::Debian, "8") {
+        if host.platform.version_is_same_or_greater_than(Flavor::Debian, "9") {
             command.arguments(vec!["apt", "list", "--upgradable"]);
             Ok(command.to_string())
         }

@@ -43,7 +43,7 @@ impl MonitoringModule for PhysicalVolume {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
             command.arguments(vec!["pvs", "--separator", "|", "--options", "pv_name,pv_attr,pv_size", "--units", "H"]);
             Ok(command.to_string())
         }

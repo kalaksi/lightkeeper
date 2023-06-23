@@ -43,7 +43,7 @@ impl MonitoringModule for LogicalVolume {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.version_is_newer_than(platform_info::Flavor::Debian, "8") {
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
             command.arguments(vec![
                 "lvs", "--separator", "|", "--options", "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent", "--units", "H"
             ]);
@@ -57,6 +57,10 @@ impl MonitoringModule for LogicalVolume {
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if response.message.is_empty() && response.return_code == 0 {
+            return Ok(DataPoint::empty());
+        }
+        // Command does not exist.
+        else if response.message.is_empty() && response.return_code == 127 {
             return Ok(DataPoint::empty());
         }
 
