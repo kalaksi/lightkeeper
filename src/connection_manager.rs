@@ -238,20 +238,18 @@ impl ConnectionManager {
 
                     let response_result = connector.send_message(&request_message);
 
-                    // Don't continue if any of the commands fail unexpectedly.
                     if response_result.is_ok() {
-                        let exit_code = response_result.as_ref().unwrap().return_code;
-                        if exit_code != 0 {
-                            Err(format!("Command returned non-zero exit code: {}", exit_code))
+                        let response = response_result.as_ref().unwrap().clone();
+                        if response.return_code != 0 {
+                            log::debug!("Command returned non-zero exit code: {}", response.return_code)
                         }
                         else {
                             // Doesn't cache failed commands.
-                            let response = response_result.as_ref().unwrap().clone();
                             let mut cached_response = response.clone();
                             cached_response.is_from_cache = true;
                             command_cache.insert(cache_key, cached_response);
-                            Ok(response)
                         }
+                        Ok(response)
                     }
                     else {
                         response_result
