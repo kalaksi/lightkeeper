@@ -10,7 +10,7 @@ import "../Text"
 Item {
     id: root
     property string text: ""
-    property string color: "#555555"
+    property string color: "#444444"
     property bool showRefreshButton: false
     property bool showMinimizeButton: false
     property bool showMaximizeButton: false

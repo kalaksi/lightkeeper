@@ -43,7 +43,7 @@ impl MonitoringModule for Kernel {
         }
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         Ok(DataPoint::new(response.message.replace(" ", " (") + ")"))
     }
 }

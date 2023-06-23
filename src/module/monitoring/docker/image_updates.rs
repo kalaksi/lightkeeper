@@ -44,6 +44,10 @@ impl MonitoringModule for ImageUpdates {
     }
 
     fn get_connector_messages(&self, _host: Host, parent_result: DataPoint) -> Result<Vec<String>, String> {
+        if parent_result.is_empty() {
+            return Ok(Vec::new());
+        }
+
         let result = parent_result.multivalue.iter().map(|data_point| {
             let image_repo_tag = data_point.command_params.get(1).unwrap();
 
@@ -67,6 +71,10 @@ impl MonitoringModule for ImageUpdates {
     }
 
     fn process_responses(&self, host: Host, responses: Vec<ResponseMessage>, parent_result: DataPoint) -> Result<DataPoint, String> {
+        if responses.is_empty() {
+            return Ok(DataPoint::empty());
+        }
+
         let mut new_result = parent_result;
 
         if responses.len() != new_result.multivalue.len() {

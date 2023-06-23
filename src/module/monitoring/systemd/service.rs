@@ -55,7 +55,7 @@ impl MonitoringModule for Service {
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") {
             command.arguments(vec!["busctl", "--no-pager", "--json=short", "call", "org.freedesktop.systemd1",
                                     "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
             Ok(command.to_string())
