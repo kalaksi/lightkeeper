@@ -26,8 +26,8 @@ display_options:
     storage:
       priority: 2
       color: "#80b3825d"
-      command_order: ["linux-lvm-snapshot", "linux-lvm-lvresize", "linux-lvm-lvremove"]
-      monitor_order: ["filesystem", "linux-lvm-logical-volume", "linux-lvm-volume-group", "linux-lvm-physical-volume"]
+      command_order: ["storage-lvm-snapshot", "storage-lvm-lvresize", "storage-lvm-lvremove"]
+      monitor_order: ["filesystem", "storage-lvm-logical-volume", "storage-lvm-volume-group", "storage-lvm-physical-volume"]
     network:
       priority: 3
       color: "#80b3825d"

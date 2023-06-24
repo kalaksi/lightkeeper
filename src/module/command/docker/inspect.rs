@@ -40,7 +40,7 @@ impl CommandModule for Inspect {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if !string_validation::is_alphanumeric(target_id) {
+        if !string_validation::is_alphanumeric_with(target_id, &"-_") {
             panic!("Invalid container ID: {}", target_id)
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {

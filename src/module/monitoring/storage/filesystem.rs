@@ -18,6 +18,7 @@ impl Module for Filesystem {
         Filesystem {
             ignored_filesystems: vec![
                 String::from("/run"),
+                String::from("/dev"),
                 String::from("/dev/shm"),
                 String::from("/sys/fs/cgroup"),
             ]

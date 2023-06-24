@@ -43,6 +43,10 @@ impl CommandModule for Clean {
             command.arguments(vec!["yum", "clean", "all"]);
             Ok(command.to_string())
         }
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
+            command.arguments(vec!["dnf", "clean", "all"]);
+            Ok(command.to_string())
+        }
         else {
             Err(String::from("Unsupported platform"))
         }
