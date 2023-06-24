@@ -32,12 +32,10 @@ Rectangle {
 
         Image {
             source: root.icon
+            sourceSize.width: 32
+            sourceSize.height: 32
             height: label.implicitHeight * 0.9
             width: height
-            // height: 32
-            // width: 32
-            // So that small images look good. Has a performance cost and makes the image blurry.
-            // mipmap: true
 
             ColorOverlay {
                 anchors.fill: parent

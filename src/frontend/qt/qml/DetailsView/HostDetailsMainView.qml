@@ -161,8 +161,8 @@ Item {
                                     id: hostIcon
                                     anchors.verticalCenter: parent.verticalCenter
                                     source: "qrc:/main/images/host/linux"
-                                    width: 60
-                                    height: 60
+                                    sourceSize.width: 64
+                                    sourceSize.height: 64
                                 }
 
                                 Column {
