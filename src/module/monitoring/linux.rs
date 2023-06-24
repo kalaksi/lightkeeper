@@ -15,3 +15,6 @@ pub use who::Who;
 
 pub mod load;
 pub use load::Load;
+
+pub mod ram;
+pub use ram::Ram;
