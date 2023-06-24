@@ -1,0 +1,19 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/debian9"
+  # Setting static IP can be buggy and won't work in every environment. Using port forwarding instead.
+  config.vm.network "forwarded_port", guest: 22, host: 33301
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.cpus = 1
+    libvirt.memory = 768
+  end
+  # config.vm.provision "shell", inline: <<-SHELL
+  #   apt-get update
+
+  #   # Install latest Docker (https://docs.docker.com/engine/install/debian/)
+  #   curl -fsSL https://get.docker.com -o get-docker.sh
+  #   sh get-docker.sh
+  # SHELL
+end
