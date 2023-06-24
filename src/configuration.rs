@@ -88,7 +88,7 @@ pub struct HostSettings {
     #[serde(default)]
     pub connectors: HashMap<String, ConnectorConfig>,
     #[serde(default)]
-    pub settings: Vec<HostSetting>,
+    pub settings: Option<Vec<HostSetting>>,
 }
 
 impl HostSettings {
@@ -207,6 +207,11 @@ impl Configuration {
             if let Some(host_template_ids) = host_config.templates.clone() {
                 for template_id in host_template_ids.iter() {
                     let template_config = all_templates.templates.get(template_id).unwrap();
+
+                    // Host settings are not merged.
+                    if template_config.settings.is_some() {
+                        host_config.settings = template_config.settings.clone();
+                    }
 
                     // Merge templates.
                     template_config.monitors.iter().for_each(|(monitor_id, new_config)| {
