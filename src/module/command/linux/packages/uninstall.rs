@@ -36,22 +36,29 @@ impl CommandModule for Uninstall {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+        let package = parameters.first().unwrap();
+
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
-            command.arguments(vec!["apt-get", "remove"]);
+            command.arguments(vec!["apt-get", "remove", "-y", package]);
 
             if self.purge {
                 command.argument("--purge");
             }
-
-            Ok(command.to_string())
+        }
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
+            command.arguments(vec!["dnf", "remove", "-y", package]);
+        }
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+            command.arguments(vec!["dnf", "remove", "-y", package]);
         }
         else {
-            Err(String::from("Unsupported platform"))
+            return Err(String::from("Unsupported platform"));
         }
+        Ok(command.to_string())
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

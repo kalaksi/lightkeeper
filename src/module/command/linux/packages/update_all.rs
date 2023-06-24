@@ -38,11 +38,17 @@ impl CommandModule for UpdateAll {
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
             command.arguments(vec!["apt", "upgrade", "-y"]); 
-            Ok(command.to_string())
+        }
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
+            command.arguments(vec!["dnf", "update", "-y"]); 
+        }
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+            command.arguments(vec!["dnf", "update", "-y"]); 
         }
         else {
-            Err(String::from("Unsupported platform"))
+            return Err(String::from("Unsupported platform"));
         }
+        Ok(command.to_string())
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

@@ -37,19 +37,17 @@ impl CommandModule for Clean {
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") {
             command.arguments(vec!["apt-get", "clean"]);
-            Ok(command.to_string())
         }
         else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "6") {
             command.arguments(vec!["yum", "clean", "all"]);
-            Ok(command.to_string())
         }
         else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
             command.arguments(vec!["dnf", "clean", "all"]);
-            Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            return Err(String::from("Unsupported platform"));
         }
+        Ok(command.to_string())
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
