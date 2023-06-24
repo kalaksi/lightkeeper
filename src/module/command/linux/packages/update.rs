@@ -42,10 +42,8 @@ impl CommandModule for Update {
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["apt", "--only-upgrade", "-y", "install", package]); 
         }
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
-            command.arguments(vec!["dnf", "upgrade", "-y", package]);
-        }
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
+                host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec!["dnf", "upgrade", "-y", package]);
         }
         else {

@@ -50,10 +50,8 @@ impl CommandModule for Uninstall {
                 command.argument("--purge");
             }
         }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
-            command.arguments(vec!["dnf", "remove", "-y", package]);
-        }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
+                host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec!["dnf", "remove", "-y", package]);
         }
         else {
