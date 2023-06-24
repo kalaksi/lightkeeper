@@ -43,6 +43,7 @@ templates:
       os: {}
       kernel: {}
       uptime: {}
+      load: {}
       filesystem: {}
       interface:
         settings:

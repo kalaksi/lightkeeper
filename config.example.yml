@@ -22,7 +22,7 @@ display_options:
       priority: 1
       color: "#80b3825d"
       command_order: ["reboot", "shutdown", "logs"]
-      monitor_order: ["uptime", "os", "kernel", "filesystem"]
+      monitor_order: ["uptime", "load", "os", "kernel", "filesystem"]
     storage:
       priority: 2
       color: "#80b3825d"
