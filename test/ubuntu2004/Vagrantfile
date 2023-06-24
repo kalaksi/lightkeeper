@@ -14,7 +14,20 @@ Vagrant.configure("2") do |config|
       sh ./get-docker.sh
 
       docker pull nginx:stable
-      docker run -d -p 80:80 --name http-server nginx:stable
+      docker run -d -p 80:80 --name http-server-nocompose nginx:stable
+    fi
+
+    if [ ! -e /mnt/http-server-compose ]; then
+      DEBIAN_FRONTEND=noninteractive apt install -y docker-compose
+      mkdir -p /mnt/http-server-compose
+      echo "version: '3.4'
+services:
+  nginx:
+    image: nginx:stable
+    restart: unless-stopped
+    ports:
+      - 8080:8080" >> /mnt/http-server-compose/docker-compose.yml
+      docker-compose -f /mnt/http-server-compose/docker-compose.yml up -d
     fi
 
     if [ ! -e /mnt/test.img ]; then
@@ -25,5 +38,6 @@ Vagrant.configure("2") do |config|
       vgcreate test_vg /dev/loop0
       lvcreate -L 128M -n test_lv test_vg
     fi
+
   SHELL
 end

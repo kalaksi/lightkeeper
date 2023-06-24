@@ -10,10 +10,23 @@ Vagrant.configure("2") do |config|
   end
   config.vm.provision "shell", inline: <<-SHELL
     yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    yum -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    systemctl start docker
 
     docker pull nginx:stable
-    docker run -d -p 80:80 --name http-server nginx:stable
+    docker run -d -p 80:80 --name http-server-nocompose nginx:stable
+
+    if [ ! -e /mnt/http-server-compose ]; then
+      mkdir -p /mnt/http-server-compose
+      echo "version: '3.4'
+services:
+  nginx:
+    image: nginx:stable
+    restart: unless-stopped
+    ports:
+      - 8080:8080" >> /mnt/http-server-compose/docker-compose.yml
+      docker compose -f /mnt/http-server-compose/docker-compose.yml up -d
+    fi
 
     if [ ! -e /mnt/test.img ]; then
       truncate -s 256M /mnt/test.img

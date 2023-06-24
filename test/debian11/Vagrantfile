@@ -2,10 +2,41 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "generic/debian10"
+  config.vm.box = "generic/debian11"
   config.vm.network "forwarded_port", guest: 22, host: 33303
   config.vm.provider :libvirt do |libvirt|
     libvirt.cpus = 1
     libvirt.memory = 768
   end
+  config.vm.provision "shell", inline: <<-SHELL
+    if [ ! -e /etc/apt/sources.list.d/docker.list ]; then
+      curl -fsSL https://get.docker.com -o get-docker.sh
+      sh ./get-docker.sh
+
+      docker pull nginx:stable
+      docker run -d -p 80:80 --name http-server-nocompose nginx:stable
+    fi
+
+    if [ ! -e /mnt/http-server-compose ]; then
+      DEBIAN_FRONTEND=noninteractive apt install -y docker-compose
+      mkdir -p /mnt/http-server-compose
+      echo "version: '3.4'
+services:
+  nginx:
+    image: nginx:stable
+    restart: unless-stopped
+    ports:
+      - 8080:8080" >> /mnt/http-server-compose/docker-compose.yml
+      docker-compose -f /mnt/http-server-compose/docker-compose.yml up -d
+    fi
+
+    if [ ! -e /mnt/test.img ]; then
+      DEBIAN_FRONTEND=noninteractive apt install -y lvm2
+      truncate -s 256M /mnt/test.img
+      losetup /dev/loop0 /mnt/test.img
+      pvcreate /dev/loop0
+      vgcreate test_vg /dev/loop0
+      lvcreate -L 128M -n test_lv test_vg
+    fi
+  SHELL
 end
