@@ -53,6 +53,7 @@ impl MonitoringModule for Images {
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
             // TODO: somehow connect directly to the unix socket instead of using curl?
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);

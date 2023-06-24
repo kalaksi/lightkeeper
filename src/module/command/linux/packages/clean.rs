@@ -35,7 +35,8 @@ impl CommandModule for Clean {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") {
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["apt-get", "clean"]);
         }
         else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "6") {

@@ -42,7 +42,8 @@ impl CommandModule for Uninstall {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["apt-get", "remove", "-y", package]);
 
             if self.purge {

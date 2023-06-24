@@ -44,6 +44,7 @@ impl MonitoringModule for VolumeGroup {
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
             command.arguments(vec![ "vgs", "--separator", "|", "--options", "vg_name,vg_attr,vg_size", "--units", "H" ]);
             Ok(command.to_string())

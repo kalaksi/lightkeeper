@@ -44,6 +44,7 @@ impl MonitoringModule for PhysicalVolume {
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
             command.arguments(vec!["pvs", "--separator", "|", "--options", "pv_name,pv_attr,pv_size", "--units", "H"]);
             Ok(command.to_string())

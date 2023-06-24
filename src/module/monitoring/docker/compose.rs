@@ -49,6 +49,7 @@ impl MonitoringModule for Compose {
 
         // TODO: Check for docker-compose version for a more controlled approach?
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
             // Docker API is much better suited for this than using the docker-compose CLI. More effective too.
             // TODO: find down-status compose-projects with find-command?

@@ -74,7 +74,9 @@ impl MonitoringModule for Service {
 
         let mut result = DataPoint::empty();
 
-        let all_units = if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") {
+        let all_units = if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
+                           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+
             let mut response: DbusResponse = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
             response.data.remove(0)
         }

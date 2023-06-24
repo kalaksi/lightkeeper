@@ -38,7 +38,8 @@ impl CommandModule for Update {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["apt", "--only-upgrade", "-y", "install", package]); 
         }
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
