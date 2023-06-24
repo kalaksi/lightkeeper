@@ -39,10 +39,8 @@ impl CommandModule for Clean {
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["apt-get", "clean"]);
         }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "6") {
-            command.arguments(vec!["yum", "clean", "all"]);
-        }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
+        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") ||
+                host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
             command.arguments(vec!["dnf", "clean", "all"]);
         }
         else {
@@ -52,7 +50,7 @@ impl CommandModule for Clean {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        if response.return_code == 0 {
+        if response.is_success() {
             Ok(CommandResult::new(String::new()))
         }
         else {

@@ -40,6 +40,10 @@ impl ResponseMessage {
         }
     }
 
+    pub fn is_success(&self) -> bool {
+        self.return_code == 0
+    }
+
     pub fn is_error(&self) -> bool {
         self.return_code != 0
     }

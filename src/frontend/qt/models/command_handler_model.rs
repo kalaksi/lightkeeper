@@ -168,26 +168,37 @@ impl CommandHandlerModel {
         match display_options.action {
             UIAction::None => {
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters.clone());
-                let button_identifier = format!("{}|{}", command_id, parameters.first().unwrap_or(&String::new()));
-                self.command_executed(invocation_id, host_id, command_id, QString::from(display_options.category), QString::from(button_identifier));
+
+                if invocation_id > 0 {
+                    let button_identifier = format!("{}|{}", command_id, parameters.first().unwrap_or(&String::new()));
+                    self.command_executed(invocation_id, host_id, command_id, QString::from(display_options.category), QString::from(button_identifier));
+                }
             },
             UIAction::DetailsDialog => {
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
-                self.details_dialog_opened(invocation_id)
+                if invocation_id > 0 {
+                    self.details_dialog_opened(invocation_id)
+                }
             },
             UIAction::TextView => {
                 let target_id = parameters.first().unwrap().clone();
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
-                self.details_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
+                if invocation_id > 0 {
+                    self.details_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
+                }
             },
             UIAction::TextDialog => {
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
-                self.text_dialog_opened(invocation_id)
+                if invocation_id > 0 {
+                    self.text_dialog_opened(invocation_id)
+                }
             },
             UIAction::LogView => {
                 let target_id = parameters.first().unwrap().clone();
                 invocation_id = self.command_handler.execute(host_id.to_string(), command_id.to_string(), parameters);
-                self.logs_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
+                if invocation_id > 0 {
+                    self.logs_subview_opened(QString::from(format!("{}: {}", command_id.to_string(), target_id)), invocation_id)
+                }
             },
             UIAction::Terminal => {
                 let target_id = parameters.first().unwrap();

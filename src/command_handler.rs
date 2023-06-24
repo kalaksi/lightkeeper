@@ -63,6 +63,7 @@ impl CommandHandler {
         }
     }
 
+    /// Returns invocation ID or 0 on error.
     pub fn execute(&mut self, host_id: String, command_id: String, parameters: Vec<String>) -> u64 {
 
         let host = self.host_manager.borrow().get_host(&host_id);
@@ -79,6 +80,16 @@ impl CommandHandler {
             Ok(messages) => messages,
             Err(error) => {
                 log::error!("Command \"{}\" failed: {}", command_id, error);
+                state_update_sender.send(StateUpdateMessage {
+                    host_name: host.name,
+                    display_options: command.get_display_options(),
+                    module_spec: command.get_module_spec(),
+                    data_point: None,
+                    command_result: Some(CommandResult::new_error(error)),
+                    exit_thread: false,
+                }).unwrap_or_else(|error| {
+                    log::error!("Couldn't send message to state manager: {}", error);
+                });
                 return 0;
             }
         };

@@ -107,7 +107,7 @@ impl HostDataManagerModel {
                     if let Some(new_monitor_data) = new_display_data.new_monitoring_data {
                         let last_data_point = new_monitor_data.values.back().unwrap();
 
-                        // Initial values (invoked internally) have invocation_id of 0.
+                        // Invocation ID may be missing if no command was executed due to error.
                         if last_data_point.invocation_id > 0 {
                             self_pinned.borrow_mut().remove_pending_monitor_invocation(&new_display_data.name,
                                                                                        &new_monitor_data.display_options.category,
