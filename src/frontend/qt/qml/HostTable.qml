@@ -114,7 +114,7 @@ TableView {
     }
 
     function centerRow() {
-        // TODO: incomplete solution, finish later
-        root.contentY = root.model.selected_row * root.rowHeight - 80
+        let rowsBeforeSelected = Math.min(root.model.selected_row, 2)
+        root.contentY = root.model.selected_row * root.rowHeight - rowsBeforeSelected * root.rowHeight
     }
 }
