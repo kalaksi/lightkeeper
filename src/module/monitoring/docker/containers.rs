@@ -44,7 +44,7 @@ impl MonitoringModule for Containers {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
             // TODO: somehow connect directly to the unix socket instead of using curl?
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
