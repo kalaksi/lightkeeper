@@ -8,7 +8,7 @@ use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
-use crate::utils::ShellCommand;
+use crate::utils::{ShellCommand, string_manipulation};
 
 #[monitoring_module("package", "0.0.1")]
 pub struct Package;
@@ -42,32 +42,50 @@ impl MonitoringModule for Package {
             command.arguments(vec!["apt", "list", "--upgradable"]);
             Ok(command.to_string())
         }
+        else if host.platform.version_is_same_or_greater_than(Flavor::CentOS, "8") {
+            command.arguments(vec!["dnf", "check-update", "--quiet", "--color=never", "--assumeno"]);
+            Ok(command.to_string())
+        }
         else {
             Err(String::from("Unsupported platform"))
         }
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+    fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         let mut result = DataPoint::empty();
-        let lines = response.message.lines().filter(|line| line.contains("[upgradable"));
-        for line in lines {
-            let mut parts = line.split_whitespace();
-            let full_package = parts.next().unwrap().to_string();
-            let package = full_package.split(',').nth(0).map(|s| s.to_string())
-                                        .unwrap_or(full_package.clone());
-            let package_name = full_package.split('/').next().unwrap().to_string();
-            let new_version = parts.next().unwrap().to_string();
-            // let arch = parts.next().unwrap().to_string();
 
-            // Current version needs some more work.
-            let start_index =  line.find("[upgradable from: ").unwrap() + "[upgradable from: ".len();
-            let end_index = line[start_index..].find("]").unwrap();
-            let old_version = line[start_index..(start_index + end_index)].to_string();
-            
-            let mut data_point = DataPoint::labeled_value(package_name, new_version);
-            data_point.description = old_version;
-            data_point.command_params = vec![package];
-            result.multivalue.push(data_point);
+        if host.platform.version_is_same_or_greater_than(Flavor::Debian, "9") {
+            let lines = response.message.lines().filter(|line| line.contains("[upgradable"));
+            for line in lines {
+                let mut parts = line.split_whitespace();
+                let full_package = parts.next().unwrap().to_string();
+                let package = full_package.split(',').nth(0).map(|s| s.to_string())
+                                            .unwrap_or(full_package.clone());
+                let package_name = full_package.split('/').next().unwrap().to_string();
+                let new_version = parts.next().unwrap().to_string();
+                // let arch = parts.next().unwrap().to_string();
+
+                let old_version = string_manipulation::get_string_between(&line, "[upgradable from: ", "]");
+                let mut data_point = DataPoint::labeled_value(package_name, new_version);
+                data_point.description = old_version;
+                data_point.command_params = vec![package];
+                result.multivalue.push(data_point);
+            }
+        }
+        else if host.platform.version_is_same_or_greater_than(Flavor::CentOS, "8") {
+            let lines = response.message.lines().filter(|line| !line.is_empty());
+            for line in lines {
+                let mut parts = line.split_whitespace();
+
+                let package_name = parts.next().unwrap().to_string();
+                let new_version = parts.next().unwrap().to_string();
+                let repository = parts.next().unwrap().to_string();
+
+                let mut data_point = DataPoint::labeled_value(package_name.clone(), new_version);
+                data_point.description = repository;
+                data_point.command_params = vec![package_name];
+                result.multivalue.push(data_point);
+            }
         }
 
         Ok(result)

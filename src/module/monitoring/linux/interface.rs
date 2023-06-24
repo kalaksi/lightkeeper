@@ -44,7 +44,8 @@ impl MonitoringModule for Interface {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
             Ok(String::from("ip -o addr show"))
         }
         else {

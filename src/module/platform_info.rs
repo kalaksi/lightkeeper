@@ -75,6 +75,7 @@ pub enum Flavor {
     Ubuntu,
     ArchLinux,
     RedHat,
+    CentOS,
 }
 
 impl Default for Flavor {

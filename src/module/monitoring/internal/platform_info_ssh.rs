@@ -62,6 +62,7 @@ fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber) 
             "ID" => {
                 match value.as_str() {
                     "debian" => flavor = platform_info::Flavor::Debian,
+                    "centos" => flavor = platform_info::Flavor::CentOS,
                     _ => ()
                 }
             },
