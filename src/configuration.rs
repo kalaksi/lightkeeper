@@ -215,15 +215,16 @@ impl Configuration {
 
                     // Merge templates.
                     template_config.monitors.iter().for_each(|(monitor_id, new_config)| {
-                        // TODO: deal with conflicting version-settings?
                         let mut merged_config = host_config.monitors.get(monitor_id).cloned().unwrap_or(MonitorConfig::default());
                         merged_config.settings.extend(new_config.settings.clone());
+                        merged_config.is_critical = new_config.is_critical;
                         host_config.monitors.insert(monitor_id.clone(), merged_config);
                     });
 
                     template_config.commands.iter().for_each(|(command_id, new_config)| {
                         let mut merged_config = host_config.commands.get(command_id).cloned().unwrap_or(CommandConfig::default());
                         merged_config.settings.extend(new_config.settings.clone());
+                        merged_config.version = new_config.version.clone();
                         host_config.commands.insert(command_id.clone(), merged_config);
                     });
 
