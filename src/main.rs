@@ -29,7 +29,7 @@ use module::{ ModuleFactory, ModuleSpecification };
 #[derive(Parser)]
 #[clap()]
 struct Args {
-    #[clap(short, long, default_value = "test")]
+    #[clap(short, long, default_value = "")]
     config_dir: String,
 }
 
