@@ -1,13 +1,15 @@
-# Design goals
+# LightkeeperRM
 
-## General
-- Make customizations easy so that it can be modified to different needs.
-- Make it easily extendable.
-- Avoid sending too many commands to keep target host logs cleaner and traffic minimal.
+**LightkeeperRM (Remote Management) is a drop-in replacement for maintaining servers over SSH with shell commands.**  
+No additional daemons or other software is needed on target servers. LightkeeperRM will only run standard Linux commands already available on the target server.
+You can see executed commands through debug log and, of course, on target server's logs, so it's easy to audit and debug.  
+  
+**LightkeeperRM aims to be customizable**, modular and easily extendable, so that it can be modified for different needs.  
+  
+**User-interface is compact** and aims to keep only the most essential information visible. Clicking and navigating between different views is kept to a minimum.  
+In case you find the GUI insufficient and need to dig deeper, you can always find a convenience button for launching a terminal that logs you in through SSH.
+You can, for example, launch a terminal with a shell inside a Docker container, with a single click.  
 
-## UI
-- Aim for compact style. Avoid including too much information to keep the UI simple.
-- Keep the amount of navigating and clicking to a minimum.
 
 # Installing
 Currently only Linux is supported.
@@ -55,7 +57,7 @@ $ setcap cap_net_raw+ep $MY_BINARY
 
 ## File locations
 When running without flatpak, the default configuration directory is `~/.config/lightkeeper` and cache directory `~/.cache/lightkeeper`.  
-With flatpak, it's the usual app specific directory: `~/.var/app/io.github.kalaksi.Lightkeeper/config` and `~/.var/app/io.github.kalaksi.Lightkeeper/config`.
+With flatpak, it's the usual app specific directory: `~/.var/app/io.github.kalaksi.Lightkeeper/config` and `~/.var/app/io.github.kalaksi.Lightkeeper/cache`.
 
 You can point to a custom configuration directory with the `-c`/`--config-dir` options.
 
