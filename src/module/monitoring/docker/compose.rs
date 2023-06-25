@@ -16,14 +16,14 @@ pub struct Compose {
     pub compose_file_name: String,
     /// Earlier docker-compose versions don't include working_dir label so this can be used instead.
     /// Currently, a single directory is supported.
-    pub main_dir: String, 
+    pub working_dir: String, 
 }
 
 impl Module for Compose {
     fn new(settings: &HashMap<String, String>) -> Self {
         Compose {
             compose_file_name: String::from("docker-compose.yml"),
-            main_dir: settings.get("main_directory").unwrap_or(&String::new()).clone()
+            working_dir: settings.get("working_dir").unwrap_or(&String::new()).clone()
         }
     }
 }
@@ -94,14 +94,14 @@ impl MonitoringModule for Compose {
                 Some(working_dir) => working_dir.clone(),
                 None => {
                     log::warn!("Container {} has no com.docker.compose.project.working_dir label set.", container.id);
-                    if !self.main_dir.is_empty() {
-                        let working_dir = format!("{}/{}", self.main_dir, project);
+                    if !self.working_dir.is_empty() {
+                        let working_dir = format!("{}/{}", self.working_dir, project);
                         log::warn!("User-defined working_dir \"{}\" is used instead. It isn't guaranteed that this is correct.", working_dir);
                         working_dir
                     }
                     else {
                         // Some earlier Docker Compose versions don't include this label.
-                        log::error!("User-defined main_directory setting is unset. Container can't be used.");
+                        log::error!("working_dir setting has to be set in module settings with this version of Docker Compose.");
                         continue;
                     }
                 }

@@ -60,7 +60,7 @@ impl MonitoringModule for Ram {
             let available = parts[6].parse::<u64>().unwrap();
 
             let usage_percent = 1.0 - (available as f64 / total as f64);
-            let value = format!("{} / {} M  ({:.0} %)", available, total, usage_percent * 100.0);
+            let value = format!("{} / {} M  ({:.0} %)", total - available, total, usage_percent * 100.0);
             Ok(DataPoint::new(value))
         }
         else {
