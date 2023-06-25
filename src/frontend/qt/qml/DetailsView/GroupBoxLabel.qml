@@ -31,6 +31,7 @@ Rectangle {
         spacing: 8
 
         Image {
+            visible: root.icon !== ""
             source: root.icon
             sourceSize.width: 32
             sourceSize.height: 32
