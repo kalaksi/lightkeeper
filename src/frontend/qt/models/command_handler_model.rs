@@ -235,7 +235,7 @@ impl CommandHandlerModel {
     }
 
     fn force_initialize_hosts(&mut self) {
-        let host_ids = self.monitor_manager.refresh_platform_info_all();
+        let host_ids = self.monitor_manager.refresh_platform_info_all(Some(CachePolicy::BypassCache));
         for host_id in host_ids {
             self.host_initializing(QString::from(host_id));
         }

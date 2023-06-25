@@ -54,6 +54,7 @@ fn main() {
     let mut connection_manager = ConnectionManager::new(config.cache_settings.clone());
     let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.clone(), config.cache_settings.clone());
     let mut command_handler = CommandHandler::new(&config.preferences, connection_manager.new_request_sender(), host_manager.clone());
+    host_manager.borrow_mut().start_receiving_updates();
 
     // Configure hosts and modules.
     for (host_id, host_config) in hosts_config.hosts.iter() {

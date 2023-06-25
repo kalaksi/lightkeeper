@@ -29,28 +29,28 @@ pub struct HostManager {
     hosts: Arc<Mutex<HostCollection>>,
     /// Provides sender handles for sending StateUpdateMessages to this instance.
     data_sender_prototype: mpsc::Sender<StateUpdateMessage>,
-    receiver_handle: Option<thread::JoinHandle<()>>,
-    observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
+    data_receiver: Option<mpsc::Receiver<StateUpdateMessage>>,
+    receiver_thread: Option<thread::JoinHandle<()>>,
+    frontend_state_sender: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
 }
 
 impl HostManager {
     pub fn new() -> HostManager {
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
         let shared_hosts = Arc::new(Mutex::new(HostCollection::new()));
-        let observers = Arc::new(Mutex::new(Vec::new()));
-
-        let handle = Self::start_receiving_updates(shared_hosts.clone(), receiver, observers.clone());
+        let frontend_state_sender = Arc::new(Mutex::new(Vec::new()));
 
         HostManager {
             hosts: shared_hosts,
             data_sender_prototype: sender,
-            receiver_handle: Some(handle),
-            observers: observers,
+            data_receiver: Some(receiver),
+            receiver_thread: None,
+            frontend_state_sender: frontend_state_sender,
         }
     }
 
     pub fn join(&mut self) {
-        self.receiver_handle.take().expect("Thread has already stopped.")
+        self.receiver_thread.take().expect("Thread has already stopped.")
                             .join().unwrap();
     }
 
@@ -72,10 +72,20 @@ impl HostManager {
     }
 
     pub fn add_observer(&mut self, sender: mpsc::Sender<frontend::HostDisplayData>) {
-        self.observers.lock().unwrap().push(sender);
+        self.frontend_state_sender.lock().unwrap().push(sender);
     }
 
-    fn start_receiving_updates(
+    pub fn start_receiving_updates(&mut self) {
+        let thread = Self::_start_receiving_updates(
+            self.hosts.clone(),
+            self.data_receiver.take().unwrap(),
+            self.frontend_state_sender.clone(),
+        );
+
+        self.receiver_thread = Some(thread);
+    }
+
+    fn _start_receiving_updates(
         hosts: Arc<Mutex<HostCollection>>,
         receiver: mpsc::Receiver<StateUpdateMessage>,
         observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
