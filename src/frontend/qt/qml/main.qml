@@ -217,7 +217,7 @@ ApplicationWindow {
             target: body
             property: "splitSize"
             to: 1.0
-            duration: 175
+            duration: Theme.animation_duration()
             easing.type: Easing.OutQuad
         }
 
@@ -226,7 +226,7 @@ ApplicationWindow {
             target: body
             property: "splitSize"
             to: 0.8
-            duration: 175
+            duration: Theme.animation_duration()
             easing.type: Easing.OutQuad
         }
 
@@ -235,7 +235,7 @@ ApplicationWindow {
             target: body
             property: "splitSize"
             to: 0.8
-            duration: 175
+            duration: Theme.animation_duration()
             easing.type: Easing.OutQuad
 
             onFinished: {
@@ -249,7 +249,7 @@ ApplicationWindow {
             target: body
             property: "splitSize"
             to: 0.0
-            duration: 175
+            duration: Theme.animation_duration()
             easing.type: Easing.OutQuad
         }
 

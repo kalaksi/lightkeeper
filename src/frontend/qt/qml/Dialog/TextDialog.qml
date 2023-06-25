@@ -12,10 +12,39 @@ Dialog {
     id: root
     property string text: ""
     modal: true
+    opacity: 0.0
     // TODO: more accurate calculation?
     implicitWidth: dialogText.implicitWidth + 100
     implicitHeight: dialogText.implicitHeight + 100
     standardButtons: Dialog.Close
+
+
+    onVisibleChanged: {
+        if (visible) {
+            root.opacity = 1.0
+        }
+        else {
+            root.opacity = 0.0
+        }
+    }
+
+    Behavior on width {
+        NumberAnimation {
+            duration: Theme.animation_duration()
+        }
+    }
+
+    Behavior on height {
+        NumberAnimation {
+            duration: Theme.animation_duration()
+        }
+    }
+
+    Behavior on opacity {
+        NumberAnimation {
+            duration: Theme.animation_duration()
+        }
+    }
 
     background: Rectangle {
         color: Material.background

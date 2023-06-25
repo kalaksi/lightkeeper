@@ -16,6 +16,7 @@ pub struct ThemeModel {
     groupbox_padding: qt_method!(fn(&self) -> i8),
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
+    animation_duration: qt_method!(fn(&self) -> QVariant),
     pill_color_for_criticality: qt_method!(fn(&self, criticality: QString) -> QString),
     get_display_options: qt_method!(fn(&self) -> QVariant),
     icon_for_criticality: qt_method!(fn(&self, alert_level: QString) -> QString),
@@ -80,6 +81,10 @@ impl ThemeModel {
 
     fn tooltip_delay(&self) -> QVariant {
         QVariant::from(800)
+    }
+
+    fn animation_duration(&self) -> QVariant {
+        QVariant::from(175)
     }
 
     fn pill_color_for_criticality(&self, criticality: QString) -> QString {
