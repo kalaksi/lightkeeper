@@ -51,6 +51,14 @@ $ setcap cap_net_raw+ep $MY_BINARY
 ```
 
 
+# Configuration
+
+## File locations
+When running without flatpak, the default configuration directory is `~/.config/lightkeeper` and cache directory `~/.cache/lightkeeper`.  
+With flatpak, it's the usual app specific directory: `~/.var/app/io.github.kalaksi.Lightkeeper/config` and `~/.var/app/io.github.kalaksi.Lightkeeper/config`.
+
+You can point to a custom configuration directory with the `-c`/`--config-dir` options.
+
 # License
 ## Lightkeeper
 This software is licensed under GNU General Public License 3.
