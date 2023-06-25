@@ -36,26 +36,62 @@ Item {
         }
 
         Image {
+            id: image
             anchors.centerIn: parent
             source: root.imageSource
             width: root.imageRelativeWidth * root.width
             height: root.imageRelativeHeight * root.height
 
-            ColorOverlay {
-                anchors.fill: parent
-                source: parent
-                color: "transparent"
-                antialiasing: true
-            }
-
             NumberAnimation on rotation {
-                id: spinningAnimation
                 from: 0
                 to: 360
                 loops: Animation.Infinite
                 duration: 1000
                 running: root.spinning
-                alwaysRunToEnd: true
+                alwaysRunToEnd: false
+
+                onStopped: {
+                    image.rotation = 0
+                    readyAnimation.start()
+                }
+            }
+
+        }
+
+        Image {
+            id: readyAnimationImage
+            visible: false
+            anchors.centerIn: parent
+            source: root.imageSource
+            width: root.imageRelativeWidth * root.width
+            height: root.imageRelativeHeight * root.height
+            z: 10
+        }
+
+        ParallelAnimation {
+            id: readyAnimation
+            onStarted: {
+                readyAnimationImage.visible = true
+            }
+
+            onStopped: {
+                readyAnimationImage.visible = false
+                readyAnimationImage.scale = 1.0
+                readyAnimationImage.opacity = 1.0
+            }
+
+            PropertyAnimation {
+                target: readyAnimationImage
+                property: "opacity"
+                to: 0.2
+                duration: Theme.animation_duration()
+            }
+
+            PropertyAnimation {
+                target: readyAnimationImage
+                property: "scale"
+                to: 2.0
+                duration: Theme.animation_duration()
             }
         }
     }
