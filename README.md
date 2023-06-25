@@ -10,6 +10,15 @@ You can see executed commands through debug log and, of course, on target server
 In case you find the GUI insufficient and need to dig deeper, you can always find a convenience button for launching a terminal that logs you in through SSH.
 You can, for example, launch a terminal with a shell inside a Docker container, with a single click.  
 
+<br />
+<br />
+<p align="center">
+    <img src="doc/images/LightkeeperRM-overview.png" width="75%" />
+    <br />
+    <i>Overview of LightkeeperRM's GUI.</i>
+</p>
+<br />
+
 
 # Installing
 Currently only Linux is supported.
