@@ -8,6 +8,8 @@ You can see executed commands through debug log and, of course, on server's logs
   
 **User-interface is compact** and aims to keep only the most essential information visible. Clicking and navigating between different views is kept to a minimum.  
 In case you find the GUI insufficient and need to dig deeper, you can always use a button for launching a terminal that logs you in through SSH.
+  
+NOTE: this is currently the first release and may still have bugs.
 
 <br />
 <br />
@@ -20,10 +22,8 @@ In case you find the GUI insufficient and need to dig deeper, you can always use
 
 
 # Installing
-Currently only Linux is supported.
-
 ## Flatpak
-It is recommended to download the app from Flathub.
+It is recommended to download the app from Flathub. The alternative is building from source.
 
 # Building from source
 ## Flatpak
@@ -60,14 +60,23 @@ If you're using the ping monitor, you need to give Lightkeeper binary more netwo
 $ setcap cap_net_raw+ep $MY_BINARY
 ```
 
-
 # Configuration
+Configuration is stored in configuration files and configuring is currently done directly through them. Later there will be a GUI for that.  
+This repository contains example configuration files (`config.example.yml`, `hosts.example.yml` and `templates.example.yml`) in addition to ones in `test`-directory,
+to use as a starting point.
+
+**TODO:** explain configuring in detail.
 
 ## File locations
-When running without flatpak, the default configuration directory is `~/.config/lightkeeper` and cache directory `~/.cache/lightkeeper`.  
+When running without flatpak, the default configuration directory is `~/.config/lightkeeper` and cache directory `~/.cache/lightkeeper`. It's possible the location differs if environment variables `XDG_CONFIG_HOME` and `XDG_CONFIG_CACHE` are set and point somewhere else.  
 With flatpak, it's the usual app specific directory: `~/.var/app/io.github.kalaksi.Lightkeeper/config` and `~/.var/app/io.github.kalaksi.Lightkeeper/cache`.
+  
+You can use a custom configuration directory with the `-c`/`--config-dir` option.
 
-You can point to a custom configuration directory with the `-c`/`--config-dir` options.
+# Testing
+`test`-directory contains Vagrantfiles for virtual machines and also matching LightkeeperRM configurations.  
+Use `--config-dir` to load the test configuration. For example, `./target/debug/lightkeeper --config-dir test` if building from source.
+
 
 # License
 ## Lightkeeper
