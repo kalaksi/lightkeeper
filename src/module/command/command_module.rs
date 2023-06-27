@@ -65,41 +65,41 @@ pub struct CommandResult {
 }
 
 impl CommandResult {
-    pub fn new(message: String) -> Self {
+    pub fn new<Stringable: ToString>(message: Stringable) -> Self {
         CommandResult {
-            message: message,
+            message: message.to_string(),
             criticality: Criticality::Normal,
             ..Default::default()
         }
     }
 
-    pub fn new_info(message: String) -> Self {
+    pub fn new_info<Stringable: ToString>(message: Stringable) -> Self {
         CommandResult {
-            message: message,
+            message: message.to_string(),
             criticality: Criticality::Info,
             ..Default::default()
         }
     }
 
-    pub fn new_warning(message: String) -> Self {
+    pub fn new_warning<Stringable: ToString>(message: Stringable) -> Self {
         CommandResult {
-            message: message,
+            message: message.to_string(),
             criticality: Criticality::Warning,
             ..Default::default()
         }
     }
 
-    pub fn new_error(error: String) -> Self {
+    pub fn new_error<Stringable: ToString>(error: Stringable) -> Self {
         CommandResult {
-            error: error,
+            error: error.to_string(),
             criticality: Criticality::Error,
             ..Default::default()
         }
     }
 
-    pub fn new_critical_error(error: String) -> Self {
+    pub fn new_critical_error<Stringable: ToString>(error: Stringable) -> Self {
         CommandResult {
-            error: error,
+            error: error.to_string(),
             criticality: Criticality::Critical,
             ..Default::default()
         }
