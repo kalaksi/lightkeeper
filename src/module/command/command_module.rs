@@ -58,6 +58,7 @@ pub trait BoxCloneableCommand {
 pub struct CommandResult {
     pub command_id: String,
     pub message: String,
+    pub show_in_notification: bool,
     pub error: String,
     pub criticality: Criticality,
     pub time: DateTime<Utc>,
@@ -69,6 +70,16 @@ impl CommandResult {
         CommandResult {
             message: message.to_string(),
             criticality: Criticality::Normal,
+            show_in_notification: true,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_hidden<Stringable: ToString>(message: Stringable) -> Self {
+        CommandResult {
+            message: message.to_string(),
+            criticality: Criticality::Normal,
+            show_in_notification: false,
             ..Default::default()
         }
     }
@@ -77,6 +88,7 @@ impl CommandResult {
         CommandResult {
             message: message.to_string(),
             criticality: Criticality::Info,
+            show_in_notification: true,
             ..Default::default()
         }
     }
@@ -85,6 +97,7 @@ impl CommandResult {
         CommandResult {
             message: message.to_string(),
             criticality: Criticality::Warning,
+            show_in_notification: true,
             ..Default::default()
         }
     }
@@ -93,6 +106,7 @@ impl CommandResult {
         CommandResult {
             error: error.to_string(),
             criticality: Criticality::Error,
+            show_in_notification: true,
             ..Default::default()
         }
     }
@@ -101,6 +115,7 @@ impl CommandResult {
         CommandResult {
             error: error.to_string(),
             criticality: Criticality::Critical,
+            show_in_notification: true,
             ..Default::default()
         }
     }
@@ -111,6 +126,7 @@ impl Default for CommandResult {
         CommandResult {
             command_id: String::from(""),
             message: String::from(""),
+            show_in_notification: false,
             error: String::from(""),
             criticality: Criticality::Normal,
             time: Utc::now(),

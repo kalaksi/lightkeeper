@@ -98,7 +98,7 @@ impl CommandModule for RemoteTags {
             }
         }
 
-        Ok(CommandResult::new(result_rows.join("\n")))
+        Ok(CommandResult::new_hidden(result_rows.join("\n")))
     }
 }
 

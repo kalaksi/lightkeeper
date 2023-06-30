@@ -42,7 +42,7 @@ pub struct Preferences {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
-    pub group_multivalue: bool,
+    pub hide_info_notifications: bool,
     pub categories: HashMap<String, Category>,
 }
 

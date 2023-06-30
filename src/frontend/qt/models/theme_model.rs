@@ -20,6 +20,8 @@ pub struct ThemeModel {
     pill_color_for_criticality: qt_method!(fn(&self, criticality: QString) -> QString),
     get_display_options: qt_method!(fn(&self) -> QVariant),
     icon_for_criticality: qt_method!(fn(&self, alert_level: QString) -> QString),
+    hide_info_notifications: qt_method!(fn(&self) -> bool),
+    notification_show_duration: qt_method!(fn(&self) -> i32),
 
     i_display_options: configuration::DisplayOptions,
 }
@@ -125,5 +127,13 @@ impl ThemeModel {
             Criticality::Error => QString::from("qrc:/main/images/alert/error"),
             Criticality::Critical => QString::from("qrc:/main/images/alert/error"),
         }
+    }
+
+    fn hide_info_notifications(&self) -> bool {
+        self.i_display_options.hide_info_notifications
+    }
+
+    fn notification_show_duration(&self) -> i32 {
+        4000
     }
 }

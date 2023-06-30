@@ -15,8 +15,7 @@ cache_settings:
   time_to_live: 8400
 
 display_options:
-  # Group monitors with multiple values into one column (or similar) or display everything separately.
-  group_multivalue: true
+  hide_info_notifications: false
   categories:
     host:
       priority: 1

@@ -57,11 +57,10 @@ ApplicationWindow {
         function onCommand_result_received(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
 
-            if (commandResult.criticality !== "Normal") {
-                toastLoader.setSource("Toast.qml", {
-                    text: commandResult.message,
-                    criticality: commandResult.criticality,
-                })
+            if (commandResult.show_in_notification === true &&
+                (commandResult.criticality !== "Normal" || Theme.hide_info_notifications() === false)) {
+
+                snackbarContainer.addSnackbar(commandResult.criticality, commandResult.message)
             }
 
             let dialogInstanceId = _detailsDialogs[commandResult.invocation_id]
@@ -189,28 +188,6 @@ ApplicationWindow {
             }
         }
 
-        // Dynamic component loaders
-        Loader {
-            id: confirmationDialogLoader
-        }
-
-        Loader {
-            id: toastLoader
-            anchors.bottom: body.bottom
-            anchors.right: body.right
-            anchors.margins: 20
-        }
-
-        DynamicObjectManager {
-            id: detailsDialogManager
-
-            DetailsDialog {
-                y: root.y + 50
-                x: root.x + 50
-                width: root.width
-                height: root.height
-            }
-        }
         // Animations
         NumberAnimation {
             id: animateMaximizeDetails
@@ -239,7 +216,7 @@ ApplicationWindow {
             easing.type: Easing.OutQuad
 
             onFinished: {
-                // TODO: animate
+                // TODO: animate?
                 hostTable.centerRow()
             }
         }
@@ -275,11 +252,34 @@ ApplicationWindow {
         ]
     }
 
-    // Modal dialogs:
+    // Dynamic component loaders
+    Loader {
+        id: confirmationDialogLoader
+    }
+
+    DynamicObjectManager {
+        id: detailsDialogManager
+
+        DetailsDialog {
+            y: root.y + 50
+            x: root.x + 50
+            width: root.width
+            height: root.height
+        }
+    }
+
+    SnackbarContainer {
+        id: snackbarContainer
+        anchors.fill: parent
+        anchors.margins: 20
+    }
+
+
+    // Modal dialogs
     InputDialog {
         id: inputDialog
-        anchors.centerIn: parent
         visible: false
+        anchors.centerIn: parent
     }
 
     TextDialog {

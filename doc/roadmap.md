@@ -7,7 +7,7 @@ More important features first.
 - Check and display vuln status of system (or docker) packages using mitre, DSA and etc.
 - Utilize system icons and themes? Can still offer and default to baked in style when necessary.
 - easily add self-made scripts (shell scripts etc.) as commands?
-- modules as shared objects instead of compiled in?
+- modules as shared objects instead of compiled in? or loadable scripts?
 - Support SaaS-platforms? (probably outside of scope)
 
 # Problems
