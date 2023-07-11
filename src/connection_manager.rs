@@ -157,7 +157,7 @@ impl ConnectionManager {
                         if !connector.is_connected() {
                             if let Err(error) = connector.connect(&request.host.ip_address) {
                                 log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
-                                // TODO: put the request data somewhere? Now gets dropped.
+                                (request.response_handler)(vec![Err(format!("Error while connecting: {}", error))]);
                                 continue;
                             }
                         }

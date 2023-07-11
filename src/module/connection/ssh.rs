@@ -1,3 +1,4 @@
+use std::net::ToSocketAddrs;
 use std::{
     net::TcpStream,
     net::IpAddr,
@@ -24,6 +25,7 @@ pub struct Ssh2 {
     username: String,
     password: Option<String>,
     private_key_path: Option<String>,
+    connection_timeout: u16,
 }
 
 impl Ssh2 {
@@ -61,6 +63,7 @@ impl Module for Ssh2 {
             username: settings.get("username").expect("username is not set").clone(),
             password: settings.get("password").map(|s| s.clone()),
             private_key_path: settings.get("private_key_path").map(|s| s.clone()),
+            connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
         }
     }
 }
@@ -73,9 +76,11 @@ impl ConnectionModule for Ssh2 {
 
         self.address = address.clone();
 
-        let stream = match TcpStream::connect(format!("{}:{}", address, self.port)) {
+        let socket_address = format!("{}:{}", address, self.port).to_socket_addrs().unwrap().next().unwrap();
+        let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
+        let stream = match TcpStream::connect_timeout(&socket_address, connection_timeout) {
             Ok(stream) => stream,
-            Err(error) => return Err(format!("Connection error: {}", error))
+            Err(error) => return Err(error.to_string())
         };
 
         log::info!("Connected to {}:{}", address, self.port);
