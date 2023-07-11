@@ -180,6 +180,7 @@ impl HostManager {
                         new_monitoring_data: new_monitoring_data.clone(),
                         command_results: host_state.command_results.clone(),
                         new_command_results: new_command_results.clone(),
+                        new_errors: state_update.errors.clone(),
                         status: host_state.status,
                         just_initialized: host_state.just_initialized,
                         just_initialized_from_cache: host_state.just_initialized_from_cache,
@@ -219,6 +220,7 @@ impl HostManager {
                 new_monitoring_data: None,
                 command_results: state.command_results.clone(),
                 new_command_results: None,
+                new_errors: Vec::new(),
                 status: state.status,
                 just_initialized: state.just_initialized,
                 just_initialized_from_cache: state.just_initialized_from_cache,
@@ -267,6 +269,7 @@ pub struct StateUpdateMessage {
     // Only used with MonitoringModule.
     pub data_point: Option<DataPoint>,
     pub command_result: Option<CommandResult>,
+    pub errors: Vec<String>,
     pub exit_thread: bool,
 }
 

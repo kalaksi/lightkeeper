@@ -77,6 +77,11 @@ ApplicationWindow {
                 detailsView.refreshSubview(commandResult)
             }
         }
+
+        function onError_received(errorMessage) {
+            // TODO: other kind of dialog for critical errors.
+            snackbarContainer.addSnackbar("Error", errorMessage)
+        }
     }
 
     Connections {

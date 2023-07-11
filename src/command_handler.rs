@@ -86,6 +86,7 @@ impl CommandHandler {
                     module_spec: command.get_module_spec(),
                     data_point: None,
                     command_result: Some(CommandResult::new_error(error)),
+                    errors: Vec::new(),
                     exit_thread: false,
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to state manager: {}", error);
@@ -136,37 +137,37 @@ impl CommandHandler {
             let mut errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
             let command_id = command.get_module_spec().id.clone();
 
-            let mut command_result;
+            let mut result;
             if responses.len() > 0 {
-                command_result = command.process_responses(host.clone(), responses.clone());
-                if let Err(error) = command_result {
+                result = command.process_responses(host.clone(), responses.clone());
+                if let Err(error) = result {
                     if error.is_empty() {
                         // Wasn't implemented, try the other method.
-                        command_result = command.process_response(host.clone(), responses.first().unwrap());
+                        result = command.process_response(host.clone(), responses.first().unwrap());
                     }
                     else {
-                        command_result = Err(error);
+                        result = Err(error);
                     }
                 }
             }
             else {
-                command_result = Err(format!("No responses received for command {}", command_id));
+                result = Err(format!("No responses received for command {}", command_id));
             }
 
-            let result = match command_result {
-                Ok(mut result) => {
-                    log::debug!("[{}] Command result received: {}", host.name, result.message);
-                    result.invocation_id = invocation_id;
-                    result.command_id = command.get_module_spec().id;
-                    result
+            let new_command_result = match result {
+                Ok(mut command_result) => {
+                    log::debug!("[{}] Command result received: {}", host.name, command_result.message);
+                    command_result.invocation_id = invocation_id;
+                    command_result.command_id = command.get_module_spec().id;
+                    Some(command_result)
                 },
                 Err(error) => {
-                    errors.push(error.clone());
-                    CommandResult::new_critical_error(errors.first().unwrap().clone())
+                    errors.push(error);
+                    None
                 }
             };
 
-            for error in errors {
+            for error in errors.iter() {
                 log::error!("[{}] Error from command {}: {}", host.name, command_id, error);
             }
 
@@ -175,7 +176,8 @@ impl CommandHandler {
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 data_point: None,
-                command_result: Some(result),
+                command_result: new_command_result,
+                errors: errors,
                 exit_thread: false,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
@@ -234,6 +236,7 @@ impl CommandHandler {
                 module_spec: command.get_module_spec(),
                 data_point: None,
                 command_result: Some(CommandResult::new(String::from("Successfully modified file"))),
+                errors: Vec::new(),
                 exit_thread: false,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
@@ -295,6 +298,7 @@ impl CommandHandler {
                         module_spec: command.get_module_spec(),
                         data_point: None,
                         command_result: Some(CommandResult::new_critical_error(error.clone())),
+                        errors: Vec::new(),
                         exit_thread: false,
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to state manager: {}", error);
@@ -326,6 +330,7 @@ impl CommandHandler {
                 module_spec: command.get_module_spec(),
                 data_point: None,
                 command_result: Some(command_result),
+                errors: Vec::new(),
                 exit_thread: false,
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);

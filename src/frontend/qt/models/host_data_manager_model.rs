@@ -24,6 +24,7 @@ pub struct HostDataManagerModel {
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     command_result_received: qt_signal!(command_result: QString),
     monitoring_data_received: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant),
+    error_received: qt_signal!(error: QString),
 
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     get_display_data: qt_method!(fn(&self) -> QVariant),
@@ -139,6 +140,10 @@ impl HostDataManagerModel {
                                 QString::from(new_criticality.to_string())
                             );
                         }
+                    }
+
+                    for error in new_display_data.new_errors {
+                        self_pinned.borrow().error_received(QString::from(error));
                     }
 
                     self_pinned.borrow().update_received(QString::from(old_data.name));

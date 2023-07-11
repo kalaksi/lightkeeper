@@ -43,7 +43,7 @@ fn main() {
     let (config, hosts_config) = match Configuration::read(&args.config_dir) {
         Ok(configuration) => configuration,
         Err(error) => {
-            log::error!("Error while reading configuration file: {}", error);
+            log::error!("Error while reading configuration files: {}", error);
             return;
         }
     };

@@ -48,7 +48,17 @@ impl MonitorManager {
             log::debug!("[{}] Adding monitor {}", host.name, module_spec.id);
 
             // Add initial state value indicating no data as been received yet.
-            Self::send_state_update(&host, &monitor, self.state_update_sender.clone(), DataPoint::no_data());
+            self.state_update_sender.send(StateUpdateMessage {
+                host_name: host.name.clone(),
+                display_options: monitor.get_display_options(),
+                module_spec: monitor.get_module_spec(),
+                data_point: Some(DataPoint::no_data()),
+                command_result: None,
+                errors: Vec::new(),
+                exit_thread: false,
+            }).unwrap_or_else(|error| {
+                log::error!("Couldn't send message to state manager: {}", error);
+            });
 
             // Independent monitors are always executed first.
             // They don't depend on platform info or connectors.
@@ -291,7 +301,7 @@ impl MonitorManager {
                         // Was not implemented, so try the other method.
                         let response = responses[0].clone();
                         datapoint_result = monitor.process_response(host.clone(), response.clone(), parent_datapoint.clone())
-                                                    .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point });
+                                                  .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point });
                     }
                     else {
                         datapoint_result = Err(error);
@@ -302,46 +312,41 @@ impl MonitorManager {
                 datapoint_result = Err(format!("No responses received for monitor {}", monitor_id));
             }
 
-            let mut new_data_point;
-            match datapoint_result {
-                Ok(data_point) => {
+            let new_data_point = match datapoint_result {
+                Ok(mut data_point) => {
                     log::debug!("[{}] Data point received for monitor {}: {} {}", host.name, monitor_id, data_point.label, data_point);
-                    new_data_point = data_point;
+                    data_point.invocation_id = invocation_id;
+                    data_point
                 },
                 Err(error) => {
                     errors.push(error);
-                    new_data_point = parent_datapoint.clone();
+                    // In case this was an extension module, retain the parents data point unmodified.
+                    parent_datapoint
                 }
-            }
+            };
 
-            for error in errors {
+            for error in errors.iter() {
                 log::error!("[{}] Error from monitor {}: {}", host.name, monitor_id, error);
             }
-
-            new_data_point.invocation_id = invocation_id;
 
             if !monitors.is_empty() {
                 // Process extension modules recursively until the final result is reached.
                 Self::send_connector_request(host, monitors, invocation_id, request_sender, state_update_sender, new_data_point, cache_policy);
             }
             else {
-                Self::send_state_update(&host, &monitor, state_update_sender, new_data_point);
+                state_update_sender.send(StateUpdateMessage {
+                    host_name: host.name.clone(),
+                    display_options: monitor.get_display_options(),
+                    module_spec: monitor.get_module_spec(),
+                    data_point: Some(new_data_point),
+                    command_result: None,
+                    errors: errors,
+                    exit_thread: false,
+                }).unwrap_or_else(|error| {
+                    log::error!("Couldn't send message to state manager: {}", error);
+                });
             }
         })
-    }
-
-    /// Send a state update to HostManager.
-    fn send_state_update(host: &Host, monitor: &Monitor, state_update_sender: Sender<StateUpdateMessage>, data_point: DataPoint) {
-        state_update_sender.send(StateUpdateMessage {
-            host_name: host.name.clone(),
-            display_options: monitor.get_display_options(),
-            module_spec: monitor.get_module_spec(),
-            data_point: Some(data_point),
-            command_result: None,
-            exit_thread: false,
-        }).unwrap_or_else(|error| {
-            log::error!("Couldn't send message to state manager: {}", error);
-        });
     }
 }
 
