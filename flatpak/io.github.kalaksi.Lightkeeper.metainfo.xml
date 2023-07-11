@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>io.github.kalaksi.Lightkeeper</id>
   <name>LightkeeperRM</name>
-  <summary>A standalone, customizable server management tool.</summary>
+  <summary>A standalone, customizable server management tool</summary>
   <metadata_license>CC-BY-SA-4.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <description>
