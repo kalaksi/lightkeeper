@@ -1,9 +1,15 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
-use std::path::Path;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::{ fs, io, collections::HashMap };
 use crate::host::HostSetting;
 use crate::file_handler;
+
+const MAIN_CONFIG_FILE: &str = "config.yml";
+const HOSTS_FILE: &str = "hosts.yml";
+const TEMPLATES_FILE: &str = "templates.yml";
+
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
@@ -160,11 +166,6 @@ pub struct ConnectorConfig {
 
 impl Configuration {
     pub fn read(config_dir: &String) -> io::Result<(Configuration, Hosts)> {
-        const MAIN_CONFIG_FILE: &str = "config.yml";
-        const HOSTS_FILE: &str = "hosts.yml";
-        const TEMPLATES_FILE: &str = "templates.yml";
-
-
         let config_dir = if config_dir.is_empty() {
             file_handler::get_config_dir().unwrap()
         }
@@ -176,17 +177,23 @@ impl Configuration {
         let hosts_file_path = config_dir.join(HOSTS_FILE);
         let templates_file_path = config_dir.join(TEMPLATES_FILE);
 
-        log::debug!("Reading general configuration from {}", main_config_file_path.display());
+        // If main configuration is missing, this is probably the first run, so create initial configurations.
+        if let Err(_) = fs::metadata(&main_config_file_path) {
+            Self::write_initial_configuration(config_dir)?;
+        }
+
+        log::info!("Reading main configuration from {}", main_config_file_path.display());
         let config_contents = fs::read_to_string(main_config_file_path)?;
+
         let main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
                                      .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
-        log::debug!("Reading host configuration from {}", hosts_file_path.display());
+        log::info!("Reading host configuration from {}", hosts_file_path.display());
         let hosts_contents = fs::read_to_string(hosts_file_path)?;
         let mut hosts = serde_yaml::from_str::<Hosts>(hosts_contents.as_str())
                                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
-        log::debug!("Reading template configuration from {}", templates_file_path.display());
+        log::info!("Reading template configuration from {}", templates_file_path.display());
         let templates_contents = fs::read_to_string(templates_file_path)?;
         let all_templates = serde_yaml::from_str::<Templates>(templates_contents.as_str())
                                        .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
@@ -238,5 +245,70 @@ impl Configuration {
         }
 
         Ok((main_config, hosts))
+    }
+
+    pub fn write_initial_configuration(config_dir: PathBuf) -> io::Result<()> {
+        let default_main_config = include_str!("../config.example.yml");
+        let default_hosts_config = include_str!("../hosts.example.yml");
+        let default_templates_config = include_str!("../templates.example.yml");
+
+        let main_config_file_path = config_dir.join(MAIN_CONFIG_FILE);
+        let hosts_file_path = config_dir.join(HOSTS_FILE);
+        let templates_file_path = config_dir.join(TEMPLATES_FILE);
+
+        fs::create_dir_all(&config_dir)?;
+
+        let main_config_file = fs::OpenOptions::new().write(true).create_new(true).open(main_config_file_path.clone());
+        match main_config_file {
+            Ok(mut file) => {
+                if let Err(error) = file.write_all(default_main_config.as_bytes()) {
+                    let message = format!("Failed to write main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
+                    return Err(io::Error::new(io::ErrorKind::Other, message));
+                }
+                else {
+                    log::info!("Created new main configuration file {}", main_config_file_path.to_string_lossy());
+                }
+            },
+            Err(error) => {
+                let message = format!("Failed to create main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
+                return Err(io::Error::new(io::ErrorKind::Other, message));
+            }
+        }
+
+        let hosts_config_file = fs::OpenOptions::new().write(true).create_new(true).open(hosts_file_path.clone());
+        match hosts_config_file {
+            Ok(mut file) => {
+                if let Err(error) = file.write_all(default_hosts_config.as_bytes()) {
+                    let message = format!("Failed to write host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
+                    return Err(io::Error::new(io::ErrorKind::Other, message));
+                }
+                else {
+                    log::info!("Created new host configuration file {}", hosts_file_path.to_string_lossy());
+                }
+            },
+            Err(error) => {
+                let message = format!("Failed to create host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
+                return Err(io::Error::new(io::ErrorKind::Other, message));
+            }
+        }
+
+        let templates_config_file = fs::OpenOptions::new().write(true).create_new(true).open(templates_file_path.clone());
+        match templates_config_file {
+            Ok(mut file) => {
+                if let Err(error) = file.write_all(default_templates_config.as_bytes()) {
+                    let message = format!("Failed to write template configuration file {}: {}", templates_file_path.to_string_lossy(), error);
+                    return Err(io::Error::new(io::ErrorKind::Other, message));
+                }
+                else {
+                    log::info!("Created new template configuration file {}", templates_file_path.to_string_lossy());
+                }
+            },
+            Err(error) => {
+                let message = format!("Failed to create template configuration file {}: {}", templates_file_path.to_string_lossy(), error);
+                return Err(io::Error::new(io::ErrorKind::Other, message));
+            }
+        }
+
+        Ok(())
     }
 }

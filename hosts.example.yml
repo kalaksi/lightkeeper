@@ -1,17 +1,12 @@
 hosts:
-  test1:
-    fqdn: test1.example.invalid
+  example:
+    address: 0.0.0.0
     templates:
       - defaults
       - linux
       - docker
       - docker-compose
       - systemd-service
-    monitors:
-      ping:
-        is_critical: true
-  test2:
-    address: 10.0.0.1
     monitors:
       ping:
         is_critical: true
