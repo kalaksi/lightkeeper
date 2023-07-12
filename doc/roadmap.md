@@ -1,6 +1,7 @@
 # TODO
 More important features first.
 - configuring through GUI
+- documentation for configurations
 - cache for monitor's command results to minimize amount of commands actually run (crude implementation done)
 - automatic module testing and documentation.
 - new module property `privileged` for modules that require sudo/root

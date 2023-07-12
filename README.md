@@ -9,7 +9,7 @@ You can see executed commands through debug log and, of course, on server's logs
 **User-interface is compact** and aims to keep only the most essential information visible. Clicking and navigating between different views is kept to a minimum.  
 In case you find the GUI insufficient and need to dig deeper, you can always use a button for launching a terminal that logs you in through SSH.
   
-*NOTE: this is currently release 0.1.1 (and the first release) and still has bugs and is missing some features. Documentation is also not yet complete.*
+*NOTE: this is currently release 0.2.0 (and the first release) and still has bugs and is missing some features. Documentation is also not yet complete.*
 
 <br />
 <br />
@@ -63,9 +63,9 @@ $ setcap cap_net_raw+ep $MY_BINARY
 # Configuration
 Configuration is stored in configuration files and configuring is currently done directly through them. Later there will be a GUI for that.  
 This repository contains example configuration files (`config.example.yml`, `hosts.example.yml` and `templates.example.yml`) in addition to ones in `test`-directory,
-to use as a starting point.
+to use as a starting point.  
 
-**TODO:** explain configuring in detail.
+**There is also currently an assumption that your user can run sudo without password (or has root privileges) on the target host since some commands need higher privileges.**
 
 ## File locations
 When running without flatpak, the default configuration directory is `~/.config/lightkeeper` and cache directory `~/.cache/lightkeeper`. It's possible the location differs if environment variables `XDG_CONFIG_HOME` and `XDG_CONFIG_CACHE` are set and point somewhere else.  
