@@ -9,6 +9,7 @@ import HostTableModel 1.0
 
 import "./Dialog"
 import "./DetailsView"
+import "js/Utils.js" as Utils
 
 ApplicationWindow {
     id: root
@@ -291,7 +292,7 @@ ApplicationWindow {
         id: textDialog
         visible: false
         anchors.centerIn: parent
-        width: Math.max(root.width * 0.5, Math.min(root.width * 0.8, implicitWidth))
-        height: Math.max(root.height * 0.5, Math.min(root.height * 0.8, implicitHeight))
+        width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
+        height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
 }
