@@ -9,6 +9,7 @@ use crate::configuration;
 use crate::enums::Criticality;
 use crate::frontend;
 use crate::module::monitoring::MonitoringData;
+use crate::utils::ErrorMessage;
 
 
 // TODO: use camelcase with qml models?
@@ -24,7 +25,7 @@ pub struct HostDataManagerModel {
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     command_result_received: qt_signal!(command_result: QString),
     monitoring_data_received: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant),
-    error_received: qt_signal!(error: QString),
+    error_received: qt_signal!(criticality: QString, error: QString),
 
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     get_display_data: qt_method!(fn(&self) -> QVariant),
@@ -143,12 +144,23 @@ impl HostDataManagerModel {
                     }
 
                     for error in new_display_data.new_errors {
-                        self_pinned.borrow().error_received(QString::from(error));
+                        self_pinned.borrow().error_received(QString::from(error.criticality.to_string()), QString::from(error.message));
                     }
 
                     self_pinned.borrow().update_received(QString::from(old_data.name));
                 });
             });
+
+            // This is the first launch so display an error about needing to edit the configuration files.
+            if self.display_data.hosts.len() == 1 && self.display_data.hosts.contains_key("example-host") {
+                let error = ErrorMessage::new(
+                    Criticality::Critical,
+                    String::from("Looks like this is the first time you have started LightkeeperRM.  
+                                Lightkeeper is still in development and doesn't currently contain a GUI for configuration.  
+                                Please see the README in https://github.com/kalaksi/lightkeeper for help with configurations.")
+                );
+                self.error_received(QString::from(Criticality::Critical.to_string()), QString::from(error.message));
+            }
 
             let receiver = self.update_receiver.take().unwrap();
             let thread = std::thread::spawn(move || {

@@ -6,8 +6,9 @@ use std::process;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::enums::Criticality;
 use crate::host_manager::HostManager;
-use crate::utils::ShellCommand;
+use crate::utils::{ShellCommand, ErrorMessage};
 use crate::{
     configuration::Preferences,
     Host,
@@ -134,7 +135,7 @@ impl CommandHandler {
         Box::new(move |results| {
             let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
             let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-            let mut errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+            let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err())).collect::<Vec<_>>();
             let command_id = command.get_module_spec().id.clone();
 
             let mut result;
@@ -162,13 +163,13 @@ impl CommandHandler {
                     Some(command_result)
                 },
                 Err(error) => {
-                    errors.push(error);
+                    errors.push(ErrorMessage::new(Criticality::Error, error));
                     None
                 }
             };
 
             for error in errors.iter() {
-                log::error!("[{}] Error from command {}: {}", host.name, command_id, error);
+                log::error!("[{}] Error from command {}: {}", host.name, command_id, error.message);
             }
 
             state_update_sender.send(StateUpdateMessage {

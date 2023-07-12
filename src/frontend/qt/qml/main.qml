@@ -79,9 +79,15 @@ ApplicationWindow {
             }
         }
 
-        function onError_received(errorMessage) {
-            // TODO: other kind of dialog for critical errors.
-            snackbarContainer.addSnackbar("Error", errorMessage)
+        function onError_received(criticality, message) {
+            if (criticality === "Critical") {
+                // TODO: something better. This is not really an alert dialog.
+                textDialog.text = message
+                textDialog.open()
+            }
+            else {
+                snackbarContainer.addSnackbar(criticality, message)
+            }
         }
     }
 

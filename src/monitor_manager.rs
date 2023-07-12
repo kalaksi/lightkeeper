@@ -5,10 +5,12 @@ use std::sync::mpsc::{self, Sender};
 
 use crate::Host;
 use crate::configuration::CacheSettings;
+use crate::enums::Criticality;
 use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::*;
 use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestType, CachePolicy };
+use crate::utils::ErrorMessage;
 
 
 pub struct MonitorManager {
@@ -281,7 +283,7 @@ impl MonitorManager {
             let results_len = results.len();
             let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
             let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-            let mut errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+            let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err())).collect::<Vec<_>>();
 
             // If CachePolicy::OnlyCache is used and an entry is not found, don't continue.
             if responses.iter().any(|response| response.is_not_found()) {
@@ -322,7 +324,7 @@ impl MonitorManager {
                 },
                 Err(error) => {
                     if !error.is_empty() {
-                        errors.push(error);
+                        errors.push(ErrorMessage::new(Criticality::Error, error));
                     }
                     // In case this was an extension module, retain the parents data point unmodified.
                     parent_datapoint
@@ -330,7 +332,7 @@ impl MonitorManager {
             };
 
             for error in errors.iter() {
-                log::error!("[{}] Error from monitor {}: {}", host.name, monitor_id, error);
+                log::error!("[{}] Error from monitor {}: {}", host.name, monitor_id, error.message);
             }
 
             if !monitors.is_empty() {

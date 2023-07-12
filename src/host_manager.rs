@@ -13,10 +13,11 @@ use crate::module::{
     command::CommandResult,
 };
 
-use crate::utils::VersionNumber;
 use crate::{
     enums::HostStatus,
     enums::Criticality,
+    utils::VersionNumber,
+    utils::ErrorMessage,
     host::Host,
     frontend,
 };
@@ -169,8 +170,7 @@ impl HostManager {
                 host_state.update_status();
 
                 // Send the state update to the front end.
-                let observers = observers.lock().unwrap();
-                for observer in observers.iter() {
+                for observer in observers.lock().unwrap().iter() {
                     observer.send(frontend::HostDisplayData {
                         name: host_state.host.name.clone(),
                         domain_name: host_state.host.fqdn.clone(),
@@ -269,7 +269,7 @@ pub struct StateUpdateMessage {
     // Only used with MonitoringModule.
     pub data_point: Option<DataPoint>,
     pub command_result: Option<CommandResult>,
-    pub errors: Vec<String>,
+    pub errors: Vec<ErrorMessage>,
     pub exit_thread: bool,
 }
 

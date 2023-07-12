@@ -8,3 +8,6 @@ pub mod string_validation;
 
 pub mod shell_command;
 pub use shell_command::ShellCommand;
+
+pub mod error_message;
+pub use error_message::ErrorMessage;

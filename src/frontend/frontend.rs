@@ -6,6 +6,7 @@ use crate::module::PlatformInfo;
 use crate::module::command::CommandResult;
 use crate::module::monitoring::MonitoringData;
 use crate::enums::HostStatus;
+use crate::utils::ErrorMessage;
 
 pub trait Frontend {
     fn draw(display_data: &DisplayData);
@@ -42,7 +43,7 @@ pub struct HostDisplayData {
     pub new_monitoring_data: Option<MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
     pub new_command_results: Option<CommandResult>,
-    pub new_errors: Vec<String>,
+    pub new_errors: Vec<ErrorMessage>,
     pub just_initialized: bool,
     pub just_initialized_from_cache: bool,
     pub is_initialized: bool,
