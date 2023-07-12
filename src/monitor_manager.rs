@@ -309,7 +309,9 @@ impl MonitorManager {
                 }
             }
             else {
-                datapoint_result = Err(format!("No responses received for monitor {}", monitor_id));
+                log::warn!("No response messages received for monitor {}", monitor_id);
+                // This is just ignored below.
+                datapoint_result = Err(String::new());
             }
 
             let new_data_point = match datapoint_result {
@@ -319,7 +321,9 @@ impl MonitorManager {
                     data_point
                 },
                 Err(error) => {
-                    errors.push(error);
+                    if !error.is_empty() {
+                        errors.push(error);
+                    }
                     // In case this was an extension module, retain the parents data point unmodified.
                     parent_datapoint
                 }
