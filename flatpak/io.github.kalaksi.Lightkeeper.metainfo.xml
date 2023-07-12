@@ -20,7 +20,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.1.1" date="2023-07-09">
+    <release version="0.2.0" date="2023-07-12">
       <description>
         <p>First early release.</p>
       </description>
