@@ -1,6 +1,8 @@
 import QtQuick 2.15
 import QtQuick.Controls.Material 2.15
 
+import "js/Utils.js" as Utils
+
 
 /// Provides a space for multiple snackbars.
 Item {
@@ -8,6 +10,8 @@ Item {
     property int spacing: 10
     property int showDuration: Theme.notification_show_duration()
     property int animationDuration: Theme.animation_duration()
+    property int snackbarHeight: 75
+    property int snackbarMaximumWidth: 600
     property var _instances: []
 
     Component {
@@ -34,12 +38,12 @@ Item {
         let newSnackbar = snackbarComponent.createObject(root, {
             criticality: criticality,
             text: text,
-            contentWidth: 500,
-            contentHeight: 50,
             fadeDuration: root.animationDuration,
             showDuration: root.showDuration,
-            y: root.height - 70 - root.spacing,
-            x: root.width - 530 - root.spacing,
+            maximumWidth: root.snackbarMaximumWidth,
+            height: root.snackbarHeight,
+            "anchors.right": root.right,
+            y: root.height - root.snackbarHeight - root.spacing,
         })
 
         for (let existingInstance of root._instances) {
