@@ -1,6 +1,6 @@
 hosts:
-  example:
-    address: 0.0.0.0
+  example-host:
+    fqdn: 127.0.0.1
     templates:
       - defaults
       - linux
@@ -10,3 +10,9 @@ hosts:
     monitors:
       ping:
         is_critical: true
+    connectors:
+      ssh:
+        settings:
+          username: example-user
+          # Default is 22.
+          port: 12345
