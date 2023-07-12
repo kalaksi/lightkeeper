@@ -40,8 +40,8 @@ Item {
 
     WorkingSprite {
         visible: root._categories.length === 0
-        width: 1.5 * implicitWidth
-        height: 1.5 * implicitHeight
+        scale: 1.5
+        text: "Connecting..."
     }
 
     ScrollView {
