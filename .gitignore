@@ -2,6 +2,3 @@
 /flatpak/build
 .*
 vendor
-config.yml
-hosts.yml
-templates.yml

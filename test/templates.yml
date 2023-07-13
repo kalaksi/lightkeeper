@@ -1,0 +1,72 @@
+templates:
+  defaults:
+    settings:
+      - use_sudo
+    monitors:
+      ping:
+        is_critical: true
+      docker-compose:
+        settings:
+          working_dir: /mnt/containers
+    connectors:
+      ssh:
+        settings:
+          username: "vagrant"
+  docker:
+    monitors:
+      docker-containers: {}
+      docker-images: {}
+      docker-image-updates: {}
+    commands:
+      docker-image-prune: {}
+      docker-restart: {}
+      docker-inspect: {}
+      docker-shell: {}
+      docker-image-remove: {}
+      docker-image-remote-tags: {}
+  docker-compose:
+    monitors:
+      docker-compose: {}
+    commands:
+      docker-compose-edit: {}
+      docker-compose-pull: {}
+      docker-compose-up: {}
+      docker-compose-start: {}
+      docker-compose-stop: {}
+  linux:
+    connectors:
+      ssh: {}
+    monitors:
+      os: {}
+      kernel: {}
+      uptime: {}
+      filesystem: {}
+      load: {}
+      ram: {}
+      interface:
+        settings:
+          ignored_interfaces: "br-,docker,lo,veth"
+      package: {}
+      systemd-service:
+        settings:
+          included_services: "acpid.,cron.,collectd.,dbus.,ntp.,chrony.,systemd-journald.,containerd.,docker.,ufw.,rsyslog.,nullmailer.,ssh."
+      ssh: {}
+      who: {}
+      storage-lvm-logical-volume: {}
+      storage-lvm-volume-group: {}
+      storage-lvm-physical-volume: {}
+    commands:
+      logs: {}
+      shutdown: {}
+      reboot: {}
+      linux-packages-clean: {}
+      linux-packages-update: {}
+      linux-packages-update-all: {}
+      systemd-service-start: {}
+      systemd-service-stop: {}
+      systemd-service-mask: {}
+      systemd-service-unmask: {}
+      storage-file-space-usage: {}
+      storage-lvm-snapshot: {}
+      storage-lvm-lvresize: {}
+      storage-lvm-lvremove: {}
