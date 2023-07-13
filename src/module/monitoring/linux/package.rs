@@ -10,7 +10,12 @@ use crate::module::*;
 use crate::module::monitoring::*;
 use crate::utils::{ShellCommand, string_manipulation};
 
-#[monitoring_module("package", "0.0.1")]
+#[monitoring_module(
+    "package",
+    "0.0.1",
+    "Lists system packages that have an update available.
+    Settings: none"
+)]
 pub struct Package;
 
 impl Module for Package {

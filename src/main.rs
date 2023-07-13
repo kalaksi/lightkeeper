@@ -27,10 +27,11 @@ use module::{ ModuleFactory, ModuleSpecification };
 
 
 #[derive(Parser)]
-#[clap()]
 struct Args {
     #[clap(short, long, default_value = "")]
     config_dir: String,
+    #[clap(short, long)]
+    module_information: bool,
 }
 
 
@@ -40,6 +41,12 @@ fn main() {
 
     let args = Args::parse();
 
+    let module_factory = ModuleFactory::new();
+    if args.module_information {
+        print!("{}", module_factory.generate_documentation());
+        return;
+    }
+
     let (config, hosts_config) = match Configuration::read(&args.config_dir) {
         Ok(configuration) => configuration,
         Err(error) => {
@@ -47,8 +54,6 @@ fn main() {
             return;
         }
     };
-
-    let module_factory = ModuleFactory::new();
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
     let mut connection_manager = ConnectionManager::new(config.cache_settings.clone());

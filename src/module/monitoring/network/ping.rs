@@ -7,7 +7,12 @@ use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("ping", "0.0.1")]
+#[monitoring_module(
+    "ping",
+    "0.0.1",
+    "Measures latency to host with ICMP echo request.
+    Settings: none"
+)]
 pub struct Ping;
 
 impl Module for Ping {

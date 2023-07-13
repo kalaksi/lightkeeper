@@ -10,7 +10,8 @@ use crate::{
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("os", "0.0.1")]
+#[monitoring_module("os", "0.0.1", "Provides basic information about the operating system."
+)]
 pub struct Os;
 
 impl Module for Os {

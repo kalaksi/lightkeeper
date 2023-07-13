@@ -10,7 +10,12 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 
-#[monitoring_module("who", "0.0.1")]
+#[monitoring_module(
+    "who",
+    "0.0.1",
+    "Gets list of logged in users. Useful if there's a chance someone else is operating the server at the same time.
+    Settings: none"
+)]
 pub struct Who;
 
 impl Module for Who {

@@ -8,7 +8,11 @@ use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("_internal-platform-info-ssh", "0.0.1")]
+#[monitoring_module(
+    "_internal-platform-info-ssh",
+    "0.0.1",
+    "Internal module to provide platform information with SSH."
+)]
 pub struct PlatformInfoSsh {
 }
 

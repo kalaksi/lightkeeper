@@ -17,7 +17,13 @@ const LEVEL_WARNING: usize = 0;
 const LEVEL_ERROR: usize = 1;
 const LEVEL_CRITICAL: usize = 2;
 
-#[monitoring_module("docker-images", "0.0.1")]
+#[monitoring_module(
+    "docker-images",
+    "0.0.1",
+    "Provides information about Docker images.
+    Settings:
+      - criticality_levels: Comma-separated list of criticality levels in days. Default: 180,365,730."
+)]
 pub struct Images {
     criticality_levels: Vec<u32>,
 }

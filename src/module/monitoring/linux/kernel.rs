@@ -10,7 +10,12 @@ use crate::{
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("kernel", "0.0.1")]
+#[monitoring_module(
+    "kernel",
+    "0.0.1",
+    "Provides kernel version and architecture information.
+    Settings: none"
+)]
 pub struct Kernel;
 
 impl Module for Kernel {

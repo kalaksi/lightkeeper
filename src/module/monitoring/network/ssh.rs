@@ -6,7 +6,11 @@ use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("ssh", "0.0.1")]
+#[monitoring_module(
+    "ssh",
+    "0.0.1",
+    "Checks if the SSH service is available."
+)]
 pub struct Ssh;
 
 impl Module for Ssh {

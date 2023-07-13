@@ -11,7 +11,12 @@ use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("uptime", "0.0.1")]
+#[monitoring_module(
+    "uptime",
+    "0.0.1",
+    "Gets host uptime in days.
+    Settings: none"
+)]
 pub struct Uptime;
 
 impl Module for Uptime {

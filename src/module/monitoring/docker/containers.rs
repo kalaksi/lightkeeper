@@ -11,7 +11,13 @@ use crate::module::*;
 use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
 
-#[monitoring_module("docker-containers", "0.0.1")]
+#[monitoring_module(
+    "docker-containers",
+    "0.0.1",
+    "Provides information about Docker containers.
+    Settings:
+    - ignore_compose_managed: Ignore containers that are managed by docker-compose. Default: true."
+)]
 pub struct Containers {
     // Ignore containers that are managed by docker-compose.
     ignore_compose_managed: bool,

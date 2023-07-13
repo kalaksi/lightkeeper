@@ -10,7 +10,12 @@ use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("ram", "0.0.1")]
+#[monitoring_module(
+    "ram",
+    "0.0.1",
+    "Provides RAM usage information.
+    Settings: none"
+)]
 pub struct Ram;
 
 impl Module for Ram {

@@ -141,6 +141,17 @@ impl ModuleFactory {
         }
     }
 
+    pub fn generate_documentation(&self) -> String {
+        // Print monitoring module ID, version and description.
+        let mut documentation = String::new();
+        documentation.push_str("Monitoring modules:\n");
+        for (metadata, _) in self.monitor_modules.iter() {
+            let description = metadata.description.replace("    ", "  ");
+            documentation.push_str(&format!("- {} ({}):\n  {}\n\n", metadata.module_spec.id, metadata.module_spec.version, description));
+        }
+        documentation
+    }
+
     fn load_modules(&mut self) {
         // Connection modules.
         self.connector_modules = vec![

@@ -10,7 +10,13 @@ use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("interface", "0.0.1")]
+#[monitoring_module(
+    "interface",
+    "0.0.1",
+    "Provides information about network interfaces.
+    Settings:
+      - ignored_interfaces: comma-separated list of interface names to ignore. Default: empty."
+)]
 pub struct Interface {
     ignored_interfaces: Vec<String>,
 }

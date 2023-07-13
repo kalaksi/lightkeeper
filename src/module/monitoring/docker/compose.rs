@@ -11,11 +11,17 @@ use crate::module::*;
 use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
 
-#[monitoring_module("docker-compose", "0.0.1")]
+#[monitoring_module(
+    "docker-compose",
+    "0.0.1",
+    "Provides information about docker-compose projects.
+    Settings:
+      - compose_file_name: Name of the docker-compose file. Default: docker-compose.yml
+      - working_dir: This is only needed with older docker-compose versions. Those don't include working_dir label on the container,
+                     so this can be used instead. Should be the parent directory of project directories. Currently, a single directory is supported."
+)]
 pub struct Compose {
     pub compose_file_name: String,
-    /// Earlier docker-compose versions don't include working_dir label so this can be used instead.
-    /// Currently, a single directory is supported.
     pub working_dir: String, 
 }
 

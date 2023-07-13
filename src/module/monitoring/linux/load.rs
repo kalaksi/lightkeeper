@@ -10,7 +10,12 @@ use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_module("load", "0.0.1")]
+#[monitoring_module(
+    "load",
+    "0.0.1",
+    "Provides information about average load (using uptime-command).
+    Settings: none"
+)]
 pub struct Load;
 
 impl Module for Load {
