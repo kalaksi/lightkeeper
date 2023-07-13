@@ -30,8 +30,12 @@ use module::{ ModuleFactory, ModuleSpecification };
 struct Args {
     #[clap(short, long, default_value = "")]
     config_dir: String,
-    #[clap(short, long)]
-    module_information: bool,
+    #[clap(long)]
+    monitoring_module_info: bool,
+    #[clap(long)]
+    command_module_info: bool,
+    #[clap(long)]
+    connector_module_info: bool,
 }
 
 
@@ -42,8 +46,16 @@ fn main() {
     let args = Args::parse();
 
     let module_factory = ModuleFactory::new();
-    if args.module_information {
-        print!("{}", module_factory.generate_documentation());
+    if args.monitoring_module_info {
+        print!("{}", module_factory.get_monitoring_module_info());
+        return;
+    }
+    if args.command_module_info {
+        print!("{}", module_factory.get_command_module_info());
+        return;
+    }
+    if args.connector_module_info {
+        print!("{}", module_factory.get_connector_module_info());
         return;
     }
 

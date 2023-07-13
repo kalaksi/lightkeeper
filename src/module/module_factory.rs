@@ -29,7 +29,6 @@ impl ModuleFactory {
         };
 
         manager.load_modules();
-
         manager
     }
 
@@ -95,7 +94,7 @@ impl ModuleFactory {
     }
 
     pub fn validate_modules(&self) {
-        log::info!("Validating module configuration");
+        log::info!("Validating modules");
 
         // Validate monitoring modules.
         for (metadata, constructor) in self.monitor_modules.iter() {
@@ -141,13 +140,61 @@ impl ModuleFactory {
         }
     }
 
-    pub fn generate_documentation(&self) -> String {
-        // Print monitoring module ID, version and description.
-        let mut documentation = String::new();
-        documentation.push_str("Monitoring modules:\n");
-        for (metadata, _) in self.monitor_modules.iter() {
-            let description = metadata.description.replace("    ", "  ");
-            documentation.push_str(&format!("- {} ({}):\n  {}\n\n", metadata.module_spec.id, metadata.module_spec.version, description));
+    pub fn get_monitoring_module_info(&self) -> String {
+        let mut documentation = String::from("Monitoring modules:\n");
+
+        for (metadata, module_constructor) in self.monitor_modules.iter() {
+            let module_instance = module_constructor(&HashMap::new());
+
+            documentation.push_str(&format!("- {}:\n", metadata.module_spec.to_string()));
+
+            if let Some(parent_spec) = &metadata.parent_module {
+                documentation.push_str(&format!("  Extends module: {}\n", parent_spec.to_string()));
+            };
+
+            match module_instance.get_connector_spec() {
+                Some(connector_spec) => documentation.push_str(&format!("  Connector: {}\n", connector_spec.id)),
+                None => documentation.push_str("  Connector: none\n"),
+            };
+
+            documentation.push_str(&format!("  {}\n\n", &metadata.description.replace("    ", "  ")));
+        }
+        documentation
+    }
+
+    pub fn get_command_module_info(&self) -> String {
+        let mut documentation = String::from("Command modules:\n");
+
+        for (metadata, module_constructor) in self.command_modules.iter() {
+            let module_instance = module_constructor(&HashMap::new());
+
+            documentation.push_str(&format!("- {}:\n", metadata.module_spec.to_string()));
+
+            if let Some(parent_spec) = &metadata.parent_module {
+                documentation.push_str(&format!("Extends module: {}\n", parent_spec.to_string()));
+            };
+
+            match module_instance.get_connector_spec() {
+                Some(connector_spec) => documentation.push_str(&format!("  Connector: {}\n", connector_spec.id)),
+                None => documentation.push_str("  Connector: none\n"),
+            };
+
+            match module_instance.get_display_options().parent_id.as_str() {
+                "" => documentation.push_str("  Monitor dependency: none (category-level command)\n"),
+                parent_id => documentation.push_str(&format!("  Monitor dependency: {}\n", parent_id)),
+            };
+
+            documentation.push_str(&format!("{}\n\n", &metadata.description.replace("    ", "  ")));
+        }
+        documentation
+    }
+
+    pub fn get_connector_module_info(&self) -> String {
+        let mut documentation = String::from("Connector modules:\n");
+
+        for (metadata, _) in self.connector_modules.iter() {
+            documentation.push_str(&format!("- {}:\n", metadata.module_spec.to_string()));
+            documentation.push_str(&format!("  {}\n\n", &metadata.description.replace("    ", "  ")));
         }
         documentation
     }
