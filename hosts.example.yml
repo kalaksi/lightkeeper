@@ -1,17 +1,28 @@
 hosts:
   example-host:
-    fqdn: 127.0.0.1
+    address: 127.0.0.1
+    # Alternatively:
+    # fqdn: localhost
+
+    # Templates are defined in templates.yml
     templates:
       - defaults
       - linux
       - docker
       - docker-compose
       - systemd-service
+
+    # Templates should define the bulk of configurations, but every module (monitors, commands, connectors)
+    # can also be configured on host-level which will override settings from templates.
     monitors:
       ping:
+        # If a critical monitor (ping, in this case), fails, the host is considered to be down.
         is_critical: true
+
+    # You could also set settings for SSH connections on the template level.
     connectors:
       ssh:
+        # Every module has settings defined this way. Valid settings are defined by the module
         settings:
           username: example-user
           # Default is 22.

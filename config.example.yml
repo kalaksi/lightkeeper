@@ -1,12 +1,22 @@
 preferences:
-  use_remote_editor: true
+  # Connect to all hosts on start and 
   refresh_hosts_on_start: false
-  sudo_remote_editor: true
+  # Some commands allow you to edit a remote file.
+  # This can be done directly over a terminal or by temporarily downloading the file for editing locally.
+  # If set to true, will launch a terminal for editing directly using a CLI text editor.
+  use_remote_editor: true
+  # This is the path to the remote CLI text editor.
   remote_text_editor: "/usr/bin/nano"
+  # Use sudo when editing remote files?
+  sudo_remote_editor: true
+  # Likewise, a path to an editor for editing locally.
   text_editor: "/usr/bin/kate"
+  # Some commands may launch a terminal for you. Here you can configure the terminal and parameters.
   terminal: "/usr/bin/xterm"
   terminal_args: ["-e"]
 
+# Caching can provide speed benefits especially if you have many hosts.
+# Recommended to be left disabled for now.
 cache_settings:
   enable_cache: false
   provide_initial_value: true
@@ -14,13 +24,19 @@ cache_settings:
   prefer_cache: true
   time_to_live: 8400
 
+# Control category order, command buttons orders, colors.
+# Defaults should be good.
 display_options:
   hide_info_notifications: false
   categories:
     host:
+      # Priority controls the order of the category tiles. Host should be first.
       priority: 1
+      # Color of the label bar.
       color: "#80b3825d"
+      # Order of command buttons.
       command_order: ["reboot", "shutdown", "logs"]
+      # Order of monitors.
       monitor_order: ["uptime", "load", "ram", "os", "kernel", "filesystem"]
     storage:
       priority: 2

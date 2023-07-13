@@ -1,41 +1,15 @@
 templates:
+  # This is nothing special, just a template called "defaults".
   defaults:
     settings:
+      # Some modules require more privileges and will try to use sudo (without password)
+      # if use_sudo is set.
       - use_sudo
     monitors:
       ping:
         is_critical: true
-  docker:
-    monitors:
-      docker-containers: {}
-      docker-images: {}
-      docker-image-updates: {}
-    commands:
-      docker-image-prune: {}
-      docker-restart: {}
-      docker-inspect: {}
-      docker-shell: {}
-      docker-image-remove: {}
-      docker-image-remote-tags: {}
-  docker-compose:
-    monitors:
-      docker-compose: {}
-    commands:
-      docker-compose-edit: {}
-      docker-compose-pull: {}
-      docker-compose-up: {}
-      docker-compose-start: {}
-      docker-compose-stop: {}
-  systemd-service:
-    monitors:
-      systemd-service:
-        settings:
-          included_services: "acpid.,cron.,collectd.,dbus.,ntp.,chrony.,systemd-journald.,containerd.,docker.,ufw.,rsyslog.,nullmailer.,ssh."
-    commands:
-      systemd-service-start: {}
-      systemd-service-stop: {}
-      systemd-service-mask: {}
-      systemd-service-unmask: {}
+
+  # Monitors and commands for Linux hosts. You usually want at least this for your hosts.
   linux:
     connectors:
       ssh: {}
@@ -66,3 +40,41 @@ templates:
       storage-lvm-snapshot: {}
       storage-lvm-lvresize: {}
       storage-lvm-lvremove: {}
+
+  # Monitors and commands for Docker.
+  docker:
+    monitors:
+      docker-containers: {}
+      docker-images: {}
+      docker-image-updates: {}
+    commands:
+      docker-image-prune: {}
+      docker-restart: {}
+      docker-inspect: {}
+      docker-shell: {}
+      docker-image-remove: {}
+      docker-image-remote-tags: {}
+
+  # Monitors and commands for Docker-compose.
+  docker-compose:
+    monitors:
+      docker-compose: {}
+    commands:
+      docker-compose-edit: {}
+      docker-compose-pull: {}
+      docker-compose-up: {}
+      docker-compose-start: {}
+      docker-compose-stop: {}
+
+  # Monitors and commands for SystemD services.
+  systemd-service:
+    monitors:
+      systemd-service:
+        settings:
+          included_services: "acpid.,cron.,collectd.,dbus.,ntp.,chrony.,systemd-journald.,containerd.,docker.,ufw.,rsyslog.,nullmailer.,ssh."
+    commands:
+      systemd-service-start: {}
+      systemd-service-stop: {}
+      systemd-service-mask: {}
+      systemd-service-unmask: {}
+
