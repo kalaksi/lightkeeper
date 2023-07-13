@@ -8,7 +8,12 @@ use crate::utils::ShellCommand;
 use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
-#[command_module("systemd-service-mask", "0.0.1")]
+#[command_module(
+    "systemd-service-mask",
+    "0.0.1",
+    "Masks a SystemD service.
+    Settings: none"
+)]
 pub struct Mask;
 
 impl Module for Mask {

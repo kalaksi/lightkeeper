@@ -9,7 +9,12 @@ use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 
-#[command_module("storage-lvm-lvresize", "0.0.1")]
+#[command_module(
+    "storage-lvm-lvresize",
+    "0.0.1",
+    "Resizes an LVM logical volume.
+    Settings: none"
+)]
 pub struct LVResize {
 }
 

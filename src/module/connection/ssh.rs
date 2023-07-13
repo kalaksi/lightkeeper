@@ -1,12 +1,12 @@
-use std::net::ToSocketAddrs;
 use std::{
     net::TcpStream,
     net::IpAddr,
     net::Ipv4Addr,
-    io::Read,
+    net::ToSocketAddrs,
     collections::HashMap,
     path::Path,
     io,
+    io::Read,
     io::Write,
 };
 
@@ -16,7 +16,17 @@ use lightkeeper_module::connection_module;
 use crate::module::*;
 use crate::module::connection::*;
 
-#[connection_module("ssh", "0.0.1")]
+#[connection_module(
+    "ssh",
+    "0.0.1",
+    "Sends commands and file requests over SSH.
+    Settings:
+      - port: Port of the SSH server. Default: 22.
+      - username: Username for the SSH connection. Required.
+      - password: Password for the SSH connection. Default: empty (not used).
+      - private_key_path: Path to the private key file for the SSH connection. Default: empty.
+      - connection_timeout: Timeout (in seconds) for the SSH connection. Default: 15."
+)]
 pub struct Ssh2 {
     session: Session,
     is_initialized: bool,

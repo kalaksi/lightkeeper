@@ -7,7 +7,12 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("reboot", "0.0.1")]
+#[command_module(
+    "reboot",
+    "0.0.1",
+    "Reboots the host.
+    Settings: none"
+)]
 pub struct Reboot;
 
 impl Module for Reboot {

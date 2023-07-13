@@ -152,12 +152,14 @@ impl ModuleFactory {
                 documentation.push_str(&format!("  Extends module: {}\n", parent_spec.to_string()));
             };
 
+            documentation.push_str(&format!("  Description: {}\n", &metadata.description.replace("    ", "  ")));
+
             match module_instance.get_connector_spec() {
                 Some(connector_spec) => documentation.push_str(&format!("  Connector: {}\n", connector_spec.id)),
                 None => documentation.push_str("  Connector: none\n"),
             };
 
-            documentation.push_str(&format!("  {}\n\n", &metadata.description.replace("    ", "  ")));
+            documentation.push('\n');
         }
         documentation
     }
@@ -174,6 +176,8 @@ impl ModuleFactory {
                 documentation.push_str(&format!("Extends module: {}\n", parent_spec.to_string()));
             };
 
+            documentation.push_str(&format!("  Description: {}\n", &metadata.description.replace("    ", "  ")));
+
             match module_instance.get_connector_spec() {
                 Some(connector_spec) => documentation.push_str(&format!("  Connector: {}\n", connector_spec.id)),
                 None => documentation.push_str("  Connector: none\n"),
@@ -184,7 +188,7 @@ impl ModuleFactory {
                 parent_id => documentation.push_str(&format!("  Monitor dependency: {}\n", parent_id)),
             };
 
-            documentation.push_str(&format!("{}\n\n", &metadata.description.replace("    ", "  ")));
+            documentation.push('\n');
         }
         documentation
     }
@@ -194,7 +198,7 @@ impl ModuleFactory {
 
         for (metadata, _) in self.connector_modules.iter() {
             documentation.push_str(&format!("- {}:\n", metadata.module_spec.to_string()));
-            documentation.push_str(&format!("  {}\n\n", &metadata.description.replace("    ", "  ")));
+            documentation.push_str(&format!("  Description: {}\n\n", &metadata.description.replace("    ", "  ")));
         }
         documentation
     }

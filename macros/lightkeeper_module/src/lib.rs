@@ -66,6 +66,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
     let module_version = args_iter.next().unwrap();
     let parent_module_name = args_iter.next().unwrap();
     let parent_module_version = args_iter.next().unwrap();
+    let module_description = args_iter.next().unwrap();
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -81,7 +82,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                 fn get_metadata() -> Metadata {
                     Metadata {
                         module_spec: ModuleSpecification::new(#module_name, #module_version),
-                        description: String::from(""),
+                        description: String::from(#module_description),
                         parent_module: Some(ModuleSpecification::new(#parent_module_name, #parent_module_version)),
                         is_stateless: true,
                         cache_scope: crate::cache::CacheScope::Host,
@@ -117,6 +118,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut args_iter = args_parsed.iter();
     let module_name = args_iter.next().unwrap();
     let module_version = args_iter.next().unwrap();
+    let module_description = args_iter.next().unwrap();
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -132,7 +134,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
                 fn get_metadata() -> Metadata {
                     Metadata {
                         module_spec: ModuleSpecification::new(#module_name, #module_version),
-                        description: String::from(""),
+                        description: String::from(#module_description),
                         parent_module: None,
                         is_stateless: true,
                         cache_scope: crate::cache::CacheScope::Host,
@@ -168,6 +170,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut args_iter = args_parsed.iter();
     let module_name = args_iter.next().unwrap();
     let module_version = args_iter.next().unwrap();
+    let module_description = args_iter.next().unwrap();
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -182,7 +185,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
                 fn get_metadata() -> Metadata {
                     Metadata {
                         module_spec: ModuleSpecification::new(#module_name, #module_version),
-                        description: String::from(""),
+                        description: String::from(#module_description),
                         parent_module: None,
                         is_stateless: false,
                         cache_scope: crate::cache::CacheScope::Host,
@@ -213,6 +216,7 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
     let module_name = args_iter.next().unwrap();
     let module_version = args_iter.next().unwrap();
     let cache_level = args_iter.next().unwrap();
+    let module_description = args_iter.next().unwrap();
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -227,7 +231,7 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
                 fn get_metadata() -> Metadata {
                     Metadata {
                         module_spec: ModuleSpecification::new(#module_name, #module_version),
-                        description: String::from(""),
+                        description: String::from(#module_description),
                         parent_module: None,
                         is_stateless: true,
                         cache_scope: #cache_level.parse::<crate::cache::CacheScope>().unwrap(),

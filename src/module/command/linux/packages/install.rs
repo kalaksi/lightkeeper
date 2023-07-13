@@ -6,7 +6,12 @@ use crate::module::*;
 use crate::module::command::*;
 use lightkeeper_module::command_module;
 
-#[command_module("linux-packages-install", "0.0.1")]
+#[command_module(
+    "linux-packages-install",
+    "0.0.1",
+    "Installs system packages.
+    Settings: none"
+)]
 pub struct Install;
 
 impl Module for Install {

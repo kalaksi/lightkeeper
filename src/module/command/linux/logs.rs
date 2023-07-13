@@ -9,7 +9,12 @@ use crate::utils::string_validation;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("logs", "0.0.1")]
+#[command_module(
+    "logs",
+    "0.0.1",
+    "Shows logs from journalctl.
+    Settings: none"
+)]
 pub struct Logs;
 
 impl Module for Logs {

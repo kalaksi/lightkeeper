@@ -14,7 +14,12 @@ use lightkeeper_module::monitoring_extension_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 
-#[monitoring_extension_module("docker-image-updates", "0.0.1", "docker-images", "0.0.1")]
+#[monitoring_extension_module(
+    "docker-image-updates", "0.0.1",
+    "docker-images", "0.0.1",
+    "Checks if there are updates available for Docker image tags.
+    Settings: none"
+)]
 pub struct ImageUpdates {
     /// Tags that don't use remote registry.
     pub local_tag_prefixes: Vec<String>,

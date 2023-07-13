@@ -8,7 +8,12 @@ use crate::utils::ShellCommand;
 use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
-#[command_module("docker-restart", "0.0.1")]
+#[command_module(
+    "docker-restart",
+    "0.0.1",
+    "Restarts a Docker container.
+    Settings: none"
+)]
 pub struct Restart;
 
 impl Module for Restart {

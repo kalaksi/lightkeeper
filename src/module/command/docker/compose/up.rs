@@ -8,7 +8,12 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("docker-compose-up", "0.0.1")]
+#[command_module(
+    "docker-compose-up",
+    "0.0.1",
+    "Builds, (re)creates and starts containers for a service.
+    Settings: none"
+)]
 pub struct Up {
 }
 

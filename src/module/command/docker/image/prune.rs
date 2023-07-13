@@ -9,7 +9,12 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("docker-image-prune", "0.0.1")]
+#[command_module(
+    "docker-image-prune",
+    "0.0.1",
+    "Prunes all unused Docker images.
+    Settings: none"
+)]
 pub struct Prune;
 
 impl Module for Prune {

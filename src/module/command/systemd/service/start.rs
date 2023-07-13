@@ -9,7 +9,11 @@ use crate::utils::string_validation;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("systemd-service-start", "0.0.1")]
+#[command_module(
+    "systemd-service-start",
+    "0.0.1",
+    "Starts a SystemD service."
+)]
 pub struct Start;
 
 impl Module for Start {

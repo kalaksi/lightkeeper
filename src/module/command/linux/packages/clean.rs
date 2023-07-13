@@ -7,7 +7,12 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("linux-packages-clean", "0.0.1")]
+#[command_module(
+    "linux-packages-clean",
+    "0.0.1",
+    "Cleans the system's package cache.
+    Settings: none"
+)]
 pub struct Clean;
 
 impl Module for Clean {

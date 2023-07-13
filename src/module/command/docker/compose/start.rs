@@ -7,7 +7,12 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("docker-compose-start", "0.0.1")]
+#[command_module(
+    "docker-compose-start",
+    "0.0.1",
+    "Starts docker-compose projects or services.
+    Settings: none"
+)]
 pub struct Start {
 }
 

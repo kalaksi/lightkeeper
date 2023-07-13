@@ -8,7 +8,12 @@ use crate::utils::ShellCommand;
 use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
-#[command_module("systemd-service-unmask", "0.0.1")]
+#[command_module(
+    "systemd-service-unmask",
+    "0.0.1",
+    "Unmasks a SystemD service.
+    Settings: none"
+)]
 pub struct Unmask;
 
 impl Module for Unmask {

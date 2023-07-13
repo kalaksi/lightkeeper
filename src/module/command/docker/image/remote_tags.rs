@@ -14,7 +14,12 @@ use crate::module::platform_info::Architecture;
 use lightkeeper_module::command_module;
 
 
-#[command_module("docker-image-remote-tags", "0.0.1")]
+#[command_module(
+    "docker-image-remote-tags",
+    "0.0.1",
+    "Shows available remote tags for a Docker image. Currently supports Docker Hub only.
+    Settings: none"
+)]
 pub struct RemoteTags {
     page_size: u64,
     page_count: u64,

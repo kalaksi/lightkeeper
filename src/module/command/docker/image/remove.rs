@@ -12,7 +12,12 @@ use crate::utils::ShellCommand;
 use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
-#[command_module("docker-image-remove", "0.0.1")]
+#[command_module(
+    "docker-image-remove",
+    "0.0.1",
+    "Removes a Docker image.
+    Settings: none"
+)]
 pub struct Remove;
 
 impl Module for Remove {

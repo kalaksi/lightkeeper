@@ -1,13 +1,16 @@
-use std::{
-    collections::HashMap,
-};
+use std::collections::HashMap;
 use crate::frontend;
 use crate::host::*;
 use crate::module::*;
 use crate::module::command::*;
 use lightkeeper_module::command_module;
 
-#[command_module("docker-compose-edit", "0.0.1")]
+#[command_module(
+    "docker-compose-edit",
+    "0.0.1",
+    "Launches an editor for editing a compose-file.
+    Settings: none"
+)]
 pub struct Edit {
 }
 

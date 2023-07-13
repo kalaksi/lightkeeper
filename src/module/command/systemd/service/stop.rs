@@ -9,7 +9,12 @@ use crate::utils::ShellCommand;
 use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
-#[command_module("systemd-service-stop", "0.0.1")]
+#[command_module(
+    "systemd-service-stop",
+    "0.0.1",
+    "Stops a SystemD service.
+    Settings: none"
+)]
 pub struct Stop;
 
 impl Module for Stop {

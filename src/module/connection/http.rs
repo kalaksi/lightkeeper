@@ -5,7 +5,13 @@ use lightkeeper_module::stateless_connection_module;
 use crate::module::*;
 use crate::module::connection::*;
 
-#[stateless_connection_module("http", "0.0.1", "Global")]
+#[stateless_connection_module(
+    "http",
+    "0.0.1",
+    "Global",
+    "Sends a HTTP request.
+    Settings: none"
+)]
 pub struct Http {
 }
 

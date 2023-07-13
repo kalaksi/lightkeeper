@@ -9,7 +9,12 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("docker-compose-stop", "0.0.1")]
+#[command_module(
+    "docker-compose-stop",
+    "0.0.1",
+    "Stops docker-compose projects or services.
+    Settings: none"
+)]
 pub struct Stop {
 }
 

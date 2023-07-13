@@ -1,6 +1,4 @@
-use std::{
-    collections::HashMap,
-};
+use std::collections::HashMap;
 use crate::frontend;
 use crate::host::*;
 use crate::module::*;
@@ -8,7 +6,12 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
-#[command_module("docker-compose-pull", "0.0.1")]
+#[command_module(
+    "docker-compose-pull",
+    "0.0.1",
+    "Pulls images for docker-compose projects or services.
+    Settings: none"
+)]
 pub struct Pull {
 }
 
