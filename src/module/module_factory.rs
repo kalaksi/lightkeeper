@@ -146,17 +146,17 @@ impl ModuleFactory {
         for (metadata, module_constructor) in self.monitor_modules.iter() {
             let module_instance = module_constructor(&HashMap::new());
 
-            documentation.push_str(&format!("- {}:\n", metadata.module_spec.to_string()));
+            documentation.push_str(&format!("{}:\n", metadata.module_spec.to_string()));
 
             if let Some(parent_spec) = &metadata.parent_module {
-                documentation.push_str(&format!("  Extends module: {}\n", parent_spec.to_string()));
+                documentation.push_str(&format!("  extends module: {}\n", parent_spec.to_string()));
             };
 
-            documentation.push_str(&format!("  Description: {}\n", &metadata.description.replace("    ", "  ")));
+            documentation.push_str(&format!("  description: {}\n", &metadata.description.replace("    ", "  ")));
 
             match module_instance.get_connector_spec() {
-                Some(connector_spec) => documentation.push_str(&format!("  Connector: {}\n", connector_spec.id)),
-                None => documentation.push_str("  Connector: none\n"),
+                Some(connector_spec) => documentation.push_str(&format!("  connector: {}\n", connector_spec.id)),
+                None => documentation.push_str("  connector: none\n"),
             };
 
             documentation.push('\n');
@@ -170,22 +170,22 @@ impl ModuleFactory {
         for (metadata, module_constructor) in self.command_modules.iter() {
             let module_instance = module_constructor(&HashMap::new());
 
-            documentation.push_str(&format!("- {}:\n", metadata.module_spec.to_string()));
+            documentation.push_str(&format!("{}:\n", metadata.module_spec.to_string()));
 
             if let Some(parent_spec) = &metadata.parent_module {
-                documentation.push_str(&format!("Extends module: {}\n", parent_spec.to_string()));
+                documentation.push_str(&format!("extends module: {}\n", parent_spec.to_string()));
             };
 
-            documentation.push_str(&format!("  Description: {}\n", &metadata.description.replace("    ", "  ")));
+            documentation.push_str(&format!("  description: {}\n", &metadata.description.replace("    ", "  ")));
 
             match module_instance.get_connector_spec() {
-                Some(connector_spec) => documentation.push_str(&format!("  Connector: {}\n", connector_spec.id)),
-                None => documentation.push_str("  Connector: none\n"),
+                Some(connector_spec) => documentation.push_str(&format!("  connector: {}\n", connector_spec.id)),
+                None => documentation.push_str("  connector: none\n"),
             };
 
             match module_instance.get_display_options().parent_id.as_str() {
-                "" => documentation.push_str("  Monitor dependency: none (category-level command)\n"),
-                parent_id => documentation.push_str(&format!("  Monitor dependency: {}\n", parent_id)),
+                "" => documentation.push_str("  monitor dependency: none (category-level command)\n"),
+                parent_id => documentation.push_str(&format!("  monitor dependency: {}\n", parent_id)),
             };
 
             documentation.push('\n');
@@ -197,8 +197,8 @@ impl ModuleFactory {
         let mut documentation = String::from("Connector modules:\n");
 
         for (metadata, _) in self.connector_modules.iter() {
-            documentation.push_str(&format!("- {}:\n", metadata.module_spec.to_string()));
-            documentation.push_str(&format!("  Description: {}\n\n", &metadata.description.replace("    ", "  ")));
+            documentation.push_str(&format!("{}:\n", metadata.module_spec.to_string()));
+            documentation.push_str(&format!("  description: {}\n\n", &metadata.description.replace("    ", "  ")));
         }
         documentation
     }
