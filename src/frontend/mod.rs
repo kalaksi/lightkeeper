@@ -9,5 +9,6 @@ pub use display_options::DisplayStyle;
 pub use display_options::UserInputField;
 pub use display_options::UserInputFieldType;
 
-pub mod cli;
+// TODO: Not sure if going to implement this. Remove later.
+// pub mod cli;
 pub mod qt;
