@@ -44,6 +44,8 @@ pub fn init_resources() {
             "images/breeze/dark/edit-copy.svg" as "images/button/copy",
             "images/breeze/dark/resizecol.svg" as "images/button/resize-column",
             "images/breeze/dark/gnumeric-column-size.svg" as "images/button/resize-column-2",
+            "images/breeze/dark/list-add.svg" as "images/button/add",
+            "images/breeze/dark/list-remove.svg" as "images/button/remove",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -109,6 +111,8 @@ pub fn init_resources() {
             "images/breeze/light/edit-copy.svg" as "images/light/copy",
             "images/breeze/light/resizecol.svg" as "images/button/resize-column",
             "images/breeze/light/gnumeric-column-size.svg" as "images/button/resize-column-2",
+            "images/breeze/light/list-add.svg" as "images/button/add",
+            "images/breeze/light/list-remove.svg" as "images/button/remove",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
