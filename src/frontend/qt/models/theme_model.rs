@@ -14,6 +14,8 @@ pub struct ThemeModel {
     category_refresh_mask: qt_method!(fn(&self) -> QString),
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
     groupbox_padding: qt_method!(fn(&self) -> i8),
+    dialog_margin: qt_method!(fn(&self) -> i8),
+    form_row_spacing: qt_method!(fn(&self) -> i8),
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     animation_duration: qt_method!(fn(&self) -> QVariant),
@@ -62,6 +64,14 @@ impl ThemeModel {
 
     fn groupbox_padding(&self) -> i8 {
         2
+    }
+
+    fn dialog_margin(&self) -> i8 {
+        30
+    }
+
+    fn form_row_spacing(&self) -> i8 {
+        10
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
