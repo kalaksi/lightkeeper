@@ -1,4 +1,4 @@
-templates:
+groups:
   # This is nothing special, just a template called "defaults".
   defaults:
     settings:

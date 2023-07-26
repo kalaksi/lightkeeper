@@ -4,8 +4,8 @@ hosts:
     # Alternatively:
     # fqdn: localhost
 
-    # Templates are defined in templates.yml
-    templates:
+    # Templates are defined in groups.yml
+    groups:
       - defaults
       - linux
       - docker
@@ -13,7 +13,7 @@ hosts:
       - systemd-service
 
     # Templates should define the bulk of configurations, but every module (monitors, commands, connectors)
-    # can also be configured on host-level which will override settings from templates.
+    # can also be configured on host-level which will override settings from groups.
     monitors:
       ping:
         # If a critical monitor (ping, in this case), fails, the host is considered to be down.
