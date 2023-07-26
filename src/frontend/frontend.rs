@@ -8,6 +8,7 @@ use crate::module::monitoring::MonitoringData;
 use crate::enums::HostStatus;
 use crate::utils::ErrorMessage;
 
+// TODO: refactor, maybe split to multiple files, draw() isn't used anywhere but the CLI
 pub trait Frontend {
     fn draw(display_data: &DisplayData);
 }

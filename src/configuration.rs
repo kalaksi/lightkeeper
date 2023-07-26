@@ -11,7 +11,7 @@ const HOSTS_FILE: &str = "hosts.yml";
 const TEMPLATES_FILE: &str = "templates.yml";
 
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
     pub preferences: Preferences,
