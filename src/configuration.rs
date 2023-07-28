@@ -19,7 +19,7 @@ pub struct Configuration {
     pub cache_settings: CacheSettings,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Groups {
     pub groups: HashMap<String, HostSettings>,
@@ -165,7 +165,7 @@ pub struct ConnectorConfig {
 }
 
 impl Configuration {
-    pub fn read(config_dir: &String) -> io::Result<(Configuration, Hosts)> {
+    pub fn read(config_dir: &String) -> io::Result<(Configuration, Hosts, Groups)> {
         let config_dir = if config_dir.is_empty() {
             file_handler::get_config_dir().unwrap()
         }
@@ -244,7 +244,7 @@ impl Configuration {
             }
         }
 
-        Ok((main_config, hosts))
+        Ok((main_config, hosts, all_groups))
     }
 
     pub fn write_initial_config(config_dir: PathBuf) -> io::Result<()> {

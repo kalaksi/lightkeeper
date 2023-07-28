@@ -28,13 +28,16 @@ pub struct QmlFrontend {
 }
 
 impl QmlFrontend {
-    pub fn new(display_data: frontend::DisplayData, config: configuration::Configuration) -> Self {
+    pub fn new(display_data: frontend::DisplayData,
+               main_config: configuration::Configuration,
+               hosts_config: configuration::Hosts,
+               group_config: configuration::Groups) -> QmlFrontend {
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
 
-        let theme_model = ThemeModel::new(config.display_options.clone());
-        let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data, config.clone());
-        let config_manager = ConfigManagerModel::new(config);
+        let theme_model = ThemeModel::new(main_config.display_options.clone());
+        let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data, main_config.clone());
+        let config_manager = ConfigManagerModel::new(main_config, hosts_config, group_config);
 
         QmlFrontend {
             theme: Some(theme_model),

@@ -40,6 +40,7 @@ pub struct HostDataManagerModel {
     clear_pending_monitor_invocations: qt_method!(fn(&self, host_id: QString, monitor_id: QString)),
 
     // These methods are used to get the data in JSON and parsed in QML side.
+    // JSON is required since there doesn't seem to be a way to return a self-defined QObject.
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
     get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_host_data_json: qt_method!(fn(&self, host_id: QString) -> QString),

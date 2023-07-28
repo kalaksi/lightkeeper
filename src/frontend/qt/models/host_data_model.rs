@@ -4,8 +4,8 @@ use qmetaobject::*;
 use crate::frontend;
 use super::monitor_data_model::MonitorDataModel;
 
-// HostData is the corresponding Qt struct for frontend::HostDisplayData.
-// Contains host and state information.
+/// HostData is the corresponding Qt struct for frontend::HostDisplayData.
+/// Contains host and state information.
 #[derive(QGadget, Default, Clone)]
 pub struct HostDataModel {
     pub status: qt_property!(QString),

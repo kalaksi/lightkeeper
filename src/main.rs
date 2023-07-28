@@ -59,7 +59,7 @@ fn main() {
         return;
     }
 
-    let (config, hosts_config) = match Configuration::read(&args.config_dir) {
+    let (main_config, hosts_config, group_config) = match Configuration::read(&args.config_dir) {
         Ok(configuration) => configuration,
         Err(error) => {
             log::error!("Error while reading configuration files: {}", error);
@@ -68,9 +68,9 @@ fn main() {
     };
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
-    let mut connection_manager = ConnectionManager::new(config.cache_settings.clone());
-    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.clone(), config.cache_settings.clone());
-    let mut command_handler = CommandHandler::new(&config.preferences, connection_manager.new_request_sender(), host_manager.clone());
+    let mut connection_manager = ConnectionManager::new(main_config.cache_settings.clone());
+    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.clone(), main_config.cache_settings.clone());
+    let mut command_handler = CommandHandler::new(&main_config.preferences, connection_manager.new_request_sender(), host_manager.clone());
     host_manager.borrow_mut().start_receiving_updates();
 
     // Configure hosts and modules.
@@ -130,10 +130,10 @@ fn main() {
     let mut initial_display_data = host_manager.borrow().get_display_data();
     initial_display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 
-    let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data, config.clone());
+    let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data, main_config.clone(), hosts_config.clone(), group_config);
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
-    frontend.setup_command_handler(command_handler, monitor_manager, config.display_options.clone());
+    frontend.setup_command_handler(command_handler, monitor_manager, main_config.display_options.clone());
     frontend.start();
 
     // Shut down threads.
