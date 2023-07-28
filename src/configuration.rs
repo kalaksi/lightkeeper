@@ -25,7 +25,7 @@ pub struct Groups {
     pub groups: HashMap<String, HostSettings>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Hosts {
     pub hosts: HashMap<String, HostSettings>,
@@ -179,7 +179,7 @@ impl Configuration {
 
         // If main configuration is missing, this is probably the first run, so create initial configurations.
         if let Err(_) = fs::metadata(&main_config_file_path) {
-            Self::write_initial_configuration(config_dir)?;
+            Self::write_initial_config(config_dir)?;
         }
 
         log::info!("Reading main configuration from {}", main_config_file_path.display());
@@ -247,7 +247,7 @@ impl Configuration {
         Ok((main_config, hosts))
     }
 
-    pub fn write_initial_configuration(config_dir: PathBuf) -> io::Result<()> {
+    pub fn write_initial_config(config_dir: PathBuf) -> io::Result<()> {
         let default_main_config = include_str!("../config.example.yml");
         let default_hosts_config = include_str!("../hosts.example.yml");
         let default_groups_config = include_str!("../groups.example.yml");
@@ -305,6 +305,31 @@ impl Configuration {
             },
             Err(error) => {
                 let message = format!("Failed to create group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
+                return Err(io::Error::new(io::ErrorKind::Other, message));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Writes the hosts.yml configuration file.
+    pub fn write_hosts_config(config_dir: PathBuf, hosts: &Hosts) -> io::Result<()> {
+        let hosts_file_path = config_dir.join(HOSTS_FILE);
+
+        let hosts_config_file = fs::OpenOptions::new().write(true).truncate(true).open(hosts_file_path.clone());
+        match hosts_config_file {
+            Ok(mut file) => {
+                let hosts_config = serde_yaml::to_string(hosts).unwrap();
+                if let Err(error) = file.write_all(hosts_config.as_bytes()) {
+                    let message = format!("Failed to write host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
+                    return Err(io::Error::new(io::ErrorKind::Other, message));
+                }
+                else {
+                    log::info!("Updated host configuration file {}", hosts_file_path.to_string_lossy());
+                }
+            },
+            Err(error) => {
+                let message = format!("Failed to open host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
                 return Err(io::Error::new(io::ErrorKind::Other, message));
             }
         }
