@@ -14,6 +14,7 @@ Item {
     property bool roundButton: false
     property bool flatButton: false
     property bool hoverEnabled: true
+    property bool enabled: true
 
     width: 0.8 * parent.height
     height: width
@@ -25,6 +26,7 @@ Item {
         anchors.fill: parent
         anchors.centerIn: parent
         visible: roundButton === false
+        enabled: root.enabled
         onClicked: root.clicked()
         focusPolicy: Qt.NoFocus
         hoverEnabled: root.hoverEnabled
@@ -56,6 +58,7 @@ Item {
         anchors.fill: parent
         anchors.centerIn: parent
         visible: roundButton === true
+        enabled: root.enabled
         onClicked: root.clicked()
         focusPolicy: Qt.NoFocus
         hoverEnabled: root.hoverEnabled
