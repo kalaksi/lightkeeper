@@ -9,7 +9,8 @@ pub struct ConfigManagerModel {
     base: qt_base_class!(trait QObject),
     // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     get_host_settings: qt_method!(fn(&self, host_name: QString) -> QString),
-    get_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
+    get_all_groups: qt_method!(fn(&self) -> QStringList),
+    get_group_settings: qt_method!(fn(&self, group_name: QString) -> QString),
 
     hosts_config: Hosts,
     groups_config: Groups,
@@ -41,18 +42,20 @@ impl ConfigManagerModel {
         QString::from(serde_json::to_string(&host_settings).unwrap())
     }
 
-    pub fn get_groups(&self, host_name: QString) -> QStringList {
-        let host_groups = self.hosts_config.hosts.get(&host_name.to_string()).unwrap().groups.clone().unwrap_or(Vec::new());
-        let mut available_groups = self.groups_config.groups.keys()
-                                                            .filter(|name| !host_groups.contains(name))
-                                                            .collect::<Vec<&String>>();
-
-        available_groups.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    pub fn get_all_groups(&self) -> QStringList {
+        let all_groups = self.groups_config.groups.keys().collect::<Vec<&String>>();
 
         let mut result = QStringList::default();
-        for group in available_groups {
+        for group in all_groups {
             result.push(QString::from(group.clone()));
         }
         result
+    }
+
+    pub fn get_group_settings(&self, group_name: QString) -> QString {
+        let group_name = group_name.to_string();
+        let group_settings = self.groups_config.groups.get(&group_name).unwrap();
+
+        QString::from(serde_json::to_string(&group_settings).unwrap())
     }
 }

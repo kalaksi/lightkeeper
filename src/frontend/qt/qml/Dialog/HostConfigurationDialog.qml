@@ -4,18 +4,20 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.11
 
+import "../Button"
 
 // This component should be a direct child of main window.
 Dialog {
     id: root
     required property string hostName
-    required property var hostSettings
-    required property var groups
-    property int _contentWidth: 350
+    property var hostSettings: JSON.parse(ConfigManager.get_host_settings("infra"))
+    property var allGroups: ConfigManager.get_all_groups()
+    property int _contentWidth: 360
+    property int buttonSize: 42
 
     modal: true
-    implicitWidth: 500
-    implicitHeight: 600
+    implicitWidth: 600
+    implicitHeight: 650
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     contentItem: ColumnLayout {
@@ -35,7 +37,7 @@ Dialog {
             TextField {
                 width: parent.width
                 placeholderText: "Unique name for host..."
-                text: root.hostSettings !== undefined ? root.hostName: ""
+                text: root.hostName
                 // TODO: validation
             }
         }
@@ -51,19 +53,7 @@ Dialog {
             TextField {
                 width: parent.width
                 placeholderText: ""
-                text: {
-                    if (root.hostSettings !== undefined) {
-                        if (root.hostSettings.address === "0.0.0.0") {
-                            return root.hostSettings.fqdn
-                        }
-                        else {
-                            return root.hostSettings.address 
-                        }
-                    }
-                    else {
-                        return ""
-                    }
-                }
+                text: root.hostSettings.address === "0.0.0.0" ? root.hostSettings.fqdn : root.hostSettings.address 
             }
         }
 
@@ -73,48 +63,149 @@ Dialog {
             height: Theme.form_row_spacing()
         }
 
-        TabView {
+        Row {
+            spacing: Theme.common_spacing()
+
             Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: root._contentWidth
             Layout.fillHeight: true
+            Layout.preferredWidth: root._contentWidth
 
-            Tab {
-                title: "Selected groups"
+            TabView {
+                id: tabView
+                width: parent.width
+                height: parent.height
 
-                ListView {
-                    clip: true
-                    // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
-                    boundsBehavior: Flickable.StopAtBounds
+                property string _selectedGroup: ""
+                // Clearing _selectedGroup on tab change would be simpler, but couldn't find a way to detect a tab change.
+                property int _selectedGroupTab: -1
 
-                    ScrollBar.vertical: ScrollBar {
-                        active: true
+                Tab {
+                    title: "Selected groups"
+
+                    ListView {
+                        id: selectedGroupsList
+                        clip: true
+                        // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        ScrollBar.vertical: ScrollBar {
+                            active: true
+                        }
+
+                        model: root.hostSettings.groups !== undefined ? root.hostSettings.groups : []
+                        delegate: ItemDelegate {
+                            width: selectedGroupsList.width
+                            text: modelData
+                            highlighted: tabView.isSelected(modelData)
+                            onClicked: {
+                                if (tabView.isSelected(modelData)) {
+                                    tabView._selectedGroup = ""
+                                    tabView._selectedGroupTab = -1
+                                }
+                                else {
+                                    tabView._selectedGroup = modelData
+                                    tabView._selectedGroupTab = tabView.currentIndex
+                                }
+                            }
+                        }
                     }
+                }
 
-                    model: root.hostSettings !== undefined ? root.hostSettings.groups : []
-                    delegate: ItemDelegate {
-                        width: parent.width
-                        text: modelData
+                Tab {
+                    title: "Available groups"
+
+                    ListView {
+                        id: availableGroupsList
+                        clip: true
+                        // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        ScrollBar.vertical: ScrollBar {
+                            active: true
+                        }
+
+                        model: {
+                            let availableGroups = root.allGroups.filter(function(group) {
+                                return root.hostSettings.groups === undefined || root.hostSettings.groups.indexOf(group) === -1
+                            })
+                            availableGroups.sort()
+                            return availableGroups
+                        }
+
+                        delegate: ItemDelegate {
+                            width: availableGroupsList.width
+                            text: modelData
+                            highlighted: tabView.isSelected(modelData)
+                            onClicked: {
+                                if (tabView.isSelected(modelData)) {
+                                    tabView._selectedGroup = ""
+                                    tabView._selectedGroupTab = -1
+                                }
+                                else {
+                                    tabView._selectedGroup = modelData
+                                    tabView._selectedGroupTab = tabView.currentIndex
+                                }
+                            }
+                        }
                     }
+                }
+
+                function isSelected(group) {
+                    return tabView._selectedGroup === group &&
+                           tabView._selectedGroupTab === tabView.currentIndex
                 }
             }
 
-            Tab {
-                title: "Available groups"
+            // Add, remove and configure buttons.
+            Column {
+                width: configButton.width
+                height: tabView.height
+                spacing: Theme.common_spacing()
+                topPadding: 30
 
-                ListView {
-                    clip: true
-                    // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
-                    boundsBehavior: Flickable.StopAtBounds
+                property bool isValidGroupSelection: tabView._selectedGroup !== "" && tabView._selectedGroupTab === tabView.currentIndex
 
-                    ScrollBar.vertical: ScrollBar {
-                        active: true
+                ImageButton {
+                    id: addButton
+                    visible: tabView.currentIndex === 1
+                    enabled: parent.isValidGroupSelection
+                    imageSource: "qrc:/main/images/button/add"
+                    width: root.buttonSize
+                    onClicked: {
+                        if (root.hostSettings.groups === undefined) {
+                            root.hostSettings.groups = []
+                        }
+
+                        root.hostSettings.groups.push(tabView._selectedGroup)
+                        root.hostSettings.groups.sort()
+                        // Forces re-evaluation of lists.
+                        root.hostSettings = root.hostSettings
                     }
+                }
 
-                    model: root.groups
-                    delegate: ItemDelegate {
-                        width: parent.width
-                        text: modelData
+                ImageButton {
+                    id: removeButton
+                    visible: tabView.currentIndex === 0
+                    enabled: parent.isValidGroupSelection
+                    imageSource: "qrc:/main/images/button/remove"
+                    width: root.buttonSize
+                    onClicked: {
+                        var index = root.hostSettings.groups.indexOf(tabView._selectedGroup)
+                        if (index !== -1) {
+                            root.hostSettings.groups.splice(index, 1)
+                            root.hostSettings.groups.sort()
+                            // Forces re-evaluation of lists.
+                            root.hostSettings = root.hostSettings
+                        }
                     }
+                }
+
+                ImageButton {
+                    id: configButton
+                    enabled: parent.isValidGroupSelection
+                    imageSource: "qrc:/main/images/button/configure"
+                    width: root.buttonSize
+                    onClicked: groupConfigDialog.open()
                 }
             }
         }
@@ -123,6 +214,19 @@ Dialog {
         Item {
             Layout.fillWidth: true
             height: 40
+        }
+    }
+
+    GroupConfigurationDialog {
+        id: groupConfigDialog
+        visible: false
+        groupSettings: {
+            if (tabView._selectedGroup !== "") {
+                return ConfigManager.get_group_settings(tabView._selectedGroup)
+            }
+            else {
+                return {}
+            }
         }
     }
 }
