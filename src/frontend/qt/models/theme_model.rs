@@ -16,6 +16,7 @@ pub struct ThemeModel {
     groupbox_padding: qt_method!(fn(&self) -> i8),
     dialog_margin: qt_method!(fn(&self) -> i8),
     form_row_spacing: qt_method!(fn(&self) -> i8),
+    common_spacing: qt_method!(fn(&self) -> i8),
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     animation_duration: qt_method!(fn(&self) -> QVariant),
@@ -72,6 +73,10 @@ impl ThemeModel {
 
     fn form_row_spacing(&self) -> i8 {
         10
+    }
+
+    fn common_spacing(&self) -> i8 {
+        5
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
