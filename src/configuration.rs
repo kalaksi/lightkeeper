@@ -79,7 +79,7 @@ pub struct Category {
     pub collapsible_commands: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct HostSettings {
     pub groups: Option<Vec<String>>,
@@ -176,9 +176,20 @@ impl Configuration {
         let main_config_file_path = config_dir.join(MAIN_CONFIG_FILE);
         let hosts_file_path = config_dir.join(HOSTS_FILE);
         let groups_file_path = config_dir.join(GROUPS_FILE);
+        let old_templates_file_path = config_dir.join("templates.yml");
 
         // If main configuration is missing, this is probably the first run, so create initial configurations.
         if let Err(_) = fs::metadata(&main_config_file_path) {
+            Self::write_initial_config(config_dir)?;
+        }
+        else if let Ok(_) = fs::metadata(config_dir.join("templates.yml")) {
+            log::warn!("Old templates.yml configuration file found. Renaming old configuration files and reinitializing.");
+
+            // This is the old groups.yml file. Rename old files with .old suffix and do a new init.
+            fs::rename(&main_config_file_path, config_dir.join(format!("{}.old", MAIN_CONFIG_FILE)))?;
+            fs::rename(&hosts_file_path, config_dir.join(format!("{}.old", HOSTS_FILE)))?;
+            fs::rename(old_templates_file_path, config_dir.join("templates.yml.old"))?;
+
             Self::write_initial_config(config_dir)?;
         }
 

@@ -4,7 +4,7 @@ hosts:
     # Alternatively:
     # fqdn: localhost
 
-    # Templates are defined in groups.yml
+    # Groups are defined in groups.yml
     groups:
       - defaults
       - linux
@@ -12,14 +12,14 @@ hosts:
       - docker-compose
       - systemd-service
 
-    # Templates should define the bulk of configurations, but every module (monitors, commands, connectors)
+    # Groups should define the bulk of configurations, but every module (monitors, commands, connectors)
     # can also be configured on host-level which will override settings from groups.
     monitors:
       ping:
         # If a critical monitor (ping, in this case), fails, the host is considered to be down.
         is_critical: true
 
-    # You could also set settings for SSH connections on the template level.
+    # You could also set settings for SSH connections on the group level.
     connectors:
       ssh:
         # Every module has settings defined this way. Valid settings are defined by the module

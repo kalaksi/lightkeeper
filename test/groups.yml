@@ -1,5 +1,5 @@
 groups:
-  # This is nothing special, just a template called "defaults".
+  # This is nothing special, just a group called "defaults".
   defaults:
     settings:
       # Some modules require more privileges and will try to use sudo (without password)
