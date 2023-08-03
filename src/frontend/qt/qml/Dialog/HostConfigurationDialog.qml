@@ -1,7 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 1.4
 import QtQuick.Controls 2.15
-import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.11
 
 import "../Button"
@@ -10,14 +9,17 @@ import "../Button"
 Dialog {
     id: root
     required property string hostName
-    property var hostSettings: JSON.parse(ConfigManager.get_host_settings("infra"))
-    property var allGroups: ConfigManager.get_all_groups()
+    property var hostSettings: JSON.parse(ConfigManager.get_host_settings(hostName))
+    property var _selectedGroups: ConfigManager.get_selected_groups(hostName)
+    property var _availableGroups: ConfigManager.get_available_groups(hostName)
     property int _contentWidth: 360
     property int buttonSize: 42
 
     modal: true
     implicitWidth: 600
     implicitHeight: 650
+    bottomMargin: 80
+    background: DialogBackground { }
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     contentItem: ColumnLayout {
@@ -79,6 +81,7 @@ Dialog {
                 // Clearing _selectedGroup on tab change would be simpler, but couldn't find a way to detect a tab change.
                 property int _selectedGroupTab: -1
 
+
                 Tab {
                     title: "Selected groups"
 
@@ -92,21 +95,12 @@ Dialog {
                             active: true
                         }
 
-                        model: root.hostSettings.groups !== undefined ? root.hostSettings.groups : []
+                        model: root._selectedGroups
                         delegate: ItemDelegate {
                             width: selectedGroupsList.width
                             text: modelData
                             highlighted: tabView.isSelected(modelData)
-                            onClicked: {
-                                if (tabView.isSelected(modelData)) {
-                                    tabView._selectedGroup = ""
-                                    tabView._selectedGroupTab = -1
-                                }
-                                else {
-                                    tabView._selectedGroup = modelData
-                                    tabView._selectedGroupTab = tabView.currentIndex
-                                }
-                            }
+                            onClicked: tabView.selectGroup(modelData, tabView.currentIndex)
                         }
                     }
                 }
@@ -124,29 +118,25 @@ Dialog {
                             active: true
                         }
 
-                        model: {
-                            let availableGroups = root.allGroups.filter(function(group) {
-                                return root.hostSettings.groups === undefined || root.hostSettings.groups.indexOf(group) === -1
-                            })
-                            availableGroups.sort()
-                            return availableGroups
-                        }
+                        model: root._availableGroups
 
                         delegate: ItemDelegate {
                             width: availableGroupsList.width
                             text: modelData
                             highlighted: tabView.isSelected(modelData)
-                            onClicked: {
-                                if (tabView.isSelected(modelData)) {
-                                    tabView._selectedGroup = ""
-                                    tabView._selectedGroupTab = -1
-                                }
-                                else {
-                                    tabView._selectedGroup = modelData
-                                    tabView._selectedGroupTab = tabView.currentIndex
-                                }
-                            }
+                            onClicked: tabView.selectGroup(modelData, tabView.currentIndex)
                         }
+                    }
+                }
+
+                function selectGroup(group, tabIndex) {
+                    if (tabView.isSelected(group)) {
+                        tabView._selectedGroup = ""
+                        tabView._selectedGroupTab = -1
+                    }
+                    else {
+                        tabView._selectedGroup = group 
+                        tabView._selectedGroupTab = tabIndex
                     }
                 }
 
@@ -172,14 +162,10 @@ Dialog {
                     imageSource: "qrc:/main/images/button/add"
                     width: root.buttonSize
                     onClicked: {
-                        if (root.hostSettings.groups === undefined) {
-                            root.hostSettings.groups = []
-                        }
-
-                        root.hostSettings.groups.push(tabView._selectedGroup)
-                        root.hostSettings.groups.sort()
+                        ConfigManager.add_host_to_group(root.hostName, tabView._selectedGroup)
                         // Forces re-evaluation of lists.
-                        root.hostSettings = root.hostSettings
+                        root._selectedGroups = ConfigManager.get_selected_groups(root.hostName)
+                        root._availableGroups = ConfigManager.get_available_groups(root.hostName)
                     }
                 }
 
@@ -190,13 +176,10 @@ Dialog {
                     imageSource: "qrc:/main/images/button/remove"
                     width: root.buttonSize
                     onClicked: {
-                        var index = root.hostSettings.groups.indexOf(tabView._selectedGroup)
-                        if (index !== -1) {
-                            root.hostSettings.groups.splice(index, 1)
-                            root.hostSettings.groups.sort()
-                            // Forces re-evaluation of lists.
-                            root.hostSettings = root.hostSettings
-                        }
+                        ConfigManager.remove_host_from_group(root.hostName, tabView._selectedGroup)
+                        // Forces re-evaluation of lists.
+                        root._selectedGroups = ConfigManager.get_selected_groups(root.hostName)
+                        root._availableGroups = ConfigManager.get_available_groups(root.hostName)
                     }
                 }
 
@@ -220,13 +203,6 @@ Dialog {
     GroupConfigurationDialog {
         id: groupConfigDialog
         visible: false
-        groupSettings: {
-            if (tabView._selectedGroup !== "") {
-                return ConfigManager.get_group_settings(tabView._selectedGroup)
-            }
-            else {
-                return {}
-            }
-        }
+        groupName: tabView._selectedGroup
     }
 }

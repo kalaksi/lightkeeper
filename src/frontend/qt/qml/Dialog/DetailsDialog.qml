@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
+// TODO: Get rid of Material since it mostly just causes issues with correct background colors.
 import QtQuick.Controls.Material 2.15
 
 import ".."
@@ -16,7 +17,7 @@ Window {
     visible: true
     color: Material.background
 
-    Material.theme: Material.System
+    Material.theme: Material.Dark
 
     Dialog {
         modal: false
