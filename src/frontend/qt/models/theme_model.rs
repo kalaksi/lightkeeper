@@ -13,10 +13,20 @@ pub struct ThemeModel {
     category_background_color: qt_method!(fn(&self) -> QString),
     category_refresh_mask: qt_method!(fn(&self) -> QString),
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
+
     groupbox_padding: qt_method!(fn(&self) -> i8),
     dialog_margin: qt_method!(fn(&self) -> i8),
     form_row_spacing: qt_method!(fn(&self) -> i8),
     common_spacing: qt_method!(fn(&self) -> i8),
+    common_indentation: qt_method!(fn(&self) -> i8),
+
+    color_red: qt_method!(fn(&self) -> QString),
+    color_green: qt_method!(fn(&self) -> QString),
+    color_yellow: qt_method!(fn(&self) -> QString),
+    background_color: qt_method!(fn(&self) -> QString),
+    table_background_color: qt_method!(fn(&self) -> QString),
+    highlight_color: qt_method!(fn(&self) -> QString),
+
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     animation_duration: qt_method!(fn(&self) -> QVariant),
@@ -76,7 +86,35 @@ impl ThemeModel {
     }
 
     fn common_spacing(&self) -> i8 {
-        5
+        8
+    }
+
+    fn common_indentation(&self) -> i8 {
+        16
+    }
+
+    fn color_red(&self) -> QString {
+        QString::from("#d05252")
+    }
+
+    fn color_green(&self) -> QString {
+        QString::from("#4caa4f")
+    }
+
+    fn color_yellow(&self) -> QString {
+        QString::from("#d3cc0a")
+    }
+
+    fn background_color(&self) -> QString {
+        QString::from("#2a2e32")
+    }
+
+    fn table_background_color(&self) -> QString {
+        QString::from("#26292d")
+    }
+
+    fn highlight_color(&self) -> QString {
+        QString::from("#242628")
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
