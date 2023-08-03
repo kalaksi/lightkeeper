@@ -5,6 +5,8 @@ Text {
     color: Qt.darker(Material.foreground, 1.10)
     font.pixelSize: 8
     font.family: fontLabel.name
+    antialiasing: false
+    font.letterSpacing: 1
 
     FontLoader {
         id: fontLabel
