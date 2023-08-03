@@ -112,6 +112,8 @@ impl HostSettings {
 pub struct MonitorConfig {
     #[serde(default = "MonitorConfig::default_version")]
     pub version: String,
+    #[serde(default = "MonitorConfig::default_enabled")]
+    pub enabled: Option<bool>,
     pub is_critical: Option<bool>,
     #[serde(default)]
     pub settings: HashMap<String, String>,
@@ -121,12 +123,17 @@ impl MonitorConfig {
     pub fn default_version() -> String {
         String::from("latest")
     }
+
+    pub fn default_enabled() -> Option<bool> {
+        Some(true)
+    }
 }
 
 impl Default for MonitorConfig {
     fn default() -> Self {
         MonitorConfig {
             version: MonitorConfig::default_version(),
+            enabled: MonitorConfig::default_enabled(),
             is_critical: None,
             settings: HashMap::new(),
         }
