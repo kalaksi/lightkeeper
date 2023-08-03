@@ -139,7 +139,7 @@ Dialog {
 
                             ImageButton {
                                 visible: monitorHighlighter.containsMouse
-                                imageSource: "qrc:/main/images/button/story-editor"
+                                imageSource: "qrc:/main/images/button/entry-edit"
                                 onClicked: groupConfigDialog.open()
                                 flatButton: false
                                 roundButton: true
