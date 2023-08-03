@@ -17,11 +17,7 @@ Dialog {
 
     signal inputValuesGiven(var inputValues)
 
-    background: Rectangle {
-        color: Material.background
-        border.width: 1
-        border.color: "#808080"
-    }
+    background: DialogBackground { }
 
     contentItem: ColumnLayout {
         anchors.fill: parent

@@ -18,6 +18,8 @@ Dialog {
     implicitHeight: dialogText.implicitHeight + 100
     standardButtons: Dialog.Close
 
+    background: DialogBackground { }
+
 
     onVisibleChanged: {
         if (visible) {
@@ -26,30 +28,6 @@ Dialog {
         else {
             root.opacity = 0.0
         }
-    }
-
-    Behavior on width {
-        NumberAnimation {
-            duration: Theme.animation_duration()
-        }
-    }
-
-    Behavior on height {
-        NumberAnimation {
-            duration: Theme.animation_duration()
-        }
-    }
-
-    Behavior on opacity {
-        NumberAnimation {
-            duration: Theme.animation_duration()
-        }
-    }
-
-    background: Rectangle {
-        color: Material.background
-        border.width: 1
-        border.color: "#808080"
     }
 
     WorkingSprite {
@@ -72,5 +50,23 @@ Dialog {
 
     onClosed: {
         root.text = ""
+    }
+
+    Behavior on width {
+        NumberAnimation {
+            duration: Theme.animation_duration()
+        }
+    }
+
+    Behavior on height {
+        NumberAnimation {
+            duration: Theme.animation_duration()
+        }
+    }
+
+    Behavior on opacity {
+        NumberAnimation {
+            duration: Theme.animation_duration()
+        }
     }
 }
