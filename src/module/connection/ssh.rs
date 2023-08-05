@@ -17,15 +17,16 @@ use crate::module::*;
 use crate::module::connection::*;
 
 #[connection_module(
-    "ssh",
-    "0.0.1",
-    "Sends commands and file requests over SSH.
-    Settings:
-      - port: Port of the SSH server. Default: 22.
-      - username: Username for the SSH connection. Required.
-      - password: Password for the SSH connection. Default: empty (not used).
-      - private_key_path: Path to the private key file for the SSH connection. Default: empty.
-      - connection_timeout: Timeout (in seconds) for the SSH connection. Default: 15."
+    name="ssh",
+    version="0.0.1",
+    description="Sends commands and file requests over SSH.",
+    settings={
+      port => "Port of the SSH server. Default: 22.",
+      username => "Username for the SSH connection. Required.",
+      password => "Password for the SSH connection. Default: empty (not used).",
+      private_key_path => "Path to the private key file for the SSH connection. Default: empty.",
+      connection_timeout => "Timeout (in seconds) for the SSH connection. Default: 15."
+    }
 )]
 pub struct Ssh2 {
     session: Session,
