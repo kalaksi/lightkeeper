@@ -1,10 +1,13 @@
 extern crate qmetaobject;
+use std::collections::HashMap;
+
 use qmetaobject::*;
 
-use crate::configuration::{
-    Configuration,
-    Hosts,
-    Groups,
+use crate::{
+    configuration::Configuration,
+    configuration::Hosts,
+    configuration::Groups,
+    module::Metadata,
 };
 
 
@@ -20,23 +23,33 @@ pub struct ConfigManagerModel {
     add_host_to_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
     remove_host_from_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
 
+    get_all_monitors: qt_method!(fn(&self) -> QStringList),
     get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QString),
     get_group_monitor_settings_keys: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QStringList),
     get_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString),
 
+    get_all_connectors: qt_method!(fn(&self) -> QStringList),
     get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
     get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
 
+    get_all_module_settings: qt_method!(fn(&self, module_id: QString) -> QVariantMap),
+
     hosts_config: Hosts,
     groups_config: Groups,
+    module_metadatas: Vec<Metadata>,
     // Not yet used.
     _main_config: Configuration,
 }
 
 impl ConfigManagerModel {
-    pub fn new(main_config: Configuration, mut hosts_config: Hosts, groups_config: Groups) -> ConfigManagerModel {
+    pub fn new(main_config: Configuration,
+               hosts_config: Hosts,
+               groups_config: Groups,
+               module_metadatas: Vec<Metadata>) -> Self {
+        
+        let mut hosts_config = hosts_config;
         // Sort host groups alphabetically.
         for host in hosts_config.hosts.values_mut() {
             if let Some(ref mut groups) = host.groups {
@@ -48,6 +61,7 @@ impl ConfigManagerModel {
             hosts_config: hosts_config,
             groups_config: groups_config,
             _main_config: main_config,
+            module_metadatas: module_metadatas,
             ..Default::default()
         }
     }
@@ -126,6 +140,19 @@ impl ConfigManagerModel {
         }
     }
 
+    pub fn get_all_monitors(&self) -> QStringList {
+        let mut all_monitors = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.module_type == "monitor")
+                                                           .map(|metadata| metadata.module_spec.id.clone())
+                                                           .collect::<Vec<String>>();
+        all_monitors.sort();
+
+        let mut result = QStringList::default();
+        for monitor in all_monitors {
+            result.push(QString::from(monitor.clone()));
+        }
+        result
+    }
+
     pub fn get_group_monitors(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_monitors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().monitors;
@@ -175,6 +202,19 @@ impl ConfigManagerModel {
         QString::from(group_monitor_settings.get(&setting_key).cloned().unwrap_or_default())
     }
 
+    pub fn get_all_connectors(&self) -> QStringList {
+        let mut all_connectors = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.module_type == "connector")
+                                                             .map(|metadata| metadata.module_spec.id.clone())
+                                                             .collect::<Vec<String>>();
+        all_connectors.sort();
+
+        let mut result = QStringList::default();
+        for connector in all_connectors {
+            result.push(QString::from(connector.clone()));
+        }
+        result
+    }
+
     pub fn get_group_connectors(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
@@ -213,5 +253,22 @@ impl ConfigManagerModel {
                                                        .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
 
         QString::from(group_connector_settings.get(&setting_key).cloned().unwrap_or_default())
+    }
+
+    pub fn get_all_module_settings(&self, module_id: QString) -> QVariantMap {
+        let module_id = module_id.to_string();
+        let module_settings = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.id == module_id)
+                                                   .map(|metadata| metadata.settings.clone())
+                                                   .next().unwrap();
+
+        let mut module_settings_keys = module_settings.keys().collect::<Vec<&String>>();
+        module_settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
+
+        let mut result = QVariantMap::default();
+        for setting_key in module_settings_keys {
+            let qvariant = module_settings.get(setting_key).map(|key| QString::from(key.clone())).unwrap_or_default();
+            result.insert(setting_key.clone().into(), qvariant.into());
+        }
+        result
     }
 }

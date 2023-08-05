@@ -125,12 +125,19 @@ fn main() {
         }
     }
 
+    let module_metadatas = module_factory.get_module_metadatas();
     connection_manager.start(module_factory);
 
     let mut initial_display_data = host_manager.borrow().get_display_data();
     initial_display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
 
-    let mut frontend = frontend::qt::QmlFrontend::new(initial_display_data, main_config.clone(), hosts_config.clone(), group_config);
+    let mut frontend = frontend::qt::QmlFrontend::new(
+        initial_display_data,
+        main_config.clone(),
+        hosts_config.clone(),
+        group_config,
+        module_metadatas,
+    );
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     frontend.setup_command_handler(command_handler, monitor_manager, main_config.display_options.clone());

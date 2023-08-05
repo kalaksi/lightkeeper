@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::{
     module::MetadataSupport,
@@ -93,6 +93,14 @@ impl ModuleFactory {
         self.connector_modules.iter().find(|(metadata, _ctor)| &metadata.module_spec == module_spec).unwrap().0.clone()
     }
 
+    pub fn get_module_metadatas(&self) -> Vec<Metadata> {
+        let mut metadatas = Vec::new();
+        metadatas.extend(self.connector_modules.iter().map(|(metadata, _ctor)| metadata.clone()));
+        metadatas.extend(self.monitor_modules.iter().map(|(metadata, _ctor)| metadata.clone()));
+        metadatas.extend(self.command_modules.iter().map(|(metadata, _ctor)| metadata.clone()));
+        metadatas
+    }
+
     pub fn validate_modules(&self) {
         log::info!("Validating modules");
 
@@ -136,7 +144,16 @@ impl ModuleFactory {
                     .unwrap_or_else(|| panic!("Connector module '{}' for command module '{}' was not found.",
                         connector_spec.id, metadata.module_spec.id));
             }
+        }
 
+        // Make sure module IDs are unique between different types of modules.
+        let module_ids = self.get_module_metadatas().iter().map(|metadata| metadata.module_spec.id.clone()).collect::<Vec<_>>();
+        let mut unique_module_ids = HashSet::new();
+        for module_id in module_ids {
+            if unique_module_ids.contains(&module_id) {
+                panic!("Module ID '{}' is not unique.", module_id);
+            }
+            unique_module_ids.insert(module_id);
         }
     }
 

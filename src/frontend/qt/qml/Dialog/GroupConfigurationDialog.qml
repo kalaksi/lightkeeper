@@ -17,7 +17,7 @@ Dialog {
     implicitWidth: 600
     implicitHeight: 650
     background: DialogBackground { }
-    standardButtons: Dialog.Ok | Dialog.Cancel
+    standardButtons: Dialog.Cancel | Dialog.Ok
 
     contentItem: ScrollView {
         id: rootScrollView

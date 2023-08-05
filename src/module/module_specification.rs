@@ -4,6 +4,8 @@ use std::fmt::Display;
 pub struct ModuleSpecification {
     pub id: String,
     pub version: String,
+    // Maybe enum instead? String is more flexible and independent though.
+    pub module_type: String,
 }
 
 impl ModuleSpecification {
@@ -15,6 +17,19 @@ impl ModuleSpecification {
         ModuleSpecification {
             id: id.to_string(),
             version: version.to_string(),
+            module_type: String::from(""),
+        }
+    }
+
+    pub fn new_with_type(id: &str, version: &str, module_type: &str) -> Self {
+        if id.chars().any(char::is_whitespace) {
+            panic!("No whitespace allowed in module ID.");
+        }
+
+        ModuleSpecification {
+            id: id.to_string(),
+            version: version.to_string(),
+            module_type: module_type.to_string(),
         }
     }
 
