@@ -4,8 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
     self,
-    parse::{Parser, Parse},
-    Lit, parse_macro_input, Token, braced,
+    parse::Parser
 };
 
 // ModuleArgs contain the parsing logic. Macro parameters should look like this:
@@ -22,14 +21,16 @@ struct ModuleArgs {
     name: String,
     version: String,
     description: String,
+    cache_scope: String,
     settings: HashMap<String, String>,
 }
 
-impl Parse for ModuleArgs {
+impl syn::parse::Parse for ModuleArgs {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut name = None;
         let mut version = None;
         let mut description = None;
+        let mut cache_scope = String::from("Host");
         let mut settings = HashMap::new();
 
         while !input.is_empty() {
@@ -45,9 +46,12 @@ impl Parse for ModuleArgs {
                 "description" => {
                     description = Some(input.parse::<syn::LitStr>()?.value());
                 }
+                "cache_scope" => {
+                    cache_scope = input.parse::<syn::LitStr>()?.value();
+                }
                 "settings" => {
                     let content;
-                    braced!(content in input);
+                    syn::braced!(content in input);
 
                     while !content.is_empty() {
                         let key: syn::Ident = content.parse()?;
@@ -70,6 +74,7 @@ impl Parse for ModuleArgs {
             name: name.unwrap(),
             version: version.unwrap(),
             description: description.unwrap(),
+            cache_scope: cache_scope,
             settings: settings,
         })
     }
@@ -240,7 +245,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args_parsed = parse_macro_input!(args as ModuleArgs);
+    let args_parsed = syn::parse_macro_input!(args as ModuleArgs);
     let module_name = args_parsed.name;
     let module_version = args_parsed.version;
     let module_description = args_parsed.description;
@@ -250,7 +255,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     });
 
-    let ast = parse_macro_input!(input as syn::DeriveInput);
+    let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
     let struct_name = &ast.ident;
 
@@ -286,14 +291,16 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
-    // TODO: Add compile errors?
-    let parser = syn::punctuated::Punctuated::<syn::LitStr, syn::Token![,]>::parse_terminated;
-    let args_parsed = parser.parse(args).unwrap();
-    let mut args_iter = args_parsed.iter();
-    let module_name = args_iter.next().unwrap();
-    let module_version = args_iter.next().unwrap();
-    let cache_level = args_iter.next().unwrap();
-    let module_description = args_iter.next().unwrap();
+    let args_parsed = syn::parse_macro_input!(args as ModuleArgs);
+    let module_name = args_parsed.name;
+    let module_version = args_parsed.version;
+    let module_description = args_parsed.description;
+    let cache_scope = args_parsed.cache_scope;
+    let settings = args_parsed.settings.iter().map(|(key, value)| {
+        quote! {
+            (#key.to_string(), #value.to_string())
+        }
+    });
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -309,10 +316,12 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
                     Metadata {
                         module_spec: ModuleSpecification::new(#module_name, #module_version),
                         description: String::from(#module_description),
-                        settings: HashMap::new(),
+                        settings: HashMap::from([
+                            #(#settings),*
+                        ]),
                         parent_module: None,
                         is_stateless: true,
-                        cache_scope: #cache_level.parse::<crate::cache::CacheScope>().unwrap(),
+                        cache_scope: #cache_scope.parse::<crate::cache::CacheScope>().unwrap(),
                     }
                 }
 

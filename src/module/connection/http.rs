@@ -6,11 +6,10 @@ use crate::module::*;
 use crate::module::connection::*;
 
 #[stateless_connection_module(
-    "http",
-    "0.0.1",
-    "Global",
-    "Sends a HTTP request.
-    Settings: none"
+    name="http",
+    version="0.0.1",
+    cache_scope="Global",
+    description="Sends a HTTP request",
 )]
 pub struct Http {
 }

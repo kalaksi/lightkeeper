@@ -198,7 +198,16 @@ impl ModuleFactory {
 
         for (metadata, _) in self.connector_modules.iter() {
             documentation.push_str(&format!("{}:\n", metadata.module_spec.to_string()));
-            documentation.push_str(&format!("  description: {}\n\n", &metadata.description.replace("    ", "  ")));
+            documentation.push_str(&format!("  description: {}\n", &metadata.description));
+            documentation.push_str(&format!("  settings:\n"));
+            if metadata.settings.len() > 0 {
+                for (key, value) in metadata.settings.iter() {
+                    documentation.push_str(&format!("    {}: {}\n", key, value));
+                }
+            }
+            else {
+                documentation.push_str("    none\n");
+            }
         }
         documentation
     }
