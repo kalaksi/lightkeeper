@@ -12,10 +12,9 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_module(
-    "uptime",
-    "0.0.1",
-    "Gets host uptime in days.
-    Settings: none"
+    name="uptime",
+    version="0.0.1",
+    description="Gets host uptime in days.",
 )]
 pub struct Uptime;
 

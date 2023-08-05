@@ -9,11 +9,12 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_module(
-    "filesystem",
-    "0.0.1",
-    "Shows filesystem usage in a progress bar.
-    Settings:
-    - ignored_filesystems: comma-separated list of filesystems to ignore. Default: /run,/dev,/dev/shm,/sys/fs/cgroup"
+    name="filesystem",
+    version="0.0.1",
+    description="Shows filesystem usage in a progress bar.",
+    settings={
+        ignored_filesystems => "Comma-separated list of filesystems to ignore. Default: /run,/dev,/dev/shm,/sys/fs/cgroup"
+    }
 )]
 pub struct Filesystem {
     ignored_filesystems: Vec<String>,

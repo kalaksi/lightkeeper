@@ -8,10 +8,9 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_module(
-    "ping",
-    "0.0.1",
-    "Measures latency to host with ICMP echo request.
-    Settings: none"
+    name="ping",
+    version="0.0.1",
+    description="Measures latency to host with ICMP echo request.",
 )]
 pub struct Ping;
 

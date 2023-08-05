@@ -15,12 +15,13 @@ use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
 
 #[monitoring_module(
-    "systemd-service",
-    "0.0.1",
-    "Provides information about SystemD services.
-    Settings:
-      - included_services: Comma-separated list of services to include. Default: empty (which means all).
-      - excluded_services: Comma-separated list of services to exclude. Default: empty"
+    name="systemd-service",
+    version="0.0.1",
+    description="Provides information about SystemD services.",
+    settings={
+      included_services => "Comma-separated list of services to include. Default: empty (which means all).",
+      excluded_services => "Comma-separated list of services to exclude. Default: empty"
+    }
 )]
 pub struct Service {
     included_services: Vec<String>,

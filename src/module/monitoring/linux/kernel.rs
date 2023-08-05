@@ -11,10 +11,9 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_module(
-    "kernel",
-    "0.0.1",
-    "Provides kernel version and architecture information.
-    Settings: none"
+    name="kernel",
+    version="0.0.1",
+    description="Provides kernel version and architecture information.",
 )]
 pub struct Kernel;
 

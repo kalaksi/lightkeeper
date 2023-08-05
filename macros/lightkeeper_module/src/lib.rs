@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{
-    self,
-    parse::Parser
-};
+use syn;
 
 // ModuleArgs contain the parsing logic. Macro parameters should look like this:
 // #[connection_module(
@@ -21,6 +18,8 @@ struct ModuleArgs {
     name: String,
     version: String,
     description: String,
+    parent_module_name: Option<String>,
+    parent_module_version: Option<String>,
     cache_scope: String,
     settings: HashMap<String, String>,
 }
@@ -30,6 +29,8 @@ impl syn::parse::Parse for ModuleArgs {
         let mut name = None;
         let mut version = None;
         let mut description = None;
+        let mut parent_module_name = None;
+        let mut parent_module_version = None;
         let mut cache_scope = String::from("Host");
         let mut settings = HashMap::new();
 
@@ -45,6 +46,12 @@ impl syn::parse::Parse for ModuleArgs {
                 }
                 "description" => {
                     description = Some(input.parse::<syn::LitStr>()?.value());
+                }
+                "parent_module_name" => {
+                    parent_module_name = Some(input.parse::<syn::LitStr>()?.value());
+                }
+                "parent_module_version" => {
+                    parent_module_version = Some(input.parse::<syn::LitStr>()?.value());
                 }
                 "cache_scope" => {
                     cache_scope = input.parse::<syn::LitStr>()?.value();
@@ -74,6 +81,8 @@ impl syn::parse::Parse for ModuleArgs {
             name: name.unwrap(),
             version: version.unwrap(),
             description: description.unwrap(),
+            parent_module_name: parent_module_name,
+            parent_module_version: parent_module_version,
             cache_scope: cache_scope,
             settings: settings,
         })
@@ -83,13 +92,15 @@ impl syn::parse::Parse for ModuleArgs {
 
 #[proc_macro_attribute]
 pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
-    // TODO: Add compile errors?
-    let parser = syn::punctuated::Punctuated::<syn::LitStr, syn::Token![,]>::parse_terminated;
-    let args_parsed = parser.parse(args).unwrap();
-    let mut args_iter = args_parsed.iter();
-    let module_name = args_iter.next().unwrap();
-    let module_version = args_iter.next().unwrap();
-    let module_description = args_iter.next().unwrap();
+    let args_parsed = syn::parse_macro_input!(args as ModuleArgs);
+    let module_name = args_parsed.name;
+    let module_version = args_parsed.version;
+    let module_description = args_parsed.description;
+    let settings = args_parsed.settings.iter().map(|(key, value)| {
+        quote! {
+            (#key.to_string(), #value.to_string())
+        }
+    });
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -106,7 +117,9 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     Metadata {
                         module_spec: ModuleSpecification::new(#module_name, #module_version),
                         description: String::from(#module_description),
-                        settings: HashMap::new(),
+                        settings: HashMap::from([
+                            #(#settings),*
+                        ]),
                         parent_module: None,
                         is_stateless: true,
                         cache_scope: crate::cache::CacheScope::Host,
@@ -137,15 +150,17 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
 /// Extension modules enrich or modify the original data and are processed after parent module.
 #[proc_macro_attribute]
 pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> TokenStream {
-    // TODO: Add compile errors?
-    let parser = syn::punctuated::Punctuated::<syn::LitStr, syn::Token![,]>::parse_terminated;
-    let args_parsed = parser.parse(args).unwrap();
-    let mut args_iter = args_parsed.iter();
-    let module_name = args_iter.next().unwrap();
-    let module_version = args_iter.next().unwrap();
-    let parent_module_name = args_iter.next().unwrap();
-    let parent_module_version = args_iter.next().unwrap();
-    let module_description = args_iter.next().unwrap();
+    let args_parsed = syn::parse_macro_input!(args as ModuleArgs);
+    let module_name = args_parsed.name;
+    let module_version = args_parsed.version;
+    let module_description = args_parsed.description;
+    let parent_module_name = args_parsed.parent_module_name;
+    let parent_module_version = args_parsed.parent_module_version;
+    let settings = args_parsed.settings.iter().map(|(key, value)| {
+        quote! {
+            (#key.to_string(), #value.to_string())
+        }
+    });
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -162,7 +177,9 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                     Metadata {
                         module_spec: ModuleSpecification::new(#module_name, #module_version),
                         description: String::from(#module_description),
-                        settings: HashMap::new(),
+                        settings: HashMap::from([
+                            #(#settings),*
+                        ]),
                         parent_module: Some(ModuleSpecification::new(#parent_module_name, #parent_module_version)),
                         is_stateless: true,
                         cache_scope: crate::cache::CacheScope::Host,

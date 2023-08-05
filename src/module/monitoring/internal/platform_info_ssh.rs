@@ -9,9 +9,9 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_module(
-    "_internal-platform-info-ssh",
-    "0.0.1",
-    "Internal module to provide platform information with SSH."
+    name="_internal-platform-info-ssh",
+    version="0.0.1",
+    description="Internal module to provide platform information with SSH.",
 )]
 pub struct PlatformInfoSsh {
 }

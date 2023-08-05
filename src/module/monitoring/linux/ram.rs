@@ -11,10 +11,9 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_module(
-    "ram",
-    "0.0.1",
-    "Provides RAM usage information.
-    Settings: none"
+    name="ram",
+    version="0.0.1",
+    description="Provides RAM usage information.",
 )]
 pub struct Ram;
 

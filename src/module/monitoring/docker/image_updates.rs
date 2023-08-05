@@ -15,10 +15,11 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_extension_module(
-    "docker-image-updates", "0.0.1",
-    "docker-images", "0.0.1",
-    "Checks if there are updates available for Docker image tags.
-    Settings: none"
+    name="docker-image-updates",
+    version="0.0.1",
+    parent_module_name="docker-images",
+    parent_module_version="0.0.1",
+    description= "Checks if there are updates available for Docker image tags.",
 )]
 pub struct ImageUpdates {
     /// Tags that don't use remote registry.

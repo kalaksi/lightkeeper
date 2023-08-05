@@ -11,10 +11,9 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_module(
-    "load",
-    "0.0.1",
-    "Provides information about average load (using uptime-command).
-    Settings: none"
+    name="load",
+    version="0.0.1",
+    description="Provides information about average load (using uptime-command).",
 )]
 pub struct Load;
 

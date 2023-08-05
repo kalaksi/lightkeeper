@@ -11,11 +11,12 @@ use crate::module::*;
 use crate::module::monitoring::*;
 
 #[monitoring_module(
-    "interface",
-    "0.0.1",
-    "Provides information about network interfaces.
-    Settings:
-      - ignored_interfaces: comma-separated list of interface names to ignore. Default: empty."
+    name="interface",
+    version="0.0.1",
+    description="Provides information about network interfaces.",
+    settings={
+        ignored_interfaces => "Comma-separated list of interface names to ignore. Default: empty."
+    }
 )]
 pub struct Interface {
     ignored_interfaces: Vec<String>,

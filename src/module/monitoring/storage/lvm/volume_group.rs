@@ -13,10 +13,9 @@ use crate::utils::ShellCommand;
 use crate::host::HostSetting;
 
 #[monitoring_module(
-    "storage-lvm-volume-group",
-    "0.0.1",
-    "Provides information about LVM volume groups.
-    Settings: none"
+    name="storage-lvm-volume-group",
+    version="0.0.1",
+    description="Provides information about LVM volume groups.",
 )]
 pub struct VolumeGroup {
 }

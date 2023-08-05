@@ -13,10 +13,9 @@ use crate::utils::ShellCommand;
 use crate::host::HostSetting;
 
 #[monitoring_module(
-    "storage-lvm-physical-volume",
-    "0.0.1",
-    "Provides information about LVM physical volumes.
-    Settings: none"
+    name="storage-lvm-physical-volume",
+    version="0.0.1",
+    description="Provides information about LVM physical volumes.",
 )]
 pub struct PhysicalVolume {
 }

@@ -14,10 +14,9 @@ use crate::utils::ShellCommand;
 use crate::host::HostSetting;
 
 #[monitoring_module(
-    "storage-lvm-logical-volume",
-    "0.0.1",
-    "Provides information about LVM logical volumes.
-    Settings: none"
+    name="storage-lvm-logical-volume",
+    version="0.0.1",
+    description="Provides information about LVM logical volumes.",
 )]
 pub struct LogicalVolume {
 }
