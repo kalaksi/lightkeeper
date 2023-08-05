@@ -50,13 +50,6 @@ pub struct DisplayOptions {
 }
 
 impl DisplayOptions {
-    pub fn just_style(display_style: DisplayStyle) -> Self {
-        DisplayOptions {
-            display_style: display_style,
-            ..Default::default()
-        }
-    }
-
     pub fn validate(&self) -> Result<(), String> {
         if self.display_style == DisplayStyle::Icon && self.display_icon.is_empty() {
             return Err(String::from("Icon display style requires display_icon to be set."));
@@ -128,17 +121,6 @@ pub struct UserInputField {
 }
 
 impl UserInputField {
-    pub fn new<Stringable: ToString>(field_type: UserInputFieldType, label: Stringable, default_value: Stringable) -> Self {
-        UserInputField {
-            field_type: field_type,
-            label: label.to_string(),
-            default_value: default_value.to_string(),
-            units: Vec::new(),
-            validator_regexp: String::new(),
-            additional_validator_regexp: String::new(),
-        }
-    }
-
     pub fn number<Stringable: ToString>(label: Stringable, default_value: Stringable) -> Self {
         UserInputField {
             field_type: UserInputFieldType::Integer,
