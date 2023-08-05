@@ -9,12 +9,13 @@ use lightkeeper_module::command_module;
 
 
 #[command_module(
-    "storage-file-space-usage",
-    "0.0.1",
-    "Shows which files take the most disk space.
-    Settings:
-      - line_count: number of lines to show. Default: 50.
-      - one_file_system: only show files on the same file system. Default: false."
+    name="storage-file-space-usage",
+    version="0.0.1",
+    description="Shows which files take the most disk space.",
+    settings={
+      line_count => "Number of lines to show. Default: 50.",
+      one_file_system => "only show files on the same file system. Default: false."
+    }
 )]
 pub struct FileSpaceUsage {
     pub line_count: u32,

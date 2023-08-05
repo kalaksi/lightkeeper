@@ -9,10 +9,9 @@ use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "systemd-service-unmask",
-    "0.0.1",
-    "Unmasks a SystemD service.
-    Settings: none"
+    name="systemd-service-unmask",
+    version="0.0.1",
+    description="Unmasks a SystemD service.",
 )]
 pub struct Unmask;
 

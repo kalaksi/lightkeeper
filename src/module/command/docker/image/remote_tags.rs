@@ -15,10 +15,9 @@ use lightkeeper_module::command_module;
 
 
 #[command_module(
-    "docker-image-remote-tags",
-    "0.0.1",
-    "Shows available remote tags for a Docker image. Currently supports Docker Hub only.
-    Settings: none"
+    name="docker-image-remote-tags",
+    version="0.0.1",
+    description="Shows available remote tags for a Docker image. Currently supports Docker Hub only.",
 )]
 pub struct RemoteTags {
     page_size: u64,

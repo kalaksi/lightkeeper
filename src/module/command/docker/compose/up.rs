@@ -1,6 +1,4 @@
-use std::{
-    collections::HashMap,
-};
+use std::collections::HashMap;
 use crate::frontend;
 use crate::host::*;
 use crate::module::*;
@@ -9,10 +7,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "docker-compose-up",
-    "0.0.1",
-    "Builds, (re)creates and starts containers for a service.
-    Settings: none"
+    name="docker-compose-up",
+    version="0.0.1",
+    description="Builds, (re)creates and starts containers for a service.",
 )]
 pub struct Up {
 }

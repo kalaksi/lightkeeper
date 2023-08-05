@@ -12,11 +12,12 @@ use lightkeeper_module::command_module;
 
 
 #[command_module(
-    "storage-lvm-snapshot",
-    "0.0.1",
-    "Creates a snapshot of an LVM logical volume.
-    Settings:
-      - snapshot_suffix: The suffix to append to the snapshot name. Defaults to '_snapshot_$TIME'."
+    name="storage-lvm-snapshot",
+    version="0.0.1",
+    description="Creates a snapshot of an LVM logical volume.",
+    settings={
+      snapshot_suffix => "The suffix to append to the snapshot name. Defaults to '_snapshot_$TIME'."
+    }
 )]
 pub struct Snapshot {
     pub snapshot_suffix: String,

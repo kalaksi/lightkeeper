@@ -8,10 +8,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "linux-packages-update-all",
-    "0.0.1",
-    "Updates all system packages.
-    Settings: none"
+    name="linux-packages-update-all",
+    version="0.0.1",
+    description="Updates all system packages.",
 )]
 pub struct UpdateAll;
 

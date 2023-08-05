@@ -9,10 +9,9 @@ use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "docker-inspect",
-    "0.0.1",
-    "Inspects a Docker container.
-    Settings: none"
+    name="docker-inspect",
+    version="0.0.1",
+    description="Inspects a Docker container.",
 )]
 pub struct Inspect;
 

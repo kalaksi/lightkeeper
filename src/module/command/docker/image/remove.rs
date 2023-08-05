@@ -13,10 +13,9 @@ use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "docker-image-remove",
-    "0.0.1",
-    "Removes a Docker image.
-    Settings: none"
+    name="docker-image-remove",
+    version="0.0.1",
+    description="Removes a Docker image.",
 )]
 pub struct Remove;
 

@@ -8,10 +8,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "linux-packages-update",
-    "0.0.1",
-    "Updates individual system packages.
-    Settings: none"
+    name="linux-packages-update",
+    version="0.0.1",
+    description="Updates individual system packages.",
 )]
 pub struct Update;
 

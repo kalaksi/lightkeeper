@@ -10,10 +10,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "logs",
-    "0.0.1",
-    "Shows logs from journalctl.
-    Settings: none"
+    name="logs",
+    version="0.0.1",
+    description="Shows logs from journalctl.",
 )]
 pub struct Logs;
 

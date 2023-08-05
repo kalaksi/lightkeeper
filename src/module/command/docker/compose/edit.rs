@@ -6,10 +6,9 @@ use crate::module::command::*;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "docker-compose-edit",
-    "0.0.1",
-    "Launches an editor for editing a compose-file.
-    Settings: none"
+    name="docker-compose-edit",
+    version="0.0.1",
+    description="Launches an editor for editing a compose-file.",
 )]
 pub struct Edit {
 }

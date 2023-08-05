@@ -1,6 +1,4 @@
-use std::{
-    collections::HashMap,
-};
+use std::collections::HashMap;
 use crate::enums::Criticality;
 use crate::frontend;
 use crate::host::*;
@@ -10,10 +8,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "docker-compose-stop",
-    "0.0.1",
-    "Stops docker-compose projects or services.
-    Settings: none"
+    name="docker-compose-stop",
+    version="0.0.1",
+    description="Stops docker-compose projects or services.",
 )]
 pub struct Stop {
 }

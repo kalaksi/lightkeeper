@@ -177,6 +177,15 @@ impl ModuleFactory {
             };
 
             documentation.push_str(&format!("  description: {}\n", &metadata.description.replace("    ", "  ")));
+            documentation.push_str(&format!("  settings:\n"));
+            if metadata.settings.len() > 0 {
+                for (key, value) in metadata.settings.iter() {
+                    documentation.push_str(&format!("    {}: {}\n", key, value));
+                }
+            }
+            else {
+                documentation.push_str("    none\n");
+            }
 
             match module_instance.get_connector_spec() {
                 Some(connector_spec) => documentation.push_str(&format!("  connector: {}\n", connector_spec.id)),

@@ -10,10 +10,9 @@ use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "systemd-service-stop",
-    "0.0.1",
-    "Stops a SystemD service.
-    Settings: none"
+    name="systemd-service-stop",
+    version="0.0.1",
+    description="Stops a SystemD service.",
 )]
 pub struct Stop;
 

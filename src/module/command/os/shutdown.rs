@@ -8,10 +8,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "shutdown",
-    "0.0.1",
-    "Shuts down the host.
-    Settings: none"
+    name="shutdown",
+    version="0.0.1",
+    description="Shuts down the host.",
 )]
 pub struct Shutdown;
 

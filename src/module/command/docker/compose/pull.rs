@@ -7,10 +7,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "docker-compose-pull",
-    "0.0.1",
-    "Pulls images for docker-compose projects or services.
-    Settings: none"
+    name="docker-compose-pull",
+    version="0.0.1",
+    description="Pulls images for docker-compose projects or services.",
 )]
 pub struct Pull {
 }

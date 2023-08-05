@@ -8,9 +8,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "linux-packages-uninstall",
-    "0.0.1",
-    "Uninstalls system packages."
+    name="linux-packages-uninstall",
+    version="0.0.1",
+    description="Uninstalls system packages.",
 )]
 pub struct Uninstall {
     pub purge: bool

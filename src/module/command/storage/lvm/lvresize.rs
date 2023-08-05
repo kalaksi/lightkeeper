@@ -10,10 +10,9 @@ use lightkeeper_module::command_module;
 
 
 #[command_module(
-    "storage-lvm-lvresize",
-    "0.0.1",
-    "Resizes an LVM logical volume.
-    Settings: none"
+    name="storage-lvm-lvresize",
+    version="0.0.1",
+    description="Resizes an LVM logical volume.",
 )]
 pub struct LVResize {
 }

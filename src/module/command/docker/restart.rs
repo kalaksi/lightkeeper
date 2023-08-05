@@ -9,10 +9,9 @@ use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "docker-restart",
-    "0.0.1",
-    "Restarts a Docker container.
-    Settings: none"
+    name="docker-restart",
+    version="0.0.1",
+    description="Restarts a Docker container.",
 )]
 pub struct Restart;
 

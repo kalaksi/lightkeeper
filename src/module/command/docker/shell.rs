@@ -8,10 +8,9 @@ use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "docker-shell",
-    "0.0.1",
-    "Opens a shell inside a Docker container.
-    Settings: none"
+    name="docker-shell",
+    version="0.0.1",
+    description="Opens a shell inside a Docker container.",
 )]
 pub struct Shell;
 

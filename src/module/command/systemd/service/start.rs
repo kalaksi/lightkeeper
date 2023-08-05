@@ -10,9 +10,9 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    "systemd-service-start",
-    "0.0.1",
-    "Starts a SystemD service."
+    name="systemd-service-start",
+    version="0.0.1",
+    description="Starts a SystemD service.",
 )]
 pub struct Start;
 
