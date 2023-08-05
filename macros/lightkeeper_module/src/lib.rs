@@ -282,7 +282,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
         impl MetadataSupport for #struct_name {
             fn get_metadata() -> Metadata {
                 Metadata {
-                    module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, "connection"),
+                    module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, "connector"),
                     description: String::from(#module_description),
                     settings: HashMap::from([
                         #(#settings),*
@@ -330,7 +330,7 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
             impl MetadataSupport for #struct_name {
                 fn get_metadata() -> Metadata {
                     Metadata {
-                        module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, "connection"),
+                        module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, "connector"),
                         description: String::from(#module_description),
                         settings: HashMap::from([
                             #(#settings),*

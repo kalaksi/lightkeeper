@@ -33,30 +33,33 @@ impl ModuleFactory {
     }
 
     pub fn new_connector(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> connection::Connector {
-        let normalized_spec = match module_spec.latest_version() {
-            true => ModuleSpecification::new(&module_spec.id.as_str(), self.get_latest_version_for_connector(&module_spec.id).as_str()),
-            false => module_spec.clone(),
-        };
+        let mut normalized_spec = module_spec.clone();
+        normalized_spec.module_type = String::from("connector");
+        if normalized_spec.latest_version() {
+            normalized_spec.version = self.get_latest_version_for_connector(&normalized_spec.id);
+        }
 
         let constructor = self.connector_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
         constructor(settings)
     }
 
     pub fn new_monitor(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> monitoring::Monitor {
-        let normalized_spec = match module_spec.latest_version() {
-            true => ModuleSpecification::new(&module_spec.id.as_str(), self.get_latest_version_for_monitor(&module_spec.id).as_str()),
-            false => module_spec.clone(),
-        };
+        let mut normalized_spec = module_spec.clone();
+        normalized_spec.module_type = String::from("monitor");
+        if normalized_spec.latest_version() {
+            normalized_spec.version = self.get_latest_version_for_monitor(&normalized_spec.id);
+        }
 
         let constructor = self.monitor_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
         constructor(settings)
     }
 
     pub fn new_command(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> command::Command {
-        let normalized_spec = match module_spec.latest_version() {
-            true => ModuleSpecification::new(&module_spec.id.as_str(), self.get_latest_version_for_command(&module_spec.id).as_str()),
-            false => module_spec.clone(),
-        };
+        let mut normalized_spec = module_spec.clone();
+        normalized_spec.module_type = String::from("command");
+        if normalized_spec.latest_version() {
+            normalized_spec.version = self.get_latest_version_for_command(&normalized_spec.id);
+        }
 
         let constructor = self.command_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
         constructor(settings)
@@ -90,7 +93,8 @@ impl ModuleFactory {
     }
 
     pub fn get_connector_module_metadata(&self, module_spec: &ModuleSpecification) -> Metadata {
-        self.connector_modules.iter().find(|(metadata, _ctor)| &metadata.module_spec == module_spec).unwrap().0.clone()
+        let module_spec = ModuleSpecification::new_with_type(module_spec.id.as_str(), module_spec.version.as_str(), "connector");
+        self.connector_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == module_spec).unwrap().0.clone()
     }
 
     pub fn get_module_metadatas(&self) -> Vec<Metadata> {
@@ -112,6 +116,7 @@ impl ModuleFactory {
             }
 
             if let Some(connector_spec) = new_monitor.get_connector_spec() {
+                let connector_spec = ModuleSpecification::new_with_type(connector_spec.id.as_str(), connector_spec.version.as_str(), "connector");
                 self.connector_modules.iter()
                     .find(|(metadata, _ctor)| metadata.module_spec == connector_spec)
                     .unwrap_or_else(|| panic!("Connector module '{}' for monitoring module '{}' was not found.",
@@ -119,7 +124,8 @@ impl ModuleFactory {
             }
 
             if let Some(parent_spec) = &metadata.parent_module {
-                let matches = self.monitor_modules.iter().filter(|(metadata, _)| &metadata.module_spec == parent_spec).collect::<Vec<_>>();
+                let parent_spec = ModuleSpecification::new_with_type(parent_spec.id.as_str(), parent_spec.version.as_str(), "monitor");
+                let matches = self.monitor_modules.iter().filter(|(metadata, _)| metadata.module_spec == parent_spec).collect::<Vec<_>>();
                 if matches.len() == 0 {
                     panic!("Parent module '{}' for monitoring extension module '{}' was not found.", parent_spec.id, metadata.module_spec.id);
                 }
@@ -139,21 +145,12 @@ impl ModuleFactory {
             }
 
             if let Some(connector_spec) = new_command.get_connector_spec() {
+                let connector_spec = ModuleSpecification::new_with_type(connector_spec.id.as_str(), connector_spec.version.as_str(), "connector");
                 self.connector_modules.iter()
                     .find(|(metadata, _ctor)| metadata.module_spec == connector_spec)
                     .unwrap_or_else(|| panic!("Connector module '{}' for command module '{}' was not found.",
                         connector_spec.id, metadata.module_spec.id));
             }
-        }
-
-        // Make sure module IDs are unique between different types of modules.
-        let module_ids = self.get_module_metadatas().iter().map(|metadata| metadata.module_spec.id.clone()).collect::<Vec<_>>();
-        let mut unique_module_ids = HashSet::new();
-        for module_id in module_ids {
-            if unique_module_ids.contains(&module_id) {
-                panic!("Module ID '{}' is not unique.", module_id);
-            }
-            unique_module_ids.insert(module_id);
         }
     }
 
