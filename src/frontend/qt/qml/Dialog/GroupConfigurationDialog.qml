@@ -19,6 +19,7 @@ Dialog {
     background: DialogBackground { }
     standardButtons: Dialog.Cancel | Dialog.Ok
 
+
     contentItem: ScrollView {
         id: rootScrollView
         contentWidth: availableWidth
@@ -45,36 +46,53 @@ Dialog {
                 Column {
                     Layout.leftMargin: Theme.common_indentation()
                     width: parent.width - 40
+                    spacing: 0
 
                     RowHighlight {
                         id: connectorHighlighter
                         width: parent.width
-                        height: connectorRow.height + Theme.spacing_normal() / 2
+                        height: connectoringModuleRow.height
 
                         RowLayout {
-                            id: connectorRow
-                            spacing: Theme.spacing_normal()
+                            id: connectoringModuleRow
+                            width: parent.width
+                            spacing: Theme.spacing_tight()
 
                             NormalText {
                                 text: modelData
+                                // Has to be set explicitly or may, for some reason, change color when redrawn.
+                                color: Theme.color_text()
 
+                                Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
                             }
 
                             ImageButton {
-                                visible: connectorHighlighter.containsMouse
                                 imageSource: "qrc:/main/images/button/entry-edit"
                                 onClicked: {
                                     moduleSettingsDialog.moduleId = modelData
                                     moduleSettingsDialog.moduleType = "connector"
                                     moduleSettingsDialog.visible = true
                                 }
-                                flatButton: false
-                                roundButton: true
+                                flatButton: true
+                                roundButton: false
                                 tooltip: "Module settings..."
-                                hoverEnabled: true
+                                width: 26
 
-                                Layout.fillHeight: true
+                                Layout.alignment: Qt.AlignVCenter
+                            }
+
+                            ImageButton {
+                                imageSource: "qrc:/main/images/button/delete"
+                                onClicked: {
+                                    ConfigManager.remove_group_connector(root.groupName, modelData)
+                                    root._connectorList = ConfigManager.get_group_connectors(root.groupName)
+                                }
+                                flatButton: true
+                                roundButton: false
+                                tooltip: "Remove module from group"
+                                width: 26
+
                                 Layout.alignment: Qt.AlignVCenter
                                 Layout.rightMargin: Theme.common_indentation()
                             }
@@ -84,21 +102,21 @@ Dialog {
                     Repeater {
                         id: connectorSettingsRepeater
                         property string connectorName: modelData
-                        model: ConfigManager.get_group_connector_settings_keys(root.groupName, modelData)
+                        model: ConfigManager.get_group_connector_settings_keys(root.groupName, connectorName)
 
                         Layout.fillWidth: true
                         RowLayout {
-                            width: parent.width
-                            spacing: Theme.spacing_normal()
+                            SmallText {
+                                text: modelData + ": "
+                                color: Theme.color_dark_text()
 
-                            NormalText {
-                                text: modelData
-
-                                Layout.alignment: Qt.AlignVCenter
+                                Layout.fillWidth: true
+                                Layout.leftMargin: Theme.common_indentation()
                             }
 
-                            NormalText {
+                            SmallText {
                                 text: ConfigManager.get_group_connector_setting(root.groupName, connectorSettingsRepeater.connectorName, modelData)
+                                color: Theme.color_dark_text()
 
                                 Layout.fillWidth: true
                             }
@@ -144,6 +162,8 @@ Dialog {
 
                             NormalText {
                                 text: modelData
+                                // Has to be set explicitly or may, for some reason, change color when redrawn.
+                                color: Theme.color_text()
 
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
@@ -233,5 +253,15 @@ Dialog {
         id: moduleSettingsDialog
         visible: false
         groupName: root.groupName
+
+        onAcceptedValid: function(moduleType, groupName, moduleId) {
+            if (moduleType === "connector") {
+                root._connectorList = []
+                root._connectorList = ConfigManager.get_group_connectors(groupName)
+            } else if (moduleType === "monitor") {
+                root._monitorList = []
+                root._monitorList = ConfigManager.get_group_monitors(groupName)
+            }
+        }
     }
 }

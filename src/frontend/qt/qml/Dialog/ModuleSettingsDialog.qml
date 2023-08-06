@@ -19,6 +19,8 @@ Dialog {
     standardButtons: Dialog.Ok | Dialog.Cancel
     background: DialogBackground { }
 
+    signal acceptedValid(string moduleType, string groupName, string moduleId)
+
     contentItem: ScrollView {
         contentWidth: availableWidth
 
@@ -27,9 +29,10 @@ Dialog {
             anchors.margins: 30
 
             Repeater {
+                id: repeater
                 Layout.fillWidth: true
 
-                model: getModuleSettings()
+                model: getModuleSettingsModel()
 
                 Row {
                     Layout.fillWidth: true
@@ -56,10 +59,10 @@ Dialog {
                     TextField {
                         id: textField
                         width: parent.width * 0.4
+                        anchors.verticalCenter: parent.verticalCenter
                         placeholderText: "(default)"
                         text: modelData.value
 
-                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
             }
@@ -71,7 +74,31 @@ Dialog {
         }
     }
 
-    function getModuleSettings() {
+    onAccepted: {
+        for (let i = 0; i < repeater.model.length; i++) {
+            let nextItem = repeater.itemAt(i)
+            let key = nextItem.children[0].children[0].text
+            let value = nextItem.children[1].text
+            let previousValue = repeater.model.filter((item) => item.key === key)[0].value
+
+            if (value === previousValue) {
+                continue
+            }
+
+            if (root.moduleType === "connector") {
+                ConfigManager.set_group_connector_setting(root.groupName, root.moduleId, key, value)
+            }
+            else if (root.moduleType === "monitor") {
+                ConfigManager.set_group_monitor_setting(root.groupName, root.moduleId, key, value)
+            }
+            else if (root.moduleType === "command") {
+                ConfigManager.set_group_command_setting(root.groupName, root.moduleId, key, value)
+            }
+        }
+        root.acceptedValid(root.moduleType, root.groupName, root.moduleId)
+    }
+
+    function getModuleSettingsModel() {
         let settings = ConfigManager.get_all_module_settings(root.moduleType, root.moduleId)
         let settingsArray = []
         for (let key in settings) {

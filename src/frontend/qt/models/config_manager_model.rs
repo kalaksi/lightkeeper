@@ -29,11 +29,13 @@ pub struct ConfigManagerModel {
     toggle_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     get_group_monitor_settings_keys: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QStringList),
     get_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString),
+    set_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString, setting_value: QString)),
 
     get_all_connectors: qt_method!(fn(&self) -> QStringList),
     get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
     get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
+    set_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString)),
 
     get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
@@ -217,6 +219,17 @@ impl ConfigManagerModel {
         QString::from(group_monitor_settings.get(&setting_key).cloned().unwrap_or_default())
     }
 
+    pub fn set_group_monitor_setting(&mut self, group_name: QString, monitor_name: QString, setting_key: QString, setting_value: QString) {
+        let group_name = group_name.to_string();
+        let monitor_name = monitor_name.to_string();
+        let setting_key = setting_key.to_string();
+        let setting_value = setting_value.to_string();
+
+        let group_monitor_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
+                                                       .monitors.get_mut(&monitor_name).unwrap();
+        group_monitor_settings.settings.insert(setting_key, setting_value);
+    }
+
     pub fn get_all_connectors(&self) -> QStringList {
         let mut all_connectors = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.module_type == "connector")
                                                              .map(|metadata| metadata.module_spec.id.clone())
@@ -268,6 +281,17 @@ impl ConfigManagerModel {
                                                        .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
 
         QString::from(group_connector_settings.get(&setting_key).cloned().unwrap_or_default())
+    }
+
+    pub fn set_group_connector_setting(&mut self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString) {
+        let group_name = group_name.to_string();
+        let connector_name = connector_name.to_string();
+        let setting_key = setting_key.to_string();
+        let setting_value = setting_value.to_string();
+
+        let group_connector_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
+                                                         .connectors.get_mut(&connector_name).unwrap();
+        group_connector_settings.settings.insert(setting_key, setting_value);
     }
 
     pub fn get_all_module_settings(&self, module_type: QString, module_id: QString) -> QVariantMap {

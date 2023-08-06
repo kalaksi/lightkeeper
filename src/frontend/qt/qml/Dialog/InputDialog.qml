@@ -14,10 +14,10 @@ Dialog {
     implicitWidth: 400
     implicitHeight: 300
     standardButtons: Dialog.Ok | Dialog.Cancel
+    background: DialogBackground { }
 
     signal inputValuesGiven(var inputValues)
 
-    background: DialogBackground { }
 
     contentItem: ColumnLayout {
         anchors.fill: parent
