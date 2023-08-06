@@ -16,16 +16,18 @@ pub struct ThemeModel {
 
     groupbox_padding: qt_method!(fn(&self) -> i8),
     dialog_margin: qt_method!(fn(&self) -> i8),
-    form_row_spacing: qt_method!(fn(&self) -> i8),
-    common_spacing: qt_method!(fn(&self) -> i8),
+    spacing_loose: qt_method!(fn(&self) -> i8),
+    spacing_normal: qt_method!(fn(&self) -> i8),
+    spacing_tight: qt_method!(fn(&self) -> i8),
     common_indentation: qt_method!(fn(&self) -> i8),
 
     color_red: qt_method!(fn(&self) -> QString),
     color_green: qt_method!(fn(&self) -> QString),
     color_yellow: qt_method!(fn(&self) -> QString),
     background_color: qt_method!(fn(&self) -> QString),
-    table_background_color: qt_method!(fn(&self) -> QString),
-    highlight_color: qt_method!(fn(&self) -> QString),
+    color_table_background: qt_method!(fn(&self) -> QString),
+    color_dark_text: qt_method!(fn(&self) -> QString),
+    color_highlight: qt_method!(fn(&self) -> QString),
 
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
@@ -81,12 +83,16 @@ impl ThemeModel {
         30
     }
 
-    fn form_row_spacing(&self) -> i8 {
-        10
+    fn spacing_loose(&self) -> i8 {
+        12
     }
 
-    fn common_spacing(&self) -> i8 {
+    fn spacing_normal(&self) -> i8 {
         8
+    }
+
+    fn spacing_tight(&self) -> i8 {
+        2
     }
 
     fn common_indentation(&self) -> i8 {
@@ -109,11 +115,15 @@ impl ThemeModel {
         QString::from("#2a2e32")
     }
 
-    fn table_background_color(&self) -> QString {
+    fn color_table_background(&self) -> QString {
         QString::from("#26292d")
     }
 
-    fn highlight_color(&self) -> QString {
+    fn color_dark_text(&self) -> QString {
+        QString::from("#a0a0a0")
+    }
+
+    fn color_highlight(&self) -> QString {
         QString::from("#242628")
     }
 

@@ -14,7 +14,7 @@ Rectangle {
         preventStealing: true
 
         onEntered: {
-            root.color = Theme.highlight_color()
+            root.color = Theme.color_highlight()
         }
 
         onExited: {

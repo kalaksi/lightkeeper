@@ -26,6 +26,7 @@ pub struct ConfigManagerModel {
     get_all_monitors: qt_method!(fn(&self) -> QStringList),
     get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QString),
+    toggle_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     get_group_monitor_settings_keys: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QStringList),
     get_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString),
 
@@ -34,7 +35,7 @@ pub struct ConfigManagerModel {
     get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
     get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
 
-    get_all_module_settings: qt_method!(fn(&self, module_id: QString) -> QVariantMap),
+    get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
     hosts_config: Hosts,
     groups_config: Groups,
@@ -176,6 +177,20 @@ impl ConfigManagerModel {
                           .enabled.unwrap_or(true).to_string().into()
     }
 
+    pub fn toggle_group_monitor_enabled(&mut self, group_name: QString, monitor_name: QString) {
+        let group_name = group_name.to_string();
+        let monitor_name = monitor_name.to_string();
+
+        let group_monitor_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
+                                                       .monitors.get_mut(&monitor_name).unwrap();
+
+        if let Some(enabled) = group_monitor_settings.enabled {
+            group_monitor_settings.enabled = Some(!enabled);
+        } else {
+            group_monitor_settings.enabled = Some(false);
+        }
+    }
+
     pub fn get_group_monitor_settings_keys(&self, group_name: QString, monitor_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let monitor_name = monitor_name.to_string();
@@ -255,11 +270,14 @@ impl ConfigManagerModel {
         QString::from(group_connector_settings.get(&setting_key).cloned().unwrap_or_default())
     }
 
-    pub fn get_all_module_settings(&self, module_id: QString) -> QVariantMap {
+    pub fn get_all_module_settings(&self, module_type: QString, module_id: QString) -> QVariantMap {
         let module_id = module_id.to_string();
-        let module_settings = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.id == module_id)
-                                                   .map(|metadata| metadata.settings.clone())
-                                                   .next().unwrap();
+        let module_type = module_type.to_string();
+        // TODO: Consider version too.
+        let module_settings = self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == module_type)
+            .map(|metadata| metadata.settings.clone())
+            .next().unwrap_or_default();
 
         let mut module_settings_keys = module_settings.keys().collect::<Vec<&String>>();
         module_settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));

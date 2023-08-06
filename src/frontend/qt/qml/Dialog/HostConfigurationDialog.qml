@@ -26,7 +26,7 @@ Dialog {
         id: content
         anchors.fill: parent
         anchors.margins: Theme.dialog_margin()
-        spacing: Theme.form_row_spacing()
+        spacing: Theme.spacing_loose()
 
         Column {
             Layout.alignment: Qt.AlignHCenter
@@ -62,11 +62,11 @@ Dialog {
         // Just for extra spacing
         Item {
             Layout.fillWidth: true
-            height: Theme.form_row_spacing()
+            height: Theme.spacing_loose()
         }
 
         Row {
-            spacing: Theme.common_spacing()
+            spacing: Theme.spacing_normal()
 
             Layout.alignment: Qt.AlignHCenter
             Layout.fillHeight: true
@@ -150,7 +150,7 @@ Dialog {
             Column {
                 width: configButton.width
                 height: tabView.height
-                spacing: Theme.common_spacing()
+                spacing: Theme.spacing_normal()
                 topPadding: 30
 
                 property bool isValidGroupSelection: tabView._selectedGroup !== "" && tabView._selectedGroupTab === tabView.currentIndex

@@ -47,21 +47,36 @@ Dialog {
                     width: parent.width - 40
 
                     RowHighlight {
+                        id: connectorHighlighter
                         width: parent.width
-                        height: connectorRow.height + Theme.common_spacing() / 2
+                        height: connectorRow.height + Theme.spacing_normal() / 2
 
-                        Row {
+                        RowLayout {
                             id: connectorRow
-                            spacing: Theme.common_spacing()
+                            spacing: Theme.spacing_normal()
 
                             NormalText {
                                 text: modelData
+
+                                Layout.alignment: Qt.AlignVCenter
                             }
 
-                            SmallerText {
-                                text: ConfigManager.get_group_connector_enabled(root.groupName, modelData) === "false" ? "disabled" : "enabled"
-                                color: text === "disabled" ? Theme.color_red() : Theme.color_green()
-                                anchors.verticalCenter: parent.verticalCenter
+                            ImageButton {
+                                visible: connectorHighlighter.containsMouse
+                                imageSource: "qrc:/main/images/button/entry-edit"
+                                onClicked: {
+                                    moduleSettingsDialog.moduleId = modelData
+                                    moduleSettingsDialog.moduleType = "connector"
+                                    moduleSettingsDialog.visible = true
+                                }
+                                flatButton: false
+                                roundButton: true
+                                tooltip: "Module settings..."
+                                hoverEnabled: true
+
+                                Layout.fillHeight: true
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.rightMargin: Theme.common_indentation()
                             }
                         }
                     }
@@ -73,16 +88,19 @@ Dialog {
 
                         Layout.fillWidth: true
                         RowLayout {
-                            NormalText {
-                                Layout.fillWidth: true
+                            width: parent.width
+                            spacing: Theme.spacing_normal()
 
-                                Layout.leftMargin: Theme.common_indentation()
-                                text: modelData + ": "
+                            NormalText {
+                                text: modelData
+
+                                Layout.alignment: Qt.AlignVCenter
                             }
 
                             NormalText {
-                                Layout.fillWidth: true
                                 text: ConfigManager.get_group_connector_setting(root.groupName, connectorSettingsRepeater.connectorName, modelData)
+
+                                Layout.fillWidth: true
                             }
                         }
                     }
@@ -90,7 +108,7 @@ Dialog {
             }
 
             BigText {
-                topPadding: Theme.form_row_spacing()
+                topPadding: Theme.spacing_loose()
                 text: "Monitoring modules"
             }
 
@@ -112,41 +130,65 @@ Dialog {
                 Column {
                     Layout.leftMargin: Theme.common_indentation()
                     width: parent.width - 40
+                    spacing: 0
 
                     RowHighlight {
                         id: monitorHighlighter
                         width: parent.width
-                        height: monitoringModuleRow.height + Theme.common_spacing() / 2
+                        height: monitoringModuleRow.height
 
                         RowLayout {
                             id: monitoringModuleRow
                             width: parent.width
-                            spacing: Theme.common_spacing()
+                            spacing: Theme.spacing_tight()
 
                             NormalText {
                                 text: modelData
-
-                                Layout.alignment: Qt.AlignVCenter
-                            }
-
-                            SmallerText {
-                                text: ConfigManager.get_group_monitor_enabled(root.groupName, modelData) === "false" ? "disabled" : "enabled"
-                                color: text === "disabled" ? Theme.color_red() : Theme.color_green()
 
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
                             }
 
                             ImageButton {
-                                visible: monitorHighlighter.containsMouse
                                 imageSource: "qrc:/main/images/button/entry-edit"
-                                onClicked: groupConfigDialog.open()
-                                flatButton: false
-                                roundButton: true
+                                onClicked: {
+                                    moduleSettingsDialog.moduleId = modelData
+                                    moduleSettingsDialog.moduleType = "monitor"
+                                    moduleSettingsDialog.visible = true
+                                }
+                                flatButton: true
+                                roundButton: false
                                 tooltip: "Module settings..."
-                                hoverEnabled: true
+                                width: 26
 
-                                Layout.fillHeight: true
+                                Layout.alignment: Qt.AlignVCenter
+                            }
+
+                            ImageButton {
+                                imageSource: "qrc:/main/images/button/cancel"
+                                onClicked: {
+                                    ConfigManager.toggle_group_monitor_enabled(root.groupName, modelData)
+                                    root._monitorList = ConfigManager.get_group_monitors(root.groupName)
+                                }
+                                flatButton: true
+                                roundButton: false
+                                tooltip: "Enable/disable module"
+                                width: 26
+
+                                Layout.alignment: Qt.AlignVCenter
+                            }
+
+                            ImageButton {
+                                imageSource: "qrc:/main/images/button/delete"
+                                onClicked: {
+                                    ConfigManager.remove_group_monitor(root.groupName, modelData)
+                                    root._monitorList = ConfigManager.get_group_monitors(root.groupName)
+                                }
+                                flatButton: true
+                                roundButton: false
+                                tooltip: "Remove module from group"
+                                width: 26
+
                                 Layout.alignment: Qt.AlignVCenter
                                 Layout.rightMargin: Theme.common_indentation()
                             }
@@ -160,16 +202,19 @@ Dialog {
 
                         Layout.fillWidth: true
                         RowLayout {
-                            NormalText {
-                                Layout.fillWidth: true
-
-                                Layout.leftMargin: Theme.common_indentation()
+                            SmallText {
                                 text: modelData + ": "
+                                color: Theme.color_dark_text()
+
+                                Layout.fillWidth: true
+                                Layout.leftMargin: Theme.common_indentation()
                             }
 
-                            NormalText {
-                                Layout.fillWidth: true
+                            SmallText {
                                 text: ConfigManager.get_group_monitor_setting(root.groupName, monitorSettingsRepeater.monitorName, modelData)
+                                color: Theme.color_dark_text()
+
+                                Layout.fillWidth: true
                             }
                         }
                     }
@@ -182,5 +227,11 @@ Dialog {
                 height: 40
             }
         }
+    }
+
+    ModuleSettingsDialog {
+        id: moduleSettingsDialog
+        visible: false
+        groupName: root.groupName
     }
 }
