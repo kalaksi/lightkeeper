@@ -1,6 +1,5 @@
 import QtQuick 2.15
 import Qt.labs.qmlmodels 1.0
-import QtQuick.Controls.Material 2.15
 
 Item {
     // NOTE: remember that required properties can cause issues if used with modelData.

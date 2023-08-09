@@ -24,7 +24,9 @@ pub struct ThemeModel {
     color_red: qt_method!(fn(&self) -> QString),
     color_green: qt_method!(fn(&self) -> QString),
     color_yellow: qt_method!(fn(&self) -> QString),
+    // TODO: deprecated
     background_color: qt_method!(fn(&self) -> QString),
+    color_background: qt_method!(fn(&self) -> QString),
     color_table_background: qt_method!(fn(&self) -> QString),
     color_text: qt_method!(fn(&self) -> QString),
     color_dark_text: qt_method!(fn(&self) -> QString),
@@ -113,6 +115,10 @@ impl ThemeModel {
     }
 
     fn background_color(&self) -> QString {
+        QString::from("#2a2e32")
+    }
+
+    fn color_background(&self) -> QString {
         QString::from("#2a2e32")
     }
 

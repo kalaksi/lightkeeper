@@ -1,9 +1,8 @@
 import QtQuick 2.15
-import QtQuick.Controls.Material 2.15
 
 // NOTE: There's currently a bug in Qt where Text is not selectable: https://bugreports.qt.io/browse/QTBUG-14077
 Text {
-    color: Material.foreground
+    color: Theme.color_text()
     font.pointSize: 10
 }
 

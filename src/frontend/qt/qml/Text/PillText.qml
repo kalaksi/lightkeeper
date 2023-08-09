@@ -1,5 +1,4 @@
 import QtQuick 2.15
-import QtQuick.Controls.Material 2.15
 
 import "../js/TextTransform.js" as TextTransform
 
