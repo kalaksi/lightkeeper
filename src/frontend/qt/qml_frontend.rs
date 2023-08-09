@@ -1,4 +1,4 @@
-use std::{sync::mpsc, collections::HashMap};
+use std::sync::mpsc;
 use std::env;
 extern crate qmetaobject;
 use qmetaobject::*;

@@ -47,8 +47,6 @@ impl MonitorManager {
 
         // Only add if missing.
         if !monitor_collection.contains_key(&module_spec.id) {
-            log::debug!("[{}] Adding monitor {}", host.name, module_spec.id);
-
             // Add initial state value indicating no data as been received yet.
             self.state_update_sender.send(StateUpdateMessage {
                 host_name: host.name.clone(),

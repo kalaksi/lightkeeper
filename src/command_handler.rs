@@ -59,7 +59,6 @@ impl CommandHandler {
 
         // Only add if missing.
         if !command_collection.contains_key(&module_spec.id) {
-            log::debug!("[{}] Adding command {}", host_id, module_spec.id);
             command_collection.insert(module_spec.id, command);
         }
     }

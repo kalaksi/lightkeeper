@@ -55,7 +55,6 @@ impl ConnectionManager {
             let module_spec = connector.get_module_spec();
 
             if !host_connectors.contains_key(&module_spec) {
-                log::debug!("[{}] Adding connector {}", host.name, module_spec.id);
                 host_connectors.insert(module_spec, Arc::new(Mutex::new(connector)));
             }
         }

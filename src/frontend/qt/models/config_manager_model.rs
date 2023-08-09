@@ -1,5 +1,4 @@
 extern crate qmetaobject;
-use std::collections::HashMap;
 
 use qmetaobject::*;
 

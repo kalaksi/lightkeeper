@@ -1,5 +1,5 @@
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use super::{
     module::MetadataSupport,
@@ -306,6 +306,10 @@ impl ModuleFactory {
         ];
 
         self.validate_modules();
+        self.connector_modules.iter().map(|(metadata, _)| metadata).for_each(|metadata| log::debug!("Loaded connector module: {}", metadata.module_spec.id));
+        self.monitor_modules.iter().map(|(metadata, _)| metadata).for_each(|metadata| log::debug!("Loaded monitoring module: {}", metadata.module_spec.id));
+        self.command_modules.iter().map(|(metadata, _)| metadata).for_each(|metadata| log::debug!("Loaded command module: {}", metadata.module_spec.id));
+
         log::info!("Loaded {} command modules, {} monitoring modules and {} connector modules",
                    self.command_modules.len(), self.monitor_modules.len(), self.connector_modules.len());
 
