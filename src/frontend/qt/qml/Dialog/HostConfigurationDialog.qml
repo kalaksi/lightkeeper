@@ -18,7 +18,6 @@ Dialog {
     modal: true
     implicitWidth: 600
     implicitHeight: 650
-    bottomMargin: 80
     background: DialogBackground { }
     standardButtons: Dialog.Ok | Dialog.Cancel
 

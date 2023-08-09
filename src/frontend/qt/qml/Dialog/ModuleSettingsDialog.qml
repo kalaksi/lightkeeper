@@ -18,7 +18,7 @@ Dialog {
     standardButtons: Dialog.Ok | Dialog.Cancel
     background: DialogBackground { }
 
-    signal acceptedValid(string moduleType, string groupName, string moduleId)
+    signal configSaved(string moduleType, string groupName, string moduleId)
 
     contentItem: ScrollView {
         contentWidth: availableWidth
@@ -55,12 +55,19 @@ Dialog {
                         }
                     }
 
+                    CheckBox {
+                        id: checkBox
+                        anchors.verticalCenter: parent.verticalCenter
+                        checkState: modelData.enabled === false ? Qt.Unchecked : Qt.Checked
+                    }
+
                     TextField {
                         id: textField
                         width: parent.width * 0.4
                         anchors.verticalCenter: parent.verticalCenter
-                        placeholderText: "(default)"
-                        text: modelData.value
+                        enabled: checkBox.checkState === Qt.Checked
+                        placeholderText: checkBox.checkState === Qt.Checked ? "" : "unset"
+                        text: checkBox.checkState === Qt.Checked ? modelData.value : ""
 
                     }
                 }
@@ -77,11 +84,18 @@ Dialog {
         for (let i = 0; i < repeater.model.length; i++) {
             let nextItem = repeater.itemAt(i)
             let key = nextItem.children[0].children[0].text
-            let value = nextItem.children[1].text
+            let enabled = nextItem.children[1].checkState === Qt.Checked
+            let value = nextItem.children[2].text
+            let previousEnabled = repeater.model.filter((item) => item.key === key)[0].enabled
             let previousValue = repeater.model.filter((item) => item.key === key)[0].value
 
-            if (value === previousValue) {
+            if (value === previousValue && enabled === previousEnabled) {
                 continue
+            }
+
+            // "unset" is currently used as a special value to act as a null value.
+            if (enabled === false) {
+                value = "unset"
             }
 
             if (root.moduleType === "connector") {
@@ -94,7 +108,9 @@ Dialog {
                 ConfigManager.set_group_command_setting(root.groupName, root.moduleId, key, value)
             }
         }
-        root.acceptedValid(root.moduleType, root.groupName, root.moduleId)
+
+        root.configSaved(root.moduleType, root.groupName, root.moduleId)
+        repeater.model = getModuleSettingsModel()
     }
 
     function getModuleSettingsModel() {
@@ -102,6 +118,7 @@ Dialog {
         let settingsArray = []
         for (let key in settings) {
             let value = ""
+            let enabled = true
             if (root.moduleType === "connector") {
                 value = ConfigManager.get_group_connector_setting(root.groupName, root.moduleId, key)
             }
@@ -111,7 +128,18 @@ Dialog {
             else if (root.moduleType === "command") {
                 value = ConfigManager.get_group_command_setting(root.groupName, root.moduleId, key)
             }
-            settingsArray.push({ "key": key, "description": settings[key], "value": value })
+
+            if (value === "unset") {
+                value = ""
+                enabled = false
+            }
+            
+            settingsArray.push({
+                "key": key,
+                "description": settings[key],
+                "value": value,
+                "enabled": enabled
+            })
         }
         return settingsArray
     }

@@ -254,7 +254,7 @@ Dialog {
         visible: false
         groupName: root.groupName
 
-        onAcceptedValid: function(moduleType, groupName, moduleId) {
+        onConfigSaved: function(moduleType, groupName, moduleId) {
             if (moduleType === "connector") {
                 root._connectorList = []
                 root._connectorList = ConfigManager.get_group_connectors(groupName)

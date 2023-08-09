@@ -22,6 +22,7 @@ pub struct ConfigManagerModel {
     add_host_to_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
     remove_host_from_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
 
+    // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
     get_all_monitors: qt_method!(fn(&self) -> QStringList),
     get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QString),
@@ -215,7 +216,7 @@ impl ConfigManagerModel {
         let group_monitor_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
                                                        .monitors.get(&monitor_name).cloned().unwrap_or_default().settings;
 
-        QString::from(group_monitor_settings.get(&setting_key).cloned().unwrap_or_default())
+        QString::from(group_monitor_settings.get(&setting_key).cloned().unwrap_or(String::from("unset")))
     }
 
     pub fn set_group_monitor_setting(&mut self, group_name: QString, monitor_name: QString, setting_key: QString, setting_value: QString) {
@@ -226,7 +227,12 @@ impl ConfigManagerModel {
 
         let group_monitor_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
                                                        .monitors.get_mut(&monitor_name).unwrap();
-        group_monitor_settings.settings.insert(setting_key, setting_value);
+        if setting_value == "unset" {
+            group_monitor_settings.settings.remove(&setting_key);
+        }
+        else {
+            group_monitor_settings.settings.insert(setting_key, setting_value);
+        }
     }
 
     pub fn get_all_connectors(&self) -> QStringList {
@@ -277,9 +283,9 @@ impl ConfigManagerModel {
         let connector_name = connector_name.to_string();
         let setting_key = setting_key.to_string();
         let group_connector_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                                                       .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
+                                                         .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
 
-        QString::from(group_connector_settings.get(&setting_key).cloned().unwrap_or_default())
+        QString::from(group_connector_settings.get(&setting_key).cloned().unwrap_or(String::from("unset")))
     }
 
     pub fn set_group_connector_setting(&mut self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString) {
@@ -290,7 +296,13 @@ impl ConfigManagerModel {
 
         let group_connector_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
                                                          .connectors.get_mut(&connector_name).unwrap();
-        group_connector_settings.settings.insert(setting_key, setting_value);
+
+        if setting_value == "unset" {
+            group_connector_settings.settings.remove(&setting_key);
+        }
+        else {
+            group_connector_settings.settings.insert(setting_key, setting_value);
+        }
     }
 
     pub fn get_all_module_settings(&self, module_type: QString, module_id: QString) -> QVariantMap {
