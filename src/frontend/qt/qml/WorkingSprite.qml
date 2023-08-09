@@ -7,11 +7,12 @@ import "Text"
 
 
 Item {
+    id: root
     property real scale: 1.0
     property string text: ""
 
-    id: root
     anchors.centerIn: parent
+    anchors.verticalCenterOffset: -0.1 * parent.height
 
     Column {
         anchors.fill: parent
