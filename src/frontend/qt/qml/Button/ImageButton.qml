@@ -15,6 +15,7 @@ Item {
     property bool flatButton: false
     property bool hoverEnabled: true
     property bool enabled: true
+    property bool checkable: false
 
     width: 0.8 * parent.height
     height: width
@@ -30,6 +31,7 @@ Item {
         onClicked: root.clicked()
         focusPolicy: Qt.NoFocus
         hoverEnabled: root.hoverEnabled
+        checkable: root.checkable
 
         ToolTip.visible: root.tooltip !== "" && hovered
         ToolTip.delay: Theme.tooltip_delay()
@@ -62,6 +64,7 @@ Item {
         onClicked: root.clicked()
         focusPolicy: Qt.NoFocus
         hoverEnabled: root.hoverEnabled
+        checkable: root.checkable
 
         ToolTip.visible: root.tooltip !== "" && hovered
         ToolTip.delay: Theme.tooltip_delay()
