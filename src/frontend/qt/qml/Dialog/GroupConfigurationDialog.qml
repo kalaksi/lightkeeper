@@ -10,9 +10,10 @@ import ".."
 Dialog {
     id: root
     required property string groupName 
-    property var _connectorList: ConfigManager.get_group_connectors(root.groupName) 
-    property var _monitorList: ConfigManager.get_group_monitors(root.groupName)
-    property var _commandList: ConfigManager.get_group_commands(root.groupName)
+    property var _connectorList: []
+    property var _monitorList: []
+    property var _commandList: []
+    property bool _loading: true
 
     modal: true
     implicitWidth: 600
@@ -20,16 +21,16 @@ Dialog {
     background: DialogBackground { }
     standardButtons: Dialog.Cancel | Dialog.Ok
 
+    WorkingSprite {
+        visible: root._loading
+    }
 
     contentItem: ScrollView {
-        id: rootScrollView
-        anchors.fill: parent
-        anchors.margins: Theme.margin_dialog()
-        anchors.bottomMargin: Theme.margin_dialog_bottom()
         contentWidth: availableWidth
 
         Column {
             id: rootColumn
+            visible: !root._loading
             anchors.fill: parent
             spacing: Theme.spacing_tight()
 
@@ -39,6 +40,7 @@ Dialog {
 
             OptionalText {
                 visible: root._connectorList.length === 0
+                anchors.left: parent.left
                 anchors.leftMargin: Theme.common_indentation()
 
                 placeholder: "No changes"
@@ -135,6 +137,7 @@ Dialog {
 
             OptionalText {
                 visible: monitorRepeater.model.length === 0
+                anchors.left: parent.left
                 anchors.leftMargin: Theme.common_indentation()
 
                 placeholder: "No changes"
@@ -261,6 +264,7 @@ Dialog {
 
             OptionalText {
                 visible: commandRepeater.model.length === 0
+                anchors.left: parent.left
                 anchors.leftMargin: Theme.common_indentation()
 
                 placeholder: "No changes"
@@ -358,20 +362,20 @@ Dialog {
 
     onOpened: {
         ConfigManager.begin_group_configuration()
-        root._connectorList = []
-        root._monitorList = []
-        root._commandList = []
         root._connectorList = ConfigManager.get_group_connectors(root.groupName) 
         root._monitorList = ConfigManager.get_group_monitors(root.groupName)
         root._commandList = ConfigManager.get_group_commands(root.groupName)
+        root._loading = false
     }
 
     onAccepted: {
         ConfigManager.commit_group_configuration()
+        root._loading = true
     }
 
     onRejected: {
         ConfigManager.cancel_group_configuration()
+        root._loading = true
     }
 
     ModuleSettingsDialog {

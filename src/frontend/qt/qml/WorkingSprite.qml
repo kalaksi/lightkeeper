@@ -8,7 +8,7 @@ import "Text"
 
 Item {
     id: root
-    property real scale: 1.0
+    property real scale: 1.5
     property string text: ""
 
     anchors.centerIn: parent

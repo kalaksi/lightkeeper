@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
 
 import "../Text"
+import ".."
 
 
 // This component should be a direct child of main window.
@@ -11,6 +12,7 @@ Dialog {
     property string groupName: ""
     property string moduleId: ""
     property string moduleType: ""
+    property bool _loading: groupName === "" || moduleId === "" || moduleType === ""
 
     modal: true
     implicitWidth: 600
@@ -20,11 +22,16 @@ Dialog {
 
     signal configSaved(string moduleType, string groupName, string moduleId)
 
+    WorkingSprite {
+        visible: root._loading
+    }
+
     contentItem: ScrollView {
         contentWidth: availableWidth
 
         Column {
             id: rootColumn
+            visible: !root._loading
             anchors.fill: parent
             anchors.margins: Theme.margin_dialog()
             spacing: Theme.spacing_normal()
@@ -107,14 +114,10 @@ Dialog {
         }
 
         root.configSaved(root.moduleType, root.groupName, root.moduleId)
-        repeater.model = getModuleSettingsModel()
-    }
-
-    onRejected: {
-        repeater.model = []
     }
 
     onOpened: {
+        repeater.model = []
         repeater.model = getModuleSettingsModel()
     }
 
