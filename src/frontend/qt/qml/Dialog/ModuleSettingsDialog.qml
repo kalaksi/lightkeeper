@@ -31,7 +31,7 @@ Dialog {
 
             Repeater {
                 id: repeater
-                model: getModuleSettingsModel()
+                model: []
 
                 RowLayout {
                     width: parent.width
@@ -107,6 +107,14 @@ Dialog {
         }
 
         root.configSaved(root.moduleType, root.groupName, root.moduleId)
+        repeater.model = getModuleSettingsModel()
+    }
+
+    onRejected: {
+        repeater.model = []
+    }
+
+    onOpened: {
         repeater.model = getModuleSettingsModel()
     }
 
