@@ -15,7 +15,9 @@ pub struct ThemeModel {
     category_icon: qt_method!(fn(&self, category: QString) -> QString),
 
     groupbox_padding: qt_method!(fn(&self) -> i8),
-    dialog_margin: qt_method!(fn(&self) -> i8),
+    margin_dialog: qt_method!(fn(&self) -> i8),
+    // Content will often overflow behind the dialog buttons (ugh...), reserve more space for them with this.
+    margin_dialog_bottom: qt_method!(fn(&self) -> i8),
     spacing_loose: qt_method!(fn(&self) -> i8),
     spacing_normal: qt_method!(fn(&self) -> i8),
     spacing_tight: qt_method!(fn(&self) -> i8),
@@ -82,8 +84,12 @@ impl ThemeModel {
         2
     }
 
-    fn dialog_margin(&self) -> i8 {
+    fn margin_dialog(&self) -> i8 {
         30
+    }
+
+    fn margin_dialog_bottom(&self) -> i8 {
+        80
     }
 
     fn spacing_loose(&self) -> i8 {

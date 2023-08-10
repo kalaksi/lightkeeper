@@ -23,24 +23,25 @@ Dialog {
     contentItem: ScrollView {
         contentWidth: availableWidth
 
-        ColumnLayout {
+        Column {
+            id: rootColumn
             anchors.fill: parent
-            anchors.margins: 30
+            anchors.margins: Theme.margin_dialog()
+            spacing: Theme.spacing_normal()
 
             Repeater {
                 id: repeater
-                Layout.fillWidth: true
-
                 model: getModuleSettingsModel()
 
-                Row {
-                    Layout.fillWidth: true
-                    height: column.implicitHeight
+                RowLayout {
+                    width: parent.width
+                    height: textContainer.implicitHeight
                     spacing: Theme.spacing_normal()
 
                     Column {
-                        id: column
-                        width: root.width * 0.5
+                        id: textContainer
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
 
                         Label {
                             width: parent.width
@@ -55,27 +56,23 @@ Dialog {
                         }
                     }
 
-                    CheckBox {
-                        id: checkBox
-                        anchors.verticalCenter: parent.verticalCenter
-                        checkState: modelData.enabled === false ? Qt.Unchecked : Qt.Checked
+                    Switch {
+                        id: toggleSwitch
+                        checked: modelData.enabled
+
+                        Layout.alignment: Qt.AlignVCenter
                     }
 
                     TextField {
                         id: textField
-                        width: parent.width * 0.4
-                        anchors.verticalCenter: parent.verticalCenter
-                        enabled: checkBox.checkState === Qt.Checked
-                        placeholderText: checkBox.checkState === Qt.Checked ? "" : "unset"
-                        text: checkBox.checkState === Qt.Checked ? modelData.value : ""
+                        enabled: toggleSwitch.checked
+                        placeholderText: toggleSwitch.checked ? "" : "unset"
+                        text: toggleSwitch.checked ? modelData.value : ""
 
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
                     }
                 }
-            }
-
-            Item {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
             }
         }
     }
@@ -84,7 +81,7 @@ Dialog {
         for (let i = 0; i < repeater.model.length; i++) {
             let nextItem = repeater.itemAt(i)
             let key = nextItem.children[0].children[0].text
-            let enabled = nextItem.children[1].checkState === Qt.Checked
+            let enabled = nextItem.children[1].checked
             let value = nextItem.children[2].text
             let previousEnabled = repeater.model.filter((item) => item.key === key)[0].enabled
             let previousValue = repeater.model.filter((item) => item.key === key)[0].value

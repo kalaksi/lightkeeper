@@ -4,6 +4,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
 
 import "../Button"
+import "../Text"
 
 // This component should be a direct child of main window.
 Dialog {
@@ -24,8 +25,15 @@ Dialog {
     contentItem: ColumnLayout {
         id: content
         anchors.fill: parent
-        anchors.margins: Theme.dialog_margin()
+        anchors.margins: Theme.margin_dialog()
+        anchors.bottomMargin: Theme.margin_dialog_bottom()
         spacing: Theme.spacing_loose()
+
+        BigText {
+            text: "Host details"
+
+            Layout.alignment: Qt.AlignHCenter
+        }
 
         Column {
             Layout.alignment: Qt.AlignHCenter
@@ -61,7 +69,13 @@ Dialog {
         // Just for extra spacing
         Item {
             Layout.fillWidth: true
-            height: Theme.spacing_loose()
+            height: Theme.spacing_normal()
+        }
+
+        BigText {
+            text: "Configuration groups"
+
+            Layout.alignment: Qt.AlignHCenter
         }
 
         Row {
@@ -82,7 +96,7 @@ Dialog {
 
 
                 Tab {
-                    title: "Selected groups"
+                    title: `Selected (${root._selectedGroups.length})    `
 
                     ListView {
                         id: selectedGroupsList
@@ -105,7 +119,7 @@ Dialog {
                 }
 
                 Tab {
-                    title: "Available groups"
+                    title: `Available (${root._availableGroups.length})`
 
                     ListView {
                         id: availableGroupsList
@@ -146,11 +160,10 @@ Dialog {
             }
 
             // Add, remove and configure buttons.
-            Column {
+            ColumnLayout {
                 width: configButton.width
                 height: tabView.height
                 spacing: Theme.spacing_normal()
-                topPadding: 30
 
                 property bool isValidGroupSelection: tabView._selectedGroup !== "" && tabView._selectedGroupTab === tabView.currentIndex
 
@@ -166,6 +179,8 @@ Dialog {
                         root._selectedGroups = ConfigManager.get_selected_groups(root.hostName)
                         root._availableGroups = ConfigManager.get_available_groups(root.hostName)
                     }
+
+                    Layout.topMargin: 30
                 }
 
                 ImageButton {
@@ -180,6 +195,8 @@ Dialog {
                         root._selectedGroups = ConfigManager.get_selected_groups(root.hostName)
                         root._availableGroups = ConfigManager.get_available_groups(root.hostName)
                     }
+
+                    Layout.topMargin: 30
                 }
 
                 ImageButton {
@@ -189,13 +206,26 @@ Dialog {
                     width: root.buttonSize
                     onClicked: groupConfigDialog.open()
                 }
-            }
-        }
 
-        // Content will overflow behind the buttons with Layout.fillHeight (ugh...), reserve some space with them with this.
-        Item {
-            Layout.fillWidth: true
-            height: 40
+                // Spacer
+                Item {
+                    Layout.fillHeight: true
+                }
+
+                ImageButton {
+                    id: createGroupButton
+                    visible: tabView.currentIndex === 1
+                    imageSource: "qrc:/main/images/button/add"
+                    width: root.buttonSize
+                }
+
+                ImageButton {
+                    id: deleteGroupButton
+                    visible: tabView.currentIndex === 1
+                    imageSource: "qrc:/main/images/button/remove"
+                    width: root.buttonSize
+                }
+            }
         }
     }
 
