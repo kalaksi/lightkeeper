@@ -22,20 +22,28 @@ pub struct ConfigManagerModel {
     add_host_to_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
     remove_host_from_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
 
+    get_all_connectors: qt_method!(fn(&self) -> QStringList),
+    get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
+    get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
+    set_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString)),
+
     // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
     get_all_monitors: qt_method!(fn(&self) -> QStringList),
     get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    // These 2 are currently not really used.
     get_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QString),
     toggle_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     get_group_monitor_settings_keys: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QStringList),
     get_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString),
     set_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString, setting_value: QString)),
 
-    get_all_connectors: qt_method!(fn(&self) -> QStringList),
-    get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
-    get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
-    get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
-    set_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString)),
+    get_all_commands: qt_method!(fn(&self) -> QStringList),
+    get_group_commands: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    get_group_command_settings_keys: qt_method!(fn(&self, group_name: QString, command_name: QString) -> QStringList),
+    get_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString),
+    set_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString, setting_value: QString)),
+
 
     get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
@@ -302,6 +310,76 @@ impl ConfigManagerModel {
         }
         else {
             group_connector_settings.settings.insert(setting_key, setting_value);
+        }
+    }
+
+    pub fn get_all_commands(&self) -> QStringList {
+        let mut all_commands = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.module_type == "command")
+                                                             .map(|metadata| metadata.module_spec.id.clone())
+                                                             .collect::<Vec<String>>();
+        all_commands.sort();
+
+        let mut result = QStringList::default();
+        for command in all_commands {
+            result.push(QString::from(command.clone()));
+        }
+        result
+    }
+
+    pub fn get_group_commands(&self, group_name: QString) -> QStringList {
+        let group_name = group_name.to_string();
+        let group_commands = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().commands;
+
+        let mut group_commands_keys = group_commands.into_keys().collect::<Vec<String>>();
+        group_commands_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+
+        let mut result = QStringList::default();
+        for command_key in group_commands_keys {
+            result.push(QString::from(command_key));
+        }
+        result
+    }
+
+    pub fn get_group_command_settings_keys(&self, group_name: QString, command_name: QString) -> QStringList {
+        let group_name = group_name.to_string();
+        let command_name = command_name.to_string();
+        let group_command_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
+                                                       .commands.get(&command_name).cloned().unwrap_or_default().settings;
+
+        let mut group_command_settings_keys = group_command_settings.into_keys().collect::<Vec<String>>();
+        group_command_settings_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+
+        let mut result = QStringList::default();
+        for setting_key in group_command_settings_keys {
+            result.push(QString::from(setting_key));
+        }
+        result
+    }
+
+    pub fn get_group_command_setting(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString {
+        let group_name = group_name.to_string();
+        let command_name = command_name.to_string();
+        let setting_key = setting_key.to_string();
+        let group_command_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
+                                                         .commands.get(&command_name).cloned().unwrap_or_default().settings;
+
+        QString::from(group_command_settings.get(&setting_key).cloned().unwrap_or(String::from("unset")))
+    }
+
+    pub fn set_group_command_setting(&mut self, group_name: QString, command_name: QString, setting_key: QString, setting_value: QString) {
+        let group_name = group_name.to_string();
+        let command_name = command_name.to_string();
+        let setting_key = setting_key.to_string();
+        let setting_value = setting_value.to_string();
+
+        let group_command_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
+                                                         .commands.get_mut(&command_name).unwrap();
+
+        if setting_value == "unset" {
+            group_command_settings.settings.remove(&setting_key);
+        }
+        else {
+            group_command_settings.settings.insert(setting_key, setting_value);
         }
     }
 
