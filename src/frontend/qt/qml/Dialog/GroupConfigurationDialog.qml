@@ -356,6 +356,24 @@ Dialog {
         }
     }
 
+    onOpened: {
+        ConfigManager.begin_group_configuration()
+        root._connectorList = []
+        root._monitorList = []
+        root._commandList = []
+        root._connectorList = ConfigManager.get_group_connectors(root.groupName) 
+        root._monitorList = ConfigManager.get_group_monitors(root.groupName)
+        root._commandList = ConfigManager.get_group_commands(root.groupName)
+    }
+
+    onAccepted: {
+        ConfigManager.commit_group_configuration()
+    }
+
+    onRejected: {
+        ConfigManager.cancel_group_configuration()
+    }
+
     ModuleSettingsDialog {
         id: moduleSettingsDialog
         visible: false

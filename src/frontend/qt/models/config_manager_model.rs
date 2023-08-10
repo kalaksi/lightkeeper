@@ -13,8 +13,13 @@ use crate::{
 #[derive(QObject, Default)]
 pub struct ConfigManagerModel {
     base: qt_base_class!(trait QObject),
+
     // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     get_host_settings: qt_method!(fn(&self, host_name: QString) -> QString),
+
+    begin_group_configuration: qt_method!(fn(&self)),
+    cancel_group_configuration: qt_method!(fn(&self)),
+    commit_group_configuration: qt_method!(fn(&self)),
 
     get_all_groups: qt_method!(fn(&self) -> QStringList),
     get_selected_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
@@ -31,6 +36,8 @@ pub struct ConfigManagerModel {
     // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
     get_all_monitors: qt_method!(fn(&self) -> QStringList),
     get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    add_group_monitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
+    remove_group_monitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     // These 2 are currently not really used.
     get_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QString),
     toggle_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
@@ -40,15 +47,17 @@ pub struct ConfigManagerModel {
 
     get_all_commands: qt_method!(fn(&self) -> QStringList),
     get_group_commands: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    add_group_command: qt_method!(fn(&self, group_name: QString, command_name: QString)),
+    remove_group_command: qt_method!(fn(&self, group_name: QString, command_name: QString)),
     get_group_command_settings_keys: qt_method!(fn(&self, group_name: QString, command_name: QString) -> QStringList),
     get_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString),
     set_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString, setting_value: QString)),
-
 
     get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
     hosts_config: Hosts,
     groups_config: Groups,
+    groups_config_backup: Option<Groups>,
     module_metadatas: Vec<Metadata>,
     // Not yet used.
     _main_config: Configuration,
@@ -75,6 +84,20 @@ impl ConfigManagerModel {
             module_metadatas: module_metadatas,
             ..Default::default()
         }
+    }
+
+    pub fn begin_group_configuration(&mut self) {
+        self.groups_config_backup = Some(self.groups_config.clone());
+    }
+
+    pub fn cancel_group_configuration(&mut self) {
+        if let Some(groups_config_backup) = self.groups_config_backup.take() {
+            self.groups_config = groups_config_backup;
+        }
+    }
+
+    pub fn commit_group_configuration(&mut self) {
+        self.groups_config_backup = None;
     }
 
     pub fn get_host_settings(&self, host_name: QString) -> QString {
@@ -176,6 +199,18 @@ impl ConfigManagerModel {
             result.push(QString::from(monitor_key));
         }
         result
+    }
+
+    pub fn add_group_monitor(&mut self, group_name: QString, monitor_name: QString) {
+        let group_name = group_name.to_string();
+        let monitor_name = monitor_name.to_string();
+        self.groups_config.groups.get_mut(&group_name).unwrap().monitors.insert(monitor_name, Default::default());
+    }
+
+    pub fn remove_group_monitor(&mut self, group_name: QString, monitor_name: QString) {
+        let group_name = group_name.to_string();
+        let monitor_name = monitor_name.to_string();
+        self.groups_config.groups.get_mut(&group_name).unwrap().monitors.remove(&monitor_name);
     }
 
     pub fn get_group_monitor_enabled(&self, group_name: QString, monitor_name: QString) -> QString {
@@ -338,6 +373,18 @@ impl ConfigManagerModel {
             result.push(QString::from(command_key));
         }
         result
+    }
+
+    pub fn add_group_command(&mut self, group_name: QString, command_name: QString) {
+        let group_name = group_name.to_string();
+        let command_name = command_name.to_string();
+        self.groups_config.groups.get_mut(&group_name).unwrap().commands.insert(command_name, Default::default());
+    }
+
+    pub fn remove_group_command(&mut self, group_name: QString, command_name: QString) {
+        let group_name = group_name.to_string();
+        let command_name = command_name.to_string();
+        self.groups_config.groups.get_mut(&group_name).unwrap().commands.remove(&command_name);
     }
 
     pub fn get_group_command_settings_keys(&self, group_name: QString, command_name: QString) -> QStringList {
