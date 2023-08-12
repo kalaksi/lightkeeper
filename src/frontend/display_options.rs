@@ -101,7 +101,8 @@ impl Default for DisplayStyle {
 pub enum UserInputFieldType {
     Text,
     Integer,
-    DecimalNumber
+    DecimalNumber,
+    Option,
 }
 
 impl Default for UserInputFieldType {
@@ -118,6 +119,8 @@ pub struct UserInputField {
     pub units: Vec<String>,
     pub validator_regexp: String,
     pub additional_validator_regexp: String,
+    pub options: Vec<String>,
+    pub option_descriptions: Vec<String>,
 }
 
 impl UserInputField {
@@ -129,6 +132,8 @@ impl UserInputField {
             units: Vec::new(),
             validator_regexp: String::from("^\\d+$"),
             additional_validator_regexp: String::new(),
+            options: Vec::new(),
+            option_descriptions: Vec::new(),
         }
     }
 
@@ -140,6 +145,8 @@ impl UserInputField {
             units: Vec::new(),
             validator_regexp: String::from("^\\d+(\\.\\d+)?$"),
             additional_validator_regexp: String::new(),
+            options: Vec::new(),
+            option_descriptions: Vec::new(),
         }
     }
 
@@ -151,6 +158,8 @@ impl UserInputField {
             validator_regexp: format!("^\\d+ ?({})$", units.join("|")),
             additional_validator_regexp: String::new(),
             units: units,
+            options: Vec::new(),
+            option_descriptions: Vec::new(),
         }
     }
 
@@ -164,6 +173,8 @@ impl UserInputField {
             validator_regexp: format!("^\\d+(\\.\\d*)? ?({})$", units.join("|")),
             additional_validator_regexp: format!("^\\d+(\\.\\d+)? ?({})$", units.join("|")),
             units: units,
+            options: Vec::new(),
+            option_descriptions: Vec::new(),
         }
     }
 }
