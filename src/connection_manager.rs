@@ -121,7 +121,8 @@ impl ConnectionManager {
                     (request.response_handler)(Vec::new());
                 }
                 else {
-                    let connector_spec = request.connector_spec.as_ref().unwrap().clone();
+                    let mut connector_spec = request.connector_spec.as_ref().unwrap().clone();
+                    connector_spec.module_type = String::from("connector");
                     let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
                     let request_messages = request.messages.clone();
 
@@ -149,8 +150,8 @@ impl ConnectionManager {
                     else {
                         // TODO: This will block the thread unnecessarily. Need better solution. Imagine
                         // MAX_WORKERS amount of requests sequentially for the same host and connector.
-                        let connector_mutex = stateful_connectors.get_mut(&request.host.name)
-                                                                 .and_then(|connections| connections.get_mut(&connector_spec)).unwrap();
+                        let host_connectors = stateful_connectors.get_mut(&request.host.name).unwrap();
+                        let connector_mutex = host_connectors.get_mut(&connector_spec).unwrap();
 
                         let mut connector = connector_mutex.lock().unwrap();
                         if !connector.is_connected() {
