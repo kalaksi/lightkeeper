@@ -35,6 +35,7 @@ pub struct ConfigManagerModel {
 
     // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
     get_all_monitors: qt_method!(fn(&self) -> QStringList),
+    get_monitor_description: qt_method!(fn(&self, monitor_name: QString) -> QString),
     get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     add_group_monitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     remove_group_monitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
@@ -46,6 +47,7 @@ pub struct ConfigManagerModel {
     set_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString, setting_value: QString)),
 
     get_all_commands: qt_method!(fn(&self) -> QStringList),
+    get_command_description: qt_method!(fn(&self, command_name: QString) -> QString),
     get_group_commands: qt_method!(fn(&self, group_name: QString) -> QStringList),
     add_group_command: qt_method!(fn(&self, group_name: QString, command_name: QString)),
     remove_group_command: qt_method!(fn(&self, group_name: QString, command_name: QString)),
@@ -185,6 +187,16 @@ impl ConfigManagerModel {
             result.push(QString::from(monitor.clone()));
         }
         result
+    }
+
+    pub fn get_monitor_description(&self, module_name: QString) -> QString {
+        let module_name = module_name.to_string();
+        let module_description = self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == "monitor")
+            .map(|metadata| metadata.description.clone())
+            .next().unwrap_or_default();
+
+        QString::from(module_description)
     }
 
     pub fn get_group_monitors(&self, group_name: QString) -> QStringList {
@@ -361,6 +373,16 @@ impl ConfigManagerModel {
         result
     }
 
+    pub fn get_command_description(&self, module_name: QString) -> QString {
+        let module_name = module_name.to_string();
+        let module_description = self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == "command")
+            .map(|metadata| metadata.description.clone())
+            .next().unwrap_or_default();
+
+        QString::from(module_description)
+    }
+
     pub fn get_group_commands(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_commands = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().commands;
@@ -449,4 +471,5 @@ impl ConfigManagerModel {
         }
         result
     }
+
 }

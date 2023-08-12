@@ -130,9 +130,40 @@ Dialog {
                 }
             }
 
-            BigText {
-                topPadding: Theme.spacing_loose()
-                text: "Enabled monitoring modules and settings"
+            RowLayout {
+                width: parent.width
+
+                BigText {
+                    topPadding: Theme.spacing_loose()
+                    text: "Enabled monitoring modules and settings"
+
+                    Layout.fillWidth: true
+                }
+
+                ImageButton {
+                    imageSource: "qrc:/main/images/button/add"
+                    onClicked: {
+                        let allMonitors = ConfigManager.get_all_monitors()
+                        moduleAddDialog.inputSpecs = []
+                        moduleAddDialog.inputSpecs = [{
+                            label: "Monitoring module",
+                            field_type: "Option",
+                            options: allMonitors,
+                            option_descriptions: allMonitors.map((monitor) => ConfigManager.get_monitor_description(monitor))
+                        }]
+                        moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
+                            ConfigManager.add_group_monitor(root.groupName, inputValues[0])
+                            refreshMonitorList()
+                        })
+                        moduleAddDialog.open()
+                    }
+                    flatButton: true
+                    roundButton: false
+                    tooltip: "Add new module"
+                    width: 26
+
+                    Layout.alignment: Qt.AlignBottom
+                }
             }
 
             OptionalText {
@@ -257,9 +288,40 @@ Dialog {
                 }
             }
 
-            BigText {
-                topPadding: Theme.spacing_loose()
-                text: "Enabled command modules and settings"
+            RowLayout {
+                width: parent.width
+
+                BigText {
+                    topPadding: Theme.spacing_loose()
+                    text: "Enabled command modules and settings"
+
+                    Layout.fillWidth: true
+                }
+
+                ImageButton {
+                    imageSource: "qrc:/main/images/button/add"
+                    onClicked: {
+                        let allCommands = ConfigManager.get_all_commands()
+                        moduleAddDialog.inputSpecs = []
+                        moduleAddDialog.inputSpecs = [{
+                            label: "Command module",
+                            field_type: "Option",
+                            options: allCommands,
+                            option_descriptions: allCommands.map((command) => ConfigManager.get_command_description(command))
+                        }]
+                        moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
+                            ConfigManager.add_group_command(root.groupName, inputValues[0])
+                            refreshCommandList()
+                        })
+                        moduleAddDialog.open()
+                    }
+                    flatButton: true
+                    roundButton: false
+                    tooltip: "Add new module"
+                    width: 26
+
+                    Layout.alignment: Qt.AlignBottom
+                }
             }
 
             OptionalText {
@@ -391,6 +453,13 @@ Dialog {
                 refreshMonitorList()
             }
         }
+    }
+
+    InputDialog {
+        id: moduleAddDialog
+        visible: false
+        width: parent.width
+        height: 200
     }
 
     function refreshMonitorList() {

@@ -98,7 +98,6 @@ Dialog {
             else {
                 nextValue = inputRepeater.itemAt(i).children[1].text
             }
-            console.log(nextValue)
             values.push(nextValue)
 
             // For some reason the validator fails to perform correctly in all cases.
