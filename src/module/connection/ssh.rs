@@ -22,7 +22,7 @@ use crate::module::connection::*;
     description="Sends commands and file requests over SSH.",
     settings={
       port => "Port of the SSH server. Default: 22.",
-      username => "Username for the SSH connection. Required.",
+      username => "Username for the SSH connection. Default: root.",
       password => "Password for the SSH connection. Default: empty (not used).",
       private_key_path => "Path to the private key file for the SSH connection. Default: empty.",
       connection_timeout => "Timeout (in seconds) for the SSH connection. Default: 15."
@@ -71,7 +71,7 @@ impl Module for Ssh2 {
             is_initialized: false,
             address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             port: settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap(),
-            username: settings.get("username").expect("username is not set").clone(),
+            username: settings.get("username").unwrap_or(&String::from("root")).clone(),
             password: settings.get("password").map(|s| s.clone()),
             private_key_path: settings.get("private_key_path").map(|s| s.clone()),
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
