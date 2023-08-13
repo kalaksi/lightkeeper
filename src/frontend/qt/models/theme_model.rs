@@ -34,6 +34,10 @@ pub struct ThemeModel {
     color_dark_text: qt_method!(fn(&self) -> QString),
     color_highlight: qt_method!(fn(&self) -> QString),
 
+    border_radius: qt_method!(fn(&self) -> i8),
+
+    opacity_when_disabled: qt_method!(fn(&self) -> QString),
+
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     animation_duration: qt_method!(fn(&self) -> QVariant),
@@ -142,6 +146,14 @@ impl ThemeModel {
 
     fn color_highlight(&self) -> QString {
         QString::from("#242628")
+    }
+
+    fn border_radius(&self) -> i8 {
+        4
+    }
+
+    fn opacity_when_disabled(&self) -> QString {
+        QString::from("0.3")
     }
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {

@@ -60,7 +60,7 @@ Dialog {
                 Column {
                     spacing: Theme.spacing_normal()
 
-                    Layout.minimumWidth: 200
+                    Layout.minimumWidth: 220
 
                     ComboBox {
                         id: comboBox

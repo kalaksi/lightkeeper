@@ -28,6 +28,7 @@ Item {
         anchors.centerIn: parent
         visible: roundButton === false
         enabled: root.enabled
+        opacity: root.enabled ? 1.0 : Theme.opacity_when_disabled()
         onClicked: root.clicked()
         focusPolicy: Qt.NoFocus
         hoverEnabled: root.hoverEnabled
@@ -61,6 +62,7 @@ Item {
         anchors.centerIn: parent
         visible: roundButton === true
         enabled: root.enabled
+        opacity: root.enabled ? 1.0 : 0.5
         onClicked: root.clicked()
         focusPolicy: Qt.NoFocus
         hoverEnabled: root.hoverEnabled

@@ -99,48 +99,71 @@ Dialog {
                         width: parent.width
                         height: connectorModuleRow.height
 
-                        RowLayout {
+                        onClicked: {
+                            connectorDescriptionText.text = connectorDescriptionText.text !== "" ? "" : ConfigManager.get_connector_description(modelData)
+                        }
+
+                        Column {
                             id: connectorModuleRow
                             width: parent.width
-                            spacing: Theme.spacing_tight()
 
-                            NormalText {
-                                text: modelData
-                                Layout.alignment: Qt.AlignVCenter
-                            }
+                            RowLayout {
+                                width: parent.width
+                                spacing: Theme.spacing_tight()
 
-                            // Spacer
-                            Item {
-                                Layout.fillWidth: true
-                            }
-
-                            ImageButton {
-                                imageSource: "qrc:/main/images/button/entry-edit"
-                                onClicked: {
-                                    moduleSettingsDialog.moduleId = modelData
-                                    moduleSettingsDialog.moduleType = "connector"
-                                    moduleSettingsDialog.visible = true
+                                NormalText {
+                                    text: modelData
+                                    Layout.alignment: Qt.AlignVCenter
                                 }
-                                flatButton: true
-                                roundButton: false
-                                tooltip: "Module settings..."
-                                width: 26
 
-                                Layout.alignment: Qt.AlignVCenter
+                                // Spacer
+                                Item {
+                                    Layout.fillWidth: true
+                                }
+
+                                ImageButton {
+                                    enabled: ConfigManager.get_group_connector_settings_keys(root.groupName, modelData).length > 0
+                                    imageSource: "qrc:/main/images/button/entry-edit"
+                                    onClicked: {
+                                        moduleSettingsDialog.moduleId = modelData
+                                        moduleSettingsDialog.moduleType = "connector"
+                                        moduleSettingsDialog.visible = true
+                                    }
+                                    flatButton: true
+                                    roundButton: false
+                                    tooltip: "Module settings..."
+                                    width: 26
+
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                ImageButton {
+                                    imageSource: "qrc:/main/images/button/delete"
+                                    onClicked: {
+                                        ConfigManager.remove_group_connector(root.groupName, modelData)
+                                        root._connectorList = ConfigManager.get_group_connectors(root.groupName)
+                                    }
+                                    flatButton: true
+                                    roundButton: false
+                                    tooltip: "Remove module from group"
+                                    width: 26
+
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
                             }
 
-                            ImageButton {
-                                imageSource: "qrc:/main/images/button/delete"
-                                onClicked: {
-                                    ConfigManager.remove_group_connector(root.groupName, modelData)
-                                    root._connectorList = ConfigManager.get_group_connectors(root.groupName)
-                                }
-                                flatButton: true
-                                roundButton: false
-                                tooltip: "Remove module from group"
-                                width: 26
+                            SmallText {
+                                id: connectorDescriptionText
+                                visible: text !== ""
+                                opacity: visible ? 1 : 0
+                                text: ""
+                                color: Theme.color_dark_text()
 
-                                Layout.alignment: Qt.AlignVCenter
+                                Behavior on opacity {
+                                    NumberAnimation {
+                                        duration: Theme.animation_duration()
+                                    }
+                                }
                             }
                         }
                     }
@@ -226,74 +249,96 @@ Dialog {
                         width: parent.width
                         height: monitoringModuleRow.height
 
-                        RowLayout {
+                        onClicked: {
+                            monitorDescriptionText.text = monitorDescriptionText.text !== "" ? "" : ConfigManager.get_monitor_description(modelData)
+                        }
+
+                        Column {
                             id: monitoringModuleRow
                             width: parent.width
-                            spacing: Theme.spacing_tight()
 
-                            NormalText {
-                                text: modelData
-                                Layout.alignment: Qt.AlignVCenter
-                            }
+                            RowLayout {
+                                width: parent.width
+                                spacing: Theme.spacing_tight()
 
-                            /* 
-                            See comment below
-                            PixelatedText {
-                                id: monitorStatusText
-                                text: ConfigManager.get_group_monitor_enabled(root.groupName, modelData) === "true" ? "Enabled" : "Disabled"
-                                color: text === "Enabled" ? Theme.color_green() : Theme.color_red()
-                            }
-                            */
-
-                            // Spacer
-                            Item {
-                                Layout.fillWidth: true
-                            }
-
-                            /*
-                            Control if module will be enabled or disabled (previous enable overridden).
-                            Could be useful but currently it might just confuse the user more than help,
-                            since the module settings have a similar switch that works a bit differently.
-
-                            Switch {
-                                checked: ConfigManager.get_group_monitor_enabled(root.groupName, modelData) === "true"
-                                onClicked: {
-                                    ConfigManager.toggle_group_monitor_enabled(root.groupName, modelData)
-                                    refreshMonitorList()
+                                NormalText {
+                                    text: modelData
+                                    Layout.alignment: Qt.AlignVCenter
                                 }
 
-                                Layout.alignment: Qt.AlignVCenter
-                                Layout.rightMargin: Theme.spacing_loose()
-                            }
-                            */
-
-                            ImageButton {
-                                imageSource: "qrc:/main/images/button/entry-edit"
-                                onClicked: {
-                                    moduleSettingsDialog.moduleId = modelData
-                                    moduleSettingsDialog.moduleType = "monitor"
-                                    moduleSettingsDialog.visible = true
+                                /* 
+                                See comment below
+                                PixelatedText {
+                                    id: monitorStatusText
+                                    text: ConfigManager.get_group_monitor_enabled(root.groupName, modelData) === "true" ? "Enabled" : "Disabled"
+                                    color: text === "Enabled" ? Theme.color_green() : Theme.color_red()
                                 }
-                                flatButton: true
-                                roundButton: false
-                                tooltip: "Module settings..."
-                                width: 26
+                                */
 
-                                Layout.alignment: Qt.AlignVCenter
-                            }
-
-                            ImageButton {
-                                imageSource: "qrc:/main/images/button/delete"
-                                onClicked: {
-                                    ConfigManager.remove_group_monitor(root.groupName, modelData)
-                                    refreshMonitorList()
+                                // Spacer
+                                Item {
+                                    Layout.fillWidth: true
                                 }
-                                flatButton: true
-                                roundButton: false
-                                tooltip: "Remove module from group"
-                                width: 26
 
-                                Layout.alignment: Qt.AlignVCenter
+                                /*
+                                Control if module will be enabled or disabled (previous enable overridden).
+                                Could be useful but currently it might just confuse the user more than help,
+                                since the module settings have a similar switch that works a bit differently.
+
+                                Switch {
+                                    checked: ConfigManager.get_group_monitor_enabled(root.groupName, modelData) === "true"
+                                    onClicked: {
+                                        ConfigManager.toggle_group_monitor_enabled(root.groupName, modelData)
+                                        refreshMonitorList()
+                                    }
+
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.rightMargin: Theme.spacing_loose()
+                                }
+                                */
+
+                                ImageButton {
+                                    enabled: ConfigManager.get_group_connector_settings_keys(root.groupName, modelData).length > 0
+                                    imageSource: "qrc:/main/images/button/entry-edit"
+                                    onClicked: {
+                                        moduleSettingsDialog.moduleId = modelData
+                                        moduleSettingsDialog.moduleType = "monitor"
+                                        moduleSettingsDialog.visible = true
+                                    }
+                                    flatButton: true
+                                    roundButton: false
+                                    tooltip: "Module settings..."
+                                    width: 26
+
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                ImageButton {
+                                    imageSource: "qrc:/main/images/button/delete"
+                                    onClicked: {
+                                        ConfigManager.remove_group_monitor(root.groupName, modelData)
+                                        refreshMonitorList()
+                                    }
+                                    flatButton: true
+                                    roundButton: false
+                                    tooltip: "Remove module from group"
+                                    width: 26
+
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+                            }
+                            SmallText {
+                                id: monitorDescriptionText
+                                visible: text !== ""
+                                opacity: visible ? 1 : 0
+                                text: ""
+                                color: Theme.color_dark_text()
+
+                                Behavior on opacity {
+                                    NumberAnimation {
+                                        duration: Theme.animation_duration()
+                                    }
+                                }
                             }
                         }
                     }
@@ -380,50 +425,66 @@ Dialog {
                         width: parent.width
                         height: commandModuleRow.height
 
-                        RowLayout {
+                        onClicked: {
+                            commandDescriptionText.text = commandDescriptionText.text !== "" ? "" : ConfigManager.get_command_description(modelData)
+                        }
+
+                        Column {
                             id: commandModuleRow
                             width: parent.width
-                            spacing: Theme.spacing_tight()
 
-                            NormalText {
-                                text: modelData
+                            RowLayout {
+                                width: parent.width
+                                spacing: Theme.spacing_tight()
 
-                                Layout.alignment: Qt.AlignVCenter
-                                Layout.rightMargin: Theme.spacing_normal()
-                            }
+                                NormalText {
+                                    text: modelData
 
-                            // Spacer
-                            Item {
-                                Layout.fillWidth: true
-                            }
-
-                            ImageButton {
-                                imageSource: "qrc:/main/images/button/entry-edit"
-                                onClicked: {
-                                    moduleSettingsDialog.moduleId = modelData
-                                    moduleSettingsDialog.moduleType = "command"
-                                    moduleSettingsDialog.visible = true
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.rightMargin: Theme.spacing_normal()
                                 }
-                                flatButton: true
-                                roundButton: false
-                                tooltip: "Module settings..."
-                                width: 26
 
-                                Layout.alignment: Qt.AlignVCenter
+                                // Spacer
+                                Item {
+                                    Layout.fillWidth: true
+                                }
+
+                                ImageButton {
+                                    enabled: ConfigManager.get_group_connector_settings_keys(root.groupName, modelData).length > 0
+                                    imageSource: "qrc:/main/images/button/entry-edit"
+                                    onClicked: {
+                                        moduleSettingsDialog.moduleId = modelData
+                                        moduleSettingsDialog.moduleType = "command"
+                                        moduleSettingsDialog.visible = true
+                                    }
+                                    flatButton: true
+                                    roundButton: false
+                                    tooltip: "Module settings..."
+                                    width: 26
+
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                ImageButton {
+                                    imageSource: "qrc:/main/images/button/delete"
+                                    onClicked: {
+                                        ConfigManager.remove_group_command(root.groupName, modelData)
+                                        root._commandList = ConfigManager.get_group_commands(root.groupName)
+                                    }
+                                    flatButton: true
+                                    roundButton: false
+                                    tooltip: "Remove module from group"
+                                    width: 26
+
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
                             }
 
-                            ImageButton {
-                                imageSource: "qrc:/main/images/button/delete"
-                                onClicked: {
-                                    ConfigManager.remove_group_command(root.groupName, modelData)
-                                    root._commandList = ConfigManager.get_group_commands(root.groupName)
-                                }
-                                flatButton: true
-                                roundButton: false
-                                tooltip: "Remove module from group"
-                                width: 26
-
-                                Layout.alignment: Qt.AlignVCenter
+                            SmallText {
+                                id: commandDescriptionText
+                                visible: text !== ""
+                                text: ""
+                                color: Theme.color_dark_text()
                             }
                         }
                     }
@@ -466,11 +527,17 @@ Dialog {
     onAccepted: {
         ConfigManager.end_group_configuration()
         root._loading = true
+        root._connectorList = []
+        root._monitorList = []
+        root._commandList = []
     }
 
     onRejected: {
         ConfigManager.cancel_group_configuration()
         root._loading = true
+        root._connectorList = []
+        root._monitorList = []
+        root._commandList = []
     }
 
     ModuleSettingsDialog {
