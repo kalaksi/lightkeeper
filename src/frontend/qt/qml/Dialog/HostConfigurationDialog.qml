@@ -20,7 +20,7 @@ Dialog {
     property bool _loading: true
 
     modal: true
-    implicitWidth: 600
+    implicitWidth: 550
     implicitHeight: 650
     background: DialogBackground { }
     standardButtons: Dialog.Ok | Dialog.Cancel
