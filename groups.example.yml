@@ -1,18 +1,18 @@
 groups:
   # This is nothing special, just a template called "defaults".
   defaults:
-    settings:
+    host_settings:
       # Some modules require more privileges and will try to use sudo (without password)
       # if use_sudo is set.
       - use_sudo
+    connectors:
+      ssh: {}
     monitors:
       ping:
         is_critical: true
 
   # Monitors and commands for Linux hosts. You usually want at least this for your hosts.
   linux:
-    connectors:
-      ssh: {}
     monitors:
       os: {}
       kernel: {}

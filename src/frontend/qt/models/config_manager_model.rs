@@ -15,6 +15,9 @@ use crate::{
 pub struct ConfigManagerModel {
     base: qt_base_class!(trait QObject),
 
+    // Signals
+    file_write_error: qt_signal!(config_dir: QString, error_message: QString),
+
     add_host: qt_method!(fn(&self, host_name: QString)),
     // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     get_host_settings: qt_method!(fn(&self, host_name: QString) -> QString),
@@ -86,9 +89,7 @@ impl ConfigManagerModel {
         let mut hosts_config = hosts_config;
         // Sort host groups alphabetically.
         for host in hosts_config.hosts.values_mut() {
-            if let Some(ref mut groups) = host.groups {
-                groups.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-            }
+            host.groups.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
         }
 
         ConfigManagerModel {
@@ -104,10 +105,10 @@ impl ConfigManagerModel {
     pub fn add_host(&mut self, host_name: QString) {
         let host_name = host_name.to_string();
         let config = HostSettings {
-            groups: Some(vec![
+            groups: vec![
                 String::from("defaults"),
                 String::from("linux"),
-            ]),
+            ],
             ..Default::default()
         };
         self.hosts_config.hosts.insert(host_name, config);
@@ -123,7 +124,9 @@ impl ConfigManagerModel {
 
     pub fn end_host_configuration(&mut self) {
         self.hosts_config_backup = None;
-        Configuration::write_hosts_config(&self.config_dir, &self.hosts_config);
+        if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
+            self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+        }
     }
 
     pub fn begin_group_configuration(&mut self) {
@@ -136,7 +139,9 @@ impl ConfigManagerModel {
 
     pub fn end_group_configuration(&mut self) {
         self.groups_config_backup = None;
-        Configuration::write_groups_config(&self.config_dir, &self.groups_config);
+        if let Err(error) = Configuration::write_groups_config(&self.config_dir, &self.groups_config) {
+            self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+        }
     }
 
     pub fn get_host_settings(&self, host_name: QString) -> QString {
@@ -152,9 +157,13 @@ impl ConfigManagerModel {
         let host_settings: HostSettings = serde_json::from_str(&host_settings_json.to_string()).unwrap();
 
         if old_host_name != new_host_name {
-            self.hosts_config.hosts.remove(&old_host_name);
+            let host_config = self.hosts_config.hosts.remove(&old_host_name).unwrap();
+            self.hosts_config.hosts.insert(new_host_name.clone(), host_config);
         }
-        self.hosts_config.hosts.insert(new_host_name, host_settings);
+
+        let mut host_config = self.hosts_config.hosts.get_mut(&new_host_name).unwrap();
+        host_config.address = host_settings.address;
+        host_config.fqdn = host_settings.fqdn;
     }
 
     pub fn get_all_groups(&self) -> QStringList {
@@ -171,13 +180,10 @@ impl ConfigManagerModel {
     pub fn get_selected_groups(&self, host_name: QString) -> QStringList {
         let host_name = host_name.to_string();
         let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
-        let groups_sorted = match host_settings.groups {
-            Some(groups) => {
-                let mut groups_sorted = groups.clone();
-                groups_sorted.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-                groups_sorted
-            },
-            None => Vec::new(),
+        let groups_sorted = {
+            let mut groups = host_settings.groups.clone();
+            groups.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+            groups
         };
 
         let mut result = QStringList::default();
@@ -193,7 +199,7 @@ impl ConfigManagerModel {
 
         let all_groups = self.groups_config.groups.keys().collect::<Vec<&String>>();
         let available_groups = all_groups.iter()
-            .filter(|group| host_settings.groups.is_none() || !host_settings.groups.as_ref().unwrap().contains(&group))
+            .filter(|group| !host_settings.groups.contains(&group))
             .map(|group| group.to_string())
             .collect::<Vec<String>>();
 
@@ -209,11 +215,7 @@ impl ConfigManagerModel {
         let group_name = group_name.to_string();
         let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
 
-        if let Some(ref mut groups) = host_settings.groups {
-            groups.push(group_name);
-        } else {
-            host_settings.groups = Some(vec![group_name]);
-        }
+        host_settings.groups.push(group_name);
     }
 
     pub fn remove_host_from_group(&mut self, host_name: QString, group_name: QString) {
@@ -221,9 +223,7 @@ impl ConfigManagerModel {
         let group_name = group_name.to_string();
         let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
 
-        if let Some(ref mut groups) = host_settings.groups {
-            groups.retain(|group| group != &group_name);
-        }
+        host_settings.groups.retain(|group| group != &group_name);
     }
 
     pub fn get_all_monitors(&self) -> QStringList {

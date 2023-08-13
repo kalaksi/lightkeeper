@@ -157,8 +157,8 @@ impl HostDataManagerModel {
                 let error = ErrorMessage::new(
                     Criticality::Critical,
                     String::from("Looks like this is the first time you have started LightkeeperRM.  
-                                Lightkeeper is still in development and doesn't currently contain a GUI for configuration.  
-                                Please see the README in https://github.com/kalaksi/lightkeeper for help with configurations.")
+                                This version is still an early release and may be missing some features and contain bugs.  
+                                See https://github.com/kalaksi/lightkeeper for the issue tracker and some documentation.")
                 );
                 self.error_received(QString::from(Criticality::Critical.to_string()), QString::from(error.message));
             }

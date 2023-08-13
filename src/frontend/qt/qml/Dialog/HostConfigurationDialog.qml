@@ -79,7 +79,7 @@ Dialog {
                 id: hostAddressField
                 width: parent.width
                 placeholderText: ""
-                text: root.hostSettings.address === "0.0.0.0" ? root.hostSettings.fqdn : root.hostSettings.address 
+                text: root.hostSettings.address === undefined ? root.hostSettings.fqdn : root.hostSettings.address 
                 validator: RegularExpressionValidator {
                     regularExpression: /[\.\:a-zA-Z\d]+/
                 }
@@ -268,7 +268,7 @@ Dialog {
         }
         else {
             ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
-                fqdn: hostAddressField.text
+                fqdn: hostAddressField.text,
             }))
         }
         ConfigManager.end_host_configuration()

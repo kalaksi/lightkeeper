@@ -49,7 +49,7 @@ Item {
     }
 
 
-    Component.onCompleted: function() {
+    Component.onCompleted: {
         colors = {
             up: "forestgreen",
             down: "firebrick",
@@ -58,9 +58,10 @@ Item {
     }
 
     function getColor(status) {
-        if (typeof status === "undefined") {
+        let result = colors[status]
+        if (typeof result === "undefined") {
             return colors["_"]
         }
-        return colors[status]
+        return result
     }
 }

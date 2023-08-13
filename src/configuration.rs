@@ -22,7 +22,7 @@ pub struct Configuration {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Groups {
-    pub groups: HashMap<String, HostSettings>,
+    pub groups: HashMap<String, ConfigGroup>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -82,31 +82,51 @@ pub struct Category {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct HostSettings {
-    pub groups: Option<Vec<String>>,
-    #[serde(default = "HostSettings::default_address")]
+    #[serde(default)]
+    pub groups: Vec<String>,
+    #[serde(default = "HostSettings::default_address", skip_serializing_if = "HostSettings::is_default_address")]
     pub address: String,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub fqdn: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub settings: Vec<HostSetting>,
+    // Currently, you have to use config groups instead of setting these directly on host.
+    // So these are never written but will be populated from groups on config read.
+    #[serde(default, skip_serializing_if = "Configuration::always")]
     pub monitors: HashMap<String, MonitorConfig>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Configuration::always")]
     pub commands: HashMap<String, CommandConfig>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Configuration::always")]
     pub connectors: HashMap<String, ConnectorConfig>,
-    #[serde(default)]
-    pub settings: Option<Vec<HostSetting>>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct ConfigGroup {
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub host_settings: Vec<HostSetting>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub monitors: HashMap<String, MonitorConfig>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub commands: HashMap<String, CommandConfig>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub connectors: HashMap<String, ConnectorConfig>,
+
 }
 
 impl HostSettings {
     pub fn default_address() -> String {
         String::from("0.0.0.0")
     }
+
+    pub fn is_default_address(address: &String) -> bool {
+        address == "0.0.0.0"
+    }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct MonitorConfig {
-    #[serde(default = "MonitorConfig::default_version", skip_serializing_if = "MonitorConfig::version_is_latest")]
+    #[serde(default = "MonitorConfig::default_version", skip_serializing_if = "Configuration::version_is_latest")]
     pub version: String,
     #[serde(default = "MonitorConfig::default_enabled", skip_serializing_if = "MonitorConfig::is_enabled")]
     pub enabled: Option<bool>,
@@ -119,10 +139,6 @@ pub struct MonitorConfig {
 impl MonitorConfig {
     pub fn default_version() -> String {
         String::from("latest")
-    }
-
-    pub fn version_is_latest(version: &str) -> bool {
-        version == "latest"
     }
 
     pub fn default_enabled() -> Option<bool> {
@@ -145,12 +161,12 @@ impl Default for MonitorConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct CommandConfig {
-    #[serde(default = "CommandConfig::default_version")]
+    #[serde(default = "CommandConfig::default_version", skip_serializing_if = "Configuration::version_is_latest")]
     pub version: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub settings: HashMap<String, String>,
 }
 
@@ -169,7 +185,7 @@ impl Default for CommandConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct ConnectorConfig {
     #[serde(default)]
@@ -223,8 +239,7 @@ impl Configuration {
 
         // Check there are no invalid group references.
         let invalid_groups = hosts.hosts.values()
-            .filter(|host_config| host_config.groups.is_some())
-            .flat_map(|host_config| host_config.groups.clone().unwrap_or_else(|| Vec::new()))
+            .flat_map(|host_config| host_config.groups.clone())
             .filter(|group_id| !all_groups.groups.contains_key(group_id))
             .collect::<Vec<String>>();
 
@@ -234,36 +249,34 @@ impl Configuration {
         }
 
         for (_, host_config) in hosts.hosts.iter_mut() {
-            if let Some(host_group_ids) = host_config.groups.clone() {
-                for group_id in host_group_ids.iter() {
-                    let group_config = all_groups.groups.get(group_id).unwrap();
+            for group_id in host_config.groups.clone().iter() {
+                let group_config = all_groups.groups.get(group_id).unwrap();
 
-                    // Host settings are not merged.
-                    if group_config.settings.is_some() {
-                        host_config.settings = group_config.settings.clone();
-                    }
-
-                    // Merge groups.
-                    group_config.monitors.iter().for_each(|(monitor_id, new_config)| {
-                        let mut merged_config = host_config.monitors.get(monitor_id).cloned().unwrap_or(MonitorConfig::default());
-                        merged_config.settings.extend(new_config.settings.clone());
-                        merged_config.is_critical = new_config.is_critical;
-                        host_config.monitors.insert(monitor_id.clone(), merged_config);
-                    });
-
-                    group_config.commands.iter().for_each(|(command_id, new_config)| {
-                        let mut merged_config = host_config.commands.get(command_id).cloned().unwrap_or(CommandConfig::default());
-                        merged_config.settings.extend(new_config.settings.clone());
-                        merged_config.version = new_config.version.clone();
-                        host_config.commands.insert(command_id.clone(), merged_config);
-                    });
-
-                    group_config.connectors.iter().for_each(|(connector_id, new_config)| {
-                        let mut merged_config = host_config.connectors.get(connector_id).cloned().unwrap_or(ConnectorConfig::default());
-                        merged_config.settings.extend(new_config.settings.clone());
-                        host_config.connectors.insert(connector_id.clone(), merged_config);
-                    });
+                // NOTE: Host settings are not merged.
+                if !group_config.host_settings.is_empty() {
+                    host_config.settings = group_config.host_settings.clone();
                 }
+
+                // Merge groups.
+                group_config.monitors.iter().for_each(|(monitor_id, new_config)| {
+                    let mut merged_config = host_config.monitors.get(monitor_id).cloned().unwrap_or(MonitorConfig::default());
+                    merged_config.settings.extend(new_config.settings.clone());
+                    merged_config.is_critical = new_config.is_critical;
+                    host_config.monitors.insert(monitor_id.clone(), merged_config);
+                });
+
+                group_config.commands.iter().for_each(|(command_id, new_config)| {
+                    let mut merged_config = host_config.commands.get(command_id).cloned().unwrap_or(CommandConfig::default());
+                    merged_config.settings.extend(new_config.settings.clone());
+                    merged_config.version = new_config.version.clone();
+                    host_config.commands.insert(command_id.clone(), merged_config);
+                });
+
+                group_config.connectors.iter().for_each(|(connector_id, new_config)| {
+                    let mut merged_config = host_config.connectors.get(connector_id).cloned().unwrap_or(ConnectorConfig::default());
+                    merged_config.settings.extend(new_config.settings.clone());
+                    host_config.connectors.insert(connector_id.clone(), merged_config);
+                });
             }
         }
 
@@ -399,5 +412,13 @@ impl Configuration {
 
     fn is_default<T: Default + PartialEq>(t: &T) -> bool {
         t == &T::default()
+    }
+
+    fn always<T>(_t: &T) -> bool {
+        true
+    }
+
+    pub fn version_is_latest(version: &str) -> bool {
+        version == "latest"
     }
 }

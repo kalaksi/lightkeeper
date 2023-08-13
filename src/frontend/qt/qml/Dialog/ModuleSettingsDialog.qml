@@ -91,6 +91,11 @@ Dialog {
         }
     }
 
+    onOpened: {
+        repeater.model = []
+        repeater.model = getModuleSettingsModel()
+    }
+
     onAccepted: {
         for (let i = 0; i < repeater.model.length; i++) {
             let nextItem = repeater.itemAt(i)
@@ -121,11 +126,6 @@ Dialog {
         }
 
         root.configSaved(root.moduleType, root.groupName, root.moduleId)
-    }
-
-    onOpened: {
-        repeater.model = []
-        repeater.model = getModuleSettingsModel()
     }
 
     function getModuleSettingsModel() {

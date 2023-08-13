@@ -60,6 +60,8 @@ Dialog {
                 Column {
                     spacing: Theme.spacing_normal()
 
+                    Layout.minimumWidth: 200
+
                     ComboBox {
                         id: comboBox
                         model: [''].concat(modelData.options)
