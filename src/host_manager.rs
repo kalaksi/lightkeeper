@@ -229,6 +229,7 @@ impl HostManager {
             });
         }
 
+        display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
         display_data
     }
 

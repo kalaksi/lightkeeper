@@ -41,8 +41,40 @@ Dialog {
                 Layout.bottomMargin: Theme.spacing_loose()
             }
 
-            BigText {
-                text: "Connector module settings"
+            RowLayout {
+                width: parent.width
+
+                BigText {
+                    topPadding: Theme.spacing_loose()
+                    text: "Connector module settings"
+
+                    Layout.fillWidth: true
+                }
+
+                ImageButton {
+                    imageSource: "qrc:/main/images/button/add"
+                    onClicked: {
+                        let allConnectors = ConfigManager.get_all_connectors()
+                        moduleAddDialog.inputSpecs = []
+                        moduleAddDialog.inputSpecs = [{
+                            label: "Connector module",
+                            field_type: "Option",
+                            options: allConnectors,
+                            option_descriptions: allConnectors.map((connector) => ConfigManager.get_connector_description(connector))
+                        }]
+                        moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
+                            ConfigManager.add_group_connector(root.groupName, inputValues[0])
+                            root._connectorList = ConfigManager.get_group_connectors(root.groupName)
+                        })
+                        moduleAddDialog.open()
+                    }
+                    flatButton: true
+                    roundButton: false
+                    tooltip: "Add new module"
+                    width: 26
+
+                    Layout.alignment: Qt.AlignBottom
+                }
             }
 
             OptionalText {
@@ -53,32 +85,33 @@ Dialog {
                 Layout.leftMargin: Theme.common_indentation()
             }
 
+
             Repeater {
                 id: connectorRepeater
                 model: root._connectorList
 
                 Column {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.leftMargin: Theme.common_indentation()
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Theme.common_indentation()
 
                     RowHighlight {
                         id: connectorHighlighter
                         width: parent.width
-                        height: connectoringModuleRow.height
+                        height: connectorModuleRow.height
 
                         RowLayout {
-                            id: connectoringModuleRow
+                            id: connectorModuleRow
                             width: parent.width
                             spacing: Theme.spacing_tight()
 
                             NormalText {
                                 text: modelData
-                                // Has to be set explicitly or may, for some reason, change color when redrawn.
-                                color: Theme.color_text()
-
-                                Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
+                            }
+
+                            // Spacer
+                            Item {
+                                Layout.fillWidth: true
                             }
 
                             ImageButton {
@@ -200,9 +233,7 @@ Dialog {
 
                             NormalText {
                                 text: modelData
-
                                 Layout.alignment: Qt.AlignVCenter
-                                Layout.rightMargin: Theme.spacing_normal()
                             }
 
                             /* 

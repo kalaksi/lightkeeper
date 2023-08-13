@@ -128,11 +128,9 @@ fn main() {
     let module_metadatas = module_factory.get_module_metadatas();
     connection_manager.start(module_factory);
 
-    let mut initial_display_data = host_manager.borrow().get_display_data();
-    initial_display_data.table_headers = vec![String::from("Status"), String::from("Name"), String::from("FQDN"), String::from("IP address")];
-
     let mut frontend = frontend::qt::QmlFrontend::new(
-        initial_display_data,
+        host_manager.borrow().get_display_data(),
+        args.config_dir.clone(),
         main_config.clone(),
         hosts_config.clone(),
         group_config,

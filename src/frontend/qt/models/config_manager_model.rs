@@ -34,10 +34,13 @@ pub struct ConfigManagerModel {
     remove_host_from_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
 
     get_all_connectors: qt_method!(fn(&self) -> QStringList),
+    get_connector_description: qt_method!(fn(&self, connector_name: QString) -> QString),
     get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    add_group_connector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
     get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
     get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
     set_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString)),
+    remove_group_connector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
 
     // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
     get_all_monitors: qt_method!(fn(&self) -> QStringList),
@@ -63,6 +66,7 @@ pub struct ConfigManagerModel {
 
     get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
+    config_dir: String,
     hosts_config: Hosts,
     hosts_config_backup: Option<Hosts>,
     groups_config: Groups,
@@ -73,7 +77,8 @@ pub struct ConfigManagerModel {
 }
 
 impl ConfigManagerModel {
-    pub fn new(main_config: Configuration,
+    pub fn new(config_dir: String,
+               main_config: Configuration,
                hosts_config: Hosts,
                groups_config: Groups,
                module_metadatas: Vec<Metadata>) -> Self {
@@ -87,6 +92,7 @@ impl ConfigManagerModel {
         }
 
         ConfigManagerModel {
+            config_dir: config_dir,
             hosts_config: hosts_config,
             groups_config: groups_config,
             _main_config: main_config,
@@ -117,6 +123,7 @@ impl ConfigManagerModel {
 
     pub fn end_host_configuration(&mut self) {
         self.hosts_config_backup = None;
+        Configuration::write_hosts_config(&self.config_dir, &self.hosts_config);
     }
 
     pub fn begin_group_configuration(&mut self) {
@@ -129,6 +136,7 @@ impl ConfigManagerModel {
 
     pub fn end_group_configuration(&mut self) {
         self.groups_config_backup = None;
+        Configuration::write_groups_config(&self.config_dir, &self.groups_config);
     }
 
     pub fn get_host_settings(&self, host_name: QString) -> QString {
@@ -345,6 +353,16 @@ impl ConfigManagerModel {
         result
     }
 
+    pub fn get_connector_description(&self, module_name: QString) -> QString {
+        let module_name = module_name.to_string();
+        let module_description = self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == "connector")
+            .map(|metadata| metadata.description.clone())
+            .next().unwrap_or_default();
+
+        QString::from(module_description)
+    }
+
     pub fn get_group_connectors(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
@@ -357,6 +375,12 @@ impl ConfigManagerModel {
             result.push(QString::from(connector_key));
         }
         result
+    }
+
+    pub fn add_group_connector(&mut self, group_name: QString, connector_name: QString) {
+        let group_name = group_name.to_string();
+        let connector_name = connector_name.to_string();
+        self.groups_config.groups.get_mut(&group_name).unwrap().connectors.insert(connector_name, Default::default());
     }
 
     pub fn get_group_connector_settings_keys(&self, group_name: QString, connector_name: QString) -> QStringList {
@@ -400,6 +424,12 @@ impl ConfigManagerModel {
         else {
             group_connector_settings.settings.insert(setting_key, setting_value);
         }
+    }
+
+    pub fn remove_group_connector(&mut self, group_name: QString, connector_name: QString) {
+        let group_name = group_name.to_string();
+        let connector_name = connector_name.to_string();
+        self.groups_config.groups.get_mut(&group_name).unwrap().connectors.remove(&connector_name);
     }
 
     pub fn get_all_commands(&self) -> QStringList {

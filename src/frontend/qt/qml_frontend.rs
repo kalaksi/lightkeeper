@@ -30,6 +30,7 @@ pub struct QmlFrontend {
 
 impl QmlFrontend {
     pub fn new(display_data: frontend::DisplayData,
+               config_dir: String,
                main_config: configuration::Configuration,
                hosts_config: configuration::Hosts,
                group_config: configuration::Groups,
@@ -40,7 +41,7 @@ impl QmlFrontend {
 
         let theme_model = ThemeModel::new(main_config.display_options.clone());
         let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data, main_config.clone());
-        let config_manager = ConfigManagerModel::new(main_config, hosts_config, group_config, module_metadatas);
+        let config_manager = ConfigManagerModel::new(config_dir, main_config, hosts_config, group_config, module_metadatas);
 
         QmlFrontend {
             theme: Some(theme_model),

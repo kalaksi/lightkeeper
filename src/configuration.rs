@@ -85,7 +85,7 @@ pub struct HostSettings {
     pub groups: Option<Vec<String>>,
     #[serde(default = "HostSettings::default_address")]
     pub address: String,
-    #[serde(default = "HostSettings::default_fqdn")]
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub fqdn: String,
     #[serde(default)]
     pub monitors: HashMap<String, MonitorConfig>,
@@ -101,21 +101,18 @@ impl HostSettings {
     pub fn default_address() -> String {
         String::from("0.0.0.0")
     }
-
-    pub fn default_fqdn() -> String {
-        String::from("")
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct MonitorConfig {
-    #[serde(default = "MonitorConfig::default_version")]
+    #[serde(default = "MonitorConfig::default_version", skip_serializing_if = "MonitorConfig::version_is_latest")]
     pub version: String,
-    #[serde(default = "MonitorConfig::default_enabled")]
+    #[serde(default = "MonitorConfig::default_enabled", skip_serializing_if = "MonitorConfig::is_enabled")]
     pub enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Configuration::is_default")]
     pub is_critical: Option<bool>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub settings: HashMap<String, String>,
 }
 
@@ -124,8 +121,16 @@ impl MonitorConfig {
         String::from("latest")
     }
 
+    pub fn version_is_latest(version: &str) -> bool {
+        version == "latest"
+    }
+
     pub fn default_enabled() -> Option<bool> {
         Some(true)
+    }
+
+    pub fn is_enabled(enabled: &Option<bool>) -> bool {
+        enabled.clone().unwrap_or(true)
     }
 }
 
@@ -331,9 +336,15 @@ impl Configuration {
     }
 
     /// Writes the hosts.yml configuration file.
-    pub fn write_hosts_config(config_dir: PathBuf, hosts: &Hosts) -> io::Result<()> {
-        let hosts_file_path = config_dir.join(HOSTS_FILE);
+    pub fn write_hosts_config(config_dir: &String, hosts: &Hosts) -> io::Result<()> {
+        let config_dir = if config_dir.is_empty() {
+            file_handler::get_config_dir().unwrap()
+        }
+        else {
+            Path::new(config_dir).to_path_buf()
+        };
 
+        let hosts_file_path = config_dir.join(HOSTS_FILE);
         let hosts_config_file = fs::OpenOptions::new().write(true).truncate(true).open(hosts_file_path.clone());
         match hosts_config_file {
             Ok(mut file) => {
@@ -353,5 +364,40 @@ impl Configuration {
         }
 
         Ok(())
+    }
+
+    /// Writes the groups.yml configuration file.
+    pub fn write_groups_config(config_dir: &String, groups: &Groups) -> io::Result<()> {
+        let config_dir = if config_dir.is_empty() {
+            file_handler::get_config_dir().unwrap()
+        }
+        else {
+            Path::new(config_dir).to_path_buf()
+        };
+
+        let groups_file_path = config_dir.join(GROUPS_FILE);
+        let groups_config_file = fs::OpenOptions::new().write(true).truncate(true).open(groups_file_path.clone());
+        match groups_config_file {
+            Ok(mut file) => {
+                let groups_config = serde_yaml::to_string(groups).unwrap();
+                if let Err(error) = file.write_all(groups_config.as_bytes()) {
+                    let message = format!("Failed to write group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
+                    return Err(io::Error::new(io::ErrorKind::Other, message));
+                }
+                else {
+                    log::info!("Updated group configuration file {}", groups_file_path.to_string_lossy());
+                }
+            },
+            Err(error) => {
+                let message = format!("Failed to open group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
+                return Err(io::Error::new(io::ErrorKind::Other, message));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+        t == &T::default()
     }
 }
