@@ -6,6 +6,7 @@ use crate::{
     configuration::Configuration,
     configuration::Hosts,
     configuration::Groups,
+    configuration::HostSettings,
     module::Metadata,
 };
 
@@ -14,12 +15,17 @@ use crate::{
 pub struct ConfigManagerModel {
     base: qt_base_class!(trait QObject),
 
+    add_host: qt_method!(fn(&self, host_name: QString)),
     // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     get_host_settings: qt_method!(fn(&self, host_name: QString) -> QString),
+    set_host_settings: qt_method!(fn(&self, old_host_name: QString, new_host_name: QString, host_settings_json: QString)),
+    begin_host_configuration: qt_method!(fn(&self)),
+    cancel_host_configuration: qt_method!(fn(&self)),
+    end_host_configuration: qt_method!(fn(&self)),
 
     begin_group_configuration: qt_method!(fn(&self)),
     cancel_group_configuration: qt_method!(fn(&self)),
-    commit_group_configuration: qt_method!(fn(&self)),
+    end_group_configuration: qt_method!(fn(&self)),
 
     get_all_groups: qt_method!(fn(&self) -> QStringList),
     get_selected_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
@@ -58,6 +64,7 @@ pub struct ConfigManagerModel {
     get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
     hosts_config: Hosts,
+    hosts_config_backup: Option<Hosts>,
     groups_config: Groups,
     groups_config_backup: Option<Groups>,
     module_metadatas: Vec<Metadata>,
@@ -88,25 +95,58 @@ impl ConfigManagerModel {
         }
     }
 
+    pub fn add_host(&mut self, host_name: QString) {
+        let host_name = host_name.to_string();
+        let config = HostSettings {
+            groups: Some(vec![
+                String::from("defaults"),
+                String::from("linux"),
+            ]),
+            ..Default::default()
+        };
+        self.hosts_config.hosts.insert(host_name, config);
+    }
+
+    pub fn begin_host_configuration(&mut self) {
+        self.hosts_config_backup = Some(self.hosts_config.clone());
+    }
+
+    pub fn cancel_host_configuration(&mut self) {
+        self.hosts_config = self.hosts_config_backup.take().unwrap();
+    }
+
+    pub fn end_host_configuration(&mut self) {
+        self.hosts_config_backup = None;
+    }
+
     pub fn begin_group_configuration(&mut self) {
         self.groups_config_backup = Some(self.groups_config.clone());
     }
 
     pub fn cancel_group_configuration(&mut self) {
-        if let Some(groups_config_backup) = self.groups_config_backup.take() {
-            self.groups_config = groups_config_backup;
-        }
+        self.groups_config = self.groups_config_backup.take().unwrap();
     }
 
-    pub fn commit_group_configuration(&mut self) {
+    pub fn end_group_configuration(&mut self) {
         self.groups_config_backup = None;
     }
 
     pub fn get_host_settings(&self, host_name: QString) -> QString {
         let host_name = host_name.to_string();
-        let host_settings = self.hosts_config.hosts.get(&host_name).unwrap();
+        let host_settings = self.hosts_config.hosts.get(&host_name).unwrap_or(&Default::default()).clone();
 
         QString::from(serde_json::to_string(&host_settings).unwrap())
+    }
+
+    pub fn set_host_settings(&mut self, old_host_name: QString, new_host_name: QString, host_settings_json: QString) {
+        let old_host_name = old_host_name.to_string();
+        let new_host_name = new_host_name.to_string();
+        let host_settings: HostSettings = serde_json::from_str(&host_settings_json.to_string()).unwrap();
+
+        if old_host_name != new_host_name {
+            self.hosts_config.hosts.remove(&old_host_name);
+        }
+        self.hosts_config.hosts.insert(new_host_name, host_settings);
     }
 
     pub fn get_all_groups(&self) -> QStringList {
@@ -144,12 +184,14 @@ impl ConfigManagerModel {
         let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
 
         let all_groups = self.groups_config.groups.keys().collect::<Vec<&String>>();
-        let available_groups = all_groups.iter().filter(|group| !host_settings.groups.as_ref().unwrap().contains(&group)).cloned()
-                                         .collect::<Vec<&String>>();
+        let available_groups = all_groups.iter()
+            .filter(|group| host_settings.groups.is_none() || !host_settings.groups.as_ref().unwrap().contains(&group))
+            .map(|group| group.to_string())
+            .collect::<Vec<String>>();
 
         let mut result = QStringList::default();
         for group in available_groups {
-            result.push(QString::from(group.to_owned()));
+            result.push(QString::from(group));
         }
         result
     }

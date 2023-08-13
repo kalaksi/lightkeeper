@@ -28,11 +28,18 @@ Dialog {
     contentItem: ScrollView {
         contentWidth: availableWidth
 
-        Column {
+        ColumnLayout {
             id: rootColumn
             visible: !root._loading
             anchors.fill: parent
             spacing: Theme.spacing_tight()
+
+            BigText {
+                text: `Configuration group: ${root.groupName}`
+
+                Layout.alignment: Qt.AlignHCenter
+                Layout.bottomMargin: Theme.spacing_loose()
+            }
 
             BigText {
                 text: "Connector module settings"
@@ -40,11 +47,10 @@ Dialog {
 
             OptionalText {
                 visible: root._connectorList.length === 0
-                anchors.left: parent.left
-                anchors.leftMargin: Theme.common_indentation()
-
                 placeholder: "No changes"
                 text: ""
+
+                Layout.leftMargin: Theme.common_indentation()
             }
 
             Repeater {
@@ -168,11 +174,10 @@ Dialog {
 
             OptionalText {
                 visible: monitorRepeater.model.length === 0
-                anchors.left: parent.left
-                anchors.leftMargin: Theme.common_indentation()
-
                 placeholder: "No changes"
                 text: ""
+
+                Layout.leftMargin: Theme.common_indentation()
             }
 
             Repeater {
@@ -180,9 +185,8 @@ Dialog {
                 model: root._monitorList
 
                 Column {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.leftMargin: Theme.common_indentation()
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Theme.common_indentation()
 
                     RowHighlight {
                         id: monitorHighlighter
@@ -326,11 +330,10 @@ Dialog {
 
             OptionalText {
                 visible: commandRepeater.model.length === 0
-                anchors.left: parent.left
-                anchors.leftMargin: Theme.common_indentation()
-
                 placeholder: "No changes"
                 text: ""
+
+                Layout.leftMargin: Theme.common_indentation()
             }
 
             Repeater {
@@ -338,9 +341,8 @@ Dialog {
                 model: root._commandList
 
                 Column {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.leftMargin: Theme.common_indentation()
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Theme.common_indentation()
 
                     RowHighlight {
                         id: commandHighlighter
@@ -431,7 +433,7 @@ Dialog {
     }
 
     onAccepted: {
-        ConfigManager.commit_group_configuration()
+        ConfigManager.end_group_configuration()
         root._loading = true
     }
 

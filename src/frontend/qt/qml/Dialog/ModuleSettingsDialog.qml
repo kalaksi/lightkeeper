@@ -29,6 +29,13 @@ Dialog {
     contentItem: ScrollView {
         contentWidth: availableWidth
 
+        BigText {
+            text: `Module settings: ${root.moduleId}`
+
+            Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: Theme.spacing_loose()
+        }
+
         Column {
             id: rootColumn
             visible: !root._loading

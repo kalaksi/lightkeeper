@@ -8,6 +8,7 @@ import QtQuick.Layouts 1.11
 import HostTableModel 1.0
 
 import "./Dialog"
+import "./Button"
 import "./DetailsView"
 import "js/Utils.js" as Utils
 
@@ -22,7 +23,39 @@ ApplicationWindow {
     property var _detailsDialogs: {}
     property int _textDialogPendingInvocation: 0
 
-    Material.theme: Material.System
+    header: ToolBar {
+        RowLayout {
+            anchors.fill: parent
+
+            // Spacer
+            Item {
+                Layout.fillWidth: true
+            }
+
+            ToolButton {
+                icon.source: "qrc:/main/images/button/add"
+                onClicked: {
+                    hostConfigurationDialog.hostId = ""
+                    hostConfigurationDialog.open()
+                }
+            }
+
+            ToolButton {
+                icon.source: "qrc:/main/images/button/entry-edit"
+                onClicked: {
+                    ConfigManager.begin_host_configuration()
+                    hostConfigurationDialog.hostId = _hostTableModel.get_selected_host_id()
+                    hostConfigurationDialog.open()
+                }
+            }
+
+            ToolButton {
+                icon.source: "qrc:/main/images/button/remove"
+            }
+        }
+    }
+
+    Material.theme: Material.Dark
 
     Connections {
         target: HostDataManager
@@ -135,11 +168,11 @@ ApplicationWindow {
         }
 
         function onSelection_activated() {
-            animateShowDetails.start()
+            body.splitSize = 0.8
         }
 
         function onSelection_deactivated() {
-            animateHideDetails.start()
+            body.splitSize = 0.0
         }
     }
 
@@ -186,8 +219,12 @@ ApplicationWindow {
 
                 hostId: _hostTableModel.get_selected_host_id()
 
-                onMinimizeClicked: animateMinimizeDetails.start()
-                onMaximizeClicked: animateMaximizeDetails.start()
+                onMinimizeClicked: {
+                    body.splitSize = 0.8
+                }
+                onMaximizeClicked: {
+                    body.splitSize = 1.0
+                }
                 onOpenInNewWindowClicked: (invocationId, text, errorText, criticality) => {
                     let instanceId = detailsDialogManager.create({
                         text: text,
@@ -201,45 +238,16 @@ ApplicationWindow {
         }
 
         // Animations
-        NumberAnimation {
-            id: animateMaximizeDetails
-            target: body
-            property: "splitSize"
-            to: 1.0
-            duration: Theme.animation_duration()
-            easing.type: Easing.OutQuad
-        }
+        Behavior on splitSize {
+            NumberAnimation {
+                duration: Theme.animation_duration()
+                easing.type: Easing.OutQuad
 
-        NumberAnimation {
-            id: animateMinimizeDetails
-            target: body
-            property: "splitSize"
-            to: 0.8
-            duration: Theme.animation_duration()
-            easing.type: Easing.OutQuad
-        }
-
-        NumberAnimation {
-            id: animateShowDetails
-            target: body
-            property: "splitSize"
-            to: 0.8
-            duration: Theme.animation_duration()
-            easing.type: Easing.OutQuad
-
-            onFinished: {
-                // TODO: animate?
-                hostTable.centerRow()
+                onFinished: {
+                    // TODO: animate?
+                    hostTable.centerRow()
+                }
             }
-        }
-
-        NumberAnimation {
-            id: animateHideDetails
-            target: body
-            property: "splitSize"
-            to: 0.0
-            duration: Theme.animation_duration()
-            easing.type: Easing.OutQuad
         }
 
         states: [
@@ -292,6 +300,13 @@ ApplicationWindow {
         id: inputDialog
         visible: false
         anchors.centerIn: parent
+    }
+
+    HostConfigurationDialog {
+        id: hostConfigurationDialog
+        visible: false
+        anchors.centerIn: parent
+        bottomMargin: 0.12 * parent.height
     }
 
     TextDialog {

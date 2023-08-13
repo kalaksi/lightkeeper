@@ -5,16 +5,19 @@ import QtQuick.Layouts 1.11
 
 import "../Button"
 import "../Text"
+import "../js/Utils.js" as Utils
+import ".."
 
 // This component should be a direct child of main window.
 Dialog {
     id: root
-    required property string hostName
-    property var hostSettings: JSON.parse(ConfigManager.get_host_settings(hostName))
-    property var _selectedGroups: ConfigManager.get_selected_groups(hostName)
-    property var _availableGroups: ConfigManager.get_available_groups(hostName)
-    property int _contentWidth: 360
+    property string hostId: ""
     property int buttonSize: 42
+    property var hostSettings: JSON.parse(ConfigManager.get_host_settings(hostId))
+    property var _selectedGroups: ConfigManager.get_selected_groups(hostId)
+    property var _availableGroups: ConfigManager.get_available_groups(hostId)
+    property int _contentWidth: 360
+    property bool _loading: true
 
     modal: true
     implicitWidth: 600
@@ -22,8 +25,18 @@ Dialog {
     background: DialogBackground { }
     standardButtons: Dialog.Ok | Dialog.Cancel
 
+    Item {
+        visible: root._loading
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+
+        WorkingSprite {
+        }
+    }
+
     contentItem: ColumnLayout {
         id: content
+        visible: !root._loading
         anchors.fill: parent
         anchors.margins: Theme.margin_dialog()
         anchors.bottomMargin: Theme.margin_dialog_bottom()
@@ -44,10 +57,13 @@ Dialog {
             }
 
             TextField {
+                id: hostIdField
                 width: parent.width
                 placeholderText: "Unique name for host..."
-                text: root.hostName
-                // TODO: validation
+                text: root.hostId === "new-host-id" ? "" : root.hostId
+                validator: RegularExpressionValidator {
+                    regularExpression: /[a-zA-Z\d\-]+/
+                }
             }
         }
 
@@ -60,9 +76,13 @@ Dialog {
             }
 
             TextField {
+                id: hostAddressField
                 width: parent.width
                 placeholderText: ""
                 text: root.hostSettings.address === "0.0.0.0" ? root.hostSettings.fqdn : root.hostSettings.address 
+                validator: RegularExpressionValidator {
+                    regularExpression: /[\.\:a-zA-Z\d]+/
+                }
             }
         }
 
@@ -174,10 +194,10 @@ Dialog {
                     imageSource: "qrc:/main/images/button/add"
                     width: root.buttonSize
                     onClicked: {
-                        ConfigManager.add_host_to_group(root.hostName, tabView._selectedGroup)
+                        ConfigManager.add_host_to_group(root.hostId, tabView._selectedGroup)
                         // Forces re-evaluation of lists.
-                        root._selectedGroups = ConfigManager.get_selected_groups(root.hostName)
-                        root._availableGroups = ConfigManager.get_available_groups(root.hostName)
+                        root._selectedGroups = ConfigManager.get_selected_groups(root.hostId)
+                        root._availableGroups = ConfigManager.get_available_groups(root.hostId)
                     }
 
                     Layout.topMargin: 30
@@ -190,10 +210,10 @@ Dialog {
                     imageSource: "qrc:/main/images/button/remove"
                     width: root.buttonSize
                     onClicked: {
-                        ConfigManager.remove_host_from_group(root.hostName, tabView._selectedGroup)
+                        ConfigManager.remove_host_from_group(root.hostId, tabView._selectedGroup)
                         // Forces re-evaluation of lists.
-                        root._selectedGroups = ConfigManager.get_selected_groups(root.hostName)
-                        root._availableGroups = ConfigManager.get_available_groups(root.hostName)
+                        root._selectedGroups = ConfigManager.get_selected_groups(root.hostId)
+                        root._availableGroups = ConfigManager.get_available_groups(root.hostId)
                     }
 
                     Layout.topMargin: 30
@@ -227,6 +247,37 @@ Dialog {
                 }
             }
         }
+    }
+
+    onOpened: {
+        ConfigManager.begin_host_configuration()
+        if (root.hostId === "") {
+            ConfigManager.add_host("new-host-id")
+            root.hostId = "new-host-id"
+        }
+        root._loading = false
+    }
+
+    onAccepted: {
+        // TODO: GUI for host settings (UseSudo etc.)
+
+        if (Utils.isIpv4OrIpv6Address(hostAddressField.text)) {
+            ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
+                address: hostAddressField.text,
+            }))
+        }
+        else {
+            ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
+                fqdn: hostAddressField.text
+            }))
+        }
+        ConfigManager.end_host_configuration()
+        root._loading = true
+    }
+
+    onRejected: {
+        ConfigManager.cancel_host_configuration()
+        root._loading = true
     }
 
     GroupConfigurationDialog {
