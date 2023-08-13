@@ -195,9 +195,7 @@ Dialog {
                     width: root.buttonSize
                     onClicked: {
                         ConfigManager.add_host_to_group(root.hostId, tabView._selectedGroup)
-                        // Forces re-evaluation of lists.
-                        root._selectedGroups = ConfigManager.get_selected_groups(root.hostId)
-                        root._availableGroups = ConfigManager.get_available_groups(root.hostId)
+                        refreshGroups()
                     }
 
                     Layout.topMargin: 30
@@ -235,15 +233,26 @@ Dialog {
                 ImageButton {
                     id: createGroupButton
                     visible: tabView.currentIndex === 1
-                    imageSource: "qrc:/main/images/button/add"
+                    imageSource: "qrc:/main/images/button/group-new"
+                    tooltip: "Create new group"
                     width: root.buttonSize
+
+                    onClicked: groupAddDialog.open()
                 }
 
                 ImageButton {
                     id: deleteGroupButton
                     visible: tabView.currentIndex === 1
-                    imageSource: "qrc:/main/images/button/remove"
+                    imageSource: "qrc:/main/images/button/delete"
+                    tooltip: "Delete group"
                     width: root.buttonSize
+
+                    onClicked: {
+                        ConfigManager.begin_group_configuration()
+                        ConfigManager.remove_group(tabView._selectedGroup)
+                        ConfigManager.end_group_configuration()
+                        refreshGroups()
+                    }
                 }
             }
         }
@@ -285,4 +294,38 @@ Dialog {
         visible: false
         groupName: tabView._selectedGroup
     }
+
+    InputDialog {
+        id: groupAddDialog
+        visible: false
+        width: parent.width
+        height: 150
+
+        inputSpecs: [{
+            label: "Configuration group name",
+            field_type: "Text",
+            validator_regexp: "[a-zA-Z\d\-]+",
+        }]
+
+        onInputValuesGiven: (inputValues) => {
+            ConfigManager.add_group(inputValues[0])
+            ConfigManager.end_group_configuration()
+            refreshGroups()
+        }
+
+        onOpened: {
+            ConfigManager.begin_group_configuration()
+        }
+
+        onRejected: {
+            ConfigManager.cancel_group_configuration()
+        }
+    }
+
+    // Forces re-evaluation of lists.
+    function refreshGroups() {
+        root._selectedGroups = ConfigManager.get_selected_groups(root.hostId)
+        root._availableGroups = ConfigManager.get_available_groups(root.hostId)
+    }
+
 }

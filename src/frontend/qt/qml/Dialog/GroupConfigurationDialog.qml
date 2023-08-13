@@ -55,17 +55,12 @@ Dialog {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
                         let allConnectors = ConfigManager.get_all_connectors()
-                        moduleAddDialog.inputSpecs = []
                         moduleAddDialog.inputSpecs = [{
                             label: "Connector module",
                             field_type: "Option",
                             options: allConnectors,
                             option_descriptions: allConnectors.map((connector) => ConfigManager.get_connector_description(connector))
                         }]
-                        moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
-                            ConfigManager.add_group_connector(root.groupName, inputValues[0])
-                            root._connectorList = ConfigManager.get_group_connectors(root.groupName)
-                        })
                         moduleAddDialog.open()
                     }
                     flatButton: true
@@ -560,6 +555,11 @@ Dialog {
         visible: false
         width: parent.width
         height: 200
+
+        onInputValuesGiven: {
+            ConfigManager.add_group_connector(root.groupName, inputValues[0])
+            root._connectorList = ConfigManager.get_group_connectors(root.groupName)
+        }
     }
 
     function refreshMonitorList() {

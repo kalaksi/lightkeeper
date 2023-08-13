@@ -31,6 +31,8 @@ pub struct ConfigManagerModel {
     end_group_configuration: qt_method!(fn(&self)),
 
     get_all_groups: qt_method!(fn(&self) -> QStringList),
+    add_group: qt_method!(fn(&self, group_name: QString)),
+    remove_group: qt_method!(fn(&self, group_name: QString)),
     get_selected_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     get_available_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     add_host_to_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
@@ -175,6 +177,16 @@ impl ConfigManagerModel {
             result.push(QString::from(group.clone()));
         }
         result
+    }
+
+    pub fn add_group(&mut self, group_name: QString) {
+        let group_name = group_name.to_string();
+        self.groups_config.groups.insert(group_name, Default::default());
+    }
+
+    pub fn remove_group(&mut self, group_name: QString) {
+        let group_name = group_name.to_string();
+        self.groups_config.groups.remove(&group_name);
     }
 
     pub fn get_selected_groups(&self, host_name: QString) -> QStringList {

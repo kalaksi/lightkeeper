@@ -48,6 +48,7 @@ pub fn init_resources() {
             "images/breeze/dark/list-remove.svg" as "images/button/remove",
             "images/breeze/dark/configure.svg" as "images/button/configure",
             "images/breeze/dark/entry-edit.svg" as "images/button/entry-edit",
+            "images/breeze/dark/group-new.svg" as "images/button/group-new",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -117,6 +118,7 @@ pub fn init_resources() {
             "images/breeze/light/list-remove.svg" as "images/button/remove",
             "images/breeze/light/configure.svg" as "images/button/configure",
             "images/breeze/light/entry-edit.svg" as "images/button/entry-edit",
+            "images/breeze/light/group-new.svg" as "images/button/group-new",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",

@@ -30,25 +30,6 @@ Dialog {
             model: root.inputSpecs
 
             RowLayout {
-                visible: modelData.field_type !== "Option"
-                Layout.fillWidth: true
-
-                Label {
-                    text: modelData.label
-                    Layout.fillWidth: true
-                }
-
-                TextField {
-                    text: modelData.default_value || ""
-                    validator: RegularExpressionValidator {
-                        regularExpression: modelData.validator_regexp === "" ? /.*/ : RegExp(modelData.validator_regexp)
-                    }
-                    Layout.fillWidth: true
-                }
-            }
-
-            RowLayout {
-                visible: modelData.field_type === "Option"
                 Layout.fillWidth: true
 
                 Label {
@@ -57,7 +38,17 @@ Dialog {
                     Layout.alignment: Qt.AlignTop
                 }
 
+                TextField {
+                    visible: modelData.field_type !== "Option"
+                    text: modelData.default_value || ""
+                    validator: RegularExpressionValidator {
+                        regularExpression: modelData.validator_regexp === "" ? /.*/ : RegExp(modelData.validator_regexp)
+                    }
+                    Layout.fillWidth: true
+                }
+
                 Column {
+                    visible: modelData.field_type === "Option"
                     spacing: Theme.spacing_normal()
 
                     Layout.minimumWidth: 220
@@ -95,7 +86,7 @@ Dialog {
             // Handle options differently.
             let nextValue = ""
             if (root.inputSpecs[i].field_type === "Option") {
-                nextValue = inputRepeater.itemAt(i).children[1].children[0].currentText
+                nextValue = inputRepeater.itemAt(i).children[2].children[0].currentText
             }
             else {
                 nextValue = inputRepeater.itemAt(i).children[1].text
@@ -117,17 +108,15 @@ Dialog {
                 root.open()
                 return
             }
-
-            // Reset fields back to default value.
-            if (root.inputSpecs[i].field_type === "Option") {
-                inputRepeater.itemAt(i).children[1].children[0].currentIndex = 0
-            }
-            else {
-                inputRepeater.itemAt(i).children[1].text = root.inputSpecs[i].default_value || ""
-            }
         }
 
-        root._errorText = ""
         root.inputValuesGiven(values)
+        root._errorText = ""
+        root.inputSpecs = []
+    }
+
+    onRejected: {
+        root._errorText = ""
+        root.inputSpecs = []
     }
 }
