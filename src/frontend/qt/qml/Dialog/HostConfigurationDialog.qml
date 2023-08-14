@@ -81,7 +81,7 @@ Dialog {
                 placeholderText: ""
                 text: root.hostSettings.address === undefined ? root.hostSettings.fqdn : root.hostSettings.address 
                 validator: RegularExpressionValidator {
-                    regularExpression: /[\.\:a-zA-Z\d]+/
+                    regularExpression: /[\.\:a-zA-Z\d\-]+/
                 }
             }
         }

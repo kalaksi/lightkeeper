@@ -399,7 +399,7 @@ impl ConfigManagerModel {
         let group_name = group_name.to_string();
         let connector_name = connector_name.to_string();
         let group_connector_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                                                       .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
+                                                         .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
 
         let mut group_connector_settings_keys = group_connector_settings.into_keys().collect::<Vec<String>>();
         group_connector_settings_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));

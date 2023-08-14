@@ -36,7 +36,7 @@ pub struct ThemeModel {
 
     border_radius: qt_method!(fn(&self) -> i8),
 
-    opacity_when_disabled: qt_method!(fn(&self) -> QString),
+    opacity: qt_method!(fn(&self, is_enabled: bool) -> QString),
 
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
@@ -152,7 +152,10 @@ impl ThemeModel {
         4
     }
 
-    fn opacity_when_disabled(&self) -> QString {
+    fn opacity(&self, is_enabled: bool) -> QString {
+        if is_enabled {
+            return QString::from("1.0");
+        }
         QString::from("0.3")
     }
 

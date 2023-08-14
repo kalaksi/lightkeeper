@@ -114,7 +114,7 @@ impl ConnectionModule for Ssh2 {
             };
         }
         else {
-            log::debug!("Password is not set, trying authentication with first key found in SSH agent");
+            log::warn!("Password is not set, trying authentication with first key found in SSH agent");
             if let Err(error) = self.session.userauth_agent(self.username.as_str()) {
                 return Err(format!("Error when communicating with SSH agent: {}", error));
             };

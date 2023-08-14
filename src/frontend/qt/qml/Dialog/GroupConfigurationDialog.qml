@@ -61,6 +61,10 @@ Dialog {
                             options: allConnectors,
                             option_descriptions: allConnectors.map((connector) => ConfigManager.get_connector_description(connector))
                         }]
+                        moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
+                            ConfigManager.add_group_connector(root.groupName, inputValues[0])
+                            refreshConnectorList()
+                        })
                         moduleAddDialog.open()
                     }
                     flatButton: true
@@ -117,7 +121,10 @@ Dialog {
                                 }
 
                                 ImageButton {
-                                    enabled: ConfigManager.get_group_connector_settings_keys(root.groupName, modelData).length > 0
+                                    enabled: {
+                                        let settings = ConfigManager.get_all_module_settings("connector", modelData)
+                                        return Object.keys(settings).length > 0
+                                    }
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         moduleSettingsDialog.moduleId = modelData
@@ -153,12 +160,6 @@ Dialog {
                                 opacity: visible ? 1 : 0
                                 text: ""
                                 color: Theme.color_dark_text()
-
-                                Behavior on opacity {
-                                    NumberAnimation {
-                                        duration: Theme.animation_duration()
-                                    }
-                                }
                             }
                         }
                     }
@@ -293,7 +294,10 @@ Dialog {
                                 */
 
                                 ImageButton {
-                                    enabled: ConfigManager.get_group_connector_settings_keys(root.groupName, modelData).length > 0
+                                    enabled: {
+                                        let settings = ConfigManager.get_all_module_settings("monitor", modelData)
+                                        return Object.keys(settings).length > 0
+                                    }
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         moduleSettingsDialog.moduleId = modelData
@@ -328,12 +332,6 @@ Dialog {
                                 opacity: visible ? 1 : 0
                                 text: ""
                                 color: Theme.color_dark_text()
-
-                                Behavior on opacity {
-                                    NumberAnimation {
-                                        duration: Theme.animation_duration()
-                                    }
-                                }
                             }
                         }
                     }
@@ -445,7 +443,10 @@ Dialog {
                                 }
 
                                 ImageButton {
-                                    enabled: ConfigManager.get_group_connector_settings_keys(root.groupName, modelData).length > 0
+                                    enabled: {
+                                        let settings = ConfigManager.get_all_module_settings("command", modelData)
+                                        return Object.keys(settings).length > 0
+                                    }
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         moduleSettingsDialog.moduleId = modelData
@@ -555,11 +556,11 @@ Dialog {
         visible: false
         width: parent.width
         height: 200
+    }
 
-        onInputValuesGiven: {
-            ConfigManager.add_group_connector(root.groupName, inputValues[0])
-            root._connectorList = ConfigManager.get_group_connectors(root.groupName)
-        }
+    function refreshConnectorList() {
+        root._connectorList = []
+        root._connectorList = ConfigManager.get_group_connectors(root.groupName)
     }
 
     function refreshMonitorList() {

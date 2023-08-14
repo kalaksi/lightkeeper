@@ -41,6 +41,8 @@ ApplicationWindow {
             }
 
             ToolButton {
+                enabled: _hostTableModel.selected_row >= 0
+                opacity: Theme.opacity(enabled)
                 icon.source: "qrc:/main/images/button/entry-edit"
                 onClicked: {
                     ConfigManager.begin_host_configuration()
@@ -50,7 +52,14 @@ ApplicationWindow {
             }
 
             ToolButton {
+                enabled: _hostTableModel.selected_row >= 0
+                opacity: Theme.opacity(enabled)
                 icon.source: "qrc:/main/images/button/remove"
+                onClicked: {
+                    ConfigManager.begin_host_configuration()
+                    ConfigManager.remove_host(_hostTableModel.get_selected_host_id())
+                    ConfigManager.end_host_configuration()
+                }
             }
         }
     }

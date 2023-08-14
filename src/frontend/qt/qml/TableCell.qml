@@ -1,6 +1,5 @@
 import QtQuick 2.15
 import Qt.labs.qmlmodels 1.0
-import QtQuick.Controls.Material 2.15
 
 Item {
     id: root
@@ -33,13 +32,13 @@ Item {
 
     function getBackgroundColor(selected) {
         if (selected === true) {
-            return Qt.darker(Material.primary, 1.20)
+            return Theme.color_highlight()
         }
         else if (model.row % 2 == 0) {
-            return Material.background
+            return Theme.color_table_background()
         }
         else {
-            return Qt.darker(Material.background, 1.10)
+            return Theme.color_background()
         }
     }
 }
