@@ -14,6 +14,9 @@ pub struct HostTableModel {
     display_data: qt_property!(QVariant; WRITE set_display_data),
     data_changed_for_host: qt_method!(fn(&self, host_id: QString)),
 
+    // Remove host without application restart.
+    remove_host: qt_method!(fn(&mut self, host_id: QString)),
+
     // toggle_row is preferred for setting selected row.
     selected_row: qt_property!(i32; NOTIFY selected_row_changed),
     selected_row_changed: qt_signal!(),
@@ -28,6 +31,7 @@ pub struct HostTableModel {
     // Currently stores the same data as HostDataManagerModel but that might change.
     /// Holds preprocessed data more fitting for table rows.
     row_data: Vec<HostDataModel>,
+    disabled_hosts: Vec<String>,
 }
 
 impl HostTableModel {
@@ -40,6 +44,8 @@ impl HostTableModel {
 
         let mut host_ids_ordered = self.i_display_data.hosts.keys().collect::<Vec<&String>>();
         host_ids_ordered.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+        // Ignore disabled hosts.
+        host_ids_ordered.retain(|host_id| !self.disabled_hosts.contains(*host_id));
 
         self.host_row_map.clear();
         self.row_data.clear();
@@ -53,7 +59,7 @@ impl HostTableModel {
     }
 
     // A slot for informing about change in table data.
-    pub fn data_changed_for_host(&mut self, host_id: QString) {
+    fn data_changed_for_host(&mut self, host_id: QString) {
         let host_index = self.host_row_map.get(&host_id.to_string()).unwrap();
 
         let top_left = self.index(*host_index as i32, 0);
@@ -63,7 +69,7 @@ impl HostTableModel {
         self.data_changed(top_left, bottom_right);
     }
 
-    pub fn toggle_row(&mut self, row: i32) {
+    fn toggle_row(&mut self, row: i32) {
         if self.selected_row == row {
             self.selected_row = -1;
             self.selection_deactivated();
@@ -77,11 +83,27 @@ impl HostTableModel {
         self.selected_row_changed();
     }
 
-    pub fn get_selected_host_id(&self) -> QString {
+    fn get_selected_host_id(&self) -> QString {
         match self.row_data.get(self.selected_row as usize) {
             Some(host) => host.name.clone(),
             None => QString::from(""),
         }
+    }
+
+    fn remove_host(&mut self, host_id: QString) {
+        self.disabled_hosts.push(host_id.to_string());
+        let host_index = self.host_row_map.remove(&host_id.to_string()).unwrap() as i32;
+
+        for row in self.host_row_map.values_mut() {
+            if *row > host_index as usize {
+                *row -= 1;
+            }
+        }
+
+        self.toggle_row(self.selected_row);
+        self.begin_remove_rows(host_index, host_index);
+        self.row_data.retain(|host| host.name != host_id);
+        self.end_remove_rows();
     }
 }
 

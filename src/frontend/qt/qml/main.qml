@@ -58,6 +58,7 @@ ApplicationWindow {
                 onClicked: {
                     ConfigManager.begin_host_configuration()
                     ConfigManager.remove_host(_hostTableModel.get_selected_host_id())
+                    _hostTableModel.remove_host(_hostTableModel.get_selected_host_id())
                     ConfigManager.end_host_configuration()
                 }
             }
