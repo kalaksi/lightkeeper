@@ -21,6 +21,31 @@ Dialog {
     background: DialogBackground { }
     standardButtons: Dialog.Cancel | Dialog.Ok
 
+    onOpened: {
+        ConfigManager.begin_group_configuration()
+        root._connectorList = ConfigManager.get_group_connectors(root.groupName) 
+        root._monitorList = ConfigManager.get_group_monitors(root.groupName)
+        root._commandList = ConfigManager.get_group_commands(root.groupName)
+        root._loading = false
+    }
+
+    onAccepted: {
+        ConfigManager.end_group_configuration()
+        root._loading = true
+        root._connectorList = []
+        root._monitorList = []
+        root._commandList = []
+    }
+
+    onRejected: {
+        ConfigManager.cancel_group_configuration()
+        root._loading = true
+        root._connectorList = []
+        root._monitorList = []
+        root._commandList = []
+    }
+
+
     WorkingSprite {
         visible: root._loading
     }
@@ -510,30 +535,6 @@ Dialog {
                 }
             }
         }
-    }
-
-    onOpened: {
-        ConfigManager.begin_group_configuration()
-        root._connectorList = ConfigManager.get_group_connectors(root.groupName) 
-        root._monitorList = ConfigManager.get_group_monitors(root.groupName)
-        root._commandList = ConfigManager.get_group_commands(root.groupName)
-        root._loading = false
-    }
-
-    onAccepted: {
-        ConfigManager.end_group_configuration()
-        root._loading = true
-        root._connectorList = []
-        root._monitorList = []
-        root._commandList = []
-    }
-
-    onRejected: {
-        ConfigManager.cancel_group_configuration()
-        root._loading = true
-        root._connectorList = []
-        root._monitorList = []
-        root._commandList = []
     }
 
     ModuleSettingsDialog {

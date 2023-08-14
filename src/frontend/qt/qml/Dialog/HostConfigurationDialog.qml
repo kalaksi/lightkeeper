@@ -27,6 +27,39 @@ Dialog {
 
     signal configurationChanged()
 
+    onOpened: {
+        ConfigManager.begin_host_configuration()
+        if (root.hostId === "") {
+            ConfigManager.add_host("new-host-id")
+            root.hostId = "new-host-id"
+        }
+        root._loading = false
+    }
+
+    onAccepted: {
+        // TODO: GUI for host settings (UseSudo etc.)
+
+        if (Utils.isIpv4OrIpv6Address(hostAddressField.text)) {
+            ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
+                address: hostAddressField.text,
+            }))
+        }
+        else {
+            ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
+                fqdn: hostAddressField.text,
+            }))
+        }
+        ConfigManager.end_host_configuration()
+        root._loading = true
+        
+        root.configurationChanged()
+    }
+
+    onRejected: {
+        ConfigManager.cancel_host_configuration()
+        root._loading = true
+    }
+
     Item {
         visible: root._loading
         Layout.fillWidth: true
@@ -258,39 +291,15 @@ Dialog {
                 }
             }
         }
-    }
 
-    onOpened: {
-        ConfigManager.begin_host_configuration()
-        if (root.hostId === "") {
-            ConfigManager.add_host("new-host-id")
-            root.hostId = "new-host-id"
+        NormalText {
+            text: "Accepting changes will reload the application."
+            color: Theme.color_dark_text()
+            wrapMode: Text.Wrap
+            width: root._contentWidth
+
+            Layout.alignment: Qt.AlignHCenter
         }
-        root._loading = false
-    }
-
-    onAccepted: {
-        // TODO: GUI for host settings (UseSudo etc.)
-
-        if (Utils.isIpv4OrIpv6Address(hostAddressField.text)) {
-            ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
-                address: hostAddressField.text,
-            }))
-        }
-        else {
-            ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
-                fqdn: hostAddressField.text,
-            }))
-        }
-        ConfigManager.end_host_configuration()
-        root._loading = true
-        
-        root.configurationChanged()
-    }
-
-    onRejected: {
-        ConfigManager.cancel_host_configuration()
-        root._loading = true
     }
 
     GroupConfigurationDialog {

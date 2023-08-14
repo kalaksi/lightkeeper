@@ -22,6 +22,44 @@ Dialog {
 
     signal configSaved(string moduleType, string groupName, string moduleId)
 
+    onOpened: {
+        repeater.model = []
+        repeater.model = getModuleSettingsModel()
+    }
+
+    onAccepted: {
+        for (let i = 0; i < repeater.model.length; i++) {
+            let nextItem = repeater.itemAt(i)
+            let key = nextItem.children[0].children[0].text
+            let enabled = nextItem.children[1].checked
+            let value = nextItem.children[2].text
+            let previousEnabled = repeater.model.filter((item) => item.key === key)[0].enabled
+            let previousValue = repeater.model.filter((item) => item.key === key)[0].value
+
+            if (value === previousValue && enabled === previousEnabled) {
+                continue
+            }
+
+            // "unset" is currently used as a special value to act as a null value.
+            if (enabled === false) {
+                value = "unset"
+            }
+
+            if (root.moduleType === "connector") {
+                ConfigManager.set_group_connector_setting(root.groupName, root.moduleId, key, value)
+            }
+            else if (root.moduleType === "monitor") {
+                ConfigManager.set_group_monitor_setting(root.groupName, root.moduleId, key, value)
+            }
+            else if (root.moduleType === "command") {
+                ConfigManager.set_group_command_setting(root.groupName, root.moduleId, key, value)
+            }
+        }
+
+        root.configSaved(root.moduleType, root.groupName, root.moduleId)
+    }
+
+
     WorkingSprite {
         visible: root._loading
     }
@@ -89,43 +127,6 @@ Dialog {
                 }
             }
         }
-    }
-
-    onOpened: {
-        repeater.model = []
-        repeater.model = getModuleSettingsModel()
-    }
-
-    onAccepted: {
-        for (let i = 0; i < repeater.model.length; i++) {
-            let nextItem = repeater.itemAt(i)
-            let key = nextItem.children[0].children[0].text
-            let enabled = nextItem.children[1].checked
-            let value = nextItem.children[2].text
-            let previousEnabled = repeater.model.filter((item) => item.key === key)[0].enabled
-            let previousValue = repeater.model.filter((item) => item.key === key)[0].value
-
-            if (value === previousValue && enabled === previousEnabled) {
-                continue
-            }
-
-            // "unset" is currently used as a special value to act as a null value.
-            if (enabled === false) {
-                value = "unset"
-            }
-
-            if (root.moduleType === "connector") {
-                ConfigManager.set_group_connector_setting(root.groupName, root.moduleId, key, value)
-            }
-            else if (root.moduleType === "monitor") {
-                ConfigManager.set_group_monitor_setting(root.groupName, root.moduleId, key, value)
-            }
-            else if (root.moduleType === "command") {
-                ConfigManager.set_group_command_setting(root.groupName, root.moduleId, key, value)
-            }
-        }
-
-        root.configSaved(root.moduleType, root.groupName, root.moduleId)
     }
 
     function getModuleSettingsModel() {
