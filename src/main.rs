@@ -26,7 +26,7 @@ use configuration::Configuration;
 use module::{ ModuleFactory, ModuleSpecification };
 
 
-#[derive(Parser)]
+#[derive(Parser, Clone)]
 struct Args {
     #[clap(short, long, default_value = "")]
     config_dir: String,
@@ -38,32 +38,50 @@ struct Args {
     connector_module_info: bool,
 }
 
+#[derive(PartialEq)]
+pub enum ExitReason {
+    Quit,
+    Error,
+    Restart,
+}
 
 fn main() {
     env_logger::init();
+    let args = Args::parse();
+
+    loop {
+        let exit_reason = run(args.clone());
+        match exit_reason {
+            ExitReason::Quit => break,
+            ExitReason::Error => break,
+            ExitReason::Restart => continue,
+        };
+    }
+}
+
+fn run(args: Args) -> ExitReason {
     log::info!("Lightkeeper starting...");
 
-    let args = Args::parse();
 
     let module_factory = ModuleFactory::new();
     if args.monitoring_module_info {
         print!("{}", module_factory.get_monitoring_module_info());
-        return;
+        return ExitReason::Quit;
     }
     if args.command_module_info {
         print!("{}", module_factory.get_command_module_info());
-        return;
+        return ExitReason::Quit;
     }
     if args.connector_module_info {
         print!("{}", module_factory.get_connector_module_info());
-        return;
+        return ExitReason::Quit;
     }
 
     let (main_config, hosts_config, group_config) = match Configuration::read(&args.config_dir) {
         Ok(configuration) => configuration,
         Err(error) => {
             log::error!("Error while reading configuration files: {}", error);
-            return;
+            return ExitReason::Error;
         }
     };
 
@@ -139,7 +157,7 @@ fn main() {
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     frontend.setup_command_handler(command_handler, monitor_manager, main_config.display_options.clone());
-    frontend.start();
+    let exit_reason = frontend.start();
 
     // Shut down threads.
     connection_manager.new_request_sender()
@@ -152,4 +170,6 @@ fn main() {
                 .send(host_manager::StateUpdateMessage::exit_token())
                 .unwrap_or_else(|error| log::error!("Couldn't send exit token to state manager: {}", error));
     host_manager.borrow_mut().join();
+
+    exit_reason
 }

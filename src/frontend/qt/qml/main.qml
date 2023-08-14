@@ -316,7 +316,14 @@ ApplicationWindow {
         visible: false
         anchors.centerIn: parent
         bottomMargin: 0.12 * parent.height
+
+        onConfigurationChanged: {
+            // Restarts application.
+            ConfigManager.require_restart()
+            Qt.quit()
+        }
     }
+
 
     TextDialog {
         id: textDialog

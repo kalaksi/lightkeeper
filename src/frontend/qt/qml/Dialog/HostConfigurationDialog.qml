@@ -25,6 +25,8 @@ Dialog {
     background: DialogBackground { }
     standardButtons: Dialog.Ok | Dialog.Cancel
 
+    signal configurationChanged()
+
     Item {
         visible: root._loading
         Layout.fillWidth: true
@@ -282,6 +284,8 @@ Dialog {
         }
         ConfigManager.end_host_configuration()
         root._loading = true
+        
+        root.configurationChanged()
     }
 
     onRejected: {

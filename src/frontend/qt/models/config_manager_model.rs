@@ -19,6 +19,7 @@ pub struct ConfigManagerModel {
     file_write_error: qt_signal!(config_dir: QString, error_message: QString),
 
     add_host: qt_method!(fn(&self, host_name: QString)),
+    require_restart: qt_method!(fn(&self)),
     // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     get_host_settings: qt_method!(fn(&self, host_name: QString) -> QString),
     set_host_settings: qt_method!(fn(&self, old_host_name: QString, new_host_name: QString, host_settings_json: QString)),
@@ -71,6 +72,8 @@ pub struct ConfigManagerModel {
 
     get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
+    pub restart_required: bool,
+
     config_dir: String,
     hosts_config: Hosts,
     hosts_config_backup: Option<Hosts>,
@@ -114,6 +117,10 @@ impl ConfigManagerModel {
             ..Default::default()
         };
         self.hosts_config.hosts.insert(host_name, config);
+    }
+
+    pub fn require_restart(&mut self) {
+        self.restart_required = true;
     }
 
     pub fn begin_host_configuration(&mut self) {

@@ -16,7 +16,8 @@ use crate::{
     command_handler::CommandHandler,
     monitor_manager::MonitorManager,
     configuration,
-    module::Metadata
+    module::Metadata,
+    ExitReason,
 };
 
 
@@ -56,7 +57,7 @@ impl QmlFrontend {
         self.command_handler = Some(CommandHandlerModel::new(command_handler, monitor_manager, display_options));
     }
 
-    pub fn start(&mut self) {
+    pub fn start(&mut self) -> ExitReason {
         let main_qml_path = if env::var("FLATPAK_ID").is_ok() {
             // Inside flatpak.
             "/app/qml/main.qml"
@@ -81,6 +82,13 @@ impl QmlFrontend {
         engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
         engine.load_file(QString::from(main_qml_path));
         engine.exec();
+
+        if qt_data_config_manager.pinned().borrow().restart_required {
+            ExitReason::Restart
+        }
+        else {
+            ExitReason::Quit
+        }
     }
 
     pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {

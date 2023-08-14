@@ -102,8 +102,6 @@ impl ConnectionManager {
 
                 if request.request_type == RequestType::Exit {
                     log::debug!("Gracefully exiting connection manager thread");
-                    // Not sure if waiting for a bit for workers to finish is needed but a couple of seconds won't hurt.
-                    thread::sleep(std::time::Duration::from_secs(2));
 
                     if cache_settings.enable_cache {
                         match command_cache.lock().unwrap().write_to_disk() {
