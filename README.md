@@ -1,6 +1,6 @@
 # LightkeeperRM
 
-**LightkeeperRM (Remote Management) is a drop-in replacement for maintaining servers over SSH with shell commands.**  
+**LightkeeperRM (Remote Management) is a modular drop-in replacement for maintaining servers over SSH with shell commands.**
 No additional daemons or other software is needed on servers. LightkeeperRM will only run standard Linux commands already available on the server.
 You can see executed commands through debug log and, of course, on server's logs, so it's easy to audit and debug.  
   
