@@ -9,7 +9,7 @@ You can see executed commands through debug log and, of course, on server's logs
 **User-interface is compact** and aims to keep only the most essential information visible. Clicking and navigating between different views is kept to a minimum.  
 In case you find the GUI insufficient and need to dig deeper, you can always use a button for launching a terminal that logs you in through SSH.
   
-*NOTE: this is currently release 0.2.0 (and the first release) and still has bugs and is missing some features. Documentation is also not yet complete.*
+*NOTE: this is currently a pre-release and still has bugs and is missing some features. Documentation is also not yet complete.*
 
 <br />
 <br />
