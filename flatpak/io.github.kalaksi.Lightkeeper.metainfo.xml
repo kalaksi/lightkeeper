@@ -21,7 +21,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.3.1" date="2023-08-17">
+    <release version="0.3.2" date="2023-08-17">
       <description>
         <ul>
           <li>Breaking change: changes to configuration schema. Old configuration is not compatible and will be moved aside with .bak suffix.</li>
