@@ -64,10 +64,6 @@ impl DisplayOptions {
             return Err(String::from("display_text must be set."));
         }
 
-        if self.category.is_empty() {
-            return Err(String::from("Category must be set."));
-        }
-
         for user_input_field in &self.user_parameters {
             if user_input_field.label.is_empty() {
                 return Err(String::from("User input field label must be set."));

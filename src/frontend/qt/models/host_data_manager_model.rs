@@ -29,8 +29,8 @@ pub struct HostDataManagerModel {
 
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     get_display_data: qt_method!(fn(&self) -> QVariant),
-    get_categories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QVariantList),
-    get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+    get_categories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
+    get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
@@ -203,15 +203,15 @@ impl HostDataManagerModel {
     }
 
     // Get list of monitors for category.
-    fn get_category_monitor_ids(&self, host_id: QString, category: QString) -> QVariantList {
+    fn get_category_monitor_ids(&self, host_id: QString, category: QString) -> QStringList {
         let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
         let category = category.to_string();
 
-        let mut result = QVariantList::default();
+        let mut result = QStringList::default();
 
         for (monitor_id, monitor_data) in host.monitoring_data.iter() {
             if monitor_data.display_options.category == category {
-                result.push(monitor_id.to_qvariant());
+                result.push(QString::from(monitor_id.clone()));
             }
         }
 
@@ -314,21 +314,25 @@ impl HostDataManagerModel {
     }
 
     // Get a readily sorted list of unique categories for a host. Gathered from the monitoring data.
-    fn get_categories(&self, host_id: QString, ignore_empty: bool) -> QVariantList {
+    fn get_categories(&self, host_id: QString, ignore_empty: bool) -> QStringList {
         let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
 
         // Get unique categories from monitoring datas, and sort them according to config and alphabetically.
-        let mut categories = host.monitoring_data.values().map(|monitor_data| monitor_data.display_options.category.clone()).collect::<Vec<String>>();
+        let mut categories = host.monitoring_data.values()
+            .filter(|monitor_data| !monitor_data.display_options.category.is_empty())
+            .map(|monitor_data| monitor_data.display_options.category.clone())
+            .collect::<Vec<String>>();
+
         categories.sort();
         categories.dedup();
 
-        let mut result = QVariantList::default();
+        let mut result = QStringList::default();
 
         // First add categories in the order they are defined in the config.
         for prioritized_category in self.display_options_category_order.iter() {
             if categories.contains(prioritized_category) {
                 if !ignore_empty || !self.is_empty_category(host_id.to_string(), prioritized_category.to_string()) {
-                    result.push(prioritized_category.to_qvariant());
+                    result.push(QString::from(prioritized_category.clone()));
                 }
             }
         }
@@ -336,7 +340,7 @@ impl HostDataManagerModel {
         for remaining_category in categories.iter() {
             if !self.display_options_category_order.contains(remaining_category) {
                 if !ignore_empty || !self.is_empty_category(host_id.to_string(), remaining_category.to_string()) {
-                    result.push(remaining_category.to_qvariant());
+                    result.push(QString::from(remaining_category.clone()));
                 }
             }
         }

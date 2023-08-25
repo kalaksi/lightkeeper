@@ -120,8 +120,7 @@ impl HostManager {
                 if let Some(message_data_point) = state_update.data_point {
 
                     // Specially structured data point for passing platform info here.
-                    // TODO: remove hardcoding?
-                    if message_data_point.value == "_platform_info" {
+                    if message_data_point.is_internal() {
                         if let Ok(platform) = Self::read_platform_info(&message_data_point) {
                             host_state.host.platform = platform;
                             log::debug!("[{}] Platform info updated", host_state.host.name);
