@@ -33,6 +33,7 @@ Dialog {
             ConfigManager.add_host("new-host-id")
             root.hostId = "new-host-id"
         }
+        refreshGroups()
         root._loading = false
     }
 
