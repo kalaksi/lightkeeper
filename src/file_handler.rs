@@ -10,6 +10,7 @@ use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
 use chrono::{DateTime, Utc};
 use crate::Host;
+use crate::file_handler;
 
 
 const MAX_PATH_COMPONENTS: u8 = 2;
@@ -38,7 +39,7 @@ pub fn get_config_dir() -> io::Result<PathBuf> {
 }
 
 pub fn get_cache_dir() -> io::Result<PathBuf> {
-    let cache_dir;
+    let mut cache_dir;
     if let Some(path) = env::var_os("XDG_CACHE_HOME") {
         cache_dir = PathBuf::from(path);
     }
@@ -49,24 +50,22 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
         return Err(io::Error::new(io::ErrorKind::Other, "Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set."));
     }
 
-    // If running inside flatpak, there's no need to add a separate subdir for the app.
-    if env::var("FLATPAK_ID").is_ok() {
-        Ok(cache_dir)
+    // If not running inside flatpak, we need to add a separate subdir for the app.
+    if env::var("FLATPAK_ID").is_err() {
+        cache_dir = cache_dir.join(APP_DIR_NAME)
     }
-    else {
-        Ok(cache_dir.join(APP_DIR_NAME))
-    }
+
+    Ok(cache_dir)
 }
 
 /// Create a local file. Local path is based on remote host name and remote file path.
 /// Will overwrite any existing files.
-pub fn create_file(host: &Host, remote_file_path: &String, file_contents: Vec<u8>) -> io::Result<String> {
+pub fn create_file(host: &Host, remote_file_path: &String, file_mode: i32, file_contents: Vec<u8>) -> io::Result<String> {
     let file_dir = host.name.clone();
     if !Path::new(&file_dir).is_dir() {
         fs::create_dir(&file_dir)?;
     }
 
-    // TODO: make sure config dir is protected from reading by others.
     let file_path = convert_to_local_path(host, remote_file_path);
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
     let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_file_path)?;
@@ -74,6 +73,7 @@ pub fn create_file(host: &Host, remote_file_path: &String, file_contents: Vec<u8
         download_time: Utc::now(),
         remote_path: remote_file_path.clone(),
         remote_file_hash: sha256::digest(file_contents.as_slice()),
+        mode: file_mode,
         temporary: true,
     };
 
@@ -115,7 +115,8 @@ pub fn get_metadata_path(local_file_path: &String) -> String {
 
 /// Provides the local file path based on remote host name and remote file path.
 pub fn convert_to_local_path(host: &Host, remote_file_path: &String) -> String {
-    let file_dir = host.name.clone();
+    let cache_dir = file_handler::get_cache_dir().unwrap();
+    let file_dir = cache_dir.join(host.name.clone());
 
     // Using only hash as the file name would suffice but providing some parts of
     // the file path and name will help the user to identify the file in e.g. text editor.
@@ -144,6 +145,7 @@ pub struct FileMetadata {
     pub download_time: DateTime<Utc>,
     pub remote_path: String,
     pub remote_file_hash: String,
+    pub mode: i32,
     /// Temporary files will be deleted when they're no longer used.
     pub temporary: bool,
 }

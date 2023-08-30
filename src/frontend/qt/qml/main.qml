@@ -27,11 +27,6 @@ ApplicationWindow {
         RowLayout {
             anchors.fill: parent
 
-            // Spacer
-            Item {
-                Layout.fillWidth: true
-            }
-
             ToolButton {
                 icon.source: "qrc:/main/images/button/add"
                 onClicked: {
@@ -62,6 +57,48 @@ ApplicationWindow {
                     ConfigManager.end_host_configuration()
                 }
             }
+
+            ToolSeparator {
+            }
+
+
+            /* TODO: implement later?
+            Row {
+                id: searchRow
+                spacing: Theme.spacing_loose()
+
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.spacing_loose() * 4
+
+                Label {
+                    text: "Search:"
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                TextField {
+                    id: searchInput
+                    text: "Search by name or address"
+
+                    width: parent.width * 0.5
+                }
+            }
+            */
+
+            // Spacer
+            Item {
+                Layout.fillWidth: true
+            }
+
+            ToolSeparator {
+            }
+
+            ToolButton {
+                icon.source: "qrc:/main/images/button/configure"
+                onClicked: {
+                    preferencesDialog.open()
+                }
+            }
+
         }
     }
 
@@ -314,6 +351,19 @@ ApplicationWindow {
 
     HostConfigurationDialog {
         id: hostConfigurationDialog
+        visible: false
+        anchors.centerIn: parent
+        bottomMargin: 0.12 * parent.height
+
+        onConfigurationChanged: {
+            // Restarts application.
+            ConfigManager.require_restart()
+            Qt.quit()
+        }
+    }
+
+    PreferencesDialog {
+        id: preferencesDialog
         visible: false
         anchors.centerIn: parent
         bottomMargin: 0.12 * parent.height

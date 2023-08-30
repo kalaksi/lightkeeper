@@ -15,12 +15,27 @@ use crate::{
 pub struct ConfigManagerModel {
     base: qt_base_class!(trait QObject),
 
+    //
     // Signals
+    //
     file_write_error: qt_signal!(config_dir: QString, error_message: QString),
 
+    //
+    // Common
+    //
+    require_restart: qt_method!(fn(&self)),
+
+    //
+    // Preferences
+    //
+    get_preferences: qt_method!(fn(&self) -> QVariantMap),
+    set_preferences: qt_method!(fn(&self, preferences: QVariantMap)),
+
+    //
+    // Host configuration
+    //
     add_host: qt_method!(fn(&self, host_name: QString)),
     remove_host: qt_method!(fn(&self, host_name: QString)),
-    require_restart: qt_method!(fn(&self)),
     // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     get_host_settings: qt_method!(fn(&self, host_name: QString) -> QString),
     set_host_settings: qt_method!(fn(&self, old_host_name: QString, new_host_name: QString, host_settings_json: QString)),
@@ -28,6 +43,14 @@ pub struct ConfigManagerModel {
     cancel_host_configuration: qt_method!(fn(&self)),
     end_host_configuration: qt_method!(fn(&self)),
 
+    get_selected_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
+    get_available_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
+    add_host_to_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
+    remove_host_from_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
+
+    //
+    // Group configuration
+    //
     begin_group_configuration: qt_method!(fn(&self)),
     cancel_group_configuration: qt_method!(fn(&self)),
     end_group_configuration: qt_method!(fn(&self)),
@@ -35,11 +58,11 @@ pub struct ConfigManagerModel {
     get_all_groups: qt_method!(fn(&self) -> QStringList),
     add_group: qt_method!(fn(&self, group_name: QString)),
     remove_group: qt_method!(fn(&self, group_name: QString)),
-    get_selected_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
-    get_available_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
-    add_host_to_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
-    remove_host_from_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
+    get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
+    //
+    // Group configuration: connectors
+    //
     get_all_connectors: qt_method!(fn(&self) -> QStringList),
     get_connector_description: qt_method!(fn(&self, connector_name: QString) -> QString),
     get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
@@ -49,6 +72,9 @@ pub struct ConfigManagerModel {
     set_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString)),
     remove_group_connector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
 
+    //
+    // Group configuration: monitors
+    //
     // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
     get_all_monitors: qt_method!(fn(&self) -> QStringList),
     get_monitor_description: qt_method!(fn(&self, monitor_name: QString) -> QString),
@@ -62,6 +88,9 @@ pub struct ConfigManagerModel {
     get_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString),
     set_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString, setting_value: QString)),
 
+    //
+    // Group configuration: commands
+    //
     get_all_commands: qt_method!(fn(&self) -> QStringList),
     get_command_description: qt_method!(fn(&self, command_name: QString) -> QString),
     get_group_commands: qt_method!(fn(&self, group_name: QString) -> QStringList),
@@ -71,18 +100,17 @@ pub struct ConfigManagerModel {
     get_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString),
     set_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString, setting_value: QString)),
 
-    get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
+
 
     pub restart_required: bool,
 
     config_dir: String,
+    main_config: Configuration,
     hosts_config: Hosts,
     hosts_config_backup: Option<Hosts>,
     groups_config: Groups,
     groups_config_backup: Option<Groups>,
     module_metadatas: Vec<Metadata>,
-    // Not yet used.
-    _main_config: Configuration,
 }
 
 impl ConfigManagerModel {
@@ -100,11 +128,38 @@ impl ConfigManagerModel {
 
         ConfigManagerModel {
             config_dir: config_dir,
+            main_config: main_config,
             hosts_config: hosts_config,
             groups_config: groups_config,
-            _main_config: main_config,
             module_metadatas: module_metadatas,
             ..Default::default()
+        }
+    }
+
+    fn get_preferences(&self) -> QVariantMap {
+        let mut preferences = QVariantMap::default();
+        preferences.insert("refresh_hosts_on_start".into(), self.main_config.preferences.refresh_hosts_on_start.into());
+        preferences.insert("use_remote_editor".into(), self.main_config.preferences.use_remote_editor.into());
+        preferences.insert("remote_text_editor".into(), QString::from(self.main_config.preferences.remote_text_editor.clone()).into());
+        preferences.insert("sudo_remote_editor".into(), self.main_config.preferences.sudo_remote_editor.into());
+        preferences.insert("text_editor".into(), QString::from(self.main_config.preferences.text_editor.clone()).into());
+        preferences.insert("terminal".into(), QString::from(self.main_config.preferences.terminal.clone()).into());
+        preferences.insert("terminal_args".into(), QString::from(self.main_config.preferences.terminal_args.join(" ")).into());
+        preferences
+    }
+
+    fn set_preferences(&mut self, preferences: QVariantMap) {
+        self.main_config.preferences.refresh_hosts_on_start = preferences.value("refresh_hosts_on_start".into(), false.into()).to_bool();
+        self.main_config.preferences.use_remote_editor = preferences.value("use_remote_editor".into(), false.into()).to_bool();
+        self.main_config.preferences.remote_text_editor = preferences.value("remote_text_editor".into(), QString::from("vim").into()).to_qbytearray().to_string();
+        self.main_config.preferences.sudo_remote_editor = preferences.value("sudo_remote_editor".into(), false.into()).to_bool();
+        self.main_config.preferences.text_editor = preferences.value("text_editor".into(), QString::from("kate").into()).to_qbytearray().to_string();
+        self.main_config.preferences.terminal = preferences.value("terminal".into(), QString::from("xterm").into()).to_qbytearray().to_string();
+        self.main_config.preferences.terminal_args = preferences.value("terminal_args".into(), QString::from("-e").into()).to_qbytearray().to_string()
+                                                                .split(" ").map(|arg| arg.to_string()).collect();
+
+        if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+            self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
         }
     }
 
@@ -184,12 +239,7 @@ impl ConfigManagerModel {
     fn get_all_groups(&self) -> QStringList {
         let mut all_groups = self.groups_config.groups.keys().cloned().collect::<Vec<String>>();
         all_groups.sort();
-
-        let mut result = QStringList::default();
-        for group in all_groups {
-            result.push(QString::from(group.clone()));
-        }
-        result
+        all_groups.into_iter().map(|group| QString::from(group)).collect()
     }
 
     fn add_group(&mut self, group_name: QString) {
@@ -211,11 +261,7 @@ impl ConfigManagerModel {
             groups
         };
 
-        let mut result = QStringList::default();
-        for group in groups_sorted {
-            result.push(QString::from(group));
-        }
-        result
+        groups_sorted.into_iter().map(|group| QString::from(group)).collect()
     }
 
     fn get_available_groups(&self, host_name: QString) -> QStringList {
@@ -228,11 +274,7 @@ impl ConfigManagerModel {
             .map(|group| group.to_string())
             .collect::<Vec<String>>();
 
-        let mut result = QStringList::default();
-        for group in available_groups {
-            result.push(QString::from(group));
-        }
-        result
+        available_groups.into_iter().map(|group| QString::from(group)).collect()
     }
 
     fn add_host_to_group(&mut self, host_name: QString, group_name: QString) {
@@ -256,12 +298,7 @@ impl ConfigManagerModel {
                                                            .map(|metadata| metadata.module_spec.id.clone())
                                                            .collect::<Vec<String>>();
         all_monitors.sort();
-
-        let mut result = QStringList::default();
-        for monitor in all_monitors {
-            result.push(QString::from(monitor.clone()));
-        }
-        result
+        all_monitors.into_iter().map(|monitor| QString::from(monitor)).collect()
     }
 
     fn get_monitor_description(&self, module_name: QString) -> QString {
@@ -281,11 +318,7 @@ impl ConfigManagerModel {
         let mut group_monitors_keys = group_monitors.into_keys().collect::<Vec<String>>();
         group_monitors_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
 
-        let mut result = QStringList::default();
-        for monitor_key in group_monitors_keys {
-            result.push(QString::from(monitor_key));
-        }
-        result
+        group_monitors_keys.into_iter().map(|monitor| QString::from(monitor)).collect()
     }
 
     fn add_group_monitor(&mut self, group_name: QString, monitor_name: QString) {
@@ -332,11 +365,7 @@ impl ConfigManagerModel {
         let mut group_monitor_settings_keys = group_monitor_settings.into_keys().collect::<Vec<String>>();
         group_monitor_settings_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
 
-        let mut result = QStringList::default();
-        for setting_key in group_monitor_settings_keys {
-            result.push(QString::from(setting_key));
-        }
-        result
+        group_monitor_settings_keys.into_iter().map(|setting| QString::from(setting)).collect()
     }
 
     fn get_group_monitor_setting(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString {
@@ -370,12 +399,7 @@ impl ConfigManagerModel {
                                                              .map(|metadata| metadata.module_spec.id.clone())
                                                              .collect::<Vec<String>>();
         all_connectors.sort();
-
-        let mut result = QStringList::default();
-        for connector in all_connectors {
-            result.push(QString::from(connector.clone()));
-        }
-        result
+        all_connectors.into_iter().map(|connector| QString::from(connector)).collect()
     }
 
     fn get_connector_description(&self, module_name: QString) -> QString {
@@ -395,11 +419,7 @@ impl ConfigManagerModel {
         let mut group_connectors_keys = group_connectors.into_keys().collect::<Vec<String>>();
         group_connectors_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
 
-        let mut result = QStringList::default();
-        for connector_key in group_connectors_keys {
-            result.push(QString::from(connector_key));
-        }
-        result
+        group_connectors_keys.into_iter().map(|connector| QString::from(connector)).collect()
     }
 
     fn add_group_connector(&mut self, group_name: QString, connector_name: QString) {
@@ -417,11 +437,7 @@ impl ConfigManagerModel {
         let mut group_connector_settings_keys = group_connector_settings.into_keys().collect::<Vec<String>>();
         group_connector_settings_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
 
-        let mut result = QStringList::default();
-        for setting_key in group_connector_settings_keys {
-            result.push(QString::from(setting_key));
-        }
-        result
+        group_connector_settings_keys.into_iter().map(|setting| QString::from(setting)).collect()
     }
 
     fn get_group_connector_setting(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString {
@@ -463,11 +479,7 @@ impl ConfigManagerModel {
                                                              .collect::<Vec<String>>();
         all_commands.sort();
 
-        let mut result = QStringList::default();
-        for command in all_commands {
-            result.push(QString::from(command.clone()));
-        }
-        result
+        all_commands.into_iter().map(|command| QString::from(command)).collect()
     }
 
     fn get_command_description(&self, module_name: QString) -> QString {
@@ -487,11 +499,7 @@ impl ConfigManagerModel {
         let mut group_commands_keys = group_commands.into_keys().collect::<Vec<String>>();
         group_commands_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
 
-        let mut result = QStringList::default();
-        for command_key in group_commands_keys {
-            result.push(QString::from(command_key));
-        }
-        result
+        group_commands_keys.into_iter().map(|command| QString::from(command)).collect()
     }
 
     fn add_group_command(&mut self, group_name: QString, command_name: QString) {
@@ -515,11 +523,7 @@ impl ConfigManagerModel {
         let mut group_command_settings_keys = group_command_settings.into_keys().collect::<Vec<String>>();
         group_command_settings_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
 
-        let mut result = QStringList::default();
-        for setting_key in group_command_settings_keys {
-            result.push(QString::from(setting_key));
-        }
-        result
+        group_command_settings_keys.into_iter().map(|setting| QString::from(setting)).collect()
     }
 
     fn get_group_command_setting(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString {

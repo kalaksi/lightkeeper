@@ -72,10 +72,15 @@ pub struct CacheSettings {
 #[serde(deny_unknown_fields)]
 pub struct Category {
     pub priority: u16,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub icon: Option<String>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub command_order: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub monitor_order: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub collapsible_commands: Option<Vec<String>>,
 }
 
@@ -403,6 +408,37 @@ impl Configuration {
             },
             Err(error) => {
                 let message = format!("Failed to open group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
+                return Err(io::Error::new(io::ErrorKind::Other, message));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Writes the config.yml configuration file.
+    pub fn write_main_config(config_dir: &String, config: &Configuration) -> io::Result<()> {
+        let config_dir = if config_dir.is_empty() {
+            file_handler::get_config_dir().unwrap()
+        }
+        else {
+            Path::new(config_dir).to_path_buf()
+        };
+
+        let main_config_file_path = config_dir.join(MAIN_CONFIG_FILE);
+        let main_config_file = fs::OpenOptions::new().write(true).truncate(true).open(main_config_file_path.clone());
+        match main_config_file {
+            Ok(mut file) => {
+                let main_config = serde_yaml::to_string(config).unwrap();
+                if let Err(error) = file.write_all(main_config.as_bytes()) {
+                    let message = format!("Failed to write main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
+                    return Err(io::Error::new(io::ErrorKind::Other, message));
+                }
+                else {
+                    log::info!("Updated main configuration file {}", main_config_file_path.to_string_lossy());
+                }
+            },
+            Err(error) => {
+                let message = format!("Failed to open main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
                 return Err(io::Error::new(io::ErrorKind::Other, message));
             }
         }

@@ -1,5 +1,5 @@
 preferences:
-  # Connect to all hosts on start and 
+  # Refresh all hosts on application start.
   refresh_hosts_on_start: false
   # Some commands allow you to edit a remote file.
   # This can be done directly over a terminal or by temporarily downloading the file for editing locally.
