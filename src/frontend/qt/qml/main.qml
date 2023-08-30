@@ -141,7 +141,12 @@ ApplicationWindow {
             if (commandResult.show_in_notification === true &&
                 (commandResult.criticality !== "Normal" || Theme.hide_info_notifications() === false)) {
 
-                snackbarContainer.addSnackbar(commandResult.criticality, commandResult.message)
+                if (commandResult.error !== "") {
+                    snackbarContainer.addSnackbar(commandResult.criticality, commandResult.error)
+                }
+                else {
+                    snackbarContainer.addSnackbar(commandResult.criticality, commandResult.message)
+                }
             }
 
             let dialogInstanceId = _detailsDialogs[commandResult.invocation_id]
