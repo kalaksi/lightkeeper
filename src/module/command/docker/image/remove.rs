@@ -64,18 +64,22 @@ impl CommandModule for Remove {
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.message.len() > 0 {
             if let Ok(deletion_details) = serde_json::from_str::<Vec<DeletionDetails>>(&response.message) {
-                let response_message = deletion_details.iter().map(|details| {
-                    if let Some(deleted) = &details.deleted {
-                        format!("Deleted: {}", deleted)
-                    }
-                    else if let Some(untagged) = &details.untagged {
-                        format!("Untagged: {}", untagged)
-                    }
-                    else {
-                        String::from("")
-                    }
-                }).collect::<Vec<String>>().join("\n");
+                // Alternatively, display verbosely.
+                // let response_message = deletion_details.iter().map(|details| {
+                //     if let Some(deleted) = &details.deleted {
+                //         format!("Deleted: {}", deleted)
+                //     }
+                //     else if let Some(untagged) = &details.untagged {
+                //         format!("Untagged: {}", untagged)
+                //     }
+                //     else {
+                //         String::from("")
+                //     }
+                // }).collect::<Vec<String>>().join("\n");
 
+                let untagged_count = deletion_details.iter().filter(|details| details.untagged.is_some()).count();
+                let deleted_count = deletion_details.iter().filter(|details| details.deleted.is_some()).count();
+                let response_message = format!("{} layers untagged, {} layers deleted", untagged_count, deleted_count);
                 return Ok(CommandResult::new(response_message));
             }
             else if let Ok(docker_response) = serde_json::from_str::<ErrorMessage>(&response.message) {
@@ -87,6 +91,7 @@ impl CommandModule for Remove {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct DeletionDetails {
     untagged: Option<String>,
     deleted: Option<String>,

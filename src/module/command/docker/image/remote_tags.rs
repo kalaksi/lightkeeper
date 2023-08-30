@@ -29,7 +29,7 @@ impl Module for RemoteTags {
         RemoteTags {
             // 100 is the maximum for the Docker Hub API.
             page_size: 100,
-            page_count: 2,
+            page_count: 1,
         }
     }
 }
