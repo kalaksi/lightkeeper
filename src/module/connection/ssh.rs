@@ -10,6 +10,7 @@ use std::{
     io::Write,
 };
 
+use chrono::Utc;
 use ssh2::Session;
 use crate::file_handler::FileMetadata;
 use crate::utils::strip_newline;
@@ -164,7 +165,7 @@ impl ConnectionModule for Ssh2 {
         Ok(ResponseMessage::new(strip_newline(&output), exit_status))
     }
 
-    fn download_file(&self, source: &String) -> io::Result<Vec<u8>> {
+    fn download_file(&self, source: &String) -> io::Result<(FileMetadata, Vec<u8>)> {
         let sftp = self.session.sftp().unwrap();
         match sftp.open(Path::new(&source)) {
             Ok(mut file) => {
@@ -173,7 +174,17 @@ impl ConnectionModule for Ssh2 {
                     Err(error)
                 }
                 else {
-                    Ok(contents)
+                    let stat = file.stat().unwrap();
+                    let metadata = FileMetadata {
+                        download_time: Utc::now(),
+                        remote_path: source.clone(),
+                        remote_file_hash: sha256::digest(contents.as_slice()),
+                        owner_uid: stat.uid.unwrap(),
+                        owner_gid: stat.gid.unwrap(),
+                        permissions: stat.perm.unwrap(),
+                        temporary: true,
+                    };
+                    Ok((metadata, contents))
                 }
             }
             Err(error) => {
@@ -184,6 +195,7 @@ impl ConnectionModule for Ssh2 {
 
     fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> io::Result<()> {
         let sftp = self.session.sftp().unwrap();
+
         match sftp.create(Path::new(&metadata.remote_path)) {
             Ok(mut file) => {
                 if let Err(error) = file.write(&contents) {

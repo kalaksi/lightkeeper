@@ -257,8 +257,8 @@ impl ConnectionManager {
             RequestType::Download => {
                 log::debug!("[{}] Downloading file: {}", request.host.name, request_message);
                 match connector.download_file(&request_message) {
-                    Ok(contents) => {
-                        match file_handler::create_file(&request.host, &request_message, contents) {
+                    Ok((metadata, contents)) => {
+                        match file_handler::create_file(&request.host, &request_message, metadata, contents) {
                             Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
                             Err(error) => Err(error.to_string()),
                         }

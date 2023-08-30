@@ -60,7 +60,7 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
 
 /// Create a local file. Local path is based on remote host name and remote file path.
 /// Will overwrite any existing files.
-pub fn create_file(host: &Host, remote_file_path: &String, file_contents: Vec<u8>) -> io::Result<String> {
+pub fn create_file(host: &Host, remote_file_path: &String, metadata: FileMetadata, file_contents: Vec<u8>) -> io::Result<String> {
     let (dir_path, file_path) = convert_to_local_paths(host, remote_file_path);
 
     if !Path::new(&dir_path).is_dir() {
@@ -69,12 +69,6 @@ pub fn create_file(host: &Host, remote_file_path: &String, file_contents: Vec<u8
 
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
     let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_file_path)?;
-    let metadata = FileMetadata {
-        download_time: Utc::now(),
-        remote_path: remote_file_path.clone(),
-        remote_file_hash: sha256::digest(file_contents.as_slice()),
-        temporary: true,
-    };
 
     fs::write(&file_path, file_contents)?;
     serde_yaml::to_writer(metadata_file, &metadata)
@@ -148,6 +142,9 @@ pub struct FileMetadata {
     pub download_time: DateTime<Utc>,
     pub remote_path: String,
     pub remote_file_hash: String,
+    pub owner_uid: u32,
+    pub owner_gid: u32,
+    pub permissions: u32,
     /// Temporary files will be deleted when they're no longer used.
     pub temporary: bool,
 }
