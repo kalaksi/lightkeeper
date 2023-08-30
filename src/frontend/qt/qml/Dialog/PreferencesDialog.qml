@@ -213,6 +213,11 @@ Dialog {
             }
         }
 
+        // Spacer
+        Item {
+            Layout.fillHeight: true
+        }
+
         NormalText {
             text: "Accepting changes will reload the application."
             color: Theme.color_dark_text()
