@@ -257,8 +257,8 @@ impl ConnectionManager {
             RequestType::Download => {
                 log::debug!("[{}] Downloading file: {}", request.host.name, request_message);
                 match connector.download_file(&request_message) {
-                    Ok((file_mode, contents)) => {
-                        match file_handler::create_file(&request.host, &request_message, file_mode, contents) {
+                    Ok(contents) => {
+                        match file_handler::create_file(&request.host, &request_message, contents) {
                             Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
                             Err(error) => Err(error.to_string()),
                         }
@@ -277,15 +277,20 @@ impl ConnectionManager {
                         // Only upload if contents changed.
                         if local_file_hash != metadata.remote_file_hash {
                             result = connector.upload_file(&metadata, contents);
+                            if result.is_ok() {
+                                response_message = String::from("File updated");
+                            }
                         }
                         else {
-                            response_message = format!("Skipping upload of unchanged file {}", request_message);
+                            response_message = String::from("File unchanged");
                             log::info!("{}", response_message);
                         }
 
                         if metadata.temporary {
                             log::debug!("Removing temporary local file {}", request_message);
-                            result = file_handler::remove_file(&request_message);
+                            if let Err(error) = file_handler::remove_file(&request_message) {
+                                log::error!("Error while removing: {}", error);
+                            }
                         }
 
                         if result.is_ok() {

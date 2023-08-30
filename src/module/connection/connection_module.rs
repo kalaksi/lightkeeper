@@ -12,7 +12,7 @@ pub type Connector = Box<dyn ConnectionModule + Send>;
 pub trait ConnectionModule : MetadataSupport + Module {
     fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String>;
 
-    fn download_file(&self, _source: &String) -> io::Result<(i32, Vec<u8>)> {
+    fn download_file(&self, _source: &String) -> io::Result<Vec<u8>> {
         Err(io::Error::new(io::ErrorKind::Other, "Not implemented"))
     }
 

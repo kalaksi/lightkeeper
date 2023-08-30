@@ -320,7 +320,7 @@ impl CommandHandler {
                     CommandResult::new(message.message.to_owned())
                 },
                 Err(error) => {
-                    let error_message = format!("Error uploading file: {} (do you have required permissions?)", error);
+                    let error_message = format!("Error uploading file: {}", error);
                     log::error!("{}", error_message);
                     CommandResult::new_critical_error(error_message)
                 }

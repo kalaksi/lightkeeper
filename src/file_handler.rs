@@ -60,7 +60,7 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
 
 /// Create a local file. Local path is based on remote host name and remote file path.
 /// Will overwrite any existing files.
-pub fn create_file(host: &Host, remote_file_path: &String, file_mode: i32, file_contents: Vec<u8>) -> io::Result<String> {
+pub fn create_file(host: &Host, remote_file_path: &String, file_contents: Vec<u8>) -> io::Result<String> {
     let (dir_path, file_path) = convert_to_local_paths(host, remote_file_path);
 
     if !Path::new(&dir_path).is_dir() {
@@ -73,7 +73,6 @@ pub fn create_file(host: &Host, remote_file_path: &String, file_mode: i32, file_
         download_time: Utc::now(),
         remote_path: remote_file_path.clone(),
         remote_file_hash: sha256::digest(file_contents.as_slice()),
-        mode: file_mode,
         temporary: true,
     };
 
@@ -88,6 +87,7 @@ pub fn create_file(host: &Host, remote_file_path: &String, file_mode: i32, file_
 pub fn remove_file(local_file_path: &String) -> io::Result<()> {
     // TODO: path validation and limits just in case?
     fs::remove_file(local_file_path)?;
+    fs::remove_file(get_metadata_path(local_file_path))?;
     Ok(())
 }
 
@@ -148,7 +148,6 @@ pub struct FileMetadata {
     pub download_time: DateTime<Utc>,
     pub remote_path: String,
     pub remote_file_hash: String,
-    pub mode: i32,
     /// Temporary files will be deleted when they're no longer used.
     pub temporary: bool,
 }

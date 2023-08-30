@@ -164,48 +164,39 @@ impl ConnectionModule for Ssh2 {
         Ok(ResponseMessage::new(strip_newline(&output), exit_status))
     }
 
-    fn download_file(&self, source: &String) -> io::Result<(i32, Vec<u8>)> {
-        let result: Result<(i32, Vec<u8>), io::Error>;
-
-        match self.session.scp_recv(Path::new(&source)) {
-            Ok((mut remote_file, stat)) => {
+    fn download_file(&self, source: &String) -> io::Result<Vec<u8>> {
+        let sftp = self.session.sftp().unwrap();
+        match sftp.open(Path::new(&source)) {
+            Ok(mut file) => {
                 let mut contents = Vec::new();
-                if let Err(error) = remote_file.read_to_end(&mut contents) {
-                    result = Err(error);
+                if let Err(error) = file.read_to_end(&mut contents) {
+                    Err(error)
                 }
                 else {
-                    result = Ok((stat.mode(), contents));
+                    Ok(contents)
                 }
-
-                self.send_eof_and_close(remote_file);
-            },
-            Err(error) => {
-                result = Err(io::Error::new(io::ErrorKind::Other, error.message()));
             }
-        };
-
-        result
+            Err(error) => {
+                Err(io::Error::new(io::ErrorKind::Other, error.message()))
+            }
+        }
     }
 
     fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> io::Result<()> {
-        let result: io::Result<()>;
-
-        match self.session.scp_send(Path::new(&metadata.remote_path), metadata.mode, contents.len().try_into().unwrap(), None) {
-            Ok(mut remote_file) => {
-                if let Err(error) = remote_file.write(&contents) {
-                    result = Err(error)
+        let sftp = self.session.sftp().unwrap();
+        match sftp.create(Path::new(&metadata.remote_path)) {
+            Ok(mut file) => {
+                if let Err(error) = file.write(&contents) {
+                    Err(error)
                 }
                 else {
-                    result = Ok(());
+                    Ok(())
                 }
-                self.send_eof_and_close(remote_file);
-            },
-            Err(error) => {
-                result = Err(io::Error::new(io::ErrorKind::Other, error.message()));
             }
-        };
-
-        result
+            Err(error) => {
+                Err(io::Error::new(io::ErrorKind::Other, error.message()))
+            }
+        }
     }
 
     fn is_connected(&self) -> bool {
