@@ -5,17 +5,18 @@ use std::io;
 use crate::module::MetadataSupport;
 use crate::module::module::Module;
 use crate::module::connection::ResponseMessage;
+use crate::file_handler::FileMetadata;
 
 pub type Connector = Box<dyn ConnectionModule + Send>;
 
 pub trait ConnectionModule : MetadataSupport + Module {
     fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String>;
 
-    fn download_file(&self, _source: &String) -> io::Result<Vec<u8>> {
+    fn download_file(&self, _source: &String) -> io::Result<(i32, Vec<u8>)> {
         Err(io::Error::new(io::ErrorKind::Other, "Not implemented"))
     }
 
-    fn upload_file(&self, _destination: &String, _contents: Vec<u8>) -> io::Result<()> {
+    fn upload_file(&self, _metadata: &FileMetadata, _contents: Vec<u8>) -> io::Result<()> {
         Err(io::Error::new(io::ErrorKind::Other, "Not implemented"))
     }
 

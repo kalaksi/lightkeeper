@@ -257,8 +257,8 @@ impl ConnectionManager {
             RequestType::Download => {
                 log::debug!("[{}] Downloading file: {}", request.host.name, request_message);
                 match connector.download_file(&request_message) {
-                    Ok(contents) => {
-                        match file_handler::create_file(&request.host, &request_message, contents) {
+                    Ok((file_mode, contents)) => {
+                        match file_handler::create_file(&request.host, &request_message, file_mode, contents) {
                             Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
                             Err(error) => Err(error.to_string()),
                         }
@@ -270,14 +270,26 @@ impl ConnectionManager {
                 log::debug!("[{}] Uploading file: {}", request.host.name, request_message);
                 match file_handler::read_file(&request_message) {
                     Ok((metadata, contents)) => {
-                        let mut result = connector.upload_file(&metadata.remote_path, contents);
-                        if result.is_ok() && metadata.temporary {
-                            log::debug!("removing temporary local file");
+                        let local_file_hash = sha256::digest(contents.as_slice());
+
+                        let mut result = Ok(());
+                        let mut response_message = String::new();
+                        // Only upload if contents changed.
+                        if local_file_hash != metadata.remote_file_hash {
+                            result = connector.upload_file(&metadata, contents);
+                        }
+                        else {
+                            response_message = format!("Skipping upload of unchanged file {}", request_message);
+                            log::info!("{}", response_message);
+                        }
+
+                        if metadata.temporary {
+                            log::debug!("Removing temporary local file {}", request_message);
                             result = file_handler::remove_file(&request_message);
                         }
 
                         if result.is_ok() {
-                            Ok(ResponseMessage::empty())
+                            Ok(ResponseMessage::new(response_message, 0))
                         }
                         else {
                             Err(result.unwrap_err().to_string())

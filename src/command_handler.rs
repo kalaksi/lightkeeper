@@ -235,7 +235,7 @@ impl CommandHandler {
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 data_point: None,
-                command_result: Some(CommandResult::new(String::from("Successfully modified file"))),
+                command_result: Some(CommandResult::new(String::from("Changes saved"))),
                 errors: Vec::new(),
                 exit_thread: false,
             }).unwrap_or_else(|error| {
@@ -272,8 +272,6 @@ impl CommandHandler {
 
             match response {
                 Ok(response_message) => {
-                    // TODO: check that destination file hasn't changed.
-
                     log::debug!("Starting local process: {} {}", preferences.text_editor, response_message.message);
                     process::Command::new(preferences.text_editor).args(vec![response_message.message.clone()]).output()
                                         .expect("Running command failed");
@@ -291,13 +289,15 @@ impl CommandHandler {
                     });
                 },
                 Err(error) => {
-                    log::error!("Error downloading file: {}", error);
+                    let error_message = format!("Error downloading file: {}", error);
+                    log::error!("{}", error_message);
+
                     state_update_sender.send(StateUpdateMessage {
                         host_name: host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
                         data_point: None,
-                        command_result: Some(CommandResult::new_critical_error(error.clone())),
+                        command_result: Some(CommandResult::new_critical_error(error_message)),
                         errors: Vec::new(),
                         exit_thread: false,
                     }).unwrap_or_else(|error| {
@@ -312,15 +312,17 @@ impl CommandHandler {
 
         Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
+            // TODO: check that destination file hasn't changed?
             let response = responses.first().unwrap();
 
             let command_result = match response {
-                Ok(_) => {
-                    CommandResult::new(String::from("File updated successfully"))
+                Ok(message) => {
+                    CommandResult::new(message.message.to_owned())
                 },
                 Err(error) => {
-                    log::error!("Error uploading file: {}", error);
-                    CommandResult::new_critical_error(error.clone())
+                    let error_message = format!("Error uploading file: {} (do you have required permissions?)", error);
+                    log::error!("{}", error_message);
+                    CommandResult::new_critical_error(error_message)
                 }
             };
 

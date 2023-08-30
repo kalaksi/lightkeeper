@@ -42,7 +42,7 @@ impl CommandModule for RemoteTags {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             category: String::from("docker-images"),
-            parent_id: String::from("docker-image-updates"),
+            parent_id: String::from("docker-images"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("tag"),
             display_text: String::from("Show available tags"),

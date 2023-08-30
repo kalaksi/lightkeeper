@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::os::unix::prelude::PermissionsExt;
+use std::path::Path;
 use std::time::{SystemTime, Duration, Instant};
 use std::fs;
 
@@ -58,9 +60,18 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
     /// Writes cache contents to disk in YAML format so they can be loaded on application start.
     pub fn write_to_disk(&self) -> Result<usize, String> where K: serde::Serialize, V: serde::Serialize {
         // TODO: don't write sensitive information. Modules should define if they can contain sensitive info.
-        let config_dir = file_handler::get_cache_dir().map_err(|error| error.to_string())?;
-        fs::create_dir_all(&config_dir).map_err(|error| format!("Error while creating configuration directory: {}", error))?;
-        let file_path = config_dir.join(CACHE_FILE_NAME);
+        let cache_dir = file_handler::get_cache_dir().map_err(|error| error.to_string())?;
+
+        if !Path::new(&cache_dir).exists() {
+            fs::create_dir_all(&cache_dir).map_err(|error| format!("Error while creating cache directory: {}", error))?;
+
+            // Make sure directory is protected from reading by others.
+            if let Err(error) = fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o700)) {
+                return Err(format!("Error while setting cache directory permissions: {}", error));
+            }
+        }
+
+        let file_path = cache_dir.join(CACHE_FILE_NAME);
         let serialized = serde_yaml::to_string(&self.data).unwrap();
         fs::write(file_path, serialized).map_err(|error| format!("Error while writing cache to disk: {}", error))?;
         Ok(self.data.len() as usize)

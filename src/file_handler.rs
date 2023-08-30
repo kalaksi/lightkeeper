@@ -61,12 +61,12 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
 /// Create a local file. Local path is based on remote host name and remote file path.
 /// Will overwrite any existing files.
 pub fn create_file(host: &Host, remote_file_path: &String, file_mode: i32, file_contents: Vec<u8>) -> io::Result<String> {
-    let file_dir = host.name.clone();
-    if !Path::new(&file_dir).is_dir() {
-        fs::create_dir(&file_dir)?;
+    let (dir_path, file_path) = convert_to_local_paths(host, remote_file_path);
+
+    if !Path::new(&dir_path).is_dir() {
+        fs::create_dir_all(&dir_path)?;
     }
 
-    let file_path = convert_to_local_path(host, remote_file_path);
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
     let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_file_path)?;
     let metadata = FileMetadata {
@@ -105,7 +105,7 @@ pub fn read_file(local_file_path: &String) -> io::Result<(FileMetadata, Vec<u8>)
 
 /// Provides the local metadata file path based on remote host name and remote file path.
 pub fn convert_to_local_metadata_path(host: &Host, remote_file_path: &String) -> String {
-    let file_path = convert_to_local_path(host, remote_file_path);
+    let (_, file_path) = convert_to_local_paths(host, remote_file_path);
     get_metadata_path(&file_path)
 }
 
@@ -113,8 +113,8 @@ pub fn get_metadata_path(local_file_path: &String) -> String {
     format!("{}.metadata.yml", local_file_path)
 }
 
-/// Provides the local file path based on remote host name and remote file path.
-pub fn convert_to_local_path(host: &Host, remote_file_path: &String) -> String {
+/// Provides the local directory and file paths based on remote host name and remote file path.
+pub fn convert_to_local_paths(host: &Host, remote_file_path: &String) -> (String, String) {
     let cache_dir = file_handler::get_cache_dir().unwrap();
     let file_dir = cache_dir.join(host.name.clone());
 
@@ -134,7 +134,10 @@ pub fn convert_to_local_path(host: &Host, remote_file_path: &String) -> String {
         }
     }
 
-    Path::new(&file_dir).join(file_name).to_string_lossy().to_string()
+    (
+        Path::new(&file_dir).to_string_lossy().to_string(),
+        Path::new(&file_dir).join(file_name).to_string_lossy().to_string()
+    )
 }
 
 

@@ -11,6 +11,7 @@ use std::{
 };
 
 use ssh2::Session;
+use crate::file_handler::FileMetadata;
 use crate::utils::strip_newline;
 use lightkeeper_module::connection_module;
 use crate::module::*;
@@ -163,17 +164,17 @@ impl ConnectionModule for Ssh2 {
         Ok(ResponseMessage::new(strip_newline(&output), exit_status))
     }
 
-    fn download_file(&self, source: &String) -> io::Result<Vec<u8>> {
-        let result: Result<Vec<u8>, io::Error>;
+    fn download_file(&self, source: &String) -> io::Result<(i32, Vec<u8>)> {
+        let result: Result<(i32, Vec<u8>), io::Error>;
 
         match self.session.scp_recv(Path::new(&source)) {
-            Ok((mut remote_file, _)) => {
+            Ok((mut remote_file, stat)) => {
                 let mut contents = Vec::new();
                 if let Err(error) = remote_file.read_to_end(&mut contents) {
                     result = Err(error);
                 }
                 else {
-                    result = Ok(contents);
+                    result = Ok((stat.mode(), contents));
                 }
 
                 self.send_eof_and_close(remote_file);
@@ -186,11 +187,10 @@ impl ConnectionModule for Ssh2 {
         result
     }
 
-    fn upload_file(&self, destination: &String, contents: Vec<u8>) -> io::Result<()> {
+    fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> io::Result<()> {
         let result: io::Result<()>;
 
-        // TODO: keep original permissions.
-        match self.session.scp_send(Path::new(destination), 0o640, contents.len().try_into().unwrap(), None) {
+        match self.session.scp_send(Path::new(&metadata.remote_path), metadata.mode, contents.len().try_into().unwrap(), None) {
             Ok(mut remote_file) => {
                 if let Err(error) = remote_file.write(&contents) {
                     result = Err(error)
