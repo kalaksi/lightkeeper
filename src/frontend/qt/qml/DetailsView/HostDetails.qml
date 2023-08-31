@@ -13,7 +13,7 @@ import "../js/ValueUnit.js" as ValueUnit
 
 Item {
     id: root
-    property string hostId: ""
+    required property string hostId
     property real _subviewSize: 0.0
     // Only one subview can be open at one time, but in case a DetailsDialog is opened using openInNewWindowClicked(),
     // we need to provide the invocation id for state updates since there can be multiple dialogs open.
@@ -102,6 +102,7 @@ Item {
             // TODO: disable button until service unit list is received.
             HostDetailsLogView {
                 id: logView
+                hostId: root.hostId
                 anchors.fill: parent
                 visible: false
                 selections: []

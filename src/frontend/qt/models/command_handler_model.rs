@@ -195,10 +195,9 @@ impl CommandHandlerModel {
                 }
             },
             UIAction::LogView => {
-                let target_id = parameters.first().unwrap().clone();
                 invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters);
                 if invocation_id > 0 {
-                    self.logs_subview_opened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id)
+                    self.logs_subview_opened(QString::from(format!("{}", command_id)), invocation_id)
                 }
             },
             UIAction::Terminal => {

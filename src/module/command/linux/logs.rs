@@ -44,7 +44,9 @@ impl CommandModule for Logs {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.os == platform_info::OperatingSystem::Linux {
+        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+
             command.arguments(vec!["journalctl", "-q", "-n", "400"]);
 
             if let Some(parameter1) = parameters.first() {
@@ -78,6 +80,9 @@ impl CommandModule for Logs {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        Ok(CommandResult::new(response.message.clone()))
+        if response.is_error() {
+            return Err(response.message.clone());
+        }
+        Ok(CommandResult::new_hidden(response.message.clone()))
     }
 }

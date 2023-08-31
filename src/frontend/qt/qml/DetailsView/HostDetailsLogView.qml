@@ -8,7 +8,7 @@ Item {
     // TODO: loading indicator and indicator (translucent text maybe) for empty results 
     // TODO: indicator for no search results
     id: root
-    property string hostId: ""
+    required property string hostId
     property var selections: []
     property string text: ""
     property string errorText: ""
