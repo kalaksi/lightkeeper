@@ -49,9 +49,11 @@ Item {
         id: background
         anchors.verticalCenter: parent.verticalCenter
         anchors.fill: parent
+        anchors.bottomMargin: -1
+        anchors.topMargin: -1
         radius: root.size * 0.5
         color: root._showBackground ? Qt.lighter(Theme.category_background_color(), 1.4) : "transparent"
-        border.color: root._showBackground ? Qt.darker(Theme.category_background_color(), 1.2) : "transparent"
+        border.color: root._showBackground ? Theme.category_background_color() : "transparent"
         border.width: 1
 
         Row {
@@ -72,9 +74,7 @@ Item {
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
                     cooldownPercent: root._getButtonCooldown(buttonIdentifier)
-                    onClicked: function() {
-                        root.clicked(modelData.command_id, modelData.command_params)
-                    }
+                    onClicked: root.clicked(modelData.command_id, modelData.command_params)
 
                     hoverEnabled: root.hoverEnabled
 
