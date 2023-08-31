@@ -99,11 +99,8 @@ Item {
         if (icon_name === "stop") {
             return 0.5
         }
-        if (icon_name === "delete") {
-            return 0.8
-        }
         else {
-            return 0.9
+            return 0.8
         }
     }
 }
