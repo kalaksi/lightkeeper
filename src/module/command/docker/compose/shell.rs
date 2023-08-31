@@ -5,13 +5,13 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use crate::utils::string_validation;
+use crate::enums;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    name="docker-shell",
+    name="docker-compose-shell",
     version="0.0.1",
-    description="Opens a shell inside a Docker container.",
+    description="Opens a shell inside a Docker compose managed container.",
 )]
 pub struct Shell;
 
@@ -28,22 +28,21 @@ impl CommandModule for Shell {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("docker-containers"),
-            parent_id: String::from("docker-containers"),
+            category: String::from("docker-compose"),
+            parent_id: String::from("docker-compose"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("terminal"),
             display_text: String::from("Open shell inside"),
+            depends_on_criticality: vec![enums::Criticality::Normal],
             action: UIAction::Terminal,
+            multivalue_level: 2,
             ..Default::default()
         }
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
-        let target_id = parameters.first().unwrap();
-
-        if !string_validation::is_alphanumeric(target_id) {
-            panic!("Invalid container ID: {}", target_id)
-        }
+        let compose_file = parameters.first().unwrap();
+        let project = parameters.get(1).unwrap();
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
@@ -51,13 +50,13 @@ impl CommandModule for Shell {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
 
-            command.arguments(vec!["docker", "exec", "-it", target_id, "/bin/sh"]);
+            command.arguments(vec!["docker-compose", "-f", compose_file, "exec", project, "/bin/sh"]);
         }
 
         else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") ||
                 host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
 
-            command.arguments(vec!["docker", "exec", "-it", target_id, "/bin/sh"]);
+            command.arguments(vec!["docker", "compose", "-f", compose_file, "exec", project, "/bin/sh"]);
         }
         else {
             return Err(String::from("Unsupported platform"));

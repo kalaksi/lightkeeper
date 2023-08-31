@@ -299,6 +299,7 @@ impl ModuleFactory {
             (command::docker::compose::Up::get_metadata(), command::docker::compose::Up::new_command_module),
             (command::docker::compose::Start::get_metadata(), command::docker::compose::Start::new_command_module),
             (command::docker::compose::Stop::get_metadata(), command::docker::compose::Stop::new_command_module),
+            (command::docker::compose::Shell::get_metadata(), command::docker::compose::Shell::new_command_module),
             (command::systemd::service::Start::get_metadata(), command::systemd::service::Start::new_command_module),
             (command::systemd::service::Stop::get_metadata(), command::systemd::service::Stop::new_command_module),
             (command::systemd::service::Mask::get_metadata(), command::systemd::service::Mask::new_command_module),

@@ -190,11 +190,25 @@ impl CommandHandler {
     // INTEGRATED COMMANDS
     //
 
-    pub fn open_terminal(&self, args: Vec<String>) {
+    pub fn open_terminal(&self, host_id: String, command_id: String, parameters: Vec<String>) {
         // TODO: integrated interactive terminals with ssh2::request_pty() / shell?
 
+        let host = self.host_manager.borrow().get_host(&host_id);
+        let command = self.commands.get(&host_id).unwrap()
+                                   .get(&command_id).unwrap();
+
+        let connector_messages = get_command_connector_messages(&host, &command, &parameters).map_err(|error| {
+            log::error!("Command \"{}\" failed: {}", command_id, error);
+            return;
+        }).unwrap();
+
         let mut command_args = self.preferences.terminal_args.clone();
-        command_args.extend(args);
+        command_args.extend(vec![
+            String::from("ssh"),
+            String::from("-t"),
+            host_id.to_string(),
+            connector_messages.join(" "),
+        ]);
 
         log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.join(" "));
         process::Command::new(self.preferences.terminal.as_str()).args(command_args).output()
@@ -206,13 +220,10 @@ impl CommandHandler {
         let command = self.commands.get(&host_id).unwrap()
                                    .get(&command_id).unwrap();
 
-        let connector_messages = match get_command_connector_messages(&host, &command, &vec![remote_file_path.clone()]) {
-            Ok(messages) => messages,
-            Err(error) => {
-                log::error!("Command \"{}\" failed: {}", command_id, error);
-                return;
-            }
-        };
+        let connector_messages = get_command_connector_messages(&host, &command, &vec![remote_file_path.clone()]).map_err(|error| {
+            log::error!("Command \"{}\" failed: {}", command_id, error);
+            return;
+        }).unwrap();
 
         if self.preferences.use_remote_editor {
             let mut shell_command = ShellCommand::new();
