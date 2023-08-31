@@ -15,7 +15,7 @@ import "js/Utils.js" as Utils
 ApplicationWindow {
     id: root
     visible: true
-    minimumWidth: 1400
+    minimumWidth: 1500
     minimumHeight: 800
     width: 1400
     height: 800

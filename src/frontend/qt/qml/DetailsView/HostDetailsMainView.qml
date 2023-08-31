@@ -14,8 +14,8 @@ Item {
     id: root
     property string hostId: ""
     property bool hideEmptyCategories: true
-    property int columnMinimumWidth: 400
-    property int columnMaximumWidth: 600
+    property int columnMinimumWidth: Theme.groupbox_min_width()
+    property int columnMaximumWidth: Theme.groupbox_max_width()
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
     property int columnSpacing: 6
