@@ -9,7 +9,7 @@ Item {
     // TODO: indicator for no search results
     id: root
     required property string hostId
-    property var selections: []
+    property string commandId: ""
     property string text: ""
     property string errorText: ""
     property string criticality: ""
@@ -23,109 +23,99 @@ Item {
         anchors.fill: parent
     }
 
-    Row {
-        // TODO: Separate component: SearchableTextArea
-        id: searchBox
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.margins: 20
-
-        spacing: 30
-
-        ComboBox {
-            id: selection
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width * 0.20
-            model: root.selections
-
-            // TODO: don't hard-code command id.
-            onActivated: function(index) {
-                root._unitId = root.selections[index].toLowerCase()
-                // TODO: use invocation id (only needed for dialog?)?
-                CommandHandler.execute(root.hostId, "logs", [root._unitId])
-            }
-        }
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: Theme.spacing_normal()
 
         Row {
-            spacing: 10
+            id: searchBox
+            spacing: Theme.spacing_loose()
 
-            TextField {
-                id: searchField
-                anchors.leftMargin: 30
-                anchors.verticalCenter: parent.verticalCenter
-                width: searchBox.width * 0.55
-                placeholderText: "RegExp search..."
-                color: Material.foreground
-                focus: true
+            Layout.topMargin: Theme.spacing_normal()
+            Layout.leftMargin: root.width * 0.30
+            Layout.fillWidth: true
 
-                onAccepted: search("up", searchField.text)
-            }
+            Row {
+                spacing: 10
+                bottomPadding: 10
 
-            // TODO: custom component for buttons (and roundbuttons).
-            Button {
-                anchors.leftMargin: 30
-                anchors.verticalCenter: parent.verticalCenter
-                flat: true
+                TextField {
+                    id: searchField
+                    anchors.leftMargin: 30
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: searchBox.width * 0.55
+                    placeholderText: "RegEx search..."
+                    color: Material.foreground
+                    focus: true
 
-                ToolTip.visible: hovered
-                ToolTip.text: "Search up in the text"
-
-                onClicked: search("up", searchField.text)
-
-                Image {
-                    width: 0.80 * parent.width
-                    height: width
-                    anchors.fill: parent
-                    anchors.centerIn: parent
-                    source: "qrc:/main/images/button/search-up"
+                    onAccepted: search("up", searchField.text)
                 }
-            }
 
-            Button {
-                anchors.verticalCenter: parent.verticalCenter
-                flat: true
+                // TODO: custom component for buttons (and roundbuttons).
+                Button {
+                    anchors.leftMargin: 30
+                    anchors.verticalCenter: parent.verticalCenter
+                    flat: true
 
-                ToolTip.visible: hovered
-                ToolTip.text: "Search down in the text"
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Search up"
 
-                onClicked: search("down", searchField.text)
+                    onClicked: search("up", searchField.text)
 
-                Image {
-                    width: 0.80 * parent.width
-                    height: width
-                    anchors.fill: parent
-                    anchors.centerIn: parent
-                    source: "qrc:/main/images/button/search-down"
+                    Image {
+                        width: 0.80 * parent.width
+                        height: width
+                        anchors.fill: parent
+                        anchors.centerIn: parent
+                        source: "qrc:/main/images/button/search-up"
+                    }
                 }
-            }
 
-            Button {
-                anchors.verticalCenter: parent.verticalCenter
-                onClicked: searchRows(searchField.text)
+                Button {
+                    anchors.verticalCenter: parent.verticalCenter
+                    flat: true
 
-                ToolTip.visible: hovered
-                ToolTip.text: "Show only matching rows"
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Search down"
 
-                Image {
-                    width: parent.width * 0.8
-                    height: width
-                    anchors.centerIn: parent
-                    source: "qrc:/main/images/button/search"
+                    onClicked: search("down", searchField.text)
+
+                    Image {
+                        width: 0.80 * parent.width
+                        height: width
+                        anchors.fill: parent
+                        anchors.centerIn: parent
+                        source: "qrc:/main/images/button/search-down"
+                    }
+                }
+
+                Button {
+                    anchors.verticalCenter: parent.verticalCenter
+                    onClicked: searchRows(searchField.text)
+
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Show only matching rows"
+
+                    Image {
+                        width: parent.width * 0.8
+                        height: width
+                        anchors.centerIn: parent
+                        source: "qrc:/main/images/button/search"
+                    }
                 }
             }
         }
+
+        LogList {
+            rows: root.text.split("\n")
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.margins: Theme.spacing_normal()
+        }
     }
-
+    /*
     ScrollView {
-        anchors.top: searchBox.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: 5
-
-        ScrollBar.vertical.position: contentHeight
-        ScrollBar.vertical.policy: ScrollBar.AlwaysOn
 
         TextArea {
             id: textArea
@@ -133,7 +123,6 @@ Item {
             readOnly: true
             activeFocusOnPress: false
             text: root.text
-            font.family: "monospace"
             font.pointSize: 8
 
             cursorPosition: length - 1
@@ -149,6 +138,7 @@ Item {
             }
         }
     }
+    */
 
     Shortcut {
         sequence: StandardKey.Find
@@ -210,7 +200,7 @@ Item {
             return;
         }
 
-        CommandHandler.execute(root.hostId, "logs", [root._unitId, query])
+        CommandHandler.execute(root.hostId, root.commandId, [root._unitId, query])
     }
 
     function highlight(match) {

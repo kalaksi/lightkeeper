@@ -33,8 +33,8 @@ Item {
             openTextView(headerText, invocationId)
         }
 
-        function onLogs_subview_opened(headerText, invocationId) {
-            openLogView(headerText, invocationId)
+        function onLogs_subview_opened(commandId, invocationId) {
+            openLogView(commandId, invocationId)
         }
     }
 
@@ -69,7 +69,7 @@ Item {
 
     Item {
         id: detailsSubview
-        height: (root.height - mainViewHeader.height - 3) * root._subviewSize
+        height: (root.height - mainViewHeader.height - Theme.spacing_loose() / 2) * root._subviewSize
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
@@ -105,7 +105,6 @@ Item {
                 hostId: root.hostId
                 anchors.fill: parent
                 visible: false
-                selections: []
             }
 
             HostDetailsTextView{
@@ -170,24 +169,16 @@ Item {
         animateShowSubview.start()
     }
 
-    function openLogView(headerText, invocationId) {
-        subviewHeader.text = headerText
+    function openLogView(commandId, invocationId) {
+        subviewHeader.text = commandId
         root._subviewInvocationId = invocationId
 
-        let monitorDataJSON = HostDataManager.get_monitor_data(root.hostId, "systemd-service")
+        logView.commandId = commandId
 
-        if (monitorDataJSON.length > 2) {
-            let monitorData = JSON.parse(monitorDataJSON)
-            let lastDataPoint = monitorData.values.slice(-1)[0]
-            logView.selections = ["ALL", "DMESG"].concat(
-                lastDataPoint.multivalue.map((item) => item.label)
-            )
-
-            textView.visible = false
-            logView.visible = true
-            textEditor.visible = false
-            animateShowSubview.start()
-        }
+        textView.visible = false
+        logView.visible = true
+        textEditor.visible = false
+        animateShowSubview.start()
     }
 
     function openTextEditorView(headerText, invocationId) {
@@ -197,6 +188,7 @@ Item {
         textView.visible = false
         logView.visible = false
         textEditor.visible = true
+        animateShowSubview.start()
     }
 
     function refreshSubview(commandResult) {
