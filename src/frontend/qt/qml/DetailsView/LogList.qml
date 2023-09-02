@@ -83,7 +83,7 @@ ListView {
                     rowMatches = true
                     let word = match[0]
                     resultRow += TextTransform.escapeHtml(text.substring(lastIndex, match.index))
-                    resultRow += "<span style='background-color: #FF0000'>" + word + "</span>"
+                    resultRow += "<span style='background-color: " + Theme.color_highlight_bright() + "'>" + word + "</span>"
                     lastIndex = match.index + word.length
 
                     match = regexp.exec(text)

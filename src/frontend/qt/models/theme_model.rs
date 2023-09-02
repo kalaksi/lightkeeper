@@ -37,6 +37,7 @@ pub struct ThemeModel {
     color_dark_text: qt_method!(fn(&self) -> QString),
     color_highlight: qt_method!(fn(&self) -> QString),
     color_highlight_light: qt_method!(fn(&self) -> QString),
+    color_highlight_bright: qt_method!(fn(&self) -> QString),
 
     border_radius: qt_method!(fn(&self) -> i8),
 
@@ -162,6 +163,10 @@ impl ThemeModel {
 
     fn color_highlight_light(&self) -> QString {
         QString::from("#30ffffff")
+    }
+
+    fn color_highlight_bright(&self) -> QString {
+        QString::from("#50ff2222")
     }
 
     fn border_radius(&self) -> i8 {
