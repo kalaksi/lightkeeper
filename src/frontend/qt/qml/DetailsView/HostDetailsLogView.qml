@@ -115,17 +115,30 @@ Item {
     }
 
     Shortcut {
-        sequence: StandardKey.Find
+        sequence: [
+            StandardKey.Find,
+            // Vim-like shortcut:
+            "Ctrl+7",
+        ]
         onActivated: searchField.focus = true
     }
 
     Shortcut {
-        sequence: StandardKey.FindNext
-        onActivated: logList.search("up", searchField.text)
+        sequence: [
+            StandardKey.FindNext,
+            // Vim-like shortcut:
+            "Ctrl+N",
+        ]
+        onActivated: logList.search("down", searchField.text)
     }
 
     Shortcut {
-        sequence: StandardKey.FindPrevious
-        onActivated: logList.search("down", searchField.text)
+        sequence: [
+            StandardKey.FindPrevious,
+            // Vim-like shortcut:
+            "Ctrl+P",
+        ]
+        onActivated: logList.search("up", searchField.text)
     }
+
 }

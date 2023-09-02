@@ -31,6 +31,20 @@ ListView {
         id: scrollBar
     }
 
+    Shortcut {
+        sequence: [
+            StandardKey.Copy,
+            "Ctrl+C",
+            StandardKey.Cancel
+        ]
+        onActivated: {
+            if (root.currentIndex >= 0) {
+                let text = root.rows[root.currentIndex]
+                root.copyToClipboard(text)
+            }
+        }
+    }
+
     delegate: SmallText {
         width: root.width
         text: modelData
@@ -40,23 +54,42 @@ ListView {
 
         MouseArea {
             anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: {
                 root.currentIndex = index
+
+                // Right-click opens context menu.
+                if (mouse.button === Qt.RightButton) {
+                    contextMenu.popup()
+                }
+            }
+
+            Menu {
+                id: contextMenu
+                MenuItem {
+                    text: "Copy"
+                    onTriggered: {
+                        let text = root.rows[index]
+                        root.copyToClipboard(text)
+                    }
+                }
             }
         }
     }
 
-    function highlightMatches(text, highlights) {
-        let result = ""
-        for (let highlight of highlights) {
-            result += TextTransform.escapeHtml(text.substring(lastIndex, highlight.column))
-            result += "<span style='background-color: #FF0000'>" + highlight.text + "</span>"
-            lastIndex = highlight.column + highlight.text.length
-        }
-        result += text.substring(lastIndex)
-        return result
+    TextEdit {
+        id: textEdit
+        visible: false
+        text: ""
     }
 
+    // Workaround for copying to clipboard since there's currently no native QML way to do it (AFAIK).
+    function copyToClipboard(text) {
+        textEdit.text = text
+        textEdit.selectAll()
+        textEdit.copy()
+        console.log("Copied to clipboard: " + text)
+    }
 
     // Could be done with rust too.
     function search(direction, query) {
