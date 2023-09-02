@@ -14,8 +14,6 @@ Item {
     property string errorText: ""
     property string criticality: ""
     property string _unitId: ""
-    property var _matches: []
-    property string _lastQuery: ""
 
 
     Rectangle {
@@ -48,7 +46,7 @@ Item {
                     color: Material.foreground
                     focus: true
 
-                    onAccepted: search("up", searchField.text)
+                    onAccepted: logList.search("up", searchField.text)
                 }
 
                 // TODO: custom component for buttons (and roundbuttons).
@@ -60,7 +58,7 @@ Item {
                     ToolTip.visible: hovered
                     ToolTip.text: "Search up"
 
-                    onClicked: search("up", searchField.text)
+                    onClicked: logList.search("up", searchField.text)
 
                     Image {
                         width: 0.80 * parent.width
@@ -78,7 +76,7 @@ Item {
                     ToolTip.visible: hovered
                     ToolTip.text: "Search down"
 
-                    onClicked: search("down", searchField.text)
+                    onClicked: logList.search("down", searchField.text)
 
                     Image {
                         width: 0.80 * parent.width
@@ -107,6 +105,7 @@ Item {
         }
 
         LogList {
+            id: logList
             rows: root.text.split("\n")
 
             Layout.fillWidth: true
@@ -114,31 +113,6 @@ Item {
             Layout.margins: Theme.spacing_normal()
         }
     }
-    /*
-    ScrollView {
-
-        TextArea {
-            id: textArea
-            anchors.fill: parent
-            readOnly: true
-            activeFocusOnPress: false
-            text: root.text
-            font.pointSize: 8
-
-            cursorPosition: length - 1
-
-            Rectangle {
-                id: highlighter
-                color: "#FF0000"
-                radius: 5
-                opacity: 0.4
-                width: 0
-                height: parent.font.pointSize * 2.0
-                visible: false
-            }
-        }
-    }
-    */
 
     Shortcut {
         sequence: StandardKey.Find
@@ -147,73 +121,11 @@ Item {
 
     Shortcut {
         sequence: StandardKey.FindNext
-        onActivated: search("up", searchField.text)
+        onActivated: logList.search("up", searchField.text)
     }
 
     Shortcut {
         sequence: StandardKey.FindPrevious
-        onActivated: search("down", searchField.text)
-    }
-
-
-    function search(direction, query) {
-        dehighlight()
-        if (query.length === 0) {
-            return;
-        }
-
-        if (root._matches.length === 0 || root._lastQuery !== query) {
-            recordMatches(query, textArea.text)
-            root._lastQuery = query
-        }
-
-        let match;
-        if (direction === "up") {
-            let reversed = [...root._matches].reverse()
-            match = reversed.find((item) => textArea.cursorPosition > item[0])
-        }
-        else if (direction === "down") {
-            match = root._matches.find((item) => textArea.cursorPosition < item[0])
-        }
-
-        if (match) {
-            textArea.cursorPosition = match[0]
-            highlight(match[1])
-        }
-
-    }
-
-    function recordMatches(query, text) {
-        root._matches = []
-        let regexp = RegExp(query, "g")
-
-        let match = regexp.exec(text)
-        while (match !== null) {
-            root._matches.push([match.index, match[0]])
-            match = regexp.exec(text)
-        }
-    }
-
-    function searchRows(query) {
-        dehighlight()
-        if (query.length === 0) {
-            return;
-        }
-
-        CommandHandler.execute(root.hostId, root.commandId, [root._unitId, query])
-    }
-
-    function highlight(match) {
-        let cursor = textArea.cursorRectangle
-        highlighter.x = cursor.x - 2
-        // Adds some extra padding depending how much bigger the highlighter height is than the text.
-        highlighter.y = cursor.y + ((highlighter.height - textArea.font.pixelSize) / 2.0 - 1)
-        // With monospace font this crude approach will suffice for now (TODO: better solution)
-        highlighter.width = (textArea.font.pixelSize - 4.8) * match.length + 4
-        highlighter.visible = true
-    }
-
-    function dehighlight() {
-        highlighter.visible = false
+        onActivated: logList.search("down", searchField.text)
     }
 }
