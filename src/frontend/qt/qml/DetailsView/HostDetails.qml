@@ -69,6 +69,7 @@ Item {
 
     Item {
         id: detailsSubview
+        visible: root._subviewSize > 0.01
         height: (root.height - mainViewHeader.height - Theme.spacing_loose() / 2) * root._subviewSize
         anchors.bottom: parent.bottom
         anchors.left: parent.left
@@ -133,27 +134,6 @@ Item {
         easing.type: Easing.OutQuad
         duration: 175
     }
-
-    states: [
-        State {
-            name: "subviewShownVisibility"
-            when: root._subviewSize > 0.01
-
-            PropertyChanges {
-                target: detailsSubview
-                visible: true
-            }
-        },
-        State {
-            name: "subviewHiddenVisibility"
-            when: root._subviewSize < 0.01
-
-            PropertyChanges {
-                target: detailsSubview
-                visible: false
-            }
-        }
-    ]
 
     Shortcut {
         sequence: StandardKey.Cancel
