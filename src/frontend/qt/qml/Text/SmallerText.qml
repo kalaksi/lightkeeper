@@ -1,6 +1,5 @@
 import QtQuick 2.15
 
-Text {
-    color: Theme.color_text()
+BaseText {
     font.pointSize: 6
 }
