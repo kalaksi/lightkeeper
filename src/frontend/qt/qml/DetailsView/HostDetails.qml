@@ -155,6 +155,18 @@ Item {
         }
     ]
 
+    Shortcut {
+        sequence: StandardKey.Cancel
+        onActivated: {
+            if (root._subviewSize > 0.01) {
+                animateHideSubview.start()
+            }
+            else {
+                root.closeClicked()
+            }
+        }
+    }
+
     function refresh() {
         detailsMainView.refresh()
     }
