@@ -32,7 +32,7 @@ impl CommandModule for Logs {
             parent_id: String::from("docker-compose"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("view-document"),
-            display_text: String::from("Logs"),
+            display_text: String::from("Show logs"),
             action: UIAction::LogView,
             multivalue_level: 2,
             ..Default::default()

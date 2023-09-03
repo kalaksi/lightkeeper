@@ -27,11 +27,11 @@ ListView {
         color: Theme.color_highlight_light()
     }
 
-    // Last placeholder item is reserved for "load more" button
-    model: root.refreshModel(root.rows)
-
+    model: []
+    onRowsChanged: refreshModel()
 
     signal loadMore(int pageNumber, int pageSize)
+
 
 
     ScrollBar.vertical: ScrollBar {
@@ -125,12 +125,15 @@ ListView {
     // Could be done with rust too.
     function search(direction, query) {
         if (query !== root._lastQuery) {
+            console.log("NEWSEARCH")
             root._lastQuery = query
 
             let [highlightedRows, matchingRows, totalMatches] = _newSearch(query, root.rows)
+            console.log("rows", root.rows.length, "hilites", highlightedRows.length, "matches", matchingRows.length, "total", totalMatches)
+            console.log(JSON.stringify(highlightedRows))
             root._matchingRows = matchingRows
             root._totalMatches = totalMatches
-            root.model = refreshModel(highlightedRows)
+            refreshModel()
         }
 
         let match = -1
@@ -189,28 +192,21 @@ ListView {
         return [highlightedRows, matchingRows, totalMatches]
     }
 
-    function refreshModel(rows) {
-        let newModel = [...rows]
-        newModel.reverse()
-        // Last placeholder item is reserved for "load more" button
-        newModel.push("REFRESH")
-        return newModel
+    function refreshModel() {
+        let rowsClone = [...root.rows]
+        let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
+        root._matchingRows = matchingRows
+        root._totalMatches = totalMatches
+        modelRows.reverse()
+        if (modelRows.length > 0) {
+            // Last placeholder item is reserved for "load more" button
+            modelRows.push("REFRESH")
+        }
+        root.model = modelRows
     }
 
     function addRows(newRows) {
-        root.rows = newRows.concat(root.rows)
-        let [highlightedRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, root.rows)
-        root._matchingRows = matchingRows
-        root._totalMatches = totalMatches
-        root.model = refreshModel(highlightedRows)
-    }
-
-    function setRows(newRows) {
-        root.rows = newRows
-        let [highlightedRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, root.rows)
-        root._matchingRows = matchingRows
-        root._totalMatches = totalMatches
-        root.model = refreshModel(highlightedRows)
+        root.rows = newRows.filter((row) => row.length > 0).concat(root.rows)
     }
 
     function getSearchDetails() {

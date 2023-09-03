@@ -37,7 +37,7 @@ pub struct CommandHandlerModel {
     details_subview_opened: qt_signal!(header_text: QString, invocation_id: u64),
     text_dialog_opened: qt_signal!(invocation_id: u64),
     // TODO: dialog for logs (refactor so doesn't need dedicated)
-    logs_subview_opened: qt_signal!(header_text: QString, invocation_id: u64),
+    logs_subview_opened: qt_signal!(header_text: QString, parameters: QStringList, invocation_id: u64),
     text_editor_opened: qt_signal!(header_text: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
@@ -195,9 +195,10 @@ impl CommandHandlerModel {
                 }
             },
             UIAction::LogView => {
-                invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters);
+                invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters.clone());
                 if invocation_id > 0 {
-                    self.logs_subview_opened(QString::from(command_id), invocation_id)
+                    let parameters_qs = parameters.into_iter().map(|param| QString::from(param)).collect::<QStringList>();
+                    self.logs_subview_opened(QString::from(command_id), parameters_qs, invocation_id);
                 }
             },
             UIAction::Terminal => {

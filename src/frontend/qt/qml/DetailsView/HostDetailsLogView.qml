@@ -15,11 +15,14 @@ Item {
     id: root
     required property string hostId
     property string commandId: ""
+    property var commandParams: []
     property string text: ""
     property string errorText: ""
     property string _unitId: ""
     property var pendingInvocations: []
 
+
+    Component.onCompleted: root.reset()
 
     Connections {
         target: HostDataManager
@@ -28,14 +31,16 @@ Item {
             let commandResult = JSON.parse(commandResultJson)
 
             if (root.pendingInvocations.includes(commandResult.invocation_id)) {
-                root.pendingInvocations = root.pendingInvocations.filter((invocationId) => invocationId != commandResult.invocationId)
+                root.pendingInvocations = root.pendingInvocations.filter((id) => id != commandResult.invocation_id)
+                console.log(root.pendingInvocations)
 
                 if (commandResult.error) {
                     root.errorText = commandResult.error
                 }
 
+                // TODO: handle better situations where more log lines have appeared and so this isn't an accurate position
                 let oldListEnd = logList.rows.length - 1
-                logList.setRows(commandResult.message.split("\n"))
+                logList.rows = commandResult.message.split("\n").filter((line) => line.length > 0)
                 logList.currentIndex = oldListEnd
 
                 let [rowsMatched, totalMatches] = logList.getSearchDetails()
@@ -75,7 +80,7 @@ Item {
                         focus: true
 
                         onAccepted: {
-                            let [rowsMatched, totalMatches] = logList.search("up", searchField.text)
+                            let [rowsMatched, totalMatches] = logList.search("down", searchField.text)
                             searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
                         }
                     }
@@ -152,28 +157,30 @@ Item {
             }
         }
 
-        Item {
-            visible: logList.rows.length === 0
-
-            WorkingSprite {
-                id: workingSprite
-            }
-
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-        }
-
         LogList {
             id: logList
-            rows: root.text.split("\n")
+            rows: root.text.split("\n").filter((line) => line.length > 0)
             visible: rows.length > 0
 
             Layout.fillWidth: true
             Layout.fillHeight: true
 
             onLoadMore: function(pageNumber, pageSize) {
-                CommandHandler.execute_confirmed(root.hostId, root.commandId, [pageNumber, pageSize])
+                CommandHandler.execute_confirmed(root.hostId, root.commandId, [...root.commandParams, pageNumber, pageSize])
             }
+        }
+
+        // Loading animation
+        Item {
+            visible: logList.rows.length === 0
+
+            WorkingSprite {
+                visible: root.pendingInvocations.length > 0
+                id: workingSprite
+            }
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
     }
 
@@ -204,9 +211,10 @@ Item {
         onActivated: logList.search("up", searchField.text)
     }
 
-    function open(commandId, invocationId) {
-        root.commandId = commandId
+    function open(commandId, commandParams, invocationId) {
         root.pendingInvocations.push(invocationId)
+        root.commandId = commandId
+        root.commandParams = commandParams
         root.visible = true
         searchField.focus = true
     }
@@ -219,9 +227,12 @@ Item {
     }
 
     function reset() {
+        root.commandId = ""
+        root.commandParams = []
         root.text = ""
         root.errorText = ""
         root.pendingInvocations = []
+        searchField.text = ""
         logList.reset()
     }
 }

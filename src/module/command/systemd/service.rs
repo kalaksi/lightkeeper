@@ -9,3 +9,6 @@ pub use mask::Mask;
 
 pub mod unmask;
 pub use unmask::Unmask;
+
+pub mod logs;
+pub use logs::Logs;

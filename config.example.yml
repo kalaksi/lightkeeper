@@ -50,7 +50,7 @@ display_options:
     systemd:
       priority: 4
       color: "#8030d475"
-      command_order: ["systemd-service-stop", "systemd-service-start"]
+      command_order: ["systemd-service-logs", "systemd-service-stop", "systemd-service-start", "systemd-service-mask", "systemd-service-unmask"]
     package:
       priority: 5
     docker-compose:

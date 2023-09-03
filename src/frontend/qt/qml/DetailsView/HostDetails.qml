@@ -29,8 +29,8 @@ Item {
             openTextView(headerText, invocationId)
         }
 
-        function onLogs_subview_opened(commandId, invocationId) {
-            openLogView(commandId, invocationId)
+        function onLogs_subview_opened(commandId, commandParams, invocationId) {
+            openLogView(commandId, commandParams, invocationId)
         }
     }
 
@@ -79,9 +79,9 @@ Item {
             showCloseButton: true
             onOpenInWindowClicked: {
                 root.openInNewWindowClicked(subviewContent.text, subviewContent.errorText, subviewContent.criticality)
-                animateHideSubview.start()
+                root.closeSubview()
             }
-            onCloseClicked: animateHideSubview.start()
+            onCloseClicked: root.closeSubview()
         }
 
         Item {
@@ -157,12 +157,12 @@ Item {
         animateShowSubview.start()
     }
 
-    function openLogView(commandId, invocationId) {
+    function openLogView(commandId, commandParams, invocationId) {
         subviewHeader.text = commandId
 
         textView.close()
         textEditor.close()
-        logView.open(commandId, invocationId)
+        logView.open(commandId, commandParams, invocationId)
         animateShowSubview.start()
     }
 

@@ -305,6 +305,7 @@ impl ModuleFactory {
             (command::systemd::service::Stop::get_metadata(), command::systemd::service::Stop::new_command_module),
             (command::systemd::service::Mask::get_metadata(), command::systemd::service::Mask::new_command_module),
             (command::systemd::service::Unmask::get_metadata(), command::systemd::service::Unmask::new_command_module),
+            (command::systemd::service::Logs::get_metadata(), command::systemd::service::Logs::new_command_module),
         ];
 
         self.validate_modules();

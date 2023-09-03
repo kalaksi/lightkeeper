@@ -79,4 +79,5 @@ groups:
       systemd-service-stop: {}
       systemd-service-mask: {}
       systemd-service-unmask: {}
+      systemd-service-logs: {}
 
