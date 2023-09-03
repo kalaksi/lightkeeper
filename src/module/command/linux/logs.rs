@@ -41,14 +41,25 @@ impl CommandModule for Logs {
     // Parameter 1 is for unit selection and special values "all" and "dmesg".
     // Parameter 2 is for grepping. Filters rows based on regexp.
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+        let page_number = parameters.get(0).unwrap_or(&String::from("1")).parse::<i32>().unwrap_or(1);
+        let page_size = parameters.get(1).unwrap_or(&String::from("400")).parse::<i32>().unwrap_or(400);
+
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
 
-            command.arguments(vec!["journalctl", "-q", "-n", "400"]);
+            if page_number > 1 {
+                let row_count = page_number * page_size;
+                command.arguments(vec!["journalctl", "-q", "-n", &row_count.to_string()])
+                       .pipe_to(vec!["head", "-n", &page_size.to_string()]);
+            }
+            else {
+                command.arguments(vec!["journalctl", "-q", "-n", &page_size.to_string()]);
+            }
 
+            /* TODO: log searching on server side?
             if let Some(parameter1) = parameters.first() {
                 if !parameter1.is_empty() {
                     if !string_validation::is_alphanumeric_with(parameter1, "-_.@\\") ||
@@ -70,7 +81,7 @@ impl CommandModule for Logs {
                 if !parameter2.is_empty() {
                     command.arguments(vec!["-g", parameter2]);
                 }
-            }
+            } */
 
             Ok(command.to_string())
         }

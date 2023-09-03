@@ -159,9 +159,6 @@ ApplicationWindow {
             else if (_textDialogPendingInvocation === commandResult.invocation_id) {
                 textDialog.text = commandResult.message
             }
-            else {
-                detailsView.refreshSubview(commandResult)
-            }
         }
 
         function onError_received(criticality, message) {

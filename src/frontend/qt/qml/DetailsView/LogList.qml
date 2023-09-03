@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 
 import "../Text"
+import "../Button"
 import "../js/TextTransform.js" as TextTransform
 
 
@@ -10,6 +11,7 @@ ListView {
     required property var rows
     property string _lastQuery: ""
     property var _matchingRows: []
+    property int _pageSize: 0
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
@@ -24,7 +26,11 @@ ListView {
         color: Theme.color_highlight_light()
     }
 
-    model: rows.reverse()
+    // Last placeholder item is reserved for "load more" button
+    model: root.refreshModel(root.rows)
+
+
+    signal loadMore(int pageNumber, int pageSize)
 
 
     ScrollBar.vertical: ScrollBar {
@@ -45,34 +51,61 @@ ListView {
         }
     }
 
-    delegate: SmallText {
+    delegate: Item {
+        id: rowItem
+        property bool isRefreshButton: index === root.model.length - 1
+
         width: root.width
-        text: modelData
-        font.family: "monospace"
-        textFormat: Text.RichText
-        wrapMode: Text.WordWrap
+        height: isRefreshButton ? textContent.implicitHeight * 2 : textContent.implicitHeight
 
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onClicked: {
-                root.currentIndex = index
+        SmallText {
+            id: textContent
+            visible: !rowItem.isRefreshButton
+            width: parent.width
+            text: modelData
+            font.family: "monospace"
+            textFormat: Text.RichText
+            wrapMode: Text.WordWrap
 
-                // Right-click opens context menu.
-                if (mouse.button === Qt.RightButton) {
-                    contextMenu.popup()
-                }
-            }
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: {
+                    root.currentIndex = index
 
-            Menu {
-                id: contextMenu
-                MenuItem {
-                    text: "Copy"
-                    onTriggered: {
-                        let text = root.rows[index]
-                        root.copyToClipboard(text)
+                    // Right-click opens context menu.
+                    if (mouse.button === Qt.RightButton) {
+                        contextMenu.popup()
                     }
                 }
+
+                Menu {
+                    id: contextMenu
+                    MenuItem {
+                        text: "Copy"
+                        onTriggered: {
+                            let text = root.rows[index]
+                            root.copyToClipboard(text)
+                        }
+                    }
+                }
+            }
+        }
+
+        ImageButton {
+            visible: rowItem.isRefreshButton
+            height: textContent.implicitHeight * 2
+            imageSource: "qrc:/main/images/button/refresh"
+            text: "Load more"
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            onClicked: {
+                if (root._pageSize === 0) {
+                    root._pageSize = root.rows.length
+                }
+
+                let currentPage = Math.floor(root.rows.length / root._pageSize)
+                root.loadMore(currentPage + 1, root._pageSize)
             }
         }
     }
@@ -130,7 +163,7 @@ ListView {
                 }
             }
 
-            root.model = result
+            root.model = refreshModel(result)
         }
 
         let match = -1
@@ -145,6 +178,19 @@ ListView {
         if (match >= 0) {
             root.currentIndex = match
         }
+    }
+
+    function refreshModel(rows) {
+        let newModel = [...rows]
+        newModel.reverse()
+        // Last placeholder item is reserved for "load more" button
+        newModel.push("REFRESH")
+        return newModel
+    }
+
+    function addRows(newRows) {
+        root.rows = newRows.concat(root.rows)
+        root.model = root.refreshModel(root.rows)
     }
 
     /*

@@ -14,7 +14,27 @@ Item {
     property string errorText: ""
     property string criticality: ""
     property string _unitId: ""
+    property var pendingInvocations: []
 
+
+    Connections {
+        target: HostDataManager
+
+        function onCommand_result_received(commandResultJson) {
+            let commandResult = JSON.parse(commandResultJson)
+
+            if (root.pendingInvocations.includes(commandResult.invocation_id)) {
+                root.pendingInvocations = root.pendingInvocations.filter((invocationId) => invocationId != commandResult.invocationId)
+                root.criticality = commandResult.criticality
+
+                if (commandResult.error) {
+                    root.errorText = commandResult.error
+                }
+
+                logList.addRows(commandResult.message.split("\n"))
+            }
+        }
+    }
 
     Rectangle {
         color: Material.background
@@ -42,7 +62,7 @@ Item {
                     anchors.leftMargin: 30
                     anchors.verticalCenter: parent.verticalCenter
                     width: searchBox.width * 0.55
-                    placeholderText: "RegEx search..."
+                    placeholderText: "Regex search..."
                     color: Material.foreground
                     focus: true
 
@@ -111,6 +131,12 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.margins: Theme.spacing_normal()
+
+            onLoadMore: function(pageNumber, pageSize) {
+                let invocationId = CommandHandler.execute_confirmed(root.hostId, root.commandId, [pageNumber, pageSize])
+                root.pendingInvocations.push(invocationId)
+                logList.currentIndex = logList.rows.length - 2
+            }
         }
     }
 

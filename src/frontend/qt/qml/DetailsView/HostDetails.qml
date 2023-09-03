@@ -163,9 +163,9 @@ Item {
 
     function openLogView(commandId, invocationId) {
         subviewHeader.text = commandId
-        root._subviewInvocationId = invocationId
 
         logView.commandId = commandId
+        logView.pendingInvocations.push(invocationId)
 
         textView.visible = false
         logView.visible = true
@@ -194,11 +194,6 @@ Item {
             }
             textView.errorText = commandResult.error
             textView.criticality = commandResult.criticality
-        }
-        else if (logView.visible) {
-            logView.text = commandResult.message
-            logView.errorText = commandResult.error
-            logView.criticality = commandResult.criticality
         }
     }
 
