@@ -40,7 +40,7 @@ impl QmlFrontend {
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
 
-        let theme_model = ThemeModel::new(main_config.display_options.clone());
+        let theme_model = ThemeModel::new(main_config.display_options.clone().unwrap());
         let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data, main_config.clone());
         let config_manager = ConfigManagerModel::new(config_dir, main_config, hosts_config, group_config, module_metadatas);
 

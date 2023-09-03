@@ -59,9 +59,9 @@ pub struct HostDataManagerModel {
 
 impl HostDataManagerModel {
     pub fn new(display_data: frontend::DisplayData, config: configuration::Configuration) -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
-        let mut priorities = config.display_options.categories.iter()
-                                                              .map(|(category, options)| (category.clone(), options.priority))
-                                                              .collect::<Vec<_>>();
+        let mut priorities = config.display_options.as_ref().unwrap().categories.iter()
+                                                                     .map(|(category, options)| (category.clone(), options.priority))
+                                                                     .collect::<Vec<_>>();
 
         priorities.sort_by(|left, right| left.1.cmp(&right.1));
 

@@ -15,7 +15,8 @@ const GROUPS_FILE: &str = "groups.yml";
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
     pub preferences: Preferences,
-    pub display_options: DisplayOptions,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub display_options: Option<DisplayOptions>,
     pub cache_settings: CacheSettings,
 }
 
@@ -229,8 +230,14 @@ impl Configuration {
         log::info!("Reading main configuration from {}", main_config_file_path.display());
         let config_contents = fs::read_to_string(main_config_file_path)?;
 
-        let main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
+        let mut main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
                                      .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+
+        // Display options are currently defined in the app's defaults and not really user-configurable.
+        let default_main_config = include_str!("../config.example.yml");
+        let default_parsed = serde_yaml::from_str::<Configuration>(default_main_config)
+                                        .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+        main_config.display_options = Some(default_parsed.display_options.unwrap());
 
         log::info!("Reading host configuration from {}", hosts_file_path.display());
         let hosts_contents = fs::read_to_string(hosts_file_path)?;
@@ -428,7 +435,14 @@ impl Configuration {
         let main_config_file = fs::OpenOptions::new().write(true).truncate(true).open(main_config_file_path.clone());
         match main_config_file {
             Ok(mut file) => {
-                let main_config = serde_yaml::to_string(config).unwrap();
+                // Display options are currently not really user-configurable.
+                let config_without_display_options = Configuration {
+                    preferences: config.preferences.clone(),
+                    cache_settings: config.cache_settings.clone(),
+                    display_options: None,
+                };
+
+                let main_config = serde_yaml::to_string(&config_without_display_options).unwrap();
                 if let Err(error) = file.write_all(main_config.as_bytes()) {
                     let message = format!("Failed to write main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
                     return Err(io::Error::new(io::ErrorKind::Other, message));

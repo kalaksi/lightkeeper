@@ -156,7 +156,7 @@ fn run(args: Args) -> ExitReason {
     );
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
-    frontend.setup_command_handler(command_handler, monitor_manager, main_config.display_options.clone());
+    frontend.setup_command_handler(command_handler, monitor_manager, main_config.display_options.clone().unwrap());
     let exit_reason = frontend.start();
 
     // Shut down threads.
