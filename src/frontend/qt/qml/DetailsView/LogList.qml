@@ -9,10 +9,10 @@ import "../js/TextTransform.js" as TextTransform
 ListView {
     id: root 
     required property var rows
+    property int pageSize: 400
     property string _lastQuery: ""
     property var _matchingRows: []
     property int _totalMatches: 0
-    property int _pageSize: 0
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
@@ -102,12 +102,8 @@ ListView {
             anchors.topMargin: Theme.spacing_loose()
 
             onClicked: {
-                if (root._pageSize === 0) {
-                    root._pageSize = root.rows.length
-                }
-
-                let currentPage = Math.floor(root.rows.length / root._pageSize)
-                root.loadMore(currentPage + 1, root._pageSize)
+                let currentPage = Math.floor(root.rows.length / root.pageSize)
+                root.loadMore(currentPage + 1, root.pageSize)
             }
         }
     }
@@ -215,6 +211,9 @@ ListView {
         root._matchingRows = matchingRows
         root._totalMatches = totalMatches
         root.model = refreshModel(highlightedRows)
+    }
+
+    function getSearchDetails() {
         return [root._matchingRows.length, root._totalMatches]
     }
 

@@ -40,8 +40,8 @@ impl CommandModule for Logs {
     // Parameter 1 is for unit selection and special values "all" and "dmesg".
     // Parameter 2 is for grepping. Filters rows based on regexp.
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
-        let page_number = parameters.get(0).unwrap_or(&String::from("1")).parse::<i32>().unwrap_or(1);
-        let page_size = parameters.get(1).unwrap_or(&String::from("400")).parse::<i32>().unwrap_or(400);
+        let page_number = parameters.get(0).unwrap_or(&String::from("1")).parse::<i32>().unwrap();
+        let page_size = parameters.get(1).unwrap_or(&String::from("400")).parse::<i32>().unwrap();
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);

@@ -33,11 +33,12 @@ Item {
                     root.errorText = commandResult.error
                 }
 
-                let lastRowIndex = logList.rows.length - 1
-                logList.currentIndex = lastRowIndex
-                let [rowsMatched, totalMatches] = logList.setRows(commandResult.message.split("\n"))
+                let oldListEnd = logList.rows.length - 1
+                logList.setRows(commandResult.message.split("\n"))
+                logList.currentIndex = oldListEnd
+
+                let [rowsMatched, totalMatches] = logList.getSearchDetails()
                 searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
-                logList.currentIndex = lastRowIndex
             }
         }
     }
