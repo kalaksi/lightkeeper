@@ -57,7 +57,7 @@ ListView {
         property bool isRefreshButton: index === root.model.length - 1
 
         width: root.width
-        height: isRefreshButton ? textContent.implicitHeight * 2 : textContent.implicitHeight
+        height: isRefreshButton ? textContent.implicitHeight * 3 : textContent.implicitHeight
 
         SmallText {
             id: textContent
@@ -99,7 +99,7 @@ ListView {
             imageSource: "qrc:/main/images/button/refresh"
             text: "Load more"
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin: Theme.spacing_loose()
+            anchors.verticalCenter: parent.verticalCenter
 
             onClicked: {
                 let currentPage = Math.floor(root.rows.length / root.pageSize)
