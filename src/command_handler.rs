@@ -156,7 +156,14 @@ impl CommandHandler {
 
             let new_command_result = match result {
                 Ok(mut command_result) => {
-                    log::debug!("[{}] Command result received: {}", host.name, command_result.message);
+                    let log_message = if command_result.message.len() > 5000 {
+                        format!("{}...(long message cut)...", command_result.message[..5000].to_string())
+                    }
+                    else {
+                        command_result.message.clone()
+                    };
+
+                    log::debug!("[{}] Command result received: {}", host.name, log_message);
                     command_result.invocation_id = invocation_id;
                     command_result.command_id = command.get_module_spec().id;
                     Some(command_result)
