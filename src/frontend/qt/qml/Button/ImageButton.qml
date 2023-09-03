@@ -4,6 +4,9 @@ import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 import QtQuick.Controls.Material 2.15
 
+import "../Text"
+
+
 Item {
     id: root
     property string imageSource: ""
@@ -11,21 +14,21 @@ Item {
     property real imageRelativeHeight: 0.0
     property string color: "transparent"
     property string tooltip: ""
+    property string text: ""
     property bool roundButton: false
     property bool flatButton: false
     property bool hoverEnabled: true
     property bool enabled: true
     property bool checkable: false
 
-    width: 0.8 * parent.height
-    height: width
+    height: 0.8 * parent.height
+    width: 0.8 * parent.height + (buttonText.text !== "" ? buttonText.implicitWidth + Theme.spacing_normal() * 3 : 0)
 
     signal clicked()
 
     Button {
         flat: root.flatButton
         anchors.fill: parent
-        anchors.centerIn: parent
         visible: roundButton === false
         enabled: root.enabled
         opacity: Theme.opacity(enabled)
@@ -38,18 +41,27 @@ Item {
         ToolTip.delay: Theme.tooltip_delay()
         ToolTip.text: root.tooltip
 
-        Image {
+        Row {
             anchors.centerIn: parent
-            source: root.imageSource
-            width: root.imageRelativeWidth > 0.0 ? root.imageRelativeWidth * root.width :
-                                                   getIconRelativeSize(root.imageSource) * root.width
-            height: root.imageRelativeHeight > 0.0 ? root.imageRelativeHeight * root.height :
-                                                     getIconRelativeSize(root.imageSource) * root.height
-            ColorOverlay {
-                anchors.fill: parent
-                source: parent
-                color: root.color
-                antialiasing: true
+            spacing: Theme.spacing_normal()
+
+            Image {
+                source: root.imageSource
+                width: getIconWidth()
+                height: getIconHeight()
+
+                ColorOverlay {
+                    anchors.fill: parent
+                    source: parent
+                    color: root.color
+                    antialiasing: true
+                }
+            }
+
+            NormalText {
+                id: buttonText
+                visible: root.text !== ""
+                text: root.text
             }
         }
     }
@@ -59,7 +71,6 @@ Item {
 
         flat: root.flatButton
         anchors.fill: parent
-        anchors.centerIn: parent
         visible: roundButton === true
         enabled: root.enabled
         opacity: root.enabled ? 1.0 : 0.5
@@ -72,19 +83,27 @@ Item {
         ToolTip.delay: Theme.tooltip_delay()
         ToolTip.text: root.tooltip
 
-        Image {
+        Row {
             anchors.centerIn: parent
-            source: root.imageSource
-            width: root.imageRelativeWidth > 0.0 ? root.imageRelativeWidth * root.width :
-                                                   getIconRelativeSize(root.imageSource) * root.width
-            height: root.imageRelativeHeight > 0.0 ? root.imageRelativeHeight * root.height :
-                                                     getIconRelativeSize(root.imageSource) * root.height
+            spacing: Theme.spacing_normal()
 
-            ColorOverlay {
-                anchors.fill: parent
-                source: parent
-                color: root.color
-                antialiasing: true
+            Image {
+                source: root.imageSource
+                width: getIconWidth()
+                height: getIconHeight()
+
+                ColorOverlay {
+                    anchors.fill: parent
+                    source: parent
+                    color: root.color
+                    antialiasing: true
+                }
+            }
+
+            NormalText {
+                id: roundButtonText
+                visible: root.text !== ""
+                text: root.text
             }
         }
     }
@@ -101,6 +120,24 @@ Item {
         }
         else {
             return 0.8
+        }
+    }
+
+    function getIconWidth() {
+        if (root.imageRelativeWidth > 0.0) {
+            return root.imageRelativeWidth * root.height
+        }
+        else {
+            return getIconRelativeSize(root.imageSource) * root.height
+        }
+    }
+
+    function getIconHeight() {
+        if (root.imageRelativeHeight > 0.0) {
+            return root.imageRelativeHeight * root.height
+        }
+        else {
+            return getIconRelativeSize(root.imageSource) * root.height
         }
     }
 }
