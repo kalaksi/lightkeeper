@@ -99,6 +99,7 @@ ListView {
             imageSource: "qrc:/main/images/button/refresh"
             text: "Load more"
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.topMargin: Theme.spacing_loose()
 
             onClicked: {
                 if (root._pageSize === 0) {
@@ -129,45 +130,11 @@ ListView {
     function search(direction, query) {
         if (query !== root._lastQuery) {
             root._lastQuery = query
-            root._matchingRows = []
-            root._totalMatches = 0
 
-            if (query.length === 0) {
-                root.model = root.rows.reverse()
-                return;
-            }
-
-            let regexp = RegExp(query, "g")
-
-            let result = []
-            for (let i = 0; i < root.rows.length; i++) {
-                let text = root.rows[i]
-                let lastIndex = 0
-                let match = regexp.exec(text)
-
-                let rowMatches = false
-                let resultRow = ""
-                while (match !== null) {
-                    rowMatches = true
-                    root._totalMatches += 1
-
-                    let word = match[0]
-                    resultRow += TextTransform.escapeHtml(text.substring(lastIndex, match.index))
-                    resultRow += "<span style='background-color: " + Theme.color_highlight_bright() + "'>" + word + "</span>"
-                    lastIndex = match.index + word.length
-
-                    match = regexp.exec(text)
-                }
-
-                resultRow += TextTransform.escapeHtml(text.substring(lastIndex))
-                result.push(resultRow)
-
-                if (rowMatches) {
-                    root._matchingRows.push(i)
-                }
-            }
-
-            root.model = refreshModel(result)
+            let [highlightedRows, matchingRows, totalMatches] = _newSearch(query, root.rows)
+            root._matchingRows = matchingRows
+            root._totalMatches = totalMatches
+            root.model = refreshModel(highlightedRows)
         }
 
         let match = -1
@@ -186,6 +153,46 @@ ListView {
         return [root._matchingRows.length, root._totalMatches]
     }
 
+    function _newSearch(query, rows) {
+        if (query.length === 0) {
+            return [rows, [], 0]
+        }
+
+        let matchingRows = []
+        let totalMatches = 0
+        let regexp = RegExp(query, "g")
+
+        let highlightedRows = []
+        for (let i = 0; i < rows.length; i++) {
+            let text = rows[i]
+            let lastIndex = 0
+            let match = regexp.exec(text)
+
+            let rowMatches = false
+            let resultRow = ""
+            while (match !== null) {
+                rowMatches = true
+                totalMatches += 1
+
+                let word = match[0]
+                resultRow += TextTransform.escapeHtml(text.substring(lastIndex, match.index))
+                resultRow += "<span style='background-color: " + Theme.color_highlight_bright() + "'>" + word + "</span>"
+                lastIndex = match.index + word.length
+
+                match = regexp.exec(text)
+            }
+
+            resultRow += TextTransform.escapeHtml(text.substring(lastIndex))
+            highlightedRows.push(resultRow)
+
+            if (rowMatches) {
+                matchingRows.push(i)
+            }
+        }
+
+        return [highlightedRows, matchingRows, totalMatches]
+    }
+
     function refreshModel(rows) {
         let newModel = [...rows]
         newModel.reverse()
@@ -196,7 +203,27 @@ ListView {
 
     function addRows(newRows) {
         root.rows = newRows.concat(root.rows)
-        root.model = root.refreshModel(root.rows)
+        let [highlightedRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, root.rows)
+        root._matchingRows = matchingRows
+        root._totalMatches = totalMatches
+        root.model = refreshModel(highlightedRows)
+    }
+
+    function setRows(newRows) {
+        root.rows = newRows
+        let [highlightedRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, root.rows)
+        root._matchingRows = matchingRows
+        root._totalMatches = totalMatches
+        root.model = refreshModel(highlightedRows)
+        return [root._matchingRows.length, root._totalMatches]
+    }
+
+    function reset() {
+        root.rows = []
+        root.model = []
+        root._lastQuery = ""
+        root._matchingRows = []
+        root._totalMatches = 0
     }
 
     /*

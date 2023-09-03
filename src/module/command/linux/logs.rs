@@ -5,7 +5,6 @@ use crate::module::command::UIAction;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
-use crate::utils::string_validation;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
@@ -52,8 +51,10 @@ impl CommandModule for Logs {
 
             if page_number > 1 {
                 let row_count = page_number * page_size;
-                command.arguments(vec!["journalctl", "-q", "-n", &row_count.to_string()])
-                       .pipe_to(vec!["head", "-n", &page_size.to_string()]);
+                command.arguments(vec!["journalctl", "-q", "-n", &row_count.to_string()]);
+                // would be nice to return just the needed parts, but tailing will possibly return different rows,
+                // so currently just returning everything
+                       // .pipe_to(vec!["head", "-n", &page_size.to_string()]);
             }
             else {
                 command.arguments(vec!["journalctl", "-q", "-n", &page_size.to_string()]);

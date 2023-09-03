@@ -15,15 +15,11 @@ Item {
     id: root
     required property string hostId
     property real _subviewSize: 0.0
-    // Only one subview can be open at one time, but in case a DetailsDialog is opened using openInNewWindowClicked(),
-    // we need to provide the invocation id for state updates since there can be multiple dialogs open.
-    property string _subviewInvocationId: ""
 
 
     signal closeClicked()
     signal maximizeClicked()
     signal minimizeClicked()
-    signal openInNewWindowClicked(invocationId: string, text: string, errorText: string, criticality: string)
 
 
     Connections {
@@ -78,10 +74,11 @@ Item {
         Header {
             id: subviewHeader
 
-            showOpenInWindowButton: true
+            // TODO:
+            // showOpenInWindowButton: true
             showCloseButton: true
             onOpenInWindowClicked: {
-                root.openInNewWindowClicked(root._subviewInvocationId, subviewContent.text, subviewContent.errorText, subviewContent.criticality)
+                root.openInNewWindowClicked(subviewContent.text, subviewContent.errorText, subviewContent.criticality)
                 animateHideSubview.start()
             }
             onCloseClicked: animateHideSubview.start()
@@ -108,7 +105,7 @@ Item {
                 visible: false
             }
 
-            HostDetailsTextView{
+            HostDetailsTextView {
                 id: textEditor
                 anchors.fill: parent
                 visible: false
@@ -139,7 +136,7 @@ Item {
         sequence: StandardKey.Cancel
         onActivated: {
             if (root._subviewSize > 0.01) {
-                animateHideSubview.start()
+                root.closeSubview()
             }
             else {
                 root.closeClicked()
@@ -153,48 +150,38 @@ Item {
 
     function openTextView(headerText, invocationId) {
         subviewHeader.text = headerText
-        root._subviewInvocationId = invocationId
-        logView.visible = false
-        textView.visible = true
-        textEditor.visible = false
 
+        logView.close()
+        textView.open(invocationId)
+        textEditor.close()
         animateShowSubview.start()
     }
 
     function openLogView(commandId, invocationId) {
         subviewHeader.text = commandId
 
-        logView.commandId = commandId
-        logView.pendingInvocations.push(invocationId)
-
-        textView.visible = false
-        logView.visible = true
-        textEditor.visible = false
+        textView.close()
+        textEditor.close()
+        logView.open(commandId, invocationId)
         animateShowSubview.start()
     }
 
     function openTextEditorView(headerText, invocationId) {
         subviewHeader.text = headerText
-        root._subviewInvocationId = invocationId
 
-        textView.visible = false
-        logView.visible = false
-        textEditor.visible = true
+        textView.close()
+        logView.close()
+        textEditor.open(invocationId)
         animateShowSubview.start()
     }
 
-    function refreshSubview(commandResult) {
-        if (textView.visible) {
-            // If message seems to contain JSON...
-            if (commandResult.message.startsWith("{")) {
-                textView.jsonText = commandResult.message
-            }
-            else {
-                textView.text = commandResult.message
-            }
-            textView.errorText = commandResult.error
-            textView.criticality = commandResult.criticality
+    function closeSubview() {
+        if (root._subviewSize > 0.01) {
+            animateHideSubview.start()
         }
-    }
 
+        textView.close()
+        textEditor.close()
+        logView.close()
+    }
 }

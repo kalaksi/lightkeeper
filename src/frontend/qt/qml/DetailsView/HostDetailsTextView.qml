@@ -14,7 +14,31 @@ Item {
     property var jsonText: ""
     property var errorText: ""
     property var criticality: ""
+    property var pendingInvocations: []
 
+
+    Connections {
+        target: HostDataManager
+
+        function onCommand_result_received(commandResultJson) {
+            let commandResult = JSON.parse(commandResultJson)
+
+            if (root.pendingInvocations.includes(commandResult.invocation_id)) {
+                root.pendingInvocations = root.pendingInvocations.filter((invocationId) => invocationId != commandResult.invocationId)
+
+                // If message seems to contain JSON...
+                if (commandResult.message.startsWith("{")) {
+                    root.jsonText = commandResult.message
+                }
+                else {
+                    root.text = commandResult.message
+                }
+
+                root.errorText = commandResult.error
+                root.criticality = commandResult.criticality
+            }
+        }
+    }
 
     Rectangle {
         color: Material.background
@@ -53,5 +77,25 @@ Item {
         text: root.errorText
         criticality: root.criticality
         visible: root.errorText !== ""
+    }
+
+    function open(commandId, invocationId) {
+        root.commandId = commandId
+        root.pendingInvocations.push(invocationId)
+        root.visible = true
+    }
+
+    function close() {
+        if (root.visible) {
+            root.visible = false
+            reset()
+        }
+    }
+
+    function reset() {
+        root.text = ""
+        root.jsonText = ""
+        root.errorText = ""
+        root.criticality = ""
     }
 }

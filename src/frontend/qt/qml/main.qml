@@ -261,6 +261,7 @@ ApplicationWindow {
 
             HostDetails {
                 id: detailsView
+                visible: body.splitSize > 0.01
                 width: parent.width
                 SplitView.minimumHeight: 0.5 * body.splitSize * body.height
                 SplitView.preferredHeight: body.splitSize * body.height
@@ -274,15 +275,9 @@ ApplicationWindow {
                 onMaximizeClicked: {
                     body.splitSize = 1.0
                 }
-                onOpenInNewWindowClicked: (invocationId, text, errorText, criticality) => {
-                    let instanceId = detailsDialogManager.create({
-                        text: text,
-                        errorText: errorText,
-                        criticality: criticality,
-                    })
-                    root._detailsDialogs[invocationId] = instanceId
+                onCloseClicked: {
+                    _hostTableModel.toggle_row(_hostTableModel.selected_row)
                 }
-                onCloseClicked: _hostTableModel.toggle_row(_hostTableModel.selected_row)
             }
         }
 
@@ -298,27 +293,6 @@ ApplicationWindow {
                 }
             }
         }
-
-        states: [
-            State {
-                name: "detailsShownVisibility"
-                when: body.splitSize > 0.01
-
-                PropertyChanges {
-                    target: detailsView 
-                    visible: true
-                }
-            },
-            State {
-                name: "detailsHiddenVisibility"
-                when: body.splitSize < 0.01
-
-                PropertyChanges {
-                    target: detailsView
-                    visible: false
-                }
-            }
-        ]
     }
 
     // Dynamic component loaders

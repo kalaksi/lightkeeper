@@ -16,7 +16,6 @@ Item {
     property string commandId: ""
     property string text: ""
     property string errorText: ""
-    property string criticality: ""
     property string _unitId: ""
     property var pendingInvocations: []
 
@@ -29,13 +28,16 @@ Item {
 
             if (root.pendingInvocations.includes(commandResult.invocation_id)) {
                 root.pendingInvocations = root.pendingInvocations.filter((invocationId) => invocationId != commandResult.invocationId)
-                root.criticality = commandResult.criticality
 
                 if (commandResult.error) {
                     root.errorText = commandResult.error
                 }
 
-                logList.addRows(commandResult.message.split("\n"))
+                let lastRowIndex = logList.rows.length - 1
+                logList.currentIndex = lastRowIndex
+                let [rowsMatched, totalMatches] = logList.setRows(commandResult.message.split("\n"))
+                searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
+                logList.currentIndex = lastRowIndex
             }
         }
     }
@@ -156,9 +158,7 @@ Item {
             Layout.fillHeight: true
 
             onLoadMore: function(pageNumber, pageSize) {
-                let invocationId = CommandHandler.execute_confirmed(root.hostId, root.commandId, [pageNumber, pageSize])
-                root.pendingInvocations.push(invocationId)
-                logList.currentIndex = logList.rows.length - 2
+                CommandHandler.execute_confirmed(root.hostId, root.commandId, [pageNumber, pageSize])
             }
         }
     }
@@ -190,4 +190,24 @@ Item {
         onActivated: logList.search("up", searchField.text)
     }
 
+    function open(commandId, invocationId) {
+        root.commandId = commandId
+        root.pendingInvocations.push(invocationId)
+        root.visible = true
+        searchField.focus = true
+    }
+
+    function close() {
+        if (root.visible) {
+            root.visible = false
+            reset()
+        }
+    }
+
+    function reset() {
+        root.text = ""
+        root.errorText = ""
+        root.pendingInvocations = []
+        logList.reset()
+    }
 }
