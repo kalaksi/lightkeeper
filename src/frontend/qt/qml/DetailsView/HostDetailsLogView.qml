@@ -4,6 +4,10 @@ import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
 import QtQuick.Controls.Material 2.15
 
+import "../Text"
+import "../Button"
+
+
 Item {
     // TODO: loading indicator and indicator (translucent text maybe) for empty results 
     // TODO: indicator for no search results
@@ -43,36 +47,58 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: Theme.spacing_normal()
 
         Row {
             id: searchBox
             spacing: Theme.spacing_loose()
 
-            Layout.topMargin: Theme.spacing_normal()
+            Layout.topMargin: Theme.spacing_loose()
             Layout.leftMargin: root.width * 0.30
             Layout.fillWidth: true
 
             Row {
-                spacing: 10
-                bottomPadding: 10
+                spacing: Theme.spacing_loose()
 
-                TextField {
-                    id: searchField
+                Column {
                     anchors.leftMargin: 30
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: searchBox.width * 0.55
-                    placeholderText: "Regex search..."
-                    color: Material.foreground
-                    focus: true
+                    spacing: Theme.spacing_normal()
 
-                    onAccepted: logList.search("up", searchField.text)
+                    TextField {
+                        id: searchField
+                        width: searchBox.width * 0.55
+                        placeholderText: "Regex search..."
+                        color: Material.foreground
+                        focus: true
+
+                        onAccepted: {
+                            let [rowsMatched, totalMatches] = logList.search("up", searchField.text)
+                            searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
+                        }
+                    }
+
+                    RowLayout {
+                        width: searchField.width
+
+                        SmallText {
+                            id: searchDetails
+                            text: ""
+                            color: Theme.color_dark_text()
+                        }
+
+                        // Spacer
+                        Rectangle {
+                            Layout.fillWidth: true
+                        }
+
+                        SmallText {
+                            text: `${logList.rows.length} total rows`
+                            color: Theme.color_dark_text()
+                        }
+                    }
                 }
 
-                // TODO: custom component for buttons (and roundbuttons).
                 Button {
                     anchors.leftMargin: 30
-                    anchors.verticalCenter: parent.verticalCenter
                     flat: true
 
                     ToolTip.visible: hovered
@@ -90,7 +116,6 @@ Item {
                 }
 
                 Button {
-                    anchors.verticalCenter: parent.verticalCenter
                     flat: true
 
                     ToolTip.visible: hovered
@@ -108,7 +133,6 @@ Item {
                 }
 
                 Button {
-                    anchors.verticalCenter: parent.verticalCenter
                     onClicked: searchRows(searchField.text)
 
                     ToolTip.visible: hovered
@@ -130,7 +154,6 @@ Item {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.margins: Theme.spacing_normal()
 
             onLoadMore: function(pageNumber, pageSize) {
                 let invocationId = CommandHandler.execute_confirmed(root.hostId, root.commandId, [pageNumber, pageSize])

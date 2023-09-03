@@ -11,6 +11,7 @@ ListView {
     required property var rows
     property string _lastQuery: ""
     property var _matchingRows: []
+    property int _totalMatches: 0
     property int _pageSize: 0
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
@@ -129,6 +130,7 @@ ListView {
         if (query !== root._lastQuery) {
             root._lastQuery = query
             root._matchingRows = []
+            root._totalMatches = 0
 
             if (query.length === 0) {
                 root.model = root.rows.reverse()
@@ -147,6 +149,8 @@ ListView {
                 let resultRow = ""
                 while (match !== null) {
                     rowMatches = true
+                    root._totalMatches += 1
+
                     let word = match[0]
                     resultRow += TextTransform.escapeHtml(text.substring(lastIndex, match.index))
                     resultRow += "<span style='background-color: " + Theme.color_highlight_bright() + "'>" + word + "</span>"
@@ -178,6 +182,8 @@ ListView {
         if (match >= 0) {
             root.currentIndex = match
         }
+
+        return [root._matchingRows.length, root._totalMatches]
     }
 
     function refreshModel(rows) {
