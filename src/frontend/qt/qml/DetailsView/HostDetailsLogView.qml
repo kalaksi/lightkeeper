@@ -32,7 +32,6 @@ Item {
 
             if (root.pendingInvocations.includes(commandResult.invocation_id)) {
                 root.pendingInvocations = root.pendingInvocations.filter((id) => id != commandResult.invocation_id)
-                console.log(root.pendingInvocations)
 
                 if (commandResult.error) {
                     root.errorText = commandResult.error
@@ -56,6 +55,7 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
+        anchors.margins: Theme.spacing_normal()
 
         Row {
             id: searchBox

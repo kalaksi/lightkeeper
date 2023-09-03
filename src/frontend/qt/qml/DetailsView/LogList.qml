@@ -125,24 +125,17 @@ ListView {
     // Could be done with rust too.
     function search(direction, query) {
         if (query !== root._lastQuery) {
-            console.log("NEWSEARCH")
             root._lastQuery = query
-
-            let [highlightedRows, matchingRows, totalMatches] = _newSearch(query, root.rows)
-            console.log("rows", root.rows.length, "hilites", highlightedRows.length, "matches", matchingRows.length, "total", totalMatches)
-            console.log(JSON.stringify(highlightedRows))
-            root._matchingRows = matchingRows
-            root._totalMatches = totalMatches
             refreshModel()
         }
 
         let match = -1
         if (direction === "up") {
             let reversed = [...root._matchingRows].reverse()
-            match = reversed.find((row) => root.currentIndex > row)
+            match = reversed.find((row) => row < root.currentIndex)
         }
         else if (direction === "down") {
-            match = root._matchingRows.find((row) => root.currentIndex < row)
+            match = root._matchingRows.find((row) => row > root.currentIndex)
         }
 
         if (match >= 0) {
@@ -161,7 +154,7 @@ ListView {
         let totalMatches = 0
         let regexp = RegExp(query, "g")
 
-        let highlightedRows = []
+        let modelRows = []
         for (let i = 0; i < rows.length; i++) {
             let text = rows[i]
             let lastIndex = 0
@@ -182,14 +175,17 @@ ListView {
             }
 
             resultRow += TextTransform.escapeHtml(text.substring(lastIndex))
-            highlightedRows.push(resultRow)
+            modelRows.push(resultRow)
 
             if (rowMatches) {
-                matchingRows.push(i)
+                // Since modelRows is reversed compared to root.rows, we need to reverse the matching rows too.
+                matchingRows.push(rows.length - i - 1)
             }
         }
 
-        return [highlightedRows, matchingRows, totalMatches]
+        modelRows.reverse()
+        matchingRows.sort()
+        return [modelRows, matchingRows, totalMatches]
     }
 
     function refreshModel() {
@@ -197,7 +193,6 @@ ListView {
         let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
         root._matchingRows = matchingRows
         root._totalMatches = totalMatches
-        modelRows.reverse()
         if (modelRows.length > 0) {
             // Last placeholder item is reserved for "load more" button
             modelRows.push("REFRESH")
