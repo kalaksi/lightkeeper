@@ -15,3 +15,6 @@ pub use stop::Stop;
 
 pub mod shell;
 pub use shell::Shell;
+
+pub mod logs;
+pub use logs::Logs;

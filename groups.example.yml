@@ -66,6 +66,7 @@ groups:
       docker-compose-start: {}
       docker-compose-stop: {}
       docker-compose-shell: {}
+      docker-compose-logs: {}
 
   # Monitors and commands for SystemD services.
   systemd-service:

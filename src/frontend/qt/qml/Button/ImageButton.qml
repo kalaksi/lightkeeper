@@ -20,9 +20,10 @@ Item {
     property bool hoverEnabled: true
     property bool enabled: true
     property bool checkable: false
+    property real size: 0.8 * parent.height
 
-    height: 0.8 * parent.height
-    width: 0.8 * parent.height + (buttonText.text !== "" ? buttonText.implicitWidth + Theme.spacing_normal() * 3 : 0)
+    height: root.size
+    width: root.size + (buttonText.text !== "" ? buttonText.implicitWidth + Theme.spacing_normal() * 3 : 0)
 
     signal clicked()
 

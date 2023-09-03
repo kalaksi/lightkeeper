@@ -14,6 +14,7 @@ Dialog {
     property var _monitorList: []
     property var _commandList: []
     property bool _loading: true
+    property int _buttonSize: 26
 
     modal: true
     implicitWidth: 600
@@ -95,7 +96,7 @@ Dialog {
                     flatButton: true
                     roundButton: false
                     tooltip: "Add new module"
-                    width: 26
+                    size: root._buttonSize
 
                     Layout.alignment: Qt.AlignBottom
                 }
@@ -159,7 +160,7 @@ Dialog {
                                     flatButton: true
                                     roundButton: false
                                     tooltip: "Module settings..."
-                                    width: 26
+                                    size: root._buttonSize
 
                                     Layout.alignment: Qt.AlignVCenter
                                 }
@@ -173,7 +174,7 @@ Dialog {
                                     flatButton: true
                                     roundButton: false
                                     tooltip: "Remove module from group"
-                                    width: 26
+                                    size: root._buttonSize
 
                                     Layout.alignment: Qt.AlignVCenter
                                 }
@@ -243,7 +244,7 @@ Dialog {
                     flatButton: true
                     roundButton: false
                     tooltip: "Add new module"
-                    width: 26
+                    size: root._buttonSize
 
                     Layout.alignment: Qt.AlignBottom
                 }
@@ -332,7 +333,7 @@ Dialog {
                                     flatButton: true
                                     roundButton: false
                                     tooltip: "Module settings..."
-                                    width: 26
+                                    size: root._buttonSize
 
                                     Layout.alignment: Qt.AlignVCenter
                                 }
@@ -346,7 +347,7 @@ Dialog {
                                     flatButton: true
                                     roundButton: false
                                     tooltip: "Remove module from group"
-                                    width: 26
+                                    size: root._buttonSize
 
                                     Layout.alignment: Qt.AlignVCenter
                                 }
@@ -416,7 +417,7 @@ Dialog {
                     flatButton: true
                     roundButton: false
                     tooltip: "Add new module"
-                    width: 26
+                    size: root._buttonSize
 
                     Layout.alignment: Qt.AlignBottom
                 }
@@ -481,7 +482,7 @@ Dialog {
                                     flatButton: true
                                     roundButton: false
                                     tooltip: "Module settings..."
-                                    width: 26
+                                    size: root._buttonSize
 
                                     Layout.alignment: Qt.AlignVCenter
                                 }
@@ -495,7 +496,7 @@ Dialog {
                                     flatButton: true
                                     roundButton: false
                                     tooltip: "Remove module from group"
-                                    width: 26
+                                    size: root._buttonSize
 
                                     Layout.alignment: Qt.AlignVCenter
                                 }

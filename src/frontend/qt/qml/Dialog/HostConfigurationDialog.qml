@@ -228,7 +228,7 @@ Dialog {
                     visible: tabView.currentIndex === 1
                     enabled: parent.isValidGroupSelection
                     imageSource: "qrc:/main/images/button/add"
-                    width: root.buttonSize
+                    size: root.buttonSize
                     onClicked: {
                         ConfigManager.add_host_to_group(root.hostId, tabView._selectedGroup)
                         refreshGroups()
@@ -242,7 +242,7 @@ Dialog {
                     visible: tabView.currentIndex === 0
                     enabled: parent.isValidGroupSelection
                     imageSource: "qrc:/main/images/button/remove"
-                    width: root.buttonSize
+                    size: root.buttonSize
                     onClicked: {
                         ConfigManager.remove_host_from_group(root.hostId, tabView._selectedGroup)
                         // Forces re-evaluation of lists.
@@ -257,7 +257,7 @@ Dialog {
                     id: configButton
                     enabled: parent.isValidGroupSelection
                     imageSource: "qrc:/main/images/button/configure"
-                    width: root.buttonSize
+                    size: root.buttonSize
                     onClicked: groupConfigDialog.open()
                 }
 
@@ -271,7 +271,7 @@ Dialog {
                     visible: tabView.currentIndex === 1
                     imageSource: "qrc:/main/images/button/group-new"
                     tooltip: "Create new group"
-                    width: root.buttonSize
+                    size: root.buttonSize
 
                     onClicked: groupAddDialog.open()
                 }
@@ -281,7 +281,7 @@ Dialog {
                     visible: tabView.currentIndex === 1
                     imageSource: "qrc:/main/images/button/delete"
                     tooltip: "Delete group"
-                    width: root.buttonSize
+                    size: root.buttonSize
 
                     onClicked: {
                         ConfigManager.begin_group_configuration()

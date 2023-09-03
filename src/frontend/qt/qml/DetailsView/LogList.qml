@@ -95,7 +95,7 @@ ListView {
 
         ImageButton {
             visible: rowItem.isRefreshButton
-            height: textContent.implicitHeight * 2
+            size: textContent.implicitHeight * 2
             imageSource: "qrc:/main/images/button/refresh"
             text: "Load more"
             anchors.horizontalCenter: parent.horizontalCenter
