@@ -6,6 +6,7 @@ import QtQuick.Layouts 1.15
 import "Text"
 
 
+/// Don't put directly under Layout-components. Wrap inside an Item then.
 Item {
     id: root
     property real scale: 1.5

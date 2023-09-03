@@ -4,6 +4,7 @@ import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
 import QtQuick.Controls.Material 2.15
 
+import ".."
 import "../Text"
 import "../Button"
 
@@ -151,9 +152,21 @@ Item {
             }
         }
 
+        Item {
+            visible: logList.rows.length === 0
+
+            WorkingSprite {
+                id: workingSprite
+            }
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+        }
+
         LogList {
             id: logList
             rows: root.text.split("\n")
+            visible: rows.length > 0
 
             Layout.fillWidth: true
             Layout.fillHeight: true
