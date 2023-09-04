@@ -2,6 +2,7 @@
 set -euo pipefail
 
 new_version=$1
+version_only=${new_version#*v}
 new_date=$(date +%Y-%m-%d)
 
 cd "$(dirname "$0")"
@@ -11,7 +12,7 @@ if [ ! -z "$(git status -s)" ]; then
 fi
 
 echo "Updating Cargo.toml..."
-sed -i 's|^version = ".*|version = "'$new_version'"|' Cargo.toml
+sed -i 's|^version = ".*|version = "'$version_only'"|' Cargo.toml
 
 pushd flatpak &>/dev/null
 echo "Updating flatpak cargo-source and metainfo files..."
