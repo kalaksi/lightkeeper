@@ -24,8 +24,8 @@ cache_settings:
   prefer_cache: true
   time_to_live: 8400
 
-# Control category order, command buttons orders, colors.
-# Defaults should be good.
+# Control category order, command buttons orders, colors. Defaults should be good.
+# NOTE: Currently, you shouldn't manually edit display_options at all.
 display_options:
   hide_info_notifications: false
   categories:
