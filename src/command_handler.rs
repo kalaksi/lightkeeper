@@ -1,4 +1,5 @@
 
+use std::sync::Arc;
 use std::sync::mpsc::Sender;
 use std::collections::HashMap;
 use serde_derive::{Serialize, Deserialize};
@@ -6,8 +7,11 @@ use std::process;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::configuration::Hosts;
+use crate::connection_manager::ConnectionManager;
 use crate::enums::Criticality;
 use crate::host_manager::HostManager;
+use crate::module::module_factory::ModuleFactory;
 use crate::utils::{ShellCommand, ErrorMessage};
 use crate::{
     configuration::Preferences,
@@ -30,26 +34,57 @@ pub struct CommandHandler {
     request_sender: Option<Sender<ConnectorRequest>>,
     /// Channel to send state updates to HostManager.
     state_update_sender: Option<Sender<StateUpdateMessage>>,
-    host_manager: Rc<RefCell<HostManager>>,
     /// Preferences from config file.
     preferences: Preferences,
     /// Every execution gets an invocation ID. Valid ID numbers begin from 1.
     invocation_id_counter: u64,
+
+    // Shared resources.
+    host_manager: Rc<RefCell<HostManager>>,
+    module_factory: Arc<ModuleFactory>,
 }
 
 impl CommandHandler {
-    pub fn new(preferences: &Preferences, request_sender: Sender<ConnectorRequest>, host_manager: Rc<RefCell<HostManager>>) -> Self {
+    pub fn new(request_sender: Sender<ConnectorRequest>,
+               host_manager: Rc<RefCell<HostManager>>,
+               module_factory: Arc<ModuleFactory>) -> Self {
         CommandHandler {
             commands: HashMap::new(),
             request_sender: Some(request_sender),
-            host_manager: host_manager.clone(),
             state_update_sender: Some(host_manager.borrow().new_state_update_sender()),
-            preferences: preferences.clone(),
+            preferences: Preferences::default(),
             invocation_id_counter: 0,
+
+            host_manager: host_manager.clone(),
+            module_factory: module_factory,
         }
     }
 
-    pub fn add_command(&mut self, host_id: &String, command: Command) {
+    pub fn configure(&mut self, hosts_config: &Hosts, preferences: &Preferences, connection_manager: &mut ConnectionManager) {
+        self.preferences = preferences.clone();
+        self.invocation_id_counter = 0;
+
+        for (host_id, host_config) in hosts_config.hosts.iter() {
+            for (command_id, command_config) in host_config.commands.iter() {
+                let command_spec = crate::module::ModuleSpecification::new(command_id.as_str(), command_config.version.as_str());
+                let command = self.module_factory.new_command(&command_spec, &command_config.settings);
+
+                if let Some(connector_spec) = command.get_connector_spec() {
+                    let connector_settings = match host_config.connectors.get(&connector_spec.id) {
+                        Some(config) => config.settings.clone(),
+                        None => HashMap::new(),
+                    };
+
+                    let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
+                    connection_manager.add_connector(host_id.clone(), connector);
+                }
+
+                self.add_command(host_id, command);
+            }
+        }
+    }
+
+    fn add_command(&mut self, host_id: &String, command: Command) {
         if !self.commands.contains_key(host_id) {
             self.commands.insert(host_id.clone(), HashMap::new());
         }

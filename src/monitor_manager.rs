@@ -1,13 +1,15 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::mpsc::{self, Sender};
 
-use crate::Host;
-use crate::configuration::CacheSettings;
+use crate::{Host, connection_manager};
+use crate::configuration::{CacheSettings, HostSettings, Hosts};
 use crate::enums::Criticality;
 use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::*;
+use crate::module::ModuleFactory;
 use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestType, CachePolicy };
 use crate::utils::ErrorMessage;
@@ -19,37 +21,68 @@ pub struct MonitorManager {
     request_sender: Sender<ConnectorRequest>,
     // Channel to send state updates to HostManager.
     state_update_sender: Sender<StateUpdateMessage>,
-    host_manager: Rc<RefCell<HostManager>>,
     /// Every refresh operation gets an invocation ID. Valid ID numbers begin from 1.
     invocation_id_counter: u64,
     cache_settings: CacheSettings,
+
+    // Shared resources.
+    host_manager: Rc<RefCell<HostManager>>,
+    module_factory: Arc<ModuleFactory>,
 }
 
 impl MonitorManager {
     pub fn new(request_sender: mpsc::Sender<ConnectorRequest>,
+               cache_settings: CacheSettings,
                host_manager: Rc<RefCell<HostManager>>,
-               cache_settings: CacheSettings) -> Self {
+               module_factory: Arc<ModuleFactory>) -> Self {
+
 
         MonitorManager {
             monitors: HashMap::new(),
             request_sender: request_sender,
-            host_manager: host_manager.clone(),
             state_update_sender: host_manager.borrow().new_state_update_sender(),
             invocation_id_counter: 0,
             cache_settings: cache_settings,
+
+            host_manager: host_manager.clone(),
+            module_factory: module_factory,
         }
     }
 
+    pub fn configure(&mut self, hosts_config: &Hosts, connection_manager: &mut connection_manager::ConnectionManager) {
+        for (host_id, host_config) in hosts_config.hosts.iter() {
+
+            for (monitor_id, monitor_config) in host_config.monitors.iter() {
+                let monitor_spec = crate::module::ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
+                let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
+
+                // Initialize a connector if the monitor uses any.
+                if let Some(connector_spec) = monitor.get_connector_spec() {
+                    let connector_settings = match host_config.connectors.get(&connector_spec.id) {
+                        Some(config) => config.settings.clone(),
+                        None => HashMap::new(),
+                    };
+
+                    let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
+                    connection_manager.add_connector(host_id.clone(), connector);
+                }
+
+                self.add_monitor(host_id.clone(), monitor);
+            }
+        }
+    }
+        
+
     // Adds a monitor but only if a monitor with the same ID doesn't exist.
-    pub fn add_monitor(&mut self, host: &Host, monitor: Monitor) {
-        let monitor_collection = self.monitors.entry(host.name.clone()).or_insert(HashMap::new());
+    fn add_monitor(&mut self, host_id: String, monitor: Monitor) {
+        let monitor_collection = self.monitors.entry(host_id.clone()).or_insert(HashMap::new());
         let module_spec = monitor.get_module_spec();
 
         // Only add if missing.
         if !monitor_collection.contains_key(&module_spec.id) {
             // Add initial state value indicating no data as been received yet.
             self.state_update_sender.send(StateUpdateMessage {
-                host_name: host.name.clone(),
+                host_name: host_id,
                 display_options: monitor.get_display_options(),
                 module_spec: monitor.get_module_spec(),
                 data_point: Some(DataPoint::no_data()),
@@ -387,10 +420,12 @@ impl Default for MonitorManager {
         Self {
             request_sender: request_sender,
             state_update_sender: state_update_sender,
-            host_manager: Rc::new(RefCell::new(HostManager::default())),
             invocation_id_counter: 0,
             monitors: HashMap::new(),
             cache_settings: CacheSettings::default(),
+
+            host_manager: Rc::new(RefCell::new(HostManager::default())),
+            module_factory: Arc::new(ModuleFactory::default()),
         }
     }
 }

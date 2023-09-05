@@ -14,6 +14,7 @@ use super::{
 };
 
 
+#[derive(Default)]
 pub struct ModuleFactory {
     connector_modules: Vec<(Metadata, fn(&HashMap<String, String>) -> connection::Connector)>,
     monitor_modules: Vec<(Metadata, fn(&HashMap<String, String>) -> monitoring::Monitor)>,

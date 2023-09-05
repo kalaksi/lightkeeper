@@ -11,7 +11,7 @@ mod command_handler;
 mod file_handler;
 mod cache;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -63,7 +63,7 @@ fn run(args: Args) -> ExitReason {
     log::info!("Lightkeeper starting...");
 
 
-    let module_factory = ModuleFactory::new();
+    let module_factory = Arc::<ModuleFactory>::new(ModuleFactory::new());
     if args.monitoring_module_info {
         print!("{}", module_factory.get_monitoring_module_info());
         return ExitReason::Quit;
@@ -87,61 +87,14 @@ fn run(args: Args) -> ExitReason {
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
     let mut connection_manager = ConnectionManager::new(main_config.cache_settings.clone());
-    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), host_manager.clone(), main_config.cache_settings.clone());
-    let mut command_handler = CommandHandler::new(&main_config.preferences, connection_manager.new_request_sender(), host_manager.clone());
+    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), main_config.cache_settings.clone(), host_manager.clone(), module_factory.clone());
+    let mut command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.clone(), module_factory.clone());
     host_manager.borrow_mut().start_receiving_updates();
 
     // Configure hosts and modules.
-    for (host_id, host_config) in hosts_config.hosts.iter() {
-        log::info!("Found configuration for host {}", host_id);
-
-        let host = match Host::new(&host_id, &host_config.address, &host_config.fqdn, &host_config.settings.clone()) {
-            Ok(host) => host,
-            Err(error) => {
-                log::error!("{}", error);
-                continue;
-            }
-        };
-
-        if let Err(error) = host_manager.borrow_mut().add_host(host.clone()) {
-            log::error!("{}", error.to_string());
-            continue;
-        };
-
-        for (monitor_id, monitor_config) in host_config.monitors.iter() {
-            let monitor_spec = ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
-            let monitor = module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
-
-            // Initialize a connector if the monitor uses any.
-            if let Some(connector_spec) = monitor.get_connector_spec() {
-                let connector_settings = match host_config.connectors.get(&connector_spec.id) {
-                    Some(config) => config.settings.clone(),
-                    None => HashMap::new(),
-                };
-
-                let connector = module_factory.new_connector(&connector_spec, &connector_settings);
-                connection_manager.add_connector(&host, connector);
-            }
-
-            monitor_manager.add_monitor(&host, monitor);
-        }
-
-        for (command_id, command_config) in host_config.commands.iter() {
-            let command_spec = ModuleSpecification::new(command_id.as_str(), command_config.version.as_str());
-            let command = module_factory.new_command(&command_spec, &command_config.settings);
-
-            if let Some(connector_spec) = command.get_connector_spec() {
-                let connector_settings = match host_config.connectors.get(&connector_spec.id) {
-                    Some(config) => config.settings.clone(),
-                    None => HashMap::new(),
-                };
-                let connector = module_factory.new_connector(&connector_spec, &connector_settings);
-                connection_manager.add_connector(&host, connector);
-            }
-
-            command_handler.add_command(&host.name, command);
-        }
-    }
+    host_manager.borrow_mut().configure(&hosts_config);
+    monitor_manager.configure(&hosts_config, &mut connection_manager);
+    command_handler.configure(&hosts_config, &main_config.preferences, &mut connection_manager);
 
     let module_metadatas = module_factory.get_module_metadatas();
     connection_manager.start(module_factory);

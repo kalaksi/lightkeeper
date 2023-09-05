@@ -25,7 +25,6 @@ use crate::{
 const DATA_POINT_BUFFER_SIZE: usize = 4;
 
 
-// TODO: Split to StateManager and HostCollection?
 pub struct HostManager {
     hosts: Arc<Mutex<HostCollection>>,
     /// Provides sender handles for sending StateUpdateMessages to this instance.
@@ -47,6 +46,25 @@ impl HostManager {
             data_receiver: Some(receiver),
             receiver_thread: None,
             frontend_state_sender: frontend_state_sender,
+        }
+    }
+
+    pub fn configure(&mut self, config: &crate::configuration::Hosts) {
+        for (host_id, host_config) in config.hosts.iter() {
+            log::debug!("Found configuration for host {}", host_id);
+
+            let host = match Host::new(&host_id, &host_config.address, &host_config.fqdn, &host_config.settings.clone()) {
+                Ok(host) => host,
+                Err(error) => {
+                    log::error!("{}", error);
+                    continue;
+                }
+            };
+            let mut hosts = self.hosts.lock().unwrap();
+            if let Err(error) = hosts.add(host.clone(), HostStatus::Pending) {
+                log::error!("{}", error.to_string());
+                continue;
+            };
         }
     }
 

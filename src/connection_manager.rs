@@ -47,11 +47,11 @@ impl ConnectionManager {
     }
 
     // Adds a connector but only if a connector with the same ID doesn't exist.
-    pub fn add_connector(&mut self, host: &Host, connector: Connector) {
+    pub fn add_connector(&mut self, host_id: String, connector: Connector) {
         let connectors = self.stateful_connectors.as_mut().unwrap();
-        connectors.entry(host.name.clone()).or_insert(HashMap::new());
+        connectors.entry(host_id.clone()).or_insert(HashMap::new());
 
-        if let Some(host_connectors) = connectors.get_mut(&host.name) {
+        if let Some(host_connectors) = connectors.get_mut(&host_id) {
             let module_spec = connector.get_module_spec();
 
             if !host_connectors.contains_key(&module_spec) {
@@ -64,7 +64,7 @@ impl ConnectionManager {
         return self.request_sender_prototype.clone()
     }
 
-    pub fn start(&mut self, module_factory: ModuleFactory) {
+    pub fn start(&mut self, module_factory: Arc<ModuleFactory>) {
         let thread = Self::start_receiving_requests(
             self.stateful_connectors.take().unwrap(),
             self.request_receiver.take().unwrap(),
@@ -82,7 +82,7 @@ impl ConnectionManager {
     fn start_receiving_requests(
         mut stateful_connectors: HashMap<String, ConnectorStates>,
         receiver: mpsc::Receiver<ConnectorRequest>,
-        module_factory: ModuleFactory,
+        module_factory: Arc<ModuleFactory>,
         cache_settings: CacheSettings) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
