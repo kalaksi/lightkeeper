@@ -88,10 +88,6 @@ impl DataPoint {
     pub fn is_internal(&self) -> bool {
         self.value.starts_with("_")
     }
-
-    pub fn ignore(&mut self) {
-        self.criticality = Criticality::Ignore;
-    }
 }
 
 impl Default for DataPoint {

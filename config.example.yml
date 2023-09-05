@@ -5,14 +5,14 @@ preferences:
   # This can be done directly over a terminal or by temporarily downloading the file for editing locally.
   # If set to true, will launch a terminal for editing directly using a CLI text editor.
   use_remote_editor: true
-  # This is the path to the remote CLI text editor.
-  remote_text_editor: "/usr/bin/nano"
+  # This is the command (or path) to the remote CLI text editor.
+  remote_text_editor: "nano"
   # Use sudo when editing remote files?
   sudo_remote_editor: true
-  # Likewise, a path to an editor for editing locally.
-  text_editor: "/usr/bin/kate"
+  # Likewise, command (or path) to an editor for editing locally.
+  text_editor: "kate"
   # Some commands may launch a terminal for you. Here you can configure the terminal and parameters.
-  terminal: "/usr/bin/xterm"
+  terminal: "xterm"
   terminal_args: ["-e"]
 
 # Caching can provide speed benefits especially if you have many hosts.
