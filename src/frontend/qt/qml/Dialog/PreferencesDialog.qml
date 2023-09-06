@@ -67,6 +67,7 @@ Dialog {
             text: "Preferences"
 
             Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: Theme.spacing_loose()
         }
 
         RowLayout {
@@ -91,6 +92,8 @@ Dialog {
 
             CheckBox {
                 checkState: root._preferences.refresh_hosts_on_start ? Qt.Checked : Qt.Unchecked
+
+                Layout.leftMargin: content.width * 0.30
             }
         }
 
@@ -118,6 +121,8 @@ Dialog {
             CheckBox {
                 id: useRemoteEditor
                 checkState: root._preferences.use_remote_editor ? Qt.Checked : Qt.Unchecked
+
+                Layout.leftMargin: content.width * 0.30
             }
         }
 
@@ -126,6 +131,7 @@ Dialog {
 
             Label {
                 text: "Remote text editor"
+
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignTop
             }
@@ -133,6 +139,8 @@ Dialog {
             TextField {
                 enabled: useRemoteEditor.checkState === Qt.Checked
                 text: root._preferences.remote_text_editor
+
+                Layout.preferredWidth: content.width * 0.35
             }
         }
 
@@ -160,6 +168,8 @@ Dialog {
             CheckBox {
                 enabled: useRemoteEditor.checkState === Qt.Checked
                 checkState: root._preferences.sudo_remote_editor ? Qt.Checked : Qt.Unchecked
+
+                Layout.leftMargin: content.width * 0.30
             }
         }
 
@@ -185,6 +195,8 @@ Dialog {
 
             TextField {
                 text: root._preferences.text_editor
+
+                Layout.preferredWidth: content.width * 0.35
             }
         }
 
@@ -210,6 +222,8 @@ Dialog {
 
             TextField {
                 text: root._preferences.terminal + " " + root._preferences.terminal_args
+
+                Layout.preferredWidth: content.width * 0.35
             }
         }
 
