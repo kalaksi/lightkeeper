@@ -38,6 +38,13 @@ Item {
         }
     }
 
+    // ScrollView doesn't have boundsBehavior so this is the workaround.
+    Binding {
+        target: rootScrollView.contentItem
+        property: "boundsBehavior"
+        value: Flickable.StopAtBounds
+    }
+
     WorkingSprite {
         visible: root._categories.length === 0
         scale: 1.5

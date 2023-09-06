@@ -12,13 +12,15 @@ Item {
     property bool showIcon: true
     anchors.fill: parent
 
-    FontLoader { id: font_status; source: "qrc:/main/fonts/pressstart2p" }
+    FontLoader {
+        id: fontStatus
+        source: "qrc:/main/fonts/pressstart2p"
+    }
 
     RowLayout {
         anchors.fill: parent
 
         Image {
-            id: status_image
             antialiasing: true
             source: "qrc:/main/images/status/" + root.status
             visible: showIcon
@@ -40,7 +42,7 @@ Item {
 
         NormalText {
             text: status.toUpperCase()
-            font.family: font_status.name
+            font.family: fontStatus.name
             color: getColor(root.status)
 
             Layout.fillWidth: true

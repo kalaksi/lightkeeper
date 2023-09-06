@@ -130,7 +130,6 @@ impl QAbstractTableModel for HostTableModel {
             3 => row.ip_address.to_qvariant(),
             // Return host id to use with get_monitor_data().
             4 => row.name.to_qvariant(),
-            5 => row.name.to_qvariant(),
             _ => panic!(),
         }
     }

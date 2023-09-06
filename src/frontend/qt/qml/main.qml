@@ -16,10 +16,10 @@ import "js/Utils.js" as Utils
 ApplicationWindow {
     id: root
     visible: true
-    minimumWidth: 1500
+    minimumWidth: 1400
     minimumHeight: 800
-    width: 1400
-    height: 800
+    width: minimumWidth + 100
+    height: minimumHeight
 
     property var _detailsDialogs: {}
     property int _textDialogPendingInvocation: 0
@@ -28,7 +28,7 @@ ApplicationWindow {
     Material.theme: Material.Dark
     Universal.theme: Universal.Dark
 
-    header: ToolBar {
+    menuBar: ToolBar {
         RowLayout {
             anchors.fill: parent
 
@@ -103,7 +103,6 @@ ApplicationWindow {
                     preferencesDialog.open()
                 }
             }
-
         }
     }
 
@@ -252,25 +251,23 @@ ApplicationWindow {
             HostTable {
                 id: hostTable
                 width: parent.width
-                SplitView.minimumWidth: body.width
                 SplitView.fillHeight: true
 
                 model: HostTableModel {
                     id: _hostTableModel
                     display_data: HostDataManager.get_display_data()
                 }
-
             }
 
             HostDetails {
                 id: detailsView
                 visible: body.splitSize > 0.01
                 width: parent.width
+                hostId: _hostTableModel.get_selected_host_id()
+
                 SplitView.minimumHeight: 0.5 * body.splitSize * body.height
                 SplitView.preferredHeight: body.splitSize * body.height
                 SplitView.maximumHeight: 1.5 * body.splitSize * body.height
-
-                hostId: _hostTableModel.get_selected_host_id()
 
                 onMinimizeClicked: {
                     body.splitSize = 0.8

@@ -39,7 +39,7 @@ TableView {
                 firstItem: true
                 selected: root.model.selected_row === row
                 onClicked: root.model.toggle_row(row)
-                implicitWidth: root.width * 0.20
+                implicitWidth: root.width * 0.15
                 implicitHeight: root.rowHeight
 
                 HostStatus {
@@ -53,7 +53,7 @@ TableView {
             delegate: TableCell {
                 selected: root.model.selected_row === row
                 onClicked: root.model.toggle_row(row)
-                implicitWidth: root.width * 0.10
+                implicitWidth: root.width * 0.15
 
                 NormalText {
                     anchors.verticalCenter: parent.verticalCenter
@@ -66,10 +66,10 @@ TableView {
             delegate: TableCell {
                 selected: root.model.selected_row === row
                 onClicked: root.model.toggle_row(row)
-                implicitWidth: root.width * 0.20
+                implicitWidth: root.width * 0.25
 
                 OptionalText {
-                    anchors.fill: parent
+                    anchors.verticalCenter: parent.verticalCenter
                     placeholder: "No FQDN defined"
                     text: value
                 }
@@ -80,10 +80,10 @@ TableView {
             delegate: TableCell {
                 selected: root.model.selected_row === row
                 onClicked: root.model.toggle_row(row)
-                implicitWidth: root.width * 0.20
+                implicitWidth: root.width * 0.15
 
                 OptionalText {
-                    anchors.fill: parent
+                    anchors.verticalCenter: parent.verticalCenter
                     placeholder: "IP address not available"
                     text: value
                 }
