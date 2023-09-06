@@ -49,6 +49,7 @@ pub struct Preferences {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
+    pub qtquick_style: String,
     pub hide_info_notifications: bool,
     pub categories: HashMap<String, Category>,
 }

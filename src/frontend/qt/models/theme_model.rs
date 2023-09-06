@@ -21,6 +21,7 @@ pub struct ThemeModel {
     margin_dialog: qt_method!(fn(&self) -> i8),
     // Content will often overflow behind the dialog buttons (ugh...), reserve more space for them with this.
     margin_dialog_bottom: qt_method!(fn(&self) -> i8),
+    margin_scrollbar: qt_method!(fn(&self) -> i8),
     spacing_loose: qt_method!(fn(&self) -> i8),
     spacing_normal: qt_method!(fn(&self) -> i8),
     spacing_tight: qt_method!(fn(&self) -> i8),
@@ -107,6 +108,10 @@ impl ThemeModel {
 
     fn margin_dialog_bottom(&self) -> i8 {
         80
+    }
+
+    fn margin_scrollbar(&self) -> i8 {
+        16
     }
 
     fn spacing_loose(&self) -> i8 {

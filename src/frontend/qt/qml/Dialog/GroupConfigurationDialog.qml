@@ -32,32 +32,39 @@ Dialog {
 
     onAccepted: {
         ConfigManager.end_group_configuration()
-        root._loading = true
-        root._connectorList = []
-        root._monitorList = []
-        root._commandList = []
+        reset()
     }
 
     onRejected: {
         ConfigManager.cancel_group_configuration()
-        root._loading = true
-        root._connectorList = []
-        root._monitorList = []
-        root._commandList = []
+        reset()
     }
 
+
+    // ScrollView doesn't have boundsBehavior so this is the workaround.
+    Binding {
+        target: scrollView.contentItem
+        property: "boundsBehavior"
+        value: Flickable.StopAtBounds
+    }
 
     WorkingSprite {
         visible: root._loading
     }
 
     contentItem: ScrollView {
+        id: scrollView
+        anchors.fill: parent
+        anchors.margins: Theme.margin_dialog()
+        anchors.bottomMargin: Theme.margin_dialog_bottom()
         contentWidth: availableWidth
+        clip: true
 
         ColumnLayout {
             id: rootColumn
             visible: !root._loading
             anchors.fill: parent
+            anchors.rightMargin: Theme.margin_scrollbar()
             spacing: Theme.spacing_tight()
 
             BigText {
@@ -573,5 +580,12 @@ Dialog {
     function refreshCommandList() {
         root._commandList = []
         root._commandList = ConfigManager.get_group_commands(root.groupName)
+    }
+
+    function reset() {
+        root._loading = true
+        root._connectorList = []
+        root._monitorList = []
+        root._commandList = []
     }
 }

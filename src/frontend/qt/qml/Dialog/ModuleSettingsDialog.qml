@@ -59,27 +59,37 @@ Dialog {
         root.configSaved(root.moduleType, root.groupName, root.moduleId)
     }
 
+    // ScrollView doesn't have boundsBehavior so this is the workaround.
+    Binding {
+        target: scrollView.contentItem
+        property: "boundsBehavior"
+        value: Flickable.StopAtBounds
+    }
 
     WorkingSprite {
         visible: root._loading
     }
 
     contentItem: ScrollView {
+        id: scrollView
+        anchors.fill: parent
+        anchors.margins: Theme.margin_dialog()
+        anchors.bottomMargin: Theme.margin_dialog_bottom()
         contentWidth: availableWidth
-
-        BigText {
-            text: `Module settings: ${root.moduleId}`
-
-            Layout.alignment: Qt.AlignHCenter
-            Layout.bottomMargin: Theme.spacing_loose()
-        }
+        clip: true
 
         Column {
             id: rootColumn
             visible: !root._loading
             anchors.fill: parent
-            anchors.margins: Theme.margin_dialog()
+            anchors.rightMargin: Theme.margin_scrollbar()
             spacing: Theme.spacing_normal()
+
+            BigText {
+                text: `Module settings: ${root.moduleId}`
+                anchors.horizontalCenter: parent.horizontalCenter
+                height: implicitHeight + Theme.spacing_loose()
+            }
 
             Repeater {
                 id: repeater
@@ -121,7 +131,7 @@ Dialog {
                         placeholderText: toggleSwitch.checked ? "" : "unset"
                         text: toggleSwitch.checked ? modelData.value : ""
 
-                        Layout.fillWidth: true
+                        Layout.preferredWidth: scrollView.width * 0.35
                         Layout.alignment: Qt.AlignVCenter
                     }
                 }

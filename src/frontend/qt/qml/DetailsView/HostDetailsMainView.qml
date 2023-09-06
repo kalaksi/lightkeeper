@@ -48,6 +48,7 @@ Item {
         id: rootScrollView
         anchors.fill: parent
         contentWidth: availableWidth
+        clip: true
 
         GridLayout {
             id: grid

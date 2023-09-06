@@ -2,6 +2,7 @@
 More important features first.
 - Offer embedded terminals and editors?
 - more keyboard shortcuts and GUI hints
+- Hot-reloading QML?
 - cache for monitor's command results to minimize amount of commands actually run (crude implementation done)
 - automatic module testing and documentation.
 - new module property `privileged` for modules that require sudo/root

@@ -37,8 +37,14 @@ impl QmlFrontend {
                group_config: configuration::Groups,
                module_metadatas: Vec<Metadata>
             ) -> QmlFrontend {
+
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
+
+        let style = main_config.display_options.as_ref().unwrap().qtquick_style.as_str();
+        if !style.is_empty() {
+            qtquickcontrols2::QQuickStyle::set_style(style);
+        }
 
         let theme_model = ThemeModel::new(main_config.display_options.clone().unwrap());
         let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data, main_config.clone());
