@@ -50,6 +50,9 @@ impl HostManager {
     }
 
     pub fn configure(&mut self, config: &crate::configuration::Hosts) {
+        let mut hosts = self.hosts.lock().unwrap();
+        hosts.clear();
+
         for (host_id, host_config) in config.hosts.iter() {
             log::debug!("Found configuration for host {}", host_id);
 
@@ -60,7 +63,6 @@ impl HostManager {
                     continue;
                 }
             };
-            let mut hosts = self.hosts.lock().unwrap();
             if let Err(error) = hosts.add(host.clone(), HostStatus::Pending) {
                 log::error!("{}", error.to_string());
                 continue;
@@ -71,11 +73,6 @@ impl HostManager {
     pub fn join(&mut self) {
         self.receiver_thread.take().expect("Thread has already stopped.")
                             .join().unwrap();
-    }
-
-    pub fn add_host(&mut self, host: Host) -> Result<(), String> {
-        let mut hosts = self.hosts.lock().unwrap();
-        hosts.add(host, HostStatus::Pending)
     }
 
     /// Get Host details by name. Panics if the host is not found.
@@ -319,6 +316,10 @@ impl HostCollection {
 
         self.hosts.insert(host.name.clone(), HostState::from_host(host, default_status));
         Ok(())
+    }
+
+    fn clear(&mut self) {
+        self.hosts.clear();
     }
 }
 

@@ -11,7 +11,7 @@ mod command_handler;
 mod file_handler;
 mod cache;
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -23,7 +23,7 @@ use connection_manager::ConnectionManager;
 use command_handler::CommandHandler;
 use host::Host;
 use configuration::Configuration;
-use module::{ ModuleFactory, ModuleSpecification };
+use module::ModuleFactory;
 
 
 #[derive(Parser, Clone)]
