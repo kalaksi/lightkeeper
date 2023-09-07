@@ -22,6 +22,7 @@ sed -i '/<releases>$/a \    <release version="'$version_only'" date="'$new_date'
 
 read -p "Edit metainfo now by pressing enter" _temp
 $EDITOR io.github.kalaksi.Lightkeeper.metainfo.xml
+xmllint io.github.kalaksi.Lightkeeper.metainfo.xml >/dev/null
 
 echo -e "\n* Committing changes..."
 git commit -a -m "Prepare for version $new_version"

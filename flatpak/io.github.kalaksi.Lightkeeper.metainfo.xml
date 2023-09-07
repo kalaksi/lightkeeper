@@ -26,7 +26,7 @@
         <ul>
           <li>Important fixes and improvements to GUI on different systems</li>
           <li>Some groundwork for seamless app reloads</li>
-        <ul>
+        </ul>
       </description>
     </release>
     <release version="0.4.2" date="2023-09-04">
