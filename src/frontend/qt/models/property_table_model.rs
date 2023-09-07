@@ -216,7 +216,8 @@ impl PropertyTableModel {
 
         // Find commands relevant to this row and populate command.parameters property from data point.
         let level_commands = command_datas.iter()
-            .filter(|command| command.display_options.parent_id == monitoring_data.monitor_id &&
+            .filter(|command| (command.display_options.parent_id == monitoring_data.monitor_id ||
+                               command.display_options.secondary_parent_id == monitoring_data.monitor_id) &&
                               (command.display_options.multivalue_level == 0 ||
                                command.display_options.multivalue_level == multivalue_level))
             .map(|command| {
@@ -369,9 +370,9 @@ impl QAbstractTableModel for PropertyTableModel {
                 // Filters out commands that depend on specific criticality, value or tag that isn't present currently.
                 let command_datas = row_data.command_datas.into_iter()
                     .filter(|command| command.display_options.depends_on_criticality.is_empty() ||
-                                    command.display_options.depends_on_criticality.contains(&row_data.value.criticality))
+                                      command.display_options.depends_on_criticality.contains(&row_data.value.criticality))
                     .filter(|command| command.display_options.depends_on_value.is_empty() ||
-                                    command.display_options.depends_on_value.contains(&row_data.value.value))
+                                      command.display_options.depends_on_value.contains(&row_data.value.value))
                     .filter(|command| command.display_options.depends_on_tags.iter().all(|tag| row_data.value.tags.contains(tag)))
                     .filter(|command| command.display_options.depends_on_no_tags.iter().all(|tag| !row_data.value.tags.contains(tag)))
                     .collect::<Vec<CommandData>>();

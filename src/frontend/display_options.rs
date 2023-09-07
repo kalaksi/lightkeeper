@@ -31,6 +31,9 @@ pub struct DisplayOptions {
 
     /// Monitor id to attach commands to, instead of displaying on just category-level.
     pub parent_id: String,
+    /// This is for command modules that want to attach to e.g. both a monitoring module and a monitoring extension module.
+    /// Should be rarely needed. Not the optimal solution since there could be multiple parents.
+    pub secondary_parent_id: String,
 
     /// Show only if related monitor's criticality is one of these.
     /// Can be used, for example, for start and stop buttons.

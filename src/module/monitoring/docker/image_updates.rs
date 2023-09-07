@@ -66,6 +66,12 @@ impl MonitoringModule for ImageUpdates {
             }
             else {
                 let (image, tag) = image_repo_tag.split_once(":").unwrap_or(("", ""));
+
+                // Probably contains non-dockerhub registry address in image name.
+                if image.matches("/").count() > 1 {
+                    return String::new();
+                }
+
                 let (namespace, image) = image.split_once("/").unwrap_or(("library", image));
 
                 // TODO: support other registries too.
