@@ -180,7 +180,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                         settings: HashMap::from([
                             #(#settings),*
                         ]),
-                        parent_module: Some(ModuleSpecification::new(#parent_module_name, #parent_module_version)),
+                        parent_module: Some(ModuleSpecification::new_with_type(#parent_module_name, #parent_module_version, "monitor")),
                         is_stateless: true,
                         cache_scope: crate::cache::CacheScope::Host,
                     }

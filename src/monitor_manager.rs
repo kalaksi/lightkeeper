@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::mpsc::{self, Sender};
 
 use crate::{Host, connection_manager};
-use crate::configuration::{CacheSettings, HostSettings, Hosts};
+use crate::configuration::{CacheSettings, Hosts};
 use crate::enums::Criticality;
 use crate::module::connection::ResponseMessage;
 use crate::module::monitoring::*;
@@ -258,6 +258,7 @@ impl MonitorManager {
 
             // Request will contain the base monitors and possible extensions modules.
             let mut request_monitors = vec![monitor.box_clone()];
+
             extensions.iter().filter(|ext| ext.get_metadata_self().parent_module.unwrap() == monitor.get_module_spec())
                              .for_each(|extension| request_monitors.push(extension.box_clone()));
 

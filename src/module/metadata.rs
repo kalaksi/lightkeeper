@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::ModuleSpecification;
 use crate::cache::CacheScope as CacheScope;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Metadata {
     pub module_spec: ModuleSpecification,
     pub description: String,

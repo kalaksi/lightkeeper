@@ -97,7 +97,7 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
 }
 
 /// Describes if cache is global or host-specific.
-#[derive(Clone, EnumString)]
+#[derive(Clone, Debug, EnumString)]
 pub enum CacheScope {
     Global,
     Host,
