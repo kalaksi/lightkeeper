@@ -39,3 +39,8 @@ git commit -a -m "Update flatpak manifest for $new_version"
 git push
 
 popd &>/dev/null
+
+if [ -d ../io.github.kalaksi.Lightkeeper ]; then
+    cp -v flatpak/cargo-sources.json ../io.github.kalaksi.Lightkeeper/
+    cp -v flatpak/io.github.kalaksi.Lightkeeper.yml ../io.github.kalaksi.Lightkeeper/
+fi
