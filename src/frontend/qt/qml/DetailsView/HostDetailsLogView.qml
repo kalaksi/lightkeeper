@@ -212,18 +212,12 @@ Item {
     }
 
     function open(commandId, commandParams, invocationId) {
+        reset()
         root.pendingInvocations.push(invocationId)
         root.commandId = commandId
         root.commandParams = commandParams
         root.visible = true
         searchField.focus = true
-    }
-
-    function close() {
-        if (root.visible) {
-            root.visible = false
-            reset()
-        }
     }
 
     function reset() {

@@ -80,16 +80,9 @@ Item {
     }
 
     function open(commandId, invocationId) {
+        reset()
         root.commandId = commandId
         root.pendingInvocations.push(invocationId)
-        root.visible = true
-    }
-
-    function close() {
-        if (root.visible) {
-            root.visible = false
-            reset()
-        }
     }
 
     function reset() {

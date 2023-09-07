@@ -151,17 +151,19 @@ Item {
     function openTextView(headerText, invocationId) {
         subviewHeader.text = headerText
 
-        logView.close()
+        textView.visible = true
+        logView.visible = false
+        textEditor.visible = false
         textView.open(invocationId)
-        textEditor.close()
         animateShowSubview.start()
     }
 
     function openLogView(commandId, commandParams, invocationId) {
         subviewHeader.text = commandId
 
-        textView.close()
-        textEditor.close()
+        textView.visible = false
+        logView.visible = true
+        textEditor.visible = false
         logView.open(commandId, commandParams, invocationId)
         animateShowSubview.start()
     }
@@ -169,8 +171,9 @@ Item {
     function openTextEditorView(headerText, invocationId) {
         subviewHeader.text = headerText
 
-        textView.close()
-        logView.close()
+        textView.visible = false
+        logView.visible = false
+        textEditor.visible = true
         textEditor.open(invocationId)
         animateShowSubview.start()
     }
@@ -179,9 +182,5 @@ Item {
         if (root._subviewSize > 0.01) {
             animateHideSubview.start()
         }
-
-        textView.close()
-        textEditor.close()
-        logView.close()
     }
 }
