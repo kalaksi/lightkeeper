@@ -36,6 +36,7 @@ groups:
       linux-packages-clean: {}
       linux-packages-update: {}
       linux-packages-update-all: {}
+      linux-packages-refresh: {}
       storage-file-space-usage: {}
       storage-lvm-snapshot: {}
       storage-lvm-lvresize: {}
