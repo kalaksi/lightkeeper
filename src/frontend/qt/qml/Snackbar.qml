@@ -66,6 +66,7 @@ Rectangle {
 
         NormalText {
             id: textContent
+            anchors.verticalCenter: parent.verticalCenter
             text: root.text
             wrapMode: Text.Wrap
             width: row.width - iconBackground.width - root.contentPadding * 2
