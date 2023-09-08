@@ -34,6 +34,7 @@ Dialog {
             root.hostId = "new-host-id"
         }
         refreshGroups()
+        updateOkButton()
         root._loading = false
     }
 
@@ -98,8 +99,9 @@ Dialog {
                 placeholderText: "Unique name for host..."
                 text: root.hostId === "new-host-id" ? "" : root.hostId
                 validator: RegularExpressionValidator {
-                    regularExpression: /[a-zA-Z\d\-]+/
+                    regularExpression: /[a-zA-Z\d\-\.]+/
                 }
+                onTextChanged: updateOkButton()
             }
         }
 
@@ -119,6 +121,7 @@ Dialog {
                 validator: RegularExpressionValidator {
                     regularExpression: /[\.\:a-zA-Z\d\-]+/
                 }
+                onTextChanged: updateOkButton()
             }
         }
 
@@ -321,7 +324,7 @@ Dialog {
             validator_regexp: "[a-zA-Z\d\-]+",
         }]
 
-        onInputValuesGiven: (inputValues) => {
+        onInputValuesGiven: function(inputValues) {
             ConfigManager.add_group(inputValues[0])
             ConfigManager.end_group_configuration()
             refreshGroups()
@@ -342,4 +345,11 @@ Dialog {
         root._availableGroups = ConfigManager.get_available_groups(root.hostId)
     }
 
+    function fieldsAreValid() {
+        return hostIdField.acceptableInput && hostAddressField.acceptableInput
+    }
+
+    function updateOkButton() {
+        root.standardButton(Dialog.Ok).enabled = fieldsAreValid()
+    }
 }
