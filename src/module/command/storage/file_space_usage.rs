@@ -86,6 +86,6 @@ impl CommandModule for FileSpaceUsage {
             result_rows.push(format!("{} MB\t{}  ", size, path));
         }
 
-        Ok(CommandResult::new(result_rows.join("\n")))
+        Ok(CommandResult::new_hidden(result_rows.join("\n")))
     }
 }

@@ -66,6 +66,7 @@ pub struct CommandResult {
 }
 
 impl CommandResult {
+    // TODO: Get rid and replace with the more explicit function names below?
     pub fn new<Stringable: ToString>(message: Stringable) -> Self {
         CommandResult {
             message: message.to_string(),
