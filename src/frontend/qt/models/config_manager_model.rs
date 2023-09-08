@@ -169,6 +169,9 @@ impl ConfigManagerModel {
             groups: vec![
                 String::from("defaults"),
                 String::from("linux"),
+                String::from("systemd-service"),
+                String::from("docker"),
+                String::from("docker-compose"),
             ],
             ..Default::default()
         };
