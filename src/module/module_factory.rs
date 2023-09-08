@@ -250,6 +250,7 @@ impl ModuleFactory {
         self.connector_modules = vec![
             (connection::Ssh2::get_metadata(), connection::Ssh2::new_connection_module),
             (connection::Http::get_metadata(), connection::Http::new_connection_module),
+            (connection::LocalCommand::get_metadata(), connection::LocalCommand::new_connection_module),
         ];
 
         // Monitoring modules.
@@ -267,6 +268,7 @@ impl ModuleFactory {
             (monitoring::storage::lvm::VolumeGroup::get_metadata(), monitoring::storage::lvm::VolumeGroup::new_monitoring_module),
             (monitoring::storage::lvm::PhysicalVolume::get_metadata(), monitoring::storage::lvm::PhysicalVolume::new_monitoring_module),
             (monitoring::systemd::Service::get_metadata(), monitoring::systemd::Service::new_monitoring_module),
+            (monitoring::network::Oping::get_metadata(), monitoring::network::Oping::new_monitoring_module),
             (monitoring::network::Ping::get_metadata(), monitoring::network::Ping::new_monitoring_module),
             (monitoring::network::Ssh::get_metadata(), monitoring::network::Ssh::new_monitoring_module),
             (monitoring::docker::Compose::get_metadata(), monitoring::docker::Compose::new_monitoring_module),

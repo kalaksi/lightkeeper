@@ -10,3 +10,6 @@ pub use ssh::Ssh2;
 
 pub mod http;
 pub use http::Http;
+
+pub mod local_command;
+pub use local_command::LocalCommand;
