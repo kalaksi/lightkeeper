@@ -83,7 +83,7 @@ impl MonitoringModule for Images {
 
         for image in images.iter() {
             let repo_tag = match &image.repo_tags {
-                Some(repo_tags) => repo_tags.first().unwrap().clone(),
+                Some(repo_tags) => repo_tags.first().unwrap_or(&String::from("")).clone(),
                 None => String::from(""),
             };
 
