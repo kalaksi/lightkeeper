@@ -1,4 +1,4 @@
-app-id: io.github.kalaksi.Lightkeeper
+app-id: io.github.kalaksi.Lightkeeper-local
 runtime: org.kde.Platform
 runtime-version: '5.15-22.08'
 sdk: org.kde.Sdk
@@ -51,7 +51,7 @@ modules:
       - cargo --offline build --release --verbose
       - cp -r ./src/frontend/qt/qml /app/
       - install -Dm755 ./target/release/lightkeeper -t /app/bin/
-      - install -Dm644 ./flatpak/${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo/
-      - install -Dm644 ./flatpak/${FLATPAK_ID}.desktop -t /app/share/applications/
-      - install -Dm644 ./flatpak/${FLATPAK_ID}-64px.png /app/share/icons/hicolor/64x64/apps/${FLATPAK_ID}.png
-      - install -Dm644 ./flatpak/${FLATPAK_ID}-128px.png /app/share/icons/hicolor/128x128/apps/${FLATPAK_ID}.png
+      - install -Dm644 ./flatpak/${FLATPAK_ID}.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - install -Dm644 ./flatpak/${FLATPAK_ID}.desktop /app/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 ./flatpak/io.github.kalaksi.Lightkeeper-64px.png /app/share/icons/hicolor/64x64/apps/${FLATPAK_ID}.png
+      - install -Dm644 ./flatpak/io.github.kalaksi.Lightkeeper-128px.png /app/share/icons/hicolor/128x128/apps/${FLATPAK_ID}.png

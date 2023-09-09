@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.kalaksi.Lightkeeper-local</id>
+  <name>LightkeeperRM</name>
+  <summary>A standalone, customizable server management tool</summary>
+  <metadata_license>CC-BY-SA-4.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>
+      LightkeeperRM is a standalone, customizable, modular, server management tool.
+      This is still an early release. There will be some bugs and features missing.
+      See project website for more information.
+    </p>
+  </description>
+  <url type="homepage">https://github.com/kalaksi/lightkeeper</url>
+  <url type="bugtracker">https://github.com/kalaksi/lightkeeper</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/LightkeeperRM-overview.png</image>
+    </screenshot>
+  </screenshots>
+  <launchable type="desktop-id">io.github.kalaksi.Lightkeeper-local.desktop</launchable>
+  <releases>
+    <release version="0.0.1" date="2023-09-04">
+      <description>Local test release</description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>
