@@ -9,7 +9,7 @@ use crate::module::monitoring::*;
 #[monitoring_module(
     name="ssh",
     version="0.0.1",
-    description="Checks if the SSH service is available.",
+    description="DEPRECATED. Checks if the SSH service is available.",
 )]
 pub struct Ssh;
 

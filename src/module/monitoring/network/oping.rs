@@ -10,7 +10,7 @@ use crate::module::monitoring::*;
 #[monitoring_module(
     name="oping",
     version="0.0.1",
-    description="Measures latency to host with ICMP echo request (uses internal oping library).",
+    description="Measures latency to host with ICMP echo request (uses internal oping library). Does not work with flatpak.",
 )]
 pub struct Oping;
 

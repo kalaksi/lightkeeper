@@ -10,7 +10,7 @@ use crate::module::monitoring::*;
 #[monitoring_module(
     name="ping",
     version="0.0.1",
-    description="Measures average latency to host with ICMP echo request.",
+    description="Measures average latency to host with ICMP echo request. Does not work with flatpak.",
     settings={
         count => "Amount of echo requests to send. Default: 2.",
         timeout => "Timeout in seconds. Default: 10."
@@ -72,7 +72,7 @@ impl MonitoringModule for Ping {
             Ok(DataPoint::value_with_level(average_latency.to_string(), Criticality::Normal))
         }
         else {
-            Ok(DataPoint::value_with_level(String::from("-"), Criticality::Critical))
+            Ok(DataPoint::value_with_level(String::from(response.message), Criticality::Critical))
         }
     }
 }

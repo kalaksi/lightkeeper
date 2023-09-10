@@ -8,7 +8,7 @@ groups:
     connectors:
       ssh: {}
     monitors:
-      ping:
+      tcp-connect:
         is_critical: true
 
   # Monitors and commands for Linux hosts. You usually want at least this for your hosts.
@@ -24,7 +24,6 @@ groups:
         settings:
           ignored_interfaces: "br-,docker,lo,veth"
       package: {}
-      ssh: {}
       who: {}
       storage-lvm-logical-volume: {}
       storage-lvm-volume-group: {}

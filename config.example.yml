@@ -48,7 +48,7 @@ display_options:
     network:
       priority: 3
       color: "#80b3825d"
-      monitor_order: ["ping", "ssh", "interface"]
+      monitor_order: ["oping", "ping", "tcp-connect", "ssh", "interface"]
     systemd:
       priority: 4
       color: "#8030d475"
