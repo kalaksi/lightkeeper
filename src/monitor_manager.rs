@@ -127,6 +127,9 @@ impl MonitorManager {
         let cache_policy = if let Some(cache_policy) = cache_policy {
             cache_policy
         }
+        else if !self.cache_settings.enable_cache {
+            CachePolicy::BypassCache
+        }
         else if self.cache_settings.provide_initial_value {
             CachePolicy::PreferCache
         }
@@ -149,6 +152,9 @@ impl MonitorManager {
             let host = self.host_manager.borrow().get_host(host_name);
             let cache_policy = if let Some(cache_policy) = cache_policy {
                 cache_policy
+            }
+            else if !self.cache_settings.enable_cache {
+                CachePolicy::BypassCache
             }
             else if self.cache_settings.provide_initial_value {
                 CachePolicy::PreferCache
@@ -217,9 +223,14 @@ impl MonitorManager {
                                                 .filter(|(_, monitor)| &monitor.get_display_options().category == category)
                                                 .collect();
 
-        let cache_policy = match &self.cache_settings.prefer_cache {
-            true => CachePolicy::PreferCache,
-            false => CachePolicy::BypassCache,
+        let cache_policy = if !self.cache_settings.enable_cache {
+            CachePolicy::BypassCache
+        }
+        else if self.cache_settings.prefer_cache {
+            CachePolicy::PreferCache
+        }
+        else {
+            CachePolicy::BypassCache
         };
 
         let invocation_ids = self.refresh_monitors(host, monitors_by_category, cache_policy);

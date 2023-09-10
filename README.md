@@ -38,10 +38,12 @@ flatpak-builder --user --install --force-clean build io.github.kalaksi.Lightkeep
 Dependencies are:
 - Qt 5.15
 - liboping
+- libdbus
 
 Corresponding Ubuntu 22.04 packages are:
 - qtdeclarative5-dev
 - liboping0
+- libdbus-1-3, libdbus-1-dev
 
 Building:
 ```
