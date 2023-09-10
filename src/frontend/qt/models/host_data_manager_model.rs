@@ -42,7 +42,7 @@ pub struct HostDataManagerModel {
     // These methods are used to get the data in JSON and parsed in QML side.
     // JSON is required since there doesn't seem to be a way to return a self-defined QObject.
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
-    get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QStringList),
     get_host_data_json: qt_method!(fn(&self, host_id: QString) -> QString),
 
     // Basically contains the state of hosts and relevant data. Received from HostManager.
@@ -348,15 +348,24 @@ impl HostDataManagerModel {
         result
     }
 
-    fn get_summary_monitor_data(&self, host_id: QString) -> QVariantList {
-        let mut result = QVariantList::default();
+    fn get_summary_monitor_data(&self, host_id: QString) -> QStringList {
+        let mut result = QStringList::default();
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            let summary_compatible = host.monitoring_data.values().filter(|data| !data.display_options.ignore_from_summary).collect();
+            let overridden_monitors = host.monitoring_data.values()
+                .filter(|data| !data.display_options.override_summary_monitor_id.is_empty())
+                .map(|data| &data.display_options.override_summary_monitor_id)
+                .collect::<Vec<&String>>();
+
+            let summary_compatible = host.monitoring_data.values()
+                .filter(|data| !data.display_options.ignore_from_summary && !overridden_monitors.contains(&&data.monitor_id))
+                .collect();
+
             let sorted_keys = self.get_monitor_data_keys_sorted(summary_compatible);
 
             for key in sorted_keys {
                 let monitoring_data = host.monitoring_data.get(&key).unwrap();
-                result.push(serde_json::to_string(&monitoring_data).unwrap().to_qvariant())
+
+                result.push(serde_json::to_string(&monitoring_data).unwrap().into());
             }
         }
         result

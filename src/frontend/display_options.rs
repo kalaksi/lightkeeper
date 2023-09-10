@@ -23,6 +23,8 @@ pub struct DisplayOptions {
     /// For monitors that produce a group of values.
     pub use_multivalue: bool,
     pub ignore_from_summary: bool,
+    /// Mainly for extension modules. If set, will hide defined monitor id from summary.
+    pub override_summary_monitor_id: String,
 
     /// Display confirmation dialog with this text.
     pub confirmation_text: String,

@@ -44,6 +44,7 @@ impl MonitoringModule for ImageUpdates {
             display_style: frontend::DisplayStyle::CriticalityLevel,
             display_text: String::from("Docker image updates"),
             category: String::from("docker-images"),
+            override_summary_monitor_id: String::from("docker-images"),
             use_multivalue: true,
             ..Default::default()
         }
