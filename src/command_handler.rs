@@ -281,7 +281,10 @@ impl CommandHandler {
             shell_command.arguments(connector_messages);
 
             log::debug!("Starting local process: {}", shell_command.to_string());
-            shell_command.execute();
+            shell_command.execute().map_err(|error| {
+                log::error!("Couldn't start editor: {}", error);
+                return;
+            }).unwrap();
 
             self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
                 host_name: host.name,

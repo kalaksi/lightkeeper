@@ -36,19 +36,19 @@ impl ShellCommand {
         self
     }
 
-    pub fn execute(&self) {
+    pub fn execute(&self) -> std::io::Result<process::Output> {
         if self.arguments.is_empty() {
-            return;
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "No command specified"));
         }
 
         let command = self.arguments.get(0).unwrap();
         let arguments = self.arguments.iter().skip(1).collect::<Vec<&String>>();
 
         if arguments.is_empty() {
-            process::Command::new(command).output().expect("Running command failed");
+            process::Command::new(command).output()
         }
         else {
-            process::Command::new(command).args(arguments).output().expect("Running command failed");
+            process::Command::new(command).args(arguments).output()
         }
     }
 
