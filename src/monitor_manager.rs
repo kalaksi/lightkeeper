@@ -8,7 +8,7 @@ use crate::{Host, connection_manager};
 use crate::configuration::{CacheSettings, Hosts};
 use crate::enums::Criticality;
 use crate::module::connection::ResponseMessage;
-use crate::module::monitoring::*;
+use crate::module::{monitoring::*, ModuleSpecification};
 use crate::module::ModuleFactory;
 use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, RequestType, CachePolicy };
@@ -52,10 +52,18 @@ impl MonitorManager {
     pub fn configure(&mut self, hosts_config: &Hosts, connection_manager: &mut connection_manager::ConnectionManager) {
         for (host_id, host_config) in hosts_config.hosts.iter() {
 
+            let mut new_monitors = Vec::<Monitor>::new();
             for (monitor_id, monitor_config) in host_config.monitors.iter() {
-                let monitor_spec = crate::module::ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
+                let monitor_spec = ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
                 let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
+                new_monitors.push(monitor);
+            }
 
+            let base_modules = new_monitors.iter().filter(|monitor| monitor.get_metadata_self().parent_module.is_some())
+                                                  .map(|monitor| monitor.get_metadata_self().parent_module.unwrap())
+                                                  .collect::<Vec<_>>();
+
+            for monitor in new_monitors {
                 // Initialize a connector if the monitor uses any.
                 if let Some(connector_spec) = monitor.get_connector_spec() {
                     let connector_settings = match host_config.connectors.get(&connector_spec.id) {
@@ -67,31 +75,36 @@ impl MonitorManager {
                     connection_manager.add_connector(host_id.clone(), connector);
                 }
 
-                self.add_monitor(host_id.clone(), monitor);
+                // Base modules won't get the initial NoData data point sent.
+                let is_base = base_modules.contains(&monitor.get_module_spec());
+                self.add_monitor(host_id.clone(), monitor, !is_base);
             }
         }
     }
         
 
     // Adds a monitor but only if a monitor with the same ID doesn't exist.
-    fn add_monitor(&mut self, host_id: String, monitor: Monitor) {
+    fn add_monitor(&mut self, host_id: String, monitor: Monitor, send_initial_value: bool) {
         let monitor_collection = self.monitors.entry(host_id.clone()).or_insert(HashMap::new());
         let module_spec = monitor.get_module_spec();
 
         // Only add if missing.
         if !monitor_collection.contains_key(&module_spec.id) {
-            // Add initial state value indicating no data as been received yet.
-            self.state_update_sender.send(StateUpdateMessage {
-                host_name: host_id,
-                display_options: monitor.get_display_options(),
-                module_spec: monitor.get_module_spec(),
-                data_point: Some(DataPoint::no_data()),
-                command_result: None,
-                errors: Vec::new(),
-                exit_thread: false,
-            }).unwrap_or_else(|error| {
-                log::error!("Couldn't send message to state manager: {}", error);
-            });
+
+            if send_initial_value {
+                // Add initial state value indicating no data as been received yet.
+                self.state_update_sender.send(StateUpdateMessage {
+                    host_name: host_id,
+                    display_options: monitor.get_display_options(),
+                    module_spec: monitor.get_module_spec(),
+                    data_point: Some(DataPoint::no_data()),
+                    command_result: None,
+                    errors: Vec::new(),
+                    exit_thread: false,
+                }).unwrap_or_else(|error| {
+                    log::error!("Couldn't send message to state manager: {}", error);
+                });
+            }
 
             // Independent monitors are always executed first.
             // They don't depend on platform info or connectors.

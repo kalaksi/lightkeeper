@@ -354,13 +354,23 @@ impl HostState {
             data.is_critical && data.values.back().unwrap().criticality == Criticality::Critical
         });
 
+        let pending_monitor = &self.monitor_data.iter().find(|(_, data)| {
+            data.values.back().unwrap().criticality == Criticality::NoData
+        });
+
         if let Some((name, _)) = critical_monitor {
             log::debug!("Host is now down since monitor \"{}\" is at critical level", name);
         }
 
-        self.status = match critical_monitor {
-            Some(_) => HostStatus::Down,
-            None => HostStatus::Up,
+        self.status = if critical_monitor.is_some() {
+            HostStatus::Down
+        }
+        else if pending_monitor.is_some() {
+            HostStatus::Pending
+        }
+        else {
+            HostStatus::Up
         };
+
     }
 }

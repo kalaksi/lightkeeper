@@ -115,6 +115,9 @@ ApplicationWindow {
             if (hostId === detailsView.hostId) {
                 detailsView.refresh()
             }
+
+            // TODO: this might be a bit heavy-handed, not sure.
+            _hostTableModel.display_data = HostDataManager.get_display_data()
         }
 
         function onHost_initialized(hostId) {
@@ -350,7 +353,6 @@ ApplicationWindow {
             Qt.quit()
         }
     }
-
 
     TextDialog {
         id: textDialog
