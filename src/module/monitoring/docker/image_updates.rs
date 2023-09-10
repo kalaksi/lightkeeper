@@ -42,7 +42,7 @@ impl MonitoringModule for ImageUpdates {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::CriticalityLevel,
-            display_text: String::from("Docker images"),
+            display_text: String::from("Docker image updates"),
             category: String::from("docker-images"),
             use_multivalue: true,
             ..Default::default()
@@ -136,7 +136,8 @@ impl MonitoringModule for ImageUpdates {
                     let last_pulled = Utc::now() - chrono::Duration::days(local_image_age);
 
                     if last_pushed > last_pulled {
-                        new_point.criticality = Criticality::Warning;
+                        // Retain old criticality if it was higher.
+                        new_point.criticality = new_point.criticality.max(Criticality::Warning);
                         new_point.value = String::from("Outdated");
                     } else {
                         new_point.criticality = Criticality::Normal;
