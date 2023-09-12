@@ -116,7 +116,6 @@ ApplicationWindow {
                 detailsView.refresh()
             }
 
-            // TODO: this might be a bit heavy-handed, not sure.
             _hostTableModel.display_data = HostDataManager.get_display_data()
         }
 

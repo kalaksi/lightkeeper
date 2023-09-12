@@ -4,7 +4,7 @@ More important features first.
 - more keyboard shortcuts and GUI hints
 - Hot-reloading QML?
 - cache for monitor's command results to minimize amount of commands actually run (crude implementation done)
-- automatic module testing and documentation.
+- automatic module testing (QML too)
 - new module property `privileged` for modules that require sudo/root
 - Check and display vuln status of system (or docker) packages using mitre, DSA and etc.
 - Utilize system icons and themes? Can still offer and default to baked in style when necessary.
