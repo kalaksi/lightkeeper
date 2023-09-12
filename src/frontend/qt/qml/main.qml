@@ -231,6 +231,7 @@ ApplicationWindow {
 
 
     Component.onCompleted: {
+        DesktopPortal.open_file_chooser()
         _detailsDialogs = {}
 
         // Starts the thread that receives host state updates in the backend.

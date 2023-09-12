@@ -4,12 +4,7 @@ extern crate qmetaobject;
 use qmetaobject::*;
 use super::{
     resources,
-    models::HostDataManagerModel,
-    models::CommandHandlerModel,
-    models::PropertyTableModel,
-    models::HostTableModel,
-    models::ThemeModel,
-    models::ConfigManagerModel,
+    models::*,
 };
 use crate::{
     frontend,
@@ -80,12 +75,14 @@ impl QmlFrontend {
         let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
         let qt_data_command_handler = QObjectBox::new(self.command_handler.take().unwrap());
         let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
+        let qt_data_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
 
         let mut engine = QmlEngine::new();
         engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
         engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
         engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
         engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
+        engine.set_object_property(QString::from("DesktopPortal"), qt_data_desktop_portal.pinned());
         engine.load_file(QString::from(main_qml_path));
         engine.exec();
 
