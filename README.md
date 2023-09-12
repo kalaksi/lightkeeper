@@ -23,15 +23,17 @@ In case you find the GUI insufficient and need to dig deeper, you can always use
 
 # Installing
 ## Flatpak
-It is recommended to download the app from Flathub. The alternative is building from source.
+It is recommended to download the app from Flathub: https://flathub.org/apps/io.github.kalaksi.Lightkeeper  
+It's sandboxed and uses the minimum amount of permissions required.
+
+The alternative is building from source.
 
 # Building from source
 ## Flatpak
 ```
-cd flatpak
-flatpak-builder build --user --force-clean io.github.kalaksi.Lightkeeper.yml
+flatpak-builder build --user --force-clean flatpak/io.github.kalaksi.Lightkeeper-local.yml
 # If you want to install also:
-flatpak-builder --user --install --force-clean build io.github.kalaksi.Lightkeeper.yml
+flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.Lightkeeper-local.yml
 ```
 
 ## Regular
