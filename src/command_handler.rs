@@ -93,9 +93,7 @@ impl CommandHandler {
         let module_spec = command.get_module_spec();
 
         // Only add if missing.
-        if !command_collection.contains_key(&module_spec.id) {
-            command_collection.insert(module_spec.id, command);
-        }
+        command_collection.entry(module_spec.id).or_insert(command);
     }
 
     /// Returns invocation ID or 0 on error.
@@ -111,7 +109,7 @@ impl CommandHandler {
                                    .get(&command_id).unwrap();
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
 
-        let messages = match get_command_connector_messages(&host, &command, &parameters) {
+        let messages = match get_command_connector_messages(&host, command, &parameters) {
             Ok(messages) => messages,
             Err(error) => {
                 log::error!("Command \"{}\" failed: {}", command_id, error);
@@ -144,7 +142,7 @@ impl CommandHandler {
             log::error!("Couldn't send message to connector: {}", error);
         });
 
-        return self.invocation_id_counter
+        self.invocation_id_counter
     }
 
     // Return value contains host's commands. `parameters` is not set since provided by data point later on.
@@ -160,8 +158,8 @@ impl CommandHandler {
     }
 
     pub fn get_command_for_host(&self, host_id: &String, command_id: &String) -> CommandData {
-        let command_collection = self.commands.get(host_id).expect(&format!("Host '{}' not found", host_id));
-        let command = command_collection.get(command_id).expect(&format!("Command '{}' not found for host {}", command_id, host_id));
+        let command_collection = self.commands.get(host_id).unwrap_or_else(|| panic!("Host {} not found", host_id));
+        let command = command_collection.get(command_id).unwrap_or_else(|| panic!("Command {} not found", command_id));
         CommandData::new(command_id.clone(), command.get_display_options())
     }
 
@@ -173,7 +171,7 @@ impl CommandHandler {
             let command_id = command.get_module_spec().id.clone();
 
             let mut result;
-            if responses.len() > 0 {
+            if !responses.is_empty() {
                 result = command.process_responses(host.clone(), responses.clone());
                 if let Err(error) = result {
                     if error.is_empty() {
@@ -239,7 +237,7 @@ impl CommandHandler {
         let command = self.commands.get(&host_id).unwrap()
                                    .get(&command_id).unwrap();
 
-        let connector_messages = get_command_connector_messages(&host, &command, &parameters).map_err(|error| {
+        let connector_messages = get_command_connector_messages(&host, command, &parameters).map_err(|error| {
             log::error!("Command \"{}\" failed: {}", command_id, error);
             return;
         }).unwrap();
@@ -262,7 +260,7 @@ impl CommandHandler {
         let command = self.commands.get(&host_id).unwrap()
                                    .get(&command_id).unwrap();
 
-        let connector_messages = get_command_connector_messages(&host, &command, &vec![remote_file_path.clone()]).map_err(|error| {
+        let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
             log::error!("Command \"{}\" failed: {}", command_id, error);
             return;
         }).unwrap();
@@ -397,10 +395,10 @@ impl CommandHandler {
     }
 }
 
-fn get_command_connector_messages(host: &Host, command: &Command, parameters: &Vec<String>) -> Result<Vec<String>, String> {
+fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[String]) -> Result<Vec<String>, String> {
     let mut all_messages: Vec<String> = Vec::new();
 
-    match command.get_connector_messages(host.clone(), parameters.clone()) {
+    match command.get_connector_messages(host.clone(), parameters.to_owned()) {
         Ok(messages) => all_messages.extend(messages),
         Err(error) => {
             if !error.is_empty() {
@@ -409,7 +407,7 @@ fn get_command_connector_messages(host: &Host, command: &Command, parameters: &V
         }
     }
 
-    match command.get_connector_message(host.clone(), parameters.clone()) {
+    match command.get_connector_message(host.clone(), parameters.to_owned()) {
         Ok(message) => all_messages.push(message),
         Err(error) => {
             if !error.is_empty() {

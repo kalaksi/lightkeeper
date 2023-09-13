@@ -234,7 +234,7 @@ impl ConfigManagerModel {
             self.hosts_config.hosts.insert(new_host_name.clone(), host_config);
         }
 
-        let mut host_config = self.hosts_config.hosts.get_mut(&new_host_name).unwrap();
+        let host_config = self.hosts_config.hosts.get_mut(&new_host_name).unwrap();
         host_config.address = host_settings.address;
         host_config.fqdn = host_settings.fqdn;
     }

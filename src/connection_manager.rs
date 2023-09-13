@@ -61,7 +61,7 @@ impl ConnectionManager {
     }
 
     pub fn new_request_sender(&mut self) -> mpsc::Sender<ConnectorRequest> {
-        return self.request_sender_prototype.clone()
+        self.request_sender_prototype.clone()
     }
 
     pub fn start(&mut self, module_factory: Arc<ModuleFactory>) {
@@ -137,7 +137,7 @@ impl ConnectionManager {
 
                                 log::debug!("Worker {} processing a stateless request", rayon::current_thread_index().unwrap());
                                 let connector = Arc::new(Mutex::new(module_factory.new_connector(&connector_spec, &HashMap::new())));
-                                Self::process_request(mutex_request.clone(), &request_message, connector.clone(), command_cache.clone())
+                                Self::process_request(mutex_request.clone(), request_message, connector.clone(), command_cache.clone())
                             }).collect();
 
                             let request = Arc::try_unwrap(mutex_request).unwrap().into_inner().unwrap();
@@ -256,9 +256,9 @@ impl ConnectionManager {
             },
             RequestType::Download => {
                 log::debug!("[{}] Downloading file: {}", request.host.name, request_message);
-                match connector.download_file(&request_message) {
+                match connector.download_file(request_message) {
                     Ok((metadata, contents)) => {
-                        match file_handler::create_file(&request.host, &request_message, metadata, contents) {
+                        match file_handler::create_file(&request.host, request_message, metadata, contents) {
                             Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
                             Err(error) => Err(error.to_string()),
                         }
@@ -268,7 +268,7 @@ impl ConnectionManager {
             },
             RequestType::Upload => {
                 log::debug!("[{}] Uploading file: {}", request.host.name, request_message);
-                match file_handler::read_file(&request_message) {
+                match file_handler::read_file(request_message) {
                     Ok((metadata, contents)) => {
                         let local_file_hash = sha256::digest(contents.as_slice());
 
@@ -288,7 +288,7 @@ impl ConnectionManager {
 
                         if metadata.temporary {
                             log::debug!("Removing temporary local file {}", request_message);
-                            if let Err(error) = file_handler::remove_file(&request_message) {
+                            if let Err(error) = file_handler::remove_file(request_message) {
                                 log::error!("Error while removing: {}", error);
                             }
                         }

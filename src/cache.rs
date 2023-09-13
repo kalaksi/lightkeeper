@@ -74,7 +74,7 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
         let file_path = cache_dir.join(CACHE_FILE_NAME);
         let serialized = serde_yaml::to_string(&self.data).unwrap();
         fs::write(file_path, serialized).map_err(|error| format!("Error while writing cache to disk: {}", error))?;
-        Ok(self.data.len() as usize)
+        Ok(self.data.len())
     }
 
     /// Read the cache from disk.
@@ -92,7 +92,7 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
             let _ = self.get(&key);
         }
 
-        Ok(self.data.len() as usize)
+        Ok(self.data.len())
     }
 }
 

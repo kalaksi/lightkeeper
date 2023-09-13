@@ -26,7 +26,10 @@ pub fn get_config_dir() -> io::Result<PathBuf> {
         config_dir = PathBuf::from(path).join(".config");
     }
     else {
-        return Err(io::Error::new(io::ErrorKind::Other, "Cannot find configuration directory. $XDG_CONFIG_HOME or $HOME is not set."));
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Cannot find configuration directory. $XDG_CONFIG_HOME or $HOME is not set."
+        ));
     }
 
     // If running inside flatpak, there's no need to add a separate subdir for the app.
@@ -47,7 +50,10 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
         cache_dir = PathBuf::from(home_path).join(".cache");
     }
     else {
-        return Err(io::Error::new(io::ErrorKind::Other, "Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set."));
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set."
+        ));
     }
 
     // If not running inside flatpak, we need to add a separate subdir for the app.
@@ -60,7 +66,7 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
 
 /// Create a local file. Local path is based on remote host name and remote file path.
 /// Will overwrite any existing files.
-pub fn create_file(host: &Host, remote_file_path: &String, metadata: FileMetadata, file_contents: Vec<u8>) -> io::Result<String> {
+pub fn create_file(host: &Host, remote_file_path: &String, metadata: FileMetadata, contents: Vec<u8>) -> io::Result<String> {
     let (dir_path, file_path) = convert_to_local_paths(host, remote_file_path);
 
     if !Path::new(&dir_path).is_dir() {
@@ -70,7 +76,7 @@ pub fn create_file(host: &Host, remote_file_path: &String, metadata: FileMetadat
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
     let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_file_path)?;
 
-    fs::write(&file_path, file_contents)?;
+    fs::write(&file_path, contents)?;
     serde_yaml::to_writer(metadata_file, &metadata)
                .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
@@ -87,7 +93,7 @@ pub fn remove_file(local_file_path: &String) -> io::Result<()> {
 
 pub fn read_file(local_file_path: &String) -> io::Result<(FileMetadata, Vec<u8>)> {
     // TODO: path validation and limits just in case?
-    let contents = fs::read(&local_file_path)?;
+    let contents = fs::read(local_file_path)?;
 
     let metadata_path = get_metadata_path(local_file_path);
     let metadata_string = fs::read_to_string(metadata_path)?;
