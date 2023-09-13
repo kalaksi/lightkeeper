@@ -8,6 +8,7 @@ More important features first.
 - new module property `privileged` for modules that require sudo/root
 - Check and display vuln status of system (or docker) packages using mitre, DSA and etc.
 - Utilize system icons and themes? Can still offer and default to baked in style when necessary.
+- Maybe this would be suitable for managing localhost (desktop) too?
 - easily add self-made scripts (shell scripts etc.) as commands?
 - modules as shared objects instead of compiled in? or loadable scripts?
 - Support SaaS-platforms? (probably outside of scope)

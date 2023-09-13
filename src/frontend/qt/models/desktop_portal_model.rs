@@ -5,63 +5,161 @@ use dbus;
 use dbus::arg;
 use dbus::arg::RefArg;
 
+use rand;
+
 use std::collections::HashMap;
+use std::sync::mpsc;
+use std::thread;
 
 
-/// The need for this model came from poor support for portals, like file chooser, (related to sandboxing) in Qt.
-/// However, things seem to be improving so this might be unneeded in the future.
+/// The need for this model came from poor support for portals (related to sandboxing), like file chooser, in Qt.
+/// However, things seem to be improving in Qt so this might be unneeded in the future.
 #[derive(QObject, Default)]
 pub struct DesktopPortalModel {
     base: qt_base_class!(trait QObject),
 
-    open_file_chooser: qt_method!(fn(&self)),
+    receive_responses: qt_method!(fn(&self)),
+    open_file_chooser: qt_method!(fn(&self) -> u32),
+
+    file_chosen: qt_signal!(file_path: QString),
+
+    receiver: Option<mpsc::Receiver<PortalRequest>>,
+    sender: Option<mpsc::Sender<PortalRequest>>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl DesktopPortalModel {
     pub fn new() -> DesktopPortalModel {
+        let (sender, receiver) = mpsc::channel::<PortalRequest>();
+
         DesktopPortalModel {
+            receiver: Some(receiver),
+            sender: Some(sender),
+            thread: None,
             ..Default::default()
         }
     }
 
-    /// Calls org.freedestop.portal.FileChooser.OpenFile to open a file chooser dialog.
-    pub fn open_file_chooser(&self) {
-        // For arguments, see: https://github.com/diwic/dbus-rs/blob/master/dbus/examples/argument_guide.md
-        // Ashpd sources (https://github.com/bilelmoussaoui/ashpd/) can also help.
-        // Ashpd wasn't used to keep dependencies to minimum (would have added 80 crates (totalling 270)) since few dbus calls are needed.
+    pub fn receive_responses(&mut self) {
+        if self.thread.is_none() {
+            // (Unfortunately) all dbus stuff should be run in one thread.
+            // See the docs and https://github.com/diwic/dbus-rs/issues/375
 
-        let timeout = std::time::Duration::from_millis(5000);
-        let connection = dbus::blocking::Connection::new_session().unwrap();
+            let self_ptr = QPointer::from(&*self);
+            let handle_response = qmetaobject::queued_callback(move |file_chooser_response: FileChooserResponse| {
+                self_ptr.as_pinned().map(|self_pinned| {
+                    ::log::debug!("Selected files: {:?}", file_chooser_response.file_uris);
+                    let just_path = file_chooser_response.file_uris[0].clone().replace("file://", "");
+                    self_pinned.borrow().file_chosen(QString::from(just_path));
+                });
+            });
 
-        // Sender ID is formed according to https://docs.flatpak.org/en/latest/portal-api-reference.html#gdbus-org.freedesktop.portal.Request
-        let sender_id = connection.unique_name().trim_start_matches(':').replace('.', "_");
-        let request_path = dbus::Path::new(format!("/org/freedesktop/portal/desktop/request/{}/t", sender_id)).unwrap();
+            let dbus_connection = dbus::blocking::Connection::new_session().unwrap();
+            // Sender ID is formed according to https://docs.flatpak.org/en/latest/portal-api-reference.html#gdbus-org.freedesktop.portal.Request
+            let sender_id = dbus_connection.unique_name().trim_start_matches(':').replace('.', "_");
+            let receiver = self.receiver.take().unwrap();
+            let timeout = std::time::Duration::from_millis(5000);
+            let recv_wait = std::time::Duration::from_millis(1000);
 
-        // Wait for Response signal.
-        let response_proxy = connection.with_proxy("org.freedesktop.portal.Request", &request_path, timeout);
-        response_proxy.match_signal(|response: FileChooserResponse, _: &dbus::blocking::Connection, _: &dbus::Message| {
-            ::log::debug!("Selected files: {:?}", response.file_uris);
-            true
-        }).unwrap();
+            let thread = thread::spawn(move || {
+                loop {
+                    let request = match receiver.recv_timeout(recv_wait) {
+                        Ok(request) => request,
+                        Err(mpsc::RecvTimeoutError::Timeout) => {
+                            dbus_connection.process(recv_wait).unwrap();
+                            continue;
+                        },
+                        Err(mpsc::RecvTimeoutError::Disconnected) => {
+                            ::log::debug!("Portal response receiver thread disconnected");
+                            return;
+                        }
+                    };
 
-        // Send the request.
-        let request_proxy = connection.with_proxy("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop", timeout);
-        let (returned_request_path,): (dbus::Path,) = request_proxy.method_call(
-            "org.freedesktop.portal.FileChooser",
-            "OpenFile",
-            // TODO: parent window ID. Currently left empty.
-            ("", "Select file", HashMap::<&str, arg::Variant<Box<dyn arg::RefArg + 'static>>>::new())
-        ).unwrap();
+                    if request.exit {
+                        ::log::debug!("Gracefully exiting portal response receiver thread");
+                        return;
+                    }
 
-        if returned_request_path != request_path {
-            panic!("Returned DBus object path is wrong");
+                    // For arguments, see: https://github.com/diwic/dbus-rs/blob/master/dbus/examples/argument_guide.md
+                    // Ashpd sources (https://github.com/bilelmoussaoui/ashpd/) can also help.
+                    // Ashpd wasn't used to keep dependencies to minimum (would have added 80 crates (totalling 270))
+                    // since few dbus calls are needed.
+                    match request.request_type {
+                        PortalRequestType::FileChooser => {
+                            // TODO: use token? (requires parameters to dbus call).
+                            let request_path = format!("/org/freedesktop/portal/desktop/request/{}/t", sender_id);
+
+                            let response_proxy = dbus_connection.with_proxy("org.freedesktop.portal.Request", &request_path, timeout);
+                            let c_handle_response = handle_response.clone();
+                            response_proxy.match_signal(move |response: FileChooserResponse, _: &dbus::blocking::Connection, _: &dbus::Message| {
+                                c_handle_response(response);
+                                false
+                            }).unwrap();
+
+                            // Send the request.
+                            let request_proxy = dbus_connection.with_proxy("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop", timeout);
+                            let (_request_path,): (dbus::Path,) = request_proxy.method_call(
+                                "org.freedesktop.portal.FileChooser",
+                                "OpenFile",
+                                // TODO: parent window ID. Currently left empty.
+                                ("", "Select file", HashMap::<&str, arg::Variant<Box<dyn arg::RefArg + 'static>>>::new())
+                            ).unwrap();
+
+                        },
+                        _ => {
+                            ::log::warn!("Unknown portal request type");
+                        }
+                    }
+
+                    dbus_connection.process(recv_wait).unwrap();
+                }
+            });
+
+            self.thread = Some(thread);
         }
+    }
 
-        loop {
-            connection.process(std::time::Duration::from_millis(1000)).unwrap();
+    /// Calls org.freedestop.portal.FileChooser.OpenFile to open a file chooser dialog.
+    pub fn open_file_chooser(&self) -> u32 {
+        let token: u32 = rand::random();
+        self.sender.as_ref().unwrap().send(PortalRequest::file_chooser(token)).unwrap();
+        token
+    }
+}
+
+
+#[derive(Default)]
+pub struct PortalRequest {
+    request_type: PortalRequestType,
+    token: u32,
+    exit: bool,
+}
+
+impl PortalRequest {
+    pub fn file_chooser(token: u32) -> PortalRequest {
+        PortalRequest {
+            request_type: PortalRequestType::FileChooser,
+            token: token,
+            ..Default::default()
+        }
+    }
+
+    pub fn exit() -> PortalRequest {
+        PortalRequest {
+            exit: true,
+            ..Default::default()
         }
     }
 }
+
+#[derive(Default)]
+enum PortalRequestType {
+    #[default]
+    Unknown,
+    FileChooser,
+}
+
+
 
 #[derive(Debug)]
 pub struct FileChooserResponse {
