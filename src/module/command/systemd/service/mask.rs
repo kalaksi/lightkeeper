@@ -59,7 +59,7 @@ impl CommandModule for Mask {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        if response.message.len() > 0 {
+        if !response.message.is_empty() {
             Ok(CommandResult::new_error(response.message.clone()))
         }
         else {

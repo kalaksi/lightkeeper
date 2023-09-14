@@ -43,7 +43,7 @@ impl HostTableModel {
         self.headers = self.i_display_data.table_headers.iter().map(|header| QString::from(header.clone())).collect::<Vec<QString>>();
 
         let mut host_ids_ordered = self.i_display_data.hosts.keys().collect::<Vec<&String>>();
-        host_ids_ordered.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+        host_ids_ordered.sort_by_key(|key| key.to_lowercase());
         // Ignore disabled hosts.
         host_ids_ordered.retain(|host_id| !self.disabled_hosts.contains(*host_id));
 
@@ -52,7 +52,7 @@ impl HostTableModel {
         for host_id in host_ids_ordered {
             let host_data = self.i_display_data.hosts.get(host_id).unwrap();
             self.host_row_map.insert(host_id.clone(), self.row_data.len());
-            self.row_data.push(HostDataModel::from(&host_data));
+            self.row_data.push(HostDataModel::from(host_data));
         }
 
         self.end_reset_model();
@@ -63,7 +63,7 @@ impl HostTableModel {
         let host_index = self.host_row_map.get(&host_id.to_string()).unwrap();
 
         let top_left = self.index(*host_index as i32, 0);
-        let bottom_right = self.index(*host_index as i32, self.column_count() as i32 - 1);
+        let bottom_right = self.index(*host_index as i32, self.column_count() - 1);
 
         // The standard Qt signal.
         self.data_changed(top_left, bottom_right);

@@ -42,23 +42,20 @@ pub struct Ssh2 {
 }
 
 impl Ssh2 {
+    // TODO: use this?
     fn send_eof_and_close(&self, mut channel: ssh2::Channel) {
         if let Err(error) = channel.send_eof() {
             log::error!("Sending EOF failed: {}", error);
         }
-        else {
-            if let Err(error) = channel.wait_eof() {
-                log::error!("Waiting EOF failed: {}", error);
-            }
+        else if let Err(error) = channel.wait_eof() {
+            log::error!("Waiting EOF failed: {}", error);
         }
 
         if let Err(error) = channel.close() {
             log::error!("Error while closing channel: {}", error);
         }
-        else {
-            if let Err(error) = channel.wait_close() {
-                log::error!("Error while closing channel: {}", error);
-            }
+        else if let Err(error) = channel.wait_close() {
+            log::error!("Error while closing channel: {}", error);
         }
     }
 }

@@ -5,9 +5,7 @@ use std::{
     io,
     env,
 };
-use sha256;
 use serde_derive::{ Serialize, Deserialize };
-use serde_yaml;
 use chrono::{DateTime, Utc};
 use crate::Host;
 use crate::file_handler;

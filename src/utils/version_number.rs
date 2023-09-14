@@ -14,13 +14,13 @@ pub struct VersionNumber {
 
 impl VersionNumber {
     // Never panics or returns error. Zeroes will be used as defaults when parsing fails.
-    pub fn from_string(version_string: &String) -> Self {
+    pub fn from_string(version_string: &str) -> Self {
         let mut parts = version_string.split('.').collect::<Vec<&str>>();
 
         // Drop everything after dashes.
         parts = parts.iter().map(|part| part.split('-').next().unwrap_or(&"0")).collect();
 
-        let major = parts.get(0).unwrap_or(&"0")
+        let major = parts.first().unwrap_or(&"0")
                          .parse::<u16>().unwrap_or_default();
 
         let minor = match parts.get(1) {

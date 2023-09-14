@@ -83,8 +83,9 @@ impl DisplayOptions {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Display, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize, Display, PartialEq)]
 pub enum DisplayStyle {
+    #[default]
     Text,
     StatusUpDown,
     CriticalityLevel,
@@ -92,24 +93,13 @@ pub enum DisplayStyle {
     ProgressBar,
 }
 
-impl Default for DisplayStyle {
-    fn default() -> Self {
-        DisplayStyle::Text
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Display, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize, Display, PartialEq)]
 pub enum UserInputFieldType {
+    #[default]
     Text,
     Integer,
     DecimalNumber,
     Option,
-}
-
-impl Default for UserInputFieldType {
-    fn default() -> Self {
-        UserInputFieldType::Text
-    }
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]

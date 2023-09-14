@@ -7,7 +7,6 @@ use std::{
     thread,
 };
 
-use rayon;
 use rayon::prelude::*;
 
 use crate::Host;
@@ -54,9 +53,7 @@ impl ConnectionManager {
         if let Some(host_connectors) = connectors.get_mut(&host_id) {
             let module_spec = connector.get_module_spec();
 
-            if !host_connectors.contains_key(&module_spec) {
-                host_connectors.insert(module_spec, Arc::new(Mutex::new(connector)));
-            }
+            host_connectors.entry(module_spec).or_insert_with(|| Arc::new(Mutex::new(connector)));
         }
     }
 
@@ -169,7 +166,7 @@ impl ConnectionManager {
                                 }
 
                                 log::debug!("Worker {} processing a stateful request", rayon::current_thread_index().unwrap());
-                                Self::process_request(request_mutex.clone(), &request_message, connector_mutex.clone(), command_cache.clone())
+                                Self::process_request(request_mutex.clone(), request_message, connector_mutex.clone(), command_cache.clone())
                             }).collect();
 
                             let request = Arc::try_unwrap(request_mutex).unwrap().into_inner().unwrap();
@@ -234,7 +231,7 @@ impl ConnectionManager {
                         return Ok(ResponseMessage::not_found());
                     }
 
-                    let response_result = connector.send_message(&request_message);
+                    let response_result = connector.send_message(request_message);
 
                     if response_result.is_ok() {
                         let response = response_result.as_ref().unwrap().clone();
@@ -293,11 +290,11 @@ impl ConnectionManager {
                             }
                         }
 
-                        if result.is_ok() {
-                            Ok(ResponseMessage::new(response_message, 0))
+                        if let Err(error) = result {
+                            Err(error.to_string())
                         }
                         else {
-                            Err(result.unwrap_err().to_string())
+                            Ok(ResponseMessage::new(response_message, 0))
                         }
                     },
                     Err(error) => Err(error.to_string()),

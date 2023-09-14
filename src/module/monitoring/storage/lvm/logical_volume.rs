@@ -122,9 +122,7 @@ impl MonitoringModule for LogicalVolume {
                     data_point.criticality = Criticality::Warning;
                 }
             }
-            else
-
-            if !sync_percent.is_empty() && sync_percent != "100.00" {
+            else if !sync_percent.is_empty() && sync_percent != "100.00" {
                 data_point.value = format!("{}% sync", sync_percent);
                 if data_point.criticality < Criticality::Warning {
                     data_point.criticality = Criticality::Warning;

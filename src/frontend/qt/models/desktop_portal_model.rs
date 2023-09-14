@@ -47,11 +47,11 @@ impl DesktopPortalModel {
 
             let self_ptr = QPointer::from(&*self);
             let handle_response = qmetaobject::queued_callback(move |file_chooser_response: FileChooserResponse| {
-                self_ptr.as_pinned().map(|self_pinned| {
+                if let Some(self_pinned) = self_ptr.as_pinned() {
                     ::log::debug!("Selected files: {:?}", file_chooser_response.file_uris);
                     let just_path = file_chooser_response.file_uris[0].clone().replace("file://", "");
                     self_pinned.borrow().file_chosen(QString::from(just_path));
-                });
+                }
             });
 
             let dbus_connection = dbus::blocking::Connection::new_session().unwrap();
@@ -86,10 +86,13 @@ impl DesktopPortalModel {
                     // since few dbus calls are needed.
                     match request.request_type {
                         PortalRequestType::FileChooser => {
-                            // TODO: use token? (requires parameters to dbus call).
-                            let request_path = format!("/org/freedesktop/portal/desktop/request/{}/t", sender_id);
+                            let response_proxy = dbus_connection.with_proxy(
+                                "org.freedesktop.portal.Request",
+                                // TODO: use token? (requires parameters to dbus call).
+                                format!("/org/freedesktop/portal/desktop/request/{}/t", sender_id),
+                                timeout
+                            );
 
-                            let response_proxy = dbus_connection.with_proxy("org.freedesktop.portal.Request", &request_path, timeout);
                             let c_handle_response = handle_response.clone();
                             response_proxy.match_signal(move |response: FileChooserResponse, _: &dbus::blocking::Connection, _: &dbus::Message| {
                                 c_handle_response(response);
@@ -97,7 +100,11 @@ impl DesktopPortalModel {
                             }).unwrap();
 
                             // Send the request.
-                            let request_proxy = dbus_connection.with_proxy("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop", timeout);
+                            let request_proxy = dbus_connection.with_proxy(
+                                "org.freedesktop.portal.Desktop",
+                                "/org/freedesktop/portal/desktop",
+                                timeout
+                            );
                             let (_request_path,): (dbus::Path,) = request_proxy.method_call(
                                 "org.freedesktop.portal.FileChooser",
                                 "OpenFile",

@@ -87,7 +87,7 @@ impl HostDataManagerModel {
             let self_ptr = QPointer::from(&*self);
 
             let set_data = qmetaobject::queued_callback(move |new_display_data: frontend::HostDisplayData| {
-                self_ptr.as_pinned().map(|self_pinned| {
+                if let Some(self_pinned) = self_ptr.as_pinned() {
                     // HostDataModel cannot be passed between threads so parsing happens here.
 
                     // Update host data. There should always be old data.
@@ -149,7 +149,7 @@ impl HostDataManagerModel {
                     }
 
                     self_pinned.borrow().update_received(QString::from(old_data.name));
-                });
+                }
             });
 
             // This is the first launch so display an error about needing to edit the configuration files.
@@ -225,7 +225,7 @@ impl HostDataManagerModel {
     fn is_host_initialized(&self, host_id: QString) -> bool {
         if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
             if self.configuration_cache_settings.prefer_cache {
-                return host.platform.is_set()
+                host.platform.is_set()
             }
             else {
                 host.is_initialized
@@ -248,7 +248,7 @@ impl HostDataManagerModel {
             }
         }
 
-        return 100;
+        100
     }
 
     fn get_category_pending_monitor_progress(&self, host_id: QString, category: QString) -> i8 {
@@ -263,7 +263,7 @@ impl HostDataManagerModel {
             }
         }
 
-        return 100;
+        100
     }
 
     fn add_pending_monitor_invocations(&mut self, host_id: QString, category: QString, invocation_ids: QVariantList) {

@@ -190,7 +190,7 @@ impl CommandHandler {
             let new_command_result = match result {
                 Ok(mut command_result) => {
                     let log_message = if command_result.message.len() > 5000 {
-                        format!("{}...(long message cut)...", command_result.message[..5000].to_string())
+                        format!("{}...(long message cut)...", &command_result.message[..5000])
                     }
                     else {
                         command_result.message.clone()

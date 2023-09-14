@@ -1,3 +1,6 @@
+#![allow(clippy::redundant_field_names)]
+#![allow(clippy::needless_return)]
+
 mod module;
 mod host_manager;
 mod monitor_manager;

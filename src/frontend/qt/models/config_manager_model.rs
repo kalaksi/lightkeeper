@@ -123,7 +123,7 @@ impl ConfigManagerModel {
         let mut hosts_config = hosts_config;
         // Sort host groups alphabetically.
         for host in hosts_config.hosts.values_mut() {
-            host.groups.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+            host.groups.sort_by_key(|key| key.to_lowercase());
         }
 
         ConfigManagerModel {
@@ -156,7 +156,7 @@ impl ConfigManagerModel {
         self.main_config.preferences.text_editor = preferences.value("text_editor".into(), QString::from("kate").into()).to_qbytearray().to_string();
         self.main_config.preferences.terminal = preferences.value("terminal".into(), QString::from("xterm").into()).to_qbytearray().to_string();
         self.main_config.preferences.terminal_args = preferences.value("terminal_args".into(), QString::from("-e").into()).to_qbytearray().to_string()
-                                                                .split(" ").map(|arg| arg.to_string()).collect();
+                                                                .split(' ').map(|arg| arg.to_string()).collect();
 
         if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
             self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
@@ -242,7 +242,7 @@ impl ConfigManagerModel {
     fn get_all_groups(&self) -> QStringList {
         let mut all_groups = self.groups_config.groups.keys().cloned().collect::<Vec<String>>();
         all_groups.sort();
-        all_groups.into_iter().map(|group| QString::from(group)).collect()
+        all_groups.into_iter().map(QString::from).collect()
     }
 
     fn add_group(&mut self, group_name: QString) {
@@ -260,11 +260,11 @@ impl ConfigManagerModel {
         let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
         let groups_sorted = {
             let mut groups = host_settings.groups.clone();
-            groups.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+            groups.sort_by_key(|key| key.to_lowercase());
             groups
         };
 
-        groups_sorted.into_iter().map(|group| QString::from(group)).collect()
+        groups_sorted.into_iter().map(QString::from).collect()
     }
 
     fn get_available_groups(&self, host_name: QString) -> QStringList {
@@ -273,11 +273,11 @@ impl ConfigManagerModel {
 
         let all_groups = self.groups_config.groups.keys().collect::<Vec<&String>>();
         let available_groups = all_groups.iter()
-            .filter(|group| !host_settings.groups.contains(&group))
+            .filter(|group| !host_settings.groups.contains(group))
             .map(|group| group.to_string())
             .collect::<Vec<String>>();
 
-        available_groups.into_iter().map(|group| QString::from(group)).collect()
+        available_groups.into_iter().map(QString::from).collect()
     }
 
     fn add_host_to_group(&mut self, host_name: QString, group_name: QString) {
@@ -301,7 +301,7 @@ impl ConfigManagerModel {
                                                            .map(|metadata| metadata.module_spec.id.clone())
                                                            .collect::<Vec<String>>();
         all_monitors.sort();
-        all_monitors.into_iter().map(|monitor| QString::from(monitor)).collect()
+        all_monitors.into_iter().map(QString::from).collect()
     }
 
     fn get_monitor_description(&self, module_name: QString) -> QString {
@@ -319,9 +319,8 @@ impl ConfigManagerModel {
         let group_monitors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().monitors;
 
         let mut group_monitors_keys = group_monitors.into_keys().collect::<Vec<String>>();
-        group_monitors_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-
-        group_monitors_keys.into_iter().map(|monitor| QString::from(monitor)).collect()
+        group_monitors_keys.sort_by_key(|key| key.to_lowercase());
+        group_monitors_keys.into_iter().map(QString::from).collect()
     }
 
     fn add_group_monitor(&mut self, group_name: QString, monitor_name: QString) {
@@ -366,9 +365,8 @@ impl ConfigManagerModel {
                                                        .monitors.get(&monitor_name).cloned().unwrap_or_default().settings;
 
         let mut group_monitor_settings_keys = group_monitor_settings.into_keys().collect::<Vec<String>>();
-        group_monitor_settings_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-
-        group_monitor_settings_keys.into_iter().map(|setting| QString::from(setting)).collect()
+        group_monitor_settings_keys.sort_by_key(|key| key.to_lowercase());
+        group_monitor_settings_keys.into_iter().map(QString::from).collect()
     }
 
     fn get_group_monitor_setting(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString {
@@ -402,7 +400,7 @@ impl ConfigManagerModel {
                                                              .map(|metadata| metadata.module_spec.id.clone())
                                                              .collect::<Vec<String>>();
         all_connectors.sort();
-        all_connectors.into_iter().map(|connector| QString::from(connector)).collect()
+        all_connectors.into_iter().map(QString::from).collect()
     }
 
     fn get_connector_description(&self, module_name: QString) -> QString {
@@ -420,9 +418,8 @@ impl ConfigManagerModel {
         let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
 
         let mut group_connectors_keys = group_connectors.into_keys().collect::<Vec<String>>();
-        group_connectors_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-
-        group_connectors_keys.into_iter().map(|connector| QString::from(connector)).collect()
+        group_connectors_keys.sort_by_key(|key| key.to_lowercase());
+        group_connectors_keys.into_iter().map(QString::from).collect()
     }
 
     fn add_group_connector(&mut self, group_name: QString, connector_name: QString) {
@@ -438,9 +435,8 @@ impl ConfigManagerModel {
                                                          .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
 
         let mut group_connector_settings_keys = group_connector_settings.into_keys().collect::<Vec<String>>();
-        group_connector_settings_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-
-        group_connector_settings_keys.into_iter().map(|setting| QString::from(setting)).collect()
+        group_connector_settings_keys.sort_by_key(|key| key.to_lowercase());
+        group_connector_settings_keys.into_iter().map(QString::from).collect()
     }
 
     fn get_group_connector_setting(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString {
@@ -482,7 +478,7 @@ impl ConfigManagerModel {
                                                              .collect::<Vec<String>>();
         all_commands.sort();
 
-        all_commands.into_iter().map(|command| QString::from(command)).collect()
+        all_commands.into_iter().map(QString::from).collect()
     }
 
     fn get_command_description(&self, module_name: QString) -> QString {
@@ -500,9 +496,9 @@ impl ConfigManagerModel {
         let group_commands = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().commands;
 
         let mut group_commands_keys = group_commands.into_keys().collect::<Vec<String>>();
-        group_commands_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+        group_commands_keys.sort_by_key(|key| key.to_lowercase());
 
-        group_commands_keys.into_iter().map(|command| QString::from(command)).collect()
+        group_commands_keys.into_iter().map(QString::from).collect()
     }
 
     fn add_group_command(&mut self, group_name: QString, command_name: QString) {
@@ -524,9 +520,8 @@ impl ConfigManagerModel {
                                                        .commands.get(&command_name).cloned().unwrap_or_default().settings;
 
         let mut group_command_settings_keys = group_command_settings.into_keys().collect::<Vec<String>>();
-        group_command_settings_keys.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-
-        group_command_settings_keys.into_iter().map(|setting| QString::from(setting)).collect()
+        group_command_settings_keys.sort_by_key(|key| key.to_lowercase());
+        group_command_settings_keys.into_iter().map(QString::from).collect()
     }
 
     fn get_group_command_setting(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString {

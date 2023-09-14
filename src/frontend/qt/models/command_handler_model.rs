@@ -127,7 +127,7 @@ impl CommandHandlerModel {
         }
 
         // Append the rest of the commands in alphabetical order.
-        let mut rest_of_commands: Vec<CommandData> = all_commands.into_iter().map(|(_, command)| command).collect();
+        let mut rest_of_commands: Vec<CommandData> = all_commands.into_values().collect();
         rest_of_commands.sort_by(|left, right| left.command_id.cmp(&right.command_id));
         valid_commands_sorted.append(&mut rest_of_commands);
 
@@ -138,9 +138,9 @@ impl CommandHandlerModel {
     fn get_child_command_count(&self, host_id: QString, category: QString) -> u32 {
         let category_string = category.to_string();
 
-        self.command_handler.get_commands_for_host(host_id.to_string())
-                            .into_iter().filter(|(_, data)| data.display_options.category == category_string &&
-                                                            data.display_options.parent_id != "")
+        self.command_handler.get_commands_for_host(host_id.to_string()).into_iter()
+                            .filter(|(_, data)| data.display_options.category == category_string &&
+                                                !data.display_options.parent_id.is_empty())
                             .count() as u32
     }
 
@@ -197,7 +197,7 @@ impl CommandHandlerModel {
             UIAction::LogView => {
                 invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters.clone());
                 if invocation_id > 0 {
-                    let parameters_qs = parameters.into_iter().map(|param| QString::from(param)).collect::<QStringList>();
+                    let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
                     self.logs_subview_opened(QString::from(command_id), parameters_qs, invocation_id);
                 }
             },

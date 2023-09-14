@@ -87,7 +87,7 @@ impl PropertyTableModel {
     }
 
     fn update_row_datas(&mut self) {
-        let mut row_datas = self.i_monitoring_datas.iter().flat_map(|m_data| Self::convert_to_row_data(&m_data, &self.i_command_datas)).collect();
+        let mut row_datas = self.i_monitoring_datas.iter().flat_map(|m_data| Self::convert_to_row_data(m_data, &self.i_command_datas)).collect();
         self.sort_row_data(&mut row_datas);
         Self::insert_multivalue_separator_rows(&mut row_datas);
         self.row_datas = row_datas;
@@ -129,7 +129,7 @@ impl PropertyTableModel {
         let column = usize::from_qvariant(column).unwrap();
         let width_for_commands = 0.175;
 
-        let show_commands = self.row_datas.iter().any(|row_data| row_data.command_datas.len() > 0);
+        let show_commands = self.row_datas.iter().any(|row_data| !row_data.command_datas.is_empty());
 
         if self.row_datas.get(row).is_some() {
             match column {
@@ -159,7 +159,7 @@ impl PropertyTableModel {
     }
 
     // Practically flattens multivalue data and does some filtering.
-    fn convert_to_row_data(monitoring_data: &MonitoringData, command_datas: &Vec<CommandData>) -> Vec<RowData> {
+    fn convert_to_row_data(monitoring_data: &MonitoringData, command_datas: &[CommandData]) -> Vec<RowData> {
         let mut row_datas = Vec::<RowData>::new();
         let last_data_point = monitoring_data.values.iter().last().unwrap();
 
@@ -183,7 +183,7 @@ impl PropertyTableModel {
             }
         }
 
-        return row_datas;
+        row_datas
     }
 
     fn sort_row_data(&self, row_datas: &mut Vec<RowData>) {
@@ -209,7 +209,7 @@ impl PropertyTableModel {
     }
 
     fn create_single_row_data(monitoring_data: &MonitoringData, mut data_point: DataPoint, multivalue_level: u8,
-                              command_datas: &Vec<CommandData>) -> Option<RowData> {
+                              command_datas: &[CommandData]) -> Option<RowData> {
         if data_point.criticality == Criticality::Ignore {
             return None;
         }

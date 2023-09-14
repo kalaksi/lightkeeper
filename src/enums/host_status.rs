@@ -4,9 +4,10 @@ use std::fmt::Display;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Default, Deserialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum HostStatus {
+    #[default]
     Pending,
     Up,
     Down,
@@ -22,12 +23,6 @@ impl FromStr for HostStatus {
             "down" => Ok(HostStatus::Down),
             _ => panic!("Invalid HostStatus '{}'", s)
         }
-    }
-}
-
-impl Default for HostStatus {
-    fn default() -> Self {
-        HostStatus::Pending
     }
 }
 
