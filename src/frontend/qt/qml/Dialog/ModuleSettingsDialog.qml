@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
 
 import "../Text"
+import "../Button"
 import ".."
 
 
@@ -96,6 +97,7 @@ Dialog {
                 model: []
 
                 RowLayout {
+                    id: rowLayout
                     width: parent.width
                     height: textContainer.implicitHeight
                     spacing: Theme.spacing_normal()
@@ -127,18 +129,53 @@ Dialog {
 
                     TextField {
                         id: textField
-                        enabled: toggleSwitch.checked
+                        enabled: toggleSwitch.checked && !fileChooserButton.visible
                         placeholderText: toggleSwitch.checked ? "" : "unset"
                         text: toggleSwitch.checked ? modelData.value : ""
 
-                        Layout.preferredWidth: scrollView.width * 0.35
+                        Layout.preferredWidth: {
+                            if (fileChooserButton.visible) {
+                                scrollView.width * 0.35 - fileChooserButton.width - rowLayout.spacing
+                            }
+                            else {
+                                scrollView.width * 0.35
+                            }
+                        }
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Connections {
+                            target: DesktopPortal
+                            function onFile_chooser_response(token, filePath) {
+                                if (fileChooserButton.visible && token === fileChooserButton._fileChooserToken) {
+                                    textField.text = filePath
+                                }
+                            }
+                        }
+                    }
+
+                    ImageButton {
+                        id: fileChooserButton
+                        property string _fileChooserToken: ""
+
+                        // TODO: this is quick and hacky, refactor.
+                        visible: modelData.key.endsWith("_path")
+                        enabled: toggleSwitch.checked
+                        imageSource: "qrc:/main/images/button/document-open-folder"
+                        size: textField.implicitHeight * 0.8
+                        onClicked: {
+                            _fileChooserToken = DesktopPortal.open_file_chooser()
+                        }
+
+                        Layout.preferredWidth: textField.implicitHeight
                         Layout.alignment: Qt.AlignVCenter
                     }
+
                 }
             }
         }
     }
 
+    // TODO: implement model in rust?
     function getModuleSettingsModel() {
         let settings = ConfigManager.get_all_module_settings(root.moduleType, root.moduleId)
         let settingsArray = []

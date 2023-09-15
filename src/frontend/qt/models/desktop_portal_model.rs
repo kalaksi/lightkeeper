@@ -19,9 +19,10 @@ pub struct DesktopPortalModel {
     base: qt_base_class!(trait QObject),
 
     receive_responses: qt_method!(fn(&self)),
-    open_file_chooser: qt_method!(fn(&self) -> u32),
 
-    file_chosen: qt_signal!(file_path: QString),
+    /// Returns token that can be used to match the response.
+    open_file_chooser: qt_method!(fn(&self) -> QString),
+    file_chooser_response: qt_signal!(token: QString, file_path: QString),
 
     receiver: Option<mpsc::Receiver<PortalRequest>>,
     sender: Option<mpsc::Sender<PortalRequest>>,
@@ -46,11 +47,13 @@ impl DesktopPortalModel {
             // See the docs and https://github.com/diwic/dbus-rs/issues/375
 
             let self_ptr = QPointer::from(&*self);
-            let handle_response = qmetaobject::queued_callback(move |file_chooser_response: FileChooserResponse| {
+            let handle_file_chooser_response = qmetaobject::queued_callback(move |response: FileChooserResponse| {
                 if let Some(self_pinned) = self_ptr.as_pinned() {
-                    ::log::debug!("Selected files: {:?}", file_chooser_response.file_uris);
-                    let just_path = file_chooser_response.file_uris[0].clone().replace("file://", "");
-                    self_pinned.borrow().file_chosen(QString::from(just_path));
+                    if response.status == 0 {
+                        ::log::debug!("Selected files: {:?}", response.file_uris);
+                        let just_path = response.file_uris[0].clone().replace("file://", "");
+                        self_pinned.borrow().file_chooser_response(QString::from(response.token), QString::from(just_path));
+                    }
                 }
             });
 
@@ -70,7 +73,7 @@ impl DesktopPortalModel {
                             continue;
                         },
                         Err(mpsc::RecvTimeoutError::Disconnected) => {
-                            ::log::debug!("Portal response receiver thread disconnected");
+                            ::log::error!("Portal response receiver thread disconnected");
                             return;
                         }
                     };
@@ -88,16 +91,20 @@ impl DesktopPortalModel {
                         PortalRequestType::FileChooser => {
                             let response_proxy = dbus_connection.with_proxy(
                                 "org.freedesktop.portal.Request",
-                                // TODO: use token? (requires parameters to dbus call).
-                                format!("/org/freedesktop/portal/desktop/request/{}/t", sender_id),
+                                format!("/org/freedesktop/portal/desktop/request/{}/{}", sender_id, request.token),
                                 timeout
                             );
 
-                            let c_handle_response = handle_response.clone();
-                            response_proxy.match_signal(move |response: FileChooserResponse, _: &dbus::blocking::Connection, _: &dbus::Message| {
+                            let c_handle_response = handle_file_chooser_response.clone();
+                            let c_token = request.token.clone();
+                            response_proxy.match_signal(move |mut response: FileChooserResponse, _: &dbus::blocking::Connection, _: &dbus::Message| {
+                                response.token = c_token.clone();
                                 c_handle_response(response);
                                 false
                             }).unwrap();
+
+                            let mut options = HashMap::<&str, arg::Variant<Box<dyn arg::RefArg + 'static>>>::new();
+                            options.insert("handle_token", arg::Variant(Box::new(request.token)));
 
                             // Send the request.
                             let request_proxy = dbus_connection.with_proxy(
@@ -109,9 +116,8 @@ impl DesktopPortalModel {
                                 "org.freedesktop.portal.FileChooser",
                                 "OpenFile",
                                 // TODO: parent window ID. Currently left empty.
-                                ("", "Select file", HashMap::<&str, arg::Variant<Box<dyn arg::RefArg + 'static>>>::new())
+                                ("", "Select file", options),
                             ).unwrap();
-
                         },
                         _ => {
                             ::log::warn!("Unknown portal request type");
@@ -127,10 +133,15 @@ impl DesktopPortalModel {
     }
 
     /// Calls org.freedestop.portal.FileChooser.OpenFile to open a file chooser dialog.
-    pub fn open_file_chooser(&self) -> u32 {
-        let token: u32 = rand::random();
-        self.sender.as_ref().unwrap().send(PortalRequest::file_chooser(token)).unwrap();
-        token
+    pub fn open_file_chooser(&self) -> QString {
+        let token = Self::get_token();
+        self.sender.as_ref().unwrap().send(PortalRequest::file_chooser(token.clone())).unwrap();
+        QString::from(token)
+    }
+
+    fn get_token() -> String {
+        let random_number: u32 = rand::random();
+        format!("{}{}", "lightkeeper_", random_number)
     }
 }
 
@@ -138,12 +149,12 @@ impl DesktopPortalModel {
 #[derive(Default)]
 pub struct PortalRequest {
     request_type: PortalRequestType,
-    token: u32,
+    token: String,
     exit: bool,
 }
 
 impl PortalRequest {
-    pub fn file_chooser(token: u32) -> PortalRequest {
+    pub fn file_chooser(token: String) -> PortalRequest {
         PortalRequest {
             request_type: PortalRequestType::FileChooser,
             token: token,
@@ -171,6 +182,7 @@ enum PortalRequestType {
 #[derive(Debug)]
 pub struct FileChooserResponse {
     pub status: u32,
+    pub token: String,
     pub file_uris: Vec<String>,
 }
 
@@ -200,7 +212,8 @@ impl arg::ReadAll for FileChooserResponse {
         }).collect::<Vec<String>>();
 
         Ok(FileChooserResponse {
-            status,
+            status: status,
+            token: String::new(),
             file_uris: file_uris,
         })
     }

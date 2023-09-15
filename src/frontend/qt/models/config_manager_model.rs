@@ -180,7 +180,8 @@ impl ConfigManagerModel {
 
     fn remove_host(&mut self, host_name: QString) {
         let host_name = host_name.to_string();
-        self.hosts_config.hosts.remove(&host_name).expect("");
+        ::log::info!("Removing host {}", host_name);
+        self.hosts_config.hosts.remove(&host_name).unwrap();
     }
 
     fn require_restart(&mut self) {
