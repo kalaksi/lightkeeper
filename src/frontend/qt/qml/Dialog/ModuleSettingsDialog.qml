@@ -145,7 +145,7 @@ Dialog {
 
                         Connections {
                             target: DesktopPortal
-                            function onFile_chooser_response(token, filePath) {
+                            function onFileChooserResponse(token, filePath) {
                                 if (fileChooserButton.visible && token === fileChooserButton._fileChooserToken) {
                                     textField.text = filePath
                                 }
@@ -163,7 +163,7 @@ Dialog {
                         imageSource: "qrc:/main/images/button/document-open-folder"
                         size: textField.implicitHeight * 0.8
                         onClicked: {
-                            _fileChooserToken = DesktopPortal.open_file_chooser()
+                            _fileChooserToken = DesktopPortal.openFileChooser()
                         }
 
                         Layout.preferredWidth: textField.implicitHeight

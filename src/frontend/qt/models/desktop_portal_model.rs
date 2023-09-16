@@ -15,21 +15,23 @@ use std::thread;
 /// The need for this model came from poor support for portals (related to sandboxing), like file chooser, in Qt.
 /// However, things seem to be improving in Qt so this might be unneeded in the future.
 #[derive(QObject, Default)]
+#[allow(non_snake_case)]
 pub struct DesktopPortalModel {
     base: qt_base_class!(trait QObject),
 
-    receive_responses: qt_method!(fn(&self)),
+    receiveResponses: qt_method!(fn(&self)),
     exit: qt_method!(fn(&mut self)),
 
     /// Returns token that can be used to match the response.
-    open_file_chooser: qt_method!(fn(&self) -> QString),
-    file_chooser_response: qt_signal!(token: QString, file_path: QString),
+    openFileChooser: qt_method!(fn(&self) -> QString),
+    fileChooserResponse: qt_signal!(token: QString, file_path: QString),
 
     receiver: Option<mpsc::Receiver<PortalRequest>>,
     sender: Option<mpsc::Sender<PortalRequest>>,
     thread: Option<thread::JoinHandle<()>>,
 }
 
+#[allow(non_snake_case)]
 impl DesktopPortalModel {
     pub fn new() -> DesktopPortalModel {
         let (sender, receiver) = mpsc::channel::<PortalRequest>();
@@ -42,7 +44,7 @@ impl DesktopPortalModel {
         }
     }
 
-    pub fn receive_responses(&mut self) {
+    pub fn receiveResponses(&mut self) {
         if self.thread.is_none() {
             // (Unfortunately) all dbus stuff should be run in one thread.
             // See the docs and https://github.com/diwic/dbus-rs/issues/375
@@ -53,7 +55,7 @@ impl DesktopPortalModel {
                     if response.status == 0 {
                         ::log::debug!("Selected files: {:?}", response.file_uris);
                         let just_path = response.file_uris[0].clone().replace("file://", "");
-                        self_pinned.borrow().file_chooser_response(QString::from(response.token), QString::from(just_path));
+                        self_pinned.borrow().fileChooserResponse(QString::from(response.token), QString::from(just_path));
                     }
                 }
             });
@@ -63,7 +65,7 @@ impl DesktopPortalModel {
             let sender_id = dbus_connection.unique_name().trim_start_matches(':').replace('.', "_");
             let receiver = self.receiver.take().unwrap();
             let timeout = std::time::Duration::from_millis(5000);
-            let recv_wait = std::time::Duration::from_millis(1000);
+            let recv_wait = std::time::Duration::from_millis(500);
 
             let thread = thread::spawn(move || {
                 loop {
@@ -139,7 +141,7 @@ impl DesktopPortalModel {
     }
 
     /// Calls org.freedestop.portal.FileChooser.OpenFile to open a file chooser dialog.
-    pub fn open_file_chooser(&self) -> QString {
+    pub fn openFileChooser(&self) -> QString {
         let token = Self::get_token();
         self.sender.as_ref().unwrap().send(PortalRequest::file_chooser(token.clone())).unwrap();
         QString::from(token)

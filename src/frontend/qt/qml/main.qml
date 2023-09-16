@@ -237,7 +237,7 @@ ApplicationWindow {
         // Starts the thread that receives host state updates in the backend.
         HostDataManager.receive_updates()
         // Starts the thread that receives portal responses from D-Bus.
-        DesktopPortal.receive_responses()
+        DesktopPortal.receiveResponses()
 
         if (HostDataManager.refresh_hosts_on_start()) {
             CommandHandler.force_initialize_hosts()
