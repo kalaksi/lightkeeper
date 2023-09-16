@@ -238,7 +238,7 @@ TableView {
                     menuTooltip: "More commands..."
                     commands: parsedCommands
                     forceCollapse: root.expandedCommandRow !== row
-                    onExpanded: function() {
+                    onExpanded: {
                         root.expandedCommandRow = row
                     }
 

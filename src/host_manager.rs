@@ -79,7 +79,7 @@ impl HostManager {
     pub fn get_host(&self, host_name: &String) -> Host {
         let hosts = self.hosts.lock().unwrap();
         hosts.hosts.get(host_name)
-                   .expect(format!("Host '{}' not found", host_name).as_str())
+                   .unwrap_or_else(|| panic!("Host '{}' not found", host_name))
                    .host.clone()
     }
 

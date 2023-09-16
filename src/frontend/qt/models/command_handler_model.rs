@@ -18,7 +18,7 @@ pub struct CommandHandlerModel {
     get_commands_on_level: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList)),
-    execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64),
+    execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList)),
 
     // Host initialization methods.
     initialize_host: qt_method!(fn(&self, host_id: QString)),
@@ -159,8 +159,7 @@ impl CommandHandlerModel {
         }
     }
 
-    fn execute_confirmed(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) -> u64 {
-        let mut invocation_id = 0;
+    fn execute_confirmed(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_qbytearray().to_string()).collect();
@@ -168,7 +167,7 @@ impl CommandHandlerModel {
         let display_options = self.command_handler.get_command_for_host(&host_id, &command_id).display_options;
         match display_options.action {
             UIAction::None => {
-                invocation_id = self.command_handler.execute(host_id.clone(), command_id.clone(), parameters.clone());
+                let invocation_id = self.command_handler.execute(host_id.clone(), command_id.clone(), parameters.clone());
 
                 if invocation_id > 0 {
                     let button_identifier = format!("{}|{}", command_id, parameters.first().unwrap_or(&String::new()));
@@ -176,26 +175,26 @@ impl CommandHandlerModel {
                 }
             },
             UIAction::DetailsDialog => {
-                invocation_id = self.command_handler.execute(host_id, command_id, parameters);
+                let invocation_id = self.command_handler.execute(host_id, command_id, parameters);
                 if invocation_id > 0 {
                     self.details_dialog_opened(invocation_id)
                 }
             },
             UIAction::TextView => {
                 let target_id = parameters.first().unwrap().clone();
-                invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters);
+                let invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters);
                 if invocation_id > 0 {
                     self.details_subview_opened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id)
                 }
             },
             UIAction::TextDialog => {
-                invocation_id = self.command_handler.execute(host_id, command_id, parameters);
+                let invocation_id = self.command_handler.execute(host_id, command_id, parameters);
                 if invocation_id > 0 {
                     self.text_dialog_opened(invocation_id)
                 }
             },
             UIAction::LogView => {
-                invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters.clone());
+                let invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters.clone());
                 if invocation_id > 0 {
                     let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
                     self.logs_subview_opened(QString::from(command_id), parameters_qs, invocation_id);
@@ -210,8 +209,6 @@ impl CommandHandlerModel {
                 self.command_handler.open_text_editor(host_id, command_id, remote_file_path);
             },
         }
-
-        return invocation_id
     }
 
     fn initialize_host(&mut self, host_id: QString) {
