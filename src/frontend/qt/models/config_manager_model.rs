@@ -11,6 +11,7 @@ use crate::{
 };
 
 
+// TODO: use camelcase with qml models?
 #[derive(QObject, Default)]
 pub struct ConfigManagerModel {
     base: qt_base_class!(trait QObject),

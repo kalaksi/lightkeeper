@@ -7,24 +7,23 @@ use crate::frontend;
 use super::HostDataModel;
 
 
-// TODO: use camelcase with qml models?
 #[derive(QObject, Default)]
 #[allow(non_snake_case)]
 pub struct HostTableModel {
     base: qt_base_class!(trait QAbstractTableModel),
     display_data: qt_property!(QVariant; WRITE set_display_data),
-    data_changed_for_host: qt_method!(fn(&self, host_id: QString)),
+    dataChangedForHost: qt_method!(fn(&self, host_id: QString)),
 
     // Remove host without application restart.
-    remove_host: qt_method!(fn(&mut self, host_id: QString)),
+    removeHost: qt_method!(fn(&mut self, host_id: QString)),
 
-    // toggle_row is preferred for setting selected row.
+    // toggleRow is preferred for setting selected row.
     selectedRow: qt_property!(i32; NOTIFY selectedRowChanged),
     selectedRowChanged: qt_signal!(),
-    selection_activated: qt_signal!(),
-    selection_deactivated: qt_signal!(),
-    toggle_row: qt_method!(fn(&mut self, row: i32)),
-    get_selected_host_id: qt_method!(fn(&self) -> QString),
+    selectionActivated: qt_signal!(),
+    selectionDeactivated: qt_signal!(),
+    toggleRow: qt_method!(fn(&mut self, row: i32)),
+    getSelectedHostId: qt_method!(fn(&self) -> QString),
 
     headers: Vec<QString>,
     host_row_map: HashMap<String, usize>,
@@ -35,6 +34,7 @@ pub struct HostTableModel {
     disabled_hosts: Vec<String>,
 }
 
+#[allow(non_snake_case)]
 impl HostTableModel {
     fn set_display_data(&mut self, display_data: QVariant) {
         self.begin_reset_model();
@@ -58,19 +58,19 @@ impl HostTableModel {
         self.end_reset_model();
 
         // Remember currently selected host. If missing, then go back to -1.
-        let selected_host_id = self.get_selected_host_id();
+        let selected_host_id = self.getSelectedHostId();
         self.selectedRow = match self.host_row_map.get(&selected_host_id.to_string()) {
             Some(row) => *row as i32,
             None => -1,
         };
 
         if self.selectedRow >= 0 {
-            self.selection_activated();
+            self.selectionActivated();
         }
     }
 
     // A slot for informing about change in table data.
-    fn data_changed_for_host(&mut self, host_id: QString) {
+    fn dataChangedForHost(&mut self, host_id: QString) {
         let host_index = self.host_row_map.get(&host_id.to_string()).unwrap();
 
         let top_left = self.index(*host_index as i32, 0);
@@ -80,28 +80,28 @@ impl HostTableModel {
         self.data_changed(top_left, bottom_right);
     }
 
-    fn toggle_row(&mut self, row: i32) {
+    fn toggleRow(&mut self, row: i32) {
         if self.selectedRow == row {
             self.selectedRow = -1;
-            self.selection_deactivated();
+            self.selectionDeactivated();
         }
         else {
             if self.selectedRow == -1 {
-                self.selection_activated();
+                self.selectionActivated();
             }
             self.selectedRow = row;
         }
         self.selectedRowChanged();
     }
 
-    fn get_selected_host_id(&self) -> QString {
+    fn getSelectedHostId(&self) -> QString {
         match self.row_data.get(self.selectedRow as usize) {
             Some(host) => host.name.clone(),
             None => QString::from(""),
         }
     }
 
-    fn remove_host(&mut self, host_id: QString) {
+    fn removeHost(&mut self, host_id: QString) {
         self.disabled_hosts.push(host_id.to_string());
         let host_index = self.host_row_map.remove(&host_id.to_string()).unwrap() as i32;
 
@@ -111,7 +111,7 @@ impl HostTableModel {
             }
         }
 
-        self.toggle_row(self.selectedRow);
+        self.toggleRow(self.selectedRow);
         self.begin_remove_rows(host_index, host_index);
         self.row_data.retain(|host| host.name != host_id);
         self.end_remove_rows();

@@ -38,7 +38,7 @@ TableView {
             delegate: TableCell {
                 firstItem: true
                 selected: root.model.selectedRow === row
-                onClicked: root.model.toggle_row(row)
+                onClicked: root.model.toggleRow(row)
                 implicitWidth: root.width * 0.15
                 implicitHeight: root.rowHeight
 
@@ -52,7 +52,7 @@ TableView {
             column: 1
             delegate: TableCell {
                 selected: root.model.selectedRow === row
-                onClicked: root.model.toggle_row(row)
+                onClicked: root.model.toggleRow(row)
                 implicitWidth: root.width * 0.15
 
                 NormalText {
@@ -65,7 +65,7 @@ TableView {
             column: 2
             delegate: TableCell {
                 selected: root.model.selectedRow === row
-                onClicked: root.model.toggle_row(row)
+                onClicked: root.model.toggleRow(row)
                 implicitWidth: root.width * 0.25
 
                 OptionalText {
@@ -79,7 +79,7 @@ TableView {
             column: 3
             delegate: TableCell {
                 selected: root.model.selectedRow === row
-                onClicked: root.model.toggle_row(row)
+                onClicked: root.model.toggleRow(row)
                 implicitWidth: root.width * 0.15
 
                 OptionalText {
@@ -93,7 +93,7 @@ TableView {
             column: 4
             delegate: TableCell {
                 selected: root.model.selectedRow === row
-                onClicked: root.model.toggle_row(row)
+                onClicked: root.model.toggleRow(row)
                 implicitWidth: root.width * 0.3
 
                 MonitorSummary {

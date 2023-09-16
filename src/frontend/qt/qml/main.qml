@@ -46,7 +46,7 @@ ApplicationWindow {
                 icon.source: "qrc:/main/images/button/entry-edit"
                 onClicked: {
                     ConfigManager.begin_host_configuration()
-                    hostConfigurationDialog.hostId = _hostTableModel.get_selected_host_id()
+                    hostConfigurationDialog.hostId = _hostTableModel.getSelectedHostId()
                     hostConfigurationDialog.open()
                 }
             }
@@ -57,8 +57,8 @@ ApplicationWindow {
                 icon.source: "qrc:/main/images/button/remove"
                 onClicked: {
                     ConfigManager.begin_host_configuration()
-                    ConfigManager.remove_host(_hostTableModel.get_selected_host_id())
-                    _hostTableModel.remove_host(_hostTableModel.get_selected_host_id())
+                    ConfigManager.remove_host(_hostTableModel.getSelectedHostId())
+                    _hostTableModel.removeHost(_hostTableModel.getSelectedHostId())
                     ConfigManager.end_host_configuration()
                 }
             }
@@ -110,7 +110,7 @@ ApplicationWindow {
         target: HostDataManager
 
         function onUpdate_received(hostId) {
-            _hostTableModel.data_changed_for_host(hostId)
+            _hostTableModel.dataChangedForHost(hostId)
 
             if (hostId === detailsView.hostId) {
                 detailsView.refresh()
@@ -211,7 +211,7 @@ ApplicationWindow {
         target: _hostTableModel
 
         function onSelectedRowChanged() {
-            detailsView.hostId = _hostTableModel.get_selected_host_id()
+            detailsView.hostId = _hostTableModel.getSelectedHostId()
 
             if (detailsView.hostId !== "") {
                 if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
@@ -220,11 +220,11 @@ ApplicationWindow {
             }
         }
 
-        function onSelection_activated() {
+        function onSelectionActivated() {
             body.splitSize = 0.8
         }
 
-        function onSelection_deactivated() {
+        function onSelectionDeactivated() {
             body.splitSize = 0.0
         }
     }
@@ -268,7 +268,7 @@ ApplicationWindow {
                 id: detailsView
                 visible: body.splitSize > 0.01
                 width: parent.width
-                hostId: _hostTableModel.get_selected_host_id()
+                hostId: _hostTableModel.getSelectedHostId()
 
                 SplitView.minimumHeight: 0.5 * body.splitSize * body.height
                 SplitView.preferredHeight: body.splitSize * body.height
@@ -281,7 +281,7 @@ ApplicationWindow {
                     body.splitSize = 1.0
                 }
                 onCloseClicked: {
-                    _hostTableModel.toggle_row(_hostTableModel.selectedRow)
+                    _hostTableModel.toggleRow(_hostTableModel.selectedRow)
                 }
             }
         }
