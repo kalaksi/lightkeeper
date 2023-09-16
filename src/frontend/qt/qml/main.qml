@@ -229,9 +229,10 @@ ApplicationWindow {
         }
     }
 
-
     Component.onCompleted: {
         _detailsDialogs = {}
+
+        // DesktopPortal.open_uri("")
 
         // Starts the thread that receives host state updates in the backend.
         HostDataManager.receive_updates()
@@ -241,6 +242,10 @@ ApplicationWindow {
         if (HostDataManager.refresh_hosts_on_start()) {
             CommandHandler.force_initialize_hosts()
         }
+    }
+
+    onClosing: {
+        DesktopPortal.exit()
     }
 
     Item {

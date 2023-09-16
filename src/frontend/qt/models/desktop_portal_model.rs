@@ -19,6 +19,7 @@ pub struct DesktopPortalModel {
     base: qt_base_class!(trait QObject),
 
     receive_responses: qt_method!(fn(&self)),
+    exit: qt_method!(fn(&mut self)),
 
     /// Returns token that can be used to match the response.
     open_file_chooser: qt_method!(fn(&self) -> QString),
@@ -130,6 +131,11 @@ impl DesktopPortalModel {
 
             self.thread = Some(thread);
         }
+    }
+
+    pub fn exit(&mut self) {
+        self.sender.as_ref().unwrap().send(PortalRequest::exit()).unwrap();
+        self.thread.take().unwrap().join().unwrap();
     }
 
     /// Calls org.freedestop.portal.FileChooser.OpenFile to open a file chooser dialog.
