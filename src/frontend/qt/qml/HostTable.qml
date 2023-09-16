@@ -20,7 +20,7 @@ TableView {
     Connections {
         target: root.model
 
-        function onSelected_row_changed() {
+        function onSelectedRowChanged() {
             centerRow()
         }
     }
@@ -37,7 +37,7 @@ TableView {
             column: 0
             delegate: TableCell {
                 firstItem: true
-                selected: root.model.selected_row === row
+                selected: root.model.selectedRow === row
                 onClicked: root.model.toggle_row(row)
                 implicitWidth: root.width * 0.15
                 implicitHeight: root.rowHeight
@@ -51,7 +51,7 @@ TableView {
         DelegateChoice {
             column: 1
             delegate: TableCell {
-                selected: root.model.selected_row === row
+                selected: root.model.selectedRow === row
                 onClicked: root.model.toggle_row(row)
                 implicitWidth: root.width * 0.15
 
@@ -64,7 +64,7 @@ TableView {
         DelegateChoice {
             column: 2
             delegate: TableCell {
-                selected: root.model.selected_row === row
+                selected: root.model.selectedRow === row
                 onClicked: root.model.toggle_row(row)
                 implicitWidth: root.width * 0.25
 
@@ -78,7 +78,7 @@ TableView {
         DelegateChoice {
             column: 3
             delegate: TableCell {
-                selected: root.model.selected_row === row
+                selected: root.model.selectedRow === row
                 onClicked: root.model.toggle_row(row)
                 implicitWidth: root.width * 0.15
 
@@ -92,7 +92,7 @@ TableView {
         DelegateChoice {
             column: 4
             delegate: TableCell {
-                selected: root.model.selected_row === row
+                selected: root.model.selectedRow === row
                 onClicked: root.model.toggle_row(row)
                 implicitWidth: root.width * 0.3
 
@@ -113,7 +113,7 @@ TableView {
     }
 
     function centerRow() {
-        let rowsBeforeSelected = Math.min(root.model.selected_row, 2)
-        root.contentY = root.model.selected_row * root.rowHeight - rowsBeforeSelected * root.rowHeight
+        let rowsBeforeSelected = Math.min(root.model.selectedRow, 2)
+        root.contentY = root.model.selectedRow * root.rowHeight - rowsBeforeSelected * root.rowHeight
     }
 }

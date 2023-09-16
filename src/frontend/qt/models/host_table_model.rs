@@ -9,6 +9,7 @@ use super::HostDataModel;
 
 // TODO: use camelcase with qml models?
 #[derive(QObject, Default)]
+#[allow(non_snake_case)]
 pub struct HostTableModel {
     base: qt_base_class!(trait QAbstractTableModel),
     display_data: qt_property!(QVariant; WRITE set_display_data),
@@ -18,8 +19,8 @@ pub struct HostTableModel {
     remove_host: qt_method!(fn(&mut self, host_id: QString)),
 
     // toggle_row is preferred for setting selected row.
-    selected_row: qt_property!(i32; NOTIFY selected_row_changed),
-    selected_row_changed: qt_signal!(),
+    selectedRow: qt_property!(i32; NOTIFY selectedRowChanged),
+    selectedRowChanged: qt_signal!(),
     selection_activated: qt_signal!(),
     selection_deactivated: qt_signal!(),
     toggle_row: qt_method!(fn(&mut self, row: i32)),
@@ -38,7 +39,6 @@ impl HostTableModel {
     fn set_display_data(&mut self, display_data: QVariant) {
         self.begin_reset_model();
 
-        self.selected_row = -1;
         self.i_display_data = frontend::DisplayData::from_qvariant(display_data).unwrap();
         self.headers = self.i_display_data.table_headers.iter().map(|header| QString::from(header.clone())).collect::<Vec<QString>>();
 
@@ -56,6 +56,17 @@ impl HostTableModel {
         }
 
         self.end_reset_model();
+
+        // Remember currently selected host. If missing, then go back to -1.
+        let selected_host_id = self.get_selected_host_id();
+        self.selectedRow = match self.host_row_map.get(&selected_host_id.to_string()) {
+            Some(row) => *row as i32,
+            None => -1,
+        };
+
+        if self.selectedRow >= 0 {
+            self.selection_activated();
+        }
     }
 
     // A slot for informing about change in table data.
@@ -70,21 +81,21 @@ impl HostTableModel {
     }
 
     fn toggle_row(&mut self, row: i32) {
-        if self.selected_row == row {
-            self.selected_row = -1;
+        if self.selectedRow == row {
+            self.selectedRow = -1;
             self.selection_deactivated();
         }
         else {
-            if self.selected_row == -1 {
+            if self.selectedRow == -1 {
                 self.selection_activated();
             }
-            self.selected_row = row;
+            self.selectedRow = row;
         }
-        self.selected_row_changed();
+        self.selectedRowChanged();
     }
 
     fn get_selected_host_id(&self) -> QString {
-        match self.row_data.get(self.selected_row as usize) {
+        match self.row_data.get(self.selectedRow as usize) {
             Some(host) => host.name.clone(),
             None => QString::from(""),
         }
@@ -100,7 +111,7 @@ impl HostTableModel {
             }
         }
 
-        self.toggle_row(self.selected_row);
+        self.toggle_row(self.selectedRow);
         self.begin_remove_rows(host_index, host_index);
         self.row_data.retain(|host| host.name != host_id);
         self.end_remove_rows();

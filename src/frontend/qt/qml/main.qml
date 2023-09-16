@@ -41,7 +41,7 @@ ApplicationWindow {
             }
 
             ToolButton {
-                enabled: _hostTableModel.selected_row >= 0
+                enabled: _hostTableModel.selectedRow >= 0
                 opacity: Theme.opacity(enabled)
                 icon.source: "qrc:/main/images/button/entry-edit"
                 onClicked: {
@@ -52,7 +52,7 @@ ApplicationWindow {
             }
 
             ToolButton {
-                enabled: _hostTableModel.selected_row >= 0
+                enabled: _hostTableModel.selectedRow >= 0
                 opacity: Theme.opacity(enabled)
                 icon.source: "qrc:/main/images/button/remove"
                 onClicked: {
@@ -210,7 +210,7 @@ ApplicationWindow {
     Connections {
         target: _hostTableModel
 
-        function onSelected_row_changed() {
+        function onSelectedRowChanged() {
             detailsView.hostId = _hostTableModel.get_selected_host_id()
 
             if (detailsView.hostId !== "") {
@@ -259,6 +259,7 @@ ApplicationWindow {
 
                 model: HostTableModel {
                     id: _hostTableModel
+                    selectedRow: -1
                     display_data: HostDataManager.get_display_data()
                 }
             }
@@ -280,7 +281,7 @@ ApplicationWindow {
                     body.splitSize = 1.0
                 }
                 onCloseClicked: {
-                    _hostTableModel.toggle_row(_hostTableModel.selected_row)
+                    _hostTableModel.toggle_row(_hostTableModel.selectedRow)
                 }
             }
         }
