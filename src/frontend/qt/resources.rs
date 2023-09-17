@@ -50,6 +50,7 @@ pub fn init_resources() {
             "images/breeze/dark/group-new.svg" as "images/button/group-new",
             "images/breeze/dark/document-open.svg" as "images/button/document-open",
             "images/breeze/dark/document-open-folder.svg" as "images/button/document-open-folder",
+            "images/breeze/dark/document-save.svg" as "images/button/document-save",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -120,8 +121,9 @@ pub fn init_resources() {
             "images/breeze/light/configure.svg" as "images/button/configure",
             "images/breeze/light/entry-edit.svg" as "images/button/entry-edit",
             "images/breeze/light/group-new.svg" as "images/button/group-new",
-            "images/breeze/dark/document-open.svg" as "images/button/document-open",
-            "images/breeze/dark/document-open-folder.svg" as "images/button/document-open-folder",
+            "images/breeze/light/document-open.svg" as "images/button/document-open",
+            "images/breeze/light/document-open-folder.svg" as "images/button/document-open-folder",
+            "images/breeze/light/document-save.svg" as "images/button/document-save",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
