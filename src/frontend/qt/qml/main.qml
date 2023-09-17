@@ -229,10 +229,20 @@ ApplicationWindow {
         }
     }
 
+    Connections {
+        target: DesktopPortal
+        function onOpenFileResponse(token) {
+            console.log("************ Received open file response: " + token)
+            // TODO
+        }
+
+        function onError(message) {
+            snackbarContainer.addSnackbar("Critical", message)
+        }
+    }
+
     Component.onCompleted: {
         _detailsDialogs = {}
-
-        // DesktopPortal.open_uri("")
 
         // Starts the thread that receives host state updates in the backend.
         HostDataManager.receive_updates()
