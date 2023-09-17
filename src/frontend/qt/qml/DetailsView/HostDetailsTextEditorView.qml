@@ -24,8 +24,6 @@ Item {
                 root.pendingInvocations = root.pendingInvocations.filter((invocationId) => invocationId != commandResult.invocationId)
 
                 root.text = commandResult.message
-                root.errorText = commandResult.error
-                root.criticality = commandResult.criticality
             }
         }
     }
@@ -49,7 +47,15 @@ Item {
             wrapMode: Text.WordWrap
             color: Theme.color_text()
             text: root.text
+            font.family: "monospace"
         }
+    }
+
+    onAccepted: {
+    }
+
+    onRejected: {
+        reset()
     }
 
     function open(invocationId) {

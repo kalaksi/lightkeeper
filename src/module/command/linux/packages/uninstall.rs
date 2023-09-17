@@ -66,7 +66,7 @@ impl CommandModule for Uninstall {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.return_code >= 0 {
-            Ok(CommandResult::new(String::new()))
+            Ok(CommandResult::new_info(String::new()))
         }
         else {
             Ok(CommandResult::new_error(response.message.clone()))

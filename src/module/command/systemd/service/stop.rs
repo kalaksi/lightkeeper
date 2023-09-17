@@ -66,7 +66,7 @@ impl CommandModule for Stop {
             Ok(CommandResult::new_error(response.message.clone()))
         }
         else {
-            Ok(CommandResult::new(response.message.clone()))
+            Ok(CommandResult::new_info(response.message.clone()))
         }
     }
 }

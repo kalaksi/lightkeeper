@@ -60,7 +60,7 @@ impl CommandModule for LVRemove {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.return_code == 0 && response.message.contains("successfully removed"){
-            Ok(CommandResult::new(String::new()))
+            Ok(CommandResult::new_info(String::new()))
         }
         else {
             Ok(CommandResult::new_error(response.message.clone()))

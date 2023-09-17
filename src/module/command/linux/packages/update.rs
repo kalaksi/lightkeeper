@@ -59,7 +59,7 @@ impl CommandModule for Update {
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         // TODO: view output messages of installation (can be pretty long)?
         if response.return_code == 0 {
-            Ok(CommandResult::new(response.message.clone()))
+            Ok(CommandResult::new_info(response.message.clone()))
         }
         else {
             Ok(CommandResult::new_error(response.message.clone()))

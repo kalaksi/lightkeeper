@@ -54,7 +54,7 @@ impl CommandModule for Shutdown {
             Ok(CommandResult::new_warning(response.message.clone()))
         }
         else {
-            Ok(CommandResult::new(response.message.clone()))
+            Ok(CommandResult::new_info(response.message.clone()))
         }
     }
 }

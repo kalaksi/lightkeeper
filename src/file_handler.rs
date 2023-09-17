@@ -149,6 +149,6 @@ pub struct FileMetadata {
     pub owner_uid: u32,
     pub owner_gid: u32,
     pub permissions: u32,
-    /// Temporary files will be deleted when they're no longer used.
+    /// Temporary files will be deleted when they're no longer used (usually after uploading).
     pub temporary: bool,
 }

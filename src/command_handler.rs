@@ -10,7 +10,9 @@ use std::rc::Rc;
 use crate::configuration::Hosts;
 use crate::connection_manager::ConnectionManager;
 use crate::enums::Criticality;
+use crate::file_handler;
 use crate::host_manager::HostManager;
+use crate::module::command::UIAction;
 use crate::module::module_factory::ModuleFactory;
 use crate::utils::{ShellCommand, ErrorMessage};
 use crate::{
@@ -240,6 +242,8 @@ impl CommandHandler {
             return;
         }).unwrap();
 
+        // Whether to load file contents to the command result.
+        let load_contents = command.get_display_options().action == UIAction::TextEditor;
         self.invocation_id_counter += 1;
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
@@ -252,6 +256,7 @@ impl CommandHandler {
                 host,
                 command.box_clone(),
                 self.invocation_id_counter,
+                load_contents,
                 self.state_update_sender.as_ref().unwrap().clone()
             ),
             cache_policy: CachePolicy::BypassCache,
@@ -321,7 +326,7 @@ impl CommandHandler {
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 data_point: None,
-                command_result: Some(CommandResult::new(String::from("Changes saved"))),
+                command_result: Some(CommandResult::new_info(String::from("Changes saved"))),
                 errors: Vec::new(),
                 exit_thread: false,
             }).unwrap_or_else(|error| {
@@ -347,7 +352,7 @@ impl CommandHandler {
 
     }
 
-    fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64,
+    fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64, load_contents: bool,
                                           state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
         Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
@@ -356,7 +361,17 @@ impl CommandHandler {
             match response {
                 Ok(response_message) => {
                     let local_file_path = response_message.message.clone();
-                    let command_result = CommandResult::new(local_file_path.clone());
+
+                    let mut command_result  = if load_contents {
+                        let (_, contents) = file_handler::read_file(&local_file_path).unwrap();
+                        CommandResult::new_hidden(String::from_utf8(contents).unwrap())
+                    }
+                    else {
+                        CommandResult::new_hidden(local_file_path)
+                    };
+
+                    command_result.invocation_id = invocation_id;
+
                     state_update_sender.send(StateUpdateMessage {
                         host_name: host.name,
                         display_options: command.get_display_options(),
@@ -445,7 +460,7 @@ impl CommandHandler {
 
             let command_result = match response {
                 Ok(message) => {
-                    CommandResult::new(message.message.to_owned())
+                    CommandResult::new_info(message.message.to_owned())
                 },
                 Err(error) => {
                     let error_message = format!("Error uploading file: {}", error);

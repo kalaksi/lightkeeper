@@ -55,7 +55,7 @@ impl CommandModule for Clean {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_success() {
-            Ok(CommandResult::new("Package cache cleaned"))
+            Ok(CommandResult::new_info("Package cache cleaned"))
         }
         else {
             Ok(CommandResult::new_error(response.message.clone()))

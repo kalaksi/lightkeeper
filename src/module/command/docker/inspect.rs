@@ -58,6 +58,6 @@ impl CommandModule for Inspect {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        Ok(CommandResult::new(response.message.clone()))
+        Ok(CommandResult::new_info(response.message.clone()))
     }
 }

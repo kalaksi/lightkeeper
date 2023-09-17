@@ -81,13 +81,13 @@ impl CommandModule for Remove {
                 let untagged_count = deletion_details.iter().filter(|details| details.untagged.is_some()).count();
                 let deleted_count = deletion_details.iter().filter(|details| details.deleted.is_some()).count();
                 let response_message = format!("{} layers untagged, {} layers deleted", untagged_count, deleted_count);
-                return Ok(CommandResult::new(response_message));
+                return Ok(CommandResult::new_info(response_message));
             }
             else if let Ok(docker_response) = serde_json::from_str::<ErrorMessage>(&response.message) {
                 return Ok(CommandResult::new_error(docker_response.message));
             }
         }
-        Ok(CommandResult::new(response.message.clone()))
+        Ok(CommandResult::new_info(response.message.clone()))
     }
 }
 

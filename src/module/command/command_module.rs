@@ -41,7 +41,7 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        Ok(CommandResult::new(response.message.clone()))
+        Ok(CommandResult::new_info(response.message.clone()))
     }
     fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>) -> Result<CommandResult, String> {
         Err(String::new())
@@ -66,16 +66,6 @@ pub struct CommandResult {
 }
 
 impl CommandResult {
-    // TODO: Get rid and replace with the more explicit function names below?
-    pub fn new<Stringable: ToString>(message: Stringable) -> Self {
-        CommandResult {
-            message: message.to_string(),
-            criticality: Criticality::Normal,
-            show_in_notification: true,
-            ..Default::default()
-        }
-    }
-
     pub fn new_hidden<Stringable: ToString>(message: Stringable) -> Self {
         CommandResult {
             message: message.to_string(),
@@ -136,7 +126,7 @@ impl Default for CommandResult {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum UIAction {
     None,
     DetailsDialog,
