@@ -44,8 +44,8 @@ modules:
     buildsystem: simple
     sources:
       - type: archive
-        url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/v0.4.4.tar.gz
-        sha256: 36156dc623555efaf11f11bb791337bad6e77bb5f826cbe500614960612fcb51
+        url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/v0.5.0.tar.gz
+        sha256: 4d862047bc2d1acddc147e023036ad12763416efa3966fcedaeb32849663d51a
       - "cargo-sources.json"
     build-commands:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
