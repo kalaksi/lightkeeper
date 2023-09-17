@@ -21,6 +21,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.5.0" date="2023-09-17">
+      <description>
+        <ul>
+          <li>Various fixes here and there</li>
+          <li>Add first version of the internal text editor</li>
+          <li>Improve flatpak and sandboxing support</li>
+          <li>Support file selection dialogs</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.4" date="2023-09-07">
       <description>
         <ul>
