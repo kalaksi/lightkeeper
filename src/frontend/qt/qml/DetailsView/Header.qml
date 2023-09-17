@@ -15,6 +15,7 @@ Item {
     property bool showMaximizeButton: false
     property bool showCloseButton: false
     property bool showOpenInWindowButton: false
+    property bool showSaveButton: false
 
     property bool _maximized: false
 
@@ -26,6 +27,7 @@ Item {
     signal maximizeClicked()
     signal minimizeClicked()
     signal closeClicked()
+    signal saveClicked()
 
     Rectangle {
         color: root.color
@@ -47,12 +49,14 @@ Item {
         spacing: 5
 
         RefreshButton {
+            size: 0.9 * parent.height
             anchors.verticalCenter: parent.verticalCenter
             onClicked: root.refreshClicked()
             visible: root.showRefreshButton
         }
 
         ImageButton {
+            size: 0.9 * parent.height
             anchors.rightMargin: 5
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/window-new"
@@ -63,6 +67,17 @@ Item {
         }
 
         ImageButton {
+            size: 0.9 * parent.height
+            anchors.verticalCenter: parent.verticalCenter
+            imageSource: "qrc:/main/images/button/document-save"
+            flatButton: true
+            tooltip: "Save"
+            onClicked: root.saveClicked()
+            visible: root.showSaveButton
+        }
+
+        ImageButton {
+            size: 0.9 * parent.height
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/maximize"
             flatButton: true
@@ -75,6 +90,7 @@ Item {
         }
 
         ImageButton {
+            size: 0.9 * parent.height
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/minimize"
             flatButton: true
@@ -87,6 +103,7 @@ Item {
         }
 
         ImageButton {
+            size: 0.9 * parent.height
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/close"
             color: Theme.color_dark_text()

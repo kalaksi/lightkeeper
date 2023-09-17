@@ -264,8 +264,9 @@ impl ConnectionManager {
                 }
             },
             RequestType::Upload => {
-                log::debug!("[{}] Uploading file: {}", request.host.name, request_message);
-                match file_handler::read_file(request_message) {
+                let local_file_path = request_message;
+                log::debug!("[{}] Uploading file: {}", request.host.name, local_file_path);
+                match file_handler::read_file(local_file_path) {
                     Ok((metadata, contents)) => {
                         let local_file_hash = sha256::digest(contents.as_slice());
 
@@ -284,8 +285,8 @@ impl ConnectionManager {
                         }
 
                         if metadata.temporary {
-                            log::debug!("Removing temporary local file {}", request_message);
-                            if let Err(error) = file_handler::remove_file(request_message) {
+                            log::debug!("Removing temporary local file {}", local_file_path);
+                            if let Err(error) = file_handler::remove_file(local_file_path) {
                                 log::error!("Error while removing: {}", error);
                             }
                         }

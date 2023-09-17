@@ -20,6 +20,7 @@ pub struct CommandHandlerModel {
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList)),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList)),
+    saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
 
     // Host initialization methods.
     initialize_host: qt_method!(fn(&self, host_id: QString)),
@@ -38,7 +39,7 @@ pub struct CommandHandlerModel {
     text_dialog_opened: qt_signal!(invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
     detailsSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
-    textEditorSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
+    textEditorSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
     logsSubviewOpened: qt_signal!(header_text: QString, parameters: QStringList, invocation_id: u64),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
@@ -214,16 +215,24 @@ impl CommandHandlerModel {
             UIAction::TextEditor => {
                 let remote_file_path = parameters.first().unwrap().clone();
                 if self.configuration.preferences.text_editor == configuration::INTERNAL {
-                    let invocation_id = self.command_handler.download_file(&host_id, &command_id, &remote_file_path); 
-                    ::log::debug!("Downloaded file {} with invocation ID {}", remote_file_path, invocation_id);
-                    ::log::debug!("command_id: {}", command_id);
-                    self.textEditorSubviewOpened(QString::from(command_id), invocation_id);
+                    let (invocation_id, local_file_path) = self.command_handler.download_file(&host_id, &command_id, &remote_file_path); 
+                    self.textEditorSubviewOpened(QString::from(command_id), invocation_id, QString::from(local_file_path));
                 }
                 else {
                     self.command_handler.open_text_editor(&host_id, &command_id, &remote_file_path);
                 }
             },
         }
+    }
+
+    fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64 {
+        let host_id = host_id.to_string();
+        let command_id = command_id.to_string();
+        let local_file_path = local_file_path.to_string();
+        let contents = contents.to_string().into_bytes();
+
+        let invocation_id = self.command_handler.save_and_upload_file(&host_id, &command_id, &local_file_path, contents);
+        invocation_id
     }
 
     fn initialize_host(&mut self, host_id: QString) {

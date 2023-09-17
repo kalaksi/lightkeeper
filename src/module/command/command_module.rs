@@ -110,6 +110,11 @@ impl CommandResult {
             ..Default::default()
         }
     }
+
+    pub fn with_invocation_id(&mut self, invocation_id: u64) -> Self {
+        self.invocation_id = invocation_id;
+        self.to_owned()
+    }
 }
 
 impl Default for CommandResult {

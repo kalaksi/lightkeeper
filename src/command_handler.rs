@@ -119,10 +119,8 @@ impl CommandHandler {
                     host_name: host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
-                    data_point: None,
                     command_result: Some(CommandResult::new_error(error)),
-                    errors: Vec::new(),
-                    exit_thread: false,
+                    ..Default::default()
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to state manager: {}", error);
                 });
@@ -217,10 +215,9 @@ impl CommandHandler {
                 host_name: host.name,
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
-                data_point: None,
                 command_result: new_command_result,
                 errors: errors,
-                exit_thread: false,
+                ..Default::default()
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
             });
@@ -232,7 +229,7 @@ impl CommandHandler {
     // INTEGRATED COMMANDS
     //
 
-    pub fn download_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> u64 {
+    pub fn download_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> (u64, String) {
         let host = self.host_manager.borrow().get_host(&host_id);
         let command = self.commands.get(host_id).unwrap()
                                    .get(command_id).unwrap();
@@ -242,6 +239,7 @@ impl CommandHandler {
             return;
         }).unwrap();
 
+        let (_, local_file_path) = file_handler::convert_to_local_paths(&host, remote_file_path);
         // Whether to load file contents to the command result.
         let load_contents = command.get_display_options().action == UIAction::TextEditor;
         self.invocation_id_counter += 1;
@@ -260,9 +258,29 @@ impl CommandHandler {
                 self.state_update_sender.as_ref().unwrap().clone()
             ),
             cache_policy: CachePolicy::BypassCache,
-        }).unwrap_or_else(|error| {
-            log::error!("Couldn't send message to connector: {}", error);
-        });
+        }).unwrap();
+
+        (self.invocation_id_counter, local_file_path)
+    }
+
+    pub fn save_and_upload_file(&mut self, host_id: &String, command_id: &String, local_file_path: &String, new_contents: Vec<u8>) -> u64 {
+        let host = self.host_manager.borrow().get_host(&host_id);
+        let command = self.commands.get(host_id).unwrap()
+                                   .get(command_id).unwrap();
+        let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
+
+        file_handler::update_file(local_file_path, new_contents).unwrap();
+        self.invocation_id_counter += 1;
+
+        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+            connector_spec: command.get_connector_spec(),
+            source_id: command.get_module_spec().id,
+            host: host.clone(),
+            request_type: RequestType::Upload,
+            messages: vec![local_file_path.clone()],
+            response_handler: Self::get_response_handler_upload_file(host, command.box_clone(), self.invocation_id_counter, state_update_sender),
+            cache_policy: CachePolicy::BypassCache,
+        }).unwrap();
 
         self.invocation_id_counter
     }
@@ -325,10 +343,8 @@ impl CommandHandler {
                 host_name: host.name,
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
-                data_point: None,
                 command_result: Some(CommandResult::new_info(String::from("Changes saved"))),
-                errors: Vec::new(),
-                exit_thread: false,
+                ..Default::default()
             }).unwrap_or_else(|error| {
                 log::error!("Couldn't send message to state manager: {}", error);
             });
@@ -362,24 +378,22 @@ impl CommandHandler {
                 Ok(response_message) => {
                     let local_file_path = response_message.message.clone();
 
-                    let mut command_result  = if load_contents {
+                    let command_result  = if load_contents {
                         let (_, contents) = file_handler::read_file(&local_file_path).unwrap();
                         CommandResult::new_hidden(String::from_utf8(contents).unwrap())
+                                      .with_invocation_id(invocation_id)
                     }
                     else {
                         CommandResult::new_hidden(local_file_path)
+                                      .with_invocation_id(invocation_id)
                     };
-
-                    command_result.invocation_id = invocation_id;
 
                     state_update_sender.send(StateUpdateMessage {
                         host_name: host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
-                        data_point: None,
                         command_result: Some(command_result),
-                        errors: Vec::new(),
-                        exit_thread: false,
+                        ..Default::default()
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to state manager: {}", error);
                     });
@@ -392,15 +406,44 @@ impl CommandHandler {
                         host_name: host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
-                        data_point: None,
                         command_result: Some(CommandResult::new_critical_error(error_message)),
-                        errors: Vec::new(),
-                        exit_thread: false,
+                        ..Default::default()
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to state manager: {}", error);
                     });
                 }
             }
+        })
+    }
+
+    fn get_response_handler_upload_file(host: Host, command: Command, invocation_id: u64,
+                                        state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+
+        Box::new(move |responses| {
+            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
+            // TODO: check that destination file hasn't changed?
+            let response = responses.first().unwrap();
+
+            let command_result = match response {
+                Ok(message) => {
+                    CommandResult::new_info(message.message.to_owned())
+                                  .with_invocation_id(invocation_id)
+                },
+                Err(error) => {
+                    let error_message = format!("Error uploading file: {}", error);
+                    log::error!("{}", error_message);
+                    CommandResult::new_critical_error(error_message)
+                                  .with_invocation_id(invocation_id)
+                }
+            };
+
+            state_update_sender.send(StateUpdateMessage {
+                host_name: host.name,
+                display_options: command.get_display_options(),
+                module_spec: command.get_module_spec(),
+                command_result: Some(command_result),
+                ..Default::default()
+            }).unwrap();
         })
     }
 
@@ -425,7 +468,7 @@ impl CommandHandler {
                         host: host.clone(),
                         request_type: RequestType::Upload,
                         messages: vec![response_message.message.clone()],
-                        response_handler: Self::get_response_handler_upload_file(host, command, state_update_sender),
+                        response_handler: Self::get_response_handler_upload_file(host, command, 0, state_update_sender),
                         cache_policy: CachePolicy::BypassCache,
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to connector: {}", error);
@@ -439,47 +482,13 @@ impl CommandHandler {
                         host_name: host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
-                        data_point: None,
                         command_result: Some(CommandResult::new_critical_error(error_message)),
-                        errors: Vec::new(),
-                        exit_thread: false,
+                        ..Default::default()
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to state manager: {}", error);
                     });
                 }
             };
-        })
-    }
-
-    fn get_response_handler_upload_file(host: Host, command: Command, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-
-        Box::new(move |responses| {
-            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
-            // TODO: check that destination file hasn't changed?
-            let response = responses.first().unwrap();
-
-            let command_result = match response {
-                Ok(message) => {
-                    CommandResult::new_info(message.message.to_owned())
-                },
-                Err(error) => {
-                    let error_message = format!("Error uploading file: {}", error);
-                    log::error!("{}", error_message);
-                    CommandResult::new_critical_error(error_message)
-                }
-            };
-
-            state_update_sender.send(StateUpdateMessage {
-                host_name: host.name,
-                display_options: command.get_display_options(),
-                module_spec: command.get_module_spec(),
-                data_point: None,
-                command_result: Some(command_result),
-                errors: Vec::new(),
-                exit_thread: false,
-            }).unwrap_or_else(|error| {
-                log::error!("Couldn't send message to state manager: {}", error);
-            });
         })
     }
 }

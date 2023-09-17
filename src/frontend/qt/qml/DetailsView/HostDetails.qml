@@ -34,8 +34,8 @@ Item {
         }
 
         // For integrated text editor.
-        function onTextEditorSubviewOpened(headerText, invocationId) {
-            openTextEditorView(headerText, invocationId)
+        function onTextEditorSubviewOpened(commandId, invocationId, localFilePath) {
+            openTextEditorView(commandId, invocationId, localFilePath)
         }
     }
 
@@ -81,12 +81,14 @@ Item {
 
             // TODO:
             // showOpenInWindowButton: true
+            showSaveButton: textEditor.visible
             showCloseButton: true
             onOpenInWindowClicked: {
                 root.openInNewWindowClicked(subviewContent.text, subviewContent.errorText, subviewContent.criticality)
                 root.closeSubview()
             }
             onCloseClicked: root.closeSubview()
+            onSaveClicked: textEditor.save()
         }
 
         Item {
@@ -114,6 +116,16 @@ Item {
                 id: textEditor
                 anchors.fill: parent
                 visible: false
+
+                onSaved: function(commandId, localFilePath, content) {
+                    let _invocationId = CommandHandler.saveAndUploadFile(
+                        root.hostId,
+                        commandId,
+                        localFilePath,
+                        content
+                    )
+                    root.closeSubview()
+                }
             }
         }
     }
@@ -171,12 +183,12 @@ Item {
         animateShowSubview.start()
     }
 
-    function openTextEditorView(headerText, invocationId) {
-        subviewHeader.text = headerText
+    function openTextEditorView(commandId, invocationId, localFilePath) {
+        subviewHeader.text = commandId
 
         textView.visible = false
         logView.visible = false
-        textEditor.open(invocationId)
+        textEditor.open(commandId, invocationId, localFilePath)
         animateShowSubview.start()
     }
 

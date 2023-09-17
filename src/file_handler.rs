@@ -81,6 +81,12 @@ pub fn create_file(host: &Host, remote_file_path: &String, metadata: FileMetadat
     Ok(file_path)
 }
 
+/// Updates existing local file. File has to exist and have accompanying metadata file.
+pub fn update_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()> {
+    fs::write(local_file_path, contents)?;
+    Ok(())
+}
+
 /// Removes local copy of the file.
 pub fn remove_file(local_file_path: &String) -> io::Result<()> {
     // TODO: path validation and limits just in case?

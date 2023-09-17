@@ -10,9 +10,13 @@ import "../Text"
 
 Item {
     id: root
+    property string commandId: ""
     property var text: ""
+    property string localFilePath: ""
     property var pendingInvocations: []
 
+
+    signal saved(commandId: string, localFilePath: string, content: string)
 
     Connections {
         target: HostDataManager
@@ -29,7 +33,7 @@ Item {
     }
 
     Rectangle {
-        color: Theme.color_background()
+        color: Theme.color_background_2()
         anchors.fill: parent
     }
 
@@ -40,10 +44,12 @@ Item {
     ScrollView {
         visible: root.text !== ""
         anchors.fill: parent
+        anchors.margins: Theme.spacing_loose()
+        clip: true
 
         TextEdit {
+            id: textEdit
             anchors.fill: parent
-            anchors.margins: 20
             wrapMode: Text.WordWrap
             color: Theme.color_text()
             text: root.text
@@ -51,20 +57,27 @@ Item {
         }
     }
 
-    onAccepted: {
+    function save() {
+        if (root.commandId === "" || root.localFilePath === "") {
+            return
+        }
+
+        let content = textEdit.text
+        root.saved(root.commandId, root.localFilePath, content)
     }
 
-    onRejected: {
+    function open(commandId, invocationId, localFilePath) {
         reset()
-    }
-
-    function open(invocationId) {
         root.visible = true
-        reset()
+        root.commandId = commandId
+        root.localFilePath = localFilePath
         root.pendingInvocations.push(invocationId)
     }
 
     function reset() {
         root.text = ""
+        root.commandId = ""
+        root.localFilePath = ""
+        root.pendingInvocations = []
     }
 }
