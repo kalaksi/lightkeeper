@@ -12,9 +12,10 @@ Item {
     property real imageRelativeWidth: 0.8
     property real imageRelativeHeight: 0.8
     property bool flatButton: true
+    property real size: 0.8 * parent.height
 
-    width: 0.8 * parent.height
-    height: width
+    width: root.size
+    height: root.size
 
     signal clicked()
 

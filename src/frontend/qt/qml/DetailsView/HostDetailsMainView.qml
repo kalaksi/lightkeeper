@@ -18,7 +18,7 @@ Item {
     property int columnMaximumWidth: Theme.groupbox_max_width()
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
-    property int columnSpacing: 6
+    property int columnSpacing: Theme.spacing_normal()
     property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
     property var _categories: getCategories()

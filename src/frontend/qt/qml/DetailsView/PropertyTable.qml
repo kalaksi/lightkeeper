@@ -273,8 +273,8 @@ TableView {
                 cooldownTimer.stop()
 
                 // Refresh the monitor(s) related to commands that were executed.
-                for (const command_id of root.pendingRefreshAfterCommand) {
-                    CommandHandler.force_refresh_monitors_of_command(root.hostId, command_id)
+                for (const commandId of root.pendingRefreshAfterCommand) {
+                    CommandHandler.force_refresh_monitors_of_command(root.hostId, commandId)
                 }
 
                 root.pendingRefreshAfterCommand = []

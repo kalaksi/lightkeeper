@@ -200,6 +200,7 @@ ApplicationWindow {
             let inputSpecs = JSON.parse(input_specs_json)
 
             inputDialog.inputSpecs = inputSpecs
+            // TODO: need to clear previous connections?
             inputDialog.onInputValuesGiven.connect((inputValues) => {
                 CommandHandler.execute_confirmed(hostId, commandId, commandParams.concat(inputValues))
             })
