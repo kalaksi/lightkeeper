@@ -152,7 +152,7 @@ impl ThemeModel {
     }
     
     fn color_background_2(&self) -> QString {
-        QString::from(String::from("#404040"))
+        QString::from(String::from("#303030"))
     }
 
     fn color_table_background(&self) -> QString {

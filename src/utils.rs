@@ -11,6 +11,3 @@ pub use shell_command::ShellCommand;
 
 pub mod error_message;
 pub use error_message::ErrorMessage;
-
-pub mod file_utils;
-pub use file_utils::*;
