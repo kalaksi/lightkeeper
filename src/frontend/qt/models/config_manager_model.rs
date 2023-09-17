@@ -6,7 +6,7 @@ use crate::{
     configuration::Configuration,
     configuration::Hosts,
     configuration::Groups,
-    configuration::HostSettings,
+    configuration::{HostSettings, self},
     module::Metadata,
 };
 
@@ -106,7 +106,6 @@ pub struct ConfigManagerModel {
 
 
     pub restart_required: bool,
-    pub sandboxed: bool,
 
     config_dir: String,
     main_config: Configuration,
@@ -194,7 +193,30 @@ impl ConfigManagerModel {
     }
 
     fn isSandboxed(&self) -> bool {
-        self.sandboxed
+        self.main_config.preferences.use_sandbox_mode
+    }
+
+    /// Updates preferences.use_sandbox_mode. Returns true if value was changed and was written to config.
+    pub fn setSandboxed(&mut self, use_sandbox_mode: bool) -> bool {
+        if self.main_config.preferences.use_sandbox_mode != use_sandbox_mode {
+            self.main_config.preferences.use_sandbox_mode = use_sandbox_mode;
+            if use_sandbox_mode {
+                self.main_config.preferences.text_editor = configuration::INTERNAL.to_string();
+                self.main_config.preferences.terminal = configuration::INTERNAL.to_string();
+                self.main_config.preferences.terminal_args = Vec::new();
+            }
+
+            if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+                self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+                false
+            }
+            else {
+                true
+            }
+        }
+        else {
+            false
+        }
     }
 
     fn begin_host_configuration(&mut self) {

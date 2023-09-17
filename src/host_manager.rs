@@ -119,7 +119,8 @@ impl HostManager {
                 if state_update.exit_thread {
                     log::debug!("Gracefully exiting state manager thread.");
                     for observer in observers.lock().unwrap().iter() {
-                        observer.send(frontend::HostDisplayData::exit_token()).unwrap();
+                        observer.send(frontend::HostDisplayData::exit_token())
+                                .unwrap_or_else(|error| log::debug!("Frontend state manager already left: {}", error));
                     }
                     return;
                 }

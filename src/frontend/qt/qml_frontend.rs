@@ -54,8 +54,8 @@ impl QmlFrontend {
         }
     }
 
-    pub fn setup_command_handler(&mut self, command_handler: CommandHandler, monitor_manager: MonitorManager, display_options: configuration::DisplayOptions) {
-        self.command_handler = Some(CommandHandlerModel::new(command_handler, monitor_manager, display_options));
+    pub fn setup_command_handler(&mut self, command_handler: CommandHandler, monitor_manager: MonitorManager, config: configuration::Configuration) {
+        self.command_handler = Some(CommandHandlerModel::new(command_handler, monitor_manager, config));
     }
 
     pub fn start(&mut self) -> ExitReason {
@@ -73,18 +73,24 @@ impl QmlFrontend {
         let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
         let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
         let qt_data_command_handler = QObjectBox::new(self.command_handler.take().unwrap());
-        let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
-        qt_data_config_manager.pinned().borrow_mut().sandboxed = sandboxed;
         let qt_data_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
+        let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
+        let sandboxed_updated = qt_data_config_manager.pinned().borrow_mut().setSandboxed(sandboxed);
 
-        let mut engine = QmlEngine::new();
-        engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
-        engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
-        engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
-        engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
-        engine.set_object_property(QString::from("DesktopPortal"), qt_data_desktop_portal.pinned());
-        engine.load_file(QString::from(main_qml_path));
-        engine.exec();
+        if sandboxed_updated {
+            // Currently needs a restart so configuration is updated everywhere. Should happen only on first start.
+            return ExitReason::Restart;
+        }
+        else {
+            let mut engine = QmlEngine::new();
+            engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
+            engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
+            engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
+            engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
+            engine.set_object_property(QString::from("DesktopPortal"), qt_data_desktop_portal.pinned());
+            engine.load_file(QString::from(main_qml_path));
+            engine.exec();
+        }
 
         if qt_data_config_manager.pinned().borrow().restart_required {
             ExitReason::Restart

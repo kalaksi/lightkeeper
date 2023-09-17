@@ -11,9 +11,6 @@ import "../Text"
 Item {
     id: root
     property var text: ""
-    property var jsonText: ""
-    property var errorText: ""
-    property var criticality: ""
     property var pendingInvocations: []
 
 
@@ -26,14 +23,7 @@ Item {
             if (root.pendingInvocations.includes(commandResult.invocation_id)) {
                 root.pendingInvocations = root.pendingInvocations.filter((invocationId) => invocationId != commandResult.invocationId)
 
-                // If message seems to contain JSON...
-                if (commandResult.message.startsWith("{")) {
-                    root.jsonText = commandResult.message
-                }
-                else {
-                    root.text = commandResult.message
-                }
-
+                root.text = commandResult.message
                 root.errorText = commandResult.error
                 root.criticality = commandResult.criticality
             }
@@ -41,55 +31,34 @@ Item {
     }
 
     Rectangle {
-        color: Material.background
+        color: Theme.color_background()
         anchors.fill: parent
     }
 
     WorkingSprite {
-        visible: root.text === "" && root.errorText === ""
-    }
-
-    ScrollView {
-        visible: root.jsonText !== ""
-        anchors.fill: parent
-
-        JsonTextFormat {
-            anchors.fill: parent
-            anchors.margins: 20
-            jsonText: root.jsonText
-        }
+        visible: root.text === ""
     }
 
     ScrollView {
         visible: root.text !== ""
         anchors.fill: parent
 
-        NormalText {
+        TextEdit {
             anchors.fill: parent
             anchors.margins: 20
             wrapMode: Text.WordWrap
-            textFormat: Text.MarkdownText
+            color: Theme.color_text()
             text: root.text
         }
     }
 
-    AlertMessage {
-        text: root.errorText
-        criticality: root.criticality
-        visible: root.errorText !== ""
-    }
-
-    function open(commandId, invocationId) {
-        reset()
-        root.commandId = commandId
-        root.pendingInvocations.push(invocationId)
+    function open(invocationId) {
         root.visible = true
+        reset()
+        root.pendingInvocations.push(invocationId)
     }
 
     function reset() {
         root.text = ""
-        root.jsonText = ""
-        root.errorText = ""
-        root.criticality = ""
     }
 }

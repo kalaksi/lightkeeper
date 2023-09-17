@@ -4,11 +4,12 @@ use std::collections::HashMap;
 use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
-use crate::configuration;
+use crate::configuration::{Configuration, self};
 use crate::connection_manager::CachePolicy;
 use crate::module::command::UIAction;
 use crate::monitor_manager::MonitorManager;
 
+#[allow(non_snake_case)]
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
@@ -34,29 +35,30 @@ pub struct CommandHandlerModel {
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
     input_dialog_opened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QVariantList),
-    details_subview_opened: qt_signal!(header_text: QString, invocation_id: u64),
     text_dialog_opened: qt_signal!(invocation_id: u64),
-    // TODO: dialog for logs (refactor so doesn't need dedicated)
-    logs_subview_opened: qt_signal!(header_text: QString, parameters: QStringList, invocation_id: u64),
-    text_editor_opened: qt_signal!(header_text: QString, invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
+    detailsSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
+    textEditorSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
+    terminalSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
+    logsSubviewOpened: qt_signal!(header_text: QString, parameters: QStringList, invocation_id: u64),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
     host_initializing: qt_signal!(host_id: QString),
 
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
-    ui_display_options: configuration::DisplayOptions,
+    configuration: Configuration,
     // TODO
     // refresh_after_execution: bool,
 }
 
+#[allow(non_snake_case)]
 impl CommandHandlerModel {
-    pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, ui_display_options: configuration::DisplayOptions) -> Self {
+    pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, configuration: Configuration) -> Self {
         CommandHandlerModel { 
             command_handler: command_handler,
             monitor_manager: monitor_manager,
-            ui_display_options: ui_display_options,
+            configuration: configuration,
             // refresh_after_execution: true,
             ..Default::default()
         }
@@ -77,7 +79,7 @@ impl CommandHandlerModel {
                                                         .map(|(_, data)| data)
                                                         .collect::<Vec<CommandData>>();
 
-        let command_order = match &self.ui_display_options.categories.get(&category_string) {
+        let command_order = match self.configuration.display_options.as_ref().unwrap().categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
             None => Vec::new(),
         };
@@ -115,7 +117,7 @@ impl CommandHandlerModel {
 
         let mut valid_commands_sorted = Vec::<CommandData>::new();
 
-        let command_order = match &self.ui_display_options.categories.get(&category_string) {
+        let command_order = match self.configuration.display_options.as_ref().unwrap().categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
             None => Vec::new(),
         };
@@ -167,7 +169,7 @@ impl CommandHandlerModel {
         let display_options = self.command_handler.get_command_for_host(&host_id, &command_id).display_options;
         match display_options.action {
             UIAction::None => {
-                let invocation_id = self.command_handler.execute(host_id.clone(), command_id.clone(), parameters.clone());
+                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
 
                 if invocation_id > 0 {
                     let button_identifier = format!("{}|{}", command_id, parameters.first().unwrap_or(&String::new()));
@@ -175,38 +177,49 @@ impl CommandHandlerModel {
                 }
             },
             UIAction::DetailsDialog => {
-                let invocation_id = self.command_handler.execute(host_id, command_id, parameters);
+                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     self.details_dialog_opened(invocation_id)
                 }
             },
             UIAction::TextView => {
                 let target_id = parameters.first().unwrap().clone();
-                let invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters);
+                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
-                    self.details_subview_opened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id)
+                    self.detailsSubviewOpened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id)
                 }
             },
             UIAction::TextDialog => {
-                let invocation_id = self.command_handler.execute(host_id, command_id, parameters);
+                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     self.text_dialog_opened(invocation_id)
                 }
             },
             UIAction::LogView => {
-                let invocation_id = self.command_handler.execute(host_id, command_id.clone(), parameters.clone());
+                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
-                    self.logs_subview_opened(QString::from(command_id), parameters_qs, invocation_id);
+                    self.logsSubviewOpened(QString::from(command_id), parameters_qs, invocation_id);
                 }
             },
             UIAction::Terminal => {
-                self.command_handler.open_terminal(host_id, command_id, parameters);
+                if self.configuration.preferences.terminal == configuration::INTERNAL {
+                    // TODO
+                    // self.terminalSubviewOpened(QString::from(command_id), );
+                }
+                else {
+                    self.command_handler.open_terminal(&host_id, &command_id, parameters);
+                }
             },
             UIAction::TextEditor => {
-                // TODO: integrated text editor
                 let remote_file_path = parameters.first().unwrap().clone();
-                self.command_handler.open_text_editor(host_id, command_id, remote_file_path);
+                if self.configuration.preferences.text_editor == configuration::INTERNAL {
+                    let invocation_id = self.command_handler.download_file(&host_id, &command_id, &remote_file_path); 
+                    self.textEditorSubviewOpened(QString::from(command_id), invocation_id);
+                }
+                else {
+                    self.command_handler.open_text_editor(&host_id, &command_id, &remote_file_path);
+                }
             },
         }
     }

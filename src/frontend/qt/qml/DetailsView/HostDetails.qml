@@ -25,12 +25,17 @@ Item {
     Connections {
         target: CommandHandler
 
-        function onDetails_subview_opened(headerText, invocationId) {
+        function onDetailsSubviewOpened(headerText, invocationId) {
             openTextView(headerText, invocationId)
         }
 
-        function onLogs_subview_opened(commandId, commandParams, invocationId) {
+        function onLogsSubviewOpened(commandId, commandParams, invocationId) {
             openLogView(commandId, commandParams, invocationId)
+        }
+
+        // For integrated text editor.
+        function onTextEditorSubviewOpened(headerText, invocationId) {
+            openTextEditorView(headerText, invocationId)
         }
     }
 
@@ -105,7 +110,7 @@ Item {
                 visible: false
             }
 
-            HostDetailsTextView {
+            HostDetailsTextEditorView {
                 id: textEditor
                 anchors.fill: parent
                 visible: false
@@ -151,7 +156,6 @@ Item {
     function openTextView(headerText, invocationId) {
         subviewHeader.text = headerText
 
-        textView.visible = true
         logView.visible = false
         textEditor.visible = false
         textView.open(invocationId)
@@ -162,7 +166,6 @@ Item {
         subviewHeader.text = commandId
 
         textView.visible = false
-        logView.visible = true
         textEditor.visible = false
         logView.open(commandId, commandParams, invocationId)
         animateShowSubview.start()
@@ -173,7 +176,6 @@ Item {
 
         textView.visible = false
         logView.visible = false
-        textEditor.visible = true
         textEditor.open(invocationId)
         animateShowSubview.start()
     }

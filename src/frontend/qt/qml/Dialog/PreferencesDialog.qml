@@ -194,7 +194,7 @@ Dialog {
             }
 
             TextField {
-                text: ConfigManager.isSandboxed() ? "internal" : root._preferences.text_editor
+                text: root._preferences.text_editor
                 enabled: !ConfigManager.isSandboxed()
 
                 Layout.preferredWidth: content.width * 0.35
@@ -222,7 +222,7 @@ Dialog {
             }
 
             TextField {
-                text: ConfigManager.isSandboxed() ? "internal" : root._preferences.terminal + " " + root._preferences.terminal_args
+                text: root._preferences.terminal + " " + root._preferences.terminal_args
                 enabled: !ConfigManager.isSandboxed()
 
                 Layout.preferredWidth: content.width * 0.35

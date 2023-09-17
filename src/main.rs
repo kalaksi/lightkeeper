@@ -90,8 +90,17 @@ fn run(args: Args) -> ExitReason {
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
     let mut connection_manager = ConnectionManager::new(main_config.cache_settings.clone());
-    let mut monitor_manager = MonitorManager::new(connection_manager.new_request_sender(), main_config.cache_settings.clone(), host_manager.clone(), module_factory.clone());
-    let mut command_handler = CommandHandler::new(connection_manager.new_request_sender(), host_manager.clone(), module_factory.clone());
+    let mut monitor_manager = MonitorManager::new(
+        connection_manager.new_request_sender(),
+        main_config.cache_settings.clone(),
+        host_manager.clone(),
+        module_factory.clone()
+    );
+    let mut command_handler = CommandHandler::new(
+        connection_manager.new_request_sender(),
+        host_manager.clone(),
+        module_factory.clone()
+    );
     host_manager.borrow_mut().start_receiving_updates();
 
     // Configure hosts and modules.
@@ -112,7 +121,7 @@ fn run(args: Args) -> ExitReason {
     );
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
-    frontend.setup_command_handler(command_handler, monitor_manager, main_config.display_options.clone().unwrap());
+    frontend.setup_command_handler(command_handler, monitor_manager, main_config.clone());
     let exit_reason = frontend.start();
 
     // Shut down threads.

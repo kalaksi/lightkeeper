@@ -97,19 +97,19 @@ impl CommandHandler {
     }
 
     /// Returns invocation ID or 0 on error.
-    pub fn execute(&mut self, host_id: String, command_id: String, parameters: Vec<String>) -> u64 {
+    pub fn execute(&mut self, host_id: &String, command_id: &String, parameters: &Vec<String>) -> u64 {
 
-        let host = self.host_manager.borrow().get_host(&host_id);
+        let host = self.host_manager.borrow().get_host(host_id);
 
         if !host.platform.is_set() {
             log::warn!("[{}] Executing command \"{}\" despite missing platform info", host_id, command_id);
         }
 
-        let command = self.commands.get(&host_id).unwrap()
-                                   .get(&command_id).unwrap();
+        let command = self.commands.get(host_id).unwrap()
+                                   .get(command_id).unwrap();
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
 
-        let messages = match get_command_connector_messages(&host, command, &parameters) {
+        let messages = match get_command_connector_messages(&host, command, parameters) {
             Ok(messages) => messages,
             Err(error) => {
                 log::error!("Command \"{}\" failed: {}", command_id, error);
@@ -230,12 +230,44 @@ impl CommandHandler {
     // INTEGRATED COMMANDS
     //
 
-    pub fn open_terminal(&self, host_id: String, command_id: String, parameters: Vec<String>) {
+    pub fn download_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> u64 {
+        let host = self.host_manager.borrow().get_host(&host_id);
+        let command = self.commands.get(host_id).unwrap()
+                                   .get(command_id).unwrap();
+
+        let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
+            log::error!("Command \"{}\" failed: {}", command_id, error);
+            return;
+        }).unwrap();
+
+        self.invocation_id_counter += 1;
+
+        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+            connector_spec: command.get_connector_spec(),
+            source_id: command.get_module_spec().id,
+            host: host.clone(),
+            request_type: RequestType::Download,
+            messages: connector_messages,
+            response_handler: Self::get_response_handler_download_file(
+                host,
+                command.box_clone(),
+                self.invocation_id_counter,
+                self.state_update_sender.as_ref().unwrap().clone()
+            ),
+            cache_policy: CachePolicy::BypassCache,
+        }).unwrap_or_else(|error| {
+            log::error!("Couldn't send message to connector: {}", error);
+        });
+
+        self.invocation_id_counter
+    }
+
+    pub fn open_terminal(&self, host_id: &String, command_id: &String, parameters: Vec<String>) {
         // TODO: integrated interactive terminals with ssh2::request_pty() / shell?
 
         let host = self.host_manager.borrow().get_host(&host_id);
-        let command = self.commands.get(&host_id).unwrap()
-                                   .get(&command_id).unwrap();
+        let command = self.commands.get(host_id).unwrap()
+                                   .get(command_id).unwrap();
 
         let connector_messages = get_command_connector_messages(&host, command, &parameters).map_err(|error| {
             log::error!("Command \"{}\" failed: {}", command_id, error);
@@ -255,10 +287,10 @@ impl CommandHandler {
                          .expect("Running command failed");
     }
 
-    pub fn open_text_editor(&self, host_id: String, command_id: String, remote_file_path: String) {
+    pub fn open_text_editor(&self, host_id: &String, command_id: &String, remote_file_path: &String) {
         let host = self.host_manager.borrow().get_host(&host_id);
-        let command = self.commands.get(&host_id).unwrap()
-                                   .get(&command_id).unwrap();
+        let command = self.commands.get(host_id).unwrap()
+                                   .get(command_id).unwrap();
 
         let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
             log::error!("Command \"{}\" failed: {}", command_id, error);
@@ -313,6 +345,48 @@ impl CommandHandler {
             });
         }
 
+    }
+
+    fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64,
+                                          state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
+        Box::new(move |responses| {
+            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
+            let response = responses.first().unwrap();
+
+            match response {
+                Ok(response_message) => {
+                    let local_file_path = response_message.message.clone();
+                    let command_result = CommandResult::new(local_file_path.clone());
+                    state_update_sender.send(StateUpdateMessage {
+                        host_name: host.name,
+                        display_options: command.get_display_options(),
+                        module_spec: command.get_module_spec(),
+                        data_point: None,
+                        command_result: Some(command_result),
+                        errors: Vec::new(),
+                        exit_thread: false,
+                    }).unwrap_or_else(|error| {
+                        log::error!("Couldn't send message to state manager: {}", error);
+                    });
+                },
+                Err(error) => {
+                    let error_message = format!("Error downloading file: {}", error);
+                    log::error!("{}", error_message);
+
+                    state_update_sender.send(StateUpdateMessage {
+                        host_name: host.name,
+                        display_options: command.get_display_options(),
+                        module_spec: command.get_module_spec(),
+                        data_point: None,
+                        command_result: Some(CommandResult::new_critical_error(error_message)),
+                        errors: Vec::new(),
+                        exit_thread: false,
+                    }).unwrap_or_else(|error| {
+                        log::error!("Couldn't send message to state manager: {}", error);
+                    });
+                }
+            }
+        })
     }
 
     fn get_response_handler_text_editor(host: Host, command: Command,

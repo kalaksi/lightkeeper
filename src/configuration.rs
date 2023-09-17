@@ -9,6 +9,7 @@ use crate::file_handler;
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
 const GROUPS_FILE: &str = "groups.yml";
+pub const INTERNAL: &str = "internal";
 
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -35,13 +36,17 @@ pub struct Hosts {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Preferences {
+    #[serde(default)]
+    pub use_sandbox_mode: bool,
     pub refresh_hosts_on_start: bool,
     pub use_remote_editor: bool,
     pub sudo_remote_editor: bool,
     // TODO: check for valid command.
     pub remote_text_editor: String,
     // TODO: check for valid path.
+    /// Command to run when launching a text editor. "internal" is a special value that uses the internal editor.
     pub text_editor: String,
+    /// Command to run when launching a terminal. "internal" is a special value that uses the internal terminal.
     pub terminal: String,
     pub terminal_args: Vec<String>,
 }
