@@ -32,6 +32,13 @@ Item {
         }
     }
 
+    // ScrollView doesn't have boundsBehavior so this is the workaround.
+    Binding {
+        target: rootScrollView.contentItem
+        property: "boundsBehavior"
+        value: Flickable.StopAtBounds
+    }
+
     Rectangle {
         color: Theme.color_background_2()
         anchors.fill: parent
@@ -42,6 +49,7 @@ Item {
     }
 
     ScrollView {
+        id: rootScrollView
         visible: root.text !== ""
         anchors.fill: parent
         anchors.margins: Theme.spacing_loose()
