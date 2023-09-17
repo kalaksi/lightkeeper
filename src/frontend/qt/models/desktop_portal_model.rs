@@ -12,8 +12,6 @@ use std::os::fd::{AsRawFd, RawFd};
 use std::sync::mpsc;
 use std::thread;
 
-use crate::utils::file_utils;
-
 
 /// The need for this model came from poor support for portals (related to sandboxing), like file chooser, in Qt.
 /// However, things seem to be improving in Qt so this might be unneeded in the future.
@@ -81,6 +79,7 @@ impl DesktopPortalModel {
                             self_pinned.borrow().error(QString::from("Unknown error occurred while opening file"));
                         }
                     }
+                    /*
                     else if portal_response.check_invalid_fds {
                         // TODO: finding invalid fds doesn't seem to work.
                         let tokens = self_pinned.borrow_mut().find_invalid_fds();
@@ -91,6 +90,7 @@ impl DesktopPortalModel {
                             self_pinned.borrow().openedFileClosed(QString::from(token));
                         }
                     }
+                    */
                 }
             });
 
@@ -236,11 +236,13 @@ impl DesktopPortalModel {
         format!("{}{}", "lightkeeper_", random_number)
     }
 
+    /* Currently not used anywhere but could be useful.
     fn find_invalid_fds(&mut self) -> Vec<String> {
         self.open_files.iter()
             .filter(|(_, fd)| { !file_utils::is_valid_fd(**fd) })
             .map(|(token, _)| { token.clone() }).collect::<Vec<String>>()
     }
+    */
 }
 
 
@@ -264,7 +266,7 @@ enum PortalRequestType {
 pub struct PortalResponse {
     file_chooser: Option<FileChooserResponse>,
     open_file: Option<OpenFileResponse>,
-    check_invalid_fds: bool,
+    _check_invalid_fds: bool,
 }
 
 impl PortalResponse {
@@ -284,7 +286,7 @@ impl PortalResponse {
 
     pub fn check_invalid_fds() -> PortalResponse {
         PortalResponse {
-            check_invalid_fds: true,
+            _check_invalid_fds: true,
             ..Default::default()
         }
     }

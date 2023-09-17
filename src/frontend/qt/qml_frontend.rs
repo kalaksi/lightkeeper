@@ -59,13 +59,12 @@ impl QmlFrontend {
     }
 
     pub fn start(&mut self) -> ExitReason {
-        let main_qml_path = if env::var("FLATPAK_ID").is_ok() {
+        let sandboxed = env::var("FLATPAK_ID").is_ok();
+        let main_qml_path = match sandboxed {
             // Inside flatpak.
-            "/app/qml/main.qml"
-        }
-        else {
+            true => "/app/qml/main.qml",
             // If running from the source directory, use the QML file from there.
-            "src/frontend/qt/qml/main.qml"
+            false => "src/frontend/qt/qml/main.qml",
         };
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
@@ -75,6 +74,7 @@ impl QmlFrontend {
         let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
         let qt_data_command_handler = QObjectBox::new(self.command_handler.take().unwrap());
         let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
+        qt_data_config_manager.pinned().borrow_mut().sandboxed = sandboxed;
         let qt_data_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
 
         let mut engine = QmlEngine::new();

@@ -187,14 +187,15 @@ Dialog {
 
                 SmallText {
                     width: parent.width
-                    text: "The text editor to use when editing files locally."
+                    text: "The text editor to use when editing files locally. Integrated editor is always used in flatpak sandbox."
                     color: Theme.color_dark_text()
                     wrapMode: Text.WordWrap
                 }
             }
 
             TextField {
-                text: root._preferences.text_editor
+                text: ConfigManager.isSandboxed() ? "internal" : root._preferences.text_editor
+                enabled: !ConfigManager.isSandboxed()
 
                 Layout.preferredWidth: content.width * 0.35
             }
@@ -214,14 +215,15 @@ Dialog {
 
                 SmallText {
                     width: parent.width
-                    text: "Terminal to use when launching a remote shell."
+                    text: "Terminal to use when launching a remote shell. Integrated editor is always used in flatpak sandbox."
                     color: Theme.color_dark_text()
                     wrapMode: Text.WordWrap
                 }
             }
 
             TextField {
-                text: root._preferences.terminal + " " + root._preferences.terminal_args
+                text: ConfigManager.isSandboxed() ? "internal" : root._preferences.terminal + " " + root._preferences.terminal_args
+                enabled: !ConfigManager.isSandboxed()
 
                 Layout.preferredWidth: content.width * 0.35
             }

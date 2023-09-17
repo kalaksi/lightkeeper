@@ -11,6 +11,7 @@ use crate::{
 };
 
 
+#[allow(non_snake_case)]
 // TODO: use camelcase with qml models?
 #[derive(QObject, Default)]
 pub struct ConfigManagerModel {
@@ -24,6 +25,7 @@ pub struct ConfigManagerModel {
     //
     // Common
     //
+    isSandboxed: qt_method!(fn(&self) -> bool),
     require_restart: qt_method!(fn(&self)),
 
     //
@@ -104,6 +106,7 @@ pub struct ConfigManagerModel {
 
 
     pub restart_required: bool,
+    pub sandboxed: bool,
 
     config_dir: String,
     main_config: Configuration,
@@ -114,6 +117,7 @@ pub struct ConfigManagerModel {
     module_metadatas: Vec<Metadata>,
 }
 
+#[allow(non_snake_case)]
 impl ConfigManagerModel {
     pub fn new(config_dir: String,
                main_config: Configuration,
@@ -187,6 +191,10 @@ impl ConfigManagerModel {
 
     fn require_restart(&mut self) {
         self.restart_required = true;
+    }
+
+    fn isSandboxed(&self) -> bool {
+        self.sandboxed
     }
 
     fn begin_host_configuration(&mut self) {
