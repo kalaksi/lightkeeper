@@ -27,7 +27,7 @@ Rectangle {
     Row {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 8
+        spacing: Theme.spacingNormal
 
         Image {
             visible: root.icon !== ""
@@ -49,8 +49,7 @@ Rectangle {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: cleanupLabel(root.text)
-            // So there's a more even padding between top and bottom
-            lineHeight: 0.9
+            color: Theme.textColor
             bottomPadding: 4
         }
     }
@@ -58,6 +57,7 @@ Rectangle {
     RefreshButton {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
+        anchors.rightMargin: Theme.spacingTight
         onClicked: root.refreshClicked()
         spinning: root.refreshProgress < 100
     }

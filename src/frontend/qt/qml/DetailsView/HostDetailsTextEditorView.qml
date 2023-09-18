@@ -39,7 +39,7 @@ Item {
     }
 
     Rectangle {
-        color: Theme.colorBackgroundLighter
+        color: Theme.backgroundColorLight
         anchors.fill: parent
     }
 

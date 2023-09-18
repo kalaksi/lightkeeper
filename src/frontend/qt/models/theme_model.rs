@@ -11,8 +11,12 @@ pub struct ThemeModel {
     base: qt_base_class!(trait QObject),
 
     // NOTE: New way of doing things. Use Qt properties and camelCase.
-    colorBackgroundDarker: qt_property!(QString; CONST),
-    colorBackgroundLighter: qt_property!(QString; CONST),
+    textColor: qt_property!(QString; CONST),
+    backgroundColorDark: qt_property!(QString; CONST),
+    backgroundColorLight: qt_property!(QString; CONST),
+    spacingLoose: qt_property!(i8; CONST),
+    spacingNormal: qt_property!(i8; CONST),
+    spacingTight: qt_property!(i8; CONST),
 
     // NOTE: Old methods, will be deprecated.
     category_color: qt_method!(fn(&self, category: QString) -> QString),
@@ -67,8 +71,12 @@ impl ThemeModel {
     pub fn new(display_options: configuration::DisplayOptions) -> ThemeModel {
         ThemeModel {
             i_display_options: display_options,
-            colorBackgroundDarker: QString::from("#252525"),
-            colorBackgroundLighter: QString::from("#303030"),
+            textColor: QString::from("#ffffff"),
+            backgroundColorDark: QString::from("#252525"),
+            backgroundColorLight: QString::from("#303030"),
+            spacingLoose: 12,
+            spacingNormal: 8,
+            spacingTight: 2,
             ..Default::default()
         }
     }

@@ -116,6 +116,7 @@ Item {
                 anchors.fill: parent
                 visible: false
 
+                // TODO: discard if not saving on close.
                 onSaved: function(commandId, localFilePath, content) {
                     let _invocationId = CommandHandler.saveAndUploadFile(
                         root.hostId,
