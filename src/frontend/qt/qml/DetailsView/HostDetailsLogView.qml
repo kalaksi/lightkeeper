@@ -2,7 +2,6 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
-import QtQuick.Controls.Material 2.15
 
 import ".."
 import "../Text"
@@ -49,7 +48,7 @@ Item {
     }
 
     Rectangle {
-        color: Material.background
+        color: Theme.colorBackgroundLighter
         anchors.fill: parent
     }
 
@@ -76,7 +75,7 @@ Item {
                         id: searchField
                         width: searchBox.width * 0.55
                         placeholderText: "Regex search..."
-                        color: Material.foreground
+                        color: Theme.color_text()
                         focus: true
 
                         onAccepted: {

@@ -2,7 +2,6 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Layouts 1.15
-import QtQuick.Controls.Material 2.15
 
 import ".."
 import "../js/Parse.js" as Parse
@@ -40,7 +39,7 @@ Item {
     }
 
     Rectangle {
-        color: Theme.color_background_2()
+        color: Theme.colorBackgroundLighter
         anchors.fill: parent
     }
 

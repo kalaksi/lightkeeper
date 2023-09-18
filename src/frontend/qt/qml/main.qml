@@ -2,8 +2,6 @@ import QtQuick 2.15
 import QtQuick.Window 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Controls 2.15
-import QtQuick.Controls.Material 2.15
-import QtQuick.Controls.Universal 2.12
 import QtQuick.Layouts 1.11
 
 import HostTableModel 1.0
@@ -23,10 +21,6 @@ ApplicationWindow {
 
     property var _detailsDialogs: {}
     property int _textDialogPendingInvocation: 0
-
-    // Makes sure dark theme is used (at least for these 2) since light is untested.
-    Material.theme: Material.Dark
-    Universal.theme: Universal.Dark
 
     menuBar: ToolBar {
         RowLayout {

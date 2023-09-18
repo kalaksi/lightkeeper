@@ -1,5 +1,4 @@
 import QtQuick 2.15
-import QtQuick.Controls.Material 2.15
 
 import "Text"
 import "js/Utils.js" as Utils
@@ -19,7 +18,7 @@ Rectangle {
     implicitHeight: Math.max(textContent.implicitHeight, image.height) + root.contentPadding
     radius: 5
     opacity: 0.0
-    color: Material.background
+    color: Theme.color_background()
     border.width: 1
     border.color: "#50FFFFFF"
     // Alternative way to get some matching color to border:
@@ -119,10 +118,10 @@ Rectangle {
             return "#FFC734"
         }
         else if (root.criticality === "Info") {
-            return Qt.darker(Material.background, 1.20)
+            return Theme.color_background_darker()
         }
         else if (root.criticality === "Normal") {
-            return Qt.darker(Material.background, 1.20)
+            return Theme.color_background_darker()
         }
         else if (root.criticality === "NoData") {
             return "#FFC734"
