@@ -28,7 +28,7 @@ cache_settings:
 # NOTE: Currently, you shouldn't manually edit display_options at all.
 display_options:
   # Empty means default.
-  qtquick_style: "Breeze"
+  qtquick_style: ""
   hide_info_notifications: false
   categories:
     host:

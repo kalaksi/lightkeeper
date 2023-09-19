@@ -3,6 +3,7 @@ import QtQuick.Controls 1.4
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
 
+import "../StyleOverride"
 import "../Button"
 import "../Text"
 import "../js/Utils.js" as Utils

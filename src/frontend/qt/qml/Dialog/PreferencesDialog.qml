@@ -1,8 +1,11 @@
 import QtQuick 2.15
+import QtQuick.Layouts 1.11
 import QtQuick.Controls 1.4
 import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+// TODO: utilize Kirigami more?
+import org.kde.kirigami 2.19 as Kirigami
 
+import "../StyleOverride"
 import "../Button"
 import "../Text"
 import "../js/Utils.js" as Utils

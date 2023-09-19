@@ -35,9 +35,11 @@ Item {
             return Theme.color_highlight()
         }
         else if (model.row % 2 == 0) {
+            return palette.alternateBase
             return Theme.color_table_background()
         }
         else {
+            return palette.base
             return Theme.color_background()
         }
     }

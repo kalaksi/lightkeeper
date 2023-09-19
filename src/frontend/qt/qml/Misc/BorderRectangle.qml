@@ -7,7 +7,7 @@ Rectangle {
     property int borderTop: 0
     property int borderLeft: 0
     property int borderRight: 0
-    property string borderColor: palette.base
+    property color borderColor: palette.base
     property alias backgroundColor: background.color
 
     color: borderColor

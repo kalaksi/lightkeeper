@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use crate::{configuration, enums::Criticality};
 
+// NOTE: See also qtquickcontrols2.conf for manually set color palette.
 
 #[derive(QObject, Default)]
 #[allow(non_snake_case)]
@@ -11,8 +12,12 @@ pub struct ThemeModel {
     base: qt_base_class!(trait QObject),
 
     // NOTE: New way of doing things. Use Qt properties and camelCase.
+    disabledTextColor: qt_property!(QString; CONST),
+    iconColor: qt_property!(QString; CONST),
     textColor: qt_property!(QString; CONST),
+    borderColor: qt_property!(QString; CONST),
     backgroundColorDark: qt_property!(QString; CONST),
+    backgroundColor: qt_property!(QString; CONST),
     backgroundColorLight: qt_property!(QString; CONST),
     spacingLoose: qt_property!(i8; CONST),
     spacingNormal: qt_property!(i8; CONST),
@@ -69,10 +74,17 @@ pub struct ThemeModel {
 #[allow(non_snake_case)]
 impl ThemeModel {
     pub fn new(display_options: configuration::DisplayOptions) -> ThemeModel {
+        // TODO: Utilize Kirigami.Theme and Kirigami.Units? Won't have everything to be sufficient, but
+        // could be used to set values to this model. Or maybe use Kirigami's models and leave anything extra here?
+        // OTOH, this model could be easier to use and more flexible.
         ThemeModel {
             i_display_options: display_options,
-            textColor: QString::from("#ffffff"),
+            disabledTextColor: QString::from("#3a4045"),
+            iconColor: QString::from("#a0a0a0"),
+            textColor: QString::from("#fcfcfc"),
+            borderColor: QString::from("#505050"),
             backgroundColorDark: QString::from("#252525"),
+            backgroundColor: QString::from("#2a2e32"),
             backgroundColorLight: QString::from("#303030"),
             spacingLoose: 12,
             spacingNormal: 8,

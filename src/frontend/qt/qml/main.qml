@@ -9,6 +9,7 @@ import HostTableModel 1.0
 import "./Dialog"
 import "./Button"
 import "./DetailsView"
+import "./Misc"
 import "js/Utils.js" as Utils
 
 ApplicationWindow {
@@ -22,7 +23,14 @@ ApplicationWindow {
     property var _detailsDialogs: {}
     property int _textDialogPendingInvocation: 0
 
+
     menuBar: ToolBar {
+        background: BorderRectangle {
+            backgroundColor: Theme.backgroundColor
+            borderColor: Theme.borderColor
+            borderBottom: 1
+        }
+
         RowLayout {
             anchors.fill: parent
 
@@ -243,6 +251,8 @@ ApplicationWindow {
         HostDataManager.receive_updates()
         // Starts the thread that receives portal responses from D-Bus.
         DesktopPortal.receiveResponses()
+
+        console.log("Current color palette: ", palette)
 
         if (HostDataManager.refresh_hosts_on_start()) {
             CommandHandler.force_initialize_hosts()

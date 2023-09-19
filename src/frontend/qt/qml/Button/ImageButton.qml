@@ -3,9 +3,11 @@ import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 
+import "../StyleOverride"
 import "../Text"
 
 
+/// Provides more flexible button with icon and text.
 Item {
     id: root
     property string imageSource: ""

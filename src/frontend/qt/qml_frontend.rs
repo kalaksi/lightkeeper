@@ -41,12 +41,6 @@ impl QmlFrontend {
             if std::env::var("QT_QUICK_CONTROLS_STYLE").is_err() && std::env::var("QT_STYLE_OVERRIDE").is_err() {
                 std::env::set_var("QT_STYLE_OVERRIDE", style);
             }
-            if std::env::var("QT_QUICK_CONTROLS_MATERIAL_THEME").is_err() {
-                std::env::set_var("QT_QUICK_CONTROLS_MATERIAL_THEME", "Dark");
-            }
-            if std::env::var("QT_QUICK_CONTROLS_MATERIAL_PRIMARY").is_err() {
-                std::env::set_var("QT_QUICK_CONTROLS_MATERIAL_PRIMARY", "Grey");
-            }
         }
 
         let theme_model = ThemeModel::new(main_config.display_options.clone().unwrap());

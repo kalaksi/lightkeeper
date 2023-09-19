@@ -9,6 +9,7 @@ import "../Text"
 Item {
     id: root
     property string text: ""
+    // TODO: don't hardcode
     property string color: "#444444"
     property bool showRefreshButton: false
     property bool showMinimizeButton: false
@@ -106,7 +107,8 @@ Item {
             size: 0.9 * parent.height
             anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/close"
-            color: Theme.color_dark_text()
+            // By default this icon is black, so changing it here.
+            color: Theme.iconColor
             imageRelativeWidth: 0.5
             imageRelativeHeight: 0.8
             flatButton: true

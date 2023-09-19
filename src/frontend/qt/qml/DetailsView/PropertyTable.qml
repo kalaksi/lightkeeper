@@ -6,6 +6,7 @@ import QtQuick.Controls.Styles 1.4
 
 import PropertyTableModel 1.0
 
+import "../StyleOverride"
 import ".."
 import "../Text"
 import "../js/TextTransform.js" as TextTransform

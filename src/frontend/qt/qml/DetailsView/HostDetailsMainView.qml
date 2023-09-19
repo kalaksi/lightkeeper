@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.15
 import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 
+import "../StyleOverride"
 import ".."
 import "../Text"
 import "../js/TextTransform.js" as TextTransform
