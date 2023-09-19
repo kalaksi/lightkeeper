@@ -21,6 +21,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.5.1" date="2023-09-19">
+      <description>
+        <ul>
+          <li>Important fix for theme and colors. Now enforces dark theme.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.0" date="2023-09-17">
       <description>
         <ul>
