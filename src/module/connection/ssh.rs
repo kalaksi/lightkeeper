@@ -27,7 +27,9 @@ use crate::module::connection::*;
       username => "Username for the SSH connection. Default: root.",
       password => "Password for the SSH connection. Default: empty (not used).",
       private_key_path => "Path to the private key file for the SSH connection. Default: empty.",
-      connection_timeout => "Timeout (in seconds) for the SSH connection. Default: 15."
+      connection_timeout => "Timeout (in seconds) for the SSH connection. Default: 15.",
+      agent_key_identifier => "Identifier for selecting key from ssh-agent. This is the comment part of the \
+                               key (e.g. user@desktop). Default: empty (all keys are tried)."
     }
 )]
 pub struct Ssh2 {
@@ -38,26 +40,8 @@ pub struct Ssh2 {
     username: String,
     password: Option<String>,
     private_key_path: Option<String>,
+    agent_key_identifier: Option<String>,
     connection_timeout: u16,
-}
-
-impl Ssh2 {
-    // TODO: use this?
-    fn send_eof_and_close(&self, mut channel: ssh2::Channel) {
-        if let Err(error) = channel.send_eof() {
-            log::error!("Sending EOF failed: {}", error);
-        }
-        else if let Err(error) = channel.wait_eof() {
-            log::error!("Waiting EOF failed: {}", error);
-        }
-
-        if let Err(error) = channel.close() {
-            log::error!("Error while closing channel: {}", error);
-        }
-        else if let Err(error) = channel.wait_close() {
-            log::error!("Error while closing channel: {}", error);
-        }
-    }
 }
 
 impl Module for Ssh2 {
@@ -71,8 +55,9 @@ impl Module for Ssh2 {
             address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             port: settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap(),
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
-            password: settings.get("password").map(|s| s.clone()),
-            private_key_path: settings.get("private_key_path").map(|s| s.clone()),
+            password: settings.get("password").cloned(),
+            private_key_path: settings.get("private_key_path").cloned(),
+            agent_key_identifier: settings.get("agent_key_identifier").cloned(),
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
         }
     }
@@ -113,10 +98,30 @@ impl ConnectionModule for Ssh2 {
             };
         }
         else {
-            log::warn!("Password is not set, trying authentication with first key found in SSH agent");
-            if let Err(error) = self.session.userauth_agent(self.username.as_str()) {
-                return Err(format!("Error when communicating with SSH agent: {}", error));
-            };
+            log::debug!("Password or key is not set, using SSH agent for authentication.");
+            let mut agent = self.session.agent()
+                .map_err(|error| format!("Failed to connect to SSH agent: {}", error))?;
+
+            agent.connect()
+                .map_err(|error| format!("Failed to connect to SSH agent: {}", error))?;
+
+            agent.list_identities().map_err(|error| error.to_string())?;
+            let mut valid_identities = agent.identities().map_err(|error| error.to_string())?;
+
+            if let Some(selected_id) = self.agent_key_identifier.as_ref() {
+                valid_identities.retain(|identity| identity.comment() == selected_id.as_str());
+            }
+
+            for identity in valid_identities.iter() {
+                log::debug!("Trying to authenticate with key \"{}\".", identity.comment());
+                if agent.userauth(self.username.as_str(), identity).is_ok() {
+                    break;
+                }
+            }
+
+            if !self.session.authenticated() {
+                return Err(format!("Failed to authenticate with SSH agent."));
+            }
         }
 
         self.is_initialized = true;
