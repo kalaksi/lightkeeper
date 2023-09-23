@@ -84,6 +84,8 @@ Use `--config-dir` to load the test configuration. For example, `./target/debug/
 
 # License
 ## Lightkeeper
+Copyright © 2023 kalaksi@users.noreply.github.com.
+
 This software is licensed under GNU General Public License 3.
 
 ## Crate dependencies

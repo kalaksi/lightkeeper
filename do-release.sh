@@ -3,6 +3,7 @@ set -euo pipefail
 
 new_version=$1
 version_only=${new_version#*v}
+minor_version=${new_version%.*}
 new_date=$(date +%Y-%m-%d)
 
 cd "$(dirname "$0")"
@@ -45,4 +46,13 @@ if [ -d ../io.github.kalaksi.Lightkeeper ]; then
     echo -e "\n* Updating flatpak-repo"
     cp -v flatpak/cargo-sources.json ../io.github.kalaksi.Lightkeeper/
     cp -v flatpak/io.github.kalaksi.Lightkeeper.yml ../io.github.kalaksi.Lightkeeper/
+    cd ../io.github.kalaksi.Lightkeeper
+
+    current_branch=$(git branch --show-current)
+    if [ $current_branch != $minor_version ]; then
+        # Will fail if branch already exists.
+        git checkout -b $minor_version
+    fi
+    git commit -a -m "Update to version $version_only"
+    cd -
 fi
