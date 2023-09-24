@@ -38,6 +38,8 @@ pub struct CommandHandler {
     state_update_sender: Option<Sender<StateUpdateMessage>>,
     /// Preferences from config file.
     preferences: Preferences,
+    /// Effective host configurations.
+    hosts_config: Hosts,
     /// Every execution gets an invocation ID. Valid ID numbers begin from 1.
     invocation_id_counter: u64,
 
@@ -55,6 +57,7 @@ impl CommandHandler {
             request_sender: Some(request_sender),
             state_update_sender: Some(host_manager.borrow().new_state_update_sender()),
             preferences: Preferences::default(),
+            hosts_config: Hosts::default(),
             invocation_id_counter: 0,
 
             host_manager: host_manager.clone(),
@@ -65,6 +68,7 @@ impl CommandHandler {
     pub fn configure(&mut self, hosts_config: &Hosts, preferences: &Preferences, connection_manager: &mut ConnectionManager) {
         self.preferences = preferences.clone();
         self.invocation_id_counter = 0;
+        self.hosts_config = hosts_config.clone();
 
         for (host_id, host_config) in hosts_config.hosts.iter() {
             for (command_id, command_config) in host_config.commands.iter() {
@@ -278,39 +282,91 @@ impl CommandHandler {
             host: host.clone(),
             request_type: RequestType::Upload,
             messages: vec![local_file_path.clone()],
-            response_handler: Self::get_response_handler_upload_file(host, command.box_clone(), self.invocation_id_counter, state_update_sender),
+            response_handler: Self::get_response_handler_upload_file(
+                host,
+                command.box_clone(),
+                self.invocation_id_counter,
+                state_update_sender
+            ),
             cache_policy: CachePolicy::BypassCache,
         }).unwrap();
 
         self.invocation_id_counter
     }
 
-    pub fn open_terminal(&self, host_id: &String, command_id: &String, parameters: Vec<String>) {
-        // TODO: integrated interactive terminals with ssh2::request_pty() / shell?
-
+    fn remote_ssh_command(&self, host_id: &String) -> ShellCommand {
         let host = self.host_manager.borrow().get_host(&host_id);
-        let command = self.commands.get(host_id).unwrap()
-                                   .get(command_id).unwrap();
 
-        let connector_messages = get_command_connector_messages(&host, command, &parameters).map_err(|error| {
+        let ssh_settings = self.hosts_config.hosts[host_id]
+                                            .connectors["ssh"]
+                                            .settings.clone();
+
+        let remote_address = if !host.fqdn.is_empty() {
+            host.fqdn.clone()
+        }
+        else {
+            host.ip_address.to_string()
+        };
+
+        let mut command = ShellCommand::new();
+        command.arguments(vec![
+            String::from("ssh"),
+            String::from("-t"), remote_address,
+            String::from("-p"), ssh_settings.get("port").unwrap_or(&String::from("22")).clone(),
+        ]);
+
+        if let Some(username) = ssh_settings.get("username") {
+            command.arguments(vec![String::from("-l"), username.clone()]);
+        }
+
+        command
+    }
+
+    pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &Vec<String>) -> ShellCommand {
+        let host = self.host_manager.borrow().get_host(&host_id);
+        let mut command = self.remote_ssh_command(&host_id);
+
+        let command_module = self.commands.get(host_id).unwrap()
+                                          .get(command_id).unwrap();
+
+        let connector_messages = get_command_connector_messages(&host, command_module, &parameters).map_err(|error| {
             log::error!("Command \"{}\" failed: {}", command_id, error);
             return;
         }).unwrap();
 
-        let mut command_args = self.preferences.terminal_args.clone();
-        command_args.extend(vec![
-            String::from("ssh"),
-            String::from("-t"),
-            host_id.to_string(),
-            connector_messages.join(" "),
-        ]);
-
-        log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.join(" "));
-        process::Command::new(self.preferences.terminal.as_str()).args(command_args).output()
-                         .expect("Running command failed");
+        command.arguments(connector_messages);
+        command
     }
 
-    pub fn open_text_editor(&self, host_id: &String, command_id: &String, remote_file_path: &String) {
+    // TODO: this will block the UI thread? Improve!
+    pub fn open_external_terminal(&self, host_id: &String, command_id: &String, parameters: Vec<String>) {
+        let command_args = self.open_remote_terminal_command(&host_id, &command_id, &parameters);
+
+        log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.to_string());
+        let result = ShellCommand::new()
+            .arguments(vec![self.preferences.terminal.clone()])
+            .arguments(self.preferences.terminal_args.clone())
+            .arguments(command_args.to_vec())
+            .execute();
+
+        if let Err(error) = result {
+            log::error!("Couldn't start terminal: {}", error);
+        }
+    }
+
+    // TODO: this will block the UI thread? Improve!
+    pub fn open_remote_text_editor_command(&self, host_id: &String) -> ShellCommand {
+        let mut command = self.remote_ssh_command(&host_id);
+
+        if self.preferences.sudo_remote_editor {
+            command.argument("sudo");
+        }
+
+        command.argument(self.preferences.remote_text_editor.clone());
+        command
+    }
+
+    pub fn open_external_text_editor(&self, host_id: &String, command_id: &String, remote_file_path: &String) {
         let host = self.host_manager.borrow().get_host(&host_id);
         let command = self.commands.get(host_id).unwrap()
                                    .get(command_id).unwrap();
@@ -320,52 +376,20 @@ impl CommandHandler {
             return;
         }).unwrap();
 
-        if self.preferences.use_remote_editor {
-            let mut shell_command = ShellCommand::new();
-            shell_command.argument(self.preferences.terminal.clone());
-            shell_command.arguments(self.preferences.terminal_args.clone());
-            shell_command.arguments(vec!["ssh", "-t", host.name.as_str()]);
-
-            if self.preferences.sudo_remote_editor {
-                shell_command.argument("sudo");
-            }
-
-            shell_command.argument(self.preferences.remote_text_editor.clone());
-            shell_command.arguments(connector_messages);
-
-            log::debug!("Starting local process: {}", shell_command.to_string());
-            shell_command.execute().map_err(|error| {
-                log::error!("Couldn't start editor: {}", error);
-                return;
-            }).unwrap();
-
-            self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
-                host_name: host.name,
-                display_options: command.get_display_options(),
-                module_spec: command.get_module_spec(),
-                command_result: Some(CommandResult::new_info(String::from("Changes saved"))),
-                ..Default::default()
-            }).unwrap_or_else(|error| {
-                log::error!("Couldn't send message to state manager: {}", error);
-            });
-        }
-        else {
-            self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-                connector_spec: command.get_connector_spec(),
-                source_id: command.get_module_spec().id,
-                host: host.clone(),
-                request_type: RequestType::Download,
-                messages: connector_messages,
-                response_handler: Self::get_response_handler_text_editor(
-                    host, command.box_clone(), self.preferences.clone(),
-                    self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
-                ),
-                cache_policy: CachePolicy::BypassCache,
-            }).unwrap_or_else(|error| {
-                log::error!("Couldn't send message to connector: {}", error);
-            });
-        }
-
+        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+            connector_spec: command.get_connector_spec(),
+            source_id: command.get_module_spec().id,
+            host: host.clone(),
+            request_type: RequestType::Download,
+            messages: connector_messages,
+            response_handler: Self::get_response_handler_external_text_editor(
+                host, command.box_clone(), self.preferences.clone(),
+                self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
+            ),
+            cache_policy: CachePolicy::BypassCache,
+        }).unwrap_or_else(|error| {
+            log::error!("Couldn't send message to connector: {}", error);
+        });
     }
 
     fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64, load_contents: bool,
@@ -447,10 +471,10 @@ impl CommandHandler {
         })
     }
 
-    fn get_response_handler_text_editor(host: Host, command: Command,
-                                        preferences: Preferences,
-                                        request_sender: Sender<ConnectorRequest>,
-                                        state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+    fn get_response_handler_external_text_editor(host: Host, command: Command,
+                                                 preferences: Preferences,
+                                                 request_sender: Sender<ConnectorRequest>,
+                                                 state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
         Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
@@ -458,9 +482,16 @@ impl CommandHandler {
 
             match response {
                 Ok(response_message) => {
-                    log::debug!("Starting local process: {} {}", preferences.text_editor, response_message.message);
-                    process::Command::new(preferences.text_editor).args(vec![response_message.message.clone()]).output()
-                                        .expect("Running command failed");
+                    let local_file = response_message.message.clone();
+                    log::debug!("Starting local process: {} {}", preferences.text_editor, local_file);
+                    let result = ShellCommand::new()
+                        .arguments(vec![preferences.text_editor, local_file])
+                        .execute();
+
+                    if let Err(error) = result {
+                        log::error!("Couldn't start text editor: {}", error);
+                        return;
+                    }
 
                     request_sender.send(ConnectorRequest {
                         connector_spec: command.get_connector_spec(),

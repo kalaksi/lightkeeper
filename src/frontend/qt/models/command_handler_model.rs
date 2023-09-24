@@ -18,8 +18,8 @@ pub struct CommandHandlerModel {
     get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     get_commands_on_level: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
-    execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList)),
-    execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QVariantList)),
+    execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
+    execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
 
     // Host initialization methods.
@@ -35,12 +35,12 @@ pub struct CommandHandlerModel {
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
-    input_dialog_opened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QVariantList),
+    input_dialog_opened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QStringList),
     text_dialog_opened: qt_signal!(invocation_id: u64),
-    confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QVariantList),
+    confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QStringList),
     detailsSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
     textEditorSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
-    terminalSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
+    terminalSubviewOpened: qt_signal!(header_text: QString, command: QStringList),
     logsSubviewOpened: qt_signal!(header_text: QString, parameters: QStringList, invocation_id: u64),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
@@ -147,7 +147,7 @@ impl CommandHandlerModel {
                             .count() as u32
     }
 
-    fn execute(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) {
+    fn execute(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
         let display_options = self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()).display_options;
 
         if !display_options.user_parameters.is_empty() {
@@ -162,10 +162,10 @@ impl CommandHandlerModel {
         }
     }
 
-    fn execute_confirmed(&mut self, host_id: QString, command_id: QString, parameters: QVariantList) {
+    fn execute_confirmed(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
-        let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_qbytearray().to_string()).collect();
+        let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
 
         let display_options = self.command_handler.get_command_for_host(&host_id, &command_id).display_options;
         match display_options.action {
@@ -205,21 +205,34 @@ impl CommandHandlerModel {
             },
             UIAction::Terminal => {
                 if self.configuration.preferences.terminal == configuration::INTERNAL {
-                    // TODO
-                    // self.terminalSubviewOpened(QString::from(command_id), );
+                    let command = self.command_handler.open_remote_terminal_command(&host_id, &command_id, &parameters);
+                    let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
+                    self.terminalSubviewOpened(QString::from(command_id), command_qsl)
                 }
                 else {
-                    self.command_handler.open_terminal(&host_id, &command_id, parameters);
+                    self.command_handler.open_external_terminal(&host_id, &command_id, parameters);
                 }
             },
             UIAction::TextEditor => {
                 let remote_file_path = parameters.first().unwrap().clone();
-                if self.configuration.preferences.text_editor == configuration::INTERNAL {
-                    let (invocation_id, local_file_path) = self.command_handler.download_file(&host_id, &command_id, &remote_file_path); 
-                    self.textEditorSubviewOpened(QString::from(command_id), invocation_id, QString::from(local_file_path));
+                if self.configuration.preferences.use_remote_editor {
+                    if self.configuration.preferences.terminal == configuration::INTERNAL {
+                        let command = self.command_handler.open_remote_text_editor_command(&host_id);
+                        let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
+                        self.terminalSubviewOpened(QString::from(command_id), command_qsl);
+                    }
+                    else {
+                        self.command_handler.open_external_terminal(&host_id, &command_id, parameters);
+                    }
                 }
                 else {
-                    self.command_handler.open_text_editor(&host_id, &command_id, &remote_file_path);
+                    if self.configuration.preferences.text_editor == configuration::INTERNAL {
+                        let (invocation_id, local_file_path) = self.command_handler.download_file(&host_id, &command_id, &remote_file_path); 
+                        self.textEditorSubviewOpened(QString::from(command_id), invocation_id, QString::from(local_file_path));
+                    }
+                    else {
+                        self.command_handler.open_external_text_editor(&host_id, &command_id, &remote_file_path);
+                    }
                 }
             },
         }

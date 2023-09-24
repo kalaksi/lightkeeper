@@ -52,6 +52,10 @@ impl ShellCommand {
         }
     }
 
+    pub fn to_vec(&self) -> Vec<String> {
+        self.arguments.iter().cloned().collect::<_>()
+    }
+
 }
 
 impl ToString for ShellCommand {

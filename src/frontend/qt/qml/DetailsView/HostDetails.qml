@@ -32,9 +32,14 @@ Item {
             openLogView(commandId, commandParams, invocationId)
         }
 
-        // For integrated text editor.
+        // For integrated text editor (not external).
         function onTextEditorSubviewOpened(commandId, invocationId, localFilePath) {
             openTextEditorView(commandId, invocationId, localFilePath)
+        }
+
+        // For integrated terminal.
+        function onTerminalSubviewOpened(commandId, command) {
+            openTerminalView(commandId, command)
         }
     }
 
@@ -127,6 +132,12 @@ Item {
                     root.closeSubview()
                 }
             }
+
+            HostDetailsTerminalView {
+                id: terminalView
+                anchors.fill: parent
+                visible: false
+            }
         }
     }
 
@@ -147,6 +158,13 @@ Item {
         to: 0.0
         easing.type: Easing.OutQuad
         duration: 175
+
+        onFinished: {
+            textView.visible = false
+            logView.visible = false
+            textEditor.visible = false
+            terminalView.close()
+        }
     }
 
     Shortcut {
@@ -167,28 +185,25 @@ Item {
 
     function openTextView(headerText, invocationId) {
         subviewHeader.text = headerText
-
-        logView.visible = false
-        textEditor.visible = false
         textView.open(invocationId)
         animateShowSubview.start()
     }
 
     function openLogView(commandId, commandParams, invocationId) {
         subviewHeader.text = commandId
-
-        textView.visible = false
-        textEditor.visible = false
         logView.open(commandId, commandParams, invocationId)
         animateShowSubview.start()
     }
 
     function openTextEditorView(commandId, invocationId, localFilePath) {
         subviewHeader.text = commandId
-
-        textView.visible = false
-        logView.visible = false
         textEditor.open(commandId, invocationId, localFilePath)
+        animateShowSubview.start()
+    }
+
+    function openTerminalView(commandId, command) {
+        subviewHeader.text = commandId
+        terminalView.open(command)
         animateShowSubview.start()
     }
 
