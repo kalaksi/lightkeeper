@@ -217,7 +217,7 @@ impl CommandHandlerModel {
                 let remote_file_path = parameters.first().unwrap().clone();
                 if self.configuration.preferences.use_remote_editor {
                     if self.configuration.preferences.terminal == configuration::INTERNAL {
-                        let command = self.command_handler.open_remote_text_editor_command(&host_id);
+                        let command = self.command_handler.open_remote_text_editor_command(&host_id, &remote_file_path);
                         let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
                         self.terminalSubviewOpened(QString::from(command_id), command_qsl);
                     }

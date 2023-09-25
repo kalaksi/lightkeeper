@@ -10,10 +10,12 @@ preferences:
   # Use sudo when editing remote files?
   sudo_remote_editor: true
   # Likewise, command (or path) to an editor for editing locally.
-  text_editor: "kate"
+  # If set to "internal", will use the integrated text editor.
+  text_editor: "internal"
   # Some commands may launch a terminal for you. Here you can configure the terminal and parameters.
-  terminal: "xterm"
-  terminal_args: ["-e"]
+  # If set to "internal", will use the integrated terminal.
+  terminal: "internal"
+  terminal_args: [""]
 
 # Caching can provide speed benefits especially if you have many hosts.
 # Recommended to be left disabled for now.

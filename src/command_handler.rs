@@ -311,8 +311,9 @@ impl CommandHandler {
         let mut command = ShellCommand::new();
         command.arguments(vec![
             String::from("ssh"),
-            String::from("-t"), remote_address,
+            String::from("-t"),
             String::from("-p"), ssh_settings.get("port").unwrap_or(&String::from("22")).clone(),
+            remote_address,
         ]);
 
         if let Some(username) = ssh_settings.get("username") {
@@ -355,7 +356,7 @@ impl CommandHandler {
     }
 
     // TODO: this will block the UI thread? Improve!
-    pub fn open_remote_text_editor_command(&self, host_id: &String) -> ShellCommand {
+    pub fn open_remote_text_editor_command(&self, host_id: &String, remote_file_path: &String) -> ShellCommand {
         let mut command = self.remote_ssh_command(&host_id);
 
         if self.preferences.sudo_remote_editor {
@@ -363,6 +364,7 @@ impl CommandHandler {
         }
 
         command.argument(self.preferences.remote_text_editor.clone());
+        command.argument(remote_file_path.clone());
         command
     }
 
