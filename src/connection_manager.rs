@@ -10,7 +10,7 @@ use std::{
 use rayon::prelude::*;
 
 use crate::Host;
-use crate::configuration::CacheSettings;
+use crate::configuration::{CacheSettings, Hosts};
 use crate::file_handler;
 use crate::module::ModuleFactory;
 use crate::module::ModuleSpecification;
@@ -24,59 +24,112 @@ type ConnectorStates = HashMap<ModuleSpecification, Arc<Mutex<Connector>>>;
 const MAX_WORKER_THREADS: usize = 8;
 
 
+// Default needs to be implemented because of Qt QObject requirements.
+#[derive(Default)]
 pub struct ConnectionManager {
     stateful_connectors: Option<HashMap<String, ConnectorStates>>,
     request_receiver: Option<mpsc::Receiver<ConnectorRequest>>,
-    request_sender_prototype: mpsc::Sender<ConnectorRequest>,
+    request_sender_prototype: Option<mpsc::Sender<ConnectorRequest>>,
     receiver_thread: Option<thread::JoinHandle<()>>,
     cache_settings: CacheSettings,
+
+    // Shared resources.
+    module_factory: Arc<ModuleFactory>,
 }
 
 impl ConnectionManager {
-    pub fn new(cache_settings: CacheSettings) -> Self {
-        let (sender, receiver) = mpsc::channel::<ConnectorRequest>();
-
+    pub fn new(module_factory: Arc<ModuleFactory>) -> Self {
         ConnectionManager {
             stateful_connectors: Some(HashMap::new()),
-            request_receiver: Some(receiver),
-            request_sender_prototype: sender,
-            receiver_thread: None,
-            cache_settings: cache_settings,
+            module_factory: module_factory,
+            ..Default::default()
         }
     }
 
-    // Adds a connector but only if a connector with the same ID doesn't exist.
-    pub fn add_connector(&mut self, host_id: String, connector: Connector) {
-        let connectors = self.stateful_connectors.as_mut().unwrap();
-        connectors.entry(host_id.clone()).or_insert(HashMap::new());
-
-        if let Some(host_connectors) = connectors.get_mut(&host_id) {
-            let module_spec = connector.get_module_spec();
-
-            host_connectors.entry(module_spec).or_insert_with(|| Arc::new(Mutex::new(connector)));
+    pub fn configure(&mut self, hosts_config: &Hosts, cache_settings: &CacheSettings) {
+        if self.receiver_thread.is_some() {
+            self.stop();
         }
+
+        self.stateful_connectors = Some(HashMap::new());
+        self.cache_settings = cache_settings.clone();
+        let stateful_connectors = self.stateful_connectors.as_mut().unwrap();
+
+        for (host_id, host_config) in hosts_config.hosts.iter() {
+            stateful_connectors.entry(host_id.clone()).or_insert(HashMap::new());
+            let host_connectors = stateful_connectors.get_mut(host_id).unwrap();
+
+            for (monitor_id, monitor_config) in host_config.monitors.iter() {
+                let monitor_spec = ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
+                let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
+
+                if let Some(mut connector_spec) = monitor.get_connector_spec() {
+                    connector_spec.module_type = String::from("connector");
+
+                    let connector_settings = match host_config.connectors.get(&connector_spec.id) {
+                        Some(config) => config.settings.clone(),
+                        None => HashMap::new(),
+                    };
+
+                    let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
+                    if !connector.get_metadata_self().is_stateless {
+                        host_connectors.entry(connector_spec).or_insert_with(|| Arc::new(Mutex::new(connector)));
+                    }
+                }
+            }
+
+            for (command_id, command_config) in host_config.commands.iter() {
+                let command_spec = ModuleSpecification::new(command_id, &command_config.version);
+                let command = self.module_factory.new_command(&command_spec, &command_config.settings);
+
+                if let Some(connector_spec) = command.get_connector_spec() {
+                    let connector_settings = match host_config.connectors.get(&connector_spec.id) {
+                        Some(config) => config.settings.clone(),
+                        None => HashMap::new(),
+                    };
+
+                    let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
+                    if !connector.get_metadata_self().is_stateless {
+                        host_connectors.entry(connector_spec).or_insert_with(|| Arc::new(Mutex::new(connector)));
+                    }
+                }
+            }
+        }
+
+        let (sender, receiver) = mpsc::channel::<ConnectorRequest>();
+        self.request_receiver = Some(receiver);
+        self.request_sender_prototype = Some(sender);
     }
 
     pub fn new_request_sender(&mut self) -> mpsc::Sender<ConnectorRequest> {
-        self.request_sender_prototype.clone()
+        self.request_sender_prototype.as_ref().unwrap().clone()
     }
 
-    pub fn start(&mut self, module_factory: Arc<ModuleFactory>) {
-        let thread = Self::start_receiving_requests(
+    pub fn start_processing_requests(&mut self) {
+        let thread = Self::process_requests(
             self.stateful_connectors.take().unwrap(),
             self.request_receiver.take().unwrap(),
-            module_factory,
+            self.module_factory.clone(),
             self.cache_settings.clone()
         );
         self.receiver_thread = Some(thread);
     }
 
-    pub fn join(&mut self) {
-        self.receiver_thread.take().expect("Thread has already stopped.")
-                            .join().unwrap();
+    pub fn stop(&mut self) {
+        self.new_request_sender()
+            .send(ConnectorRequest::exit_token())
+            .unwrap_or_else(|error| log::error!("Couldn't send exit token to connection manager: {}", error));
+
+        self.join();
     }
 
-    fn start_receiving_requests(
+    pub fn join(&mut self) {
+        if let Some(thread) = self.receiver_thread.take() {
+            thread.join().unwrap();
+        }
+    }
+
+    fn process_requests(
         mut stateful_connectors: HashMap<String, ConnectorStates>,
         receiver: mpsc::Receiver<ConnectorRequest>,
         module_factory: Arc<ModuleFactory>,

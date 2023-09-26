@@ -260,7 +260,8 @@ ApplicationWindow {
     }
 
     onClosing: {
-        DesktopPortal.exit()
+        DesktopPortal.stop()
+        CommandHandler.stop()
     }
 
     Item {
@@ -357,9 +358,8 @@ ApplicationWindow {
         bottomMargin: 0.12 * parent.height
 
         onConfigurationChanged: {
-            // Restarts application.
-            ConfigManager.require_restart()
-            Qt.quit()
+            let configs = ConfigManager.reloadConfiguration()
+            CommandHandler.reconfigure(configs[0], configs[1])
         }
     }
 
@@ -370,9 +370,8 @@ ApplicationWindow {
         bottomMargin: 0.12 * parent.height
 
         onConfigurationChanged: {
-            // Restarts application.
-            ConfigManager.require_restart()
-            Qt.quit()
+            let configs = ConfigManager.reloadConfiguration()
+            CommandHandler.reconfigure(configs[0], configs[1])
         }
     }
 

@@ -1,14 +1,12 @@
 
 use std::sync::Arc;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc;
 use std::collections::HashMap;
 use serde_derive::{Serialize, Deserialize};
-use std::process;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::configuration::Hosts;
-use crate::connection_manager::ConnectionManager;
 use crate::enums::Criticality;
 use crate::file_handler;
 use crate::host_manager::HostManager;
@@ -28,14 +26,15 @@ use crate::module::{
     command::CommandResult,
 };
 
+// Default needs to be implemented because of Qt QObject requirements.
 #[derive(Default)]
 pub struct CommandHandler {
     /// Host name is the first key, command id is the second key.
     commands: HashMap<String, HashMap<String, Command>>,
-    /// For connector communication.
-    request_sender: Option<Sender<ConnectorRequest>>,
+    /// For communication to ConnectionManager.
+    request_sender: Option<mpsc::Sender<ConnectorRequest>>,
     /// Channel to send state updates to HostManager.
-    state_update_sender: Option<Sender<StateUpdateMessage>>,
+    state_update_sender: Option<mpsc::Sender<StateUpdateMessage>>,
     /// Preferences from config file.
     preferences: Preferences,
     /// Effective host configurations.
@@ -44,12 +43,13 @@ pub struct CommandHandler {
     invocation_id_counter: u64,
 
     // Shared resources.
+    /// Mainly for getting up-to-date Host-datas.
     host_manager: Rc<RefCell<HostManager>>,
     module_factory: Arc<ModuleFactory>,
 }
 
 impl CommandHandler {
-    pub fn new(request_sender: Sender<ConnectorRequest>,
+    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>,
                host_manager: Rc<RefCell<HostManager>>,
                module_factory: Arc<ModuleFactory>) -> Self {
         CommandHandler {
@@ -65,35 +65,28 @@ impl CommandHandler {
         }
     }
 
-    pub fn configure(&mut self, hosts_config: &Hosts, preferences: &Preferences, connection_manager: &mut ConnectionManager) {
+    pub fn configure(&mut self,
+                     hosts_config: &Hosts,
+                     preferences: &Preferences,
+                     request_sender: mpsc::Sender<ConnectorRequest>) {
+
+        self.commands.clear();
+        self.request_sender = Some(request_sender);
+
         self.preferences = preferences.clone();
-        self.invocation_id_counter = 0;
         self.hosts_config = hosts_config.clone();
 
         for (host_id, host_config) in hosts_config.hosts.iter() {
             for (command_id, command_config) in host_config.commands.iter() {
-                let command_spec = crate::module::ModuleSpecification::new(command_id.as_str(), command_config.version.as_str());
+                let command_spec = crate::module::ModuleSpecification::new(command_id, &command_config.version);
                 let command = self.module_factory.new_command(&command_spec, &command_config.settings);
-
-                if let Some(connector_spec) = command.get_connector_spec() {
-                    let connector_settings = match host_config.connectors.get(&connector_spec.id) {
-                        Some(config) => config.settings.clone(),
-                        None => HashMap::new(),
-                    };
-
-                    let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
-                    connection_manager.add_connector(host_id.clone(), connector);
-                }
-
                 self.add_command(host_id, command);
             }
         }
     }
 
     fn add_command(&mut self, host_id: &String, command: Command) {
-        if !self.commands.contains_key(host_id) {
-            self.commands.insert(host_id.clone(), HashMap::new());
-        }
+        self.commands.entry(host_id.clone()).or_insert(HashMap::new());
 
         let command_collection = self.commands.get_mut(host_id).unwrap();
         let module_spec = command.get_module_spec();
@@ -140,7 +133,12 @@ impl CommandHandler {
             host: host.clone(),
             request_type: RequestType::Command,
             messages: messages,
-            response_handler: Self::get_response_handler(host, command.box_clone(), self.invocation_id_counter, state_update_sender),
+            response_handler: Self::get_response_handler(
+                host,
+                command.box_clone(),
+                self.invocation_id_counter,
+                state_update_sender
+            ),
             cache_policy: CachePolicy::BypassCache, 
         }).unwrap_or_else(|error| {
             log::error!("Couldn't send message to connector: {}", error);
@@ -167,7 +165,7 @@ impl CommandHandler {
         CommandData::new(command_id.clone(), command.get_display_options())
     }
 
-    fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+    fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
         Box::new(move |results| {
             let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
             let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
@@ -385,8 +383,11 @@ impl CommandHandler {
             request_type: RequestType::Download,
             messages: connector_messages,
             response_handler: Self::get_response_handler_external_text_editor(
-                host, command.box_clone(), self.preferences.clone(),
-                self.request_sender.as_ref().unwrap().clone(), self.state_update_sender.as_ref().unwrap().clone()
+                host,
+                command.box_clone(),
+                self.preferences.clone(),
+                self.request_sender.as_ref().unwrap().clone(),
+                self.state_update_sender.as_ref().unwrap().clone()
             ),
             cache_policy: CachePolicy::BypassCache,
         }).unwrap_or_else(|error| {
@@ -395,7 +396,7 @@ impl CommandHandler {
     }
 
     fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64, load_contents: bool,
-                                          state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
+                                          state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
         Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
             let response = responses.first().unwrap();
@@ -443,7 +444,7 @@ impl CommandHandler {
     }
 
     fn get_response_handler_upload_file(host: Host, command: Command, invocation_id: u64,
-                                        state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+                                        state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
         Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
@@ -475,8 +476,8 @@ impl CommandHandler {
 
     fn get_response_handler_external_text_editor(host: Host, command: Command,
                                                  preferences: Preferences,
-                                                 request_sender: Sender<ConnectorRequest>,
-                                                 state_update_sender: Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+                                                 request_sender: mpsc::Sender<ConnectorRequest>,
+                                                 state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
         Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
@@ -552,7 +553,6 @@ fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[
 }
 
 
-
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct CommandData {
     pub command_id: String,
@@ -569,3 +569,4 @@ impl CommandData {
         }
     }
 }
+

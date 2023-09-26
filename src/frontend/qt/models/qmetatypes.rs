@@ -18,3 +18,12 @@ impl QMetaType for crate::frontend::DisplayData {
 
 impl QMetaType for crate::configuration::DisplayOptions {
 }
+
+impl QMetaType for crate::configuration::Configuration {
+}
+
+impl QMetaType for crate::configuration::Hosts {
+}
+
+impl QMetaType for crate::configuration::Groups {
+}

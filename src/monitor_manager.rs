@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Sender};
 
-use crate::{Host, connection_manager};
+use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
 use crate::enums::Criticality;
 use crate::module::connection::ResponseMessage;
@@ -15,12 +15,15 @@ use crate::connection_manager::{ ConnectorRequest, ResponseHandlerCallback, Requ
 use crate::utils::ErrorMessage;
 
 
+// Default needs to be implemented because of Qt QObject requirements.
+#[derive(Default)]
 pub struct MonitorManager {
     // Host name is the first key, monitor id is the second key.
     monitors: HashMap<String, HashMap<String, Monitor>>,
-    request_sender: Sender<ConnectorRequest>,
+    /// For communication to ConnectionManager.
+    request_sender: Option<Sender<ConnectorRequest>>,
     // Channel to send state updates to HostManager.
-    state_update_sender: Sender<StateUpdateMessage>,
+    state_update_sender: Option<Sender<StateUpdateMessage>>,
     /// Every refresh operation gets an invocation ID. Valid ID numbers begin from 1.
     invocation_id_counter: u64,
     cache_settings: CacheSettings,
@@ -36,11 +39,10 @@ impl MonitorManager {
                host_manager: Rc<RefCell<HostManager>>,
                module_factory: Arc<ModuleFactory>) -> Self {
 
-
         MonitorManager {
             monitors: HashMap::new(),
-            request_sender: request_sender,
-            state_update_sender: host_manager.borrow().new_state_update_sender(),
+            request_sender: Some(request_sender),
+            state_update_sender: Some(host_manager.borrow().new_state_update_sender()),
             invocation_id_counter: 0,
             cache_settings: cache_settings,
 
@@ -49,7 +51,13 @@ impl MonitorManager {
         }
     }
 
-    pub fn configure(&mut self, hosts_config: &Hosts, connection_manager: &mut connection_manager::ConnectionManager) {
+    pub fn configure(&mut self,
+                     hosts_config: &Hosts,
+                     request_sender: mpsc::Sender<ConnectorRequest>) {
+
+        self.monitors.clear();
+        self.request_sender = Some(request_sender);
+
         for (host_id, host_config) in hosts_config.hosts.iter() {
 
             let mut new_monitors = Vec::<Monitor>::new();
@@ -64,17 +72,6 @@ impl MonitorManager {
                                                   .collect::<Vec<_>>();
 
             for monitor in new_monitors {
-                // Initialize a connector if the monitor uses any.
-                if let Some(connector_spec) = monitor.get_connector_spec() {
-                    let connector_settings = match host_config.connectors.get(&connector_spec.id) {
-                        Some(config) => config.settings.clone(),
-                        None => HashMap::new(),
-                    };
-
-                    let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
-                    connection_manager.add_connector(host_id.clone(), connector);
-                }
-
                 // Base modules won't get the initial NoData data point sent.
                 let is_base = base_modules.contains(&monitor.get_module_spec());
                 self.add_monitor(host_id.clone(), monitor, !is_base);
@@ -93,7 +90,7 @@ impl MonitorManager {
 
             if send_initial_value {
                 // Add initial state value indicating no data as been received yet.
-                self.state_update_sender.send(StateUpdateMessage {
+                self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
                     host_name: host_id,
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
@@ -190,15 +187,20 @@ impl MonitorManager {
                     }
                 };
 
-                self.request_sender.send(ConnectorRequest {
+                self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                     connector_spec: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
                     messages: messages,
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
-                        host.clone(), vec![info_provider], 0, self.request_sender.clone(),
-                        self.state_update_sender.clone(), DataPoint::empty_and_critical(), cache_policy
+                        host.clone(),
+                        vec![info_provider],
+                        0,
+                        self.request_sender.as_ref().unwrap().clone(),
+                        self.state_update_sender.as_ref().unwrap().clone(),
+                        DataPoint::empty_and_critical(),
+                        cache_policy
                     ),
                     cache_policy: cache_policy,
                 }).unwrap_or_else(|error| {
@@ -287,8 +289,12 @@ impl MonitorManager {
                              .for_each(|extension| request_monitors.push(extension.box_clone()));
 
             Self::send_connector_request(
-                host.clone(), request_monitors, current_invocation_id, self.request_sender.clone(),
-                self.state_update_sender.clone(), DataPoint::empty_and_critical(), cache_policy.clone()
+                host.clone(),
+                request_monitors,
+                current_invocation_id,
+                self.request_sender.as_ref().unwrap().clone(),
+                self.state_update_sender.as_ref().unwrap().clone(),
+                DataPoint::empty_and_critical(), cache_policy.clone()
             );
         }
 
@@ -434,23 +440,4 @@ fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoi
     }
 
     Ok(all_messages)
-}
-
-
-// Default needs to be implemented because of Qt QObject requirements.
-impl Default for MonitorManager {
-    fn default() -> Self {
-        let (request_sender, _) = mpsc::channel();
-        let (state_update_sender, _) = mpsc::channel();
-        Self {
-            request_sender: request_sender,
-            state_update_sender: state_update_sender,
-            invocation_id_counter: 0,
-            monitors: HashMap::new(),
-            cache_settings: CacheSettings::default(),
-
-            host_manager: Rc::new(RefCell::new(HostManager::default())),
-            module_factory: Arc::new(ModuleFactory::default()),
-        }
-    }
 }

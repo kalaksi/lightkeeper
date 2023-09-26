@@ -10,7 +10,7 @@ import "../Text"
 
 Item {
     id: root
-
+    property int invocationId: 0
 
     Rectangle {
         color: Theme.backgroundColorLight
@@ -19,6 +19,8 @@ Item {
 
     QMLTermWidget {
         id: terminal
+        property int invocationId: root.invocationId
+
         anchors.fill: parent
         font.family: "Monospace"
         font.pointSize: 10
@@ -48,7 +50,6 @@ Item {
 
 
     function open(command) {
-        terminalSession.clearScreen()
         terminalSession.setShellProgram(command[0])
         terminalSession.setArgs(command.slice(1))
         terminalSession.startShellProgram()
@@ -57,10 +58,7 @@ Item {
     }
 
     function close() {
-        // "clear" reduces the additional padding that gets left behind,
-        // since clearScreen() doesn't take cursor to top corner.
-        terminalSession.sendText("clear\n")
-        terminalSession.sendText("exit\n")
+        root.invocationId += 1
         root.visible = false
     }
 }

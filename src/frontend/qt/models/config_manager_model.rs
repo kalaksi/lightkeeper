@@ -26,7 +26,7 @@ pub struct ConfigManagerModel {
     // Common
     //
     isSandboxed: qt_method!(fn(&self) -> bool),
-    require_restart: qt_method!(fn(&self)),
+    reloadConfiguration: qt_method!(fn(&self) -> QVariantList),
 
     //
     // Preferences
@@ -104,8 +104,6 @@ pub struct ConfigManagerModel {
     set_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString, setting_value: QString)),
 
 
-
-    pub restart_required: bool,
 
     config_dir: String,
     main_config: Configuration,
@@ -188,12 +186,28 @@ impl ConfigManagerModel {
         self.hosts_config.hosts.remove(&host_name).unwrap();
     }
 
-    fn require_restart(&mut self) {
-        self.restart_required = true;
-    }
-
     fn isSandboxed(&self) -> bool {
         self.main_config.preferences.use_sandbox_mode
+    }
+
+    fn reloadConfiguration(&mut self) -> QVariantList {
+        ::log::info!("Reloading configuration...");
+        match Configuration::read(&self.config_dir) {
+            Ok((main_config, hosts_config, groups_config)) => {
+                self.main_config = main_config;
+                self.hosts_config = hosts_config;
+                self.groups_config = groups_config;
+            },
+            Err(error) => {
+                self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            }
+        }
+
+        // How to do in one line?
+        let mut result = QVariantList::default();
+        result.push(self.main_config.clone().to_qvariant());
+        result.push(self.hosts_config.clone().to_qvariant());
+        result
     }
 
     /// Updates preferences.use_sandbox_mode. Returns true if value was changed and was written to config.

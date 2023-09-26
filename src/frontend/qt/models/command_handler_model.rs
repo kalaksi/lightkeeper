@@ -5,7 +5,7 @@ use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
 use crate::configuration::{Configuration, self};
-use crate::connection_manager::CachePolicy;
+use crate::connection_manager::{CachePolicy, ConnectionManager};
 use crate::module::command::UIAction;
 use crate::monitor_manager::MonitorManager;
 
@@ -13,6 +13,10 @@ use crate::monitor_manager::MonitorManager;
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
+
+    stop: qt_method!(fn(&mut self)),
+    reconfigure: qt_method!(fn(&mut self, config: QVariant, hosts_config: QVariant)),
+
     get_all_host_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
@@ -48,21 +52,39 @@ pub struct CommandHandlerModel {
 
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
+    connection_manager: ConnectionManager,
     configuration: Configuration,
-    // TODO
-    // refresh_after_execution: bool,
 }
 
 #[allow(non_snake_case)]
 impl CommandHandlerModel {
-    pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, configuration: Configuration) -> Self {
+    pub fn new(
+        command_handler: CommandHandler,
+        monitor_manager: MonitorManager,
+        connection_manager: ConnectionManager,
+        configuration: Configuration) -> Self {
         CommandHandlerModel { 
             command_handler: command_handler,
             monitor_manager: monitor_manager,
+            connection_manager: connection_manager,
             configuration: configuration,
-            // refresh_after_execution: true,
             ..Default::default()
         }
+    }
+
+    fn stop(&mut self) {
+        self.connection_manager.stop();
+    }
+
+    fn reconfigure(&mut self, main_config: QVariant, hosts_config: QVariant) {
+        let main_config = Configuration::from_qvariant(main_config).unwrap();
+        let hosts_config = configuration::Hosts::from_qvariant(hosts_config).unwrap();
+        self.configuration = main_config.clone();
+
+        self.connection_manager.configure(&hosts_config, &main_config.cache_settings);
+        self.monitor_manager.configure(&hosts_config, self.connection_manager.new_request_sender());
+        self.command_handler.configure(&hosts_config, &main_config.preferences, self.connection_manager.new_request_sender());
+        self.connection_manager.start_processing_requests();
     }
 
     fn get_commands(&self, host_id: QString) -> QVariantList {

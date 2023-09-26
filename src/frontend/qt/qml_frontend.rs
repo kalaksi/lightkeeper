@@ -13,6 +13,7 @@ use crate::{
     configuration,
     module::Metadata,
     ExitReason,
+    connection_manager::ConnectionManager,
 };
 
 
@@ -20,11 +21,11 @@ pub struct QmlFrontend {
     theme: Option<ThemeModel>,
     update_sender_prototype: mpsc::Sender<frontend::HostDisplayData>,
     host_data_manager: Option<HostDataManagerModel>,
-    command_handler: Option<CommandHandlerModel>,
     config_manager: Option<ConfigManagerModel>,
 }
 
 impl QmlFrontend {
+    /// Parameters provide the initial data and configuration for the frontend.
     pub fn new(display_data: frontend::DisplayData,
                config_dir: String,
                main_config: configuration::Configuration,
@@ -51,16 +52,17 @@ impl QmlFrontend {
             theme: Some(theme_model),
             update_sender_prototype: update_sender,
             host_data_manager: Some(host_data_manager),
-            command_handler: None,
             config_manager: Some(config_manager),
         }
     }
 
-    pub fn setup_command_handler(&mut self, command_handler: CommandHandler, monitor_manager: MonitorManager, config: configuration::Configuration) {
-        self.command_handler = Some(CommandHandlerModel::new(command_handler, monitor_manager, config));
-    }
+    // Takes ownership of most components (excl. HostDataManager).
+    pub fn start(&mut self,
+        command_handler: CommandHandler,
+        monitor_manager: MonitorManager,
+        connection_manager: ConnectionManager,
+        config: configuration::Configuration) -> ExitReason {
 
-    pub fn start(&mut self) -> ExitReason {
         let sandboxed = env::var("FLATPAK_ID").is_ok();
         let main_qml_path = match sandboxed {
             // Inside flatpak.
@@ -69,12 +71,14 @@ impl QmlFrontend {
             false => "src/frontend/qt/qml/main.qml",
         };
 
+        let command_handler_model = CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, config);
+
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
 
         let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
         let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
-        let qt_data_command_handler = QObjectBox::new(self.command_handler.take().unwrap());
+        let qt_data_command_handler = QObjectBox::new(command_handler_model);
         let qt_data_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
         let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
         let sandboxed_updated = qt_data_config_manager.pinned().borrow_mut().setSandboxed(sandboxed);
@@ -94,12 +98,7 @@ impl QmlFrontend {
             engine.exec();
         }
 
-        if qt_data_config_manager.pinned().borrow().restart_required {
-            ExitReason::Restart
-        }
-        else {
-            ExitReason::Quit
-        }
+        ExitReason::Quit
     }
 
     pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {

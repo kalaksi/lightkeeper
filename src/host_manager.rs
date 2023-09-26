@@ -20,6 +20,7 @@ use crate::{
     utils::ErrorMessage,
     host::Host,
     frontend,
+    configuration,
 };
 
 const DATA_POINT_BUFFER_SIZE: usize = 4;
@@ -28,7 +29,7 @@ const DATA_POINT_BUFFER_SIZE: usize = 4;
 pub struct HostManager {
     hosts: Arc<Mutex<HostCollection>>,
     /// Provides sender handles for sending StateUpdateMessages to this instance.
-    data_sender_prototype: mpsc::Sender<StateUpdateMessage>,
+    data_sender_prototype: Option<mpsc::Sender<StateUpdateMessage>>,
     data_receiver: Option<mpsc::Receiver<StateUpdateMessage>>,
     receiver_thread: Option<thread::JoinHandle<()>>,
     frontend_state_sender: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
@@ -36,20 +37,22 @@ pub struct HostManager {
 
 impl HostManager {
     pub fn new() -> HostManager {
-        let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
-        let shared_hosts = Arc::new(Mutex::new(HostCollection::new()));
+        let hosts = Arc::new(Mutex::new(HostCollection::new()));
         let frontend_state_sender = Arc::new(Mutex::new(Vec::new()));
 
         HostManager {
-            hosts: shared_hosts,
-            data_sender_prototype: sender,
-            data_receiver: Some(receiver),
+            hosts: hosts,
+            data_sender_prototype: None,
+            data_receiver: None,
             receiver_thread: None,
             frontend_state_sender: frontend_state_sender,
         }
     }
 
-    pub fn configure(&mut self, config: &crate::configuration::Hosts) {
+    pub fn configure(&mut self, config: &configuration::Hosts) {
+        if self.receiver_thread.is_some() {
+            self.stop();
+        }
         let mut hosts = self.hosts.lock().unwrap();
         hosts.clear();
 
@@ -68,11 +71,24 @@ impl HostManager {
                 continue;
             };
         }
+
+        let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
+        self.data_sender_prototype = Some(sender);
+        self.data_receiver = Some(receiver);
+    }
+
+    pub fn stop(&mut self) {
+        self.new_state_update_sender()
+            .send(StateUpdateMessage::exit_token())
+            .unwrap_or_else(|error| log::error!("Couldn't send exit token to state manager: {}", error));
+
+        self.join();
     }
 
     pub fn join(&mut self) {
-        self.receiver_thread.take().expect("Thread has already stopped.")
-                            .join().unwrap();
+        if let Some(thread) = self.receiver_thread.take() {
+            thread.join().unwrap();
+        }
     }
 
     /// Get Host details by name. Panics if the host is not found.
@@ -84,7 +100,7 @@ impl HostManager {
     }
 
     pub fn new_state_update_sender(&self) -> mpsc::Sender<StateUpdateMessage> {
-        self.data_sender_prototype.clone()
+        self.data_sender_prototype.as_ref().unwrap().clone()
     }
 
     pub fn add_observer(&mut self, sender: mpsc::Sender<frontend::HostDisplayData>) {

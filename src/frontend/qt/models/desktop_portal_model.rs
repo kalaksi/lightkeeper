@@ -22,7 +22,7 @@ pub struct DesktopPortalModel {
 
     receiveResponses: qt_method!(fn(&self)),
     error: qt_signal!(error_message: QString),
-    exit: qt_method!(fn(&mut self)),
+    stop: qt_method!(fn(&mut self)),
 
     /// Returns token that can be used to match the response.
     openFileChooser: qt_method!(fn(&self) -> QString),
@@ -120,7 +120,7 @@ impl DesktopPortalModel {
                         }
                     };
 
-                    if request.exit {
+                    if request.stop {
                         ::log::debug!("Gracefully exiting portal response receiver thread");
                         return;
                     }
@@ -194,9 +194,9 @@ impl DesktopPortalModel {
         }
     }
 
-    pub fn exit(&mut self) {
+    pub fn stop(&mut self) {
         let request = PortalRequest {
-            exit: true,
+            stop: true,
             ..Default::default()
         };
         self.sender.as_ref().unwrap().send(request).unwrap();
@@ -251,7 +251,7 @@ pub struct PortalRequest {
     request_type: PortalRequestType,
     token: String,
     file: Option<std::fs::File>,
-    exit: bool,
+    stop: bool,
 }
 
 #[derive(Default)]

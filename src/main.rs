@@ -89,28 +89,30 @@ fn run(args: Args) -> ExitReason {
     };
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
-    let mut connection_manager = ConnectionManager::new(main_config.cache_settings.clone());
+    host_manager.borrow_mut().configure(&hosts_config);
+
+    let mut connection_manager = ConnectionManager::new(module_factory.clone());
+    connection_manager.configure(&hosts_config, &main_config.cache_settings);
+
     let mut monitor_manager = MonitorManager::new(
         connection_manager.new_request_sender(),
         main_config.cache_settings.clone(),
         host_manager.clone(),
         module_factory.clone()
     );
+    monitor_manager.configure(&hosts_config, connection_manager.new_request_sender());
+
     let mut command_handler = CommandHandler::new(
         connection_manager.new_request_sender(),
         host_manager.clone(),
         module_factory.clone()
     );
-    host_manager.borrow_mut().start_receiving_updates();
+    command_handler.configure(&hosts_config, &main_config.preferences, connection_manager.new_request_sender());
 
-    // Configure hosts and modules.
-    host_manager.borrow_mut().configure(&hosts_config);
-    monitor_manager.configure(&hosts_config, &mut connection_manager);
-    command_handler.configure(&hosts_config, &main_config.preferences, &mut connection_manager);
+    host_manager.borrow_mut().start_receiving_updates();
+    connection_manager.start_processing_requests();
 
     let module_metadatas = module_factory.get_module_metadatas();
-    connection_manager.start(module_factory);
-
     let mut frontend = frontend::qt::QmlFrontend::new(
         host_manager.borrow().get_display_data(),
         args.config_dir.clone(),
@@ -121,20 +123,8 @@ fn run(args: Args) -> ExitReason {
     );
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
-    frontend.setup_command_handler(command_handler, monitor_manager, main_config.clone());
-    let exit_reason = frontend.start();
+    let exit_reason = frontend.start(command_handler, monitor_manager, connection_manager, main_config.clone());
 
-    // Shut down threads.
-    connection_manager.new_request_sender()
-                      .send(connection_manager::ConnectorRequest::exit_token())
-                      .unwrap_or_else(|error| log::error!("Couldn't send exit token to connection manager: {}", error));
-    connection_manager.join();
-
-    host_manager.borrow_mut()
-                .new_state_update_sender()
-                .send(host_manager::StateUpdateMessage::exit_token())
-                .unwrap_or_else(|error| log::error!("Couldn't send exit token to state manager: {}", error));
-    host_manager.borrow_mut().join();
-
+    host_manager.borrow_mut().stop();
     exit_reason
 }
