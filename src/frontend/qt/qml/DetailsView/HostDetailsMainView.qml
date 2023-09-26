@@ -180,8 +180,8 @@ Item {
                                         width: 0.7 * parent.width
                                         model: root._hostDetails !== null ?
                                             [
-                                                [ "Status", root._hostDetails.status ],
                                                 [ "Name", root._hostDetails.name ],
+                                                [ "Status", root._hostDetails.status ],
                                                 [ "FQDN", root._hostDetails.domain_name ],
                                                 [ "IP Address", root._hostDetails.ip_address ],
                                             ] : []
