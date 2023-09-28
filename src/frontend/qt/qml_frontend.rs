@@ -1,4 +1,5 @@
-use std::sync::mpsc;
+use std::rc::Rc;
+use std::{sync::mpsc, cell::RefCell};
 use std::env;
 extern crate qmetaobject;
 use qmetaobject::*;
@@ -13,7 +14,7 @@ use crate::{
     configuration,
     module::Metadata,
     ExitReason,
-    connection_manager::ConnectionManager,
+    connection_manager::ConnectionManager, host_manager,
 };
 
 
@@ -45,12 +46,12 @@ impl QmlFrontend {
         }
 
         let theme_model = ThemeModel::new(main_config.display_options.clone().unwrap());
-        let (host_data_manager, update_sender) = HostDataManagerModel::new(display_data, main_config.clone());
+        let host_data_manager = HostDataManagerModel::new(display_data, main_config.clone());
         let config_manager = ConfigManagerModel::new(config_dir, main_config, hosts_config, group_config, module_metadatas);
 
         QmlFrontend {
             theme: Some(theme_model),
-            update_sender_prototype: update_sender,
+            update_sender_prototype: host_data_manager.new_update_sender(),
             host_data_manager: Some(host_data_manager),
             config_manager: Some(config_manager),
         }
@@ -61,6 +62,7 @@ impl QmlFrontend {
         command_handler: CommandHandler,
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
+        host_manager: Rc<RefCell<host_manager::HostManager>>,
         config: configuration::Configuration) -> ExitReason {
 
         let sandboxed = env::var("FLATPAK_ID").is_ok();
@@ -71,7 +73,7 @@ impl QmlFrontend {
             false => "src/frontend/qt/qml/main.qml",
         };
 
-        let command_handler_model = CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, config);
+        let command_handler_model = CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, config);
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));

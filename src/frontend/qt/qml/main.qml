@@ -59,9 +59,9 @@ ApplicationWindow {
                 icon.source: "qrc:/main/images/button/remove"
                 onClicked: {
                     ConfigManager.begin_host_configuration()
-                    ConfigManager.remove_host(_hostTableModel.getSelectedHostId())
-                    _hostTableModel.removeHost(_hostTableModel.getSelectedHostId())
+                    ConfigManager.removeHost(_hostTableModel.getSelectedHostId())
                     ConfigManager.end_host_configuration()
+                    reloadConfiguration()
                 }
             }
 
@@ -118,7 +118,7 @@ ApplicationWindow {
                 detailsView.refresh()
             }
 
-            _hostTableModel.display_data = HostDataManager.get_display_data()
+            _hostTableModel.displayData = HostDataManager.getDisplayData()
         }
 
         function onHost_initialized(hostId) {
@@ -260,8 +260,9 @@ ApplicationWindow {
     }
 
     onClosing: {
-        DesktopPortal.stop()
         CommandHandler.stop()
+        HostDataManager.stop()
+        DesktopPortal.stop()
     }
 
     Item {
@@ -281,7 +282,7 @@ ApplicationWindow {
                 model: HostTableModel {
                     id: _hostTableModel
                     selectedRow: -1
-                    display_data: HostDataManager.get_display_data()
+                    displayData: HostDataManager.getDisplayData()
                 }
             }
 
@@ -358,8 +359,7 @@ ApplicationWindow {
         bottomMargin: 0.12 * parent.height
 
         onConfigurationChanged: {
-            let configs = ConfigManager.reloadConfiguration()
-            CommandHandler.reconfigure(configs[0], configs[1])
+            reloadConfiguration()
         }
     }
 
@@ -370,8 +370,7 @@ ApplicationWindow {
         bottomMargin: 0.12 * parent.height
 
         onConfigurationChanged: {
-            let configs = ConfigManager.reloadConfiguration()
-            CommandHandler.reconfigure(configs[0], configs[1])
+            reloadConfiguration()
         }
     }
 
@@ -381,5 +380,14 @@ ApplicationWindow {
         anchors.centerIn: parent
         width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
+    }
+
+    function reloadConfiguration() {
+        HostDataManager.reset()
+        _hostTableModel.displayData = HostDataManager.getDisplayData()
+
+        let configs = ConfigManager.reloadConfiguration()
+        CommandHandler.reconfigure(configs[0], configs[1])
+        _hostTableModel.toggleRow(_hostTableModel.selectedRow)
     }
 }

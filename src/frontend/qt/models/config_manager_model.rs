@@ -38,7 +38,7 @@ pub struct ConfigManagerModel {
     // Host configuration
     //
     add_host: qt_method!(fn(&self, host_name: QString)),
-    remove_host: qt_method!(fn(&self, host_name: QString)),
+    removeHost: qt_method!(fn(&self, host_name: QString)),
     // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     get_host_settings: qt_method!(fn(&self, host_name: QString) -> QString),
     set_host_settings: qt_method!(fn(&self, old_host_name: QString, new_host_name: QString, host_settings_json: QString)),
@@ -180,7 +180,7 @@ impl ConfigManagerModel {
         self.hosts_config.hosts.insert(host_name, config);
     }
 
-    fn remove_host(&mut self, host_name: QString) {
+    fn removeHost(&mut self, host_name: QString) {
         let host_name = host_name.to_string();
         ::log::info!("Removing host {}", host_name);
         self.hosts_config.hosts.remove(&host_name).unwrap();

@@ -14,10 +14,13 @@ use crate::utils::ErrorMessage;
 
 // TODO: use camelcase with qml models?
 #[derive(QObject, Default)]
+#[allow(non_snake_case)]
 pub struct HostDataManagerModel {
     base: qt_base_class!(trait QObject),
 
     receive_updates: qt_method!(fn(&self)),
+    reset: qt_method!(fn(&mut self)),
+    stop: qt_method!(fn(&mut self)),
     update_received: qt_signal!(host_id: QString),
 
     host_initialized: qt_signal!(host_id: QString),
@@ -28,7 +31,7 @@ pub struct HostDataManagerModel {
     error_received: qt_signal!(criticality: QString, error: QString),
 
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
-    get_display_data: qt_method!(fn(&self) -> QVariant),
+    getDisplayData: qt_method!(fn(&self) -> QVariant),
     get_categories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
     get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
@@ -55,10 +58,12 @@ pub struct HostDataManagerModel {
     configuration_cache_settings: configuration::CacheSettings,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
+    update_sender_prototype: Option<mpsc::Sender<frontend::HostDisplayData>>,
 }
 
+#[allow(non_snake_case)]
 impl HostDataManagerModel {
-    pub fn new(display_data: frontend::DisplayData, config: configuration::Configuration) -> (Self, mpsc::Sender<frontend::HostDisplayData>) {
+    pub fn new(display_data: frontend::DisplayData, config: configuration::Configuration) -> Self {
         let mut priorities = config.display_options.as_ref().unwrap().categories.iter()
                                                                      .map(|(category, options)| (category.clone(), options.priority))
                                                                      .collect::<Vec<_>>();
@@ -75,10 +80,11 @@ impl HostDataManagerModel {
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             configuration_preferences: config.preferences,
             configuration_cache_settings: config.cache_settings,
+            update_sender_prototype: Some(sender),
             ..Default::default()
         };
 
-        (model, sender)
+        model
     }
 
     fn receive_updates(&mut self) {
@@ -90,16 +96,18 @@ impl HostDataManagerModel {
                 if let Some(self_pinned) = self_ptr.as_pinned() {
                     // HostDataModel cannot be passed between threads so parsing happens here.
 
-                    // Update host data. There should always be old data.
-                    let old_data = self_pinned.borrow_mut().display_data.hosts.insert(new_display_data.name.clone(), new_display_data.clone()).unwrap();
+                    let maybe_old_data = self_pinned.borrow_mut().display_data.hosts.insert(
+                        new_display_data.name.clone(),
+                        new_display_data.clone()
+                    );
 
                     if new_display_data.just_initialized {
-                        ::log::debug!("Host {} initialized", old_data.name);
-                        self_pinned.borrow().host_initialized(QString::from(old_data.name.clone()));
+                        ::log::debug!("Host {} initialized", new_display_data.name);
+                        self_pinned.borrow().host_initialized(QString::from(new_display_data.name.clone()));
                     }
                     else if new_display_data.just_initialized_from_cache {
-                        ::log::debug!("Host {} initialized from cache", old_data.name);
-                        self_pinned.borrow().host_initialized_from_cache(QString::from(old_data.name.clone()));
+                        ::log::debug!("Host {} initialized from cache", new_display_data.name);
+                        self_pinned.borrow().host_initialized_from_cache(QString::from(new_display_data.name.clone()));
                     }
 
                     if let Some(command_result) = new_display_data.new_command_results {
@@ -121,26 +129,22 @@ impl HostDataManagerModel {
                                                                       QString::from(new_monitor_data.display_options.category.clone()),
                                                                       new_monitor_data.to_qvariant());
 
+
                         // Find out any monitor state changes and signal accordingly.
-                        let new_criticality = new_monitor_data.values.back().unwrap().criticality;
+                        if let Some(old_data) = maybe_old_data {
+                            let new_criticality = new_monitor_data.values.back().unwrap().criticality;
 
-                        if let Some(old_monitor_data) = old_data.monitoring_data.get(&new_monitor_data.monitor_id) {
-                            let old_criticality = old_monitor_data.values.back().unwrap().criticality;
+                            if let Some(old_monitor_data) = old_data.monitoring_data.get(&new_monitor_data.monitor_id) {
+                                let old_criticality = old_monitor_data.values.back().unwrap().criticality;
 
-                            if new_criticality != old_criticality {
-                                self_pinned.borrow().monitor_state_changed(
-                                    QString::from(new_display_data.name.clone()),
-                                    QString::from(new_monitor_data.monitor_id.clone()),
-                                    QString::from(new_criticality.to_string())
-                                );
+                                if new_criticality != old_criticality {
+                                    self_pinned.borrow().monitor_state_changed(
+                                        QString::from(new_display_data.name.clone()),
+                                        QString::from(new_monitor_data.monitor_id.clone()),
+                                        QString::from(new_criticality.to_string())
+                                    );
+                                }
                             }
-                        }
-                        else {
-                            self_pinned.borrow().monitor_state_changed(
-                                QString::from(new_display_data.name.clone()),
-                                QString::from(new_monitor_data.monitor_id.clone()),
-                                QString::from(new_criticality.to_string())
-                            );
                         }
                     }
 
@@ -148,7 +152,7 @@ impl HostDataManagerModel {
                         self_pinned.borrow().error_received(QString::from(error.criticality.to_string()), QString::from(error.message));
                     }
 
-                    self_pinned.borrow().update_received(QString::from(old_data.name));
+                    self_pinned.borrow().update_received(QString::from(new_display_data.name));
                 }
             });
 
@@ -168,7 +172,7 @@ impl HostDataManagerModel {
                 loop {
                     let received_data = receiver.recv().unwrap();
 
-                    if received_data.exit_thread {
+                    if received_data.stop {
                         ::log::debug!("Gracefully exiting UI state receiver thread");
                         return;
                     }
@@ -177,6 +181,24 @@ impl HostDataManagerModel {
             });
 
             self.update_receiver_thread = Some(thread);
+        }
+    }
+
+    pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {
+        self.update_sender_prototype.as_ref().unwrap().clone()
+    }
+
+    pub fn reset(&mut self) {
+        self.display_data.hosts.clear();
+        self.pending_monitor_invocations.clear();
+    }
+
+    pub fn stop(&mut self) {
+        self.new_update_sender()
+            .send(frontend::HostDisplayData::stop()).unwrap();
+
+        if let Some(thread) = self.update_receiver_thread.take() {
+            thread.join().unwrap();
         }
     }
 
@@ -198,7 +220,7 @@ impl HostDataManagerModel {
         host.monitoring_data.get(&monitor_id).unwrap().to_qvariant()
     }
 
-    fn get_display_data(&self) -> QVariant {
+    fn getDisplayData(&self) -> QVariant {
         self.display_data.to_qvariant()
     }
 

@@ -34,15 +34,14 @@ pub struct MonitorManager {
 }
 
 impl MonitorManager {
-    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>,
-               cache_settings: CacheSettings,
+    pub fn new(cache_settings: CacheSettings,
                host_manager: Rc<RefCell<HostManager>>,
                module_factory: Arc<ModuleFactory>) -> Self {
 
         MonitorManager {
             monitors: HashMap::new(),
-            request_sender: Some(request_sender),
-            state_update_sender: Some(host_manager.borrow().new_state_update_sender()),
+            request_sender: None,
+            state_update_sender: None,
             invocation_id_counter: 0,
             cache_settings: cache_settings,
 
@@ -53,10 +52,12 @@ impl MonitorManager {
 
     pub fn configure(&mut self,
                      hosts_config: &Hosts,
-                     request_sender: mpsc::Sender<ConnectorRequest>) {
+                     request_sender: mpsc::Sender<ConnectorRequest>,
+                     state_update_sender: Sender<StateUpdateMessage>) {
 
         self.monitors.clear();
         self.request_sender = Some(request_sender);
+        self.state_update_sender = Some(state_update_sender);
 
         for (host_id, host_config) in hosts_config.hosts.iter() {
 
@@ -97,7 +98,7 @@ impl MonitorManager {
                     data_point: Some(DataPoint::no_data()),
                     command_result: None,
                     errors: Vec::new(),
-                    exit_thread: false,
+                    stop: false,
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to state manager: {}", error);
                 });
@@ -318,7 +319,7 @@ impl MonitorManager {
         };
 
         let response_handler = Self::get_response_handler(
-            host.clone(), monitors, invocation_id, request_sender.clone(), state_update_sender.clone(), parent_result, cache_policy 
+            host.clone(), monitors, invocation_id, request_sender.clone(), state_update_sender, parent_result, cache_policy 
         );
 
         request_sender.send(ConnectorRequest {
@@ -409,7 +410,7 @@ impl MonitorManager {
                     data_point: Some(new_data_point),
                     command_result: None,
                     errors: errors,
-                    exit_thread: false,
+                    stop: false,
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to state manager: {}", error);
                 });

@@ -296,15 +296,6 @@ Dialog {
                 }
             }
         }
-
-        NormalText {
-            text: "Accepting changes will reload the application."
-            color: Theme.color_dark_text()
-            wrapMode: Text.Wrap
-            width: root._contentWidth
-
-            Layout.alignment: Qt.AlignHCenter
-        }
     }
 
     GroupConfigurationDialog {

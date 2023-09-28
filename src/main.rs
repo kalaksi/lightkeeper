@@ -94,20 +94,20 @@ fn run(args: Args) -> ExitReason {
     let mut connection_manager = ConnectionManager::new(module_factory.clone());
     connection_manager.configure(&hosts_config, &main_config.cache_settings);
 
-    let mut monitor_manager = MonitorManager::new(
+    let mut monitor_manager = MonitorManager::new(main_config.cache_settings.clone(), host_manager.clone(), module_factory.clone());
+    monitor_manager.configure(
+        &hosts_config,
         connection_manager.new_request_sender(),
-        main_config.cache_settings.clone(),
-        host_manager.clone(),
-        module_factory.clone()
+        host_manager.borrow().new_state_update_sender()
     );
-    monitor_manager.configure(&hosts_config, connection_manager.new_request_sender());
 
-    let mut command_handler = CommandHandler::new(
+    let mut command_handler = CommandHandler::new(host_manager.clone(), module_factory.clone());
+    command_handler.configure(
+        &hosts_config,
+        &main_config.preferences,
         connection_manager.new_request_sender(),
-        host_manager.clone(),
-        module_factory.clone()
+        host_manager.borrow().new_state_update_sender()
     );
-    command_handler.configure(&hosts_config, &main_config.preferences, connection_manager.new_request_sender());
 
     host_manager.borrow_mut().start_receiving_updates();
     connection_manager.start_processing_requests();
@@ -123,8 +123,7 @@ fn run(args: Args) -> ExitReason {
     );
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
-    let exit_reason = frontend.start(command_handler, monitor_manager, connection_manager, main_config.clone());
+    let exit_reason = frontend.start(command_handler, monitor_manager, connection_manager, host_manager, main_config.clone());
 
-    host_manager.borrow_mut().stop();
     exit_reason
 }

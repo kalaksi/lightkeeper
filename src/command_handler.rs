@@ -49,13 +49,11 @@ pub struct CommandHandler {
 }
 
 impl CommandHandler {
-    pub fn new(request_sender: mpsc::Sender<ConnectorRequest>,
-               host_manager: Rc<RefCell<HostManager>>,
-               module_factory: Arc<ModuleFactory>) -> Self {
+    pub fn new(host_manager: Rc<RefCell<HostManager>>, module_factory: Arc<ModuleFactory>) -> Self {
         CommandHandler {
             commands: HashMap::new(),
-            request_sender: Some(request_sender),
-            state_update_sender: Some(host_manager.borrow().new_state_update_sender()),
+            request_sender: None,
+            state_update_sender: None,
             preferences: Preferences::default(),
             hosts_config: Hosts::default(),
             invocation_id_counter: 0,
@@ -68,10 +66,12 @@ impl CommandHandler {
     pub fn configure(&mut self,
                      hosts_config: &Hosts,
                      preferences: &Preferences,
-                     request_sender: mpsc::Sender<ConnectorRequest>) {
+                     request_sender: mpsc::Sender<ConnectorRequest>,
+                     state_update_sender: mpsc::Sender<StateUpdateMessage>) {
 
         self.commands.clear();
         self.request_sender = Some(request_sender);
+        self.state_update_sender = Some(state_update_sender);
 
         self.preferences = preferences.clone();
         self.hosts_config = hosts_config.clone();

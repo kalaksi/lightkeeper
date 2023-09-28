@@ -1,14 +1,18 @@
 extern crate qmetaobject;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandData};
-use crate::configuration::{Configuration, self};
+use crate::configuration;
 use crate::connection_manager::{CachePolicy, ConnectionManager};
+use crate::host_manager;
 use crate::module::command::UIAction;
 use crate::monitor_manager::MonitorManager;
 
+// This should probably be renamed to something like RequestHandlerModel.
 #[allow(non_snake_case)]
 #[derive(QObject, Default)]
 pub struct CommandHandlerModel {
@@ -52,8 +56,11 @@ pub struct CommandHandlerModel {
 
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
+    configuration: configuration::Configuration,
+
+    // These are here only so that reconfiguring and stopping can be controlled by GUI.
     connection_manager: ConnectionManager,
-    configuration: Configuration,
+    host_manager: Rc<RefCell<host_manager::HostManager>>,
 }
 
 #[allow(non_snake_case)]
@@ -62,11 +69,13 @@ impl CommandHandlerModel {
         command_handler: CommandHandler,
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
-        configuration: Configuration) -> Self {
+        host_manager: Rc<RefCell<host_manager::HostManager>>,
+        configuration: configuration::Configuration) -> Self {
         CommandHandlerModel { 
             command_handler: command_handler,
             monitor_manager: monitor_manager,
             connection_manager: connection_manager,
+            host_manager: host_manager,
             configuration: configuration,
             ..Default::default()
         }
@@ -74,17 +83,31 @@ impl CommandHandlerModel {
 
     fn stop(&mut self) {
         self.connection_manager.stop();
+        self.host_manager.borrow_mut().exit();
     }
 
     fn reconfigure(&mut self, main_config: QVariant, hosts_config: QVariant) {
-        let main_config = Configuration::from_qvariant(main_config).unwrap();
+        let main_config = configuration::Configuration::from_qvariant(main_config).unwrap();
         let hosts_config = configuration::Hosts::from_qvariant(hosts_config).unwrap();
         self.configuration = main_config.clone();
 
+        self.host_manager.borrow_mut().configure(&hosts_config);
+        self.host_manager.borrow_mut().start_receiving_updates();
+
         self.connection_manager.configure(&hosts_config, &main_config.cache_settings);
-        self.monitor_manager.configure(&hosts_config, self.connection_manager.new_request_sender());
-        self.command_handler.configure(&hosts_config, &main_config.preferences, self.connection_manager.new_request_sender());
         self.connection_manager.start_processing_requests();
+
+        self.monitor_manager.configure(
+            &hosts_config,
+            self.connection_manager.new_request_sender(),
+            self.host_manager.borrow().new_state_update_sender()
+        );
+        self.command_handler.configure(
+            &hosts_config,
+            &main_config.preferences,
+            self.connection_manager.new_request_sender(),
+            self.host_manager.borrow().new_state_update_sender()
+        );
     }
 
     fn get_commands(&self, host_id: QString) -> QVariantList {

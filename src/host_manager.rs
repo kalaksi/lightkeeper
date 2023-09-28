@@ -79,8 +79,17 @@ impl HostManager {
 
     pub fn stop(&mut self) {
         self.new_state_update_sender()
-            .send(StateUpdateMessage::exit_token())
-            .unwrap_or_else(|error| log::error!("Couldn't send exit token to state manager: {}", error));
+            .send(StateUpdateMessage::stop())
+            .unwrap_or_else(|error| log::error!("Couldn't send stop command to state manager: {}", error));
+
+        self.join();
+    }
+
+    /// Exit will forward the exit request to relevant parties that this component is responsible for 
+    pub fn exit(&mut self) {
+        self.new_state_update_sender()
+            .send(StateUpdateMessage::stop())
+            .unwrap_or_else(|error| log::error!("Couldn't send exit command to state manager: {}", error));
 
         self.join();
     }
@@ -132,17 +141,20 @@ impl HostManager {
                     }
                 };
 
-                if state_update.exit_thread {
-                    log::debug!("Gracefully exiting state manager thread.");
-                    for observer in observers.lock().unwrap().iter() {
-                        observer.send(frontend::HostDisplayData::exit_token())
-                                .unwrap_or_else(|error| log::debug!("Frontend state manager already left: {}", error));
-                    }
+                if state_update.stop {
+                    log::debug!("Restarting state manager thread.");
                     return;
                 }
 
                 let mut hosts = hosts.lock().unwrap();
-                let host_state = hosts.hosts.get_mut(&state_update.host_name).unwrap();
+                let host_state = match hosts.hosts.get_mut(&state_update.host_name) {
+                    Some(host_state) => host_state,
+                    // It's possible that we receive state update from host that was just removed.
+                    None => {
+                        ::log::debug!("Host {} not found", state_update.host_name);
+                        continue;
+                    },
+                };
 
                 host_state.just_initialized = false;
                 host_state.just_initialized_from_cache = false;
@@ -216,7 +228,7 @@ impl HostManager {
                         just_initialized: host_state.just_initialized,
                         just_initialized_from_cache: host_state.just_initialized_from_cache,
                         is_initialized: host_state.is_initialized,
-                        exit_thread: false,
+                        stop: false,
                     }).unwrap();
                 }
             }
@@ -256,7 +268,7 @@ impl HostManager {
                 just_initialized: state.just_initialized,
                 just_initialized_from_cache: state.just_initialized_from_cache,
                 is_initialized: state.is_initialized,
-                exit_thread: false,
+                stop: false,
             });
         }
 
@@ -302,13 +314,13 @@ pub struct StateUpdateMessage {
     pub data_point: Option<DataPoint>,
     pub command_result: Option<CommandResult>,
     pub errors: Vec<ErrorMessage>,
-    pub exit_thread: bool,
+    pub stop: bool,
 }
 
 impl StateUpdateMessage {
-    pub fn exit_token() -> Self {
+    pub fn stop() -> Self {
         StateUpdateMessage {
-            exit_thread: true,
+            stop: true,
             ..Default::default()
         }
     }

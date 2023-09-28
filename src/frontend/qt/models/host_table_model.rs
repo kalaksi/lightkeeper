@@ -11,11 +11,8 @@ use super::HostDataModel;
 #[allow(non_snake_case)]
 pub struct HostTableModel {
     base: qt_base_class!(trait QAbstractTableModel),
-    display_data: qt_property!(QVariant; WRITE set_display_data),
+    displayData: qt_property!(QVariant; WRITE set_display_data),
     dataChangedForHost: qt_method!(fn(&self, host_id: QString)),
-
-    // Remove host without application restart.
-    removeHost: qt_method!(fn(&mut self, host_id: QString)),
 
     // toggleRow is preferred for setting selected row.
     selectedRow: qt_property!(i32; NOTIFY selectedRowChanged),
@@ -25,13 +22,11 @@ pub struct HostTableModel {
     toggleRow: qt_method!(fn(&mut self, row: i32)),
     getSelectedHostId: qt_method!(fn(&self) -> QString),
 
-    headers: Vec<QString>,
     host_row_map: HashMap<String, usize>,
     i_display_data: frontend::DisplayData,
     // Currently stores the same data as HostDataManagerModel but that might change.
     /// Holds preprocessed data more fitting for table rows.
     row_data: Vec<HostDataModel>,
-    disabled_hosts: Vec<String>,
 }
 
 #[allow(non_snake_case)]
@@ -40,12 +35,9 @@ impl HostTableModel {
         self.begin_reset_model();
 
         self.i_display_data = frontend::DisplayData::from_qvariant(display_data).unwrap();
-        self.headers = self.i_display_data.table_headers.iter().map(|header| QString::from(header.clone())).collect::<Vec<QString>>();
 
         let mut host_ids_ordered = self.i_display_data.hosts.keys().collect::<Vec<&String>>();
         host_ids_ordered.sort_by_key(|key| key.to_lowercase());
-        // Ignore disabled hosts.
-        host_ids_ordered.retain(|host_id| !self.disabled_hosts.contains(*host_id));
 
         self.host_row_map.clear();
         self.row_data.clear();
@@ -71,13 +63,16 @@ impl HostTableModel {
 
     // A slot for informing about change in table data.
     fn dataChangedForHost(&mut self, host_id: QString) {
-        let host_index = self.host_row_map.get(&host_id.to_string()).unwrap();
+        let host_id = host_id.to_string();
 
-        let top_left = self.index(*host_index as i32, 0);
-        let bottom_right = self.index(*host_index as i32, self.column_count() - 1);
+        // Host might already be removed, so ignore. 
+        if let Some(host_index) = self.host_row_map.get(&host_id) {
+            let top_left = self.index(*host_index as i32, 0);
+            let bottom_right = self.index(*host_index as i32, self.column_count() - 1);
 
-        // The standard Qt signal.
-        self.data_changed(top_left, bottom_right);
+            // The standard Qt signal.
+            self.data_changed(top_left, bottom_right);
+        }
     }
 
     fn toggleRow(&mut self, row: i32) {
@@ -99,22 +94,6 @@ impl HostTableModel {
             Some(host) => host.name.clone(),
             None => QString::from(""),
         }
-    }
-
-    fn removeHost(&mut self, host_id: QString) {
-        self.disabled_hosts.push(host_id.to_string());
-        let host_index = self.host_row_map.remove(&host_id.to_string()).unwrap() as i32;
-
-        for row in self.host_row_map.values_mut() {
-            if *row > host_index as usize {
-                *row -= 1;
-            }
-        }
-
-        self.toggleRow(self.selectedRow);
-        self.begin_remove_rows(host_index, host_index);
-        self.row_data.retain(|host| host.name != host_id);
-        self.end_remove_rows();
     }
 }
 

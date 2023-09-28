@@ -48,13 +48,13 @@ pub struct HostDisplayData {
     pub just_initialized: bool,
     pub just_initialized_from_cache: bool,
     pub is_initialized: bool,
-    pub exit_thread: bool,
+    pub stop: bool,
 }
 
 impl HostDisplayData {
-    pub fn exit_token() -> Self {
+    pub fn stop() -> Self {
         HostDisplayData {
-            exit_thread: true,
+            stop: true,
             ..Default::default()
         }
     }
@@ -76,7 +76,7 @@ impl Default for HostDisplayData {
             just_initialized: false,
             just_initialized_from_cache: false,
             is_initialized: false,
-            exit_thread: false,
+            stop: false,
         }
     }
 }

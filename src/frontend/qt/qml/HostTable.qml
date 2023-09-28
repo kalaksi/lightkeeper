@@ -44,7 +44,7 @@ TableView {
 
                 HostStatus {
                     id: host_status
-                    status: value.toLowerCase()
+                    status: value !== undefined ? value.toLowerCase() : "unknown"
                 }
             }
         }
@@ -57,7 +57,7 @@ TableView {
 
                 NormalText {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: value
+                    text: value || ""
                 }
             }
         }
