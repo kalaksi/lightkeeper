@@ -114,7 +114,7 @@ impl QAbstractTableModel for HostTableModel {
         let row = self.row_data.get(index.row() as usize).unwrap();
 
         match index.column() {
-            0 => row.status.to_qvariant(),
+            0 => row.status.to_lower().to_qvariant(),
             1 => row.name.to_qvariant(),
             2 => row.fqdn.to_qvariant(),
             3 => row.ip_address.to_qvariant(),

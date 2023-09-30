@@ -44,7 +44,7 @@ TableView {
 
                 HostStatus {
                     id: host_status
-                    status: value !== undefined ? value.toLowerCase() : "unknown"
+                    status: value || "unknown"
                 }
             }
         }
@@ -71,7 +71,7 @@ TableView {
                 OptionalText {
                     anchors.verticalCenter: parent.verticalCenter
                     placeholder: "No FQDN defined"
-                    text: value
+                    text: value || ""
                 }
             }
         }

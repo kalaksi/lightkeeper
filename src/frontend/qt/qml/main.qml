@@ -384,10 +384,10 @@ ApplicationWindow {
 
     function reloadConfiguration() {
         HostDataManager.reset()
+        _hostTableModel.toggleRow(_hostTableModel.selectedRow)
         _hostTableModel.displayData = HostDataManager.getDisplayData()
 
         let configs = ConfigManager.reloadConfiguration()
         CommandHandler.reconfigure(configs[0], configs[1])
-        _hostTableModel.toggleRow(_hostTableModel.selectedRow)
     }
 }
