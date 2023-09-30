@@ -50,16 +50,15 @@ impl CommandModule for Shell {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
 
-            command.arguments(vec!["docker-compose", "-f", compose_file, "exec", project, "/bin/sh"]);
+            command.arguments(vec!["docker-compose", "-f", compose_file, "exec", project,
+                                   "/bin/sh", "-c", "test -e /bin/bash && /bin/bash || /bin/sh"]);
         }
 
         else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") ||
                 host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
 
-            command.arguments(vec!["docker", "compose", "-f", compose_file, "exec", project, "/bin/sh"]);
-        }
-        else {
-            return Err(String::from("Unsupported platform"));
+            command.arguments(vec!["docker", "compose", "-f", compose_file, "exec", project,
+                                   "/bin/sh", "-c", "test -e /bin/bash && /bin/bash || /bin/sh"]);
         }
 
         Ok(command.to_string())
