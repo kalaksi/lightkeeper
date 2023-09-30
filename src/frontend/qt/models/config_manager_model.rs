@@ -66,7 +66,7 @@ pub struct ConfigManagerModel {
     //
     // Group configuration: connectors
     //
-    get_all_connectors: qt_method!(fn(&self) -> QStringList),
+    getUnselectedConnectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_connector_description: qt_method!(fn(&self, connector_name: QString) -> QString),
     get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     add_group_connector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
@@ -79,7 +79,7 @@ pub struct ConfigManagerModel {
     // Group configuration: monitors
     //
     // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
-    get_all_monitors: qt_method!(fn(&self) -> QStringList),
+    getUnselectedMonitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_monitor_description: qt_method!(fn(&self, monitor_name: QString) -> QString),
     get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     add_group_monitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
@@ -94,7 +94,7 @@ pub struct ConfigManagerModel {
     //
     // Group configuration: commands
     //
-    get_all_commands: qt_method!(fn(&self) -> QStringList),
+    getUnselectedCommands: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_command_description: qt_method!(fn(&self, command_name: QString) -> QString),
     get_group_commands: qt_method!(fn(&self, group_name: QString) -> QStringList),
     add_group_command: qt_method!(fn(&self, group_name: QString, command_name: QString)),
@@ -342,12 +342,22 @@ impl ConfigManagerModel {
         host_settings.groups.retain(|group| group != &group_name);
     }
 
-    fn get_all_monitors(&self) -> QStringList {
-        let mut all_monitors = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.module_type == "monitor")
-                                                           .map(|metadata| metadata.module_spec.id.clone())
-                                                           .collect::<Vec<String>>();
-        all_monitors.sort();
-        all_monitors.into_iter().map(QString::from).collect()
+    fn getUnselectedMonitors(&self, group_name: QString) -> QStringList {
+        let group_name = group_name.to_string();
+        let group_monitors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().monitors;
+
+        let all_monitors = self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.module_type == "monitor")
+            .map(|metadata| metadata.module_spec.id.clone())
+            .collect::<Vec<String>>();
+
+        let mut unselected_monitors = all_monitors.iter()
+            .filter(|monitor| !group_monitors.contains_key(*monitor))
+            .cloned()
+            .collect::<Vec<String>>();
+
+        unselected_monitors.sort();
+        unselected_monitors.into_iter().map(QString::from).collect()
     }
 
     fn get_monitor_description(&self, module_name: QString) -> QString {
@@ -441,12 +451,22 @@ impl ConfigManagerModel {
         }
     }
 
-    fn get_all_connectors(&self) -> QStringList {
-        let mut all_connectors = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.module_type == "connector")
-                                                             .map(|metadata| metadata.module_spec.id.clone())
-                                                             .collect::<Vec<String>>();
-        all_connectors.sort();
-        all_connectors.into_iter().map(QString::from).collect()
+    fn getUnselectedConnectors(&self, group_name: QString) -> QStringList {
+        let group_name = group_name.to_string();
+        let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
+
+        let all_connectors = self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.module_type == "connector")
+            .map(|metadata| metadata.module_spec.id.clone())
+            .collect::<Vec<String>>();
+
+        let mut unselected_connectors = all_connectors.iter()
+            .filter(|connector| !group_connectors.contains_key(*connector))
+            .cloned()
+            .collect::<Vec<String>>();
+
+        unselected_connectors.sort();
+        unselected_connectors.into_iter().map(QString::from).collect()
     }
 
     fn get_connector_description(&self, module_name: QString) -> QString {
@@ -518,13 +538,22 @@ impl ConfigManagerModel {
         self.groups_config.groups.get_mut(&group_name).unwrap().connectors.remove(&connector_name);
     }
 
-    fn get_all_commands(&self) -> QStringList {
-        let mut all_commands = self.module_metadatas.iter().filter(|metadata| metadata.module_spec.module_type == "command")
-                                                             .map(|metadata| metadata.module_spec.id.clone())
-                                                             .collect::<Vec<String>>();
-        all_commands.sort();
+    fn getUnselectedCommands(&self, group_name: QString) -> QStringList {
+        let group_name = group_name.to_string();
+        let group_commands = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().commands;
 
-        all_commands.into_iter().map(QString::from).collect()
+        let all_commands = self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.module_type == "command")
+            .map(|metadata| metadata.module_spec.id.clone())
+            .collect::<Vec<String>>();
+
+        let mut unselected_commands = all_commands.iter()
+            .filter(|command| !group_commands.contains_key(*command))
+            .cloned()
+            .collect::<Vec<String>>();
+
+        unselected_commands.sort();
+        unselected_commands.into_iter().map(QString::from).collect()
     }
 
     fn get_command_description(&self, module_name: QString) -> QString {

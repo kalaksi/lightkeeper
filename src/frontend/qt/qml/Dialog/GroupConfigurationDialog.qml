@@ -88,12 +88,12 @@ Dialog {
                 ImageButton {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let allConnectors = ConfigManager.get_all_connectors()
+                        let connectors = ConfigManager.getUnselectedConnectors(root.groupName)
                         moduleAddDialog.inputSpecs = [{
                             label: "Connector module",
                             field_type: "Option",
-                            options: allConnectors,
-                            option_descriptions: allConnectors.map((connector) => ConfigManager.get_connector_description(connector))
+                            options: connectors,
+                            option_descriptions: connectors.map((connector) => ConfigManager.get_connector_description(connector))
                         }]
                         moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
                             ConfigManager.add_group_connector(root.groupName, inputValues[0])
@@ -235,13 +235,13 @@ Dialog {
                 ImageButton {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let allMonitors = ConfigManager.get_all_monitors()
+                        let monitors = ConfigManager.getUnselectedMonitors(root.groupName)
                         moduleAddDialog.inputSpecs = []
                         moduleAddDialog.inputSpecs = [{
                             label: "Monitoring module",
                             field_type: "Option",
-                            options: allMonitors,
-                            option_descriptions: allMonitors.map((monitor) => ConfigManager.get_monitor_description(monitor))
+                            options: monitors,
+                            option_descriptions: monitors.map((monitor) => ConfigManager.get_monitor_description(monitor))
                         }]
                         moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
                             ConfigManager.add_group_monitor(root.groupName, inputValues[0])
@@ -408,13 +408,13 @@ Dialog {
                 ImageButton {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let allCommands = ConfigManager.get_all_commands()
+                        let commands = ConfigManager.getUnselectedCommands(root.groupName)
                         moduleAddDialog.inputSpecs = []
                         moduleAddDialog.inputSpecs = [{
                             label: "Command module",
                             field_type: "Option",
-                            options: allCommands,
-                            option_descriptions: allCommands.map((command) => ConfigManager.get_command_description(command))
+                            options: commands,
+                            option_descriptions: commands.map((command) => ConfigManager.get_command_description(command))
                         }]
                         moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
                             ConfigManager.add_group_command(root.groupName, inputValues[0])
