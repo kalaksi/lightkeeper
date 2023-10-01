@@ -60,6 +60,9 @@ impl CommandModule for Shell {
             command.arguments(vec!["docker", "compose", "-f", compose_file, "exec", project,
                                    "/bin/sh", "-c", "test -e /bin/bash && /bin/bash || /bin/sh"]);
         }
+        else {
+            return Err(String::from("Unsupported platform"));
+        }
 
         Ok(command.to_string())
     }

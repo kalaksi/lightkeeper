@@ -47,7 +47,7 @@ impl CommandModule for Up {
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
 
             command.arguments(vec!["docker-compose", "-f", compose_file, "up", "-d"]);
-            if let Some(service_name) = parameters.get(1) {
+            if let Some(service_name) = parameters.get(2) {
                 command.argument(service_name);
             }
         }
@@ -55,7 +55,7 @@ impl CommandModule for Up {
                 host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
 
             command.arguments(vec!["docker", "compose", "-f", compose_file, "up", "-d"]);
-            if let Some(service_name) = parameters.get(1) {
+            if let Some(service_name) = parameters.get(2) {
                 command.argument(service_name);
             }
         }

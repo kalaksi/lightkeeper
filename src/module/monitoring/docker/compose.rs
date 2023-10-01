@@ -120,7 +120,7 @@ impl MonitoringModule for Compose {
 
             let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.status.to_string(), container.state.to_criticality());
             data_point.description = container.image.clone();
-            data_point.command_params = vec![compose_file, service];
+            data_point.command_params = vec![compose_file, project.clone(), service];
 
             projects.get_mut(&project).unwrap().push(data_point);
         }
