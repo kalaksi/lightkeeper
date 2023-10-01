@@ -38,7 +38,9 @@ Item {
 
                 // TODO: handle better situations where more log lines have appeared and so this isn't an accurate position
                 let oldListEnd = logList.rows.length - 1
-                logList.rows = commandResult.message.split("\n").filter((line) => line.length > 0)
+                let rows = commandResult.message.split("\n").filter((line) => line.length > 0)
+                rows.reverse()
+                logList.rows = rows
                 logList.currentIndex = oldListEnd
 
                 let [rowsMatched, totalMatches] = logList.getSearchDetails()
