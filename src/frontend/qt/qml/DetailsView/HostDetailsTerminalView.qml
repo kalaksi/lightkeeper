@@ -10,7 +10,6 @@ import "../Text"
 
 Item {
     id: root
-    property int invocationId: 0
 
     Rectangle {
         color: Theme.backgroundColorLight
@@ -19,7 +18,6 @@ Item {
 
     QMLTermWidget {
         id: terminal
-        property int invocationId: root.invocationId
 
         anchors.fill: parent
         font.family: "Monospace"
@@ -58,7 +56,8 @@ Item {
     }
 
     function close() {
-        root.invocationId += 1
+        terminalSession.sendSignal(15)
+        terminalSession.clearScreen()
         root.visible = false
     }
 }
