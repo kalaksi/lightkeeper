@@ -42,7 +42,7 @@ modules:
         url: https://github.com/Swordfish90/qmltermwidget.git
         commit: 63228027e1f97c24abb907550b22ee91836929c5
     make-install-args:
-      - "INSTALL_ROOT=/app"
+      - "INSTALL_ROOT=/app/qmltermwidget"
   - name: lightkeeper
     buildsystem: simple
     sources:

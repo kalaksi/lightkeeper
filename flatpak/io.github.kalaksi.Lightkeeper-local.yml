@@ -13,7 +13,7 @@ finish-args:
   - "--device=dri"
   - "--socket=ssh-auth"
 modules:
-  # Liboping is needed for ping monitoring module.
+  # Liboping is needed for oping monitoring module.
   - name: liboping
     buildsystem: autotools
     build-options:
