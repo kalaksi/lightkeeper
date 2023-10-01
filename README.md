@@ -2,7 +2,7 @@
 
 **LightkeeperRM (Remote Management) is a modular drop-in replacement for maintaining servers over SSH with shell commands.**
 No additional daemons or other software is needed on servers. LightkeeperRM will only run standard Linux commands already available on the server.
-You can see executed commands through debug log and, of course, on server's logs, so it's easy to audit and debug.  
+You can see executed commands through debug log and on server's logs (depends on server's settings), so it's easy to audit and debug.  
   
 **LightkeeperRM aims to be customizable**, modular and easily extendable, so that it can be modified for different needs.  
   
@@ -67,7 +67,8 @@ $ setcap cap_net_raw+ep $MY_BINARY
 ```
 
 # Configuration
-**NOTE: There is currently an assumption that your user can run sudo without password (or has root privileges) on the target host since some commands need higher privileges.**
+**NOTE: There is currently an assumption that your user can run sudo without password (or has root privileges) on the target host since some commands need higher privileges.**  
+  
 Configuration can now be done using the graphical UI, but configuring can always be done directly through configuration files, too.
 
 ## Configuration files
