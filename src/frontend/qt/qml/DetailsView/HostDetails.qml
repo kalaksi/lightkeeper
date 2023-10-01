@@ -58,7 +58,10 @@ Item {
         onRefreshClicked: CommandHandler.force_initialize_host(hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
-        onCloseClicked: root.closeClicked()
+        onCloseClicked: {
+            root.closeSubview()
+            root.closeClicked()
+        }
     }
 
     HostDetailsMainView {
