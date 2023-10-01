@@ -1,12 +1,11 @@
-# TODO
+# Features
 More important features first.
-- Offer embedded terminals and editors?
 - more keyboard shortcuts and GUI hints
-- Hot-reloading QML?
+- Check and display vuln status of system (or docker) packages using mitre, DSA and etc.
 - cache for monitor's command results to minimize amount of commands actually run (crude implementation done)
 - automatic module testing (QML too)
 - new module property `privileged` for modules that require sudo/root
-- Check and display vuln status of system (or docker) packages using mitre, DSA and etc.
+- Hot-reloading QML?
 - Utilize system icons and themes? Can still offer and default to baked in style when necessary.
 - Maybe this would be suitable for managing localhost (desktop) too?
 - mobile version?

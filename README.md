@@ -41,11 +41,13 @@ Dependencies are:
 - Qt 5.15
 - liboping
 - libdbus
+- qmltermwidget
 
 Corresponding Ubuntu 22.04 packages are:
 - qtdeclarative5-dev
 - liboping0
 - libdbus-1-3, libdbus-1-dev
+- qml-module-qmltermwidget
 
 Building:
 ```

@@ -39,7 +39,7 @@ display_options:
       # Color of the label bar.
       color: "#80b3825d"
       # Order of command buttons.
-      command_order: ["reboot", "shutdown", "logs"]
+      command_order: ["shell", "reboot", "shutdown", "logs"]
       # Order of monitors.
       monitor_order: ["uptime", "load", "ram", "os", "kernel", "filesystem"]
     storage:

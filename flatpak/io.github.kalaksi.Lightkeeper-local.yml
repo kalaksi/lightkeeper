@@ -12,11 +12,6 @@ finish-args:
   - "--share=network"
   - "--device=dri"
   - "--socket=ssh-auth"
-build-options:
-  append-path: /usr/lib/sdk/rust-stable/bin
-  env:
-    RUSTFLAGS: "--remap-path-prefix =../"
-    CARGO_HOME: /run/build/lightkeeper/cargo
 modules:
   # Liboping is needed for ping monitoring module.
   - name: liboping
@@ -40,12 +35,25 @@ modules:
           - for patchfile in debian-package/patches/*.patch; do patch -p1 < "$patchfile"; done
     cleanup:
       - /app/lib/liboping/share/man
+  - name: qmltermwidget
+    buildsystem: qmake
+    sources:
+      - type: git
+        url: https://github.com/Swordfish90/qmltermwidget.git
+        commit: 63228027e1f97c24abb907550b22ee91836929c5
+    make-install-args:
+      - "INSTALL_ROOT=/app/qmltermwidget"
   - name: lightkeeper
     buildsystem: simple
     sources:
       - type: dir
         path: ..
       - "cargo-sources.json"
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        RUSTFLAGS: "--remap-path-prefix =../"
+        CARGO_HOME: /run/build/lightkeeper/cargo
     build-commands:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
       - cargo --offline build --release --verbose

@@ -91,6 +91,9 @@ impl QmlFrontend {
         }
         else {
             let mut engine = QmlEngine::new();
+            if sandboxed {
+                engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml/"));
+            }
             engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
             engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
             engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
