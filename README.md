@@ -67,16 +67,14 @@ $ setcap cap_net_raw+ep $MY_BINARY
 ```
 
 # Configuration
-Configuration is stored in configuration files and configuring is currently done directly through them. Later there will be a GUI for that.  
-This repository contains example configuration files (`config.example.yml`, `hosts.example.yml` and `templates.example.yml`) in addition to ones in `test`-directory,
-to use as a starting point.  
+**NOTE: There is currently an assumption that your user can run sudo without password (or has root privileges) on the target host since some commands need higher privileges.**
+Configuration can now be done using the graphical UI, but configuring can always be done directly through configuration files, too.
 
-**There is also currently an assumption that your user can run sudo without password (or has root privileges) on the target host since some commands need higher privileges.**
+## Configuration files
+Example configuration files `config.example.yml`, `hosts.example.yml` and `templates.example.yml` can be found in the root of this repository.
 
-## File locations
-When running without flatpak, the default configuration directory is `~/.config/lightkeeper` and cache directory `~/.cache/lightkeeper`. It's possible the location differs if environment variables `XDG_CONFIG_HOME` and `XDG_CONFIG_CACHE` are set and point somewhere else.  
+When running without flatpak, the default configuration directory is usually `~/.config/lightkeeper` and cache directory `~/.cache/lightkeeper`.
 With flatpak, it's the usual app specific directory: `~/.var/app/io.github.kalaksi.Lightkeeper/config` and `~/.var/app/io.github.kalaksi.Lightkeeper/cache`.
-  
 You can use a custom configuration directory with the `-c`/`--config-dir` option.
 
 # Testing
