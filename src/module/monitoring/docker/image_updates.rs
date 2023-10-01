@@ -1,6 +1,6 @@
 
 use std::collections::HashMap;
-use chrono::TimeZone;
+use chrono::NaiveDateTime;
 use serde_derive::Deserialize;
 use serde_json;
 use chrono::Utc;
@@ -131,7 +131,7 @@ impl MonitoringModule for ImageUpdates {
                 }
                 else if images_for_arch.len() == 1 {
                     let image_details = images_for_arch.first().unwrap();
-                    let last_pushed = Utc.datetime_from_str(image_details.last_pushed.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap();
+                    let last_pushed = NaiveDateTime::parse_from_str(image_details.last_pushed.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap().and_utc();
                     let local_image_age = old_point.value.split_once(" ").unwrap().0.parse::<i64>().unwrap();
                     // When local image was pulled.
                     let last_pulled = Utc::now() - chrono::Duration::days(local_image_age);

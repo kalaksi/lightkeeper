@@ -88,7 +88,7 @@ impl CommandModule for RemoteTags {
                 else if images_for_arch.len() == 1 {
                     let image_details = images_for_arch.first().unwrap();
                     let last_pushed_formatted = if let Some(last_pushed_str) = &image_details.last_pushed {
-                        let datetime = NaiveDateTime::parse_from_str(last_pushed_str.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap();
+                        let datetime = NaiveDateTime::parse_from_str(last_pushed_str.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap().and_utc();
                         // TODO: format according to locale.
                         datetime.format("%d.%m.%Y %H:%M:%S").to_string()
                     }
