@@ -30,6 +30,7 @@ groups:
       storage-lvm-physical-volume: {}
     commands:
       logs: {}
+      shell: {}
       shutdown: {}
       reboot: {}
       linux-packages-clean: {}
