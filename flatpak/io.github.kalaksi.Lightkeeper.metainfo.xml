@@ -25,6 +25,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.6.0" date="2023-10-01">
+      <description>
+        <ul>
+          <li>Seamless configuration reload (no app restarts anymore)</li>
+          <li>New internal/integrated terminal</li>
+          <li>New command: linux-shell</li>
+          <li>Small fixes and improvements</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.2" date="2023-09-20">
       <description>
         <ul>
