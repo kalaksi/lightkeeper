@@ -20,6 +20,10 @@ ApplicationWindow {
     width: minimumWidth + 100
     height: minimumHeight
 
+    onWidthChanged: {
+        hostTable.forceLayout()
+    }
+
     property var _detailsDialogs: {}
     property int _textDialogPendingInvocation: 0
 
