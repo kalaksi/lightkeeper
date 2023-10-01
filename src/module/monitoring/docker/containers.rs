@@ -79,11 +79,11 @@ impl MonitoringModule for Containers {
         let mut parent_data = DataPoint::empty();
 
         if !containers.is_empty() {
-            let most_critical_container = containers.iter().max_by_key(|container| container.state.to_criticality()).unwrap();
-            parent_data.criticality = most_critical_container.state.to_criticality();
+            let most_critical_container = containers.iter().max_by_key(|container| container.get_criticality()).unwrap();
+            parent_data.criticality = most_critical_container.get_criticality();
 
             parent_data.multivalue = containers.iter().map(|container| {
-                let mut point = DataPoint::value_with_level(container.state.to_string(), container.state.to_criticality());
+                let mut point = DataPoint::value_with_level(container.state.to_string(), container.get_criticality());
                 // Names may still contain a leading slash that can cause issues with docker commands.
                 point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
                 point.command_params = vec![cleanup_name(&container.names.first().unwrap_or(&container.id))];
@@ -139,15 +139,22 @@ pub enum ContainerState {
     Dead,
 }
 
-impl ContainerState {
-    pub fn to_criticality(&self) -> Criticality {
-        match self {
+impl ContainerDetails {
+    pub fn get_criticality(&self) -> Criticality {
+        match self.state {
             ContainerState::Created => Criticality::Normal,
             ContainerState::Running => Criticality::Normal,
             ContainerState::Paused => Criticality::Warning,
             ContainerState::Restarting => Criticality::Error,
             ContainerState::Removing => Criticality::Warning,
-            ContainerState::Exited => Criticality::Error,
+            ContainerState::Exited => {
+                if self.status.starts_with("Exited (0)") {
+                    Criticality::Normal
+                }
+                else {
+                    Criticality::Error
+                }
+            },
             ContainerState::Dead => Criticality::Error,
         }
     }

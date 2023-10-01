@@ -93,9 +93,7 @@ impl MonitoringModule for Compose {
                 }
             };
 
-            if !projects.contains_key(&project) {
-                projects.insert(project.clone(), Vec::new());
-            }
+            let project_datapoints = projects.entry(project.clone()).or_insert(Vec::new());
 
             let working_dir = match container.labels.get("com.docker.compose.project.working_dir") {
                 Some(working_dir) => working_dir.clone(),
@@ -118,11 +116,11 @@ impl MonitoringModule for Compose {
             let compose_file = Path::new(&working_dir)
                                     .join(&self.compose_file_name).to_string_lossy().to_string();
 
-            let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.status.to_string(), container.state.to_criticality());
+            let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.status.to_string(), container.get_criticality());
             data_point.description = container.image.clone();
             data_point.command_params = vec![compose_file, project.clone(), service];
 
-            projects.get_mut(&project).unwrap().push(data_point);
+            project_datapoints.push(data_point);
         }
 
         let mut projects_sorted = projects.keys().cloned().collect::<Vec<String>>();
