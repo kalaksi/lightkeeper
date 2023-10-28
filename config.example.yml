@@ -62,7 +62,7 @@ display_options:
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-compose-edit", "docker-compose-shell", "docker-compose-logs", "docker-compose-start", "docker-compose-stop", "docker-compose-pull", "docker-compose-up"]
-      collapsible_commands: [ "docker-compose-start", "docker-compose-stop", "docker-compose-pull", "docker-compose-edit" ]
+      collapsible_commands: [ "docker-compose-start", "docker-compose-stop", "docker-compose-edit" ]
     docker-containers:
       priority: 7
       icon: "qrc:///main/images/docker"
