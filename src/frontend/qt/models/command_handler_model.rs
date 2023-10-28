@@ -252,6 +252,9 @@ impl CommandHandlerModel {
                 if self.configuration.preferences.terminal == configuration::INTERNAL {
                     let command = self.command_handler.open_remote_terminal_command(&host_id, &command_id, &parameters);
                     let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
+
+                    ::log::debug!("Opening terminal with command: {}", command.to_string());
+
                     self.terminalSubviewOpened(QString::from(command_id), command_qsl)
                 }
                 else {
