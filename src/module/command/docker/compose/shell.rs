@@ -42,7 +42,7 @@ impl CommandModule for Shell {
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let compose_file = parameters.first().unwrap();
-        let project = parameters.get(1).unwrap();
+        let service = parameters.get(2).unwrap();
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
@@ -50,14 +50,14 @@ impl CommandModule for Shell {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
 
-            command.arguments(vec!["docker-compose", "-f", compose_file, "exec", project,
+            command.arguments(vec!["docker-compose", "-f", compose_file, "exec", service,
                                    "/bin/sh", "-c", "test -e /bin/bash && /bin/bash || /bin/sh"]);
         }
 
         else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") ||
                 host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
 
-            command.arguments(vec!["docker", "compose", "-f", compose_file, "exec", project,
+            command.arguments(vec!["docker", "compose", "-f", compose_file, "exec", service,
                                    "/bin/sh", "-c", "test -e /bin/bash && /bin/bash || /bin/sh"]);
         }
         else {
