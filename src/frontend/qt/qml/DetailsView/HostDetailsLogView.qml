@@ -38,7 +38,7 @@ Item {
 
                 // TODO: handle better situations where more log lines have appeared and so this isn't an accurate position
                 let oldListEnd = logList.rows.length - 1
-                let rows = commandResult.message.split("\n").filter((line) => line.length > 0)
+                let rows = commandResult.message.split("\n")
                 rows.reverse()
                 logList.rows = rows
                 logList.currentIndex = oldListEnd
@@ -160,7 +160,7 @@ Item {
 
         LogList {
             id: logList
-            rows: root.text.split("\n").filter((line) => line.length > 0)
+            rows: root.text.split("\n")
             visible: rows.length > 0
 
             Layout.fillWidth: true

@@ -4,6 +4,7 @@ import QtQuick.Controls 2.15
 import "../Text"
 import "../Button"
 import "../js/TextTransform.js" as TextTransform
+import "../js/Utils.js" as Utils
 
 
 ListView {
@@ -184,7 +185,7 @@ ListView {
         }
 
         modelRows.reverse()
-        matchingRows.sort()
+        Utils.sortNumerically(matchingRows)
         return [modelRows, matchingRows, totalMatches]
     }
 
@@ -201,7 +202,7 @@ ListView {
     }
 
     function addRows(newRows) {
-        root.rows = newRows.filter((row) => row.length > 0).concat(root.rows)
+        root.rows = newRows.concat(root.rows)
     }
 
     function getSearchDetails() {

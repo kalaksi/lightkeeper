@@ -334,6 +334,7 @@ impl CommandHandler {
         }).unwrap();
 
         command.arguments(connector_messages);
+        ::log::debug!("Opening terminal with command: {}", command.to_string());
         command
     }
 
