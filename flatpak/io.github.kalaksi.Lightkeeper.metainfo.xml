@@ -25,6 +25,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.6.4" date="2023-10-29">
+      <description>
+        <ul>
+          <li>Fix regression in docker-compose-shell</li>
+          <li>Fix an issue in log view search</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.3" date="2023-10-02">
       <description>
         <ul>
