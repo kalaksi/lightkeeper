@@ -27,6 +27,7 @@ use crate::module::connection::*;
       username => "Username for the SSH connection. Default: root.",
       password => "Password for the SSH connection. Default: empty (not used).",
       private_key_path => "Path to the private key file for the SSH connection. Default: empty.",
+      private_key_passphrase => "Passphrase for the private key file. Default: empty.",
       connection_timeout => "Timeout (in seconds) for the SSH connection. Default: 15.",
       agent_key_identifier => "Identifier for selecting key from ssh-agent. This is the comment part of the \
                                key (e.g. user@desktop). Default: empty (all keys are tried)."
@@ -40,6 +41,7 @@ pub struct Ssh2 {
     username: String,
     password: Option<String>,
     private_key_path: Option<String>,
+    private_key_passphrase: Option<String>,
     agent_key_identifier: Option<String>,
     connection_timeout: u16,
 }
@@ -57,6 +59,7 @@ impl Module for Ssh2 {
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
             password: settings.get("password").cloned(),
             private_key_path: settings.get("private_key_path").cloned(),
+            private_key_passphrase: settings.get("private_key_passphrase").cloned(),
             agent_key_identifier: settings.get("agent_key_identifier").cloned(),
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
         }
@@ -93,7 +96,9 @@ impl ConnectionModule for Ssh2 {
         }
         else if self.private_key_path.is_some() {
             let path = Path::new(self.private_key_path.as_ref().unwrap());
-            if let Err(error) = self.session.userauth_pubkey_file(self.username.as_str(), None, path, None) {
+            let passphrase_option = self.private_key_passphrase.as_ref().map(|pass| pass.as_str());
+
+            if let Err(error) = self.session.userauth_pubkey_file(self.username.as_str(), None, path, passphrase_option) {
                 return Err(format!("Failed to authenticate with private key: {}", error));
             };
         }
