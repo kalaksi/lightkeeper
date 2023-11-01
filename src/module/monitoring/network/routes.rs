@@ -44,9 +44,7 @@ impl MonitoringModule for Routes {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "18") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "7") {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             Ok(String::from("ip route ls"))
         }
         else {
