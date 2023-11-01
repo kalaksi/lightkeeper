@@ -23,6 +23,7 @@ groups:
       interface:
         settings:
           ignored_interfaces: "br-,docker,lo,veth"
+      network-routes: {}
       package: {}
       who: {}
       storage-lvm-logical-volume: {}
