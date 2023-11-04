@@ -25,6 +25,15 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.7.0" date="2023-11-04">
+      <description>
+        <ul>
+          <li>New configuration option for SSH key passphrase</li>
+          <li>New monitors: network-routes, network-dns</li>
+          <li>Updated dependencies</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.4" date="2023-10-29">
       <description>
         <ul>
