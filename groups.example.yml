@@ -23,6 +23,7 @@ groups:
       interface:
         settings:
           ignored_interfaces: "br-,docker,lo,veth"
+      network-dns: {}
       network-routes: {}
       package: {}
       who: {}

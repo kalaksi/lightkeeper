@@ -51,6 +51,7 @@ impl MonitoringModule for Dns {
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
 
             let command_resolvconf = ShellCommand::new_from(vec!["fgrep", "nameserver", "/etc/resolv.conf"]);
+            // TODO: use busctl instead?
             let command_resolvectl = ShellCommand::new_from(vec!["resolvectl", "dns"]);
             Ok(vec![command_resolvconf.to_string(), command_resolvectl.to_string()])
         }
