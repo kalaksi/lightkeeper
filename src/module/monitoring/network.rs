@@ -12,3 +12,6 @@ pub use tcp_connect::TcpConnect;
 
 pub mod routes;
 pub use routes::Routes;
+
+pub mod dns;
+pub use dns::Dns;

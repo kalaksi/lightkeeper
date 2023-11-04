@@ -273,6 +273,7 @@ impl ModuleFactory {
             (monitoring::network::Ssh::get_metadata(), monitoring::network::Ssh::new_monitoring_module),
             (monitoring::network::TcpConnect::get_metadata(), monitoring::network::TcpConnect::new_monitoring_module),
             (monitoring::network::Routes::get_metadata(), monitoring::network::Routes::new_monitoring_module),
+            (monitoring::network::Dns::get_metadata(), monitoring::network::Dns::new_monitoring_module),
             (monitoring::docker::Compose::get_metadata(), monitoring::docker::Compose::new_monitoring_module),
             (monitoring::docker::Containers::get_metadata(), monitoring::docker::Containers::new_monitoring_module),
             (monitoring::docker::Images::get_metadata(), monitoring::docker::Images::new_monitoring_module),

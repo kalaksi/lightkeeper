@@ -18,6 +18,12 @@ impl ShellCommand {
         }
     }
 
+    pub fn new_from<IntoString>(arguments: Vec<IntoString>) -> ShellCommand where IntoString: Into<String> {
+        let mut new_command = Self::new();
+        new_command.arguments(arguments);
+        new_command
+    }
+
     pub fn argument<IntoString>(&mut self, argument: IntoString) -> &mut Self where IntoString: Into<String> {
         self.arguments.push_back(argument.into());
         self
