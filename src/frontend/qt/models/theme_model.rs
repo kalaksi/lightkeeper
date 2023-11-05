@@ -24,11 +24,12 @@ pub struct ThemeModel {
     spacingNormal: qt_property!(i8; CONST),
     spacingTight: qt_property!(i8; CONST),
 
+    categoryColor: qt_method!(fn(&self, category: QString) -> QString),
+    categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
+
     // NOTE: Old methods, will be deprecated.
-    category_color: qt_method!(fn(&self, category: QString) -> QString),
     category_background_color: qt_method!(fn(&self) -> QString),
     category_refresh_mask: qt_method!(fn(&self) -> QString),
-    category_icon: qt_method!(fn(&self, category: QString) -> QString),
 
     groupbox_padding: qt_method!(fn(&self) -> i8),
     groupbox_min_width: qt_method!(fn(&self) -> i32),
@@ -43,9 +44,6 @@ pub struct ThemeModel {
     spacing_tight: qt_method!(fn(&self) -> i8),
     common_indentation: qt_method!(fn(&self) -> i8),
 
-    color_red: qt_method!(fn(&self) -> QString),
-    color_green: qt_method!(fn(&self) -> QString),
-    color_yellow: qt_method!(fn(&self) -> QString),
     // TODO: deprecated
     background_color: qt_method!(fn(&self) -> QString),
     color_background: qt_method!(fn(&self) -> QString),
@@ -54,8 +52,6 @@ pub struct ThemeModel {
     color_highlight: qt_method!(fn(&self) -> QString),
     color_highlight_light: qt_method!(fn(&self) -> QString),
     color_highlight_bright: qt_method!(fn(&self) -> QString),
-
-    border_radius: qt_method!(fn(&self) -> i8),
 
     opacity: qt_method!(fn(&self, is_enabled: bool) -> QString),
 
@@ -94,7 +90,7 @@ impl ThemeModel {
         }
     }
 
-    fn category_color(&self, category: QString) -> QString {
+    fn categoryColor(&self, category: QString) -> QString {
         if let Some(category) = self.i_display_options.categories.get(&category.to_string()) {
             QString::from(category.color.clone().unwrap_or_else(|| String::from("#505050")))
         }
@@ -111,7 +107,7 @@ impl ThemeModel {
         QString::from(String::from("#90404040"))
     }
 
-    fn category_icon(&self, category: QString) -> QString {
+    fn categoryIcon(&self, category: QString) -> QString {
         if let Some(category) = self.i_display_options.categories.get(&category.to_string()) {
             QString::from(category.icon.clone().unwrap_or_default())
         }
@@ -160,18 +156,6 @@ impl ThemeModel {
         16
     }
 
-    fn color_red(&self) -> QString {
-        QString::from("#d05252")
-    }
-
-    fn color_green(&self) -> QString {
-        QString::from("#4caa4f")
-    }
-
-    fn color_yellow(&self) -> QString {
-        QString::from("#d3cc0a")
-    }
-
     fn background_color(&self) -> QString {
         QString::from("#2a2e32")
     }
@@ -198,10 +182,6 @@ impl ThemeModel {
 
     fn color_highlight_bright(&self) -> QString {
         QString::from("#50ff2222")
-    }
-
-    fn border_radius(&self) -> i8 {
-        4
     }
 
     fn opacity(&self, is_enabled: bool) -> QString {

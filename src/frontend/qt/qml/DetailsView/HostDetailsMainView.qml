@@ -90,8 +90,8 @@ Item {
                         anchors.right: groupBox.right
 
                         text: TextTransform.capitalize(modelData)
-                        icon: Theme.category_icon(modelData)
-                        color: Theme.category_color(modelData)
+                        icon: Theme.categoryIcon(modelData)
+                        color: Theme.categoryColor(modelData)
                         onRefreshClicked: function() {
                             // These may be racy?
                             HostDataManager.clear_pending_monitor_invocations(root.hostId, modelData)

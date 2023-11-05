@@ -7,8 +7,8 @@ Rectangle {
     property alias containsMouse: mouseArea.containsMouse
     property bool selected: false
 
-    color: Theme.background_color()
-    radius: Theme.border_radius()
+    color: Theme.backgroundColor
+    radius: 4
 
     signal clicked
 
@@ -26,7 +26,7 @@ Rectangle {
 
         onExited: {
             if (!root.selected) {
-                root.color = Theme.background_color()
+                root.color = Theme.backgroundColor
             }
         }
 
@@ -38,7 +38,7 @@ Rectangle {
                 root.color = Theme.color_highlight()
             }
             else {
-                root.color = Theme.background_color()
+                root.color = Theme.backgroundColor
             }
         }
 
