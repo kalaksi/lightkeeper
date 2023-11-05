@@ -87,7 +87,6 @@ impl DisplayOptions {
 pub enum DisplayStyle {
     #[default]
     Text,
-    StatusUpDown,
     CriticalityLevel,
     Icon,
     ProgressBar,

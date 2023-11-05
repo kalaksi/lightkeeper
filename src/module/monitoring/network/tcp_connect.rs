@@ -33,7 +33,7 @@ impl Module for TcpConnect {
 impl MonitoringModule for TcpConnect {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_style: frontend::DisplayStyle::StatusUpDown,
+            display_style: frontend::DisplayStyle::CriticalityLevel,
             display_text: format!("TCP port {}", self.port),
             category: String::from("network"),
             ..Default::default()
@@ -44,11 +44,11 @@ impl MonitoringModule for TcpConnect {
         let socket_addr: SocketAddr = format!("{}:{}", host.ip_address, self.port).parse().unwrap();
         let result = TcpStream::connect_timeout(&socket_addr, std::time::Duration::from_secs(self.timeout as u64));
 
-        if let Err(_) = result {
-            Ok(DataPoint::value_with_level(String::from("down"), Criticality::Critical))
+        if let Err(error) = result {
+            Ok(DataPoint::value_with_level(error.to_string(), Criticality::Error))
         }
         else {
-            Ok(DataPoint::value_with_level(String::from("up"), Criticality::Normal))
+            Ok(DataPoint::new(String::from("open")))
         }
     }
 }
