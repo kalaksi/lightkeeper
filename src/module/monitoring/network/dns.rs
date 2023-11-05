@@ -85,9 +85,10 @@ impl MonitoringModule for Dns {
             for line in resolvectl_response.message.lines() {
                 if line.starts_with("Link") {
                     let mut parts = line.split("): ");
-                    let dns_server = parts.nth(1).unwrap_or_default().trim().to_string();
+                    let dns_servers = parts.nth(1).unwrap_or_default()
+                                           .split_whitespace();
 
-                    if !dns_server.is_empty() {
+                    for dns_server in dns_servers {
                         let mut datapoint = DataPoint::label(dns_server);
                         datapoint.description = String::from("systemd-resolved");
                         datapoint.is_from_cache = resolvectl_response.is_from_cache;
