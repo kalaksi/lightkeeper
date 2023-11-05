@@ -118,10 +118,10 @@ Rectangle {
             return "#FFC734"
         }
         else if (root.criticality === "Info") {
-            return Theme.backgroundColorDark()
+            return Theme.backgroundColorDark
         }
         else if (root.criticality === "Normal") {
-            return Theme.backgroundColorDark()
+            return Theme.backgroundColorDark
         }
         else if (root.criticality === "NoData") {
             return "#FFC734"
