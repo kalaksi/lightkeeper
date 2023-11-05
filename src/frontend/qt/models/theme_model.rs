@@ -19,6 +19,7 @@ pub struct ThemeModel {
     backgroundColorDark: qt_property!(QString; CONST),
     backgroundColor: qt_property!(QString; CONST),
     backgroundColorLight: qt_property!(QString; CONST),
+    tableBackgroundColor: qt_property!(QString; CONST),
     spacingLoose: qt_property!(i8; CONST),
     spacingNormal: qt_property!(i8; CONST),
     spacingTight: qt_property!(i8; CONST),
@@ -48,7 +49,6 @@ pub struct ThemeModel {
     // TODO: deprecated
     background_color: qt_method!(fn(&self) -> QString),
     color_background: qt_method!(fn(&self) -> QString),
-    color_table_background: qt_method!(fn(&self) -> QString),
     color_text: qt_method!(fn(&self) -> QString),
     color_dark_text: qt_method!(fn(&self) -> QString),
     color_highlight: qt_method!(fn(&self) -> QString),
@@ -86,6 +86,7 @@ impl ThemeModel {
             backgroundColorDark: QString::from("#252525"),
             backgroundColor: QString::from("#2a2e32"),
             backgroundColorLight: QString::from("#303030"),
+            tableBackgroundColor: QString::from("#26292d"),
             spacingLoose: 12,
             spacingNormal: 8,
             spacingTight: 2,
@@ -177,10 +178,6 @@ impl ThemeModel {
 
     fn color_background(&self) -> QString {
         QString::from("#2a2e32")
-    }
-    
-    fn color_table_background(&self) -> QString {
-        QString::from("#26292d")
     }
 
     fn color_text(&self) -> QString {

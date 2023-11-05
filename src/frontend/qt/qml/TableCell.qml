@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import Qt.labs.qmlmodels 1.0
+import org.kde.kirigami 2.19 as Kirigami
 
 Item {
     id: root
@@ -32,15 +33,13 @@ Item {
 
     function getBackgroundColor(selected) {
         if (selected === true) {
-            return Theme.color_highlight()
+            return Qt.darker(Kirigami.Theme.highlightColor)
         }
         else if (model.row % 2 == 0) {
             return palette.alternateBase
-            return Theme.color_table_background()
         }
         else {
             return palette.base
-            return Theme.color_background()
         }
     }
 }
