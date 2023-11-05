@@ -1,12 +1,12 @@
 groups:
   # This is nothing special, just a group called "defaults".
   defaults:
-    settings:
+    host_settings:
       # Some modules require more privileges and will try to use sudo (without password)
       # if use_sudo is set.
       - use_sudo
     monitors:
-      ping:
+      tcp-connect:
         is_critical: true
       docker-compose:
         settings:
@@ -18,8 +18,6 @@ groups:
 
   # Monitors and commands for Linux hosts. You usually want at least this for your hosts.
   linux:
-    connectors:
-      ssh: {}
     monitors:
       os: {}
       kernel: {}
@@ -30,19 +28,22 @@ groups:
       interface:
         settings:
           ignored_interfaces: "br-,docker,lo,veth"
+      network-dns: {}
+      network-routes: {}
       package: {}
-      ssh: {}
       who: {}
       storage-lvm-logical-volume: {}
       storage-lvm-volume-group: {}
       storage-lvm-physical-volume: {}
     commands:
       logs: {}
+      linux-shell: {}
       shutdown: {}
       reboot: {}
       linux-packages-clean: {}
       linux-packages-update: {}
       linux-packages-update-all: {}
+      linux-packages-refresh: {}
       storage-file-space-usage: {}
       storage-lvm-snapshot: {}
       storage-lvm-lvresize: {}
@@ -72,6 +73,8 @@ groups:
       docker-compose-up: {}
       docker-compose-start: {}
       docker-compose-stop: {}
+      docker-compose-shell: {}
+      docker-compose-logs: {}
 
   # Monitors and commands for SystemD services.
   systemd-service:
@@ -84,3 +87,5 @@ groups:
       systemd-service-stop: {}
       systemd-service-mask: {}
       systemd-service-unmask: {}
+      systemd-service-logs: {}
+

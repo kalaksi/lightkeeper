@@ -1,19 +1,21 @@
 preferences:
-  # Connect to all hosts on start and 
+  # Refresh all hosts on application start.
   refresh_hosts_on_start: false
   # Some commands allow you to edit a remote file.
   # This can be done directly over a terminal or by temporarily downloading the file for editing locally.
   # If set to true, will launch a terminal for editing directly using a CLI text editor.
   use_remote_editor: true
-  # This is the path to the remote CLI text editor.
-  remote_text_editor: "/usr/bin/nano"
+  # This is the command (or path) to the remote CLI text editor.
+  remote_text_editor: "nano"
   # Use sudo when editing remote files?
   sudo_remote_editor: true
-  # Likewise, a path to an editor for editing locally.
-  text_editor: "/usr/bin/kate"
+  # Likewise, command (or path) to an editor for editing locally.
+  # If set to "internal", will use the integrated text editor.
+  text_editor: "internal"
   # Some commands may launch a terminal for you. Here you can configure the terminal and parameters.
-  terminal: "/usr/bin/xterm"
-  terminal_args: ["-e"]
+  # If set to "internal", will use the integrated terminal.
+  terminal: "internal"
+  terminal_args: [""]
 
 # Caching can provide speed benefits especially if you have many hosts.
 # Recommended to be left disabled for now.
@@ -24,9 +26,11 @@ cache_settings:
   prefer_cache: true
   time_to_live: 8400
 
-# Control category order, command buttons orders, colors.
-# Defaults should be good.
+# Control category order, command buttons orders, colors. Defaults should be good.
+# NOTE: Currently, you shouldn't manually edit display_options at all.
 display_options:
+  # Empty means default.
+  qtquick_style: ""
   hide_info_notifications: false
   categories:
     host:
@@ -35,7 +39,7 @@ display_options:
       # Color of the label bar.
       color: "#80b3825d"
       # Order of command buttons.
-      command_order: ["reboot", "shutdown", "logs"]
+      command_order: ["shell", "reboot", "shutdown", "logs"]
       # Order of monitors.
       monitor_order: ["uptime", "load", "ram", "os", "kernel", "filesystem"]
     storage:
@@ -46,19 +50,19 @@ display_options:
     network:
       priority: 3
       color: "#80b3825d"
-      monitor_order: ["ping", "ssh", "interface"]
+      monitor_order: ["oping", "ping", "tcp-connect", "ssh", "network-dns", "interface", "network-routes"]
     systemd:
       priority: 4
       color: "#8030d475"
-      command_order: ["systemd-service-stop", "systemd-service-start"]
+      command_order: ["systemd-service-logs", "systemd-service-stop", "systemd-service-start", "systemd-service-mask", "systemd-service-unmask"]
     package:
       priority: 5
     docker-compose:
       priority: 6
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
-      command_order: ["docker-compose-edit", "docker-compose-pull", "docker-compose-up", "docker-compose-play", "docker-compose-stop"]
-      collapsible_commands: [ "docker-compose-up", "docker-compose-pull", "docker-compose-edit" ]
+      command_order: ["docker-compose-edit", "docker-compose-shell", "docker-compose-logs", "docker-compose-start", "docker-compose-stop", "docker-compose-pull", "docker-compose-up"]
+      collapsible_commands: [ "docker-compose-start", "docker-compose-stop", "docker-compose-edit" ]
     docker-containers:
       priority: 7
       icon: "qrc:///main/images/docker"

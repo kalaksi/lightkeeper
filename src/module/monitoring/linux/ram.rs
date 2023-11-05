@@ -40,7 +40,7 @@ impl MonitoringModule for Ram {
     fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, String> {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "7") {
             Ok(String::from("free -m"))
         }
         else {
@@ -51,7 +51,7 @@ impl MonitoringModule for Ram {
     fn process_response(&self, host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "7") {
 
             let line = response.message.lines().filter(|line| line.contains("Mem:")).collect::<Vec<&str>>();
             let parts = line[0].split_whitespace().collect::<Vec<&str>>();
