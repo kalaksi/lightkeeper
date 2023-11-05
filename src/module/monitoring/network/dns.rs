@@ -73,7 +73,8 @@ impl MonitoringModule for Dns {
                 let mut parts = line.split(" ");
                 let dns_server = parts.nth(1).unwrap_or_default().trim().to_string();
 
-                let mut datapoint = DataPoint::labeled_value(dns_server.clone(), String::new());
+                let mut datapoint = DataPoint::label(dns_server);
+                datapoint.description = String::from("resolv.conf");
                 datapoint.is_from_cache = resolvconf_response.is_from_cache;
                 result.multivalue.push(datapoint);
             }
@@ -87,7 +88,8 @@ impl MonitoringModule for Dns {
                     let dns_server = parts.nth(1).unwrap_or_default().trim().to_string();
 
                     if !dns_server.is_empty() {
-                        let mut datapoint = DataPoint::labeled_value(dns_server.clone(), String::new());
+                        let mut datapoint = DataPoint::label(dns_server);
+                        datapoint.description = String::from("systemd-resolved");
                         datapoint.is_from_cache = resolvectl_response.is_from_cache;
                         result.multivalue.push(datapoint);
                     }

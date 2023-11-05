@@ -37,6 +37,15 @@ impl DataPoint {
         }
     }
 
+    pub fn label<Stringable: ToString>(label: Stringable) -> Self {
+        DataPoint {
+            value: " ".to_string(),
+            label: label.to_string(),
+            criticality: Criticality::Normal,
+            ..Default::default()
+        }
+    }
+
     pub fn labeled_value<Stringable: ToString>(label: Stringable, value: Stringable) -> Self {
         DataPoint {
             value: value.to_string(),
