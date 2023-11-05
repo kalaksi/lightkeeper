@@ -25,6 +25,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.7.1" date="2023-11-05">
+      <description>
+        <ul>
+          <li>Fixes to network-dns, tcp-connect</li>
+          <li>A fix for host table highlight color</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.0" date="2023-11-04">
       <description>
         <ul>
