@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::enums::Criticality;
 use crate::module::connection::ResponseMessage;
 use crate::{
     Host,
@@ -13,22 +14,31 @@ use crate::module::monitoring::*;
     version="0.0.1",
     description="Shows filesystem usage in a progress bar.",
     settings={
-        ignored_filesystems => "Comma-separated list of filesystems to ignore. Default: /run,/dev,/dev/shm,/sys/fs/cgroup"
+        ignored_filesystems => "Comma-separated list of filesystems to ignore. Default: /run,/dev,/dev/shm,/sys/fs/cgroup",
+        warning_threshold => "Warning threshold in percent. Default: 80",
+        error_threshold => "Error threshold in percent. Default: 90",
+        critical_threshold => "Critical threshold in percent. Default: 95",
     }
 )]
 pub struct Filesystem {
     ignored_filesystems: Vec<String>,
+    threshold_critical: f64,
+    threshold_error: f64,
+    threshold_warning: f64,
 }
 
 impl Module for Filesystem {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         Filesystem {
             ignored_filesystems: vec![
                 String::from("/run"),
                 String::from("/dev"),
                 String::from("/dev/shm"),
                 String::from("/sys/fs/cgroup"),
-            ]
+            ],
+            threshold_critical: settings.get("critical_threshold").unwrap_or(&String::from("95")).parse().unwrap(),
+            threshold_error: settings.get("error_threshold").unwrap_or(&String::from("90")).parse().unwrap(),
+            threshold_warning: settings.get("warning_threshold").unwrap_or(&String::from("80")).parse().unwrap(),
         }
     }
 }
@@ -41,7 +51,6 @@ impl MonitoringModule for Filesystem {
             category: String::from("storage"),
             unit: String::from("%"),
             use_multivalue: true,
-            ignore_from_summary: true,
             ..Default::default()
         }
     }
@@ -71,21 +80,38 @@ impl MonitoringModule for Filesystem {
             let size_h = parts.next().unwrap().to_string();
             let used_h = parts.next().unwrap().to_string();
             let _available_h = parts.next().unwrap().to_string();
+
             let mut used_percent = parts.next().unwrap().to_string();
+            // Remove percent symbol from the end.
+            used_percent.pop();
+            let used_percent_float = used_percent.parse::<f64>().unwrap();
+
             let mountpoint = parts.next().unwrap().to_string();
 
             if self.ignored_filesystems.iter().any(|item| mountpoint.starts_with(item)) {
                 continue;
             }
 
-            // Remove percent symbol from the end.
-            used_percent.pop();
             let mut data_point = DataPoint::labeled_value(mountpoint.clone(), used_percent);
+            data_point.criticality = if used_percent_float >= self.threshold_critical {
+                Criticality::Critical
+            }
+            else if used_percent_float >= self.threshold_error {
+                Criticality::Error
+            }
+            else if used_percent_float >= self.threshold_warning {
+                Criticality::Warning
+            }
+            else {
+                Criticality::Normal
+            };
             data_point.description = format!("{} | {} / {} used", fs_type, used_h, size_h);
             data_point.command_params.push(mountpoint);
             result.multivalue.push(data_point);
-
         }
+
+        let most_critical = result.multivalue.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
+        result.criticality = most_critical.criticality;
 
         Ok(result)
     }

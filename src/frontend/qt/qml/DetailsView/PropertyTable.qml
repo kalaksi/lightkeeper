@@ -193,7 +193,7 @@ TableView {
                         visible: styledValue.display_options.display_style === "CriticalityLevel"
                         anchors.verticalCenter: parent.verticalCenter
                         text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
-                        pillColor: Theme.pill_color_for_criticality(styledValue.data_point.criticality)
+                        pillColor: Theme.colorForCriticality(styledValue.data_point.criticality)
                     }
 
                     Repeater {
@@ -202,7 +202,7 @@ TableView {
                         PillText {
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData
-                            pillColor: Theme.pill_color_for_criticality("Info")
+                            pillColor: Theme.colorForCriticality("Info")
                         }
                     }
                 }

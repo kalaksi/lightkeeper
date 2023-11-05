@@ -26,6 +26,7 @@ pub struct ThemeModel {
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
+    colorForCriticality: qt_method!(fn(&self, criticality: QString) -> QString),
 
     // NOTE: Old methods, will be deprecated.
     category_background_color: qt_method!(fn(&self) -> QString),
@@ -58,7 +59,6 @@ pub struct ThemeModel {
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     tooltip_delay: qt_method!(fn(&self) -> QVariant),
     animation_duration: qt_method!(fn(&self) -> QVariant),
-    pill_color_for_criticality: qt_method!(fn(&self, criticality: QString) -> QString),
     get_display_options: qt_method!(fn(&self) -> QVariant),
     icon_for_criticality: qt_method!(fn(&self, alert_level: QString) -> QString),
     hide_info_notifications: qt_method!(fn(&self) -> bool),
@@ -216,7 +216,7 @@ impl ThemeModel {
         QVariant::from(175)
     }
 
-    fn pill_color_for_criticality(&self, criticality: QString) -> QString {
+    fn colorForCriticality(&self, criticality: QString) -> QString {
         let criticality = criticality.to_string();
 
         if criticality.is_empty() {
