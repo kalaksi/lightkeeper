@@ -44,7 +44,7 @@ TableView {
 
                 HostStatus {
                     id: host_status
-                    status: value
+                    status: value || "unknown"
                 }
             }
         }
