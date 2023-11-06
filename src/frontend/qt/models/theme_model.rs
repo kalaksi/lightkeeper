@@ -261,6 +261,6 @@ impl ThemeModel {
     }
 
     fn notification_show_duration(&self) -> i32 {
-        4000
+        5000
     }
 }
