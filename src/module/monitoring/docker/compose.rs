@@ -16,21 +16,24 @@ use crate::utils::ShellCommand;
     version="0.0.1",
     description="Provides information about docker-compose projects.",
     settings={
-      compose_file_name => "Name of the docker-compose file. Default: docker-compose.yml",
-      working_dir => "This is only needed with older docker-compose versions that don't include working_dir label on the container,
- so this can be used instead. Should be the parent directory of project directories. Currently, a single directory is supported."
+        compose_file_name => "Name of the docker-compose file. Default: docker-compose.yml",
+        working_dir => "This is only needed with older docker-compose versions that don't include working_dir label on the container,
+ so th  is can be used instead. Should be the parent directory of project directories. Currently, a single directory is supported.",
+        local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
     }
 )]
 pub struct Compose {
     pub compose_file_name: String,
     pub working_dir: String, 
+    pub local_image_prefix: String,
 }
 
 impl Module for Compose {
     fn new(settings: &HashMap<String, String>) -> Self {
         Compose {
             compose_file_name: String::from("docker-compose.yml"),
-            working_dir: settings.get("working_dir").unwrap_or(&String::new()).clone()
+            working_dir: settings.get("working_dir").unwrap_or(&String::new()).clone(),
+            local_image_prefix: settings.get("local_image_prefix").unwrap_or(&String::from("localhost")).clone(),
         }
     }
 }
@@ -57,7 +60,8 @@ impl MonitoringModule for Compose {
         // TODO: Check for docker-compose version for a more controlled approach?
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
             // Docker API is much better suited for this than using the docker-compose CLI. More effective too.
             // TODO: find down-status compose-projects with find-command?
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
@@ -117,6 +121,11 @@ impl MonitoringModule for Compose {
                                     .join(&self.compose_file_name).to_string_lossy().to_string();
 
             let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.status.to_string(), container.get_criticality());
+
+            if container.image.starts_with(&self.local_image_prefix) {
+                data_point.tags.push(String::from("Local"));
+            }
+
             data_point.description = container.image.clone();
             data_point.command_params = vec![compose_file, project.clone(), service];
 
@@ -132,7 +141,10 @@ impl MonitoringModule for Compose {
 
             let compose_file = match data_points.first() {
                 Some(first) => first.command_params[0].clone(),
-                None => { log::error!("No compose-file found for project {}", project); continue; }
+                None => {
+                    log::error!("No compose-file found for project {}", project);
+                    continue;
+                }
             };
 
             // Check just in case that all have the same compose-file.

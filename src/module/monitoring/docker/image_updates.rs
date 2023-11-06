@@ -22,14 +22,11 @@ use crate::module::monitoring::*;
     description= "Checks if there are updates available for Docker image tags.",
 )]
 pub struct ImageUpdates {
-    /// Tags that don't use remote registry.
-    pub local_tag_prefixes: Vec<String>,
 }
 
 impl Module for ImageUpdates {
     fn new(_settings: &HashMap<String, String>) -> Self {
         ImageUpdates {
-            local_tag_prefixes: vec![String::from("local")],
         }
     }
 }
@@ -58,7 +55,8 @@ impl MonitoringModule for ImageUpdates {
         let result = parent_result.multivalue.iter().map(|data_point| {
             let image_repo_tag = data_point.command_params.get(1).unwrap();
 
-            if self.local_tag_prefixes.iter().any(|prefix| image_repo_tag.starts_with(prefix)) {
+            if data_point.tags.contains(&String::from("Local")) {
+                // Local images can not be used.
                 String::new()
             }
             else if image_repo_tag.is_empty() {
@@ -108,10 +106,9 @@ impl MonitoringModule for ImageUpdates {
             }
             else if response.is_empty() {
                 new_point.description = old_point.value;
-                if self.local_tag_prefixes.iter().any(|prefix| image_repo_tag.starts_with(prefix)) {
+                if new_point.tags.contains(&String::from("Local")) {
                     new_point.criticality = Criticality::Normal;
                     new_point.value = String::from("Up-to-date");
-                    new_point.tags.push(String::from("Local"));
                 }
                 else if image_repo_tag.is_empty() {
                     new_point.criticality = Criticality::Warning;

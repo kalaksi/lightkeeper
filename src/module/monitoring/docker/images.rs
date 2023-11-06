@@ -13,29 +13,32 @@ use crate::module::*;
 use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
 
-const LEVEL_WARNING: usize = 0;
-const LEVEL_ERROR: usize = 1;
-const LEVEL_CRITICAL: usize = 2;
 
 #[monitoring_module(
     name="docker-images",
     version="0.0.1",
     description="Provides information about Docker images.",
     settings={
-        criticality_levels => "Comma-separated list of criticality levels in days. Default: 180,365,730."
+        age_warning_threshold => "Warning threshold in days. Default: 180",
+        age_error_threshold => "Error threshold in days. Default: 365",
+        age_critical_threshold => "Critical threshold in days. Default: 730",
+        local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
     }
 )]
 pub struct Images {
-    criticality_levels: Vec<u32>,
+    age_warning_threshold: i64,
+    age_error_threshold: i64,
+    age_critical_threshold: i64,
+    local_image_prefix: String,
 }
 
 impl Module for Images {
     fn new(settings: &HashMap<String, String>) -> Self {
         Images {
-            criticality_levels: settings.get("criticality_levels").unwrap_or(&String::from("180,365,730"))
-                                        .split(',')
-                                        .map(|value| value.parse().unwrap())
-                                        .collect(),
+            age_warning_threshold: settings.get("age_warning_threshold").unwrap_or(&String::from("180")).parse().unwrap(),
+            age_error_threshold: settings.get("age_error_threshold").unwrap_or(&String::from("365")).parse().unwrap(),
+            age_critical_threshold: settings.get("age_critical_threshold").unwrap_or(&String::from("730")).parse().unwrap(),
+            local_image_prefix: settings.get("local_image_prefix").unwrap_or(&String::from("localhost")).clone(),
         }
     }
 }
@@ -61,7 +64,8 @@ impl MonitoringModule for Images {
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
             // TODO: somehow connect directly to the unix socket instead of using curl?
             command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);
             Ok(command.to_string())
@@ -100,14 +104,18 @@ impl MonitoringModule for Images {
             let creation_time = Utc.timestamp_opt(point.value.parse::<i64>().unwrap(), 0).unwrap();
             let duration_days = Utc::now().signed_duration_since(creation_time).num_days();
 
-            if duration_days > self.criticality_levels[LEVEL_CRITICAL].into() {
+            if duration_days >= self.age_critical_threshold {
                 point.criticality = Criticality::Critical;
             }
-            else if duration_days > self.criticality_levels[LEVEL_ERROR].into() {
+            else if duration_days >= self.age_error_threshold {
                 point.criticality = Criticality::Error;
             }
-            else if duration_days > self.criticality_levels[LEVEL_WARNING].into() {
+            else if duration_days >= self.age_warning_threshold {
                 point.criticality = Criticality::Warning;
+            }
+
+            if repo_tag.starts_with(&self.local_image_prefix) {
+                point.tags.push(String::from("Local"));
             }
 
             point.value = format!("{} days old", duration_days);
