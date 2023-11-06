@@ -77,8 +77,9 @@ impl MonitoringModule for Images {
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if response.return_code == 7 {
-            // Coudldn't connect. Daemon is probably not present.
-            return Ok(DataPoint::empty());
+            // Coudldn't connect. Daemon is probably not available.
+            let result = DataPoint::value_with_level(String::from("Couldn't connect to Docker daemon."), Criticality::Critical);
+            return Ok(result);
         }
 
         let images: Vec<ImageDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
