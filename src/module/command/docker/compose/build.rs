@@ -7,21 +7,21 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    name="docker-compose-pull",
+    name="docker-compose-build",
     version="0.0.1",
-    description="Pulls images for docker-compose projects or services.",
+    description="Builds local docker-compose service images.",
 )]
-pub struct Pull {
+pub struct Build {
 }
 
-impl Module for Pull {
-    fn new(_settings: &HashMap<String, String>) -> Pull {
-        Pull {
+impl Module for Build {
+    fn new(_settings: &HashMap<String, String>) -> Build {
+        Build {
         }
     }
 }
 
-impl CommandModule for Pull {
+impl CommandModule for Build {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
@@ -31,15 +31,17 @@ impl CommandModule for Pull {
             category: String::from("docker-compose"),
             parent_id: String::from("docker-compose"),
             display_style: frontend::DisplayStyle::Icon,
-            display_icon: String::from("download"),
-            display_text: String::from("Pull"),
-            depends_on_no_tags: vec![String::from("Local")],
+            display_icon: String::from("build"),
+            display_text: String::from("Build"),
+            depends_on_tags: vec![String::from("Local")],
+            multivalue_level: 2,
             ..Default::default()
         }
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let compose_file = parameters.first().unwrap();
+        let service_name = parameters.get(2).unwrap();
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
@@ -47,18 +49,12 @@ impl CommandModule for Pull {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
 
-            command.arguments(vec!["docker-compose", "-f", compose_file, "pull"]);
-            if let Some(service_name) = parameters.get(2) {
-                command.argument(service_name);
-            }
+            command.arguments(vec!["docker-compose", "-f", compose_file, "build", service_name]);
         }
         else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") ||
                 host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
 
-            command.arguments(vec!["docker", "compose", "-f", compose_file, "pull"]);
-            if let Some(service_name) = parameters.get(2) {
-                command.argument(service_name);
-            }
+            command.arguments(vec!["docker", "compose", "-f", compose_file, "build", service_name]);
         }
         else {
             return Err(String::from("Unsupported platform"));

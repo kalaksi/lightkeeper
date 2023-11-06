@@ -18,3 +18,6 @@ pub use shell::Shell;
 
 pub mod logs;
 pub use logs::Logs;
+
+pub mod build;
+pub use build::Build;
