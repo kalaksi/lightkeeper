@@ -32,7 +32,7 @@ impl MonitoringModule for Dns {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             display_style: frontend::DisplayStyle::Text,
-            display_text: String::from("DNS servers"),
+            display_text: String::from("DNS settings"),
             category: String::from("network"),
             use_multivalue: true,
             ignore_from_summary: true,
