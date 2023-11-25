@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
+import QtQuick.Layouts 1.15
 import QtGraphicalEffects 1.15
 
 import "../Button"
@@ -21,7 +22,7 @@ Item {
     property bool _maximized: false
 
     implicitWidth: parent.width
-    implicitHeight: 30
+    implicitHeight: 32
 
     signal refreshClicked()
     signal openInWindowClicked()
@@ -33,25 +34,25 @@ Item {
     Rectangle {
         color: root.color
         anchors.fill: parent
+    }
+
+    RowLayout {
+        anchors.fill: parent
+        spacing: Theme.spacingTight
 
         NormalText {
-            anchors.verticalCenter: parent.verticalCenter
             leftPadding: 10
             text: root.text
             font.pointSize: 12
         }
-    }
 
-    Row {
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        anchors.rightMargin: 5
-        spacing: 5
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+        }
 
         RefreshButton {
             size: 0.9 * parent.height
-            anchors.verticalCenter: parent.verticalCenter
             onClicked: root.refreshClicked()
             visible: root.showRefreshButton
         }
@@ -59,7 +60,6 @@ Item {
         ImageButton {
             size: 0.9 * parent.height
             anchors.rightMargin: 5
-            anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/window-new"
             flatButton: true
             tooltip: "Open in new window"
@@ -69,7 +69,6 @@ Item {
 
         ImageButton {
             size: 0.9 * parent.height
-            anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/document-save"
             flatButton: true
             tooltip: "Save"
@@ -79,7 +78,6 @@ Item {
 
         ImageButton {
             size: 0.9 * parent.height
-            anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/maximize"
             flatButton: true
             tooltip: "Maximize"
@@ -92,7 +90,6 @@ Item {
 
         ImageButton {
             size: 0.9 * parent.height
-            anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/minimize"
             flatButton: true
             tooltip: "Minimize"
@@ -105,7 +102,6 @@ Item {
 
         ImageButton {
             size: 0.9 * parent.height
-            anchors.verticalCenter: parent.verticalCenter
             imageSource: "qrc:/main/images/button/close"
             // By default this icon is black, so changing it here.
             color: Theme.iconColor
