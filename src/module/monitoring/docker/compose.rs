@@ -155,6 +155,8 @@ impl MonitoringModule for Compose {
             }
 
             let most_critical = data_points.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
+            projects_datapoint.criticality = std::cmp::max(projects_datapoint.criticality, most_critical.criticality);
+
             let mut services_datapoint = DataPoint::labeled_value_with_level(project.clone(), most_critical.value.clone(), most_critical.criticality);
             services_datapoint.command_params = vec![compose_file, project.clone()];
             services_datapoint.multivalue = data_points;
