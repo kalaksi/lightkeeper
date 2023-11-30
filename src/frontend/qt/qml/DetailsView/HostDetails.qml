@@ -64,7 +64,7 @@ Item {
             }
 
             createNewTab(tabData)
-            tabData.component.start(command)
+            tabData.component.open(command)
         }
     }
 
@@ -84,7 +84,19 @@ Item {
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.closeClicked()
-        onTabClosed: (tabIndex) => root.closeTab(tabIndex)
+
+        onTabClosed: function(tabIndex) {
+            root._tabContents[root.hostId][tabIndex].component.close()
+            root.closeTab(tabIndex)
+        }
+
+        onTabIndexChanged: {
+            if (root._tabContents[root.hostId][tabIndex] === undefined) {
+                return
+            }
+
+            root._tabContents[root.hostId][tabIndex].component.focus()
+        }
     }
 
     StackLayout {

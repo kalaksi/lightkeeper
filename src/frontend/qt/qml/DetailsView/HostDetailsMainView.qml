@@ -271,4 +271,12 @@ Item {
         return HostDataManager.is_host_initialized(root.hostId) &&
                HostDataManager.get_category_pending_monitor_progress(root.hostId, category) == 100
     }
+
+    function focus() {
+        // Do nothing.
+    }
+
+    function close() {
+        // Do nothing.
+    }
 }

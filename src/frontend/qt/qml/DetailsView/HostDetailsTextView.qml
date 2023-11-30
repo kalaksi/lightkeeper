@@ -78,8 +78,11 @@ Item {
         visible: root.errorText !== ""
     }
 
-    function open(invocationId) {
-        root.pendingInvocation = invocationId
-        root.visible = true
+    function focus() {
+        // Do nothing.
+    }
+
+    function close() {
+        // TODO: implement confirmation dialog.
     }
 }

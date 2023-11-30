@@ -72,4 +72,12 @@ Item {
         let content = textEdit.text
         root.saved(root.commandId, root.localFilePath, content)
     }
+
+    function focus() {
+        // Do nothing.
+    }
+
+    function close() {
+        // TODO: implement confirmation dialog.
+    }
 }

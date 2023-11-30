@@ -213,4 +213,13 @@ Item {
         ]
         onActivated: logList.search("up", searchField.text)
     }
+
+
+    function focus() {
+        // Do nothing.
+    }
+
+    function close() {
+        // Do nothing.
+    }
 }
