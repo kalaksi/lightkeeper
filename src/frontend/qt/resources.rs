@@ -70,6 +70,7 @@ pub fn init_resources() {
             "images/breeze/dark/update-high.svg" as "images/button/update-high",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
+            "images/breeze/dark/tab-close.svg" as "images/button/tab-close",
             "images/breeze/dark/arrow-up.svg" as "images/button/maximize",
             "images/breeze/dark/arrow-down.svg" as "images/button/minimize",
             "images/breeze/dark/window-new.svg" as "images/button/window-new",
@@ -147,6 +148,7 @@ pub fn init_resources() {
             "images/breeze/light/update-high.svg" as "images/button/update-high",
 
             "images/fontawesome/xmark.svg" as "images/button/close",
+            "images/breeze/light/tab-close.svg" as "images/button/tab-close",
             "images/breeze/light/arrow-up.svg" as "images/button/maximize",
             "images/breeze/light/arrow-down.svg" as "images/button/minimize",
             "images/breeze/light/window-new.svg" as "images/button/window-new",
