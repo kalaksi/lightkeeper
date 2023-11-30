@@ -50,7 +50,7 @@ impl MonitoringModule for VolumeGroup {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
-            command.arguments(vec![ "vgs", "--separator", "|", "--options", "vg_name,vg_attr,vg_size", "--units", "H" ]);
+            command.arguments(vec![ "vgs", "--separator", "|", "--options", "vg_name,vg_attr,vg_size,vg_free", "--units", "H" ]);
             Ok(command.to_string())
         }
         else {
@@ -71,9 +71,10 @@ impl MonitoringModule for VolumeGroup {
             let vg_name = parts.next().unwrap().trim_start().to_string();
             let vg_attr = parts.next().unwrap().to_string();
             let vg_size = parts.next().unwrap().to_string();
+            let vg_free = parts.next().unwrap().to_string();
 
             let mut data_point = DataPoint::labeled_value(vg_name.clone(), String::from("OK"));
-            data_point.description = format!("size: {}", vg_size);
+            data_point.description = format!("free: {} / {}", vg_free, vg_size);
 
             match vg_attr.chars().nth(0).unwrap() {
                 'r' => data_point.tags.push(String::from("Read-only")),

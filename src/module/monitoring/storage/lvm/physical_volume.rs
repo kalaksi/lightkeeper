@@ -50,7 +50,7 @@ impl MonitoringModule for PhysicalVolume {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
-            command.arguments(vec!["pvs", "--separator", "|", "--options", "pv_name,pv_attr,pv_size", "--units", "H"]);
+            command.arguments(vec!["pvs", "--separator", "|", "--options", "pv_name,pv_attr,pv_size,pv_free", "--units", "H"]);
             Ok(command.to_string())
         }
         else {
@@ -71,9 +71,10 @@ impl MonitoringModule for PhysicalVolume {
             let pv_name = parts.next().unwrap().trim_start().to_string();
             let pv_attr = parts.next().unwrap().to_string();
             let pv_size = parts.next().unwrap().to_string();
+            let pv_free = parts.next().unwrap().to_string();
 
             let mut data_point = DataPoint::labeled_value(pv_name.clone(), String::from("OK"));
-            data_point.description = format!("size: {}", pv_size);
+            data_point.description = format!("free: {} / {}", pv_free, pv_size);
 
             if pv_attr.chars().nth(2).unwrap() == 'm' {
                 data_point.criticality = crate::enums::Criticality::Critical;
