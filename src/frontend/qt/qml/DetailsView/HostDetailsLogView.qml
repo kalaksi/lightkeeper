@@ -18,10 +18,12 @@ Item {
     property string text: ""
     property string errorText: ""
     property string _unitId: ""
-    property var pendingInvocations: []
+    property var pendingInvocation: -1
 
 
-    Component.onCompleted: root.reset()
+    Component.onCompleted: {
+        searchField.focus = true
+    }
 
     Connections {
         target: HostDataManager
@@ -29,8 +31,8 @@ Item {
         function onCommand_result_received(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
 
-            if (root.pendingInvocations.includes(commandResult.invocation_id)) {
-                root.pendingInvocations = root.pendingInvocations.filter((id) => id != commandResult.invocation_id)
+            if (root.pendingInvocation === commandResult.invocation_id) {
+                root.pendingInvocation = -1
 
                 if (commandResult.error) {
                     root.errorText = commandResult.error
@@ -176,7 +178,7 @@ Item {
             visible: logList.rows.length === 0
 
             WorkingSprite {
-                visible: root.pendingInvocations.length > 0
+                visible: root.pendingInvocation > -1
                 id: workingSprite
             }
 
@@ -210,24 +212,5 @@ Item {
             "Ctrl+P",
         ]
         onActivated: logList.search("up", searchField.text)
-    }
-
-    function open(commandId, commandParams, invocationId) {
-        reset()
-        root.pendingInvocations.push(invocationId)
-        root.commandId = commandId
-        root.commandParams = commandParams
-        root.visible = true
-        searchField.focus = true
-    }
-
-    function reset() {
-        root.commandId = ""
-        root.commandParams = []
-        root.text = ""
-        root.errorText = ""
-        root.pendingInvocations = []
-        searchField.text = ""
-        logList.reset()
     }
 }

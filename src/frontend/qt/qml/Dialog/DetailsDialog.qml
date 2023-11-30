@@ -13,7 +13,7 @@ Window {
 
     id: root
     visible: true
-    color: Theme.color_background()
+    color: Theme.backgroundColor
 
     Dialog {
         modal: false

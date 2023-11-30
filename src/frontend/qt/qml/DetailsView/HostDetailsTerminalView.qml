@@ -47,17 +47,15 @@ Item {
     }
 
 
-    function open(command) {
+    function start(command) {
         terminalSession.setShellProgram(command[0])
         terminalSession.setArgs(command.slice(1))
         terminalSession.startShellProgram()
-        root.visible = true
         terminal.forceActiveFocus()
     }
 
-    function close() {
+    function end() {
         terminalSession.sendSignal(15)
         terminalSession.clearScreen()
-        root.visible = false
     }
 }

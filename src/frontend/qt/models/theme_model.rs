@@ -47,7 +47,6 @@ pub struct ThemeModel {
 
     // TODO: deprecated
     background_color: qt_method!(fn(&self) -> QString),
-    color_background: qt_method!(fn(&self) -> QString),
     color_text: qt_method!(fn(&self) -> QString),
     color_dark_text: qt_method!(fn(&self) -> QString),
     color_highlight: qt_method!(fn(&self) -> QString),
@@ -157,10 +156,6 @@ impl ThemeModel {
     }
 
     fn background_color(&self) -> QString {
-        QString::from("#2a2e32")
-    }
-
-    fn color_background(&self) -> QString {
         QString::from("#2a2e32")
     }
 

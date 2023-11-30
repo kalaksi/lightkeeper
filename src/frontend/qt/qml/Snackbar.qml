@@ -18,7 +18,7 @@ Rectangle {
     implicitHeight: Math.max(textContent.implicitHeight, image.height) + root.contentPadding
     radius: 5
     opacity: 0.0
-    color: Theme.color_background()
+    color: Theme.backgroundColor
     border.width: 1
     border.color: "#50FFFFFF"
     // Alternative way to get some matching color to border:

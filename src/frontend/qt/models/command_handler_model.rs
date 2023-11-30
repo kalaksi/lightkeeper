@@ -22,7 +22,6 @@ pub struct CommandHandlerModel {
     reconfigure: qt_method!(fn(&mut self, config: QVariant, hosts_config: QVariant)),
 
     get_all_host_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
-    get_commands: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     get_commands_on_level: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
@@ -49,7 +48,7 @@ pub struct CommandHandlerModel {
     detailsSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
     textEditorSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalSubviewOpened: qt_signal!(header_text: QString, command: QStringList),
-    logsSubviewOpened: qt_signal!(header_text: QString, parameters: QStringList, invocation_id: u64),
+    logsViewOpened: qt_signal!(title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
     host_initializing: qt_signal!(host_id: QString),
@@ -108,12 +107,6 @@ impl CommandHandlerModel {
             self.connection_manager.new_request_sender(),
             self.host_manager.borrow().new_state_update_sender()
         );
-    }
-
-    fn get_commands(&self, host_id: QString) -> QVariantList {
-        let command_datas = self.command_handler.get_commands_for_host(host_id.to_string());
-
-        command_datas.values().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
     }
 
     // Return CommandDatas relevant to category as QVariants.
@@ -245,7 +238,7 @@ impl CommandHandlerModel {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
-                    self.logsSubviewOpened(QString::from(command_id), parameters_qs, invocation_id);
+                    self.logsViewOpened(QString::from(display_options.tab_title), QString::from(command_id), parameters_qs, invocation_id);
                 }
             },
             UIAction::Terminal => {

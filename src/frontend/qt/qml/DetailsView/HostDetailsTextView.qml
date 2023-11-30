@@ -13,7 +13,7 @@ Item {
     property var jsonText: ""
     property var errorText: ""
     property var criticality: ""
-    property var pendingInvocations: []
+    property var pendingInvocation: -1
 
 
     Connections {
@@ -22,8 +22,8 @@ Item {
         function onCommand_result_received(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
 
-            if (root.pendingInvocations.includes(commandResult.invocation_id)) {
-                root.pendingInvocations = root.pendingInvocations.filter((invocationId) => invocationId != commandResult.invocationId)
+            if (root.pendingInvocation === commandResult.invocation_id) {
+                root.pendingInvocations = -1
 
                 // If message seems to contain JSON...
                 if (commandResult.message.startsWith("{")) {
@@ -40,7 +40,7 @@ Item {
     }
 
     Rectangle {
-        color: Theme.color_background()
+        color: Theme.backgroundColor
         anchors.fill: parent
     }
 
@@ -78,17 +78,8 @@ Item {
         visible: root.errorText !== ""
     }
 
-    function open(commandId, invocationId) {
-        reset()
-        root.commandId = commandId
-        root.pendingInvocations.push(invocationId)
+    function open(invocationId) {
+        root.pendingInvocation = invocationId
         root.visible = true
-    }
-
-    function reset() {
-        root.text = ""
-        root.jsonText = ""
-        root.errorText = ""
-        root.criticality = ""
     }
 }

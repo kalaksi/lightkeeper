@@ -32,6 +32,7 @@ impl CommandModule for Logs {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("view-document"),
             display_text: String::from("Show logs"),
+            tab_title: String::from("Host logs"),
             action: UIAction::LogView,
             ..Default::default()
         }
@@ -48,6 +49,7 @@ impl CommandModule for Logs {
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+            // TODO: centos?
 
             if page_number > 1 {
                 let row_count = page_number * page_size;

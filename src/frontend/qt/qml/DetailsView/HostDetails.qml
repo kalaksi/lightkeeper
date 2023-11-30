@@ -13,13 +13,22 @@ import "../js/ValueUnit.js" as ValueUnit
 Item {
     id: root
     required property string hostId
-    property bool showSubview: false
+    property var _tabContents: {}
 
 
     signal closeClicked()
     signal maximizeClicked()
     signal minimizeClicked()
 
+    onHostIdChanged: {
+        if (!(root.hostId in root._tabContents)) {
+            openMainView(root.hostId)
+        }
+    }
+
+    Component.onCompleted: {
+        root._tabContents = {}
+    }
 
     Connections {
         target: CommandHandler
@@ -28,8 +37,18 @@ Item {
             openTextView(headerText, invocationId)
         }
 
-        function onLogsSubviewOpened(commandId, commandParams, invocationId) {
-            openLogView(commandId, commandParams, invocationId)
+        function onLogsViewOpened(title, commandId, commandParams, invocationId) {
+            let tabData = {
+                "title": title,
+                "component": logView.createObject(tabContent, {
+                    hostId: root.hostId,
+                    pendingInvocation: invocationId,
+                    commandId: commandId,
+                    commandParams: commandParams,
+                })
+            }
+
+            createNewTab(tabData)
         }
 
         // For integrated text editor (not external).
@@ -45,12 +64,12 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: Theme.color_background()
+        color: Theme.backgroundColor
     }
 
     Header {
         id: mainViewHeader
-        text: root.hostId
+        tabs: getTabTitles()
         showRefreshButton: true
         showMinimizeButton: true
         showMaximizeButton: true
@@ -59,106 +78,76 @@ Item {
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: {
-            root.closeSubview()
             root.closeClicked()
         }
     }
 
-    HostDetailsMainView {
-        id: detailsMainView
+    StackLayout {
+        id: tabContent
+        currentIndex: mainViewHeader.tabIndex
         anchors.top: mainViewHeader.bottom
         anchors.bottom: root.bottom
         anchors.left: root.left
         anchors.right: root.right
         anchors.margins: 10
-
-        hostId: root.hostId
     }
 
-    Item {
-        id: detailsSubview
-        height: root.showSubview ? (root.height - mainViewHeader.height - Theme.spacing_loose() / 2) : 0
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
+    Component {
+        id: detailsMainView
 
-        Behavior on height {
-            NumberAnimation {
-                duration: Theme.animation_duration()
-                easing.type: Easing.InOutQuad
-            }
+        HostDetailsMainView {
+            anchors.fill: parent
         }
+    }
 
-        Header {
-            id: subviewHeader
+    Component {
+        id: textView
 
-            // TODO:
-            // showOpenInWindowButton: true
-            showSaveButton: textEditor.visible
-            showCloseButton: true
-            onOpenInWindowClicked: {
-                root.openInNewWindowClicked(subviewContent.text, subviewContent.errorText, subviewContent.criticality)
+        HostDetailsTextView {
+            anchors.fill: parent
+        }
+    }
+
+    Component {
+        id: logView
+
+        // TODO: disable button until service unit list is received.
+        HostDetailsLogView {
+            anchors.fill: parent
+        }
+    }
+
+    Component {
+        id: textEditorView
+
+        HostDetailsTextEditorView {
+            anchors.fill: parent
+
+            // TODO: discard if not saving on close.
+            onSaved: function(commandId, localFilePath, content) {
+                let _invocationId = CommandHandler.saveAndUploadFile(
+                    root.hostId,
+                    commandId,
+                    localFilePath,
+                    content
+                )
                 root.closeSubview()
             }
-            onCloseClicked: root.closeSubview()
-            onSaveClicked: textEditor.save()
         }
+    }
 
-        Item {
-            id: subviewContent
-            anchors.top: subviewHeader.bottom
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
+    Component {
+        id: terminalView
 
-            HostDetailsTextView {
-                id: textView
-                anchors.fill: parent
-                visible: false
-            }
-
-            // TODO: disable button until service unit list is received.
-            HostDetailsLogView {
-                id: logView
-                hostId: root.hostId
-                anchors.fill: parent
-                visible: false
-            }
-
-            HostDetailsTextEditorView {
-                id: textEditor
-                anchors.fill: parent
-                visible: false
-
-                // TODO: discard if not saving on close.
-                onSaved: function(commandId, localFilePath, content) {
-                    let _invocationId = CommandHandler.saveAndUploadFile(
-                        root.hostId,
-                        commandId,
-                        localFilePath,
-                        content
-                    )
-                    root.closeSubview()
-                }
-            }
-
-            HostDetailsTerminalView {
-                id: terminalView
-                anchors.fill: parent
-                visible: false
-            }
+        HostDetailsTerminalView {
+            anchors.fill: parent
         }
     }
 
     Shortcut {
         sequence: StandardKey.Cancel
         onActivated: {
-            if (root.showSubview) {
-                root.closeSubview()
-            }
-            else {
-                root.closeClicked()
-            }
+            root.closeClicked()
         }
     }
 
@@ -174,39 +163,83 @@ Item {
     }
 
     function refresh() {
-        detailsMainView.refresh()
+        root._tabContents[root.hostId][0].component.refresh()
     }
 
-    function openTextView(headerText, invocationId) {
-        subviewHeader.text = headerText
-        textView.open(invocationId)
-        root.showSubview = true
+    function createNewTab(tabData) {
+        if (!(root.hostId in root._tabContents)) {
+            root._tabContents[root.hostId] = []
+        }
+
+        let similarTabs = root._tabContents[root.hostId].filter(tab => tab.title.startsWith(tabData.title)).length
+        if (similarTabs > 0) {
+            tabData.title = `${tabData.title} (${similarTabs + 1})`
+        }
+
+        root._tabContents[root.hostId].push(tabData)
+        mainViewHeader.tabs = getTabTitles()
     }
 
-    function openLogView(commandId, commandParams, invocationId) {
-        subviewHeader.text = commandId
-        logView.open(commandId, commandParams, invocationId)
-        root.showSubview = true
+    function openMainView(hostId) {
+        let tabData = {
+            "title": hostId,
+            "component": detailsMainView.createObject(tabContent, {
+                hostId: hostId,
+            })
+        }
+
+        createNewTab(tabData)
+    }
+
+    function openTextView(title, invocationId) {
+        let tabData = {
+            "title": title,
+            "component": textView.createObject(tabContent, {
+                pendingInvocation: invocationId,
+            })
+        }
+
+        createNewTab(tabData)
     }
 
     function openTextEditorView(commandId, invocationId, localFilePath) {
-        subviewHeader.text = commandId
-        textEditor.open(commandId, invocationId, localFilePath)
-        root.showSubview = true
+        let tabData = {
+            "title": commandId,
+            "component": textEditorView.createObject(tabContent, {
+                commandId: commandId,
+                localFilePath: localFilePath,
+                pendingInvocation: invocationId,
+            })
+        }
+
+        createNewTab(tabData)
     }
 
     function openTerminalView(commandId, command) {
-        subviewHeader.text = commandId
-        terminalView.open(command)
-        root.showSubview = true
+        let component = terminalView.createObject(tabContent, {})
+        component.start(command)
+
+        let tabData = {
+            "title": commandId,
+            "component": component,
+        }
+
+        createNewTab(tabData)
     }
 
     function closeSubview() {
-        root.showSubview = false
+        root._showSubview = false
         hideSubContent.start()
     }
 
     function openSubview() {
-        root.showSubview = true
+        root._showSubview = true
+    }
+
+    function getTabTitles() {
+        if (!(root.hostId in root._tabContents)) {
+            return []
+        }
+        return root._tabContents[root.hostId].map(tabData => tabData.title)
     }
 }

@@ -9,8 +9,6 @@ import "../Text"
 
 Item {
     id: root
-    property string text: ""
-    // TODO: don't hardcode
     property string color: "#444444"
     property bool showRefreshButton: false
     property bool showMinimizeButton: false
@@ -18,6 +16,9 @@ Item {
     property bool showCloseButton: false
     property bool showOpenInWindowButton: false
     property bool showSaveButton: false
+
+    property var tabs: []
+    property alias tabIndex: tabBar.currentIndex
 
     property bool _maximized: false
 
@@ -31,6 +32,7 @@ Item {
     signal closeClicked()
     signal saveClicked()
 
+
     Rectangle {
         color: root.color
         anchors.fill: parent
@@ -40,10 +42,21 @@ Item {
         anchors.fill: parent
         spacing: Theme.spacingTight
 
-        NormalText {
-            leftPadding: 10
-            text: root.text
-            font.pointSize: 12
+        TabBar {
+            id: tabBar
+            Layout.leftMargin: Theme.spacingTight
+            Layout.alignment: Qt.AlignBottom
+
+            width: Math.floor(parent.width * 0.7)
+            // contentHeight: 28
+
+            Repeater {
+                model: root.tabs
+
+                TabButton {
+                    text: modelData
+                }
+            }
         }
 
         Item {

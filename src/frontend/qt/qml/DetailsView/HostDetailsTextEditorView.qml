@@ -72,19 +72,4 @@ Item {
         let content = textEdit.text
         root.saved(root.commandId, root.localFilePath, content)
     }
-
-    function open(commandId, invocationId, localFilePath) {
-        reset()
-        root.visible = true
-        root.commandId = commandId
-        root.localFilePath = localFilePath
-        root.pendingInvocations.push(invocationId)
-    }
-
-    function reset() {
-        root.text = ""
-        root.commandId = ""
-        root.localFilePath = ""
-        root.pendingInvocations = []
-    }
 }

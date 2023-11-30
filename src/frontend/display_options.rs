@@ -15,6 +15,8 @@ pub struct DisplayOptions {
     /// For commands: text to display in button tooltip.
     pub display_text: String,
     pub display_icon: String,
+    /// For commands: title to display in tab.
+    pub tab_title: String,
 
     /// Category for monitor or command. Monitors and commands in same category are grouped to the same box.
     pub category: String,
