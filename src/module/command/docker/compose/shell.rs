@@ -35,6 +35,7 @@ impl CommandModule for Shell {
             display_text: String::from("Open shell inside"),
             depends_on_criticality: vec![enums::Criticality::Normal],
             action: UIAction::Terminal,
+            tab_title: String::from("Docker shell"),
             multivalue_level: 2,
             ..Default::default()
         }

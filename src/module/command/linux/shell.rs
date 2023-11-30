@@ -41,6 +41,7 @@ impl CommandModule for Shell {
             display_text: String::from("Open shell"),
             depends_on_criticality: vec![enums::Criticality::Normal],
             action: UIAction::Terminal,
+            tab_title: String::from("Host shell"),
             ..Default::default()
         }
     }

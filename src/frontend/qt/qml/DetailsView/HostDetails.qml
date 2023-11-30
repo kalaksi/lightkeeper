@@ -57,8 +57,14 @@ Item {
         }
 
         // For integrated terminal.
-        function onTerminalSubviewOpened(commandId, command) {
-            openTerminalView(commandId, command)
+        function onTerminalViewOpened(title, command) {
+            let tabData = {
+                "title": title,
+                "component": terminalView.createObject(tabContent, {}),
+            }
+
+            createNewTab(tabData)
+            tabData.component.start(command)
         }
     }
 
@@ -184,7 +190,10 @@ Item {
         tabData.title += "  "
 
         root._tabContents[root.hostId].push(tabData)
+
+        let lastTabIndex = root._tabContents[root.hostId].length - 1
         mainViewHeader.tabs = getTabTitles()
+        mainViewHeader.selectTab(lastTabIndex)
     }
 
     function closeTab(tabIndex) {
@@ -224,18 +233,6 @@ Item {
                 localFilePath: localFilePath,
                 pendingInvocation: invocationId,
             })
-        }
-
-        createNewTab(tabData)
-    }
-
-    function openTerminalView(commandId, command) {
-        let component = terminalView.createObject(tabContent, {})
-        component.start(command)
-
-        let tabData = {
-            "title": commandId,
-            "component": component,
         }
 
         createNewTab(tabData)

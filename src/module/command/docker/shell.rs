@@ -34,6 +34,7 @@ impl CommandModule for Shell {
             display_icon: String::from("terminal"),
             display_text: String::from("Open shell inside"),
             action: UIAction::Terminal,
+            tab_title: String::from("Docker shell"),
             ..Default::default()
         }
     }

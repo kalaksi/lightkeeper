@@ -47,7 +47,7 @@ pub struct CommandHandlerModel {
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QStringList),
     detailsSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
     textEditorSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
-    terminalSubviewOpened: qt_signal!(header_text: QString, command: QStringList),
+    terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
     logsViewOpened: qt_signal!(title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
@@ -245,7 +245,7 @@ impl CommandHandlerModel {
                 if self.configuration.preferences.terminal == configuration::INTERNAL {
                     let command = self.command_handler.open_remote_terminal_command(&host_id, &command_id, &parameters);
                     let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
-                    self.terminalSubviewOpened(QString::from(command_id), command_qsl)
+                    self.terminalViewOpened(QString::from(display_options.tab_title), command_qsl)
                 }
                 else {
                     self.command_handler.open_external_terminal(&host_id, &command_id, parameters);
@@ -257,7 +257,7 @@ impl CommandHandlerModel {
                     if self.configuration.preferences.terminal == configuration::INTERNAL {
                         let command = self.command_handler.open_remote_text_editor_command(&host_id, &remote_file_path);
                         let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
-                        self.terminalSubviewOpened(QString::from(command_id), command_qsl);
+                        self.terminalViewOpened(QString::from(display_options.tab_title), command_qsl);
                     }
                     else {
                         self.command_handler.open_external_terminal(&host_id, &command_id, parameters);

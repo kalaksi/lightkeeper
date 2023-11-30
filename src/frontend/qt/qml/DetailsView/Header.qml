@@ -132,4 +132,8 @@ Item {
             visible: root.showCloseButton
         }
     }
+
+    function selectTab(index) {
+        tabBar.setCurrentIndex(index)
+    }
 }
