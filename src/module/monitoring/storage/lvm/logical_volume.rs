@@ -110,10 +110,17 @@ impl MonitoringModule for LogicalVolume {
                 data_point.description = format!("{} | Active", data_point.description);
             }
 
-            if lv_attr.chars().nth(8).unwrap() == 'p' {
-                data_point.tags.push(String::from("Partial"));
-                data_point.criticality = crate::enums::Criticality::Error;
-                data_point.value = String::from("Unknown % sync");
+            match lv_attr.chars().nth(8).unwrap() {
+                'p' => {
+                    data_point.tags.push(String::from("Partial"));
+                    data_point.criticality = crate::enums::Criticality::Error;
+                    data_point.value = String::from("Unknown % sync");
+                },
+                'r' => {
+                    data_point.criticality = crate::enums::Criticality::Warning;
+                    data_point.value = String::from("Refresh needed");
+                }
+                _ => {}
             }
 
             if !raid_mismatch_count.is_empty() && raid_mismatch_count != "0" {
@@ -143,6 +150,9 @@ impl MonitoringModule for LogicalVolume {
             data_point.command_params = vec![lv_path, vg_name, lv_name, lv_size];
             result.multivalue.push(data_point);
         }
+
+        let most_critical = result.multivalue.iter().max_by_key(|point| point.criticality).unwrap();
+        result.criticality = most_critical.criticality;
 
         Ok(result)
     }
