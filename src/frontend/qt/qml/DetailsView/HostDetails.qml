@@ -77,9 +77,8 @@ Item {
         onRefreshClicked: CommandHandler.force_initialize_host(hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
-        onCloseClicked: {
-            root.closeClicked()
-        }
+        onCloseClicked: root.closeClicked()
+        onTabClosed: (tabIndex) => root.closeTab(tabIndex)
     }
 
     StackLayout {
@@ -96,7 +95,8 @@ Item {
         id: detailsMainView
 
         HostDetailsMainView {
-            anchors.fill: parent
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
     }
 
@@ -104,7 +104,8 @@ Item {
         id: textView
 
         HostDetailsTextView {
-            anchors.fill: parent
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
     }
 
@@ -113,7 +114,8 @@ Item {
 
         // TODO: disable button until service unit list is received.
         HostDetailsLogView {
-            anchors.fill: parent
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
     }
 
@@ -121,7 +123,8 @@ Item {
         id: textEditorView
 
         HostDetailsTextEditorView {
-            anchors.fill: parent
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
             // TODO: discard if not saving on close.
             onSaved: function(commandId, localFilePath, content) {
@@ -140,7 +143,8 @@ Item {
         id: terminalView
 
         HostDetailsTerminalView {
-            anchors.fill: parent
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
     }
 
@@ -176,7 +180,17 @@ Item {
             tabData.title = `${tabData.title} (${similarTabs + 1})`
         }
 
+        // Extra padding for the title text before close button.
+        tabData.title += "  "
+
         root._tabContents[root.hostId].push(tabData)
+        mainViewHeader.tabs = getTabTitles()
+    }
+
+    function closeTab(tabIndex) {
+        let tabData = root._tabContents[root.hostId][tabIndex]
+        tabData.component.destroy()
+        root._tabContents[root.hostId].splice(tabIndex, 1)
         mainViewHeader.tabs = getTabTitles()
     }
 

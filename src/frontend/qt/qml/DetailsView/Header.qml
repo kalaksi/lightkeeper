@@ -6,6 +6,7 @@ import QtGraphicalEffects 1.15
 
 import "../Button"
 import "../Text"
+import "../Misc"
 
 Item {
     id: root
@@ -31,6 +32,8 @@ Item {
     signal minimizeClicked()
     signal closeClicked()
     signal saveClicked()
+    signal tabClosed(int index)
+
 
 
     Rectangle {
@@ -44,17 +47,20 @@ Item {
 
         TabBar {
             id: tabBar
+            width: Math.floor(parent.width * 0.7)
+            height: parent.height
+
             Layout.leftMargin: Theme.spacingTight
             Layout.alignment: Qt.AlignBottom
-
-            width: Math.floor(parent.width * 0.7)
-            // contentHeight: 28
 
             Repeater {
                 model: root.tabs
 
-                TabButton {
+                CloseableTabButton {
+                    // First tab can't be closed.
+                    showCloseButton: index > 0
                     text: modelData
+                    onTabClosed: root.tabClosed(index)
                 }
             }
         }

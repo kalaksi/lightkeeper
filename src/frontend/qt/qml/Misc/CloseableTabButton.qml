@@ -11,6 +11,7 @@ import "../Button"
 TabButton {
     id: root
     property int closeButtonSize: 18
+    property bool showCloseButton: true
 
     signal tabClosed
 
@@ -18,12 +19,13 @@ TabButton {
         id: contentRow
 
         Item {
+            visible: root.showCloseButton
+            height: root.closeButtonSize
+            width: root.closeButtonSize
+
             Layout.alignment: Qt.AlignRight
             Layout.rightMargin: 4
             Layout.topMargin: 2
-
-            height: root.closeButtonSize
-            width: root.closeButtonSize
 
             RoundButton {
                 id: closeButton
@@ -34,9 +36,6 @@ TabButton {
                 hoverEnabled: false
                 height: root.closeButtonSize
                 width: root.closeButtonSize
-
-                onClicked: root.tabClosed()
-
 
                 Image {
                     id: defaultImage
@@ -78,9 +77,10 @@ TabButton {
                         defaultImage.visible = true
                         hoveredImage.visible = false
                     }
+
+                    onClicked: root.tabClosed()
                 }
             }
         }
     }
-
 }
