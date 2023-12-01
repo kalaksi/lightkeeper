@@ -34,6 +34,7 @@ impl CommandModule for Edit {
             display_icon: String::from("story-editor"),
             display_text: String::from("Edit compose-file"),
             action: UIAction::TextEditor,
+            tab_title: String::from("Editor"),
             ..Default::default()
         }
     }

@@ -34,6 +34,7 @@ impl CommandModule for Logs {
             display_icon: String::from("view-document"),
             display_text: String::from("Show logs"),
             action: UIAction::LogView,
+            tab_title: String::from("Service logs"),
             ..Default::default()
         }
     }

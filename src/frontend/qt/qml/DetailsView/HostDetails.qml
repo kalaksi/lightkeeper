@@ -22,8 +22,17 @@ Item {
 
     onHostIdChanged: {
         if (!(root.hostId in root._tabContents)) {
-            openMainView(root.hostId)
+            let tabData = {
+                "title": hostId,
+                "component": detailsMainView.createObject(tabContent, {
+                    hostId: hostId,
+                })
+            }
+
+            createNewTab(tabData)
         }
+
+        mainViewHeader.tabs = getTabTitles()
     }
 
     Component.onCompleted: {
@@ -33,8 +42,15 @@ Item {
     Connections {
         target: CommandHandler
 
-        function onDetailsSubviewOpened(headerText, invocationId) {
-            openTextView(headerText, invocationId)
+        function onTextViewOpened(title, invocationId) {
+            let tabData = {
+                "title": title,
+                "component": textView.createObject(tabContent, {
+                    pendingInvocation: invocationId,
+                })
+            }
+
+            createNewTab(tabData)
         }
 
         function onLogsViewOpened(title, commandId, commandParams, invocationId) {
@@ -52,8 +68,17 @@ Item {
         }
 
         // For integrated text editor (not external).
-        function onTextEditorSubviewOpened(commandId, invocationId, localFilePath) {
-            openTextEditorView(commandId, invocationId, localFilePath)
+        function onTextEditorViewOpened(commandId, invocationId, localFilePath) {
+            let tabData = {
+                "title": commandId,
+                "component": textEditorView.createObject(tabContent, {
+                    commandId: commandId,
+                    localFilePath: localFilePath,
+                    pendingInvocation: invocationId,
+                })
+            }
+
+            createNewTab(tabData)
         }
 
         // For integrated terminal.
@@ -213,41 +238,6 @@ Item {
         tabData.component.destroy()
         root._tabContents[root.hostId].splice(tabIndex, 1)
         mainViewHeader.tabs = getTabTitles()
-    }
-
-    function openMainView(hostId) {
-        let tabData = {
-            "title": hostId,
-            "component": detailsMainView.createObject(tabContent, {
-                hostId: hostId,
-            })
-        }
-
-        createNewTab(tabData)
-    }
-
-    function openTextView(title, invocationId) {
-        let tabData = {
-            "title": title,
-            "component": textView.createObject(tabContent, {
-                pendingInvocation: invocationId,
-            })
-        }
-
-        createNewTab(tabData)
-    }
-
-    function openTextEditorView(commandId, invocationId, localFilePath) {
-        let tabData = {
-            "title": commandId,
-            "component": textEditorView.createObject(tabContent, {
-                commandId: commandId,
-                localFilePath: localFilePath,
-                pendingInvocation: invocationId,
-            })
-        }
-
-        createNewTab(tabData)
     }
 
     function closeSubview() {

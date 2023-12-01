@@ -45,8 +45,8 @@ pub struct CommandHandlerModel {
     input_dialog_opened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QStringList),
     text_dialog_opened: qt_signal!(invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QStringList),
-    detailsSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64),
-    textEditorSubviewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
+    textViewOpened: qt_signal!(title: QString, invocation_id: u64),
+    textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
     logsViewOpened: qt_signal!(title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
@@ -225,7 +225,7 @@ impl CommandHandlerModel {
                 let target_id = parameters.first().unwrap().clone();
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
-                    self.detailsSubviewOpened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id)
+                    self.textViewOpened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id)
                 }
             },
             UIAction::TextDialog => {
@@ -266,7 +266,7 @@ impl CommandHandlerModel {
                 else {
                     if self.configuration.preferences.text_editor == configuration::INTERNAL {
                         let (invocation_id, local_file_path) = self.command_handler.download_file(&host_id, &command_id, &remote_file_path); 
-                        self.textEditorSubviewOpened(QString::from(command_id), invocation_id, QString::from(local_file_path));
+                        self.textEditorViewOpened(QString::from(command_id), invocation_id, QString::from(local_file_path));
                     }
                     else {
                         self.command_handler.open_external_text_editor(&host_id, &command_id, &remote_file_path);

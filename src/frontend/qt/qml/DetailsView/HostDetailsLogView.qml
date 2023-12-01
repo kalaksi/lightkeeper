@@ -21,10 +21,6 @@ Item {
     property var pendingInvocation: -1
 
 
-    Component.onCompleted: {
-        searchField.focus = true
-    }
-
     Connections {
         target: HostDataManager
 
@@ -216,7 +212,7 @@ Item {
 
 
     function focus() {
-        // Do nothing.
+        searchField.focus = true
     }
 
     function close() {
