@@ -27,13 +27,19 @@ Item {
 
 
 
-    onHostIdChanged: refreshCategories(false)
-
     Connections {
         target: HostDataManager
+
         function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
             if (host_id === root.hostId) {
                 refreshCategories(root._showEmptyCategories)
+            }
+        }
+
+        // TODO: needed?
+        function onUpdate_received(hostId) {
+            if (hostId === root.hostId) {
+                root.refresh()
             }
         }
     }

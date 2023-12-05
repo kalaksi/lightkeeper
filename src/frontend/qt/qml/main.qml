@@ -117,11 +117,6 @@ ApplicationWindow {
 
         function onUpdate_received(hostId) {
             _hostTableModel.dataChangedForHost(hostId)
-
-            if (hostId === detailsView.hostId) {
-                detailsView.refresh()
-            }
-
             _hostTableModel.displayData = HostDataManager.getDisplayData()
         }
 

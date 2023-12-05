@@ -14,17 +14,24 @@ Item {
     id: root
     required property string hostId
     property var _tabContents: {}
+    property var _tabStacks: {}
 
 
     signal closeClicked()
     signal maximizeClicked()
     signal minimizeClicked()
 
+
     onHostIdChanged: {
         if (!(root.hostId in root._tabContents)) {
+            root._tabContents[root.hostId] = []
+            root._tabStacks[root.hostId] = tabStack.createObject(tabStackContainer, {
+                parentStackIndex: Object.keys(root._tabStacks).length,
+            })
+
             let tabData = {
                 "title": hostId,
-                "component": detailsMainView.createObject(tabContent, {
+                "component": detailsMainView.createObject(root._tabStacks[root.hostId], {
                     hostId: hostId,
                 })
             }
@@ -32,11 +39,12 @@ Item {
             createNewTab(tabData)
         }
 
-        mainViewHeader.tabs = getTabTitles()
+        root.refresh()
     }
 
     Component.onCompleted: {
         root._tabContents = {}
+        root._tabStacks = {}
     }
 
     Connections {
@@ -45,7 +53,7 @@ Item {
         function onTextViewOpened(title, invocationId) {
             let tabData = {
                 "title": title,
-                "component": textView.createObject(tabContent, {
+                "component": textView.createObject(root._tabStacks[root.hostId], {
                     pendingInvocation: invocationId,
                 })
             }
@@ -56,7 +64,7 @@ Item {
         function onLogsViewOpened(title, commandId, commandParams, invocationId) {
             let tabData = {
                 "title": title,
-                "component": logView.createObject(tabContent, {
+                "component": logView.createObject(root._tabStacks[root.hostId], {
                     hostId: root.hostId,
                     pendingInvocation: invocationId,
                     commandId: commandId,
@@ -71,7 +79,7 @@ Item {
         function onTextEditorViewOpened(commandId, invocationId, localFilePath) {
             let tabData = {
                 "title": commandId,
-                "component": textEditorView.createObject(tabContent, {
+                "component": textEditorView.createObject(root._tabStacks[root.hostId], {
                     commandId: commandId,
                     localFilePath: localFilePath,
                     pendingInvocation: invocationId,
@@ -85,7 +93,7 @@ Item {
         function onTerminalViewOpened(title, command) {
             let tabData = {
                 "title": title,
-                "component": terminalView.createObject(tabContent, {}),
+                "component": terminalView.createObject(root._tabStacks[root.hostId], {})
             }
 
             createNewTab(tabData)
@@ -120,26 +128,32 @@ Item {
                 return
             }
 
+            root._tabStacks[root.hostId].currentIndex = tabIndex
             root._tabContents[root.hostId][tabIndex].component.focus()
         }
     }
 
     StackLayout {
-        id: tabContent
-        currentIndex: mainViewHeader.tabIndex
+        id: tabStackContainer
         anchors.top: mainViewHeader.bottom
         anchors.bottom: root.bottom
         anchors.left: root.left
         anchors.right: root.right
-        anchors.margins: 10
+        anchors.margins: Theme.spacingNormal
+    }
+
+    Component {
+        id: tabStack
+
+        StackLayout {
+            property int parentStackIndex: -1
+        }
     }
 
     Component {
         id: detailsMainView
 
         HostDetailsMainView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
         }
     }
 
@@ -147,8 +161,6 @@ Item {
         id: textView
 
         HostDetailsTextView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
         }
     }
 
@@ -157,8 +169,6 @@ Item {
 
         // TODO: disable button until service unit list is received.
         HostDetailsLogView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
         }
     }
 
@@ -166,9 +176,6 @@ Item {
         id: textEditorView
 
         HostDetailsTextEditorView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-
             // TODO: discard if not saving on close.
             onSaved: function(commandId, localFilePath, content) {
                 let _invocationId = CommandHandler.saveAndUploadFile(
@@ -177,7 +184,6 @@ Item {
                     localFilePath,
                     content
                 )
-                root.closeSubview()
             }
         }
     }
@@ -186,8 +192,6 @@ Item {
         id: terminalView
 
         HostDetailsTerminalView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
         }
     }
 
@@ -198,26 +202,14 @@ Item {
         }
     }
 
-    Timer {
-        id: hideSubContent
-        interval: Theme.animation_duration()
-        onTriggered: {
-            textView.visible = false
-            logView.visible = false
-            textEditor.visible = false
-            terminalView.close()
-        }
-    }
-
     function refresh() {
         root._tabContents[root.hostId][0].component.refresh()
+
+        mainViewHeader.tabs = getTabTitles()
+        tabStackContainer.currentIndex = root._tabStacks[root.hostId].parentStackIndex
     }
 
     function createNewTab(tabData) {
-        if (!(root.hostId in root._tabContents)) {
-            root._tabContents[root.hostId] = []
-        }
-
         let similarTabs = root._tabContents[root.hostId].filter(tab => tab.title.startsWith(tabData.title)).length
         if (similarTabs > 0) {
             tabData.title = `${tabData.title} (${similarTabs + 1})`
@@ -238,15 +230,6 @@ Item {
         tabData.component.destroy()
         root._tabContents[root.hostId].splice(tabIndex, 1)
         mainViewHeader.tabs = getTabTitles()
-    }
-
-    function closeSubview() {
-        root._showSubview = false
-        hideSubContent.start()
-    }
-
-    function openSubview() {
-        root._showSubview = true
     }
 
     function getTabTitles() {

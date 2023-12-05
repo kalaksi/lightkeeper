@@ -41,8 +41,10 @@ impl CommandModule for Logs {
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
         let service = parameters.first().unwrap();
-        let page_number = parameters.get(1).unwrap_or(&String::from("1")).parse::<i32>().unwrap();
-        let page_size = parameters.get(2).unwrap_or(&String::from("400")).parse::<i32>().unwrap();
+        let start_time = parameters.get(1).cloned().unwrap_or(String::from(""));
+        let end_time = parameters.get(2).cloned().unwrap_or(String::from(""));
+        let page_number = parameters.get(3).unwrap_or(&String::from("-1")).parse::<i32>().unwrap();
+        let page_size = parameters.get(4).unwrap_or(&String::from("1000")).parse::<i32>().unwrap();
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
@@ -55,16 +57,23 @@ impl CommandModule for Logs {
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+            // TODO: centos?
 
-            if page_number > 1 {
+            command.arguments(vec!["journalctl", "-q", "-u", service]);
+
+            if !start_time.is_empty() {
+                command.arguments(vec!["--since", &start_time]);
+            }
+            if !end_time.is_empty() {
+                command.arguments(vec!["--until", &end_time]);
+            }
+
+            if page_number > 0 {
                 let row_count = page_number * page_size;
-                command.arguments(vec!["journalctl", "-q", "-n", &row_count.to_string(), "-u", service]);
+                command.arguments(vec!["-n", &row_count.to_string()]);
                 // would be nice to return just the needed parts, but tailing will possibly return different rows,
                 // so currently just returning everything
                     // .pipe_to(vec!["head", "-n", &page_size.to_string()]);
-            }
-            else {
-                command.arguments(vec!["journalctl", "-q", "-n", &page_size.to_string(), "-u", service]);
             }
 
             Ok(command.to_string())

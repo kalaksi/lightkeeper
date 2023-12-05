@@ -54,28 +54,55 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Theme.spacing_normal()
+        anchors.margins: Theme.spacingNormal
 
         Row {
             id: searchBox
-            spacing: Theme.spacing_loose()
+            spacing: Theme.spacingLoose
 
-            Layout.topMargin: Theme.spacing_loose()
-            Layout.leftMargin: root.width * 0.30
+            Layout.topMargin: Theme.spacingLoose
             Layout.fillWidth: true
 
             Row {
-                spacing: Theme.spacing_loose()
+                spacing: Theme.spacingLoose
+
+                NormalText {
+                    height: parent.height
+                    text: "From"
+                }
+
+                TextField {
+                    id: startDate
+                    width: searchBox.width * 0.12
+                    placeholderText: "Start date"
+                    // default is yesterday at 00:00:00
+                    text: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0] + " 00:00:00"
+                    color: Theme.textColor
+                }
+
+                NormalText {
+                    text: "To"
+                }
+
+                TextField {
+                    id: endDate
+                    width: searchBox.width * 0.12
+                    placeholderText: "End date"
+                    // default is today at 23:59:59
+                    text: new Date(Date.now()).toISOString().split("T")[0] + " 23:59:59"
+                    color: Theme.textColor
+                }
+
 
                 Column {
                     anchors.leftMargin: 30
-                    spacing: Theme.spacing_normal()
+                    spacing: Theme.spacingNormal
 
                     TextField {
                         id: searchField
                         width: searchBox.width * 0.55
                         placeholderText: "Regex search..."
-                        color: Theme.color_text()
+                        color: Theme.textColor
                         focus: true
 
                         onAccepted: {
@@ -165,7 +192,11 @@ Item {
             Layout.fillHeight: true
 
             onLoadMore: function(pageNumber, pageSize) {
-                CommandHandler.execute_confirmed(root.hostId, root.commandId, [...root.commandParams, pageNumber, pageSize])
+                CommandHandler.execute_confirmed(
+                    root.hostId,
+                    root.commandId,
+                    [...root.commandParams, startDate.text, endDate.text, pageNumber, pageSize]
+                )
             }
         }
 
