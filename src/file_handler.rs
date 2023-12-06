@@ -135,6 +135,12 @@ pub fn update_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()
 
 /// Removes local copy of the (possible) content file and metadata file.
 pub fn remove_file(path: &String) -> io::Result<()> {
+    // Verify, just in case, that path belongs to cache directory.
+    let cache_dir = get_cache_dir().unwrap();
+    if Path::new(path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
+        panic!()
+    }
+
     if path.ends_with(METADATA_SUFFIX) {
         // Some files may not be written to disk even though metadata might still exist.
         if let Some(file_path) = get_content_file_path(path) {
@@ -144,7 +150,6 @@ pub fn remove_file(path: &String) -> io::Result<()> {
         fs::remove_file(path)?;
     }
     else {
-        // TODO: path validation and limits just in case?
         fs::remove_file(get_metadata_path(path))?;
         fs::remove_file(path)?;
     }
@@ -152,7 +157,12 @@ pub fn remove_file(path: &String) -> io::Result<()> {
 }
 
 pub fn read_file(local_file_path: &String) -> io::Result<(FileMetadata, Vec<u8>)> {
-    // TODO: path validation and limits just in case?
+    // Verify, just in case, that path belongs to cache directory.
+    let cache_dir = get_cache_dir().unwrap();
+    if Path::new(local_file_path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
+        panic!()
+    }
+
     let contents = fs::read(local_file_path)?;
 
     let metadata_path = get_metadata_path(local_file_path);

@@ -447,7 +447,7 @@ impl CommandHandler {
 
         Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
-            // TODO: check that destination file hasn't changed?
+            // TODO: check that destination file hasn't changed and display warning?
             let response = responses.first().unwrap();
 
             let command_result = match response {

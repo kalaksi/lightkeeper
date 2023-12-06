@@ -110,14 +110,17 @@ Item {
     Header {
         id: mainViewHeader
         tabs: getTabTitles()
-        showRefreshButton: true
         showMinimizeButton: true
         showMaximizeButton: true
         showCloseButton: true
+        showRefreshButton: getCurrentTabContent() instanceof HostDetailsMainView
+        showSaveButton: getCurrentTabContent() instanceof HostDetailsTextEditorView
+
         onRefreshClicked: CommandHandler.force_initialize_host(hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.closeClicked()
+        onSaveClicked: getCurrentTabContent().save()
 
         onTabClosed: function(tabIndex) {
             root._tabContents[root.hostId][tabIndex].component.close()
@@ -168,7 +171,6 @@ Item {
     Component {
         id: logView
 
-        // TODO: disable button until service unit list is received.
         HostDetailsLogView {
         }
     }
@@ -179,7 +181,7 @@ Item {
         HostDetailsTextEditorView {
             // TODO: discard if not saving on close.
             onSaved: function(commandId, localFilePath, content) {
-                let _invocationId = CommandHandler.saveAndUploadFile(
+                CommandHandler.saveAndUploadFile(
                     root.hostId,
                     commandId,
                     localFilePath,
@@ -238,5 +240,12 @@ Item {
             return []
         }
         return root._tabContents[root.hostId].map(tabData => tabData.title)
+    }
+
+    function getCurrentTabContent() {
+        if (!(root.hostId in root._tabContents)) {
+            return undefined
+        }
+        return root._tabContents[root.hostId][mainViewHeader.tabIndex].component
     }
 }

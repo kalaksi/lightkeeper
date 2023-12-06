@@ -95,6 +95,12 @@ Item {
             visible: root.showSaveButton
         }
 
+        // Spacer
+        Item {
+            width: Theme.spacingLoose
+            height: parent.height
+        }
+
         ImageButton {
             size: 0.9 * parent.height
             imageSource: "qrc:/main/images/button/maximize"
