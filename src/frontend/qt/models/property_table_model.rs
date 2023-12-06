@@ -11,7 +11,7 @@ use crate::module::monitoring::{DataPoint, MonitoringData};
 
 
 const SEPARATOR_TOKEN: &str = "sep";
-const COOLDOWN_LENGTH: u32 = 30000;
+const COOLDOWN_LENGTH: u32 = 45000;
 
 #[derive(QObject, Default)]
 pub struct PropertyTableModel {
