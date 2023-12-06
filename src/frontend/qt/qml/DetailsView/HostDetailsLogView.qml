@@ -78,6 +78,7 @@ Item {
                     placeholderText: "Start date"
                     text: Utils.getLocalTimezoneISOString(Date.now() - 1 * 60 * 60 * 1000).replace("T", " ")
                     color: Theme.textColor
+                    onAccepted: timeRangeSubmit.clicked(null)
                 }
 
                 NormalText {
@@ -92,6 +93,7 @@ Item {
                     placeholderText: "End date"
                     text: "now"
                     color: Theme.textColor
+                    onAccepted: timeRangeSubmit.clicked(null)
                 }
 
                 TextField {
@@ -111,9 +113,11 @@ Item {
                     width: searchBox.width * 0.12
                     placeholderText: "Number of lines"
                     text: "1000"
+                    onAccepted: numberOfLinesSubmit.clicked(null)
                 }
 
                 ImageButton {
+                    id: numberOfLinesSubmit
                     visible: !root.showTimeControls
                     size: numberOfLines.height
                     imageSource: "qrc:/main/images/button/search"
@@ -128,6 +132,7 @@ Item {
                 }
 
                 ImageButton {
+                    id: timeRangeSubmit
                     visible: root.showTimeControls
                     size: numberOfLines.height
                     imageSource: "qrc:/main/images/button/search"
