@@ -61,7 +61,7 @@ Item {
             createNewTab(tabData)
         }
 
-        function onLogsViewOpened(title, commandId, commandParams, invocationId) {
+        function onLogsViewOpened(showTimeControls, title, commandId, commandParams, invocationId) {
             let tabData = {
                 "title": title,
                 "component": logView.createObject(root._tabStacks[root.hostId], {
@@ -69,6 +69,7 @@ Item {
                     pendingInvocation: invocationId,
                     commandId: commandId,
                     commandParams: commandParams,
+                    showTimeControls: showTimeControls,
                 })
             }
 

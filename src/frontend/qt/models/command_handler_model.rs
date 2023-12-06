@@ -48,7 +48,7 @@ pub struct CommandHandlerModel {
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
     textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
-    logsViewOpened: qt_signal!(title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
+    logsViewOpened: qt_signal!(time_controls: bool, title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
     host_initializing: qt_signal!(host_id: QString),
@@ -238,7 +238,14 @@ impl CommandHandlerModel {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
-                    self.logsViewOpened(QString::from(display_options.tab_title), QString::from(command_id), parameters_qs, invocation_id);
+                    self.logsViewOpened(false, QString::from(display_options.tab_title), QString::from(command_id), parameters_qs, invocation_id);
+                }
+            },
+            UIAction::LogViewWithTimeControls => {
+                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                if invocation_id > 0 {
+                    let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
+                    self.logsViewOpened(true, QString::from(display_options.tab_title), QString::from(command_id), parameters_qs, invocation_id);
                 }
             },
             UIAction::Terminal => {

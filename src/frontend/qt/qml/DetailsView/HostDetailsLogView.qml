@@ -6,6 +6,7 @@ import QtQuick.Layouts 1.15
 import ".."
 import "../Text"
 import "../Button"
+import "../js/Utils.js" as Utils
 
 
 Item {
@@ -13,6 +14,7 @@ Item {
     // TODO: indicator for no search results
     id: root
     required property string hostId
+    property bool showTimeControls: false
     property string commandId: ""
     property var commandParams: []
     property string text: ""
@@ -67,35 +69,74 @@ Item {
                 spacing: Theme.spacingLoose
 
                 NormalText {
+                    visible: root.showTimeControls
                     height: parent.height
                     text: "From"
                 }
 
                 TextField {
-                    id: startDate
+                    id: startTime
+                    visible: root.showTimeControls
                     width: searchBox.width * 0.12
                     placeholderText: "Start date"
-                    // default is yesterday at 00:00:00
-                    text: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0] + " 00:00:00"
+                    text: Utils.getLocalTimezoneISOString(Date.now() - 1 * 60 * 60 * 1000).replace("T", " ")
                     color: Theme.textColor
                 }
 
                 NormalText {
+                    visible: root.showTimeControls
                     text: "To"
                 }
 
                 TextField {
-                    id: endDate
+                    id: endTime
+                    visible: root.showTimeControls
                     width: searchBox.width * 0.12
                     placeholderText: "End date"
-                    // default is today at 23:59:59
-                    text: new Date(Date.now()).toISOString().split("T")[0] + " 23:59:59"
+                    text: "now"
                     color: Theme.textColor
                 }
 
+                TextField {
+                    visible: false
+                    id: timezone
+                    text: Utils.formatTimezone(new Date().getTimezoneOffset())
+                }
+
+                Button {
+                    visible: root.showTimeControls
+                    onClicked: {
+                        // TODO: implement checkbox for "Use UTC timezone"
+                        // let fullStartTime = `${startTime.text} ${timezone.text}`
+                        // let fullEndTime = `${endTime.text} ${timezone.text}`
+                        let fullStartTime = startTime.text
+                        let fullEndTime = endTime.text
+
+                        CommandHandler.execute_confirmed(
+                            root.hostId,
+                            root.commandId,
+                            [fullStartTime, fullEndTime, "", "", ...root.commandParams]
+                        )
+                    }
+
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Apply time range"
+
+                    Image {
+                        width: parent.width * 0.8
+                        height: width
+                        anchors.centerIn: parent
+                        source: "qrc:/main/images/button/search"
+                    }
+                }
+
+                // Spacer
+                Item {
+                    width: root.showTimeControls ? 0 : 0.25 * searchBox.width
+                    height: searchBox.height
+                }
 
                 Column {
-                    anchors.leftMargin: 30
                     spacing: Theme.spacingNormal
 
                     TextField {
@@ -166,20 +207,6 @@ Item {
                         source: "qrc:/main/images/button/search-down"
                     }
                 }
-
-                Button {
-                    onClicked: searchRows(searchField.text)
-
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Show only matching rows"
-
-                    Image {
-                        width: parent.width * 0.8
-                        height: width
-                        anchors.centerIn: parent
-                        source: "qrc:/main/images/button/search"
-                    }
-                }
             }
         }
 
@@ -190,14 +217,6 @@ Item {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-
-            onLoadMore: function(pageNumber, pageSize) {
-                CommandHandler.execute_confirmed(
-                    root.hostId,
-                    root.commandId,
-                    [...root.commandParams, startDate.text, endDate.text, pageNumber, pageSize]
-                )
-            }
         }
 
         // Loading animation

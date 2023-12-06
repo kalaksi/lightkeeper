@@ -138,6 +138,7 @@ pub enum UIAction {
     TextView,
     TextDialog,
     LogView,
+    LogViewWithTimeControls,
     Terminal,
     TextEditor,
 }

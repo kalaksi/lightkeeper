@@ -6,6 +6,7 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
+use chrono::NaiveDateTime;
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -33,7 +34,7 @@ impl CommandModule for Logs {
             display_icon: String::from("view-document"),
             display_text: String::from("Show logs"),
             tab_title: String::from("Host logs"),
-            action: UIAction::LogView,
+            action: UIAction::LogViewWithTimeControls,
             ..Default::default()
         }
     }
@@ -41,8 +42,10 @@ impl CommandModule for Logs {
     // Parameter 1 is for unit selection and special values "all" and "dmesg".
     // Parameter 2 is for grepping. Filters rows based on regexp.
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
-        let page_number = parameters.get(0).unwrap_or(&String::from("1")).parse::<i32>().unwrap();
-        let page_size = parameters.get(1).unwrap_or(&String::from("400")).parse::<i32>().unwrap();
+        let start_time = parameters.get(0).cloned().unwrap_or(String::from("-1h"));
+        let end_time = parameters.get(1).cloned().unwrap_or(String::from("now"));
+        let page_number = parameters.get(2).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(-1);
+        let page_size = parameters.get(3).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1000);
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
@@ -51,15 +54,29 @@ impl CommandModule for Logs {
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
             // TODO: centos?
 
-            if page_number > 1 {
-                let row_count = page_number * page_size;
-                command.arguments(vec!["journalctl", "-q", "-n", &row_count.to_string()]);
-                // would be nice to return just the needed parts, but tailing will possibly return different rows,
-                // so currently just returning everything
-                       // .pipe_to(vec!["head", "-n", &page_size.to_string()]);
+            command.arguments(vec!["journalctl", "-q"]);
+
+            if !start_time.is_empty() {
+                if start_time == "-1h" {
+                    command.arguments(vec!["--since", &start_time]);
+                }
+                else {
+                    match NaiveDateTime::parse_from_str(start_time.as_str(), "%Y-%m-%d %H:%M:%S") {
+                        Ok(_) => command.arguments(vec!["--since", &start_time]),
+                        Err(_) => return Err(format!("Invalid start time: {}", start_time)),
+                    };
+                }
             }
-            else {
-                command.arguments(vec!["journalctl", "-q", "-n", &page_size.to_string()]);
+            if !end_time.is_empty() && end_time != "now" {
+                match NaiveDateTime::parse_from_str(end_time.as_str(), "%Y-%m-%d %H:%M:%S") {
+                    Ok(_) => command.arguments(vec!["--until", &end_time]),
+                    Err(_) => return Err(format!("Invalid end time: {}", end_time)),
+                };
+            }
+
+            if page_number > 0 {
+                let row_count = page_number * page_size;
+                command.arguments(vec!["-n", &row_count.to_string()]);
             }
 
             /* TODO: log searching on server side?

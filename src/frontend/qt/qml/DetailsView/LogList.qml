@@ -31,8 +31,6 @@ ListView {
     model: []
     onRowsChanged: refreshModel()
 
-    signal loadMore(int pageNumber, int pageSize)
-
 
 
     ScrollBar.vertical: ScrollBar {
@@ -55,10 +53,12 @@ ListView {
 
     delegate: Item {
         id: rowItem
-        property bool isRefreshButton: index === root.model.length - 1
+        // property bool isRefreshButton: index === root.model.length - 1
+        // height: isRefreshButton ? textContent.implicitHeight * 3 : textContent.implicitHeight
+        property bool isRefreshButton: false
 
         width: root.width
-        height: isRefreshButton ? textContent.implicitHeight * 3 : textContent.implicitHeight
+        height: textContent.implicitHeight
 
         SmallText {
             id: textContent
@@ -94,6 +94,8 @@ ListView {
             }
         }
 
+        // Old implementation. Kept in case there's a need for such a button later.
+        /*
         ImageButton {
             visible: rowItem.isRefreshButton
             size: textContent.implicitHeight * 2
@@ -107,6 +109,7 @@ ListView {
                 root.loadMore(currentPage + 1, root.pageSize)
             }
         }
+        */
     }
 
     TextEdit {
@@ -194,10 +197,12 @@ ListView {
         let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
         root._matchingRows = matchingRows
         root._totalMatches = totalMatches
+        /*
         if (modelRows.length > 0) {
             // Last placeholder item is reserved for "load more" button
             modelRows.push("REFRESH")
         }
+        */
         root.model = modelRows
     }
 
@@ -218,7 +223,7 @@ ListView {
     }
 
     /*
-    // TODO
+    // TODO: button for displaying only matching rows (filter locally or remotely?)
     function searchRows(query) {
         dehighlight()
         if (query.length === 0) {
