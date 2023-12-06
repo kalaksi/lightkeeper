@@ -40,11 +40,11 @@ impl CommandModule for Logs {
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
-        let start_time = parameters.first().cloned().unwrap_or(String::from(""));
-        let end_time = parameters.get(1).cloned().unwrap_or(String::from(""));
-        let page_number = parameters.get(2).unwrap_or(&String::from("-1")).parse::<i32>().unwrap();
-        let page_size = parameters.get(3).unwrap_or(&String::from("1000")).parse::<i32>().unwrap();
-        let service = parameters.get(4).unwrap();
+        let service = parameters.get(0).unwrap();
+        let start_time = parameters.get(1).cloned().unwrap_or(String::from(""));
+        let end_time = parameters.get(2).cloned().unwrap_or(String::from(""));
+        let page_number = parameters.get(3).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1);
+        let page_size = parameters.get(4).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1000);
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
@@ -71,9 +71,6 @@ impl CommandModule for Logs {
             if page_number > 0 {
                 let row_count = page_number * page_size;
                 command.arguments(vec!["-n", &row_count.to_string()]);
-                // would be nice to return just the needed parts, but tailing will possibly return different rows,
-                // so currently just returning everything
-                    // .pipe_to(vec!["head", "-n", &page_size.to_string()]);
             }
 
             Ok(command.to_string())

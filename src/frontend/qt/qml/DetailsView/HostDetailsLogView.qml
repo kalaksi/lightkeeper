@@ -103,8 +103,38 @@ Item {
                     text: Utils.formatTimezone(new Date().getTimezoneOffset())
                 }
 
-                Button {
+                NormalText {
+                    visible: !root.showTimeControls
+                    text: "Lines fo fetch"
+                }
+
+                TextField {
+                    id: numberOfLines
+                    visible: !root.showTimeControls
+                    width: searchBox.width * 0.12
+                    placeholderText: "Number of lines"
+                    text: "1000"
+                }
+
+                ImageButton {
+                    visible: !root.showTimeControls
+                    size: numberOfLines.height
+                    imageSource: "qrc:/main/images/button/search"
+                    tooltip: "Fetch"
+                    onClicked: {
+                        CommandHandler.execute_confirmed(
+                            root.hostId,
+                            root.commandId,
+                            [...root.commandParams, "", "", "", numberOfLines.text]
+                        )
+                    }
+                }
+
+                ImageButton {
                     visible: root.showTimeControls
+                    size: numberOfLines.height
+                    imageSource: "qrc:/main/images/button/search"
+                    tooltip: "Apply time range"
                     onClicked: {
                         // TODO: implement checkbox for "Use UTC timezone"
                         // let fullStartTime = `${startTime.text} ${timezone.text}`
@@ -115,24 +145,14 @@ Item {
                         CommandHandler.execute_confirmed(
                             root.hostId,
                             root.commandId,
-                            [fullStartTime, fullEndTime, "", "", ...root.commandParams]
+                            [...root.commandParams, fullStartTime, fullEndTime, "", ""]
                         )
-                    }
-
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Apply time range"
-
-                    Image {
-                        width: parent.width * 0.8
-                        height: width
-                        anchors.centerIn: parent
-                        source: "qrc:/main/images/button/search"
                     }
                 }
 
                 // Spacer
                 Item {
-                    width: root.showTimeControls ? 0 : 0.25 * searchBox.width
+                    width: root.showTimeControls ? 0 : 0.08 * searchBox.width
                     height: searchBox.height
                 }
 

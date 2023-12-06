@@ -34,17 +34,20 @@ impl CommandModule for Logs {
             display_icon: String::from("view-document"),
             display_text: String::from("Show logs"),
             action: UIAction::LogView,
+            tab_title: String::from("Compose logs"),
             multivalue_level: 2,
             ..Default::default()
         }
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
-        let compose_file = parameters.first().unwrap();
+        let compose_file = parameters.get(0).unwrap();
         // let project = parameters.get(1).unwrap();
         let service_name = parameters.get(2).unwrap();
-        let page_number = parameters.get(3).unwrap_or(&String::from("1")).parse::<i32>().unwrap();
-        let page_size = parameters.get(4).unwrap_or(&String::from("400")).parse::<i32>().unwrap();
+        // let start_time = parameters.get(3).cloned().unwrap_or(String::from(""));
+        // let end_time = parameters.get(4).cloned().unwrap_or(String::from(""));
+        let page_number = parameters.get(5).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1);
+        let page_size = parameters.get(6).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1000);
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
@@ -52,23 +55,26 @@ impl CommandModule for Logs {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
 
-            // TODO: Don't hardcode page size
+            command.arguments(vec!["docker-compose", "-f", compose_file, "logs", "--no-color", "-t"]);
 
-            if page_number > 1 {
+            if page_number > 0 {
                 let row_count = page_number * page_size;
-                command.arguments(vec!["docker-compose", "-f", compose_file, "logs", "--tail", &row_count.to_string(), "--no-color", "-t", service_name]);
-                // would be nice to return just the needed parts, but tailing will possibly return different rows,
-                // so currently just returning everything
-                    // .pipe_to(vec!["head", "-n", &page_size.to_string()]);
+                command.arguments(vec!["--tail", &row_count.to_string()]);
             }
-            else {
-                command.arguments(vec!["docker-compose", "-f", compose_file, "logs", "--tail", &page_size.to_string(), "--no-color", "-t", service_name]);
-            }
+
+            command.argument(service_name);
         }
         else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") ||
                 host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
 
-            command.arguments(vec!["docker", "compose", "-f", compose_file, "logs", "--tail", "400", "--no-color", "-t", service_name]);
+            command.arguments(vec!["docker", "compose", "-f", compose_file, "logs", "--no-color", "-t"]);
+
+            if page_number > 0 {
+                let row_count = page_number * page_size;
+                command.arguments(vec!["--tail", &row_count.to_string()]);
+            }
+
+            command.argument(service_name);
         }
         else {
             return Err(String::from("Unsupported platform"));
