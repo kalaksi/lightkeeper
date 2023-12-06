@@ -12,7 +12,7 @@ Item {
     property string commandId: ""
     property var text: ""
     property string localFilePath: ""
-    property var pendingInvocations: []
+    property int pendingInvocation: 0
 
 
     signal saved(commandId: string, localFilePath: string, content: string)
@@ -23,9 +23,8 @@ Item {
         function onCommand_result_received(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
 
-            if (root.pendingInvocations.includes(commandResult.invocation_id)) {
-                root.pendingInvocations = root.pendingInvocations.filter((invocationId) => invocationId != commandResult.invocationId)
-
+            if (root.pendingInvocation === commandResult.invocation_id) {
+                root.pendingInvocation = 0
                 root.text = commandResult.message
             }
         }
