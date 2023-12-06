@@ -36,12 +36,9 @@ Item {
                     root.errorText = commandResult.error
                 }
 
-                // TODO: handle better situations where more log lines have appeared and so this isn't an accurate position
-                let oldListEnd = logList.rows.length - 1
                 let rows = commandResult.message.split("\n")
                 rows.reverse()
                 logList.rows = rows
-                logList.currentIndex = oldListEnd
 
                 let [rowsMatched, totalMatches] = logList.getSearchDetails()
                 searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
@@ -122,7 +119,7 @@ Item {
                     imageSource: "qrc:/main/images/button/search"
                     tooltip: "Fetch"
                     onClicked: {
-                        CommandHandler.execute_confirmed(
+                        root.pendingInvocation = CommandHandler.executePlain(
                             root.hostId,
                             root.commandId,
                             [...root.commandParams, "", "", "", numberOfLines.text]
@@ -142,7 +139,7 @@ Item {
                         let fullStartTime = startTime.text
                         let fullEndTime = endTime.text
 
-                        CommandHandler.execute_confirmed(
+                        root.pendingInvocation = CommandHandler.executePlain(
                             root.hostId,
                             root.commandId,
                             [...root.commandParams, fullStartTime, fullEndTime, "", ""]
@@ -152,7 +149,7 @@ Item {
 
                 // Spacer
                 Item {
-                    width: root.showTimeControls ? 0 : 0.08 * searchBox.width
+                    width: root.showTimeControls ? 0.01 * searchBox.width : 0.08 * searchBox.width
                     height: searchBox.height
                 }
 

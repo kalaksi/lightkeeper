@@ -27,6 +27,7 @@ pub struct CommandHandlerModel {
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
+    executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
 
     // Host initialization methods.
@@ -281,6 +282,13 @@ impl CommandHandlerModel {
                 }
             },
         }
+    }
+
+    fn executePlain(&mut self, host_id: QString, command_id: QString, parameters: QStringList) -> u64 {
+        let host_id = host_id.to_string();
+        let command_id = command_id.to_string();
+        let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
+        self.command_handler.execute(&host_id, &command_id, &parameters)
     }
 
     fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64 {
