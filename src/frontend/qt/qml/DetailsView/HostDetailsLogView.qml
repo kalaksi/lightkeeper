@@ -20,7 +20,7 @@ Item {
     property string text: ""
     property string errorText: ""
     property string _unitId: ""
-    property var pendingInvocation: -1
+    property var pendingInvocation: 0
 
 
     Connections {
@@ -30,7 +30,7 @@ Item {
             let commandResult = JSON.parse(commandResultJson)
 
             if (root.pendingInvocation === commandResult.invocation_id) {
-                root.pendingInvocation = -1
+                root.pendingInvocation = 0
 
                 if (commandResult.error) {
                     root.errorText = commandResult.error
@@ -244,7 +244,7 @@ Item {
             visible: logList.rows.length === 0
 
             WorkingSprite {
-                visible: root.pendingInvocation > -1
+                visible: root.pendingInvocation > 0
                 id: workingSprite
             }
 
