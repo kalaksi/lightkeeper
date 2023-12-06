@@ -43,6 +43,7 @@ impl CommandModule for RemoteTags {
             category: String::from("docker-images"),
             parent_id: String::from("docker-images"),
             secondary_parent_id: String::from("docker-image-updates"),
+            depends_on_no_tags: vec![String::from("Local")],
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("tag"),
             display_text: String::from("Show available tags"),
