@@ -57,6 +57,15 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
         });
     }
 
+    pub fn purge(&mut self) where K: serde::Serialize, V: serde::Serialize {
+        self.data.clear();
+        self.write_to_disk().unwrap();
+
+        for cached_file in file_handler::list_cached_files(true).unwrap() {
+            file_handler::remove_file(&cached_file).unwrap();
+        }
+    }
+
     /// Writes cache contents to disk in YAML format so they can be loaded on application start.
     pub fn write_to_disk(&self) -> Result<usize, String> where K: serde::Serialize, V: serde::Serialize {
         // TODO: don't write sensitive information. Modules should define if they can contain sensitive info.
@@ -64,11 +73,11 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
 
         if !Path::new(&cache_dir).exists() {
             fs::create_dir_all(&cache_dir).map_err(|error| format!("Error while creating cache directory: {}", error))?;
+        }
 
-            // Make sure directory is protected from reading by others.
-            if let Err(error) = fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o700)) {
-                return Err(format!("Error while setting cache directory permissions: {}", error));
-            }
+        // Make sure directory is protected from reading by others.
+        if let Err(error) = fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o700)) {
+            return Err(format!("Error while setting cache directory permissions: {}", error));
         }
 
         let file_path = cache_dir.join(CACHE_FILE_NAME);

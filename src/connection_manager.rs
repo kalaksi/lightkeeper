@@ -243,9 +243,9 @@ impl ConnectionManager {
             log::debug!("Initialized cache with TTL of {} ({}) seconds", cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
         }
         else {
-            log::debug!("Cache is disabled. Clearing existing cache file.");
+            log::debug!("Cache is disabled. Clearing existing cache files.");
             // Clear any existing cache entries from cache file.
-            new_command_cache.write_to_disk().unwrap();
+            new_command_cache.purge();
         }
 
         new_command_cache

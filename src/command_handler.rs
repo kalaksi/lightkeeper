@@ -10,7 +10,6 @@ use crate::configuration::Hosts;
 use crate::enums::Criticality;
 use crate::file_handler;
 use crate::host_manager::HostManager;
-use crate::module::command::UIAction;
 use crate::module::module_factory::ModuleFactory;
 use crate::utils::{ShellCommand, ErrorMessage};
 use crate::{
@@ -231,7 +230,7 @@ impl CommandHandler {
     // INTEGRATED COMMANDS
     //
 
-    pub fn download_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> (u64, String) {
+    pub fn download_editable_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> (u64, String) {
         let host = self.host_manager.borrow().get_host(&host_id);
         let command = self.commands.get(host_id).unwrap()
                                    .get(command_id).unwrap();
@@ -242,8 +241,6 @@ impl CommandHandler {
         }).unwrap();
 
         let (_, local_file_path) = file_handler::convert_to_local_paths(&host, remote_file_path);
-        // Whether to load file contents to the command result.
-        let load_contents = command.get_display_options().action == UIAction::TextEditor;
         self.invocation_id_counter += 1;
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
@@ -256,7 +253,8 @@ impl CommandHandler {
                 host,
                 command.box_clone(),
                 self.invocation_id_counter,
-                load_contents,
+                // Whether to temporarily save file contents to disk (in cache-folder).
+                true,
                 self.state_update_sender.as_ref().unwrap().clone()
             ),
             cache_policy: CachePolicy::BypassCache,
@@ -396,7 +394,7 @@ impl CommandHandler {
         });
     }
 
-    fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64, load_contents: bool,
+    fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64, on_disk: bool,
                                           state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
         Box::new(move |responses| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
@@ -404,15 +402,15 @@ impl CommandHandler {
 
             match response {
                 Ok(response_message) => {
-                    let local_file_path = response_message.message.clone();
+                    let response = response_message.message.clone();
 
-                    let command_result  = if load_contents {
-                        let (_, contents) = file_handler::read_file(&local_file_path).unwrap();
+                    let command_result  = if on_disk {
+                        let (_, contents) = file_handler::read_file(&response).unwrap();
                         CommandResult::new_hidden(String::from_utf8(contents).unwrap())
                                       .with_invocation_id(invocation_id)
                     }
                     else {
-                        CommandResult::new_hidden(local_file_path)
+                        CommandResult::new_hidden(response)
                                       .with_invocation_id(invocation_id)
                     };
 

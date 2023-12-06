@@ -1,6 +1,7 @@
 use serde_derive::{ Serialize, Deserialize };
 use serde_yaml;
 use std::io::Write;
+use std::os::unix::prelude::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::{ fs, io, collections::HashMap };
 use crate::host::HostSetting;
@@ -220,7 +221,7 @@ impl Configuration {
 
         // If main configuration is missing, this is probably the first run, so create initial configurations.
         if let Err(_) = fs::metadata(&main_config_file_path) {
-            Self::write_initial_config(config_dir)?;
+            Self::write_initial_config(&config_dir)?;
         }
         else if let Ok(_) = fs::metadata(config_dir.join("templates.yml")) {
             log::warn!("Old templates.yml configuration file found. Renaming old configuration files and reinitializing.");
@@ -230,7 +231,12 @@ impl Configuration {
             fs::rename(&hosts_file_path, config_dir.join(format!("{}.old", HOSTS_FILE)))?;
             fs::rename(old_templates_file_path, config_dir.join("templates.yml.old"))?;
 
-            Self::write_initial_config(config_dir)?;
+            Self::write_initial_config(&config_dir)?;
+        }
+
+        // Make sure directory is protected from reading by others.
+        if let Err(error) = fs::set_permissions(&config_dir, fs::Permissions::from_mode(0o700)) {
+            log::error!("Error while setting config directory permissions: {}", error);
         }
 
         log::info!("Reading main configuration from {}", main_config_file_path.display());
@@ -301,7 +307,7 @@ impl Configuration {
         Ok((main_config, hosts, all_groups))
     }
 
-    pub fn write_initial_config(config_dir: PathBuf) -> io::Result<()> {
+    pub fn write_initial_config(config_dir: &PathBuf) -> io::Result<()> {
         let default_main_config = include_str!("../config.example.yml");
         let default_hosts_config = include_str!("../hosts.example.yml");
         let default_groups_config = include_str!("../groups.example.yml");
@@ -310,7 +316,7 @@ impl Configuration {
         let hosts_file_path = config_dir.join(HOSTS_FILE);
         let groups_file_path = config_dir.join(GROUPS_FILE);
 
-        fs::create_dir_all(&config_dir)?;
+        fs::create_dir_all(config_dir)?;
 
         let main_config_file = fs::OpenOptions::new().write(true).create_new(true).open(main_config_file_path.clone());
         match main_config_file {

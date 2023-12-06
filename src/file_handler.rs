@@ -13,6 +13,7 @@ use crate::file_handler;
 
 const MAX_PATH_COMPONENTS: u8 = 2;
 const APP_DIR_NAME: &str = "lightkeeper";
+const METADATA_SUFFIX : &str = ".metadata.yml";
 
 
 pub fn get_config_dir() -> io::Result<PathBuf> {
@@ -81,17 +82,72 @@ pub fn create_file(host: &Host, remote_file_path: &String, metadata: FileMetadat
     Ok(file_path)
 }
 
+pub fn list_cached_files(only_metadata_files: bool) -> io::Result<Vec<String>> {
+    let cache_dir = file_handler::get_cache_dir()?;
+    let mut files = Vec::new();
+
+
+    // Nice drifting...
+    for subdirectory in fs::read_dir(cache_dir)? {
+        match subdirectory {
+            Ok(subdirectory) => {
+                if subdirectory.path().is_dir() && subdirectory.file_name() != "qmlcachedir" {
+
+                    for entry in fs::read_dir(subdirectory.path())? {
+                        match entry {
+                            Ok(entry) => {
+                                if entry.path().is_file() {
+                                    let file_path = entry.path().to_string_lossy().to_string();
+
+                                    if file_path.ends_with(METADATA_SUFFIX) {
+                                        if !only_metadata_files {
+                                            if let Some(content_file_path) = get_content_file_path(&file_path) {
+                                                files.push(content_file_path.to_string());
+                                            }
+                                        }
+
+                                        files.push(file_path);
+                                    }
+                                }
+                            }
+                            Err(error) => {
+                                log::error!("Error while reading cache directory: {}", error);
+                            }
+                        }
+                    }
+
+                }
+            }
+            Err(error) => {
+                log::error!("Error while reading cache directory: {}", error);
+            }
+        }
+    }
+
+    Ok(files)
+}
+
 /// Updates existing local file. File has to exist and have accompanying metadata file.
 pub fn update_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()> {
     fs::write(local_file_path, contents)?;
     Ok(())
 }
 
-/// Removes local copy of the file.
-pub fn remove_file(local_file_path: &String) -> io::Result<()> {
-    // TODO: path validation and limits just in case?
-    fs::remove_file(local_file_path)?;
-    fs::remove_file(get_metadata_path(local_file_path))?;
+/// Removes local copy of the (possible) content file and metadata file.
+pub fn remove_file(path: &String) -> io::Result<()> {
+    if path.ends_with(METADATA_SUFFIX) {
+        // Some files may not be written to disk even though metadata might still exist.
+        if let Some(file_path) = get_content_file_path(path) {
+            fs::remove_file(file_path)?;
+        }
+
+        fs::remove_file(path)?;
+    }
+    else {
+        // TODO: path validation and limits just in case?
+        fs::remove_file(get_metadata_path(path))?;
+        fs::remove_file(path)?;
+    }
     Ok(())
 }
 
@@ -113,8 +169,18 @@ pub fn convert_to_local_metadata_path(host: &Host, remote_file_path: &String) ->
     get_metadata_path(&file_path)
 }
 
+pub fn get_content_file_path(metadata_path: &String) -> Option<String> {
+    let file_path = metadata_path.strip_suffix(METADATA_SUFFIX).unwrap().to_string();
+    if Path::new(&file_path).is_file() {
+        Some(file_path)
+    }
+    else {
+        None
+    }
+}
+
 pub fn get_metadata_path(local_file_path: &String) -> String {
-    format!("{}.metadata.yml", local_file_path)
+    format!("{}{}", local_file_path, METADATA_SUFFIX)
 }
 
 /// Provides the local directory and file paths based on remote host name and remote file path.
