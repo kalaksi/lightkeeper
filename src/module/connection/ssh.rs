@@ -11,7 +11,7 @@ use std::{
 };
 
 use chrono::Utc;
-use ssh2::Session;
+use ssh2::{Session, FileStat};
 use crate::file_handler::FileMetadata;
 use crate::utils::strip_newline;
 use lightkeeper_module::connection_module;
@@ -204,14 +204,17 @@ impl ConnectionModule for Ssh2 {
     fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> io::Result<()> {
         let sftp = self.session.sftp().unwrap();
 
-        match sftp.create(Path::new(&metadata.remote_path)) {
+        let file = sftp.open_mode(
+            Path::new(&metadata.remote_path),
+            ssh2::OpenFlags::WRITE | ssh2::OpenFlags::TRUNCATE,
+            metadata.permissions.try_into().unwrap(),
+            ssh2::OpenType::File,
+        );
+
+        match file {
             Ok(mut file) => {
-                if let Err(error) = file.write(&contents) {
-                    Err(error)
-                }
-                else {
-                    Ok(())
-                }
+                file.write(&contents)?;
+                Ok(())
             }
             Err(error) => {
                 Err(io::Error::new(io::ErrorKind::Other, error.message()))
