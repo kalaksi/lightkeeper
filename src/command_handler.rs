@@ -278,7 +278,7 @@ impl CommandHandler {
                         host_name: host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
-                        command_result: Some(CommandResult::new_warning("File is unchanged")),
+                        command_result: Some(CommandResult::new_error("File is unchanged")),
                         ..Default::default()
                     }).unwrap_or_else(|error| {
                         log::error!("Couldn't send message to state manager: {}", error);
@@ -547,7 +547,7 @@ impl CommandHandler {
                                     host_name: host.name,
                                     display_options: command.get_display_options(),
                                     module_spec: command.get_module_spec(),
-                                    command_result: Some(CommandResult::new_warning("File is unchanged")),
+                                    command_result: Some(CommandResult::new_error("File is unchanged")),
                                     ..Default::default()
                                 }).unwrap_or_else(|error| {
                                     log::error!("Couldn't send message to state manager: {}", error);

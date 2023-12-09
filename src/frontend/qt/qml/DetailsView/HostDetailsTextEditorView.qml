@@ -26,7 +26,9 @@ Item {
 
             if (root.pendingInvocation === commandResult.invocation_id) {
                 root.pendingInvocation = 0
-                root.text = commandResult.message
+                if (commandResult.criticality === "Normal") {
+                    root.text = commandResult.message
+                }
             }
         }
     }
