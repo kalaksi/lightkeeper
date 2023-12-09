@@ -16,6 +16,7 @@ Item {
 
 
     signal saved(commandId: string, localFilePath: string, content: string)
+    signal closed(localFilePath: string)
 
     Connections {
         target: HostDataManager
@@ -77,6 +78,6 @@ Item {
     }
 
     function close() {
-        // TODO: implement confirmation dialog.
+        root.closed(root.localFilePath)
     }
 }

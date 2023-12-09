@@ -321,34 +321,11 @@ impl ConnectionManager {
                 log::debug!("[{}] Uploading file: {}", request.host.name, local_file_path);
                 match file_handler::read_file(local_file_path) {
                     Ok((metadata, contents)) => {
-                        let local_file_hash = sha256::digest(contents.as_slice());
+                        let result = connector.upload_file(&metadata, contents);
 
-                        let mut result = Ok(());
-                        let mut response_message = String::new();
-                        // Only upload if contents changed.
-                        if local_file_hash != metadata.remote_file_hash {
-                            result = connector.upload_file(&metadata, contents);
-                            if result.is_ok() {
-                                response_message = String::from("File updated");
-                            }
-                        }
-                        else {
-                            response_message = String::from("File unchanged");
-                            log::info!("{}", response_message);
-                        }
-
-                        if metadata.temporary {
-                            log::debug!("Removing temporary local file {}", local_file_path);
-                            if let Err(error) = file_handler::remove_file(local_file_path) {
-                                log::error!("Error while removing: {}", error);
-                            }
-                        }
-
-                        if let Err(error) = result {
-                            Err(error.to_string())
-                        }
-                        else {
-                            Ok(ResponseMessage::new(response_message, 0))
+                        match result {
+                            Ok(_) => Ok(ResponseMessage::empty()),
+                            Err(error) => Err(error.to_string()),
                         }
                     },
                     Err(error) => Err(error.to_string()),

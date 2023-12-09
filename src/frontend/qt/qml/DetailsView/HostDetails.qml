@@ -123,7 +123,6 @@ Item {
         onSaveClicked: getCurrentTabContent().save()
 
         onTabClosed: function(tabIndex) {
-            root._tabContents[root.hostId][tabIndex].component.close()
             root.closeTab(tabIndex)
         }
 
@@ -179,14 +178,11 @@ Item {
         id: textEditorView
 
         HostDetailsTextEditorView {
-            // TODO: discard if not saving on close.
             onSaved: function(commandId, localFilePath, content) {
-                CommandHandler.saveAndUploadFile(
-                    root.hostId,
-                    commandId,
-                    localFilePath,
-                    content
-                )
+                CommandHandler.saveAndUploadFile(root.hostId, commandId, localFilePath, content)
+            }
+            onClosed: function(localFilePath) {
+                CommandHandler.removeFile(localFilePath)
             }
         }
     }
@@ -230,6 +226,7 @@ Item {
 
     function closeTab(tabIndex) {
         let tabData = root._tabContents[root.hostId][tabIndex]
+        tabData.component.close()
         tabData.component.destroy()
         root._tabContents[root.hostId].splice(tabIndex, 1)
         mainViewHeader.tabs = getTabTitles()

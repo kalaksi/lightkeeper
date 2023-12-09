@@ -29,6 +29,7 @@ pub struct CommandHandlerModel {
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
+    removeFile: qt_method!(fn(&self, local_file_path: QString)),
 
     // Host initialization methods.
     initialize_host: qt_method!(fn(&self, host_id: QString)),
@@ -297,8 +298,14 @@ impl CommandHandlerModel {
         let local_file_path = local_file_path.to_string();
         let contents = contents.to_string().into_bytes();
 
-        let invocation_id = self.command_handler.save_and_upload_file(&host_id, &command_id, &local_file_path, contents);
+        self.command_handler.write_file(&local_file_path, contents);
+        let invocation_id = self.command_handler.upload_file(&host_id, &command_id, &local_file_path);
         invocation_id
+    }
+
+    fn removeFile(&mut self, local_file_path: QString) {
+        let local_file_path = local_file_path.to_string();
+        self.command_handler.remove_file(&local_file_path);
     }
 
     fn initialize_host(&mut self, host_id: QString) {

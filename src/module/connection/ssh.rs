@@ -11,7 +11,7 @@ use std::{
 };
 
 use chrono::Utc;
-use ssh2::{Session, FileStat};
+use ssh2::Session;
 use crate::file_handler::FileMetadata;
 use crate::utils::strip_newline;
 use lightkeeper_module::connection_module;
@@ -185,6 +185,7 @@ impl ConnectionModule for Ssh2 {
                     let stat = file.stat().unwrap();
                     let metadata = FileMetadata {
                         download_time: Utc::now(),
+                        local_path: None,
                         remote_path: source.clone(),
                         remote_file_hash: sha256::digest(contents.as_slice()),
                         owner_uid: stat.uid.unwrap(),

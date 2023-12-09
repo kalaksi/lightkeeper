@@ -65,15 +65,17 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
 
 /// Create a local file. Local path is based on remote host name and remote file path.
 /// Will overwrite any existing files.
-pub fn create_file(host: &Host, remote_file_path: &String, metadata: FileMetadata, contents: Vec<u8>) -> io::Result<String> {
+pub fn create_file(host: &Host, remote_file_path: &String, mut metadata: FileMetadata, contents: Vec<u8>) -> io::Result<String> {
     let (dir_path, file_path) = convert_to_local_paths(host, remote_file_path);
 
     if !Path::new(&dir_path).is_dir() {
         fs::create_dir_all(&dir_path)?;
     }
 
+    metadata.local_path = Some(file_path.clone());
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
     let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_file_path)?;
+
 
     fs::write(&file_path, contents)?;
     serde_yaml::to_writer(metadata_file, &metadata)
@@ -128,7 +130,7 @@ pub fn list_cached_files(only_metadata_files: bool) -> io::Result<Vec<String>> {
 }
 
 /// Updates existing local file. File has to exist and have accompanying metadata file.
-pub fn update_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()> {
+pub fn write_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()> {
     fs::write(local_file_path, contents)?;
     Ok(())
 }
@@ -226,6 +228,7 @@ pub fn convert_to_local_paths(host: &Host, remote_file_path: &String) -> (String
 pub struct FileMetadata {
     /// When download was completed and file saved.
     pub download_time: DateTime<Utc>,
+    pub local_path: Option<String>,
     pub remote_path: String,
     pub remote_file_hash: String,
     pub owner_uid: u32,
