@@ -404,8 +404,12 @@ impl CommandHandler {
     }
 
     pub fn remove_file(&mut self, local_file_path: &String) {
-        log::debug!("Removing file: {}", local_file_path);
-        file_handler::remove_file(local_file_path).unwrap();
+        if file_handler::remove_file(local_file_path).is_ok() {
+            log::debug!("Removed file {}", local_file_path);
+        }
+        else {
+            log::debug!("Failed to remove file {}", local_file_path);
+        }
     }
 
     pub fn has_file_changed(&self, local_file_path: &String, new_contents: Vec<u8>) -> bool {
