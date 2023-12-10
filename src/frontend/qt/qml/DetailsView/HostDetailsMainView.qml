@@ -255,6 +255,13 @@ Item {
         }
     }
 
+    Shortcut {
+        sequence: StandardKey.Refresh
+        onActivated: {
+            root.refresh()
+        }
+    }
+
     function getCategories(showEmptyCategories) {
         if (root.hostId !== "") {
             return HostDataManager.get_categories(root.hostId, !showEmptyCategories)

@@ -37,20 +37,6 @@ ListView {
         id: scrollBar
     }
 
-    Shortcut {
-        sequence: [
-            StandardKey.Copy,
-            "Ctrl+C",
-            StandardKey.Cancel
-        ]
-        onActivated: {
-            if (root.currentIndex >= 0) {
-                let text = root.rows[root.currentIndex]
-                root.copyToClipboard(text)
-            }
-        }
-    }
-
     delegate: Item {
         id: rowItem
         // property bool isRefreshButton: index === root.model.length - 1
@@ -87,7 +73,7 @@ ListView {
                         text: "Copy"
                         onTriggered: {
                             let text = root.rows[index]
-                            root.copyToClipboard(text)
+                            root._copyToClipboard(text)
                         }
                     }
                 }
@@ -112,14 +98,64 @@ ListView {
         */
     }
 
+    Shortcut {
+        sequence: StandardKey.Copy
+        onActivated: root.copySelectionToClipboard()
+    }
+
+    // Vim-like shortcut.
+    Shortcut {
+        sequence: "N"
+        onActivated: logList.search("down", searchField.text)
+    }
+
+    // Vim-like shortcut.
+    Shortcut {
+        sequence: "Shift+N"
+        onActivated: logList.search("up", searchField.text)
+    }
+
+    // TODO: some UI indicator when copying happened.
+    // Vim-like shortcut.
+    Shortcut {
+        sequence: "Y"
+        onActivated: logList.copySelectionToClipboard()
+    }
+
+    // Vim-like shortcut.
+    Shortcut {
+        sequence: "G"
+        onActivated: {
+            root.currentIndex = 0
+        }
+    }
+
+    // Vim-like shortcut.
+    Shortcut {
+        sequence: "Shift+G"
+        onActivated: {
+            if (root.rows.length > 0) {
+                root.currentIndex = root.rows.length - 1
+            }
+        }
+    }
+
+
     TextEdit {
         id: textEdit
         visible: false
         text: ""
     }
 
+    function copySelectionToClipboard() {
+        if (root.currentIndex >= 0) {
+            let text = root.rows[root.currentIndex]
+            root._copyToClipboard(text)
+        }
+    }
+
     // Workaround for copying to clipboard since there's currently no native QML way to do it (AFAIK).
-    function copyToClipboard(text) {
+    function _copyToClipboard(text) {
         textEdit.text = text
         textEdit.selectAll()
         textEdit.copy()

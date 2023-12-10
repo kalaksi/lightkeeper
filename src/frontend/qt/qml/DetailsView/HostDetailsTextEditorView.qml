@@ -74,6 +74,13 @@ Item {
         }
     }
 
+    Shortcut {
+        sequence: StandardKey.Save
+        onActivated: {
+            root.save()
+        }
+    }
+
     function save() {
         if (root.commandId === "" || root.localFilePath === "") {
             return

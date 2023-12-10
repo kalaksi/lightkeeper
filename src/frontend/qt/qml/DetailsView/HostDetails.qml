@@ -200,10 +200,60 @@ Item {
 
     Shortcut {
         sequence: StandardKey.Cancel
-        onActivated: {
-            root.closeClicked()
-        }
+        onActivated: root.closeClicked()
     }
+
+    Shortcut {
+        sequence: StandardKey.Close
+        // Close current tab.
+        onActivated: root.closeTab(mainViewHeader.tabIndex)
+    }
+
+    Shortcut {
+        sequence: "Alt+1"
+        onActivated: mainViewHeader.selectTab(0)
+    }
+
+    Shortcut {
+        sequence: "Alt+2"
+        onActivated: mainViewHeader.selectTab(1)
+    }
+
+    Shortcut {
+        sequence: "Alt+3"
+        onActivated: mainViewHeader.selectTab(2)
+    }
+
+    Shortcut {
+        sequence: "Alt+4"
+        onActivated: mainViewHeader.selectTab(3)
+    }
+
+    Shortcut {
+        sequence: "Alt+5"
+        onActivated: mainViewHeader.selectTab(4)
+    }
+
+    Shortcut {
+        sequence: "Alt+6"
+        onActivated: mainViewHeader.selectTab(5)
+    }
+
+    Shortcut {
+        sequence: "Alt+7"
+        onActivated: mainViewHeader.selectTab(6)
+    }
+
+    Shortcut {
+        sequence: "Alt+8"
+        onActivated: mainViewHeader.selectTab(7)
+    }
+
+    Shortcut {
+        sequence: "Alt+9"
+        onActivated: mainViewHeader.selectTab(8)
+    }
+
 
     function refresh() {
         root._tabContents[root.hostId][0].component.refresh()

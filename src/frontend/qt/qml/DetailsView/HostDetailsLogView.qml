@@ -169,6 +169,8 @@ Item {
                         focus: true
 
                         onAccepted: {
+                            focus = false
+                            logList.focus = true
                             let [rowsMatched, totalMatches] = logList.search("down", searchField.text)
                             searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
                         }
@@ -256,30 +258,31 @@ Item {
     }
 
     Shortcut {
-        sequence: [
-            StandardKey.Find,
-            // Vim-like shortcut:
-            "Ctrl+7",
-        ]
+        sequence: StandardKey.Find
         onActivated: searchField.focus = true
     }
 
     Shortcut {
-        sequence: [
-            StandardKey.FindNext,
-            // Vim-like shortcut:
-            "Ctrl+N",
-        ]
+        sequence: StandardKey.Copy
+        onActivated: {
+            console.log("Copy shortcut activated")
+            logList.copySelectionToClipboard()
+        }
+    }
+
+    Shortcut {
+        sequence: StandardKey.FindNext
         onActivated: logList.search("down", searchField.text)
     }
 
     Shortcut {
-        sequence: [
-            StandardKey.FindPrevious,
-            // Vim-like shortcut:
-            "Ctrl+P",
-        ]
+        sequence: StandardKey.FindPrevious
         onActivated: logList.search("up", searchField.text)
+    }
+
+    Shortcut {
+        sequence: StandardKey.Copy
+        onActivated: logList.copySelected()
     }
 
 
