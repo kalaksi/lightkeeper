@@ -51,8 +51,9 @@ impl CommandModule for Logs {
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
-            // TODO: centos?
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "7") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "7") {
 
             command.arguments(vec!["journalctl", "-q"]);
 
@@ -78,30 +79,6 @@ impl CommandModule for Logs {
                 let row_count = page_number * page_size;
                 command.arguments(vec!["-n", &row_count.to_string()]);
             }
-
-            /* TODO: log searching on server side?
-            if let Some(parameter1) = parameters.first() {
-                if !parameter1.is_empty() {
-                    if !string_validation::is_alphanumeric_with(parameter1, "-_.@\\") ||
-                        string_validation::begins_with_dash(parameter1){
-                        panic!("Invalid unit name: {}", parameter1)
-                    }
-
-                    if parameter1 == "all" {
-                        // No parameter needed.
-                    } else if parameter1 == "dmesg" {
-                        command.argument("--dmesg");
-                    } else {
-                        command.arguments(vec!["-u", parameter1]);
-                    }
-                }
-            }
-
-            if let Some(parameter2) = parameters.get(1) {
-                if !parameter2.is_empty() {
-                    command.arguments(vec!["-g", parameter2]);
-                }
-            } */
 
             Ok(command.to_string())
         }

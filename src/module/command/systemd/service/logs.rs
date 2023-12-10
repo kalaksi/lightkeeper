@@ -56,8 +56,9 @@ impl CommandModule for Logs {
         }
 
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "8") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
-            // TODO: centos?
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "7") ||
+           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "7") {
 
             command.arguments(vec!["journalctl", "-q", "-u", service]);
 
