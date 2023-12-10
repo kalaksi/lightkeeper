@@ -204,53 +204,53 @@ Item {
     }
 
     Shortcut {
-        sequence: StandardKey.Close
+        sequences: [StandardKey.Close]
         // Close current tab.
         onActivated: root.closeTab(mainViewHeader.tabIndex)
     }
 
     Shortcut {
-        sequence: "Alt+1"
+        sequences: ["Alt+1", "Ctrl+1"]
         onActivated: mainViewHeader.selectTab(0)
     }
 
     Shortcut {
-        sequence: "Alt+2"
+        sequences: ["Alt+2", "Ctrl+2"]
         onActivated: mainViewHeader.selectTab(1)
     }
 
     Shortcut {
-        sequence: "Alt+3"
+        sequences: ["Alt+3", "Ctrl+3"]
         onActivated: mainViewHeader.selectTab(2)
     }
 
     Shortcut {
-        sequence: "Alt+4"
+        sequences: ["Alt+4", "Ctrl+4"]
         onActivated: mainViewHeader.selectTab(3)
     }
 
     Shortcut {
-        sequence: "Alt+5"
+        sequences: ["Alt+5", "Ctrl+5"]
         onActivated: mainViewHeader.selectTab(4)
     }
 
     Shortcut {
-        sequence: "Alt+6"
+        sequences: ["Alt+6", "Ctrl+6"]
         onActivated: mainViewHeader.selectTab(5)
     }
 
     Shortcut {
-        sequence: "Alt+7"
+        sequences: ["Alt+7", "Ctrl+7"]
         onActivated: mainViewHeader.selectTab(6)
     }
 
     Shortcut {
-        sequence: "Alt+8"
+        sequences: ["Alt+8", "Ctrl+8"]
         onActivated: mainViewHeader.selectTab(7)
     }
 
     Shortcut {
-        sequence: "Alt+9"
+        sequences: ["Alt+9", "Ctrl+9"]
         onActivated: mainViewHeader.selectTab(8)
     }
 
@@ -279,6 +279,10 @@ Item {
     }
 
     function closeTab(tabIndex) {
+        if (tabIndex === 0) {
+            return
+        }
+
         let tabData = root._tabContents[root.hostId][tabIndex]
         tabData.component.close()
         tabData.component.destroy()

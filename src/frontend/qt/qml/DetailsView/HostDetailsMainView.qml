@@ -256,7 +256,7 @@ Item {
     }
 
     Shortcut {
-        sequence: StandardKey.Refresh
+        sequences: [StandardKey.Refresh]
         onActivated: {
             root.refresh()
         }
