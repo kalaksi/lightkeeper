@@ -17,13 +17,21 @@ use crate::host::HostSetting;
     name="storage-lvm-logical-volume",
     version="0.0.1",
     description="Provides information about LVM logical volumes.",
+    settings={
+        snapshot_warning_threshold => "Snapshot utilization warning threshold in percent. Default: 80",
+        snapshot_error_threshold => "Snapshot utilization error threshold in percent. Default: 90",
+    }
 )]
 pub struct LogicalVolume {
+    threshold_warning: f32,
+    threshold_error: f32,
 }
 
 impl Module for LogicalVolume {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         LogicalVolume {
+            threshold_warning: settings.get("warning_threshold").unwrap_or(&String::from("80")).parse().unwrap(),
+            threshold_error: settings.get("error_threshold").unwrap_or(&String::from("90")).parse().unwrap(),
         }
     }
 }
@@ -139,10 +147,10 @@ impl MonitoringModule for LogicalVolume {
                 data_point.value = format!("{}% full", snapshot_full_percent);
                 let fullness = snapshot_full_percent.parse::<f32>().unwrap();
 
-                if fullness > 50.0 && data_point.criticality < Criticality::Warning {
+                if fullness > self.threshold_warning && data_point.criticality < Criticality::Warning {
                     data_point.criticality = Criticality::Warning;
                 }
-                if fullness > 75.0 && data_point.criticality < Criticality::Error {
+                if fullness > self.threshold_error && data_point.criticality < Criticality::Error {
                     data_point.criticality = Criticality::Error;
                 }
             }
