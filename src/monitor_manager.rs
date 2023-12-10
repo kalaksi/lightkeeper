@@ -314,6 +314,18 @@ impl MonitorManager {
             Ok(messages) => messages,
             Err(error) => {
                 log::error!("Monitor \"{}\" failed: {}", monitor.get_module_spec().id, error);
+                let ui_error = format!("{}: {}", monitor.get_module_spec().id, error);
+
+                state_update_sender.send(StateUpdateMessage {
+                    host_name: host.name.clone(),
+                    display_options: monitor.get_display_options(),
+                    module_spec: monitor.get_module_spec(),
+                    errors: vec![ErrorMessage::new(Criticality::Error, ui_error)],
+                    ..Default::default()
+                }).unwrap_or_else(|error| {
+                    log::error!("Couldn't send message to state manager: {}", error);
+                });
+
                 return;
             }
         };
@@ -408,9 +420,8 @@ impl MonitorManager {
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
                     data_point: Some(new_data_point),
-                    command_result: None,
                     errors: errors,
-                    stop: false,
+                    ..Default::default()
                 }).unwrap_or_else(|error| {
                     log::error!("Couldn't send message to state manager: {}", error);
                 });
