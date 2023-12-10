@@ -170,13 +170,21 @@ impl HostDataManagerModel {
             let receiver = self.update_receiver.take().unwrap();
             let thread = std::thread::spawn(move || {
                 loop {
-                    let received_data = receiver.recv().unwrap();
-
-                    if received_data.stop {
-                        ::log::debug!("Gracefully exiting UI state receiver thread");
-                        return;
+                    match receiver.recv() {
+                        Ok(received_data) => {
+                            if received_data.stop {
+                                ::log::debug!("Gracefully exiting UI state receiver thread");
+                                return;
+                            }
+                            else {
+                                set_data(received_data);
+                            }
+                        },
+                        Err(error) => {
+                            ::log::error!("Stopped UI state receiver thread: {}", error);
+                            return;
+                        }
                     }
-                    set_data(received_data);
                 }
             });
 

@@ -13,6 +13,9 @@ import "./Misc"
 import "js/Utils.js" as Utils
 
 ApplicationWindow {
+    property var _detailsDialogs: {}
+    property int _textDialogPendingInvocation: 0
+
     id: root
     visible: true
     minimumWidth: 1400
@@ -24,9 +27,7 @@ ApplicationWindow {
         hostTable.forceLayout()
     }
 
-    property var _detailsDialogs: {}
-    property int _textDialogPendingInvocation: 0
-
+    onClosing: root.quit()
 
     menuBar: ToolBar {
         background: BorderRectangle {
@@ -258,11 +259,6 @@ ApplicationWindow {
         }
     }
 
-    onClosing: {
-        CommandHandler.stop()
-        HostDataManager.stop()
-        DesktopPortal.stop()
-    }
 
     Item {
         id: body
@@ -381,6 +377,12 @@ ApplicationWindow {
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
 
+    Shortcut {
+        sequence: StandardKey.Quit
+        onActivated: root.quit()
+    }
+
+
     function reloadConfiguration() {
         HostDataManager.reset()
         _hostTableModel.toggleRow(_hostTableModel.selectedRow)
@@ -388,5 +390,12 @@ ApplicationWindow {
 
         let configs = ConfigManager.reloadConfiguration()
         CommandHandler.reconfigure(configs[0], configs[1])
+    }
+
+    function quit() {
+        CommandHandler.stop()
+        HostDataManager.stop()
+        DesktopPortal.stop()
+        Qt.quit()
     }
 }
