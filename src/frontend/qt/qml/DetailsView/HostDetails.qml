@@ -247,6 +247,12 @@ Item {
         if (!(root.hostId in root._tabContents)) {
             return undefined
         }
-        return root._tabContents[root.hostId][mainViewHeader.tabIndex].component
+        let content = root._tabContents[root.hostId][mainViewHeader.tabIndex]
+        if (content === undefined) {
+            return undefined
+        }
+        else {
+            return content.component
+        }
     }
 }

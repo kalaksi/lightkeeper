@@ -61,6 +61,7 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
         self.data.clear();
         self.write_to_disk().unwrap();
 
+        // TODO: recovery handler and dialog if cached text editor files are found on start?
         for cached_file in file_handler::list_cached_files(true).unwrap() {
             file_handler::remove_file(&cached_file).unwrap();
         }
@@ -86,7 +87,7 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
         Ok(self.data.len())
     }
 
-    /// Read the cache from disk.
+    /// Reads the cache from disk.
     pub fn read_from_disk(&mut self) -> Result<usize, String> where K: serde::de::DeserializeOwned, V: serde::de::DeserializeOwned {
         let config_dir = file_handler::get_cache_dir().map_err(|error| error.to_string())?;
         let file_path = config_dir.join(CACHE_FILE_NAME);
