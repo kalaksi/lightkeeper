@@ -337,11 +337,7 @@ impl CommandHandler {
                         request_type: RequestType::Upload,
                         messages: vec![local_file_path.clone()],
                         response_handler: Self::get_response_handler_upload_file(
-                            host,
-                            command.box_clone(),
-                            self.invocation_id_counter,
-                            metadata,
-                            state_update_sender
+                            host, command.box_clone(), self.invocation_id_counter, metadata, false, state_update_sender
                         ),
                         cache_policy: CachePolicy::BypassCache,
                     }).unwrap();
@@ -366,6 +362,7 @@ impl CommandHandler {
 
     fn get_response_handler_upload_file(host: Host, command: Command, invocation_id: u64,
                                         new_metadata: file_handler::FileMetadata,
+                                        remove_file: bool,
                                         state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
         Box::new(move |responses| {
@@ -373,8 +370,13 @@ impl CommandHandler {
 
             let command_result = match response {
                 Ok(_) => {
-                    // Updates file hash in metadata.
-                    write_file_metadata(new_metadata).unwrap();
+                    if remove_file {
+                        file_handler::remove_file(&new_metadata.local_path.unwrap()).unwrap();
+                    }
+                    else {
+                        // Updates file hash in metadata.
+                        write_file_metadata(new_metadata).unwrap();
+                    }
 
                     CommandResult::new_info("File updated")
                                   .with_invocation_id(invocation_id)
@@ -553,6 +555,8 @@ impl CommandHandler {
                                 }).unwrap_or_else(|error| {
                                     log::error!("Couldn't send message to state manager: {}", error);
                                 });
+
+                                file_handler::remove_file(&local_file).unwrap();
                             }
                             else {
                                 metadata.update_hash(local_file_hash);
@@ -562,7 +566,9 @@ impl CommandHandler {
                                     host: host.clone(),
                                     request_type: RequestType::Upload,
                                     messages: vec![local_file],
-                                    response_handler: Self::get_response_handler_upload_file(host, command, 0, metadata, state_update_sender),
+                                    response_handler: Self::get_response_handler_upload_file(
+                                        host, command, 0, metadata, true, state_update_sender
+                                    ),
                                     cache_policy: CachePolicy::BypassCache,
                                 }).unwrap_or_else(|error| {
                                     log::error!("Couldn't send message to connector: {}", error);
