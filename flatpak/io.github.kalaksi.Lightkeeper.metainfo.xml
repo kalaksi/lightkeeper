@@ -25,6 +25,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.8.0" date="2023-12-10">
+      <description>
+        <ul>
+          <li>New tab-layout added</li>
+	  <li>Time range filtering to log viewer</li>
+          <li>Improved keyboard shortcuts</li>
+          <li>Various other small fixes and improvements</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.1" date="2023-11-05">
       <description>
         <ul>
