@@ -9,6 +9,7 @@ use std::rc::Rc;
 use crate::configuration::Hosts;
 use crate::enums::Criticality;
 use crate::file_handler;
+use crate::file_handler::write_file_metadata;
 use crate::host_manager::HostManager;
 use crate::module::module_factory::ModuleFactory;
 use crate::utils::{ShellCommand, ErrorMessage};
@@ -253,8 +254,6 @@ impl CommandHandler {
                 host,
                 command.box_clone(),
                 self.invocation_id_counter,
-                // Whether to temporarily save file contents to disk (in cache-folder).
-                true,
                 self.state_update_sender.as_ref().unwrap().clone()
             ),
             cache_policy: CachePolicy::BypassCache,
@@ -262,6 +261,49 @@ impl CommandHandler {
 
         (self.invocation_id_counter, local_file_path)
     }
+
+    fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64,
+                                          state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
+        Box::new(move |responses| {
+            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
+            let response = responses.first().unwrap();
+
+            match response {
+                Ok(response_message) => {
+                    let response = response_message.message.clone();
+
+                    let (_, contents) = file_handler::read_file(&response).unwrap();
+                    let command_result = CommandResult::new_hidden(String::from_utf8(contents).unwrap())
+                                                       .with_invocation_id(invocation_id);
+
+                    state_update_sender.send(StateUpdateMessage {
+                        host_name: host.name,
+                        display_options: command.get_display_options(),
+                        module_spec: command.get_module_spec(),
+                        command_result: Some(command_result),
+                        ..Default::default()
+                    }).unwrap_or_else(|error| {
+                        log::error!("Couldn't send message to state manager: {}", error);
+                    });
+                },
+                Err(error) => {
+                    let error_message = format!("Error downloading file: {}", error);
+                    log::error!("{}", error_message);
+
+                    state_update_sender.send(StateUpdateMessage {
+                        host_name: host.name,
+                        display_options: command.get_display_options(),
+                        module_spec: command.get_module_spec(),
+                        command_result: Some(CommandResult::new_critical_error(error_message)),
+                        ..Default::default()
+                    }).unwrap_or_else(|error| {
+                        log::error!("Couldn't send message to state manager: {}", error);
+                    });
+                }
+            }
+        })
+    }
+
 
     pub fn upload_file(&mut self, host_id: &String, command_id: &String, local_file_path: &String) -> u64 {
         let host = self.host_manager.borrow().get_host(&host_id);
@@ -271,8 +313,9 @@ impl CommandHandler {
         self.invocation_id_counter += 1;
 
         match file_handler::read_file(local_file_path) {
-            Ok((metadata, contents)) => {
+            Ok((mut metadata, contents)) => {
                 let local_file_hash = sha256::digest(contents.as_slice());
+
                 if local_file_hash == metadata.remote_file_hash {
                     state_update_sender.send(StateUpdateMessage {
                         host_name: host.name,
@@ -285,6 +328,8 @@ impl CommandHandler {
                     });
                 }
                 else {
+                    metadata.update_hash(local_file_hash);
+
                     self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                         connector_spec: command.get_connector_spec(),
                         source_id: command.get_module_spec().id,
@@ -295,6 +340,7 @@ impl CommandHandler {
                             host,
                             command.box_clone(),
                             self.invocation_id_counter,
+                            metadata,
                             state_update_sender
                         ),
                         cache_policy: CachePolicy::BypassCache,
@@ -319,15 +365,17 @@ impl CommandHandler {
     }
 
     fn get_response_handler_upload_file(host: Host, command: Command, invocation_id: u64,
+                                        new_metadata: file_handler::FileMetadata,
                                         state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
         Box::new(move |responses| {
-            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
-            // TODO: check that destination file hasn't changed and display warning?
             let response = responses.first().unwrap();
 
             let command_result = match response {
                 Ok(_) => {
+                    // Updates file hash in metadata.
+                    write_file_metadata(new_metadata).unwrap();
+
                     CommandResult::new_info("File updated")
                                   .with_invocation_id(invocation_id)
                 },
@@ -359,8 +407,9 @@ impl CommandHandler {
     }
 
     pub fn has_file_changed(&self, local_file_path: &String, new_contents: Vec<u8>) -> bool {
-        let (_, contents) = file_handler::read_file(local_file_path).unwrap();
-        new_contents == contents 
+        let metadata = file_handler::read_file_metadata(local_file_path).unwrap();
+        let content_hash = sha256::digest(new_contents.as_slice());
+        content_hash != metadata.remote_file_hash
     }
 
     fn remote_ssh_command(&self, host_id: &String) -> ShellCommand {
@@ -467,54 +516,6 @@ impl CommandHandler {
         });
     }
 
-    fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64, on_disk: bool,
-                                          state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
-        Box::new(move |responses| {
-            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
-            let response = responses.first().unwrap();
-
-            match response {
-                Ok(response_message) => {
-                    let response = response_message.message.clone();
-
-                    let command_result  = if on_disk {
-                        let (_, contents) = file_handler::read_file(&response).unwrap();
-                        CommandResult::new_hidden(String::from_utf8(contents).unwrap())
-                                      .with_invocation_id(invocation_id)
-                    }
-                    else {
-                        CommandResult::new_hidden(response)
-                                      .with_invocation_id(invocation_id)
-                    };
-
-                    state_update_sender.send(StateUpdateMessage {
-                        host_name: host.name,
-                        display_options: command.get_display_options(),
-                        module_spec: command.get_module_spec(),
-                        command_result: Some(command_result),
-                        ..Default::default()
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to state manager: {}", error);
-                    });
-                },
-                Err(error) => {
-                    let error_message = format!("Error downloading file: {}", error);
-                    log::error!("{}", error_message);
-
-                    state_update_sender.send(StateUpdateMessage {
-                        host_name: host.name,
-                        display_options: command.get_display_options(),
-                        module_spec: command.get_module_spec(),
-                        command_result: Some(CommandResult::new_critical_error(error_message)),
-                        ..Default::default()
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to state manager: {}", error);
-                    });
-                }
-            }
-        })
-    }
-
     fn get_response_handler_external_text_editor(host: Host, command: Command,
                                                  preferences: Preferences,
                                                  request_sender: mpsc::Sender<ConnectorRequest>,
@@ -540,7 +541,7 @@ impl CommandHandler {
                     }
 
                     match file_handler::read_file(&local_file) {
-                        Ok((metadata, contents)) => {
+                        Ok((mut metadata, contents)) => {
                             let local_file_hash = sha256::digest(contents.as_slice());
                             if local_file_hash == metadata.remote_file_hash {
                                 state_update_sender.send(StateUpdateMessage {
@@ -554,13 +555,14 @@ impl CommandHandler {
                                 });
                             }
                             else {
+                                metadata.update_hash(local_file_hash);
                                 request_sender.send(ConnectorRequest {
                                     connector_spec: command.get_connector_spec(),
                                     source_id: command.get_module_spec().id,
                                     host: host.clone(),
                                     request_type: RequestType::Upload,
                                     messages: vec![local_file],
-                                    response_handler: Self::get_response_handler_upload_file(host, command, 0, state_update_sender),
+                                    response_handler: Self::get_response_handler_upload_file(host, command, 0, metadata, state_update_sender),
                                     cache_policy: CachePolicy::BypassCache,
                                 }).unwrap_or_else(|error| {
                                     log::error!("Couldn't send message to connector: {}", error);

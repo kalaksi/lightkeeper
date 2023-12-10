@@ -115,6 +115,7 @@ Item {
         showCloseButton: true
         showRefreshButton: getCurrentTabContent() instanceof HostDetailsMainView
         showSaveButton: getCurrentTabContent() instanceof HostDetailsTextEditorView
+        disableSaveButton: true
 
         onRefreshClicked: CommandHandler.force_initialize_host(hostId)
         onMaximizeClicked: root.maximizeClicked()
@@ -179,10 +180,13 @@ Item {
 
         HostDetailsTextEditorView {
             onSaved: function(commandId, localFilePath, content) {
-                CommandHandler.saveAndUploadFile(root.hostId, commandId, localFilePath, content)
+                pendingInvocation = CommandHandler.saveAndUploadFile(root.hostId, commandId, localFilePath, content)
             }
             onClosed: function(localFilePath) {
                 CommandHandler.removeFile(localFilePath)
+            }
+            onContentChanged: function(localFilePath, content) {
+                mainViewHeader.disableSaveButton = !CommandHandler.hasFileChanged(localFilePath, content)
             }
         }
     }

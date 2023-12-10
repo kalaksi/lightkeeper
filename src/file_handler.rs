@@ -131,7 +131,23 @@ pub fn list_cached_files(only_metadata_files: bool) -> io::Result<Vec<String>> {
 
 /// Updates existing local file. File has to exist and have accompanying metadata file.
 pub fn write_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()> {
+    // Verify, just in case, that path belongs to cache directory.
+    let cache_dir = get_cache_dir().unwrap();
+    if Path::new(local_file_path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
+        panic!()
+    }
+
     fs::write(local_file_path, contents)?;
+    Ok(())
+}
+
+pub fn write_file_metadata(metadata: FileMetadata) -> io::Result<()> {
+    let local_file_path = metadata.local_path.clone().unwrap();
+    let metadata_path = get_metadata_path(&local_file_path);
+    let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_path)?;
+    serde_yaml::to_writer(metadata_file, &metadata)
+               .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+
     Ok(())
 }
 
@@ -159,12 +175,6 @@ pub fn remove_file(path: &String) -> io::Result<()> {
 }
 
 pub fn read_file(local_file_path: &String) -> io::Result<(FileMetadata, Vec<u8>)> {
-    // Verify, just in case, that path belongs to cache directory.
-    let cache_dir = get_cache_dir().unwrap();
-    if Path::new(local_file_path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
-        panic!()
-    }
-
     let contents = fs::read(local_file_path)?;
 
     let metadata_path = get_metadata_path(local_file_path);
@@ -173,6 +183,15 @@ pub fn read_file(local_file_path: &String) -> io::Result<(FileMetadata, Vec<u8>)
                                             .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
     Ok((metadata, contents))
+}
+
+pub fn read_file_metadata(local_file_path: &String) -> io::Result<FileMetadata> {
+    let metadata_path = get_metadata_path(local_file_path);
+    let metadata_string = fs::read_to_string(metadata_path)?;
+    let metadata: FileMetadata = serde_yaml::from_str(&metadata_string)
+                                            .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+
+    Ok(metadata)
 }
 
 /// Provides the local metadata file path based on remote host name and remote file path.
@@ -236,4 +255,10 @@ pub struct FileMetadata {
     pub permissions: u32,
     /// Temporary files will be deleted when they're no longer used (usually after uploading).
     pub temporary: bool,
+}
+
+impl FileMetadata {
+    pub fn update_hash(&mut self, new_hash: String) {
+        self.remote_file_hash = new_hash;
+    }
 }

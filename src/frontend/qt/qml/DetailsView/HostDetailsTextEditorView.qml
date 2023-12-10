@@ -9,14 +9,15 @@ import "../Text"
 
 Item {
     id: root
-    property string commandId: ""
+    required property string localFilePath
     property var text: ""
-    property string localFilePath: ""
+    property string commandId: ""
     property int pendingInvocation: 0
 
 
     signal saved(commandId: string, localFilePath: string, content: string)
     signal closed(localFilePath: string)
+    signal contentChanged(localFilePath: string, newContent: string)
 
     Connections {
         target: HostDataManager
@@ -26,9 +27,12 @@ Item {
 
             if (root.pendingInvocation === commandResult.invocation_id) {
                 root.pendingInvocation = 0
+
                 if (commandResult.criticality === "Normal") {
                     root.text = commandResult.message
                 }
+
+                root.focus()
             }
         }
     }
@@ -58,11 +62,15 @@ Item {
 
         TextEdit {
             id: textEdit
+            // Enabled only if all data is received.
+            enabled: root.pendingInvocation === 0
             anchors.fill: parent
             wrapMode: Text.WordWrap
             color: Theme.color_text()
             text: root.text
             font.family: "monospace"
+
+            onTextChanged: root.focus()
         }
     }
 
@@ -76,7 +84,11 @@ Item {
     }
 
     function focus() {
-        // Do nothing.
+        // If still waiting for data, then content can't have changed yet.
+        if (root.pendingInvocation === 0) {
+            // Update save-button enabled-status.
+            root.contentChanged(root.localFilePath, textEdit.text)
+        }
     }
 
     function close() {

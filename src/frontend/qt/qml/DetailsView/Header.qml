@@ -17,6 +17,7 @@ Item {
     property bool showCloseButton: false
     property bool showOpenInWindowButton: false
     property bool showSaveButton: false
+    property bool disableSaveButton: false
 
     property var tabs: []
     property alias tabIndex: tabBar.currentIndex
@@ -92,6 +93,7 @@ Item {
             flatButton: true
             tooltip: "Save"
             onClicked: root.saveClicked()
+            enabled: !root.disableSaveButton
             visible: root.showSaveButton
         }
 
