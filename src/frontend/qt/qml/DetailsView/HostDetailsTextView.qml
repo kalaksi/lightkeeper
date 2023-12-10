@@ -82,6 +82,10 @@ Item {
         // Do nothing.
     }
 
+    function refresh() {
+        // Do nothing.
+    }
+
     function close() {
         // TODO: implement confirmation dialog.
     }

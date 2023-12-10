@@ -61,4 +61,8 @@ Item {
         terminalSession.sendSignal(15)
         terminalSession.clearScreen()
     }
+
+    function refresh()  {
+        terminalSession.clearScreen()
+    }
 }

@@ -118,17 +118,10 @@ Item {
 
                 ImageButton {
                     id: numberOfLinesSubmit
-                    visible: !root.showTimeControls
                     size: numberOfLines.height
                     imageSource: "qrc:/main/images/button/search"
                     tooltip: "Fetch"
-                    onClicked: {
-                        root.pendingInvocation = CommandHandler.executePlain(
-                            root.hostId,
-                            root.commandId,
-                            [...root.commandParams, "", "", "", numberOfLines.text]
-                        )
-                    }
+                    onClicked: root.refresh()
                 }
 
                 ImageButton {
@@ -137,19 +130,7 @@ Item {
                     size: numberOfLines.height
                     imageSource: "qrc:/main/images/button/search"
                     tooltip: "Apply time range"
-                    onClicked: {
-                        // TODO: implement checkbox for "Use UTC timezone"
-                        // let fullStartTime = `${startTime.text} ${timezone.text}`
-                        // let fullEndTime = `${endTime.text} ${timezone.text}`
-                        let fullStartTime = startTime.text
-                        let fullEndTime = endTime.text
-
-                        root.pendingInvocation = CommandHandler.executePlain(
-                            root.hostId,
-                            root.commandId,
-                            [...root.commandParams, fullStartTime, fullEndTime, "", ""]
-                        )
-                    }
+                    onClicked: root.refresh()
                 }
 
                 // Spacer
@@ -263,14 +244,6 @@ Item {
     }
 
     Shortcut {
-        sequence: StandardKey.Copy
-        onActivated: {
-            console.log("Copy shortcut activated")
-            logList.copySelectionToClipboard()
-        }
-    }
-
-    Shortcut {
         sequence: StandardKey.FindNext
         onActivated: logList.search("down", searchField.text)
     }
@@ -280,11 +253,29 @@ Item {
         onActivated: logList.search("up", searchField.text)
     }
 
-    Shortcut {
-        sequence: StandardKey.Copy
-        onActivated: logList.copySelected()
-    }
+    // Executes searchagain.
+    function refresh() {
+        if (root.showTimeControls) {
+            // TODO: implement checkbox for "Use UTC timezone"
+            // let fullStartTime = `${startTime.text} ${timezone.text}`
+            // let fullEndTime = `${endTime.text} ${timezone.text}`
+            let fullStartTime = startTime.text
+            let fullEndTime = endTime.text
 
+            root.pendingInvocation = CommandHandler.executePlain(
+                root.hostId,
+                root.commandId,
+                [...root.commandParams, fullStartTime, fullEndTime, "", ""]
+            )
+        }
+        else {
+            root.pendingInvocation = CommandHandler.executePlain(
+                root.hostId,
+                root.commandId,
+                [...root.commandParams, "", "", "", ""]
+            )
+        }
+    }
 
     function focus() {
         searchField.focus = true

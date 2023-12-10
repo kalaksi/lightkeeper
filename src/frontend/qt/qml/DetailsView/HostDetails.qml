@@ -254,6 +254,16 @@ Item {
         onActivated: mainViewHeader.selectTab(8)
     }
 
+    Shortcut {
+        sequence: StandardKey.Refresh
+        onActivated: {
+            let content = getCurrentTabContent()
+            if (content !== undefined) {
+                content.refresh()
+            }
+        }
+    }
+
 
     function refresh() {
         root._tabContents[root.hostId][0].component.refresh()

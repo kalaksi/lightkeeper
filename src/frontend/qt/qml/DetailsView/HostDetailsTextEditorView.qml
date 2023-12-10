@@ -98,6 +98,10 @@ Item {
         }
     }
 
+    function refresh() {
+        // DO nothing.
+    }
+
     function close() {
         root.closed(root.localFilePath)
     }
