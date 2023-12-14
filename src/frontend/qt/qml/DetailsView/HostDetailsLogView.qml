@@ -258,7 +258,7 @@ Item {
     }
 
     Shortcut {
-        sequence: StandardKey.Find
+        sequences: [StandardKey.Find, "/"]
         onActivated: searchField.focus = true
     }
 
