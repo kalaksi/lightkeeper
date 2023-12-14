@@ -118,9 +118,19 @@ Item {
 
                 ImageButton {
                     id: numberOfLinesSubmit
+                    visible: !root.showTimeControls
                     size: numberOfLines.height
                     imageSource: "qrc:/main/images/button/search"
-                    tooltip: root.showTimeControls ? "Apply time range" : "Fetch"
+                    tooltip: "Fetch"
+                    onClicked: root.refresh()
+                }
+
+                ImageButton {
+                    id: timeRangeSubmit
+                    visible: root.showTimeControls
+                    size: numberOfLines.height
+                    imageSource: "qrc:/main/images/button/search"
+                    tooltip: "Apply time range"
                     onClicked: root.refresh()
                 }
 
