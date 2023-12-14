@@ -37,7 +37,6 @@ Item {
                 }
 
                 let rows = commandResult.message.split("\n")
-                rows.reverse()
                 logList.rows = rows
 
                 let [rowsMatched, totalMatches] = logList.getSearchDetails()
@@ -59,7 +58,8 @@ Item {
             id: searchBox
             spacing: Theme.spacingLoose
 
-            Layout.topMargin: Theme.spacingLoose
+            Layout.topMargin: Theme.spacingNormal
+            Layout.bottomMargin: Theme.spacingNormal
             Layout.fillWidth: true
 
             Row {
@@ -141,7 +141,7 @@ Item {
                 }
 
                 Column {
-                    spacing: Theme.spacingNormal
+                    spacing: Theme.spacingTight
 
                     TextField {
                         id: searchField
@@ -159,17 +159,35 @@ Item {
                     }
 
                     RowLayout {
+                        spacing: Theme.spacingNormal
                         width: searchField.width
 
-                        SmallText {
-                            id: searchDetails
-                            text: ""
-                            color: Theme.color_dark_text()
+                        NormalText {
+                            text: "Invert row order"
                         }
+
+                        Switch {
+                            id: invertRowOrder
+                            checked: true
+                            onCheckedChanged: logList.invertRowOrder()
+
+                            Layout.leftMargin: Theme.spacingTight
+                            // Make more nicely centered with the label.
+                            Layout.topMargin: 4
+                        }
+
 
                         // Spacer
                         Rectangle {
                             Layout.fillWidth: true
+                        }
+
+                        SmallText {
+                            Layout.rightMargin: Theme.spacingLoose
+
+                            id: searchDetails
+                            text: ""
+                            color: Theme.color_dark_text()
                         }
 
                         SmallText {

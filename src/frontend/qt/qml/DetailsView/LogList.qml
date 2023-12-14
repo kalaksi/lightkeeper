@@ -10,7 +10,7 @@ import "../js/Utils.js" as Utils
 ListView {
     id: root 
     required property var rows
-    property int pageSize: 400
+    property bool _invertRowOrder: true
     property string _lastQuery: ""
     property var _matchingRows: []
     property int _totalMatches: 0
@@ -29,7 +29,13 @@ ListView {
     }
 
     model: []
-    onRowsChanged: refreshModel()
+    onRowsChanged: {
+        if (root._invertRowOrder) {
+            root.rows.reverse()
+        }
+
+        refresh()
+    }
 
 
 
@@ -99,7 +105,7 @@ ListView {
     }
 
     Shortcut {
-        sequence: StandardKey.Copy
+        sequences: [StandardKey.Copy]
         onActivated: root.copySelectionToClipboard()
     }
 
@@ -166,7 +172,7 @@ ListView {
     function search(direction, query) {
         if (query !== root._lastQuery) {
             root._lastQuery = query
-            refreshModel()
+            refresh()
         }
 
         let match = -1
@@ -218,17 +224,18 @@ ListView {
             modelRows.push(resultRow)
 
             if (rowMatches) {
-                // Since modelRows is reversed compared to root.rows, we need to reverse the matching rows too.
+                // modelRows is still reversed compared to root.rows, we need to reverse the matching rows too.
                 matchingRows.push(rows.length - i - 1)
             }
         }
 
         modelRows.reverse()
+
         Utils.sortNumerically(matchingRows)
         return [modelRows, matchingRows, totalMatches]
     }
 
-    function refreshModel() {
+    function refresh() {
         let rowsClone = [...root.rows]
         let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
         root._matchingRows = matchingRows
@@ -240,6 +247,12 @@ ListView {
         }
         */
         root.model = modelRows
+    }
+
+    function invertRowOrder() {
+        root._invertRowOrder = !root._invertRowOrder
+        root.rows.reverse()
+        refresh()
     }
 
     function addRows(newRows) {
