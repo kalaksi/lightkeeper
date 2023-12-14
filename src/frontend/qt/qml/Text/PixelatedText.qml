@@ -1,7 +1,7 @@
 import QtQuick 2.15
 
 Text {
-    color: Theme.color_dark_text()
+    color: Theme.textColorDark
     font.pixelSize: 8
     font.family: fontLabel.name
     antialiasing: false

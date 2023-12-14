@@ -116,7 +116,7 @@ Dialog {
                         SmallText {
                             width: parent.width
                             text: modelData.description
-                            color: Theme.color_dark_text()
+                            color: Theme.textColorDark
                             wrapMode: Text.WordWrap
                         }
                     }

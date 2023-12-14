@@ -66,7 +66,7 @@ Item {
             enabled: root.pendingInvocation === 0
             anchors.fill: parent
             wrapMode: Text.WordWrap
-            color: Theme.color_text()
+            color: Theme.textColor
             text: root.text
             font.family: "monospace"
 

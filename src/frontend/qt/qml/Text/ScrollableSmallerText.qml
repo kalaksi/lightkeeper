@@ -27,7 +27,7 @@ Item {
 
     Text {
         id: text
-        color: Theme.color_text()
+        color: Theme.textColor
         font.pointSize: 6
     }
 

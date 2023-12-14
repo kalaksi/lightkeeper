@@ -86,7 +86,7 @@ Dialog {
                 SmallText {
                     width: parent.width
                     text: "Refresh all hosts on application start"
-                    color: Theme.color_dark_text()
+                    color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
             }
@@ -114,7 +114,7 @@ Dialog {
                     width: parent.width
                     text: "Some commands allow you to edit a remote file. If checked, will launch a terminal for editing " +
                           "directly on the remote host instead of first downloading a local copy."
-                    color: Theme.color_dark_text()
+                    color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
             }
@@ -161,7 +161,7 @@ Dialog {
                 SmallText {
                     width: parent.width
                     text: "Use sudo when editing remote files?"
-                    color: Theme.color_dark_text()
+                    color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
             }
@@ -189,7 +189,7 @@ Dialog {
                 SmallText {
                     width: parent.width
                     text: "The text editor to use when editing files locally. Integrated editor is always used in flatpak sandbox."
-                    color: Theme.color_dark_text()
+                    color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
             }
@@ -217,7 +217,7 @@ Dialog {
                 SmallText {
                     width: parent.width
                     text: "Terminal to use when launching a remote shell. Integrated editor is always used in flatpak sandbox."
-                    color: Theme.color_dark_text()
+                    color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
             }

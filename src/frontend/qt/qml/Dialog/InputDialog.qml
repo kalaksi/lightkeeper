@@ -63,7 +63,7 @@ Dialog {
                     SmallText {
                         width: parent.width
                         text: [''].concat(modelData.option_descriptions)[comboBox.currentIndex]
-                        color: Theme.color_dark_text()
+                        color: Theme.textColorDark
                         wrapMode: Text.WordWrap
                     }
                 }

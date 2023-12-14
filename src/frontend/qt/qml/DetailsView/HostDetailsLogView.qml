@@ -187,12 +187,12 @@ Item {
 
                             id: searchDetails
                             text: ""
-                            color: Theme.color_dark_text()
+                            color: Theme.textColorDark
                         }
 
                         SmallText {
                             text: `${logList.rows.length} total rows`
-                            color: Theme.color_dark_text()
+                            color: Theme.textColorDark
                         }
                     }
                 }

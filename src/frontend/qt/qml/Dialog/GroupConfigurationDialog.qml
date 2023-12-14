@@ -193,7 +193,7 @@ Dialog {
                                 visible: text !== ""
                                 opacity: visible ? 1 : 0
                                 text: ""
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
                             }
                         }
                     }
@@ -206,14 +206,14 @@ Dialog {
                         RowLayout {
                             SmallText {
                                 text: modelData + ": "
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
 
                                 Layout.leftMargin: Theme.common_indentation()
                             }
 
                             SmallText {
                                 text: ConfigManager.get_group_connector_setting(root.groupName, connectorSettingsRepeater.connectorName, modelData)
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
 
                                 Layout.fillWidth: true
                             }
@@ -365,7 +365,7 @@ Dialog {
                                 visible: text !== ""
                                 opacity: visible ? 1 : 0
                                 text: ""
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
                             }
                         }
                     }
@@ -378,7 +378,7 @@ Dialog {
                         RowLayout {
                             SmallText {
                                 text: modelData + ": "
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
 
                                 Layout.fillWidth: true
                                 Layout.leftMargin: Theme.common_indentation()
@@ -386,7 +386,7 @@ Dialog {
 
                             SmallText {
                                 text: ConfigManager.get_group_monitor_setting(root.groupName, monitorSettingsRepeater.monitorName, modelData)
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
 
                                 Layout.fillWidth: true
                             }
@@ -514,7 +514,7 @@ Dialog {
                                 id: commandDescriptionText
                                 visible: text !== ""
                                 text: ""
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
                             }
                         }
                     }
@@ -527,7 +527,7 @@ Dialog {
                         RowLayout {
                             SmallText {
                                 text: modelData + ": "
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
 
                                 Layout.fillWidth: true
                                 Layout.leftMargin: Theme.common_indentation()
@@ -535,7 +535,7 @@ Dialog {
 
                             SmallText {
                                 text: ConfigManager.get_group_command_setting(root.groupName, commandSettingsRepeater.commandName, modelData)
-                                color: Theme.color_dark_text()
+                                color: Theme.textColorDark
 
                                 Layout.fillWidth: true
                             }
