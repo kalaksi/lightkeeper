@@ -204,6 +204,7 @@ Item {
     }
 
     Shortcut {
+        enabled: !(getCurrentTabContent() instanceof HostDetailsTerminalView)
         sequences: [StandardKey.Close]
         // Close current tab.
         onActivated: root.closeTab(mainViewHeader.tabIndex)
@@ -255,7 +256,7 @@ Item {
     }
 
     Shortcut {
-        sequence: StandardKey.Refresh
+        sequences: [StandardKey.Refresh]
         onActivated: {
             let content = getCurrentTabContent()
             if (content !== undefined) {
