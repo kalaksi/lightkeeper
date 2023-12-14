@@ -38,7 +38,6 @@ ListView {
     }
 
 
-
     ScrollBar.vertical: ScrollBar {
         id: scrollBar
     }
@@ -224,12 +223,9 @@ ListView {
             modelRows.push(resultRow)
 
             if (rowMatches) {
-                // modelRows is still reversed compared to root.rows, we need to reverse the matching rows too.
-                matchingRows.push(rows.length - i - 1)
+                matchingRows.push(i)
             }
         }
-
-        modelRows.reverse()
 
         Utils.sortNumerically(matchingRows)
         return [modelRows, matchingRows, totalMatches]
