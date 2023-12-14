@@ -57,6 +57,7 @@ display_options:
       command_order: ["systemd-service-logs", "systemd-service-stop", "systemd-service-start", "systemd-service-mask", "systemd-service-unmask"]
     package:
       priority: 5
+      command_order: ["linux-packages-logs", "linux-packages-clean", "linux-packages-refresh", "linux-packages-update-all"]
     docker-compose:
       priority: 6
       icon: "qrc:///main/images/docker"

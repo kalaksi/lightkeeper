@@ -15,3 +15,6 @@ pub use update_all::UpdateAll;
 
 pub mod refresh;
 pub use refresh::Refresh;
+
+pub mod logs;
+pub use logs::Logs;
