@@ -24,6 +24,7 @@ pub struct ThemeModel {
     spacingLoose: qt_property!(i8; CONST),
     spacingNormal: qt_property!(i8; CONST),
     spacingTight: qt_property!(i8; CONST),
+    animationDuration: qt_property!(i32; CONST),
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
@@ -85,6 +86,7 @@ impl ThemeModel {
             spacingLoose: 12,
             spacingNormal: 8,
             spacingTight: 2,
+            animationDuration: 175,
             ..Default::default()
         }
     }

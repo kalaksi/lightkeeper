@@ -101,6 +101,12 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
 
+
+            ToolButton {
+                icon.source: "qrc:/main/images/button/keyboard-shortcuts"
+                onClicked: hotkeyHelp.open()
+            }
+
             ToolSeparator {
             }
 
@@ -375,6 +381,12 @@ ApplicationWindow {
         anchors.centerIn: parent
         width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
+    }
+
+    HotkeyHelp {
+        id: hotkeyHelp
+        visible: false
+        anchors.centerIn: parent
     }
 
     Shortcut {

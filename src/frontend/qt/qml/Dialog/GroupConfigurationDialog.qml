@@ -66,20 +66,20 @@ Dialog {
             visible: !root._loading
             anchors.fill: parent
             anchors.rightMargin: Theme.margin_scrollbar()
-            spacing: Theme.spacing_tight()
+            spacing: Theme.spacingTight
 
             BigText {
                 text: `Configuration group: ${root.groupName}`
 
                 Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: Theme.spacing_loose()
+                Layout.bottomMargin: Theme.spacingLoose
             }
 
             RowLayout {
                 width: parent.width
 
                 BigText {
-                    topPadding: Theme.spacing_loose()
+                    topPadding: Theme.spacingLoose
                     text: "Connector module settings"
 
                     Layout.fillWidth: true
@@ -142,7 +142,7 @@ Dialog {
 
                             RowLayout {
                                 width: parent.width
-                                spacing: Theme.spacing_tight()
+                                spacing: Theme.spacingTight
 
                                 NormalText {
                                     text: modelData
@@ -226,7 +226,7 @@ Dialog {
                 width: parent.width
 
                 BigText {
-                    topPadding: Theme.spacing_loose()
+                    topPadding: Theme.spacingLoose
                     text: "Enabled monitoring modules and settings"
 
                     Layout.fillWidth: true
@@ -289,7 +289,7 @@ Dialog {
 
                             RowLayout {
                                 width: parent.width
-                                spacing: Theme.spacing_tight()
+                                spacing: Theme.spacingTight
 
                                 NormalText {
                                     text: modelData
@@ -399,7 +399,7 @@ Dialog {
                 width: parent.width
 
                 BigText {
-                    topPadding: Theme.spacing_loose()
+                    topPadding: Theme.spacingLoose
                     text: "Enabled command modules and settings"
 
                     Layout.fillWidth: true
@@ -462,13 +462,13 @@ Dialog {
 
                             RowLayout {
                                 width: parent.width
-                                spacing: Theme.spacing_tight()
+                                spacing: Theme.spacingTight
 
                                 NormalText {
                                     text: modelData
 
                                     Layout.alignment: Qt.AlignVCenter
-                                    Layout.rightMargin: Theme.spacing_normal()
+                                    Layout.rightMargin: Theme.spacingNormal
                                 }
 
                                 // Spacer
