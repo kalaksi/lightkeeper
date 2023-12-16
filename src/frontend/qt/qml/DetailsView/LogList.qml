@@ -110,7 +110,7 @@ ListView {
 
     // Vim-like shortcut.
     Shortcut {
-        sequences: ["N", "Return"]
+        sequence: "N"
         onActivated: logList.search("down", searchField.text)
     }
 
