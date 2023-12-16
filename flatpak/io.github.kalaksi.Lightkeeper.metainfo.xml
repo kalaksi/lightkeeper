@@ -25,6 +25,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.9.1" date="2023-12-16">
+      <description>
+        <ul>
+	  <li>Fix input issues caused by recently added shortcuts</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.0" date="2023-12-16">
       <description>
         <ul>
