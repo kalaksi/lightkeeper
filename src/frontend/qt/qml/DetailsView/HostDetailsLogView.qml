@@ -191,7 +191,7 @@ Item {
                         }
 
                         SmallText {
-                            text: `${logList.rows.length} total rows`
+                            text: `row ${logList.currentIndex + 1} of ${logList.rows.length}`
                             color: Theme.textColorDark
                         }
                     }
