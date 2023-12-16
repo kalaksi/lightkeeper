@@ -282,6 +282,10 @@ Item {
         // Do nothing.
     }
 
+    function unfocus() {
+        // Do nothing.
+    }
+
     function close() {
         // Do nothing.
     }

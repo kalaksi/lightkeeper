@@ -98,6 +98,10 @@ Item {
         }
     }
 
+    function unfocus() {
+        // Do nothing.
+    }
+
     function refresh() {
         // DO nothing.
     }

@@ -127,13 +127,18 @@ Item {
             root.closeTab(tabIndex)
         }
 
-        onTabIndexChanged: {
-            if (root._tabContents[root.hostId][tabIndex] === undefined) {
+        onTabChanged: function(oldIndex, newIndex) {
+            if (root._tabContents[root.hostId][newIndex] === undefined) {
                 return
             }
 
-            root._tabStacks[root.hostId].currentIndex = tabIndex
-            root._tabContents[root.hostId][tabIndex].component.focus()
+            let oldComponent = root._tabContents[root.hostId][oldIndex]
+            if (oldComponent !== undefined) {
+                oldComponent.component.unfocus()
+            }
+
+            root._tabStacks[root.hostId].currentIndex = newIndex
+            root._tabContents[root.hostId][newIndex].component.focus()
         }
     }
 

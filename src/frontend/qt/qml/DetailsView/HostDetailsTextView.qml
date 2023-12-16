@@ -82,6 +82,10 @@ Item {
         // Do nothing.
     }
 
+    function unfocus() {
+        // Do nothing.
+    }
+
     function refresh() {
         // Do nothing.
     }

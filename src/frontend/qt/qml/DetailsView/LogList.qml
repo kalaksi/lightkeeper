@@ -10,6 +10,7 @@ import "../js/Utils.js" as Utils
 ListView {
     id: root 
     required property var rows
+    property bool enableShortcuts: true
     property bool _invertRowOrder: true
     property string _lastQuery: ""
     property var _matchingRows: []
@@ -105,18 +106,21 @@ ListView {
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: [StandardKey.Copy]
         onActivated: root.copySelectionToClipboard()
     }
 
     // Vim-like shortcut.
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: "n"
         onActivated: logList.search("down", searchField.text)
     }
 
     // Vim-like shortcut.
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: "Shift+n"
         onActivated: logList.search("up", searchField.text)
     }
@@ -124,12 +128,14 @@ ListView {
     // TODO: some UI indicator when copying happened.
     // Vim-like shortcut.
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: "y"
         onActivated: logList.copySelectionToClipboard()
     }
 
     // Vim-like shortcut.
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: "g"
         onActivated: {
             root.currentIndex = 0
@@ -138,6 +144,7 @@ ListView {
 
     // Vim-like shortcut.
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: "Shift+g"
         onActivated: {
             if (root.rows.length > 0) {
@@ -147,16 +154,19 @@ ListView {
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: [StandardKey.MoveToPreviousLine, "k"]
         onActivated: decrementCurrentIndex()
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: [StandardKey.MoveToNextLine, "j"]
         onActivated: incrementCurrentIndex()
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: StandardKey.MoveToPreviousPage
         onActivated: {
             root.currentIndex -= Math.min(root._listPageSize, root.currentIndex)
@@ -164,6 +174,7 @@ ListView {
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: StandardKey.MoveToNextPage
         onActivated: {
             root.currentIndex += Math.min(root._listPageSize, root.count - root.currentIndex)

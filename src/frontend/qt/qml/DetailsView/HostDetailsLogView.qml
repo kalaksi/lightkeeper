@@ -15,6 +15,7 @@ Item {
     id: root
     required property string hostId
     property bool showTimeControls: false
+    property bool enableShortcuts: true
     property string commandId: ""
     property var commandParams: []
     property string text: ""
@@ -236,8 +237,9 @@ Item {
 
         LogList {
             id: logList
-            rows: root.text.split("\n")
             visible: rows.length > 0
+            rows: root.text.split("\n")
+            enableShortcuts: root.enableShortcuts
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -258,16 +260,19 @@ Item {
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: [StandardKey.Find, "/"]
         onActivated: searchField.focus = true
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: StandardKey.FindNext
         onActivated: logList.search("down", searchField.text)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: StandardKey.FindPrevious
         onActivated: logList.search("up", searchField.text)
     }
@@ -298,6 +303,12 @@ Item {
 
     function focus() {
         searchField.focus = true
+        root.enableShortcuts = true
+    }
+
+    function unfocus() {
+        searchField.focus = false
+        root.enableShortcuts = false
     }
 
     function close() {

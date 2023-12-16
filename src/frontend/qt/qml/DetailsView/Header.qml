@@ -18,11 +18,10 @@ Item {
     property bool showOpenInWindowButton: false
     property bool showSaveButton: false
     property bool disableSaveButton: false
-
     property var tabs: []
     property alias tabIndex: tabBar.currentIndex
-
     property bool _maximized: false
+    property int _oldTabIndex: -1
 
     implicitWidth: parent.width
     implicitHeight: 32
@@ -34,6 +33,7 @@ Item {
     signal closeClicked()
     signal saveClicked()
     signal tabClosed(int index)
+    signal tabChanged(int oldIndex, int newIndex)
 
 
 
@@ -50,6 +50,11 @@ Item {
             id: tabBar
             width: Math.floor(parent.width * 0.7)
             height: parent.height
+
+            onCurrentIndexChanged: {
+                root.tabChanged(root._oldTabIndex, currentIndex)
+                root._oldTabIndex = currentIndex
+            }
 
             Layout.leftMargin: Theme.spacingTight
             Layout.alignment: Qt.AlignBottom

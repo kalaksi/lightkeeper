@@ -57,6 +57,10 @@ Item {
         terminal.forceActiveFocus()
     }
 
+    function unfocus() {
+        // Do nothing.
+    }
+
     function close() {
         terminalSession.sendSignal(15)
         terminalSession.clearScreen()
