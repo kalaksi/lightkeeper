@@ -14,7 +14,7 @@ Dialog {
     // implicitWidth: dialogText.implicitWidth + 100
     // implicitHeight: dialogText.implicitHeight + 100
     implicitWidth: 500
-    implicitHeight: 450
+    implicitHeight: 550
     standardButtons: Dialog.Close
 
     background: DialogBackground { }
@@ -80,6 +80,10 @@ Dialog {
 
             Repeater {
                 model: [
+                    ["Down, j", "Next line"],
+                    ["Up, k", "Previous line"],
+                    ["Page down", "Jump multiple lines down"],
+                    ["Page up ", "Jump multiple lines up"],
                     ["Ctrl + c, y", "Copy selected line"],
                     ["Ctrl + f, /", "Focus on search line"],
                     ["F3, n", "Next match"],

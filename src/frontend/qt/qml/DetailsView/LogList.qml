@@ -14,6 +14,7 @@ ListView {
     property string _lastQuery: ""
     property var _matchingRows: []
     property int _totalMatches: 0
+    property int _listPageSize: 15
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
@@ -110,26 +111,26 @@ ListView {
 
     // Vim-like shortcut.
     Shortcut {
-        sequence: "N"
+        sequence: "n"
         onActivated: logList.search("down", searchField.text)
     }
 
     // Vim-like shortcut.
     Shortcut {
-        sequence: "Shift+N"
+        sequence: "Shift+n"
         onActivated: logList.search("up", searchField.text)
     }
 
     // TODO: some UI indicator when copying happened.
     // Vim-like shortcut.
     Shortcut {
-        sequence: "Y"
+        sequence: "y"
         onActivated: logList.copySelectionToClipboard()
     }
 
     // Vim-like shortcut.
     Shortcut {
-        sequence: "G"
+        sequence: "g"
         onActivated: {
             root.currentIndex = 0
         }
@@ -137,11 +138,35 @@ ListView {
 
     // Vim-like shortcut.
     Shortcut {
-        sequence: "Shift+G"
+        sequence: "Shift+g"
         onActivated: {
             if (root.rows.length > 0) {
                 root.currentIndex = root.rows.length - 1
             }
+        }
+    }
+
+    Shortcut {
+        sequences: [StandardKey.MoveToPreviousLine, "k"]
+        onActivated: decrementCurrentIndex()
+    }
+
+    Shortcut {
+        sequences: [StandardKey.MoveToNextLine, "j"]
+        onActivated: incrementCurrentIndex()
+    }
+
+    Shortcut {
+        sequence: StandardKey.MoveToPreviousPage
+        onActivated: {
+            root.currentIndex -= Math.min(root._listPageSize, root.currentIndex)
+        }
+    }
+
+    Shortcut {
+        sequence: StandardKey.MoveToNextPage
+        onActivated: {
+            root.currentIndex += Math.min(root._listPageSize, root.count - root.currentIndex)
         }
     }
 
