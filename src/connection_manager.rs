@@ -80,7 +80,10 @@ impl ConnectionManager {
 
             for (command_id, command_config) in host_config.commands.iter() {
                 let command_spec = ModuleSpecification::new(command_id, &command_config.version);
-                let command = self.module_factory.new_command(&command_spec, &command_config.settings);
+                let command = match self.module_factory.new_command(&command_spec, &command_config.settings) {
+                    Some(command) => command,
+                    None => continue,
+                };
 
                 if let Some(connector_spec) = command.get_connector_spec() {
                     let connector_settings = match host_config.connectors.get(&connector_spec.id) {

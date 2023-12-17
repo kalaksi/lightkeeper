@@ -55,24 +55,30 @@ impl ModuleFactory {
         constructor(settings)
     }
 
-    pub fn new_command(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> command::Command {
+    pub fn new_command(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<command::Command> {
         let mut normalized_spec = module_spec.clone();
         normalized_spec.module_type = String::from("command");
         if normalized_spec.latest_version() {
-            normalized_spec.version = self.get_latest_version_for_command(&normalized_spec.id);
+            if let Some(latest_version) = self.get_latest_version_for_command(&normalized_spec.id) {
+                normalized_spec.version = latest_version
+            }
+            else {
+                log::error!("Command module '{}' was not found.", normalized_spec.id);
+                return None;
+            }
         }
 
         let constructor = self.command_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
-        constructor(settings)
+        Some(constructor(settings))
     }
 
-    pub fn get_latest_version_for_command(&self, module_id: &String) -> String {
+    pub fn get_latest_version_for_command(&self, module_id: &String) -> Option<String> {
         let mut all_versions = self.command_modules.iter()
                                                    .filter(|(metadata, _)| &metadata.module_spec.id == module_id)
                                                    .map(|(metadata, _)| metadata.module_spec.version.clone())
                                                    .collect::<Vec<String>>();
         all_versions.sort();
-        all_versions.last().unwrap_or_else(|| panic!("Command module '{}' was not found.", module_id)).to_owned()
+        all_versions.last().cloned()
     }
 
     pub fn get_latest_version_for_monitor(&self, module_id: &String) -> String {
@@ -297,6 +303,7 @@ impl ModuleFactory {
             (command::storage::lvm::Snapshot::get_metadata(), command::storage::lvm::Snapshot::new_command_module),
             (command::storage::lvm::LVResize::get_metadata(), command::storage::lvm::LVResize::new_command_module),
             (command::storage::lvm::LVRemove::get_metadata(), command::storage::lvm::LVRemove::new_command_module),
+            (command::storage::lvm::LVRefresh::get_metadata(), command::storage::lvm::LVRefresh::new_command_module),
             (command::docker::Restart::get_metadata(), command::docker::Restart::new_command_module),
             (command::docker::Inspect::get_metadata(), command::docker::Inspect::new_command_module),
             (command::docker::Shell::get_metadata(), command::docker::Shell::new_command_module),

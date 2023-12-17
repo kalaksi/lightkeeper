@@ -78,9 +78,11 @@ impl CommandHandler {
 
         for (host_id, host_config) in hosts_config.hosts.iter() {
             for (command_id, command_config) in host_config.commands.iter() {
+
                 let command_spec = crate::module::ModuleSpecification::new(command_id, &command_config.version);
-                let command = self.module_factory.new_command(&command_spec, &command_config.settings);
-                self.add_command(host_id, command);
+                if let Some(command) = self.module_factory.new_command(&command_spec, &command_config.settings) {
+                    self.add_command(host_id, command);
+                }
             }
         }
     }

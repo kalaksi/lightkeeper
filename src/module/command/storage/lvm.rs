@@ -6,3 +6,6 @@ pub use lvremove::LVRemove;
 
 pub mod lvresize;
 pub use lvresize::LVResize;
+
+pub mod lvrefresh;
+pub use lvrefresh::LVRefresh;

@@ -44,6 +44,7 @@ groups:
       storage-lvm-snapshot: {}
       storage-lvm-lvresize: {}
       storage-lvm-lvremove: {}
+      storage-lvm-lvrefresh: {}
 
   # Monitors and commands for Docker.
   docker:
