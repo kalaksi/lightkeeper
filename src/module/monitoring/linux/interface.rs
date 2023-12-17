@@ -1,9 +1,10 @@
-
+use serde_derive::Deserialize;
+use serde_json;
 use std::collections::HashMap;
 use crate::module::connection::ResponseMessage;
 use crate::{
     Host,
-    frontend,
+    frontend, enums,
 };
 
 use lightkeeper_module::monitoring_module;
@@ -37,7 +38,7 @@ impl Module for Interface {
 impl MonitoringModule for Interface {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_style: frontend::DisplayStyle::Text,
+            display_style: frontend::DisplayStyle::CriticalityLevel,
             display_text: String::from("Interfaces"),
             category: String::from("network"),
             use_multivalue: true,
@@ -54,7 +55,7 @@ impl MonitoringModule for Interface {
         if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") {
-            Ok(String::from("ip -o addr show"))
+            Ok(String::from("ip -j addr show"))
         }
         else {
             Err(String::from("Unsupported platform"))
@@ -64,20 +65,63 @@ impl MonitoringModule for Interface {
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         let mut result = DataPoint::empty();
 
-        let lines = response.message.lines();
-        for line in lines {
-            let mut parts = line.split_whitespace();
-            let if_name = parts.nth(1).unwrap().to_string();
+        let mut interfaces: Vec<InterfaceDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
-            if self.ignored_interfaces.iter().any(|item| if_name.starts_with(item)) {
+        for interface in interfaces.iter_mut() {
+            if self.ignored_interfaces.iter().any(|item| interface.ifname.starts_with(item)) {
                 continue;
             }
 
-            let if_address = parts.nth(1).unwrap_or_default().to_string();
-            let data_point = DataPoint::labeled_value(if_name, if_address);
-            result.multivalue.push(data_point);
+            let mut data_point = DataPoint::labeled_value(interface.ifname.clone(), interface.operstate.clone());
+            if let Some(address) = &interface.address {
+                data_point.description = format!("{}", address);
+            }
 
+            if interface.flags.contains(&String::from("NO-CARRIER")) {
+                data_point.tags.push(String::from("NO-CARRIER"));
+            }
+
+            if interface.flags.contains(&String::from("POINTOPOINT")) {
+                data_point.tags.push(String::from("POINTOPOINT"));
+            }
+
+            if interface.operstate == "DOWN" {
+                data_point.criticality = enums::Criticality::Error;
+            }
+            else if interface.operstate == "UP" {
+                data_point.criticality = enums::Criticality::Normal;
+            }
+            else {
+                data_point.criticality = enums::Criticality::Ignore;
+            }
+
+            for address in interface.addr_info.iter() {
+                let address_with_prefix = format!("{}/{}", address.local, address.prefixlen);
+                let address_datapoint = DataPoint::labeled_value(address_with_prefix, String::from(""));
+                data_point.multivalue.push(address_datapoint);
+            }
+
+            result.multivalue.push(data_point);
         }
+
+        result.update_criticality_from_children();
         Ok(result)
     }
+}
+
+#[derive(Deserialize)]
+pub struct InterfaceDetails {
+    pub ifname: String,
+    pub flags: Vec<String>,
+    pub operstate: String,
+    pub link_type: String,
+    pub address: Option<String>,
+    pub addr_info: Vec<InterfaceAddress>,
+}
+
+#[derive(Deserialize)]
+pub struct InterfaceAddress {
+    pub family: String,
+    pub local: String,
+    pub prefixlen: u8,
 }
