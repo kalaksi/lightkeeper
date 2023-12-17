@@ -13,6 +13,7 @@ import "../js/ValueUnit.js" as ValueUnit
 Item {
     id: root
     required property string hostId
+    property bool enableShortcuts: root.visible
     property var _tabContents: {}
     property var _tabStacks: {}
 
@@ -120,7 +121,7 @@ Item {
         onRefreshClicked: CommandHandler.force_initialize_host(hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
-        onCloseClicked: root.closeClicked()
+        onCloseClicked: root.close()
         onSaveClicked: getCurrentTabContent().save()
 
         onTabClosed: function(tabIndex) {
@@ -204,63 +205,74 @@ Item {
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequence: StandardKey.Cancel
-        onActivated: root.closeClicked()
+        onActivated: root.close()
     }
 
     Shortcut {
-        enabled: !(getCurrentTabContent() instanceof HostDetailsTerminalView)
+        enabled: !(getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
         sequences: [StandardKey.Close]
         // Close current tab.
         onActivated: root.closeTab(mainViewHeader.tabIndex)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+1", "Ctrl+1"]
         onActivated: mainViewHeader.selectTab(0)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+2", "Ctrl+2"]
         onActivated: mainViewHeader.selectTab(1)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+3", "Ctrl+3"]
         onActivated: mainViewHeader.selectTab(2)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+4", "Ctrl+4"]
         onActivated: mainViewHeader.selectTab(3)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+5", "Ctrl+5"]
         onActivated: mainViewHeader.selectTab(4)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+6", "Ctrl+6"]
         onActivated: mainViewHeader.selectTab(5)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+7", "Ctrl+7"]
         onActivated: mainViewHeader.selectTab(6)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+8", "Ctrl+8"]
         onActivated: mainViewHeader.selectTab(7)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: ["Alt+9", "Ctrl+9"]
         onActivated: mainViewHeader.selectTab(8)
     }
 
     Shortcut {
+        enabled: root.enableShortcuts
         sequences: [StandardKey.Refresh]
         onActivated: {
             let content = getCurrentTabContent()
@@ -268,6 +280,12 @@ Item {
                 content.refresh()
             }
         }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequence: "Ctrl+t"
+        onActivated: CommandHandler.executeConfirmed(root.hostId, "linux-shell", {})
     }
 
 
@@ -324,5 +342,13 @@ Item {
         else {
             return content.component
         }
+    }
+
+    function close() {
+        for (let content of root._tabContents[root.hostId]) {
+            content.component.unfocus()
+        }
+
+        root.closeClicked()
     }
 }

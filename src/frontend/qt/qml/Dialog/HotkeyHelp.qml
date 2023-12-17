@@ -13,8 +13,8 @@ Dialog {
     opacity: 0.0
     // implicitWidth: dialogText.implicitWidth + 100
     // implicitHeight: dialogText.implicitHeight + 100
-    implicitWidth: 500
-    implicitHeight: 550
+    implicitWidth: 600
+    implicitHeight: 600
     standardButtons: Dialog.Close
 
     background: DialogBackground { }
@@ -56,12 +56,13 @@ Dialog {
                 model: [
                     ["F5", "Refresh"],
                     ["Alt + 1, 2, 3...", "Switch tabs"],
-                    ["Ctrl + w", "Close tab"]
+                    ["Ctrl + w", "Close tab"],
+                    ["Ctrl + t", "Open host shell in new tab\n(if linux-shell module is in use)"]
                 ]
 
                 Row {
                     NormalText {
-                        width: root.implicitWidth * 0.55
+                        width: root.implicitWidth * 0.5
                         text: modelData[0]
                     }
 
@@ -94,7 +95,7 @@ Dialog {
 
                 Row {
                     NormalText {
-                        width: root.implicitWidth * 0.55
+                        width: root.implicitWidth * 0.5
                         text: modelData[0]
                     }
 

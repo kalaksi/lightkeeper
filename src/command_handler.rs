@@ -159,10 +159,10 @@ impl CommandHandler {
         }
     }
 
-    pub fn get_command_for_host(&self, host_id: &String, command_id: &String) -> CommandData {
-        let command_collection = self.commands.get(host_id).unwrap_or_else(|| panic!("Host {} not found", host_id));
-        let command = command_collection.get(command_id).unwrap_or_else(|| panic!("Command {} not found", command_id));
-        CommandData::new(command_id.clone(), command.get_display_options())
+    pub fn get_command_for_host(&self, host_id: &String, command_id: &String) -> Option<CommandData> {
+        let command_collection = self.commands.get(host_id)?;
+        let command = command_collection.get(command_id)?;
+        Some(CommandData::new(command_id.clone(), command.get_display_options()))
     }
 
     fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {

@@ -26,6 +26,7 @@ pub struct CommandHandlerModel {
     get_commands_on_level: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
+    executeConfirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
     execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
@@ -189,7 +190,10 @@ impl CommandHandlerModel {
     }
 
     fn execute(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
-        let display_options = self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()).display_options;
+        let display_options = match self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()) {
+            Some(command_data) => command_data.display_options,
+            None => return,
+        };
 
         if !display_options.user_parameters.is_empty() {
             let input_specs: QString = QString::from(serde_json::to_string(&display_options.user_parameters).unwrap());
@@ -203,12 +207,20 @@ impl CommandHandlerModel {
         }
     }
 
+    fn executeConfirmed(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
+        self.execute_confirmed(host_id, command_id, parameters);
+    }
+
     fn execute_confirmed(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
 
-        let display_options = self.command_handler.get_command_for_host(&host_id, &command_id).display_options;
+        let display_options = match self.command_handler.get_command_for_host(&host_id, &command_id) {
+            Some(command_data) => command_data.display_options,
+            None => return,
+        };
+
         match display_options.action {
             UIAction::None => {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
@@ -344,9 +356,12 @@ impl CommandHandlerModel {
 
         ::log::debug!("[{}] Refreshing monitors related to command {}", host_id, command_id);
 
-        let command = self.command_handler.get_command_for_host(&host_id, &command_id);
-        let monitor_id = command.display_options.parent_id;
+        let command = match self.command_handler.get_command_for_host(&host_id, &command_id) {
+            Some(command) => command,
+            None => return QVariantList::default(),
+        };
 
+        let monitor_id = command.display_options.parent_id;
         let invocation_ids = self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id, CachePolicy::BypassCache);
         QVariantList::from_iter(invocation_ids)
     }
