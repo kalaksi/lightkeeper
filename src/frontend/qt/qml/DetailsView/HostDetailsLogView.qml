@@ -15,7 +15,7 @@ Item {
     id: root
     required property string hostId
     property bool showTimeControls: false
-    property bool enableShortcuts: true
+    property bool enableShortcuts: false
     property string commandId: ""
     property var commandParams: []
     property string text: ""

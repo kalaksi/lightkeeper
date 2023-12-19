@@ -10,40 +10,67 @@ import "../Text"
 
 Item {
     id: root
+    property bool enableShortcuts: false
 
     Rectangle {
         color: Theme.backgroundColorLight
         anchors.fill: parent
     }
 
-    QMLTermWidget {
-        id: terminal
-
+    ColumnLayout {
         anchors.fill: parent
-        font.family: "Monospace"
-        font.pointSize: 10
-        colorScheme: "cool-retro-term"
-        smooth: true
-        session: QMLTermSession {
-            id: terminalSession
-            initialWorkingDirectory: "$HOME"
-            onMatchFound: {
-                console.log("found at: %1 %2 %3 %4".arg(startColumn).arg(startLine).arg(endColumn).arg(endLine));
+
+        QMLTermWidget {
+            id: terminal
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            font.family: "Monospace"
+            font.pointSize: 10
+            colorScheme: "cool-retro-term"
+            smooth: true
+            session: QMLTermSession {
+                id: terminalSession
+                initialWorkingDirectory: "$HOME"
+                onMatchFound: {
+                    console.log("found at: %1 %2 %3 %4".arg(startColumn).arg(startLine).arg(endColumn).arg(endLine));
+                }
+                onNoMatchFound: {
+                    console.log("not found");
+                }
             }
-            onNoMatchFound: {
-                console.log("not found");
+            QMLTermScrollbar {
+                terminal: terminal
+                width: 20
+                Rectangle {
+                    opacity: 0.4
+                    anchors.margins: 5
+                    radius: width * 0.5
+                    anchors.fill: parent
+                }
             }
         }
-        QMLTermScrollbar {
-            terminal: terminal
-            width: 20
-            Rectangle {
-                opacity: 0.4
-                anchors.margins: 5
-                radius: width * 0.5
-                anchors.fill: parent
-            }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequences: [StandardKey.Find]
+        onActivated: {
+            searchBar.visible = true
+            searchField.forceActiveFocus()
         }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequences: ["Ctrl+Shift+c"]
+        onActivated: terminal.copyClipboard()
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequences: ["Ctrl+Shift+v"]
+        onActivated: terminal.pasteClipboard()
     }
 
 
@@ -55,10 +82,11 @@ Item {
 
     function focus() {
         terminal.forceActiveFocus()
+        root.enableShortcuts = true
     }
 
     function unfocus() {
-        // Do nothing.
+        root.enableShortcuts = false
     }
 
     function close() {
