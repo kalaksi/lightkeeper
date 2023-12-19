@@ -387,6 +387,7 @@ ApplicationWindow {
         id: hotkeyHelp
         visible: false
         anchors.centerIn: parent
+        height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
 
     Shortcut {

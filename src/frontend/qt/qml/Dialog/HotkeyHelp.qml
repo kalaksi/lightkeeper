@@ -11,8 +11,6 @@ Dialog {
     id: root
     modal: true
     opacity: 0.0
-    // implicitWidth: dialogText.implicitWidth + 100
-    // implicitHeight: dialogText.implicitHeight + 100
     implicitWidth: 600
     implicitHeight: 600
     standardButtons: Dialog.Close
@@ -49,15 +47,15 @@ Dialog {
 
             BigText {
                 text: "Details view"
-                Layout.bottomMargin: Theme.spacingTight
+                Layout.bottomMargin: Theme.spacingNormal
             }
 
             Repeater {
                 model: [
                     ["F5", "Refresh"],
                     ["Alt + 1, 2, 3...", "Switch tabs"],
-                    ["Ctrl + w", "Close tab"],
-                    ["Ctrl + t", "Open host shell in new tab\n(if linux-shell module is in use)"]
+                    ["Ctrl + W", "Close tab"],
+                    ["Ctrl + T", "Open host shell in new tab\n(if linux-shell module is in use)"]
                 ]
 
                 Row {
@@ -81,16 +79,41 @@ Dialog {
 
             Repeater {
                 model: [
-                    ["Down, j", "Next line"],
-                    ["Up, k", "Previous line"],
+                    ["Down, J", "Next line"],
+                    ["Up, K", "Previous line"],
                     ["Page down", "Jump multiple lines down"],
                     ["Page up ", "Jump multiple lines up"],
-                    ["Ctrl + c, y", "Copy selected line"],
-                    ["Ctrl + f, /", "Focus on search line"],
-                    ["F3, n", "Next match"],
-                    ["Shift + F3, N", "Previous match"],
-                    ["g", "Go to top"],
-                    ["G", "Go to bottom"]
+                    ["Ctrl + C, Y", "Copy selected line"],
+                    ["Ctrl + F, /", "Focus on search line"],
+                    ["F3, N", "Next match"],
+                    ["Shift + F3, Shift + N", "Previous match"],
+                    ["G", "Go to top"],
+                    ["Shift + G", "Go to bottom"]
+                ]
+
+                Row {
+                    NormalText {
+                        width: root.implicitWidth * 0.5
+                        text: modelData[0]
+                    }
+
+                    NormalText {
+                        text: modelData[1]
+                    }
+                }
+            }
+
+            BigText {
+                text: "Terminal"
+
+                Layout.topMargin: Theme.spacingLoose
+                Layout.bottomMargin: Theme.spacingNormal
+            }
+
+            Repeater {
+                model: [
+                    ["Ctrl + Shift + C", "Copy selection to clipboard"],
+                    ["Ctrl + Shift + V", "Paste from clipboard"],
                 ]
 
                 Row {
