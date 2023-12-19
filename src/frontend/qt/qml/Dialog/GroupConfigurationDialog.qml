@@ -65,7 +65,7 @@ Dialog {
             id: rootColumn
             visible: !root._loading
             anchors.fill: parent
-            anchors.rightMargin: Theme.margin_scrollbar()
+            anchors.rightMargin: Theme.marginScrollbar
             spacing: Theme.spacingTight
 
             BigText {

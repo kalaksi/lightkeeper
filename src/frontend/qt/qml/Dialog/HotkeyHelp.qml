@@ -35,8 +35,8 @@ Dialog {
             id: rootColumn
             visible: !root._loading
             anchors.fill: parent
-            anchors.rightMargin: Theme.margin_scrollbar()
-            spacing: Theme.spacing_tight()
+            anchors.rightMargin: Theme.marginScrollbar
+            spacing: Theme.spacingTight
 
             BigText {
                 text: "Keyboard shortcuts"

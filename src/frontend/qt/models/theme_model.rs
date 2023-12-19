@@ -24,6 +24,7 @@ pub struct ThemeModel {
     spacingLoose: qt_property!(i8; CONST),
     spacingNormal: qt_property!(i8; CONST),
     spacingTight: qt_property!(i8; CONST),
+    marginScrollbar: qt_property!(i8; CONST),
     animationDuration: qt_property!(i32; CONST),
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
@@ -41,7 +42,6 @@ pub struct ThemeModel {
     margin_dialog: qt_method!(fn(&self) -> i8),
     // Content will often overflow behind the dialog buttons (ugh...), reserve more space for them with this.
     margin_dialog_bottom: qt_method!(fn(&self) -> i8),
-    margin_scrollbar: qt_method!(fn(&self) -> i8),
     spacing_loose: qt_method!(fn(&self) -> i8),
     spacing_normal: qt_method!(fn(&self) -> i8),
     spacing_tight: qt_method!(fn(&self) -> i8),
@@ -86,6 +86,7 @@ impl ThemeModel {
             spacingLoose: 12,
             spacingNormal: 8,
             spacingTight: 2,
+            marginScrollbar: 16,
             animationDuration: 175,
             ..Default::default()
         }
@@ -135,10 +136,6 @@ impl ThemeModel {
 
     fn margin_dialog_bottom(&self) -> i8 {
         80
-    }
-
-    fn margin_scrollbar(&self) -> i8 {
-        16
     }
 
     fn spacing_loose(&self) -> i8 {
