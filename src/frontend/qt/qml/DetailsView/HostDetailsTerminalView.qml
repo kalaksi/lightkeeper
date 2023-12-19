@@ -63,13 +63,13 @@ Item {
 
     Shortcut {
         enabled: root.enableShortcuts
-        sequences: ["Ctrl+Shift+c"]
+        sequences: ["Ctrl+Shift+C"]
         onActivated: terminal.copyClipboard()
     }
 
     Shortcut {
         enabled: root.enableShortcuts
-        sequences: ["Ctrl+Shift+v"]
+        sequences: ["Ctrl+Shift+V"]
         onActivated: terminal.pasteClipboard()
     }
 

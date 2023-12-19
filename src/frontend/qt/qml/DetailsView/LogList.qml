@@ -114,14 +114,14 @@ ListView {
     // Vim-like shortcut.
     Shortcut {
         enabled: root.enableShortcuts
-        sequence: "n"
+        sequence: "N"
         onActivated: logList.search("down", searchField.text)
     }
 
     // Vim-like shortcut.
     Shortcut {
         enabled: root.enableShortcuts
-        sequence: "Shift+n"
+        sequence: "Shift+N"
         onActivated: logList.search("up", searchField.text)
     }
 
@@ -129,14 +129,14 @@ ListView {
     // Vim-like shortcut.
     Shortcut {
         enabled: root.enableShortcuts
-        sequence: "y"
+        sequence: "Y"
         onActivated: logList.copySelectionToClipboard()
     }
 
     // Vim-like shortcut.
     Shortcut {
         enabled: root.enableShortcuts
-        sequence: "g"
+        sequence: "G"
         onActivated: {
             root.currentIndex = 0
         }
@@ -145,7 +145,7 @@ ListView {
     // Vim-like shortcut.
     Shortcut {
         enabled: root.enableShortcuts
-        sequence: "Shift+g"
+        sequence: "Shift+G"
         onActivated: {
             if (root.rows.length > 0) {
                 root.currentIndex = root.rows.length - 1
@@ -155,13 +155,13 @@ ListView {
 
     Shortcut {
         enabled: root.enableShortcuts
-        sequences: [StandardKey.MoveToPreviousLine, "k"]
+        sequences: [StandardKey.MoveToPreviousLine, "K"]
         onActivated: decrementCurrentIndex()
     }
 
     Shortcut {
         enabled: root.enableShortcuts
-        sequences: [StandardKey.MoveToNextLine, "j"]
+        sequences: [StandardKey.MoveToNextLine, "J"]
         onActivated: incrementCurrentIndex()
     }
 
@@ -203,6 +203,7 @@ ListView {
         console.log("Copied to clipboard: " + text)
     }
 
+    // TODO: Use rust model instead?
     // Could be done with rust too.
     function search(direction, query) {
         if (query !== root._lastQuery) {

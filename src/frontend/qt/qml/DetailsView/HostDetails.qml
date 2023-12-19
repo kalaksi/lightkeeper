@@ -284,7 +284,7 @@ Item {
 
     Shortcut {
         enabled: root.enableShortcuts
-        sequence: "Ctrl+t"
+        sequence: "Ctrl+T"
         onActivated: CommandHandler.executeConfirmed(root.hostId, "linux-shell", {})
     }
 
