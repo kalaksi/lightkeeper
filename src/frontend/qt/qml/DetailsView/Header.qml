@@ -44,6 +44,7 @@ Item {
 
     RowLayout {
         anchors.fill: parent
+        anchors.rightMargin: Theme.spacingTight
         spacing: Theme.spacingTight
 
         TabBar {

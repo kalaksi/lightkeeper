@@ -17,6 +17,8 @@ pub struct ThemeModel {
     textColor: qt_property!(QString; CONST),
     textColorDark: qt_property!(QString; CONST),
     borderColor: qt_property!(QString; CONST),
+    highlightColorBright: qt_property!(QString; CONST),
+    highlightColorBrighter: qt_property!(QString; CONST),
     backgroundColorDark: qt_property!(QString; CONST),
     backgroundColor: qt_property!(QString; CONST),
     backgroundColorLight: qt_property!(QString; CONST),
@@ -51,7 +53,6 @@ pub struct ThemeModel {
     background_color: qt_method!(fn(&self) -> QString),
     color_highlight: qt_method!(fn(&self) -> QString),
     color_highlight_light: qt_method!(fn(&self) -> QString),
-    color_highlight_bright: qt_method!(fn(&self) -> QString),
 
     opacity: qt_method!(fn(&self, is_enabled: bool) -> QString),
 
@@ -79,6 +80,8 @@ impl ThemeModel {
             textColor: QString::from("#fcfcfc"),
             textColorDark: QString::from("#a0a0a0"),
             borderColor: QString::from("#505050"),
+            highlightColorBright: QString::from("#50ff2222"),
+            highlightColorBrighter: QString::from("#A0ff2222"),
             backgroundColorDark: QString::from("#252525"),
             backgroundColor: QString::from("#2a2e32"),
             backgroundColorLight: QString::from("#303030"),
@@ -164,10 +167,6 @@ impl ThemeModel {
 
     fn color_highlight_light(&self) -> QString {
         QString::from("#30ffffff")
-    }
-
-    fn color_highlight_bright(&self) -> QString {
-        QString::from("#50ff2222")
     }
 
     fn opacity(&self, is_enabled: bool) -> QString {
