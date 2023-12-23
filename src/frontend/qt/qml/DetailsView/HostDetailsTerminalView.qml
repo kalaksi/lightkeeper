@@ -36,7 +36,8 @@ Item {
             id: terminalSession
             initialWorkingDirectory: "$HOME"
             onMatchFound: function(startColumn, startLine, endColumn, endLine) {
-                let newResults = [..._searchMatches, {
+                // Doesn't currently append results since only match can currently be shown at once.
+                let newResult = [{
                     "startColumn": startColumn,
                     "startLine": startLine,
                     "endColumn": endColumn,
@@ -44,12 +45,16 @@ Item {
                 }]
 
                 // Forces re-evaluation of the Repeater
-                _searchMatches = newResults
+                root._searchMatches = newResult
 
-                scrollbar.value = endLine
-            }
-            onNoMatchFound: {
-                console.log("not found");
+                let lineOnScreen = startLine - terminal.scrollbarCurrentValue
+
+                // Is not on current screen, scrolling needed.
+                if (lineOnScreen < 0 || lineOnScreen > terminal.lines) {
+                    terminal.scrollToLine(startLine)
+                }
+
+                terminal.scrollToLine(startLine)
             }
         }
 
@@ -82,35 +87,42 @@ Item {
         }
 
         /// This is a hack. Couldn't figure out a better way to control the current position of terminal buffer.
-        function scrollToPosition(position) {
-            let freeScrollable = 1.0-scrollbar.size
-            let newScrollValue = (scrollbar.position / freeScrollable) * terminal.scrollbarMaximum
-
-            while (true) {
-                let deltaY = (terminal.scrollbarCurrentValue - newScrollValue)
-                terminal.simulateWheel(0, deltaY, 0, 0, Qt.point(0, deltaY))
-
+        /// Not fully accurate so sometimes line is a few rows outside of view.
+        function scrollToLine(line) {
+            // Limit iterations just in case.
+            for (let i = 0; i < 100; i++) {
+                let deltaY = (terminal.scrollbarCurrentValue - line)
                 if ((deltaY >= 0 && deltaY < 1) || (deltaY < 0 && deltaY > -1)) {
                     break
                 }
+
+                terminal.simulateWheel(0, deltaY, 0, 0, Qt.point(0, deltaY))
             }
+        }
+
+        function scrollToPosition(position) {
+            let freeScrollable = 1.0-scrollbar.size
+            let newScrollValue = (position / freeScrollable) * terminal.scrollbarMaximum
+            scrollToLine(newScrollValue)
         }
     }
 
     Repeater {
-        anchors.fill: terminal
         id: matchHighlights
+        anchors.fill: terminal
         model: root._searchMatches
 
         // TODO: multi-line highlighting for long lines
         delegate: Rectangle {
-            color: Theme.highlightColorBrighter
-            opacity: 0.5
-            x: terminal.fontMetrics.width * modelData.startColumn
-            y: terminal.fontMetrics.height * modelData.startLine + terminal.lineSpacing
-            height: terminal.fontMetrics.height
-            width: terminal.fontMetrics.width * (modelData.endColumn - modelData.startColumn)
+            property int lineOnScreen: modelData.startLine - terminal.scrollbarCurrentValue
 
+            visible: lineOnScreen >= 0 && lineOnScreen < terminal.lines
+            color: Theme.highlightColorBright
+            x: terminal.fontMetrics.width * modelData.startColumn
+            y: terminal.fontMetrics.height * lineOnScreen + 2
+            height: terminal.fontMetrics.height
+            // + 1 since it doesn't cover all characters otherwise
+            width: terminal.fontMetrics.width * (modelData.endColumn - modelData.startColumn + 1)
         }
     }
 
@@ -139,13 +151,13 @@ Item {
             ImageButton {
                 flatButton: true
                 imageSource: "qrc:/main/images/button/search-up"
-                onClicked: findPrevious.trigger()
+                onClicked: findNext.trigger()
             }
 
             ImageButton {
                 flatButton: true
                 imageSource: "qrc:/main/images/button/search-down"
-                onClicked: findNext.trigger()
+                onClicked: findPrevious.trigger()
             }
 
             // Spacer
@@ -167,8 +179,16 @@ Item {
         shortcut: StandardKey.Find
         onTriggered: {
             searchBar.visible = true
+            searchField.selectAll()
             searchField.forceActiveFocus()
         }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequence: "Ctrl+Shift+F"
+        onActivated: openSearch.trigger()
+
     }
 
     Action {
@@ -188,7 +208,13 @@ Item {
         shortcut: StandardKey.FindNext
         onTriggered: {
             terminal.forceActiveFocus()
-            terminalSession.search(searchField.text)
+            let currentMatch = root._searchMatches[0]
+            if (currentMatch !== undefined) {
+                terminalSession.search(searchField.text, currentMatch.startLine, currentMatch.startColumn, false)
+            } else {
+                let end = terminal.lines + terminal.scrollbarCurrentValue
+                terminalSession.search(searchField.text, end, 0, false)
+            }
             terminal.updateImage()
         }
     }
@@ -199,7 +225,14 @@ Item {
         shortcut: StandardKey.FindPrevious
         onTriggered: {
             terminal.forceActiveFocus()
-            terminalSession.search(searchField.text, 0, 0, true)
+
+            let currentMatch = root._searchMatches[0]
+            if (currentMatch !== undefined) {
+                terminalSession.search(searchField.text, currentMatch.endLine, currentMatch.endColumn)
+            } else {
+                terminalSession.search(searchField.text)
+            }
+
             terminal.updateImage()
         }
     }
