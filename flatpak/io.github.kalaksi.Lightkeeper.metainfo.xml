@@ -25,6 +25,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.10.0" date="2023-12-23">
+      <description>
+        <ul>
+	  <li>Copy &amp; paste for internal terminal</li>
+	  <li>Search box for internal terminal</li>
+	  <li>Better scroll bar for internal terminal</li>
+	  <li>Keyboard shortcut for opening a new host shell</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.1" date="2023-12-16">
       <description>
         <ul>
