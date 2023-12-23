@@ -53,42 +53,12 @@ Item {
             }
         }
 
-        /*
-        QMLTermScrollbar {
-            id: scrollbar
-            terminal: terminal
-            width: 20
-            opacity: 1.0
-
-            Rectangle {
-                opacity: 0.4
-                anchors.margins: 5
-                radius: width * 0.5
-                anchors.fill: parent
-
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                drag.target: parent
-                drag.axis: Drag.YAxis
-                drag.minimumY: 0
-                drag.maximumY: terminal.height - parent.height
-                drag.minimumX: 0
-                drag.maximumX: 0
-                drag.smoothed: false
-            }
-        }
-        */
-
         // Tried QMLTermScrollbar, but functionality was lacking.
         ScrollBar {
             id: scrollbar
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            width: 20
-            opacity: 1.0
             active: true
             orientation: Qt.Vertical
             size: {
@@ -99,6 +69,31 @@ Item {
                 let freeScrollable = 1.0-size
                 return (terminal.scrollbarCurrentValue / terminal.scrollbarMaximum) * freeScrollable
             }
+
+            Connections {
+                target: scrollbar
+
+                function onPositionChanged() {
+                    if (scrollbar.pressed) {
+                        terminal.scrollToPosition(scrollbar.position)
+                    }
+                }
+            }
+        }
+
+        /// This is a hack. Couldn't figure out a better way to control the current position of terminal buffer.
+        function scrollToPosition(position) {
+            let freeScrollable = 1.0-scrollbar.size
+            let newScrollValue = (scrollbar.position / freeScrollable) * terminal.scrollbarMaximum
+
+            while (true) {
+                let deltaY = (terminal.scrollbarCurrentValue - newScrollValue)
+                terminal.simulateWheel(0, deltaY, 0, 0, Qt.point(0, deltaY))
+
+                if ((deltaY >= 0 && deltaY < 1) || (deltaY < 0 && deltaY > -1)) {
+                    break
+                }
+            }
         }
     }
 
@@ -107,7 +102,7 @@ Item {
         id: matchHighlights
         model: root._searchMatches
 
-        // TODO: multi-line highlighting
+        // TODO: multi-line highlighting for long lines
         delegate: Rectangle {
             color: Theme.highlightColorBrighter
             opacity: 0.5
@@ -228,6 +223,11 @@ Item {
         terminalSession.startShellProgram()
     }
 
+    function close() {
+        terminalSession.sendSignal(15)
+        terminalSession.clearScreen()
+    }
+
     function focus() {
         terminal.forceActiveFocus()
         root.enableShortcuts = true
@@ -235,11 +235,6 @@ Item {
 
     function unfocus() {
         root.enableShortcuts = false
-    }
-
-    function close() {
-        terminalSession.sendSignal(15)
-        terminalSession.clearScreen()
     }
 
     function refresh()  {
