@@ -112,6 +112,9 @@ Dialog {
 
             Repeater {
                 model: [
+                    ["Ctrl + F, Ctrl + Shift + F", "Search terminal buffer"],
+                    ["F3", "Next match"],
+                    ["Shift + F3", "Previous match"],
                     ["Ctrl + Shift + C", "Copy selection to clipboard"],
                     ["Ctrl + Shift + V", "Paste from clipboard"],
                 ]
