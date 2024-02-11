@@ -18,10 +18,10 @@ pub struct HostDataModel {
 impl HostDataModel {
     pub fn from(host_display_data: &frontend::HostDisplayData) -> Self {
         HostDataModel {
-            status: host_display_data.status.clone().to_string().into(),
-            name: host_display_data.name.clone().into(),
-            fqdn: host_display_data.domain_name.clone().into(),
-            ip_address: host_display_data.ip_address.to_string().into(),
+            status: host_display_data.host_state.status.clone().to_string().into(),
+            name: host_display_data.host_state.host.name.clone().into(),
+            fqdn: host_display_data.host_state.host.fqdn.clone().into(),
+            ip_address: host_display_data.host_state.host.ip_address.to_string().into(),
             monitor_data: MonitorDataModel::new(&host_display_data),
         }
     }

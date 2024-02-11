@@ -5,6 +5,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::sync::{Arc, Mutex};
 
+use serde_derive::{Deserialize, Serialize};
+
 use crate::module::platform_info;
 use crate::module::{
     ModuleSpecification,
@@ -215,19 +217,10 @@ impl HostManager {
                 // Send the state update to the front end.
                 for observer in observers.lock().unwrap().iter() {
                     observer.send(frontend::HostDisplayData {
-                        name: host_state.host.name.clone(),
-                        domain_name: host_state.host.fqdn.clone(),
-                        platform: host_state.host.platform.clone(),
-                        ip_address: host_state.host.ip_address.clone(),
-                        monitoring_data: host_state.monitor_data.clone(),
+                        host_state: host_state.clone(),
                         new_monitoring_data: new_monitoring_data.clone(),
-                        command_results: host_state.command_results.clone(),
                         new_command_results: new_command_results.clone(),
                         new_errors: state_update.errors.clone(),
-                        status: host_state.status,
-                        just_initialized: host_state.just_initialized,
-                        just_initialized_from_cache: host_state.just_initialized_from_cache,
-                        is_initialized: host_state.is_initialized,
                         stop: false,
                     }).unwrap();
                 }
@@ -255,19 +248,10 @@ impl HostManager {
 
         for (host_name, state) in hosts.hosts.iter() {
             display_data.hosts.insert(host_name.clone(), frontend::HostDisplayData {
-                name: state.host.name.clone(),
-                domain_name: state.host.fqdn.clone(),
-                platform: state.host.platform.clone(),
-                ip_address: state.host.ip_address.clone(),
-                monitoring_data: state.monitor_data.clone(),
+                host_state: state.clone(),
                 new_monitoring_data: None,
-                command_results: state.command_results.clone(),
                 new_command_results: None,
                 new_errors: Vec::new(),
-                status: state.status,
-                just_initialized: state.just_initialized,
-                just_initialized_from_cache: state.just_initialized_from_cache,
-                is_initialized: state.is_initialized,
                 stop: false,
             });
         }
@@ -353,15 +337,16 @@ impl HostCollection {
 }
 
 
-struct HostState {
-    host: Host,
-    status: HostStatus,
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HostState {
+    pub host: Host,
+    pub status: HostStatus,
     /// Host has received a real-time update for platform info (not a cached initial value).
-    just_initialized: bool,
-    just_initialized_from_cache: bool,
-    is_initialized: bool,
-    monitor_data: HashMap<String, MonitoringData>,
-    command_results: HashMap<String, CommandResult>,
+    pub just_initialized: bool,
+    pub just_initialized_from_cache: bool,
+    pub is_initialized: bool,
+    pub monitor_data: HashMap<String, MonitoringData>,
+    pub command_results: HashMap<String, CommandResult>,
 }
 
 impl HostState {

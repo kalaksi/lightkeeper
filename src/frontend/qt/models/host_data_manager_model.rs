@@ -95,19 +95,20 @@ impl HostDataManagerModel {
             let set_data = qmetaobject::queued_callback(move |new_display_data: frontend::HostDisplayData| {
                 if let Some(self_pinned) = self_ptr.as_pinned() {
                     // HostDataModel cannot be passed between threads so parsing happens here.
+                    let host_state = &new_display_data.host_state;
 
                     let maybe_old_data = self_pinned.borrow_mut().display_data.hosts.insert(
-                        new_display_data.name.clone(),
+                        host_state.host.name.clone(),
                         new_display_data.clone()
                     );
 
-                    if new_display_data.just_initialized {
-                        ::log::debug!("Host {} initialized", new_display_data.name);
-                        self_pinned.borrow().host_initialized(QString::from(new_display_data.name.clone()));
+                    if host_state.just_initialized {
+                        ::log::debug!("Host {} initialized", host_state.host.name);
+                        self_pinned.borrow().host_initialized(QString::from(host_state.host.name.clone()));
                     }
-                    else if new_display_data.just_initialized_from_cache {
-                        ::log::debug!("Host {} initialized from cache", new_display_data.name);
-                        self_pinned.borrow().host_initialized_from_cache(QString::from(new_display_data.name.clone()));
+                    else if host_state.just_initialized_from_cache {
+                        ::log::debug!("Host {} initialized from cache", host_state.host.name);
+                        self_pinned.borrow().host_initialized_from_cache(QString::from(host_state.host.name.clone()));
                     }
 
                     if let Some(command_result) = new_display_data.new_command_results {
@@ -120,12 +121,12 @@ impl HostDataManagerModel {
 
                         // Invocation ID may be missing if no command was executed due to error.
                         if last_data_point.invocation_id > 0 {
-                            self_pinned.borrow_mut().remove_pending_monitor_invocation(&new_display_data.name,
+                            self_pinned.borrow_mut().remove_pending_monitor_invocation(&host_state.host.name,
                                                                                        &new_monitor_data.display_options.category,
                                                                                        last_data_point.invocation_id);
                         }
 
-                        self_pinned.borrow().monitoring_data_received(QString::from(new_display_data.name.clone()),
+                        self_pinned.borrow().monitoring_data_received(QString::from(host_state.host.name.clone()),
                                                                       QString::from(new_monitor_data.display_options.category.clone()),
                                                                       new_monitor_data.to_qvariant());
 
@@ -134,12 +135,12 @@ impl HostDataManagerModel {
                         if let Some(old_data) = maybe_old_data {
                             let new_criticality = new_monitor_data.values.back().unwrap().criticality;
 
-                            if let Some(old_monitor_data) = old_data.monitoring_data.get(&new_monitor_data.monitor_id) {
+                            if let Some(old_monitor_data) = old_data.host_state.monitor_data.get(&new_monitor_data.monitor_id) {
                                 let old_criticality = old_monitor_data.values.back().unwrap().criticality;
 
                                 if new_criticality != old_criticality {
                                     self_pinned.borrow().monitor_state_changed(
-                                        QString::from(new_display_data.name.clone()),
+                                        QString::from(host_state.host.name.clone()),
                                         QString::from(new_monitor_data.monitor_id.clone()),
                                         QString::from(new_criticality.to_string())
                                     );
@@ -152,7 +153,7 @@ impl HostDataManagerModel {
                         self_pinned.borrow().error_received(QString::from(error.criticality.to_string()), QString::from(error.message));
                     }
 
-                    self_pinned.borrow().update_received(QString::from(new_display_data.name));
+                    self_pinned.borrow().update_received(QString::from(host_state.host.name.clone()));
                 }
             });
 
@@ -212,8 +213,8 @@ impl HostDataManagerModel {
 
     // TODO: remove
     fn get_monitor_data(&self, host_id: QString, monitor_id: QString) -> QString {
-        if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            if let Some(monitoring_data) = host.monitoring_data.get(&monitor_id.to_string()) {
+        if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
+            if let Some(monitoring_data) = display_data.host_state.monitor_data.get(&monitor_id.to_string()) {
                 return QString::from(serde_json::to_string(monitoring_data).unwrap())
             }
         }
@@ -224,8 +225,8 @@ impl HostDataManagerModel {
     fn get_monitoring_data(&self, host_id: QString, monitor_id: QString) -> QVariant {
         let monitor_id = monitor_id.to_string();
 
-        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
-        host.monitoring_data.get(&monitor_id).unwrap().to_qvariant()
+        let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        display_data.host_state.monitor_data.get(&monitor_id).unwrap().to_qvariant()
     }
 
     fn getDisplayData(&self) -> QVariant {
@@ -234,12 +235,12 @@ impl HostDataManagerModel {
 
     // Get list of monitors for category.
     fn get_category_monitor_ids(&self, host_id: QString, category: QString) -> QStringList {
-        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
         let category = category.to_string();
 
         let mut result = QStringList::default();
 
-        for (monitor_id, monitor_data) in host.monitoring_data.iter() {
+        for (monitor_id, monitor_data) in display_data.host_state.monitor_data.iter() {
             if monitor_data.display_options.category == category {
                 result.push(QString::from(monitor_id.clone()));
             }
@@ -253,12 +254,12 @@ impl HostDataManagerModel {
     }
 
     fn is_host_initialized(&self, host_id: QString) -> bool {
-        if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
+        if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
             if self.configuration_cache_settings.prefer_cache {
-                host.platform.is_set()
+                display_data.host_state.host.platform.is_set()
             }
             else {
-                host.is_initialized
+                display_data.host_state.is_initialized
             }
         }
         else {
@@ -336,19 +337,20 @@ impl HostDataManagerModel {
     }
 
     fn is_empty_category(&self, host_id: String, category: String) -> bool {
-        let host = self.display_data.hosts.get(&host_id).unwrap();
-        host.monitoring_data.values()
-                            .filter(|monitor_data| monitor_data.display_options.category == category)
-                            .all(|monitor_data| monitor_data.values.iter().all(|data_point| data_point.criticality == Criticality::Ignore ||
-                                                                                            data_point.is_empty()))
+        let display_data = self.display_data.hosts.get(&host_id).unwrap();
+        display_data.host_state.monitor_data.values()
+            .filter(|monitor_data| monitor_data.display_options.category == category)
+            .all(|monitor_data| monitor_data.values.iter()
+                .all(|data_point| data_point.criticality == Criticality::Ignore || data_point.is_empty())
+            )
     }
 
     // Get a readily sorted list of unique categories for a host. Gathered from the monitoring data.
     fn get_categories(&self, host_id: QString, ignore_empty: bool) -> QStringList {
-        let host = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
 
         // Get unique categories from monitoring datas, and sort them according to config and alphabetically.
-        let mut categories = host.monitoring_data.values()
+        let mut categories = display_data.host_state.monitor_data.values()
             .filter(|monitor_data| !monitor_data.display_options.category.is_empty())
             .map(|monitor_data| monitor_data.display_options.category.clone())
             .collect::<Vec<String>>();
@@ -380,20 +382,20 @@ impl HostDataManagerModel {
 
     fn get_summary_monitor_data(&self, host_id: QString) -> QStringList {
         let mut result = QStringList::default();
-        if let Some(host) = self.display_data.hosts.get(&host_id.to_string()) {
-            let overridden_monitors = host.monitoring_data.values()
+        if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
+            let overridden_monitors = display_data.host_state.monitor_data.values()
                 .filter(|data| !data.display_options.override_summary_monitor_id.is_empty())
                 .map(|data| &data.display_options.override_summary_monitor_id)
                 .collect::<Vec<&String>>();
 
-            let summary_compatible = host.monitoring_data.values()
+            let summary_compatible = display_data.host_state.monitor_data.values()
                 .filter(|data| !data.display_options.ignore_from_summary && !overridden_monitors.contains(&&data.monitor_id))
                 .collect();
 
             let sorted_keys = self.get_monitor_data_keys_sorted(summary_compatible);
 
             for key in sorted_keys {
-                let monitoring_data = host.monitoring_data.get(&key).unwrap();
+                let monitoring_data = display_data.host_state.monitor_data.get(&key).unwrap();
 
                 result.push(serde_json::to_string(&monitoring_data).unwrap().into());
             }
@@ -404,9 +406,9 @@ impl HostDataManagerModel {
     fn get_host_data_json(&self, host_id: QString) -> QString {
         // Doesn't include monitor and command datas.
         let mut result = String::new();
-        if let Some(host_data) = self.display_data.hosts.get(&host_id.to_string()) {
-            let mut stripped = host_data.clone();
-            stripped.monitoring_data.clear();
+        if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
+            let mut stripped = display_data.host_state.clone();
+            stripped.monitor_data.clear();
             stripped.command_results.clear();
             result = serde_json::to_string(&stripped).unwrap();
         }

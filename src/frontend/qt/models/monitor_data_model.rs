@@ -14,7 +14,7 @@ impl MonitorDataModel {
             ..Default::default()
         };
 
-        for (monitor_id, monitor_data) in &host_display_data.monitoring_data {
+        for (monitor_id, monitor_data) in &host_display_data.host_state.monitor_data {
             model.data.insert(
                 QString::from(monitor_id.clone()),
                 serde_json::to_string(&monitor_data).unwrap().to_qvariant()

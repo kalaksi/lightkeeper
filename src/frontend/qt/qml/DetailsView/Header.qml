@@ -77,6 +77,10 @@ Item {
             Layout.fillHeight: true
         }
 
+        NormalText {
+            text: " jobs"
+        }
+
         RefreshButton {
             size: 0.9 * parent.height
             onClicked: root.refreshClicked()
