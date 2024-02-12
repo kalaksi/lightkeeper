@@ -120,9 +120,7 @@ impl CommandHandler {
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_error(error)),
                     ..Default::default()
-                }).unwrap_or_else(|error| {
-                    log::error!("Couldn't send message to state manager: {}", error);
-                });
+                }).unwrap();
                 return 0;
             }
         };
@@ -142,9 +140,7 @@ impl CommandHandler {
                 state_update_sender
             ),
             cache_policy: CachePolicy::BypassCache, 
-        }).unwrap_or_else(|error| {
-            log::error!("Couldn't send message to connector: {}", error);
-        });
+        }).unwrap();
 
         self.invocation_id_counter
     }
@@ -222,9 +218,7 @@ impl CommandHandler {
                 command_result: new_command_result,
                 errors: errors,
                 ..Default::default()
-            }).unwrap_or_else(|error| {
-                log::error!("Couldn't send message to state manager: {}", error);
-            });
+            }).unwrap();
         })
 
     }
@@ -284,9 +278,7 @@ impl CommandHandler {
                         module_spec: command.get_module_spec(),
                         command_result: Some(command_result),
                         ..Default::default()
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to state manager: {}", error);
-                    });
+                    }).unwrap();
                 },
                 Err(error) => {
                     let error_message = format!("Error downloading file: {}", error);
@@ -298,9 +290,7 @@ impl CommandHandler {
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_critical_error(error_message)),
                         ..Default::default()
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to state manager: {}", error);
-                    });
+                    }).unwrap();
                 }
             }
         })
@@ -325,9 +315,7 @@ impl CommandHandler {
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_error("File is unchanged")),
                         ..Default::default()
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to state manager: {}", error);
-                    });
+                    }).unwrap();
                 }
                 else {
                     metadata.update_hash(local_file_hash);
@@ -353,9 +341,7 @@ impl CommandHandler {
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_critical_error(error)),
                     ..Default::default()
-                }).unwrap_or_else(|error| {
-                    log::error!("Couldn't send message to state manager: {}", error);
-                });
+                }).unwrap();
             }
         }
 
@@ -519,9 +505,7 @@ impl CommandHandler {
                 self.state_update_sender.as_ref().unwrap().clone()
             ),
             cache_policy: CachePolicy::BypassCache,
-        }).unwrap_or_else(|error| {
-            log::error!("Couldn't send message to connector: {}", error);
-        });
+        }).unwrap();
     }
 
     fn get_response_handler_external_text_editor(host: Host, command: Command,
@@ -558,9 +542,7 @@ impl CommandHandler {
                                     module_spec: command.get_module_spec(),
                                     command_result: Some(CommandResult::new_error("File is unchanged")),
                                     ..Default::default()
-                                }).unwrap_or_else(|error| {
-                                    log::error!("Couldn't send message to state manager: {}", error);
-                                });
+                                }).unwrap();
 
                                 file_handler::remove_file(&local_file).unwrap();
                             }
@@ -576,9 +558,7 @@ impl CommandHandler {
                                         host, command, 0, metadata, true, state_update_sender
                                     ),
                                     cache_policy: CachePolicy::BypassCache,
-                                }).unwrap_or_else(|error| {
-                                    log::error!("Couldn't send message to connector: {}", error);
-                                });
+                                }).unwrap();
                             }
                         },
                         Err(error) => {
@@ -591,9 +571,7 @@ impl CommandHandler {
                                 module_spec: command.get_module_spec(),
                                 command_result: Some(CommandResult::new_critical_error(error_message)),
                                 ..Default::default()
-                            }).unwrap_or_else(|error| {
-                                log::error!("Couldn't send message to state manager: {}", error);
-                            });
+                            }).unwrap();
                         }
                     }
                 },
@@ -607,9 +585,7 @@ impl CommandHandler {
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_critical_error(error_message)),
                         ..Default::default()
-                    }).unwrap_or_else(|error| {
-                        log::error!("Couldn't send message to state manager: {}", error);
-                    });
+                    }).unwrap();
                 }
             };
         })

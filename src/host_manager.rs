@@ -29,7 +29,7 @@ const DATA_POINT_BUFFER_SIZE: usize = 4;
 
 
 pub struct HostManager {
-    hosts: Arc<Mutex<HostCollection>>,
+    hosts: Arc<Mutex<HostStateCollection>>,
     /// Provides sender handles for sending StateUpdateMessages to this instance.
     data_sender_prototype: Option<mpsc::Sender<StateUpdateMessage>>,
     data_receiver: Option<mpsc::Receiver<StateUpdateMessage>>,
@@ -39,7 +39,7 @@ pub struct HostManager {
 
 impl HostManager {
     pub fn new() -> HostManager {
-        let hosts = Arc::new(Mutex::new(HostCollection::new()));
+        let hosts = Arc::new(Mutex::new(HostStateCollection::new()));
         let frontend_state_sender = Arc::new(Mutex::new(Vec::new()));
 
         HostManager {
@@ -129,7 +129,7 @@ impl HostManager {
     }
 
     fn _start_receiving_updates(
-        hosts: Arc<Mutex<HostCollection>>,
+        hosts: Arc<Mutex<HostStateCollection>>,
         receiver: mpsc::Receiver<StateUpdateMessage>,
         observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
 
@@ -221,7 +221,7 @@ impl HostManager {
                         new_monitoring_data: new_monitoring_data.clone(),
                         new_command_results: new_command_results.clone(),
                         new_errors: state_update.errors.clone(),
-                        stop: false,
+                        ..Default::default()
                     }).unwrap();
                 }
             }
@@ -249,10 +249,7 @@ impl HostManager {
         for (host_name, state) in hosts.hosts.iter() {
             display_data.hosts.insert(host_name.clone(), frontend::HostDisplayData {
                 host_state: state.clone(),
-                new_monitoring_data: None,
-                new_command_results: None,
-                new_errors: Vec::new(),
-                stop: false,
+                ..Default::default()
             });
         }
 
@@ -311,13 +308,13 @@ impl StateUpdateMessage {
 }
 
 
-struct HostCollection {
+struct HostStateCollection {
     hosts: HashMap<String, HostState>,
 }
 
-impl HostCollection {
+impl HostStateCollection {
     fn new() -> Self {
-        HostCollection {
+        HostStateCollection {
             hosts: HashMap::new(),
         }
     }

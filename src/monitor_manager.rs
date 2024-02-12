@@ -99,9 +99,7 @@ impl MonitorManager {
                     command_result: None,
                     errors: Vec::new(),
                     stop: false,
-                }).unwrap_or_else(|error| {
-                    log::error!("Couldn't send message to state manager: {}", error);
-                });
+                }).unwrap();
             }
 
             // Independent monitors are always executed first.
@@ -204,9 +202,7 @@ impl MonitorManager {
                         cache_policy
                     ),
                     cache_policy: cache_policy,
-                }).unwrap_or_else(|error| {
-                    log::error!("Couldn't send message to connector: {}", error);
-                });
+                }).unwrap();
             }
         }
     }
@@ -322,9 +318,7 @@ impl MonitorManager {
                     module_spec: monitor.get_module_spec(),
                     errors: vec![ErrorMessage::new(Criticality::Error, ui_error)],
                     ..Default::default()
-                }).unwrap_or_else(|error| {
-                    log::error!("Couldn't send message to state manager: {}", error);
-                });
+                }).unwrap();
 
                 return;
             }
@@ -342,9 +336,7 @@ impl MonitorManager {
             request_type: RequestType::Command,
             response_handler: response_handler,
             cache_policy: cache_policy,
-        }).unwrap_or_else(|error| {
-            log::error!("Couldn't send message to connector: {}", error);
-        });
+        }).unwrap();
     }
 
     fn get_response_handler(host: Host, mut monitors: Vec<Monitor>, invocation_id: u64,
@@ -422,9 +414,7 @@ impl MonitorManager {
                     data_point: Some(new_data_point),
                     errors: errors,
                     ..Default::default()
-                }).unwrap_or_else(|error| {
-                    log::error!("Couldn't send message to state manager: {}", error);
-                });
+                }).unwrap();
             }
         })
     }
