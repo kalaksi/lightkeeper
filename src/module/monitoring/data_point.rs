@@ -1,6 +1,4 @@
 use std::fmt;
-use chrono::{DateTime, Utc};
-
 use serde_derive::{Serialize, Deserialize};
 use crate::enums::Criticality;
 
@@ -22,7 +20,6 @@ pub struct DataPoint {
     // TODO: rename to children?
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
-    pub time: DateTime<Utc>,
     /// Unique invocation ID. Used by UI as an identifier for asynchronously executed requests and received results.
     pub invocation_id: u64,
     pub is_from_cache: bool,
@@ -113,7 +110,6 @@ impl Default for DataPoint {
             command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
-            time: Utc::now(),
             invocation_id: 0,
             is_from_cache: false,
         }
