@@ -111,6 +111,14 @@ impl CommandResult {
         }
     }
 
+    /// Used to inform that command is now queued but not yet in execution.
+    pub fn pending(invocation_id: u64) -> Self {
+        CommandResult {
+            criticality: Criticality::NoData,
+            ..Default::default()
+        }
+    }
+
     pub fn with_invocation_id(&mut self, invocation_id: u64) -> Self {
         self.invocation_id = invocation_id;
         self.to_owned()
