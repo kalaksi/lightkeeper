@@ -218,13 +218,15 @@ Item {
 
                         PropertyTable {
                             id: propertyTable
-                            // Default to 10 just to avoid warnings of zero length
-                            // width: parent.width > 0 ? parent.width : 10
                             hostId: root.hostId
                             category: modelData
                             monitoring_datas: HostDataManager.get_category_monitor_ids(root.hostId, modelData)
                                                              .map(monitorId => HostDataManager.get_monitoring_data(root.hostId, monitorId))
                             command_datas: CommandHandler.get_category_commands(root.hostId, modelData)
+
+                            Layout.fillHeight: true
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 2
 
                             Connections {
                                 target: HostDataManager
@@ -234,9 +236,6 @@ Item {
                                     }
                                 }
                             }
-
-                            Layout.fillHeight: true
-                            Layout.fillWidth: true
                         }
                     }
 
