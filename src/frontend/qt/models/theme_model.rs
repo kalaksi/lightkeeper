@@ -27,6 +27,8 @@ pub struct ThemeModel {
     spacingTight: qt_property!(i8; CONST),
     marginScrollbar: qt_property!(i8; CONST),
     animationDuration: qt_property!(i32; CONST),
+    groupboxMinWidth: qt_property!(i32; CONST),
+    groupboxMaxWidth: qt_property!(i32; CONST),
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
@@ -35,10 +37,6 @@ pub struct ThemeModel {
     // NOTE: Old methods, will be deprecated.
     category_background_color: qt_method!(fn(&self) -> QString),
     category_refresh_mask: qt_method!(fn(&self) -> QString),
-
-    groupbox_padding: qt_method!(fn(&self) -> i8),
-    groupbox_min_width: qt_method!(fn(&self) -> i32),
-    groupbox_max_width: qt_method!(fn(&self) -> i32),
 
     margin_dialog: qt_method!(fn(&self) -> i8),
     // Content will often overflow behind the dialog buttons (ugh...), reserve more space for them with this.
@@ -89,6 +87,8 @@ impl ThemeModel {
             spacingTight: 2,
             marginScrollbar: 16,
             animationDuration: 175,
+            groupboxMinWidth: 450,
+            groupboxMaxWidth: 650,
             ..Default::default()
         }
     }
@@ -117,18 +117,6 @@ impl ThemeModel {
         else {
             QString::from("")
         }
-    }
-
-    fn groupbox_padding(&self) -> i8 {
-        2
-    }
-
-    fn groupbox_min_width(&self) -> i32 {
-        450
-    }
-
-    fn groupbox_max_width(&self) -> i32 {
-        650
     }
 
     fn margin_dialog(&self) -> i8 {

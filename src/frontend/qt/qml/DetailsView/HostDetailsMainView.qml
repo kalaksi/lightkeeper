@@ -14,8 +14,8 @@ Item {
     id: root
     property string hostId: ""
     property bool hideEmptyCategories: true
-    property int columnMinimumWidth: Theme.groupbox_min_width()
-    property int columnMaximumWidth: Theme.groupbox_max_width()
+    property int columnMinimumWidth: Theme.groupboxMinWidth
+    property int columnMaximumWidth: Theme.groupboxMaxWidth
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
     property int columnSpacing: Theme.spacing_normal()
@@ -74,8 +74,8 @@ Item {
 
                 GroupBox {
                     id: groupBox
-                    leftPadding: Theme.groupbox_padding()
-                    rightPadding: Theme.groupbox_padding()
+                    leftPadding: Theme.spacingTight
+                    rightPadding: Theme.spacingTight
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.preferredWidth: root.columnMinimumWidth +
