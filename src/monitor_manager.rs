@@ -102,30 +102,6 @@ impl MonitorManager {
                 }).unwrap();
             }
 
-            // Independent monitors are always executed first.
-            // They don't depend on platform info or connectors.
-            // TODO: needed?
-            /*
-            if monitor.get_connector_spec().is_none() {
-                self.invocation_id_counter += 1;
-                let ignore_cache = self.cache_settings.provide_initial_value == false;
-
-                self.request_sender.send(ConnectorRequest {
-                    connector_spec: None,
-                    source_id: monitor.get_module_spec().id,
-                    host: host.clone(),
-                    messages: Vec::new(),
-                    request_type: RequestType::Command,
-                    response_handler: Self::get_response_handler(
-                        host.clone(), vec![monitor.box_clone()], self.invocation_id_counter, self.request_sender.clone(),
-                        self.state_update_sender.clone(), DataPoint::empty_and_critical(), ignore_cache
-                    ),
-                    ignore_cache: ignore_cache
-                }).unwrap_or_else(|error| {
-                    log::error!("Couldn't send message to connector: {}", error);
-                });
-            } */
-
             monitor_collection.insert(module_spec.id, monitor);
         }
     }
