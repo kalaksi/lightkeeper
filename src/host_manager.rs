@@ -1,4 +1,5 @@
 
+use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 use std::sync::mpsc;
@@ -185,31 +186,43 @@ impl HostManager {
                         }
                     }
                     else {
-                        // Check first if there already exists a key for monitor id.
-                        if let Some(monitoring_data) = host_state.monitor_data.get_mut(&state_update.module_spec.id) {
-
-                            monitoring_data.values.push_back(message_data_point.clone());
-
-                            if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
-                                monitoring_data.values.pop_front();
-                            }
+                        if message_data_point.criticality == Criticality::NoData {
+                            host_state.monitor_invocations.insert(message_data_point.invocation_id, chrono::Utc::now());
                         }
                         else {
-                            let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
-                            new_data.values.push_back(message_data_point.clone());
-                            host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
-                        }
+                            host_state.monitor_invocations.remove(&message_data_point.invocation_id);
 
-                        // Also add to a list of new data points.
-                        let mut new = host_state.monitor_data.get(&state_update.module_spec.id).unwrap().clone();
-                        new.values = VecDeque::from(vec![message_data_point.clone()]);
-                        new_monitoring_data = Some(new);
+                            // Check first if there already exists a key for monitor id.
+                            if let Some(monitoring_data) = host_state.monitor_data.get_mut(&state_update.module_spec.id) {
+                                monitoring_data.values.push_back(message_data_point.clone());
+
+                                if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
+                                    monitoring_data.values.pop_front();
+                                }
+                            }
+                            else {
+                                let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
+                                new_data.values.push_back(message_data_point.clone());
+                                host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
+                            }
+
+                            // Also add to a list of new data points.
+                            let mut new = host_state.monitor_data.get(&state_update.module_spec.id).unwrap().clone();
+                            new.values = VecDeque::from(vec![message_data_point.clone()]);
+                            new_monitoring_data = Some(new);
+                        }
                     }
                 }
                 else if let Some(command_result) = state_update.command_result {
-                    host_state.command_results.insert(state_update.module_spec.id, command_result.clone());
-                    // Also add to a list of new command results.
-                    new_command_results = Some(command_result);
+                    if command_result.criticality == Criticality::NoData {
+                        host_state.command_invocations.insert(command_result.invocation_id, chrono::Utc::now());
+                    }
+                    else {
+                        host_state.command_invocations.remove(&command_result.invocation_id);
+                        host_state.command_results.insert(state_update.module_spec.id, command_result.clone());
+                        // Also add to a list of new command results.
+                        new_command_results = Some(command_result);
+                    }
                 }
 
                 host_state.update_status();
@@ -291,8 +304,9 @@ pub struct StateUpdateMessage {
     pub host_name: String,
     pub display_options: frontend::DisplayOptions,
     pub module_spec: ModuleSpecification,
-    // Only used with MonitoringModule.
+    /// Only used with monitors.
     pub data_point: Option<DataPoint>,
+    /// Only used with commands.
     pub command_result: Option<CommandResult>,
     pub errors: Vec<ErrorMessage>,
     pub stop: bool,
@@ -344,6 +358,9 @@ pub struct HostState {
     pub is_initialized: bool,
     pub monitor_data: HashMap<String, MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
+    // Invocations in progress.
+    pub monitor_invocations: HashMap<u64, chrono::DateTime<chrono::Utc>>,
+    pub command_invocations: HashMap<u64, chrono::DateTime<chrono::Utc>>,
 }
 
 impl HostState {
@@ -356,6 +373,8 @@ impl HostState {
             is_initialized: false,
             monitor_data: HashMap::new(),
             command_results: HashMap::new(),
+            monitor_invocations: HashMap::new(),
+            command_invocations: HashMap::new(),
         }
     }
 
@@ -365,9 +384,10 @@ impl HostState {
             data.is_critical && data.values.back().unwrap().criticality == Criticality::Critical
         });
 
-        let pending_monitor = &self.monitor_data.iter().find(|(_, data)| {
-            data.values.back().unwrap().criticality == Criticality::NoData
-        });
+        // Status will be "pending" until all critical monitors have received data.
+        let pending_monitor = &self.monitor_data.values()
+            .filter(|data| data.is_critical)
+            .find(|data| data.values.back().unwrap().criticality == Criticality::NoData);
 
         if let Some((name, _)) = critical_monitor {
             log::debug!("Host is now down since monitor \"{}\" is at critical level", name);
@@ -376,7 +396,7 @@ impl HostState {
         self.status = if critical_monitor.is_some() {
             HostStatus::Down
         }
-        else if pending_monitor.is_some() {
+        else if pending_monitor.is_some() || self.monitor_data.is_empty() {
             HostStatus::Pending
         }
         else {

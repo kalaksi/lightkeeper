@@ -127,6 +127,16 @@ impl CommandHandler {
 
         self.invocation_id_counter += 1;
 
+        // Notify host state manager about new command, so it can keep track of pending invocations.
+        state_update_sender.send(StateUpdateMessage {
+            host_name: host.name.clone(),
+            display_options: command.get_display_options(),
+            module_spec: command.get_module_spec(),
+            command_result: Some(CommandResult::pending(self.invocation_id_counter)),
+            ..Default::default()
+        }).unwrap();
+
+        // Send request to ConnectionManager.
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,

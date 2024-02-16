@@ -61,6 +61,8 @@ impl Default for HostDisplayData {
                 is_initialized: false,
                 monitor_data: HashMap::new(),
                 command_results: HashMap::new(),
+                monitor_invocations: HashMap::new(),
+                command_invocations: HashMap::new(),
             },
             new_monitoring_data: None,
             new_command_results: None,
