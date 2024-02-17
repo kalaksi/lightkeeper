@@ -78,10 +78,11 @@ Item {
             Layout.fillHeight: true
         }
 
-        NormalText {
-            anchors.rightMargin: Theme.spacingLoose
+        SmallText {
+            id: jobsText
+            rightPadding: Theme.spacingLoose * 2
             text: root.pendingInvocations + " jobs"
-            color: root.pendingInvocations > 0 ? Theme.textColor : Theme.disabledTextColor2
+            color: root.pendingInvocations > 0 ? Theme.textColor : Theme.disabledTextColor
         }
 
         RefreshButton {
