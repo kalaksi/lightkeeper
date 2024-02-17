@@ -33,7 +33,7 @@ pub struct HostDataManagerModel {
     // Slots
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     getDisplayData: qt_method!(fn(&self) -> QVariant),
-    get_categories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
+    getCategories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
     get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
@@ -278,7 +278,7 @@ impl HostDataManagerModel {
     }
 
     // Get a readily sorted list of unique categories for a host. Gathered from the monitoring data.
-    fn get_categories(&self, host_id: QString, ignore_empty: bool) -> QStringList {
+    fn getCategories(&self, host_id: QString, ignore_empty: bool) -> QStringList {
         let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
 
         // Get unique categories from monitoring datas, and sort them according to config and alphabetically.

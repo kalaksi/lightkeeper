@@ -13,7 +13,6 @@ import "../js/Parse.js" as Parse
 Item {
     id: root
     property string hostId: ""
-    property bool hideEmptyCategories: true
     property int columnMinimumWidth: Theme.groupboxMinWidth
     property int columnMaximumWidth: Theme.groupboxMaxWidth
     property int columnMinimumHeight: 450
@@ -252,7 +251,7 @@ Item {
         if (root.hostId !== "") {
             root._hostDetailsJson = HostDataManager.get_host_data_json(hostId)
             root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
-            root._categories =  HostDataManager.get_categories(root.hostId, !root._showEmptyCategories)
+            root._categories =  HostDataManager.getCategories(root.hostId, !root._showEmptyCategories)
                                                .map(category_qv => category_qv.toString())
         }
     }
