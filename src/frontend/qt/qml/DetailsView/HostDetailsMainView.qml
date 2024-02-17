@@ -20,10 +20,13 @@ Item {
     property int columnSpacing: Theme.spacingNormal
     property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
-    property var _categories: getCategories()
+    property var _categories: {}
     property bool _showEmptyCategories: true
 
 
+    Component.onCompleted: {
+        refresh()
+    }
 
     Connections {
         target: HostDataManager
