@@ -84,7 +84,7 @@ Item {
 
                 Rectangle {
                     anchors.fill: statusImage
-                    color: Theme.category_refresh_mask()
+                    color: Theme.categoryRefreshMask
                     visible: parent.isFromCache
 
                     MouseArea {

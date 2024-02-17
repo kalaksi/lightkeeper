@@ -71,10 +71,10 @@ Item {
 
     function getBackgroundColor(selected) {
         if (selected === true) {
-            return Qt.darker(Theme.category_background_color(), 1.20)
+            return Qt.darker(Theme.categoryBackgroundColor, 1.20)
         }
         else {
-            return Theme.category_background_color()
+            return Theme.categoryBackgroundColor
         }
     }
 }

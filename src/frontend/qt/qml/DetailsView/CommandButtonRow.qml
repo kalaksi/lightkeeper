@@ -51,8 +51,8 @@ Item {
         anchors.bottomMargin: -1
         anchors.topMargin: -1
         radius: root.size * 0.5
-        color: root._showBackground ? Qt.lighter(Theme.category_background_color(), 1.4) : "transparent"
-        border.color: root._showBackground ? Theme.category_background_color() : "transparent"
+        color: root._showBackground ? Qt.lighter(Theme.categoryBackgroundColor, 1.4) : "transparent"
+        border.color: root._showBackground ? Theme.categoryBackgroundColor : "transparent"
         border.width: 1
 
         Row {

@@ -22,7 +22,6 @@ Item {
     property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
     property var _categories: getCategories()
-    property var _maskedCategories: []
     property bool _showEmptyCategories: true
 
 
@@ -32,13 +31,6 @@ Item {
 
         function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
             if (host_id === root.hostId) {
-                refreshCategories(root._showEmptyCategories)
-            }
-        }
-
-        // TODO: needed?
-        function onUpdate_received(hostId) {
-            if (hostId === root.hostId) {
                 root.refresh()
             }
         }
@@ -74,6 +66,8 @@ Item {
 
                 GroupBox {
                     id: groupBox
+                    property bool blocked: true
+
                     leftPadding: Theme.spacingTight
                     rightPadding: Theme.spacingTight
                     Layout.minimumWidth: root.columnMinimumWidth
@@ -86,7 +80,7 @@ Item {
                     Layout.alignment: Qt.AlignTop
 
                     background: Rectangle {
-                        color: Theme.category_background_color()
+                        color: Theme.categoryBackgroundColor
                     }
 
                     // Custom label provides more flexibility.
@@ -100,7 +94,8 @@ Item {
                         color: Theme.categoryColor(modelData)
                         onRefreshClicked: function() {
                             CommandHandler.force_refresh_monitors_of_category(root.hostId, modelData)
-                            refreshCategories(root._showEmptyCategories)
+                            groupBoxLabel.refreshProgress = 0
+                            groupBox.blocked = true
                         }
 
                         Connections {
@@ -108,6 +103,10 @@ Item {
                             function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
                                 if (host_id === root.hostId && category === modelData) {
                                     groupBoxLabel.refreshProgress = HostDataManager.getCategoryPendingMonitorProgress(root.hostId, category)
+
+                                    if (isCategoryReady(category)) {
+                                        groupBox.blocked = false
+                                    }
                                 }
                             }
                         }
@@ -117,7 +116,7 @@ Item {
                             function onHost_initializing(host_id) {
                                 if (host_id === root.hostId) {
                                     groupBoxLabel.refreshProgress = 0
-                                    refreshCategories(root._showEmptyCategories)
+                                    groupBox.blocked = true
                                 }
                             }
                         }
@@ -135,7 +134,7 @@ Item {
                             flatButtons: false
                             roundButtons: false
                             commands: Parse.ListOfJsons(CommandHandler.get_commands_on_level(root.hostId, modelData, "", 0))
-                            hoverEnabled: !root._maskedCategories.includes(modelData)
+                            hoverEnabled: !groupBox.blocked
 
                             Layout.alignment: Qt.AlignHCenter
                             Layout.topMargin: size * 0.20
@@ -236,8 +235,8 @@ Item {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: Theme.category_refresh_mask()
-                        visible: root._maskedCategories.includes(modelData)
+                        color: Theme.categoryRefreshMask
+                        visible: groupBox.blocked
 
                         MouseArea {
                             anchors.fill: parent
@@ -249,27 +248,18 @@ Item {
         }
     }
 
-    function getCategories(showEmptyCategories) {
-        if (root.hostId !== "") {
-            return HostDataManager.get_categories(root.hostId, !showEmptyCategories)
-                                  .map(category_qv => category_qv.toString())
-        }
-        return []
-    }
-
     function refresh() {
-        root._hostDetailsJson = HostDataManager.get_host_data_json(hostId)
-        root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
-    }
-
-    function refreshCategories(showEmptyCategories) {
-        root._categories = getCategories(showEmptyCategories)
-        root._maskedCategories = root._categories.filter(category => !isCategoryReady(category))
+        if (root.hostId !== "") {
+            root._hostDetailsJson = HostDataManager.get_host_data_json(hostId)
+            root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
+            root._categories =  HostDataManager.get_categories(root.hostId, !root._showEmptyCategories)
+                                               .map(category_qv => category_qv.toString())
+        }
     }
 
     function isCategoryReady(category) {
         return HostDataManager.is_host_initialized(root.hostId) &&
-               HostDataManager.getCategoryPendingMonitorProgress(root.hostId, category) == 100
+               HostDataManager.getCategoryPendingMonitorProgress(root.hostId, category) > 99
     }
 
     function focus() {

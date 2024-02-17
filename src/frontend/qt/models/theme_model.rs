@@ -22,6 +22,8 @@ pub struct ThemeModel {
     backgroundColor: qt_property!(QString; CONST),
     backgroundColorLight: qt_property!(QString; CONST),
     tableBackgroundColor: qt_property!(QString; CONST),
+    categoryBackgroundColor: qt_property!(QString; CONST),
+    categoryRefreshMask: qt_property!(QString; CONST),
     spacingLoose: qt_property!(i8; CONST),
     spacingNormal: qt_property!(i8; CONST),
     spacingTight: qt_property!(i8; CONST),
@@ -35,8 +37,6 @@ pub struct ThemeModel {
     colorForCriticality: qt_method!(fn(&self, criticality: QString) -> QString),
 
     // NOTE: Old methods, will be deprecated.
-    category_background_color: qt_method!(fn(&self) -> QString),
-    category_refresh_mask: qt_method!(fn(&self) -> QString),
 
     margin_dialog: qt_method!(fn(&self) -> i8),
     // Content will often overflow behind the dialog buttons (ugh...), reserve more space for them with this.
@@ -82,6 +82,8 @@ impl ThemeModel {
             backgroundColor: QString::from("#2a2e32"),
             backgroundColorLight: QString::from("#303030"),
             tableBackgroundColor: QString::from("#26292d"),
+            categoryBackgroundColor: QString::from("#404040"),
+            categoryRefreshMask: QString::from("#90404040"),
             spacingLoose: 12,
             spacingNormal: 8,
             spacingTight: 2,
@@ -100,14 +102,6 @@ impl ThemeModel {
         else {
             QString::from("#505050")
         }
-    }
-
-    fn category_background_color(&self) -> QString {
-        QString::from(String::from("#404040"))
-    }
-
-    fn category_refresh_mask(&self) -> QString {
-        QString::from(String::from("#90404040"))
     }
 
     fn categoryIcon(&self, category: QString) -> QString {

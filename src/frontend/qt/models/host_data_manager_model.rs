@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::thread;
 use std::sync::mpsc;
 
@@ -259,12 +258,11 @@ impl HostDataManagerModel {
         let host_id = host_id.to_string();
         let category = category.to_string();
 
-        if let Some(host_display_data) = self.display_data.hosts.get(&host_id) {
-            if host_display_data.host_state.monitor_invocations.iter()
-                .any(|invocation| invocation.category == category) {
+        let host_display_data = self.display_data.hosts.get(&host_id).unwrap();
+        if host_display_data.host_state.monitor_invocations.iter()
+            .any(|invocation| invocation.category == category) {
 
-                return 0;
-            }
+            return 0;
         }
 
         100
