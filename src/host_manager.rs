@@ -167,6 +167,8 @@ impl HostManager {
 
                     // Specially structured data point for passing platform info here.
                     if message_data_point.is_internal() {
+                        host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != message_data_point.invocation_id);
+
                         if let Ok(platform) = Self::read_platform_info(&message_data_point) {
                             host_state.host.platform = platform;
                             log::debug!("[{}] Platform info updated", host_state.host.name);

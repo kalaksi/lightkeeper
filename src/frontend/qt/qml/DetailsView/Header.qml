@@ -18,6 +18,7 @@ Item {
     property bool showOpenInWindowButton: false
     property bool showSaveButton: false
     property bool disableSaveButton: false
+    property int pendingInvocations: 0
     property var tabs: []
     property alias tabIndex: tabBar.currentIndex
     property bool _maximized: false
@@ -78,7 +79,9 @@ Item {
         }
 
         NormalText {
-            text: " jobs"
+            anchors.rightMargin: Theme.spacingLoose
+            text: root.pendingInvocations + " jobs"
+            color: root.pendingInvocations > 0 ? Theme.textColor : Theme.disabledTextColor2
         }
 
         RefreshButton {
@@ -89,7 +92,7 @@ Item {
 
         ImageButton {
             size: 0.9 * parent.height
-            anchors.rightMargin: 5
+            anchors.rightMargin: Theme.spacingNormal
             imageSource: "qrc:/main/images/button/window-new"
             flatButton: true
             tooltip: "Open in new window"

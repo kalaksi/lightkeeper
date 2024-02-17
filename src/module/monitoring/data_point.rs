@@ -84,6 +84,14 @@ impl DataPoint {
         }
     }
 
+    pub fn pending(invocation_id: u64) -> Self {
+        DataPoint {
+            criticality: Criticality::NoData,
+            invocation_id: invocation_id,
+            ..Default::default()
+        }
+    }
+
     pub fn empty_and_critical() -> Self {
         DataPoint {
             criticality: Criticality::Critical,

@@ -7,7 +7,7 @@ Text {
 
     Behavior on opacity {
         NumberAnimation {
-            duration: Theme.animation_duration()
+            duration: Theme.animationDuration
         }
     }
 }

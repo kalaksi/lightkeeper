@@ -72,7 +72,7 @@ impl ThemeModel {
         // OTOH, this model could be easier to use and more flexible.
         ThemeModel {
             i_display_options: display_options,
-            disabledTextColor: QString::from("#3a4045"),
+            disabledTextColor: QString::from("#50fcfcfc"),
             iconColor: QString::from("#a0a0a0"),
             textColor: QString::from("#fcfcfc"),
             textColorDark: QString::from("#a0a0a0"),

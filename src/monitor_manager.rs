@@ -96,9 +96,7 @@ impl MonitorManager {
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
                     data_point: Some(DataPoint::no_data()),
-                    command_result: None,
-                    errors: Vec::new(),
-                    stop: false,
+                    ..Default::default()
                 }).unwrap();
             }
 
@@ -162,6 +160,17 @@ impl MonitorManager {
                     }
                 };
 
+                self.invocation_id_counter += 1;
+
+                // Notify host state manager about new pending monitor invocation.
+                self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
+                    host_name: host.name.clone(),
+                    display_options: info_provider.get_display_options(),
+                    module_spec: info_provider.get_module_spec(),
+                    data_point: Some(DataPoint::pending(self.invocation_id_counter)),
+                    ..Default::default()
+                }).unwrap();
+
                 self.request_sender.as_ref().unwrap().send(ConnectorRequest {
                     connector_spec: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
@@ -171,7 +180,7 @@ impl MonitorManager {
                     response_handler: Self::get_response_handler(
                         host.clone(),
                         vec![info_provider],
-                        0,
+                        self.invocation_id_counter,
                         self.request_sender.as_ref().unwrap().clone(),
                         self.state_update_sender.as_ref().unwrap().clone(),
                         DataPoint::empty_and_critical(),
@@ -260,6 +269,15 @@ impl MonitorManager {
 
             extensions.iter().filter(|ext| ext.get_metadata_self().parent_module.unwrap() == monitor.get_module_spec())
                              .for_each(|extension| request_monitors.push(extension.box_clone()));
+
+            // Notify host state manager about new pending monitor invocation.
+            self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
+                host_name: host.name.clone(),
+                display_options: monitor.get_display_options(),
+                module_spec: monitor.get_module_spec(),
+                data_point: Some(DataPoint::pending(current_invocation_id)),
+                ..Default::default()
+            }).unwrap();
 
             Self::send_connector_request(
                 host.clone(),

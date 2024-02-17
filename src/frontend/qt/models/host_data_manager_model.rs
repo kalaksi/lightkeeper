@@ -22,7 +22,7 @@ pub struct HostDataManagerModel {
     stop: qt_method!(fn(&mut self)),
 
     // Signals
-    update_received: qt_signal!(host_id: QString),
+    updateReceived: qt_signal!(host_id: QString),
     host_initialized: qt_signal!(host_id: QString),
     host_initialized_from_cache: qt_signal!(host_id: QString),
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
@@ -38,7 +38,8 @@ pub struct HostDataManagerModel {
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
-    getPendingMonitorCount: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
+    getPendingMonitorCount: qt_method!(fn(&self, host_id: QString) -> u64),
+    getPendingMonitorCountForCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
     getPendingCommandCount: qt_method!(fn(&self, host_id: QString) -> u64),
 
     // These methods are used to get the data in JSON and parsed in QML side.
@@ -141,7 +142,7 @@ impl HostDataManagerModel {
                         self_pinned.borrow().error_received(QString::from(error.criticality.to_string()), QString::from(error.message));
                     }
 
-                    self_pinned.borrow().update_received(QString::from(host_state.host.name.clone()));
+                    self_pinned.borrow().updateReceived(QString::from(host_state.host.name.clone()));
                 }
             });
 
@@ -254,8 +255,19 @@ impl HostDataManagerModel {
         }
     }
 
+    fn getPendingMonitorCount(&self, host_id: QString) -> u64 {
+        let host_id = host_id.to_string();
+
+        if let Some(host_display_data) = self.display_data.hosts.get(&host_id) {
+            host_display_data.host_state.monitor_invocations.len() as u64
+        }
+        else {
+            0
+        }
+    }
+
     // Currently will return only 0 or 100.
-    fn getPendingMonitorCount(&self, host_id: QString, category: QString) -> u64 {
+    fn getPendingMonitorCountForCategory(&self, host_id: QString, category: QString) -> u64 {
         let host_id = host_id.to_string();
         let category = category.to_string();
 
@@ -268,8 +280,12 @@ impl HostDataManagerModel {
     fn getPendingCommandCount(&self, host_id: QString) -> u64 {
         let host_id = host_id.to_string();
 
-        let host_display_data = self.display_data.hosts.get(&host_id).unwrap();
-        host_display_data.host_state.command_invocations.len() as u64
+        if let Some(host_display_data) = self.display_data.hosts.get(&host_id) {
+            host_display_data.host_state.command_invocations.len() as u64
+        }
+        else {
+            0
+        }
     }
 
     fn is_empty_category(&self, host_id: String, category: String) -> bool {

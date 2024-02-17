@@ -49,6 +49,16 @@ Item {
     }
 
     Connections {
+        target: HostDataManager
+
+        function onUpdateReceived(hostId) {
+            if (hostId === root.hostId) {
+                mainViewHeader.pendingInvocations = HostDataManager.getPendingCommandCount(hostId) + HostDataManager.getPendingMonitorCount(hostId)
+            }
+        }
+    }
+
+    Connections {
         target: CommandHandler
 
         function onTextViewOpened(title, invocationId) {
@@ -117,6 +127,8 @@ Item {
         showRefreshButton: getCurrentTabContent() instanceof HostDetailsMainView
         showSaveButton: getCurrentTabContent() instanceof HostDetailsTextEditorView
         disableSaveButton: true
+        pendingInvocations: 0
+
 
         onRefreshClicked: CommandHandler.force_initialize_host(hostId)
         onMaximizeClicked: root.maximizeClicked()

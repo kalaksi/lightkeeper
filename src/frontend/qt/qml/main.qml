@@ -122,7 +122,7 @@ ApplicationWindow {
     Connections {
         target: HostDataManager
 
-        function onUpdate_received(hostId) {
+        function onUpdateReceived(hostId) {
             _hostTableModel.dataChangedForHost(hostId)
             _hostTableModel.displayData = HostDataManager.getDisplayData()
         }

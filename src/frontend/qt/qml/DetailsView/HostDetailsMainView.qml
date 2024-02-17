@@ -100,7 +100,7 @@ Item {
                             target: HostDataManager
                             function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
                                 if (host_id === root.hostId && category === modelData) {
-                                    groupBoxLabel.refreshProgress = HostDataManager.getPendingMonitorCount(root.hostId, category) > 0 ?  0 : 100
+                                    groupBoxLabel.refreshProgress = HostDataManager.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
 
                                     if (isCategoryReady(category)) {
                                         groupBox.blocked = false
@@ -257,7 +257,7 @@ Item {
 
     function isCategoryReady(category) {
         return HostDataManager.is_host_initialized(root.hostId) &&
-               HostDataManager.getPendingMonitorCount(root.hostId, category) == 0
+               HostDataManager.getPendingMonitorCountForCategory(root.hostId, category) == 0
     }
 
     function focus() {
