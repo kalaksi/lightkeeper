@@ -42,7 +42,7 @@ pub struct PropertyTableModel {
     i_display_options: configuration::DisplayOptions,
     command_cooldown_times: HashMap<String, u32>,
     command_cooldowns_finishing: Vec<String>,
-    command_invocations: HashMap<u64, String>,
+    command_invocation_buttons: HashMap<u64, String>,
 
     /// Holds preprocessed data more fitting for table rows.
     row_datas: Vec<RowData>,
@@ -279,7 +279,7 @@ impl PropertyTableModel {
     fn start_command_cooldown(&mut self, button_identifier: QString, invocation_id: u64) {
         let button_identifier = button_identifier.to_string();
         self.command_cooldown_times.insert(button_identifier.clone(), COOLDOWN_LENGTH);
-        self.command_invocations.insert(invocation_id, button_identifier);
+        self.command_invocation_buttons.insert(invocation_id, button_identifier);
     }
 
     fn decrease_command_cooldowns(&mut self, cooldown_decrement: u32) -> u32 {
@@ -305,7 +305,7 @@ impl PropertyTableModel {
 
     fn end_command_cooldown(&mut self, invocation_id: u64) {
         // Does nothing if the invocation_id doesn't belong to this table instance.
-        if let Some(button_identifier) = self.command_invocations.remove(&invocation_id) {
+        if let Some(button_identifier) = self.command_invocation_buttons.remove(&invocation_id) {
             self.command_cooldowns_finishing.push(button_identifier);
         }
     }

@@ -221,7 +221,6 @@ Item {
 
                             Layout.fillHeight: true
                             Layout.fillWidth: true
-                            Layout.minimumWidth: 50
 
                             Connections {
                                 target: HostDataManager
@@ -259,8 +258,7 @@ Item {
     }
 
     function isCategoryReady(category) {
-        return HostDataManager.is_host_initialized(root.hostId) &&
-               HostDataManager.getPendingMonitorCountForCategory(root.hostId, category) == 0
+        return HostDataManager.getPendingMonitorCountForCategory(root.hostId, category) == 0
     }
 
     function focus() {
