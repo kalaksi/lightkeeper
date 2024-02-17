@@ -1,5 +1,4 @@
 
-use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 use std::sync::mpsc;
@@ -187,10 +186,14 @@ impl HostManager {
                     }
                     else {
                         if message_data_point.criticality == Criticality::NoData {
-                            host_state.monitor_invocations.insert(message_data_point.invocation_id, chrono::Utc::now());
+                            host_state.monitor_invocations.push(InvocationDetails {
+                                invocation_id: message_data_point.invocation_id,
+                                time: chrono::Utc::now(),
+                                category: state_update.display_options.category,
+                            });
                         }
                         else {
-                            host_state.monitor_invocations.remove(&message_data_point.invocation_id);
+                            host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != message_data_point.invocation_id);
 
                             // Check first if there already exists a key for monitor id.
                             if let Some(monitoring_data) = host_state.monitor_data.get_mut(&state_update.module_spec.id) {
@@ -215,10 +218,14 @@ impl HostManager {
                 }
                 else if let Some(command_result) = state_update.command_result {
                     if command_result.criticality == Criticality::NoData {
-                        host_state.command_invocations.insert(command_result.invocation_id, chrono::Utc::now());
+                        host_state.command_invocations.push(InvocationDetails {
+                            invocation_id: command_result.invocation_id,
+                            time: chrono::Utc::now(),
+                            category: state_update.display_options.category,
+                        });
                     }
                     else {
-                        host_state.command_invocations.remove(&command_result.invocation_id);
+                        host_state.command_invocations.retain(|invocation| invocation.invocation_id != command_result.invocation_id);
                         host_state.command_results.insert(state_update.module_spec.id, command_result.clone());
                         // Also add to a list of new command results.
                         new_command_results = Some(command_result);
@@ -359,8 +366,8 @@ pub struct HostState {
     pub monitor_data: HashMap<String, MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
     // Invocations in progress.
-    pub monitor_invocations: HashMap<u64, chrono::DateTime<chrono::Utc>>,
-    pub command_invocations: HashMap<u64, chrono::DateTime<chrono::Utc>>,
+    pub monitor_invocations: Vec<InvocationDetails>,
+    pub command_invocations: Vec<InvocationDetails>,
 }
 
 impl HostState {
@@ -373,8 +380,8 @@ impl HostState {
             is_initialized: false,
             monitor_data: HashMap::new(),
             command_results: HashMap::new(),
-            monitor_invocations: HashMap::new(),
-            command_invocations: HashMap::new(),
+            monitor_invocations: Vec::new(),
+            command_invocations: Vec::new(),
         }
     }
 
@@ -404,4 +411,12 @@ impl HostState {
         };
 
     }
+}
+
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct InvocationDetails {
+    pub invocation_id: u64,
+    pub time: chrono::DateTime<chrono::Utc>,
+    pub category: String,
 }
