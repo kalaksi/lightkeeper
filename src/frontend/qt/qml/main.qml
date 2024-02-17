@@ -130,16 +130,14 @@ ApplicationWindow {
         function onHost_initialized(hostId) {
             let categories = CommandHandler.get_all_host_categories(hostId)
             for (const category of categories) {
-                let invocation_ids = CommandHandler.refresh_monitors_of_category(hostId, category)
-                HostDataManager.add_pending_monitor_invocations(hostId, category, invocation_ids)
+                CommandHandler.refresh_monitors_of_category(hostId, category)
             }
         }
 
         function onHost_initialized_from_cache(hostId) {
             let categories = CommandHandler.get_all_host_categories(hostId)
             for (const category of categories) {
-                let invocation_ids = CommandHandler.cached_refresh_monitors_of_category(hostId, category)
-                HostDataManager.add_pending_monitor_invocations(hostId, category, invocation_ids)
+                CommandHandler.cached_refresh_monitors_of_category(hostId, category)
             }
         }
 

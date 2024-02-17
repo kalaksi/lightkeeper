@@ -115,6 +115,7 @@ impl CommandResult {
     pub fn pending(invocation_id: u64) -> Self {
         CommandResult {
             criticality: Criticality::NoData,
+            invocation_id: invocation_id,
             ..Default::default()
         }
     }

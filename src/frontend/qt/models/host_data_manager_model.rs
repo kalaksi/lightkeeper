@@ -39,10 +39,7 @@ pub struct HostDataManagerModel {
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
-    get_pending_monitor_progress: qt_method!(fn(&self, host_id: QString) -> i8),
-    get_category_pending_monitor_progress: qt_method!(fn(&self, host_id: QString, category: QString) -> i8),
-    add_pending_monitor_invocations: qt_method!(fn(&self, host_id: QString, monitor_id: QString, invocation_ids: QVariantList)),
-    clear_pending_monitor_invocations: qt_method!(fn(&self, host_id: QString, monitor_id: QString)),
+    getCategoryPendingMonitorProgress: qt_method!(fn(&self, host_id: QString, category: QString) -> i8),
 
     // These methods are used to get the data in JSON and parsed in QML side.
     // JSON is required since there doesn't seem to be a way to return a self-defined QObject.
@@ -54,9 +51,6 @@ pub struct HostDataManagerModel {
     // Basically contains the state of hosts and relevant data. Received from HostManager.
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
-    /// Contains invocation IDs. Keeps track of monitoring data refresh progress. Empty when all is done.
-    /// First key is host id, second key is category id. Value is a list of invocation IDs and the number of maximum pending invocations.
-    pending_monitor_invocations: HashMap<String, HashMap<String, (Vec<u64>, usize)>>,
     configuration_preferences: configuration::Preferences,
     configuration_cache_settings: configuration::CacheSettings,
     update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
@@ -120,15 +114,6 @@ impl HostDataManagerModel {
                     }
 
                     if let Some(new_monitor_data) = new_display_data.new_monitoring_data {
-                        let last_data_point = new_monitor_data.values.back().unwrap();
-
-                        // Invocation ID may be missing if no command was executed due to error.
-                        if last_data_point.invocation_id > 0 {
-                            self_pinned.borrow_mut().remove_pending_monitor_invocation(&host_state.host.name,
-                                                                                       &new_monitor_data.display_options.category,
-                                                                                       last_data_point.invocation_id);
-                        }
-
                         self_pinned.borrow().monitoring_data_received(QString::from(host_state.host.name.clone()),
                                                                       QString::from(new_monitor_data.display_options.category.clone()),
                                                                       new_monitor_data.to_qvariant());
@@ -160,7 +145,7 @@ impl HostDataManagerModel {
                 }
             });
 
-            // This is the first launch so display an error about needing to edit the configuration files.
+            // This is the first launch so display a note about the project being in early development.
             if self.display_data.hosts.len() == 1 && self.display_data.hosts.contains_key("example-host") {
                 let error = ErrorMessage::new(
                     Criticality::Critical,
@@ -202,7 +187,6 @@ impl HostDataManagerModel {
 
     pub fn reset(&mut self) {
         self.display_data.hosts.clear();
-        self.pending_monitor_invocations.clear();
     }
 
     pub fn stop(&mut self) {
@@ -270,73 +254,20 @@ impl HostDataManagerModel {
         }
     }
 
-    fn get_pending_monitor_progress(&self, host_id: QString) -> i8 {
+    // Currently will return only 0 or 100.
+    fn getCategoryPendingMonitorProgress(&self, host_id: QString, category: QString) -> i8 {
         let host_id = host_id.to_string();
+        let category = category.to_string();
 
-        if let Some(categories) = self.pending_monitor_invocations.get(&host_id) {
-            let max_invocations = categories.values().map(|(_, max_invocations)| max_invocations).sum::<usize>();
-            let invocation_id_count = categories.values().map(|(invocation_ids, _)| invocation_ids.len()).sum::<usize>();
+        if let Some(host_display_data) = self.display_data.hosts.get(&host_id) {
+            if host_display_data.host_state.monitor_invocations.iter()
+                .any(|invocation| invocation.category == category) {
 
-            if max_invocations > 0 {
-                return 100 - ((invocation_id_count as f32 / max_invocations as f32 * 100.0).floor() as i8);
+                return 0;
             }
         }
 
         100
-    }
-
-    fn get_category_pending_monitor_progress(&self, host_id: QString, category: QString) -> i8 {
-        let host_id = host_id.to_string();
-        let category = category.to_string();
-
-        if let Some(categories) = self.pending_monitor_invocations.get(&host_id) {
-            if let Some((invocation_ids, max_invocations)) = categories.get(&category) {
-                if *max_invocations > 0 {
-                    return 100 - ((invocation_ids.len() as f32 / *max_invocations as f32 * 100.0).floor() as i8);
-                }
-            }
-        }
-
-        100
-    }
-
-    fn add_pending_monitor_invocations(&mut self, host_id: QString, category: QString, invocation_ids: QVariantList) {
-        let host_id = host_id.to_string();
-        let category = category.to_string();
-        let invocation_ids = invocation_ids.into_iter().map(|id| u64::from_qvariant(id.clone()).unwrap()).collect::<Vec<u64>>();
-
-        let categories = self.pending_monitor_invocations.entry(host_id.clone()).or_insert_with(HashMap::new);
-        let (existing_invocation_ids, max_invocations) = categories.entry(category.clone()).or_insert((Vec::new(), 0));
-
-        *max_invocations += invocation_ids.len();
-        existing_invocation_ids.extend(invocation_ids);
-    }
-
-    fn clear_pending_monitor_invocations(&mut self, host_id: QString, category: QString) {
-        let host_id = host_id.to_string();
-        let category = category.to_string();
-
-        if let Some(categories) = self.pending_monitor_invocations.get_mut(&host_id) {
-            if let Some((invocation_ids, max_invocations)) = categories.get_mut(&category) {
-                invocation_ids.clear();
-                *max_invocations = 0;
-            }
-        }
-    }
-
-    fn remove_pending_monitor_invocation(&mut self, host_id: &String, category: &String, invocation_id: u64) {
-        if let Some(categories) = self.pending_monitor_invocations.get_mut(host_id) {
-            if let Some((invocation_ids, max_invocations)) = categories.get_mut(category) {
-                invocation_ids.retain(|id| *id != invocation_id);
-
-                if invocation_ids.is_empty() {
-                    *max_invocations = 0;
-                }
-            }
-        }
-        else {
-            ::log::warn!("[{}] Trying to remove nonexisting monitor invocation ID {}", host_id, invocation_id);
-        }
     }
 
     fn is_empty_category(&self, host_id: String, category: String) -> bool {

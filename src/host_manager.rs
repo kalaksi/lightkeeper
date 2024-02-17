@@ -185,7 +185,13 @@ impl HostManager {
                         }
                     }
                     else {
-                        if message_data_point.criticality == Criticality::NoData {
+                        // Initial NoData point will have invocation ID 0.
+                        if message_data_point.invocation_id == 0 {
+                            let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
+                            new_data.values.push_back(message_data_point.clone());
+                            host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
+                        }
+                        else if message_data_point.criticality == Criticality::NoData {
                             host_state.monitor_invocations.push(InvocationDetails {
                                 invocation_id: message_data_point.invocation_id,
                                 time: chrono::Utc::now(),
@@ -195,18 +201,11 @@ impl HostManager {
                         else {
                             host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != message_data_point.invocation_id);
 
-                            // Check first if there already exists a key for monitor id.
-                            if let Some(monitoring_data) = host_state.monitor_data.get_mut(&state_update.module_spec.id) {
-                                monitoring_data.values.push_back(message_data_point.clone());
+                            let monitoring_data = host_state.monitor_data.get_mut(&state_update.module_spec.id).unwrap();
+                            monitoring_data.values.push_back(message_data_point.clone());
 
-                                if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
-                                    monitoring_data.values.pop_front();
-                                }
-                            }
-                            else {
-                                let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
-                                new_data.values.push_back(message_data_point.clone());
-                                host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
+                            if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
+                                monitoring_data.values.pop_front();
                             }
 
                             // Also add to a list of new data points.
@@ -365,7 +364,7 @@ pub struct HostState {
     pub is_initialized: bool,
     pub monitor_data: HashMap<String, MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
-    // Invocations in progress.
+    // Invocations in progress. Keeps track of monitor or command progress. Empty when all is done.
     pub monitor_invocations: Vec<InvocationDetails>,
     pub command_invocations: Vec<InvocationDetails>,
 }
@@ -386,24 +385,24 @@ impl HostState {
     }
 
     fn update_status(&mut self) {
-        let critical_monitor = &self.monitor_data.iter().find(|(_, data)| {
-            // There should always be some monitoring data available at this point.
-            data.is_critical && data.values.back().unwrap().criticality == Criticality::Critical
-        });
+        // There should always be some monitoring data available at this point.
+        let critical_monitor = self.monitor_data.iter()
+            .find(|(_, data)| data.is_critical && data.values.back().unwrap().criticality == Criticality::Critical);
 
         // Status will be "pending" until all critical monitors have received data.
-        let pending_monitor = &self.monitor_data.values()
-            .filter(|data| data.is_critical)
-            .find(|data| data.values.back().unwrap().criticality == Criticality::NoData);
+        let pending_critical_monitor = self.monitor_data.values()
+            .find(|data| data.is_critical && data.values.back().unwrap().criticality == Criticality::NoData);
+
+        let has_only_pending_monitors = self.monitor_data.values()
+            .all(|data| data.values.iter().all(|datapoint| datapoint.criticality == Criticality::NoData));
 
         if let Some((name, _)) = critical_monitor {
             log::debug!("Host is now down since monitor \"{}\" is at critical level", name);
         }
-
         self.status = if critical_monitor.is_some() {
             HostStatus::Down
         }
-        else if pending_monitor.is_some() || self.monitor_data.is_empty() {
+        else if pending_critical_monitor.is_some() || has_only_pending_monitors {
             HostStatus::Pending
         }
         else {

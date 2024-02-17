@@ -99,12 +99,7 @@ Item {
                         icon: Theme.categoryIcon(modelData)
                         color: Theme.categoryColor(modelData)
                         onRefreshClicked: function() {
-                            // These may be racy?
-                            HostDataManager.clear_pending_monitor_invocations(root.hostId, modelData)
-                            let invocation_ids = CommandHandler.force_refresh_monitors_of_category(root.hostId, modelData)
-                            HostDataManager.add_pending_monitor_invocations(root.hostId, modelData, invocation_ids)
-
-                            groupBoxLabel.refreshProgress = 0
+                            CommandHandler.force_refresh_monitors_of_category(root.hostId, modelData)
                             refreshCategories(root._showEmptyCategories)
                         }
 
@@ -112,7 +107,7 @@ Item {
                             target: HostDataManager
                             function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
                                 if (host_id === root.hostId && category === modelData) {
-                                    groupBoxLabel.refreshProgress = HostDataManager.get_category_pending_monitor_progress(root.hostId, category)
+                                    groupBoxLabel.refreshProgress = HostDataManager.getCategoryPendingMonitorProgress(root.hostId, category)
                                 }
                             }
                         }
@@ -274,7 +269,7 @@ Item {
 
     function isCategoryReady(category) {
         return HostDataManager.is_host_initialized(root.hostId) &&
-               HostDataManager.get_category_pending_monitor_progress(root.hostId, category) == 100
+               HostDataManager.getCategoryPendingMonitorProgress(root.hostId, category) == 100
     }
 
     function focus() {

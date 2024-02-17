@@ -37,8 +37,8 @@ TableView {
     onWidthChanged: forceLayout()
     onHeightChanged: forceLayout()
     clip: true
-    topMargin: Theme.groupbox_padding()
-    bottomMargin: Theme.groupbox_padding()
+    topMargin: Theme.spacingTight
+    bottomMargin: Theme.spacingTight
 
     rowHeightProvider: root.model.get_row_height
 
