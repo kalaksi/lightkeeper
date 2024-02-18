@@ -92,10 +92,14 @@ Item {
 
                     Connections {
                         target: HostDataManager
+
                         function onCommand_result_received(commandResultJson) {
                             let commandResult = JSON.parse(commandResultJson)
                             cooldownTimer.finishCooldown(commandResult.invocation_id)
-                            root._pendingRefreshAfterCommand.push(commandResult.command_id);
+
+                            if (!root._pendingRefreshAfterCommand.includes(commandResult.command_id)) {
+                                root._pendingRefreshAfterCommand.push(commandResult.command_id);
+                            }
                         }
                     }
 
@@ -256,6 +260,7 @@ Item {
                             monitoring_datas: HostDataManager.get_category_monitor_ids(root.hostId, modelData)
                                                              .map(monitorId => HostDataManager.get_monitoring_data(root.hostId, monitorId))
                             command_datas: CommandHandler.get_category_commands(root.hostId, modelData)
+                            cooldownTimer: cooldownTimer
 
                             Layout.fillHeight: true
                             Layout.fillWidth: true

@@ -23,6 +23,7 @@ TableView {
     property var monitoring_datas: []
     // CommandDatas as QVariants.
     property var command_datas: []
+    property var cooldownTimer: {}
 
     // Number of the row that has command row menu expanded.
     // Only one menu can be open at a time.
@@ -48,24 +49,6 @@ TableView {
 
     ScrollBar.vertical: ScrollBar {
         id: scrollBar
-    }
-
-    Connections {
-        target: HostDataManager
-        function onCommand_result_received(commandResultJson) {
-            let commandResult = JSON.parse(commandResultJson)
-            cooldownTimer.finishCooldown(commandResult.invocation_id)
-        }
-    }
-
-    Connections {
-        target: CommandHandler
-
-        function onCommand_executed(invocationId, hostId, commandId, category, buttonIdentifier) {
-            if (hostId === root.hostId && category === root.category) {
-                cooldownTimer.startCooldown(buttonIdentifier, invocationId)
-            }
-        }
     }
 
     delegate: DelegateChooser {
@@ -240,12 +223,12 @@ TableView {
                     }
 
                     Connections {
-                        target: cooldownTimer
+                        target: root.cooldownTimer
 
                         function onTriggered() {
                             let buttonIdentifiers = commandButtonRow.getButtonIdentifiers()
                             for (let identifier of buttonIdentifiers) {
-                                let cooldownPercent = cooldownTimer.getCooldown(identifier)
+                                let cooldownPercent = root.cooldownTimer.getCooldown(identifier)
                                 commandButtonRow.updateCooldown(identifier, cooldownPercent)
                             }
                         }
@@ -253,11 +236,6 @@ TableView {
                 }
             }
         }
-    }
-
-    // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
-    CooldownTimer {
-        id: cooldownTimer
     }
 
     function toggleRow(row) {
