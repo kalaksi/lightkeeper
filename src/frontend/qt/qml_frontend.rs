@@ -77,6 +77,7 @@ impl QmlFrontend {
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
+        qml_register_type::<CooldownTimerModel>(cstr::cstr!("CooldownTimerModel"), 1, 0, cstr::cstr!("CooldownTimerModel"));
 
         let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
         let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
