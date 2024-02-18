@@ -2,7 +2,6 @@
 extern crate qmetaobject;
 use qmetaobject::*;
 use serde_derive::Serialize;
-use std::collections::HashMap;
 
 use crate::command_handler::CommandData;
 use crate::enums::Criticality;
@@ -11,7 +10,6 @@ use crate::module::monitoring::{DataPoint, MonitoringData};
 
 
 const SEPARATOR_TOKEN: &str = "sep";
-const COOLDOWN_LENGTH: u32 = 45000;
 
 #[derive(QObject, Default)]
 pub struct PropertyTableModel {
@@ -28,21 +26,10 @@ pub struct PropertyTableModel {
     get_row_height: qt_method!(fn(&mut self, row: QVariant) -> u32),
     get_column_width: qt_method!(fn(&self, row: QVariant, column: QVariant) -> f32),
 
-    // For command cooldown mechanism.
-    // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
-    start_command_cooldown: qt_method!(fn(&mut self, button_identifier: QString, invocation_id: u64)),
-    decrease_command_cooldowns: qt_method!(fn(&mut self, cooldown_decrement: u32) -> u32),
-    end_command_cooldown: qt_method!(fn(&mut self, invocation_id: u64)),
-    get_command_cooldowns: qt_method!(fn(&self, row: u32) -> QString),
-
-
     // Internal data structures.
     i_monitoring_datas: Vec<MonitoringData>,
     i_command_datas: Vec<CommandData>,
     i_display_options: configuration::DisplayOptions,
-    command_cooldown_times: HashMap<String, u32>,
-    command_cooldowns_finishing: Vec<String>,
-    command_invocation_buttons: HashMap<u64, String>,
 
     /// Holds preprocessed data more fitting for table rows.
     row_datas: Vec<RowData>,
@@ -274,55 +261,6 @@ impl PropertyTableModel {
                 row_data.insert(i, separator_row);
             }
         }
-    }
-
-    fn start_command_cooldown(&mut self, button_identifier: QString, invocation_id: u64) {
-        let button_identifier = button_identifier.to_string();
-        self.command_cooldown_times.insert(button_identifier.clone(), COOLDOWN_LENGTH);
-        self.command_invocation_buttons.insert(invocation_id, button_identifier);
-    }
-
-    fn decrease_command_cooldowns(&mut self, cooldown_decrement: u32) -> u32 {
-        for (button_identifier, cooldown_time) in self.command_cooldown_times.iter_mut() {
-            // Quickly decrease cooldown if command is finished.
-            let actual_decrement = match self.command_cooldowns_finishing.contains(button_identifier) {
-                true => 30 * cooldown_decrement,
-                false => cooldown_decrement,
-            };
-
-            if actual_decrement > *cooldown_time {
-                *cooldown_time = 0;
-                self.command_cooldowns_finishing.retain(|c| c != button_identifier);
-            }
-            else {
-                *cooldown_time -= actual_decrement;
-            };
-        }
-
-        self.command_cooldown_times.retain(|_, cooldown_time| *cooldown_time > 0);
-        self.command_cooldown_times.len() as u32
-    }
-
-    fn end_command_cooldown(&mut self, invocation_id: u64) {
-        // Does nothing if the invocation_id doesn't belong to this table instance.
-        if let Some(button_identifier) = self.command_invocation_buttons.remove(&invocation_id) {
-            self.command_cooldowns_finishing.push(button_identifier);
-        }
-    }
-
-    fn get_command_cooldowns(&self, row: u32) -> QString {
-        let mut cooldowns = HashMap::<String, f32>::new();
-
-        if let Some(row_data) = self.row_datas.get(row as usize) {
-            for command_data in row_data.command_datas.iter() {
-                let button_identifier = format!("{}|{}", command_data.command_id, command_data.command_params.first().unwrap_or(&String::new()));
-                let remaining_time = self.command_cooldown_times.get(&button_identifier).unwrap_or(&0);
-                let remaining_percentage = *remaining_time as f32 / COOLDOWN_LENGTH as f32;
-                cooldowns.insert(button_identifier, remaining_percentage);
-            }
-        }
-
-        QString::from(serde_json::to_string(&cooldowns).unwrap())
     }
 }
 

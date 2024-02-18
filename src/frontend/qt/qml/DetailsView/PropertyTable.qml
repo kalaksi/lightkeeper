@@ -260,6 +260,7 @@ TableView {
         }
     }
 
+    // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
     CooldownTimer {
         id: cooldownTimer
 
