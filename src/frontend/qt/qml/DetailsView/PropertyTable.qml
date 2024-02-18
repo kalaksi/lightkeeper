@@ -8,6 +8,7 @@ import PropertyTableModel 1.0
 
 import "../StyleOverride"
 import ".."
+import "../Misc"
 import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../js/ValueUnit.js" as ValueUnit
@@ -57,8 +58,7 @@ TableView {
         target: HostDataManager
         function onCommand_result_received(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
-            root.model.end_command_cooldown(commandResult.invocation_id)
-
+            cooldownTimer.endCooldown(commandResult.invocation_id)
             root.pendingRefreshAfterCommand.push(commandResult.command_id);
         }
     }
@@ -68,10 +68,7 @@ TableView {
 
         function onCommand_executed(invocationId, hostId, commandId, category, buttonIdentifier) {
             if (hostId === root.hostId && category === root.category) {
-                root.model.start_command_cooldown(buttonIdentifier, invocationId)
-
-                // Does nothing if timer is already running.
-                cooldownTimer.start()
+                cooldownTimer.startCooldown(buttonIdentifier, invocationId)
             }
         }
     }
@@ -249,10 +246,12 @@ TableView {
 
                     Connections {
                         target: cooldownTimer
+
                         function onTriggered() {
-                            let cooldowns = JSON.parse(root.model.get_command_cooldowns(row))
-                            if (Object.keys(cooldowns).length > 0) {
-                                commandButtonRow.updateCooldowns(cooldowns)
+                            let buttonIdentifiers = commandButtonRow.getButtonIdentifiers()
+                            for (let identifier of buttonIdentifiers) {
+                                let cooldownPercent = cooldownTimer.getCooldown(identifier)
+                                commandButtonRow.updateCooldown(identifier, cooldownPercent)
                             }
                         }
                     }
@@ -261,25 +260,15 @@ TableView {
         }
     }
 
-    // Countdown timer for the cooldown canvas animation
-    Timer {
+    CooldownTimer {
         id: cooldownTimer
 
-        interval: 20
-        repeat: true
-        running: false
-        onTriggered: {
-            let cooldownCount = root.model.decrease_command_cooldowns(interval)
-            if (cooldownCount === 0) {
-                cooldownTimer.stop()
-
-                // Refresh the monitor(s) related to commands that were executed.
-                for (const commandId of root.pendingRefreshAfterCommand) {
-                    CommandHandler.force_refresh_monitors_of_command(root.hostId, commandId)
-                }
-
-                root.pendingRefreshAfterCommand = []
+        function onAllFinished() {
+            // Refresh the monitor(s) related to commands that were executed.
+            for (const commandId of root.pendingRefreshAfterCommand) {
+                CommandHandler.force_refresh_monitors_of_command(root.hostId, commandId)
             }
+            root.pendingRefreshAfterCommand = []
         }
     }
 

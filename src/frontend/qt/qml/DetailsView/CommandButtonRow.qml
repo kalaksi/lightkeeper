@@ -33,7 +33,6 @@ Item {
 
     signal clicked(string commandId, var params)
     signal expanded()
-    signal cooldownsUpdated()
 
     Component.onCompleted: {
         root._commandCooldowns = {}
@@ -61,6 +60,7 @@ Item {
             spacing: 1
 
             Repeater {
+                id: commandRepeater
                 model: !root.collapsible || root._showCommands ?  root.commands : root._alwaysShownCommands
 
                 CommandButton {
@@ -72,21 +72,9 @@ Item {
                     roundButton: root.roundButtons
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
-                    cooldownPercent: root._getButtonCooldown(buttonIdentifier)
+                    cooldownPercent: 0.0
                     onClicked: root.clicked(modelData.command_id, modelData.command_params)
-
                     hoverEnabled: root.hoverEnabled
-
-                    Connections {
-                        target: root
-                        function onCooldownsUpdated() {
-                            let newValue = root._getButtonCooldown(buttonIdentifier)
-                            if (newValue !== cooldownPercent) {
-                                cooldownPercent = newValue
-                            }
-                        }
-                    }
-
                 }
             }
 
@@ -144,6 +132,25 @@ Item {
         }
     ]
 
+    function getButtonIdentifiers() {
+        let result = []
+
+        for (let i = 0; i < commandRepeater.count; i++) {
+            let button = commandRepeater.itemAt(i)
+            result.push(button.buttonIdentifier)
+        }
+
+        return result
+    }
+
+    function updateCooldown(buttonIdentifier, cooldownPercent) {
+        let button = commandRepeater.itemAt(getButtonIdentifiers().indexOf(buttonIdentifier))
+        // Assign new value only if necessary.
+        if (button !== undefined && button.cooldownPercent !== cooldownPercent) {
+            button.cooldownPercent = cooldownPercent
+        }
+    }
+
     function calculateWidth(forAllCommands) {
         let spaceForMenu = root._showMenu ? 1 : 0
 
@@ -168,21 +175,5 @@ Item {
             root._showCommands = false
             collapseAnimation.start()
         }
-    }
-
-    function updateCooldowns(cooldowns) {
-        // Update _commandCooldowns by modifying the existing object.
-        // This avoids the need to reassign the property, which would cause everything to be re-rendered.
-        for (const buttonIdentifier of Object.keys(cooldowns)) {
-            root._commandCooldowns[buttonIdentifier] = cooldowns[buttonIdentifier]
-        }
-        root.cooldownsUpdated()
-    }
-
-    function _getButtonCooldown(buttonIdentifier) {
-        if (root._commandCooldowns[buttonIdentifier] !== undefined) {
-            return root._commandCooldowns[buttonIdentifier]
-        }
-        return 0.0
     }
 }

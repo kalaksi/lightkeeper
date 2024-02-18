@@ -13,11 +13,13 @@ const COOLDOWN_LENGTH: u32 = 45000;
 pub struct CooldownTimerModel {
     base: qt_base_class!(trait QObject),
 
+    allFinished: qt_signal!(),
+
     // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
     startCooldown: qt_method!(fn(&mut self, button_identifier: QString, invocation_id: u64)),
     updateCooldowns: qt_method!(fn(&mut self, cooldown_decrement: u32) -> u32),
     finishCooldown: qt_method!(fn(&mut self, invocation_id: u64)),
-    getCooldown: qt_method!(fn(&self, button_identifier: QString) -> u32),
+    getCooldown: qt_method!(fn(&self, button_identifier: QString) -> f32),
 
     cooldown_times: HashMap<String, u32>,
     cooldowns_finishing: Vec<String>,
@@ -50,6 +52,11 @@ impl CooldownTimerModel {
         }
 
         self.cooldown_times.retain(|_, cooldown_time| *cooldown_time > 0);
+
+        if self.cooldown_times.is_empty() {
+            self.allFinished();
+        }
+
         self.cooldown_times.len() as u32
     }
 
@@ -60,8 +67,9 @@ impl CooldownTimerModel {
         }
     }
 
-    fn getCooldown(&self, button_identifier: QString) -> u32 {
+    fn getCooldown(&self, button_identifier: QString) -> f32 {
         let button_identifier = button_identifier.to_string();
-        *self.cooldown_times.get(&button_identifier).unwrap_or(&0)
+        let cooldown_time = *self.cooldown_times.get(&button_identifier).unwrap_or(&0);
+        cooldown_time as f32 / COOLDOWN_LENGTH as f32
     }
 }

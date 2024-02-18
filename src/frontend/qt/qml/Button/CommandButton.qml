@@ -33,7 +33,7 @@ Item {
     // Cooldown animation that blocks the button until timeout timer is finished or finish() called.
     Canvas {
         id: cooldownCanvas
-        visible: root.cooldownPercent > 0
+        visible: root.cooldownPercent > 0.0
         anchors.fill: parent
         onPaint: {
             let context = getContext("2d")
