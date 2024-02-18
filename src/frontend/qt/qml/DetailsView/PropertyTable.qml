@@ -27,10 +27,6 @@ TableView {
     // Number of the row that has command row menu expanded.
     // Only one menu can be open at a time.
     property int expandedCommandRow: -1
-
-    // Automatic refresh is done after all commands have been executed.
-    // This keeps track which commands were executed.
-    property var pendingRefreshAfterCommand: []
     property int selectedRow: -1
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
@@ -58,8 +54,7 @@ TableView {
         target: HostDataManager
         function onCommand_result_received(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
-            cooldownTimer.endCooldown(commandResult.invocation_id)
-            root.pendingRefreshAfterCommand.push(commandResult.command_id);
+            cooldownTimer.finishCooldown(commandResult.invocation_id)
         }
     }
 
@@ -263,14 +258,6 @@ TableView {
     // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
     CooldownTimer {
         id: cooldownTimer
-
-        function onAllFinished() {
-            // Refresh the monitor(s) related to commands that were executed.
-            for (const commandId of root.pendingRefreshAfterCommand) {
-                CommandHandler.force_refresh_monitors_of_command(root.hostId, commandId)
-            }
-            root.pendingRefreshAfterCommand = []
-        }
     }
 
     function toggleRow(row) {

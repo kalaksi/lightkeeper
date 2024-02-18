@@ -6,6 +6,7 @@ import QtGraphicalEffects 1.15
 
 import "../StyleOverride"
 import ".."
+import "../Misc"
 import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../js/Parse.js" as Parse
@@ -23,6 +24,10 @@ Item {
     property var _categories: {}
     property bool _showEmptyCategories: true
 
+    // Automatic refresh is done after all commands have been executed.
+    // This keeps track which commands were executed.
+    property var _pendingRefreshAfterCommand: []
+
 
     Component.onCompleted: {
         refresh()
@@ -37,6 +42,7 @@ Item {
             }
         }
     }
+
 
     // ScrollView doesn't have boundsBehavior so this is the workaround.
     Binding {
@@ -82,6 +88,25 @@ Item {
 
                     background: Rectangle {
                         color: Theme.categoryBackgroundColor
+                    }
+
+                    Connections {
+                        target: HostDataManager
+                        function onCommand_result_received(commandResultJson) {
+                            let commandResult = JSON.parse(commandResultJson)
+                            cooldownTimer.finishCooldown(commandResult.invocation_id)
+                            root._pendingRefreshAfterCommand.push(commandResult.command_id);
+                        }
+                    }
+
+                    Connections {
+                        target: CommandHandler
+
+                        function onCommand_executed(invocationId, hostId, commandId, category, buttonIdentifier) {
+                            if (hostId === root.hostId && category === modelData) {
+                                cooldownTimer.startCooldown(buttonIdentifier, invocationId)
+                            }
+                        }
                     }
 
                     // Custom label provides more flexibility.
@@ -130,6 +155,7 @@ Item {
 
                         // Category-level command buttons (buttons on top of the category area).
                         CommandButtonRow {
+                            id: categoryCommands
                             visible: commands.length > 0
                             size: 34
                             flatButtons: false
@@ -144,9 +170,21 @@ Item {
                             onClicked: function(commandId, params) {
                                 CommandHandler.execute(root.hostId, commandId, params)
                             }
+
+                            Connections {
+                                target: cooldownTimer
+
+                                function onTriggered() {
+                                    let buttonIdentifiers = categoryCommands.getButtonIdentifiers()
+                                    for (let identifier of buttonIdentifiers) {
+                                        let cooldownPercent = cooldownTimer.getCooldown(identifier)
+                                        categoryCommands.updateCooldown(identifier, cooldownPercent)
+                                    }
+                                }
+                            }
                         }
 
-                        // Host details are a bit different from monitor data, so handling it separately here.
+                        // Host details are a bit different from other monitor data, so handling it separately here.
                         Item {
                             id: hostDetails
                             visible: modelData === "host"
@@ -241,6 +279,20 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             preventStealing: true
+                        }
+                    }
+
+                    // State has to be stored and handled on groupbox level and not in e.g.
+                    // CommandButton or CommandButtonRow since those are not persistent.
+                    CooldownTimer {
+                        id: cooldownTimer
+
+                        function onAllFinished() {
+                            // Refresh the monitor(s) related to commands that were executed.
+                            for (const commandId of root._pendingRefreshAfterCommand) {
+                                CommandHandler.force_refresh_monitors_of_command(root.hostId, commandId)
+                            }
+                            root._pendingRefreshAfterCommand = []
                         }
                     }
                 }
