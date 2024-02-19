@@ -9,10 +9,15 @@ Item {
     id: root
 
     signal triggered()
+    signal allFinished()
 
 
     CooldownTimerModel {
         id: cooldowns 
+
+        onAllFinished: {
+            root.allFinished()
+        }
     }
 
     Timer {

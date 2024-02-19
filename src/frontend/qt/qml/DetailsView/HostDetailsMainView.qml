@@ -24,10 +24,6 @@ Item {
     property var _categories: {}
     property bool _showEmptyCategories: true
 
-    // Automatic refresh is done after all commands have been executed.
-    // This keeps track which commands were executed.
-    property var _pendingRefreshAfterCommand: []
-
 
     Component.onCompleted: {
         refresh()
@@ -97,8 +93,8 @@ Item {
                             let commandResult = JSON.parse(commandResultJson)
                             cooldownTimer.finishCooldown(commandResult.invocation_id)
 
-                            if (!root._pendingRefreshAfterCommand.includes(commandResult.command_id)) {
-                                root._pendingRefreshAfterCommand.push(commandResult.command_id);
+                            if (!cooldownTimer.refreshAfterCommands.includes(commandResult.command_id)) {
+                                cooldownTimer.refreshAfterCommands.push(commandResult.command_id)
                             }
                         }
                     }
@@ -292,12 +288,16 @@ Item {
                     CooldownTimer {
                         id: cooldownTimer
 
-                        function onAllFinished() {
+                        // Automatic refresh is done after all commands have been executed.
+                        // This keeps track which commands were executed.
+                        property var refreshAfterCommands: []
+
+                        onAllFinished: {
                             // Refresh the monitor(s) related to commands that were executed.
-                            for (const commandId of root._pendingRefreshAfterCommand) {
+                            for (const commandId of refreshAfterCommands) {
                                 CommandHandler.force_refresh_monitors_of_command(root.hostId, commandId)
                             }
-                            root._pendingRefreshAfterCommand = []
+                            refreshAfterCommands = []
                         }
                     }
                 }
