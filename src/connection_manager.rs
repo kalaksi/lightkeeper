@@ -287,7 +287,7 @@ impl ConnectionManager {
                         return Ok(ResponseMessage::not_found());
                     }
 
-                    let response_result = connector.send_message(request_message);
+                    let response_result = connector.send_message(request_message, true);
 
                     if response_result.is_ok() {
                         let response = response_result.as_ref().unwrap().clone();

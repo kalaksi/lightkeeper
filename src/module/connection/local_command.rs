@@ -25,7 +25,12 @@ impl Module for LocalCommand {
 }
 
 impl ConnectionModule for LocalCommand {
-    fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String> {
+    fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, String> {
+        if !wait_full_response {
+            // Not supported.
+            panic!()
+        }
+
         // TODO: don't assume bash exists even though it's very common?
         let output = process::Command::new("bash")
                                       .args(&["-c", message])

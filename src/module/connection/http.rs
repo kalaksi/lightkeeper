@@ -25,7 +25,12 @@ impl Module for Http {
 }
 
 impl ConnectionModule for Http {
-    fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String> {
+    fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, String> {
+        if wait_full_response {
+            // Not supported.
+            panic!()
+        }
+
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }

@@ -134,7 +134,7 @@ impl ConnectionModule for Ssh2 {
         Ok(())
     }
 
-    fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String> {
+    fn send_message(&mut self, message: &str, wait_full_result: bool) -> Result<ResponseMessage, String> {
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }
@@ -160,9 +160,21 @@ impl ConnectionModule for Ssh2 {
         };
 
         let mut output = String::new();
-        if let Err(error) = channel.read_to_string(&mut output) {
-            return Err(format!("Invalid output string received: {}", error));
-        };
+
+        if wait_full_result {
+            if let Err(error) = channel.read_to_string(&mut output) {
+                return Err(format!("Invalid output string received: {}", error));
+            };
+        }
+        else {
+            let mut buffer = [0u8; 256];
+            if let Ok(count) = channel.read(&mut buffer) {
+                if count > 0 {
+                    let output = std::str::from_utf8(&buffer).unwrap().to_string();
+                    return Ok(ResponseMessage::new_partial(output));
+                }
+            }
+        }
 
         let exit_status = channel.exit_status().unwrap_or(-1);
 

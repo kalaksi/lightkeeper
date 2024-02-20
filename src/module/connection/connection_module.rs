@@ -10,7 +10,13 @@ use crate::file_handler::FileMetadata;
 pub type Connector = Box<dyn ConnectionModule + Send>;
 
 pub trait ConnectionModule : MetadataSupport + Module {
-    fn send_message(&mut self, message: &str) -> Result<ResponseMessage, String>;
+    /// Sends a request / message and waits for response. Response can be complete or partial.
+    fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, String>;
+
+    /// For partial responses. Should be called until the response is complete.
+    fn receive_response(&mut self, message: &str) -> Result<ResponseMessage, String> {
+        panic!("Not implemented");
+    }
 
     fn download_file(&self, _source: &String) -> io::Result<(FileMetadata, Vec<u8>)> {
         Err(io::Error::new(io::ErrorKind::Other, "Not implemented"))
