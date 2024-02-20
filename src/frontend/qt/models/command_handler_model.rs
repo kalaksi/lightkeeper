@@ -295,6 +295,10 @@ impl CommandHandlerModel {
                     }
                 }
             },
+            UIAction::FollowOutput => {
+                // TODO
+                todo!()
+            }
         }
     }
 

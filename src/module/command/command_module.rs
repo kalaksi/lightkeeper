@@ -166,6 +166,7 @@ pub enum UIAction {
     LogViewWithTimeControls,
     Terminal,
     TextEditor,
+    FollowOutput,
 }
 
 impl Default for UIAction {
