@@ -30,6 +30,7 @@ impl CommandModule for Build {
         frontend::DisplayOptions {
             category: String::from("docker-compose"),
             parent_id: String::from("docker-compose"),
+            action: UIAction::FollowOutput,
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("build"),
             display_text: String::from("Build"),
@@ -63,10 +64,16 @@ impl CommandModule for Build {
     }
 
     fn process_response(&self, _host: Host, response: &connection::ResponseMessage) -> Result<CommandResult, String> {
-        if response.return_code == 0 {
-            Ok(CommandResult::default())
-        } else {
-            Err(response.message.clone())
+        if response.is_partial {
+            // TODO
+            Ok(CommandResult::new_partial(response.message.clone(), 100))
+        }
+        else {
+            if response.return_code == 0 {
+                Ok(CommandResult::default())
+            } else {
+                Err(response.message.clone())
+            }
         }
     }
 }
