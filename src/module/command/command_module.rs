@@ -43,8 +43,9 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         Ok(CommandResult::new_info(response.message.clone()))
     }
+
     fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>) -> Result<CommandResult, String> {
-        Err(String::new())
+        Err(String::from("NI"))
     }
 }
 
@@ -58,6 +59,9 @@ pub trait BoxCloneableCommand {
 pub struct CommandResult {
     pub command_id: String,
     pub message: String,
+    /// For commands with partial responses, as normally the response means the command is 100% done.
+    /// This is percentage of progress (0-100).
+    pub progress: u8,
     pub show_in_notification: bool,
     pub error: String,
     pub criticality: Criticality,
@@ -71,6 +75,16 @@ impl CommandResult {
             message: message.to_string(),
             criticality: Criticality::Normal,
             show_in_notification: false,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_partial<Stringable: ToString>(message: Stringable, progress: u8) -> Self {
+        CommandResult {
+            message: message.to_string(),
+            criticality: Criticality::Normal,
+            show_in_notification: false,
+            progress: progress,
             ..Default::default()
         }
     }
@@ -116,6 +130,7 @@ impl CommandResult {
         CommandResult {
             criticality: Criticality::NoData,
             invocation_id: invocation_id,
+            progress: 0,
             ..Default::default()
         }
     }
@@ -131,6 +146,7 @@ impl Default for CommandResult {
         CommandResult {
             command_id: String::from(""),
             message: String::from(""),
+            progress: 100,
             show_in_notification: false,
             error: String::from(""),
             criticality: Criticality::Normal,

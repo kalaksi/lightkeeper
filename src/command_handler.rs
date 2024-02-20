@@ -184,9 +184,10 @@ impl CommandHandler {
             if !responses.is_empty() {
                 result = command.process_responses(host.clone(), responses.clone());
                 if let Err(error) = result {
-                    if error.is_empty() {
+                    if error == "NI" {
+                        let response = responses.first().unwrap();
                         // Wasn't implemented, try the other method.
-                        result = command.process_response(host.clone(), responses.first().unwrap());
+                        result = command.process_response(host.clone(), response);
                     }
                     else {
                         result = Err(error);
