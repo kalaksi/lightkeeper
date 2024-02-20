@@ -11,6 +11,7 @@ use crate::enums::Criticality;
 use crate::file_handler;
 use crate::file_handler::write_file_metadata;
 use crate::host_manager::HostManager;
+use crate::module::command::UIAction;
 use crate::module::module_factory::ModuleFactory;
 use crate::utils::{ShellCommand, ErrorMessage};
 use crate::{
@@ -136,12 +137,17 @@ impl CommandHandler {
             ..Default::default()
         }).unwrap();
 
+        let command_request_type = match command.get_display_options().action == UIAction::FollowOutput {
+            true => RequestType::CommandFollowOutput,
+            false => RequestType::Command
+        };
+
         // Send request to ConnectionManager.
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
-            request_type: RequestType::Command,
+            request_type: command_request_type,
             messages: messages,
             response_handler: Self::get_response_handler(
                 host,
