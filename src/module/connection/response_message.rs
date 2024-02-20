@@ -6,6 +6,7 @@ use serde_derive::{Serialize, Deserialize};
 pub struct ResponseMessage {
     pub message: String,
     pub return_code: i32,
+    pub is_partial: bool,
     pub is_from_cache: bool,
     /// Not found in cache when OnlyCache policy was used.
     pub not_found: bool,
@@ -16,6 +17,15 @@ impl ResponseMessage {
         ResponseMessage {
             message: message,
             return_code: return_code,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_partial(partial_message: String) -> ResponseMessage {
+        ResponseMessage {
+            message: partial_message,
+            return_code: 0,
+            is_partial: true,
             ..Default::default()
         }
     }

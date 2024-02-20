@@ -5,7 +5,7 @@ use strum_macros::{Display, EnumString};
 pub enum Criticality {
     Ignore,
     Normal,
-    // Info is basically Normal level but it will be displayed to user in some cases where Normal won't.
+    /// Info is basically Normal level but it will be displayed to user in some cases where Normal won't.
     Info,
     NoData,
     Warning,
