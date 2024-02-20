@@ -24,6 +24,7 @@ pub struct DisplayOptions {
 
     /// For monitors that produce a group of values.
     pub use_multivalue: bool,
+    /// Don't include in the host table status summary.
     pub ignore_from_summary: bool,
     /// Mainly for extension modules. If set, will hide defined monitor id from summary.
     pub override_summary_monitor_id: String,
@@ -31,6 +32,7 @@ pub struct DisplayOptions {
     /// Display confirmation dialog with this text.
     pub confirmation_text: String,
 
+    /// If set, will prompt the user for some additional parameters before launching command.
     pub user_parameters: Vec<UserInputField>,
 
     /// Monitor id to attach commands to, instead of displaying on just category-level.
