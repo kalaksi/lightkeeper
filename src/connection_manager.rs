@@ -217,14 +217,14 @@ impl ConnectionManager {
                             }
                         }).collect::<Vec<_>>();
 
-                        let response = RequestResponse::new(request.source_id, request.host, request.invocation_id, responses);
+                        let response = RequestResponse::new(&request, responses);
                         (request.response_handler)(response);
                     });
                 }
                 // Stateful connectors.
                 else {
-                    // TODO: This will block the thread unnecessarily. Need better solution. Imagine
-                    // MAX_WORKERS amount of requests sequentially for the same host and connector.
+                    // TODO: This will block the thread unnecessarily. Need a better solution for parallel update of multiple hosts.
+                    // Imagine MAX_WORKERS amount of requests sequentially for the same host and connector.
                     let host_connectors = stateful_connectors.get_mut(&request.host.name).unwrap();
                     let connector_mutex = host_connectors.get_mut(&connector_spec).unwrap();
 
@@ -241,7 +241,6 @@ impl ConnectionManager {
 
                     worker_pool.install(|| {
                         log::debug!("[{}] Worker {} processing a stateful request", request.host.name, rayon::current_thread_index().unwrap());
-                        // Self::process_request(request_mutex.clone(), request_message, connector_mutex.clone(), command_cache.clone())
 
                         let mut connector = connector_mutex.lock().unwrap();
                         let responses = request_messages.iter().map(|request_message| {
@@ -256,7 +255,7 @@ impl ConnectionManager {
                         }).collect::<Vec<_>>();
                         drop(connector);
 
-                        let response = RequestResponse::new(request.source_id, request.host, request.invocation_id, responses);
+                        let response = RequestResponse::new(&request, responses);
                         (request.response_handler)(response);
                     });
                 }
@@ -405,6 +404,7 @@ pub enum RequestType {
     CommandFollowOutput,
     Download,
     Upload,
+    /// Causes the receiver thread to exit.
     Exit,
 }
 
