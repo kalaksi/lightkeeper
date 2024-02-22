@@ -64,8 +64,11 @@ impl Host {
 impl Default for Host {
     fn default() -> Self {
         Host {
+            name: String::default(),
+            fqdn: String::default(),
             ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-            ..Default::default()
+            platform: PlatformInfo::default(),
+            settings: Vec::default(),
         }
     }
 }

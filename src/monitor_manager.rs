@@ -175,12 +175,11 @@ impl MonitorManager {
                     connector_spec: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
+                    invocation_id: self.invocation_id_counter,
                     messages: messages,
                     request_type: RequestType::Command,
                     response_handler: Self::get_response_handler(
-                        host.clone(),
                         vec![info_provider],
-                        self.invocation_id_counter,
                         self.request_sender.as_ref().unwrap().clone(),
                         self.state_update_sender.as_ref().unwrap().clone(),
                         DataPoint::empty_and_critical(),
@@ -318,31 +317,27 @@ impl MonitorManager {
             }
         };
 
-        let response_handler = Self::get_response_handler(
-            host.clone(), monitors, invocation_id, request_sender.clone(), state_update_sender, parent_result, cache_policy 
-        );
-
         request_sender.send(ConnectorRequest {
             connector_spec: monitor.get_connector_spec(),
             source_id: monitor.get_module_spec().id,
             host: host.clone(),
+            invocation_id: invocation_id,
             messages: messages,
             request_type: RequestType::Command,
-            response_handler: response_handler,
+            response_handler: Self::get_response_handler(monitors, request_sender.clone(), state_update_sender, parent_result, cache_policy),
             cache_policy: cache_policy,
         }).unwrap();
     }
 
-    fn get_response_handler(host: Host, mut monitors: Vec<Monitor>, invocation_id: u64,
-                            request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>,
+    fn get_response_handler(mut monitors: Vec<Monitor>, request_sender: Sender<ConnectorRequest>, state_update_sender: Sender<StateUpdateMessage>,
                             parent_datapoint: DataPoint, cache_policy: CachePolicy) -> ResponseHandlerCallback {
 
-        Box::new(move |results| {
+        Box::new(move |response| {
             let monitor = monitors.remove(0);
             let monitor_id = monitor.get_module_spec().id;
 
-            let results_len = results.len();
-            let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
+            let results_len = response.responses.len();
+            let (responses, errors): (Vec<_>, Vec<_>) =  response.responses.into_iter().partition(Result::is_ok);
             let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
             let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err())).collect::<Vec<_>>();
 
@@ -355,16 +350,16 @@ impl MonitorManager {
             if results_len == 0 {
                 // Some special modules require no connectors and receive no response messages.
                 // TODO: which modules?
-                datapoint_result = monitor.process_response(host.clone(), ResponseMessage::empty(), parent_datapoint.clone())
+                datapoint_result = monitor.process_response(response.host.clone(), ResponseMessage::empty(), parent_datapoint.clone())
             }
             else if responses.len() > 0 {
-                datapoint_result = monitor.process_responses(host.clone(), responses.clone(), parent_datapoint.clone());
+                datapoint_result = monitor.process_responses(response.host.clone(), responses.clone(), parent_datapoint.clone());
                 if let Err(error) = datapoint_result {
                     if error.is_empty() {
                         // Was not implemented, so try the other method.
-                        let response = responses[0].clone();
-                        datapoint_result = monitor.process_response(host.clone(), response.clone(), parent_datapoint.clone())
-                                                  .map(|mut data_point| { data_point.is_from_cache = response.is_from_cache; data_point });
+                        let message = responses[0].clone();
+                        datapoint_result = monitor.process_response(response.host.clone(), message.clone(), parent_datapoint.clone())
+                                                  .map(|mut data_point| { data_point.is_from_cache = message.is_from_cache; data_point });
                     }
                     else {
                         datapoint_result = Err(error);
@@ -379,8 +374,8 @@ impl MonitorManager {
 
             let new_data_point = match datapoint_result {
                 Ok(mut data_point) => {
-                    log::debug!("[{}] Data point received for monitor {}: {} {}", host.name, monitor_id, data_point.label, data_point);
-                    data_point.invocation_id = invocation_id;
+                    log::debug!("[{}] Data point received for monitor {}: {} {}", response.host.name, monitor_id, data_point.label, data_point);
+                    data_point.invocation_id = response.invocation_id;
                     data_point
                 },
                 Err(error) => {
@@ -393,16 +388,16 @@ impl MonitorManager {
             };
 
             for error in errors.iter() {
-                log::error!("[{}] Error from monitor {}: {}", host.name, monitor_id, error.message);
+                log::error!("[{}] Error from monitor {}: {}", response.host.name, monitor_id, error.message);
             }
 
             if !monitors.is_empty() {
                 // Process extension modules recursively until the final result is reached.
-                Self::send_connector_request(host, monitors, invocation_id, request_sender, state_update_sender, new_data_point, cache_policy);
+                Self::send_connector_request(response.host, monitors, response.invocation_id, request_sender, state_update_sender, new_data_point, cache_policy);
             }
             else {
                 state_update_sender.send(StateUpdateMessage {
-                    host_name: host.name.clone(),
+                    host_name: response.host.name.clone(),
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
                     data_point: Some(new_data_point),

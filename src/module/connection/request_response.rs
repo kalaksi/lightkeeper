@@ -1,5 +1,45 @@
-
 use serde_derive::{Serialize, Deserialize};
+
+use crate::host::Host;
+
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+pub struct RequestResponse {
+    pub source_id: String,
+    pub host: Host,
+    pub invocation_id: u64,
+    pub responses: Vec<Result<ResponseMessage, String>>,
+}
+
+impl RequestResponse {
+    pub fn new(source_id: String, host: Host, invocation_id: u64, responses: Vec<Result<ResponseMessage, String>>) -> RequestResponse {
+        RequestResponse {
+            source_id: source_id,
+            host: host,
+            invocation_id: invocation_id,
+            responses: responses,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_empty(source_id: String, host: Host, invocation_id: u64) -> RequestResponse {
+        RequestResponse {
+            source_id: source_id,
+            host: host,
+            invocation_id: invocation_id,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_error(source_id: String, host: Host, invocation_id: u64, error: String) -> RequestResponse {
+        RequestResponse {
+            source_id: source_id,
+            host: host,
+            invocation_id: invocation_id,
+            responses: vec![Err(error)],
+        }
+    }
+}
 
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

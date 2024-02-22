@@ -45,7 +45,9 @@ impl HostManager {
         HostManager {
             hosts: hosts,
             frontend_state_sender: frontend_state_sender,
-            ..Default::default()
+            data_receiver: None,
+            data_sender_prototype: None,
+            receiver_thread: None,
         }
     }
 
@@ -82,10 +84,6 @@ impl HostManager {
             .send(StateUpdateMessage::stop())
             .unwrap_or_else(|error| log::error!("Couldn't send stop command to state manager: {}", error));
 
-        self.join();
-    }
-
-    pub fn join(&mut self) {
         if let Some(thread) = self.receiver_thread.take() {
             thread.join().unwrap();
         }
@@ -306,6 +304,7 @@ pub struct StateUpdateMessage {
     /// Only used with commands.
     pub command_result: Option<CommandResult>,
     pub errors: Vec<ErrorMessage>,
+    /// Stops the receiver thread.
     pub stop: bool,
 }
 

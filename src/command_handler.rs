@@ -147,14 +147,10 @@ impl CommandHandler {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
+            invocation_id: self.invocation_id_counter,
             request_type: command_request_type,
             messages: messages,
-            response_handler: Self::get_response_handler(
-                host,
-                command.box_clone(),
-                self.invocation_id_counter,
-                state_update_sender
-            ),
+            response_handler: Self::get_response_handler(command.box_clone(), state_update_sender),
             cache_policy: CachePolicy::BypassCache, 
         }).unwrap();
 
@@ -179,21 +175,21 @@ impl CommandHandler {
         Some(CommandData::new(command_id.clone(), command.get_display_options()))
     }
 
-    fn get_response_handler(host: Host, command: Command, invocation_id: u64, state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
-        Box::new(move |results| {
-            let (responses, errors): (Vec<_>, Vec<_>) =  results.into_iter().partition(Result::is_ok);
-            let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
+    fn get_response_handler(command: Command, state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+        Box::new(move |response| {
+            let (messages, errors): (Vec<_>, Vec<_>) =  response.responses.into_iter().partition(Result::is_ok);
+            let messages = messages.into_iter().map(Result::unwrap).collect::<Vec<_>>();
             let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err())).collect::<Vec<_>>();
-            let command_id = command.get_module_spec().id.clone();
+            let command_id = response.source_id;
 
             let mut result;
-            if !responses.is_empty() {
-                result = command.process_responses(host.clone(), responses.clone());
+            if !messages.is_empty() {
+                result = command.process_responses(response.host.clone(), messages.clone());
                 if let Err(error) = result {
                     if error == "NI" {
-                        let response = responses.first().unwrap();
+                        let message = messages.first().unwrap();
                         // Wasn't implemented, try the other method.
-                        result = command.process_response(host.clone(), response);
+                        result = command.process_response(response.host.clone(), message);
                     }
                     else {
                         result = Err(error);
@@ -213,8 +209,8 @@ impl CommandHandler {
                         command_result.message.clone()
                     };
 
-                    log::debug!("[{}] Command result received: {}", host.name, log_message);
-                    command_result.invocation_id = invocation_id;
+                    log::debug!("[{}] Command result received: {}", response.host.name, log_message);
+                    command_result.invocation_id = response.invocation_id;
                     command_result.command_id = command.get_module_spec().id;
                     Some(command_result)
                 },
@@ -225,11 +221,11 @@ impl CommandHandler {
             };
 
             for error in errors.iter() {
-                log::error!("[{}] Error from command {}: {}", host.name, command_id, error.message);
+                log::error!("[{}] Error from command {}: {}", response.host.name, command_id, error.message);
             }
 
             state_update_sender.send(StateUpdateMessage {
-                host_name: host.name,
+                host_name: response.host.name,
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 command_result: new_command_result,
@@ -261,36 +257,28 @@ impl CommandHandler {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
+            invocation_id: self.invocation_id_counter,
             request_type: RequestType::Download,
             messages: connector_messages,
-            response_handler: Self::get_response_handler_download_file(
-                host,
-                command.box_clone(),
-                self.invocation_id_counter,
-                self.state_update_sender.as_ref().unwrap().clone()
-            ),
+            response_handler: Self::get_response_handler_download_file(command.box_clone(), self.state_update_sender.as_ref().unwrap().clone()),
             cache_policy: CachePolicy::BypassCache,
         }).unwrap();
 
         (self.invocation_id_counter, local_file_path)
     }
 
-    fn get_response_handler_download_file(host: Host, command: Command, invocation_id: u64,
-                                          state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
-        Box::new(move |responses| {
-            // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
-            let response = responses.first().unwrap();
+    fn get_response_handler_download_file(command: Command, state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback { 
+        Box::new(move |response| {
+            let message_result = response.responses.first().unwrap();
 
-            match response {
+            match message_result {
                 Ok(response_message) => {
-                    let response = response_message.message.clone();
-
-                    let (_, contents) = file_handler::read_file(&response).unwrap();
+                    let (_, contents) = file_handler::read_file(&response_message.message).unwrap();
                     let command_result = CommandResult::new_hidden(String::from_utf8(contents).unwrap())
-                                                       .with_invocation_id(invocation_id);
+                                                       .with_invocation_id(response.invocation_id);
 
                     state_update_sender.send(StateUpdateMessage {
-                        host_name: host.name,
+                        host_name: response.host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
                         command_result: Some(command_result),
@@ -302,7 +290,7 @@ impl CommandHandler {
                     log::error!("{}", error_message);
 
                     state_update_sender.send(StateUpdateMessage {
-                        host_name: host.name,
+                        host_name: response.host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_critical_error(error_message)),
@@ -341,11 +329,10 @@ impl CommandHandler {
                         connector_spec: command.get_connector_spec(),
                         source_id: command.get_module_spec().id,
                         host: host.clone(),
+                        invocation_id: self.invocation_id_counter,
                         request_type: RequestType::Upload,
                         messages: vec![local_file_path.clone()],
-                        response_handler: Self::get_response_handler_upload_file(
-                            host, command.box_clone(), self.invocation_id_counter, metadata, false, state_update_sender
-                        ),
+                        response_handler: Self::get_response_handler_upload_file(command.box_clone(), metadata, false, state_update_sender),
                         cache_policy: CachePolicy::BypassCache,
                     }).unwrap();
                 }
@@ -365,15 +352,13 @@ impl CommandHandler {
         self.invocation_id_counter
     }
 
-    fn get_response_handler_upload_file(host: Host, command: Command, invocation_id: u64,
-                                        new_metadata: file_handler::FileMetadata,
-                                        remove_file: bool,
-                                        state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
+    fn get_response_handler_upload_file(command: Command, new_metadata: file_handler::FileMetadata,
+                                        remove_file: bool, state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
-        Box::new(move |responses| {
-            let response = responses.first().unwrap();
+        Box::new(move |response| {
+            let message_result = response.responses.first().unwrap();
 
-            let command_result = match response {
+            let command_result = match message_result {
                 Ok(_) => {
                     if remove_file {
                         file_handler::remove_file(&new_metadata.local_path.unwrap()).unwrap();
@@ -384,18 +369,18 @@ impl CommandHandler {
                     }
 
                     CommandResult::new_info("File updated")
-                                  .with_invocation_id(invocation_id)
+                                  .with_invocation_id(response.invocation_id)
                 },
                 Err(error) => {
                     let error_message = format!("Error uploading file: {}", error);
                     log::error!("{}", error_message);
                     CommandResult::new_critical_error(error_message)
-                                  .with_invocation_id(invocation_id)
+                                  .with_invocation_id(response.invocation_id)
                 }
             };
 
             state_update_sender.send(StateUpdateMessage {
-                host_name: host.name,
+                host_name: response.host.name,
                 display_options: command.get_display_options(),
                 module_spec: command.get_module_spec(),
                 command_result: Some(command_result),
@@ -512,10 +497,10 @@ impl CommandHandler {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
+            invocation_id: 0,
             request_type: RequestType::Download,
             messages: connector_messages,
             response_handler: Self::get_response_handler_external_text_editor(
-                host,
                 command.box_clone(),
                 self.preferences.clone(),
                 self.request_sender.as_ref().unwrap().clone(),
@@ -525,16 +510,16 @@ impl CommandHandler {
         }).unwrap();
     }
 
-    fn get_response_handler_external_text_editor(host: Host, command: Command,
+    fn get_response_handler_external_text_editor(command: Command,
                                                  preferences: Preferences,
                                                  request_sender: mpsc::Sender<ConnectorRequest>,
                                                  state_update_sender: mpsc::Sender<StateUpdateMessage>) -> ResponseHandlerCallback {
 
-        Box::new(move |responses| {
+        Box::new(move |response| {
             // TODO: Commands don't yet support multiple commands per module. Implement later (take a look at monitor_manager.rs).
-            let response = responses.first().unwrap();
+            let message_result = response.responses.first().unwrap();
 
-            match response {
+            match message_result {
                 Ok(response_message) => {
                     let local_file = response_message.message.clone();
                     log::debug!("Starting local process: {} {}", preferences.text_editor, local_file);
@@ -554,7 +539,7 @@ impl CommandHandler {
                             let local_file_hash = sha256::digest(contents.as_slice());
                             if local_file_hash == metadata.remote_file_hash {
                                 state_update_sender.send(StateUpdateMessage {
-                                    host_name: host.name,
+                                    host_name: response.host.name,
                                     display_options: command.get_display_options(),
                                     module_spec: command.get_module_spec(),
                                     command_result: Some(CommandResult::new_error("File is unchanged")),
@@ -568,12 +553,11 @@ impl CommandHandler {
                                 request_sender.send(ConnectorRequest {
                                     connector_spec: command.get_connector_spec(),
                                     source_id: command.get_module_spec().id,
-                                    host: host.clone(),
+                                    host: response.host.clone(),
+                                    invocation_id: 0,
                                     request_type: RequestType::Upload,
                                     messages: vec![local_file],
-                                    response_handler: Self::get_response_handler_upload_file(
-                                        host, command, 0, metadata, true, state_update_sender
-                                    ),
+                                    response_handler: Self::get_response_handler_upload_file(command, metadata, true, state_update_sender),
                                     cache_policy: CachePolicy::BypassCache,
                                 }).unwrap();
                             }
@@ -583,7 +567,7 @@ impl CommandHandler {
                             log::error!("{}", error_message);
 
                             state_update_sender.send(StateUpdateMessage {
-                                host_name: host.name,
+                                host_name: response.host.name,
                                 display_options: command.get_display_options(),
                                 module_spec: command.get_module_spec(),
                                 command_result: Some(CommandResult::new_critical_error(error_message)),
@@ -597,7 +581,7 @@ impl CommandHandler {
                     log::error!("{}", error_message);
 
                     state_update_sender.send(StateUpdateMessage {
-                        host_name: host.name,
+                        host_name: response.host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_critical_error(error_message)),

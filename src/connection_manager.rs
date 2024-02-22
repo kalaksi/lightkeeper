@@ -17,7 +17,9 @@ use crate::module::ModuleSpecification;
 use crate::module::connection::*;
 use crate::cache::{Cache, CacheScope};
 
-pub type ResponseHandlerCallback = Box<dyn FnOnce(Vec<Result<ResponseMessage, String>>) + Send + 'static>;
+use self::request_response::RequestResponse;
+
+pub type ResponseHandlerCallback = Box<dyn FnOnce(RequestResponse) + Send + 'static>;
 type ConnectorStates = HashMap<ModuleSpecification, Arc<Mutex<Connector>>>;
 
 
@@ -188,7 +190,7 @@ impl ConnectionManager {
 
                 // Requests with no connector dependency.
                 if request.connector_spec.is_none() {
-                    (request.response_handler)(Vec::new());
+                    (request.response_handler)(RequestResponse::new_empty(request.source_id, request.host, request.invocation_id));
                     continue;
                 }
 
@@ -213,9 +215,10 @@ impl ConnectionManager {
                                 // Exit is handled earlier.
                                 RequestType::Exit => panic!(),
                             }
-                        }).collect();
+                        }).collect::<Vec<_>>();
 
-                        (request.response_handler)(responses);
+                        let response = RequestResponse::new(request.source_id, request.host, request.invocation_id, responses);
+                        (request.response_handler)(response);
                     });
                 }
                 // Stateful connectors.
@@ -229,7 +232,8 @@ impl ConnectionManager {
                     if !connector.is_connected() {
                         if let Err(error) = connector.connect(&request.host.ip_address) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
-                            (request.response_handler)(vec![Err(format!("Error while connecting: {}", error))]);
+                            let response = RequestResponse::new_error(request.source_id, request.host, request.invocation_id, format!("Error while connecting: {}", error));
+                            (request.response_handler)(response);
                             continue;
                         }
                     }
@@ -249,10 +253,11 @@ impl ConnectionManager {
                                 // Exit is handled earlier.
                                 RequestType::Exit => panic!(),
                             }
-                        }).collect();
+                        }).collect::<Vec<_>>();
                         drop(connector);
 
-                        (request.response_handler)(responses);
+                        let response = RequestResponse::new(request.source_id, request.host, request.invocation_id, responses);
+                        (request.response_handler)(response);
                     });
                 }
             }
@@ -366,6 +371,7 @@ pub struct ConnectorRequest {
     pub connector_spec: Option<ModuleSpecification>,
     pub source_id: String,
     pub host: Host,
+    pub invocation_id: u64,
     pub messages: Vec<String>,
     pub request_type: RequestType,
     pub response_handler: ResponseHandlerCallback,
@@ -377,7 +383,8 @@ impl ConnectorRequest {
         ConnectorRequest {
             connector_spec: None,
             source_id: String::new(),
-            host: Host::new(&String::new(), &String::from("127.0.0.1"), &String::new(), &Vec::new()).unwrap(),
+            host: Host::default(),
+            invocation_id: 0,
             messages: Vec::new(),
             request_type: RequestType::Exit,
             response_handler: Box::new(|_| ()),
