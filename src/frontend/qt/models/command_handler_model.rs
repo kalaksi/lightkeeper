@@ -86,7 +86,7 @@ impl CommandHandlerModel {
 
     fn stop(&mut self) {
         self.connection_manager.stop();
-        self.host_manager.borrow_mut().exit();
+        self.host_manager.borrow_mut().stop();
     }
 
     fn reconfigure(&mut self, main_config: QVariant, hosts_config: QVariant) {

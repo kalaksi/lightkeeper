@@ -44,10 +44,8 @@ impl HostManager {
 
         HostManager {
             hosts: hosts,
-            data_sender_prototype: None,
-            data_receiver: None,
-            receiver_thread: None,
             frontend_state_sender: frontend_state_sender,
+            ..Default::default()
         }
     }
 
@@ -83,15 +81,6 @@ impl HostManager {
         self.new_state_update_sender()
             .send(StateUpdateMessage::stop())
             .unwrap_or_else(|error| log::error!("Couldn't send stop command to state manager: {}", error));
-
-        self.join();
-    }
-
-    /// Exit will forward the exit request to relevant parties that this component is responsible for 
-    pub fn exit(&mut self) {
-        self.new_state_update_sender()
-            .send(StateUpdateMessage::stop())
-            .unwrap_or_else(|error| log::error!("Couldn't send exit command to state manager: {}", error));
 
         self.join();
     }
