@@ -61,6 +61,15 @@ impl Host {
     }
 }
 
+impl Default for Host {
+    fn default() -> Self {
+        Host {
+            ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            ..Default::default()
+        }
+    }
+}
+
 /// Host settings should be controlled only through configuration files.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
