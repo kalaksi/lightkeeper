@@ -176,16 +176,17 @@ impl MonitorManager {
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
                     invocation_id: self.invocation_id_counter,
-                    messages: messages,
-                    request_type: RequestType::Command,
-                    response_handler: Self::get_response_handler(
-                        vec![info_provider],
-                        self.request_sender.as_ref().unwrap().clone(),
-                        self.state_update_sender.as_ref().unwrap().clone(),
-                        DataPoint::empty_and_critical(),
-                        cache_policy
-                    ),
-                    cache_policy: cache_policy,
+                    request_type: RequestType::Command {
+                        cache_policy: cache_policy,
+                        commands: messages,
+                    }
+                    // response_handler: Self::get_response_handler(
+                    //     vec![info_provider],
+                    //     self.request_sender.as_ref().unwrap().clone(),
+                    //     self.state_update_sender.as_ref().unwrap().clone(),
+                    //     DataPoint::empty_and_critical(),
+                    //     cache_policy
+                    // ),
                 }).unwrap();
             }
         }
@@ -284,7 +285,7 @@ impl MonitorManager {
                 current_invocation_id,
                 self.request_sender.as_ref().unwrap().clone(),
                 self.state_update_sender.as_ref().unwrap().clone(),
-                DataPoint::empty_and_critical(), cache_policy.clone()
+                DataPoint::empty_and_critical(), cache_policy
             );
         }
 
@@ -322,10 +323,11 @@ impl MonitorManager {
             source_id: monitor.get_module_spec().id,
             host: host.clone(),
             invocation_id: invocation_id,
-            messages: messages,
-            request_type: RequestType::Command,
-            response_handler: Self::get_response_handler(monitors, request_sender.clone(), state_update_sender, parent_result, cache_policy),
-            cache_policy: cache_policy,
+            request_type: RequestType::Command {
+                cache_policy: cache_policy,
+                commands: messages,
+            },
+            // response_handler: Self::get_response_handler(monitors, request_sender.clone(), state_update_sender, parent_result, cache_policy),
         }).unwrap();
     }
 

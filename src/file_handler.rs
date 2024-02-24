@@ -242,7 +242,7 @@ pub fn convert_to_local_paths(host: &Host, remote_file_path: &String) -> (String
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FileMetadata {
     /// When download was completed and file saved.

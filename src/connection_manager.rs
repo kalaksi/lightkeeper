@@ -11,7 +11,7 @@ use rayon::prelude::*;
 
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
-use crate::file_handler;
+use crate::file_handler::{self, FileMetadata};
 use crate::module::ModuleFactory;
 use crate::module::ModuleSpecification;
 use crate::module::connection::*;
@@ -175,7 +175,7 @@ impl ConnectionManager {
                     }
                 };
 
-                if request.request_type == RequestType::Exit {
+                if let RequestType::Exit = request.request_type {
                     log::debug!("Gracefully exiting connection manager thread");
 
                     if cache_settings.enable_cache {
@@ -190,35 +190,38 @@ impl ConnectionManager {
 
                 // Requests with no connector dependency.
                 if request.connector_spec.is_none() {
-                    (request.response_handler)(RequestResponse::new_empty(request.source_id, request.host, request.invocation_id));
+                    // (request.response_handler)(RequestResponse::new_empty(request.source_id, request.host, request.invocation_id));
                     continue;
                 }
 
                 let mut connector_spec = request.connector_spec.as_ref().unwrap().clone();
                 connector_spec.module_type = String::from("connector");
                 let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
-                let request_messages = request.messages.clone();
 
                 // Stateless connectors.
                 if connector_metadata.is_stateless {
                     worker_pool.install(|| {
                         log::debug!("[{}] Worker {} processing a stateless request", request.host.name, rayon::current_thread_index().unwrap());
-
-                        let responses = request_messages.par_iter().map(|request_message| {
-                            let mut connector = module_factory.new_connector(&connector_spec, &HashMap::new());
-
-                            match request.request_type {
-                                RequestType::Command => Self::process_command(&request.host, command_cache.clone(), request.cache_policy, &mut connector, request_message),
-                                RequestType::CommandFollowOutput => panic!("Follow output is currently not supported for stateless connectors"),
-                                RequestType::Download => Self::process_download(&request.host, &mut connector, request_message),
-                                RequestType::Upload => Self::process_upload(&request.host, &mut connector, request_message),
-                                // Exit is handled earlier.
-                                RequestType::Exit => panic!(),
-                            }
-                        }).collect::<Vec<_>>();
+                        let mut connector = module_factory.new_connector(&connector_spec, &HashMap::new());
+                        let responses = match &request.request_type {
+                            RequestType::Command { cache_policy, commands } => {
+                                commands.par_iter().map(|command| {
+                                    let mut par_connector = module_factory.new_connector(&connector_spec, &HashMap::new());
+                                    Self::process_command(&request.host, command_cache.clone(), cache_policy, &mut par_connector, command )
+                                }).collect()
+                            },
+                            RequestType::CommandFollowOutput { commands: _ } =>
+                                panic!("Follow output is currently not supported for stateless connectors"),
+                            RequestType::Download { remote_file_path: file_path } =>
+                                vec![Self::process_download(&request.host, &mut connector, &file_path)],
+                            RequestType::Upload { metadata, local_file_path } =>
+                                vec![Self::process_upload(&request.host, &mut connector, local_file_path, metadata)],
+                            // Exit is handled earlier.
+                            RequestType::Exit => panic!(),
+                        };
 
                         let response = RequestResponse::new(&request, responses);
-                        (request.response_handler)(response);
+                        // (request.response_handler)(response);
                     });
                 }
                 // Stateful connectors.
@@ -233,7 +236,7 @@ impl ConnectionManager {
                         if let Err(error) = connector.connect(&request.host.ip_address) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
                             let response = RequestResponse::new_error(request.source_id, request.host, request.invocation_id, format!("Error while connecting: {}", error));
-                            (request.response_handler)(response);
+                            // (request.response_handler)(response);
                             continue;
                         }
                     }
@@ -243,20 +246,29 @@ impl ConnectionManager {
                         log::debug!("[{}] Worker {} processing a stateful request", request.host.name, rayon::current_thread_index().unwrap());
 
                         let mut connector = connector_mutex.lock().unwrap();
-                        let responses = request_messages.iter().map(|request_message| {
-                            match request.request_type {
-                                RequestType::Command => Self::process_command(&request.host, command_cache.clone(), request.cache_policy, &mut connector, request_message),
-                                RequestType::CommandFollowOutput => Self::process_command_follow_output(&request.host, &mut connector, request_message),
-                                RequestType::Download => Self::process_download(&request.host, &mut connector, request_message),
-                                RequestType::Upload => Self::process_upload(&request.host, &mut connector, request_message),
-                                // Exit is handled earlier.
-                                RequestType::Exit => panic!(),
-                            }
-                        }).collect::<Vec<_>>();
+                        let responses = match &request.request_type {
+                            RequestType::Command { cache_policy, commands } => {
+                                commands.iter().map(|command| {
+                                    Self::process_command(&request.host, command_cache.clone(), cache_policy, &mut connector, command )
+                                }).collect()
+                            },
+                            RequestType::CommandFollowOutput { commands } => {
+                                if commands.len() != 1 {
+                                    panic!("Follow output is only supported for a single command");
+                                }
+                                vec![Self::process_command_follow_output(&request.host, &mut connector, &commands.first().unwrap())]
+                            },
+                            RequestType::Download { remote_file_path: file_path } =>
+                                vec![Self::process_download(&request.host, &mut connector, &file_path)],
+                            RequestType::Upload { metadata, local_file_path } =>
+                                vec![Self::process_upload(&request.host, &mut connector, local_file_path, metadata)],
+                            // Exit is handled earlier.
+                            RequestType::Exit => panic!(),
+                        };
                         drop(connector);
 
                         let response = RequestResponse::new(&request, responses);
-                        (request.response_handler)(response);
+                        // (request.response_handler)(response);
                     });
                 }
             }
@@ -265,7 +277,7 @@ impl ConnectionManager {
 
     fn process_command(host: &Host,
                        command_cache: Arc<Mutex<Cache<String, ResponseMessage>>>,
-                       cache_policy: CachePolicy,
+                       cache_policy: &CachePolicy,
                        connector: &mut Connector,
                        request_message: &String) -> Result<ResponseMessage, String> {
 
@@ -284,7 +296,7 @@ impl ConnectionManager {
             CacheScope::Host => format!("{}|{}|{}", host.name, connector.get_module_spec(), request_message),
         };
 
-        let cached_response = if cache_policy == CachePolicy::OnlyCache || cache_policy == CachePolicy::PreferCache {
+        let cached_response = if *cache_policy == CachePolicy::OnlyCache || *cache_policy == CachePolicy::PreferCache {
             command_cache.get(&cache_key)
         }
         else {
@@ -296,7 +308,7 @@ impl ConnectionManager {
             return Ok(cached_response);
         }
         else {
-            if cache_policy == CachePolicy::OnlyCache {
+            if *cache_policy == CachePolicy::OnlyCache {
                 return Ok(ResponseMessage::not_found());
             }
 
@@ -335,11 +347,11 @@ impl ConnectionManager {
         }
     }
 
-    fn process_download(host: &Host, connector: &mut Connector, request_message: &String) -> Result<ResponseMessage, String> {
-        log::debug!("[{}] Downloading file: {}", host.name, request_message);
-        match connector.download_file(&request_message) {
+    fn process_download(host: &Host, connector: &mut Connector, file_path: &String) -> Result<ResponseMessage, String> {
+        log::debug!("[{}] Downloading file: {}", host.name, file_path);
+        match connector.download_file(&file_path) {
             Ok((metadata, contents)) => {
-                match file_handler::create_file(&host, &request_message, metadata, contents) {
+                match file_handler::create_file(&host, &file_path, metadata, contents) {
                     Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
                     Err(error) => Err(error.to_string()),
                 }
@@ -348,9 +360,7 @@ impl ConnectionManager {
         }
     }
 
-    fn process_upload(host: &Host, connector: &mut Connector, request_message: &String) -> Result<ResponseMessage, String> {
-        let local_file_path = request_message;
-
+    fn process_upload(host: &Host, connector: &mut Connector, local_file_path: &String, file_metadata: &FileMetadata) -> Result<ResponseMessage, String> {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
         match file_handler::read_file(&local_file_path) {
             Ok((metadata, contents)) => {
@@ -371,10 +381,7 @@ pub struct ConnectorRequest {
     pub source_id: String,
     pub host: Host,
     pub invocation_id: u64,
-    pub messages: Vec<String>,
     pub request_type: RequestType,
-    pub response_handler: ResponseHandlerCallback,
-    pub cache_policy: CachePolicy,
 }
 
 impl ConnectorRequest {
@@ -384,10 +391,7 @@ impl ConnectorRequest {
             source_id: String::new(),
             host: Host::default(),
             invocation_id: 0,
-            messages: Vec::new(),
             request_type: RequestType::Exit,
-            response_handler: Box::new(|_| ()),
-            cache_policy: CachePolicy::BypassCache,
         }
     }
 }
@@ -398,17 +402,27 @@ impl Debug for ConnectorRequest {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum RequestType {
-    Command,
-    CommandFollowOutput,
-    Download,
-    Upload,
+    Command {
+        cache_policy: CachePolicy,
+        commands: Vec<String>,
+    },
+    CommandFollowOutput {
+        commands: Vec<String>,
+    },
+    Download {
+        remote_file_path: String,
+    },
+    Upload {
+        local_file_path: String,
+        metadata: FileMetadata,
+    },
     /// Causes the receiver thread to exit.
     Exit,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CachePolicy {
     BypassCache,
     PreferCache,

@@ -137,9 +137,9 @@ impl CommandHandler {
             ..Default::default()
         }).unwrap();
 
-        let command_request_type = match command.get_display_options().action == UIAction::FollowOutput {
-            true => RequestType::CommandFollowOutput,
-            false => RequestType::Command
+        let request_type = match command.get_display_options().action == UIAction::FollowOutput {
+            true => RequestType::CommandFollowOutput { commands: messages },
+            false => RequestType::Command { cache_policy: CachePolicy::BypassCache, commands: messages }
         };
 
         // Send request to ConnectionManager.
@@ -148,10 +148,8 @@ impl CommandHandler {
             source_id: command.get_module_spec().id,
             host: host.clone(),
             invocation_id: self.invocation_id_counter,
-            request_type: command_request_type,
-            messages: messages,
-            response_handler: Self::get_response_handler(command.box_clone(), state_update_sender),
-            cache_policy: CachePolicy::BypassCache, 
+            request_type: request_type,
+            // response_handler: Self::get_response_handler(command.box_clone(), state_update_sender),
         }).unwrap();
 
         self.invocation_id_counter
@@ -258,10 +256,10 @@ impl CommandHandler {
             source_id: command.get_module_spec().id,
             host: host.clone(),
             invocation_id: self.invocation_id_counter,
-            request_type: RequestType::Download,
-            messages: connector_messages,
-            response_handler: Self::get_response_handler_download_file(command.box_clone(), self.state_update_sender.as_ref().unwrap().clone()),
-            cache_policy: CachePolicy::BypassCache,
+            request_type: RequestType::Download {
+                remote_file_path: connector_messages.first().unwrap().to_owned(),
+            },
+            // response_handler: Self::get_response_handler_download_file(command.box_clone(), self.state_update_sender.as_ref().unwrap().clone()),
         }).unwrap();
 
         (self.invocation_id_counter, local_file_path)
@@ -330,10 +328,11 @@ impl CommandHandler {
                         source_id: command.get_module_spec().id,
                         host: host.clone(),
                         invocation_id: self.invocation_id_counter,
-                        request_type: RequestType::Upload,
-                        messages: vec![local_file_path.clone()],
-                        response_handler: Self::get_response_handler_upload_file(command.box_clone(), metadata, false, state_update_sender),
-                        cache_policy: CachePolicy::BypassCache,
+                        request_type: RequestType::Upload {
+                            local_file_path: local_file_path.clone(),
+                            metadata: metadata,
+                        },
+                        // response_handler: Self::get_response_handler_upload_file(command.box_clone(), metadata, false, state_update_sender),
                     }).unwrap();
                 }
             },
@@ -498,15 +497,15 @@ impl CommandHandler {
             source_id: command.get_module_spec().id,
             host: host.clone(),
             invocation_id: 0,
-            request_type: RequestType::Download,
-            messages: connector_messages,
-            response_handler: Self::get_response_handler_external_text_editor(
-                command.box_clone(),
-                self.preferences.clone(),
-                self.request_sender.as_ref().unwrap().clone(),
-                self.state_update_sender.as_ref().unwrap().clone()
-            ),
-            cache_policy: CachePolicy::BypassCache,
+            request_type: RequestType::Download {
+                remote_file_path: connector_messages.first().unwrap().to_owned(),
+            },
+            // response_handler: Self::get_response_handler_external_text_editor(
+            //     command.box_clone(),
+            //     self.preferences.clone(),
+            //     self.request_sender.as_ref().unwrap().clone(),
+            //     self.state_update_sender.as_ref().unwrap().clone()
+            // ),
         }).unwrap();
     }
 
@@ -555,10 +554,11 @@ impl CommandHandler {
                                     source_id: command.get_module_spec().id,
                                     host: response.host.clone(),
                                     invocation_id: 0,
-                                    request_type: RequestType::Upload,
-                                    messages: vec![local_file],
-                                    response_handler: Self::get_response_handler_upload_file(command, metadata, true, state_update_sender),
-                                    cache_policy: CachePolicy::BypassCache,
+                                    request_type: RequestType::Upload {
+                                        local_file_path: local_file,
+                                        metadata: metadata
+                                    },
+                                    // response_handler: Self::get_response_handler_upload_file(command, metadata, true, state_update_sender),
                                 }).unwrap();
                             }
                         },
