@@ -14,7 +14,7 @@ pub trait ConnectionModule : MetadataSupport + Module {
     fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, String>;
 
     /// For partial responses. Should be called until the response is complete.
-    fn receive_response(&mut self, message: &str) -> Result<ResponseMessage, String> {
+    fn receive_response(&mut self, _message: &str) -> Result<ResponseMessage, String> {
         panic!("Not implemented");
     }
 

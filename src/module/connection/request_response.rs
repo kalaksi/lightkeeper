@@ -1,6 +1,6 @@
 use serde_derive::{Serialize, Deserialize};
 
-use crate::{connection_manager::ConnectorRequest, host::Host};
+use crate::{connection_manager::{ConnectorRequest, RequestType}, host::Host};
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -8,7 +8,9 @@ pub struct RequestResponse {
     pub source_id: String,
     pub host: Host,
     pub invocation_id: u64,
+    pub request_type: RequestType,
     pub responses: Vec<Result<ResponseMessage, String>>,
+    pub stop: bool,
 }
 
 impl RequestResponse {
@@ -37,6 +39,14 @@ impl RequestResponse {
             host: host,
             invocation_id: invocation_id,
             responses: vec![Err(error)],
+            ..Default::default()
+        }
+    }
+
+    pub fn stop() -> RequestResponse {
+        RequestResponse {
+            stop: true,
+            ..Default::default()
         }
     }
 }

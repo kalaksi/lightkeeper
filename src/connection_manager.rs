@@ -8,7 +8,9 @@ use std::{
 };
 
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 
+use crate::module::monitoring::DataPoint;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
@@ -19,7 +21,7 @@ use crate::cache::{Cache, CacheScope};
 
 use self::request_response::RequestResponse;
 
-pub type ResponseHandlerCallback = Box<dyn FnOnce(RequestResponse) + Send + 'static>;
+
 type ConnectorStates = HashMap<ModuleSpecification, Arc<Mutex<Connector>>>;
 
 
@@ -30,13 +32,12 @@ const MAX_WORKER_THREADS: usize = 8;
 #[derive(Default)]
 pub struct ConnectionManager {
     stateful_connectors: Option<HashMap<String, ConnectorStates>>,
+    module_factory: Arc<ModuleFactory>,
+    cache_settings: CacheSettings,
+
     request_receiver: Option<mpsc::Receiver<ConnectorRequest>>,
     request_sender_prototype: Option<mpsc::Sender<ConnectorRequest>>,
     receiver_thread: Option<thread::JoinHandle<()>>,
-    cache_settings: CacheSettings,
-
-    // Shared resources.
-    module_factory: Arc<ModuleFactory>,
 }
 
 impl ConnectionManager {
@@ -190,7 +191,7 @@ impl ConnectionManager {
 
                 // Requests with no connector dependency.
                 if request.connector_spec.is_none() {
-                    // (request.response_handler)(RequestResponse::new_empty(request.source_id, request.host, request.invocation_id));
+                    request.response_sender.send(RequestResponse::new_empty(request.source_id, request.host, request.invocation_id)).unwrap();
                     continue;
                 }
 
@@ -204,24 +205,30 @@ impl ConnectionManager {
                         log::debug!("[{}] Worker {} processing a stateless request", request.host.name, rayon::current_thread_index().unwrap());
                         let mut connector = module_factory.new_connector(&connector_spec, &HashMap::new());
                         let responses = match &request.request_type {
-                            RequestType::Command { cache_policy, commands } => {
+                            RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
                                 commands.par_iter().map(|command| {
                                     let mut par_connector = module_factory.new_connector(&connector_spec, &HashMap::new());
-                                    Self::process_command(&request.host, command_cache.clone(), cache_policy, &mut par_connector, command )
+                                    Self::process_command(&request.host, command_cache.clone(), &cache_policy, &mut par_connector, command )
+                                }).collect()
+                            },
+                            RequestType::Command { commands } => {
+                                commands.par_iter().map(|command| {
+                                    let mut par_connector = module_factory.new_connector(&connector_spec, &HashMap::new());
+                                    Self::process_command(&request.host, command_cache.clone(), &CachePolicy::BypassCache, &mut par_connector, command )
                                 }).collect()
                             },
                             RequestType::CommandFollowOutput { commands: _ } =>
                                 panic!("Follow output is currently not supported for stateless connectors"),
                             RequestType::Download { remote_file_path: file_path } =>
                                 vec![Self::process_download(&request.host, &mut connector, &file_path)],
-                            RequestType::Upload { metadata, local_file_path } =>
-                                vec![Self::process_upload(&request.host, &mut connector, local_file_path, metadata)],
+                            RequestType::Upload { metadata: _, local_file_path } =>
+                                vec![Self::process_upload(&request.host, &mut connector, local_file_path)],
                             // Exit is handled earlier.
                             RequestType::Exit => panic!(),
                         };
 
                         let response = RequestResponse::new(&request, responses);
-                        // (request.response_handler)(response);
+                        request.response_sender.send(response).unwrap();
                     });
                 }
                 // Stateful connectors.
@@ -236,7 +243,7 @@ impl ConnectionManager {
                         if let Err(error) = connector.connect(&request.host.ip_address) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
                             let response = RequestResponse::new_error(request.source_id, request.host, request.invocation_id, format!("Error while connecting: {}", error));
-                            // (request.response_handler)(response);
+                            request.response_sender.send(response).unwrap();
                             continue;
                         }
                     }
@@ -247,9 +254,14 @@ impl ConnectionManager {
 
                         let mut connector = connector_mutex.lock().unwrap();
                         let responses = match &request.request_type {
-                            RequestType::Command { cache_policy, commands } => {
+                            RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
                                 commands.iter().map(|command| {
                                     Self::process_command(&request.host, command_cache.clone(), cache_policy, &mut connector, command )
+                                }).collect()
+                            },
+                            RequestType::Command { commands } => {
+                                commands.iter().map(|command| {
+                                    Self::process_command(&request.host, command_cache.clone(), &CachePolicy::BypassCache, &mut connector, command )
                                 }).collect()
                             },
                             RequestType::CommandFollowOutput { commands } => {
@@ -260,15 +272,15 @@ impl ConnectionManager {
                             },
                             RequestType::Download { remote_file_path: file_path } =>
                                 vec![Self::process_download(&request.host, &mut connector, &file_path)],
-                            RequestType::Upload { metadata, local_file_path } =>
-                                vec![Self::process_upload(&request.host, &mut connector, local_file_path, metadata)],
+                            RequestType::Upload { metadata: _, local_file_path } =>
+                                vec![Self::process_upload(&request.host, &mut connector, local_file_path)],
                             // Exit is handled earlier.
                             RequestType::Exit => panic!(),
                         };
                         drop(connector);
 
                         let response = RequestResponse::new(&request, responses);
-                        // (request.response_handler)(response);
+                        request.response_sender.send(response).unwrap();
                     });
                 }
             }
@@ -360,7 +372,7 @@ impl ConnectionManager {
         }
     }
 
-    fn process_upload(host: &Host, connector: &mut Connector, local_file_path: &String, file_metadata: &FileMetadata) -> Result<ResponseMessage, String> {
+    fn process_upload(host: &Host, connector: &mut Connector, local_file_path: &String) -> Result<ResponseMessage, String> {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
         match file_handler::read_file(&local_file_path) {
             Ok((metadata, contents)) => {
@@ -382,16 +394,19 @@ pub struct ConnectorRequest {
     pub host: Host,
     pub invocation_id: u64,
     pub request_type: RequestType,
+    pub response_sender: mpsc::Sender<RequestResponse>,
 }
 
 impl ConnectorRequest {
     pub fn exit_token() -> Self {
+        let dummy_sender = mpsc::channel::<RequestResponse>().0;
         ConnectorRequest {
             connector_spec: None,
             source_id: String::new(),
             host: Host::default(),
             invocation_id: 0,
             request_type: RequestType::Exit,
+            response_sender: dummy_sender,
         }
     }
 }
@@ -402,10 +417,15 @@ impl Debug for ConnectorRequest {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RequestType {
-    Command {
+    MonitorCommand {
         cache_policy: CachePolicy,
+        extension_monitors: Vec<String>,
+        parent_datapoint: Option<DataPoint>,
+        commands: Vec<String>,
+    },
+    Command {
         commands: Vec<String>,
     },
     CommandFollowOutput {
@@ -422,9 +442,21 @@ pub enum RequestType {
     Exit,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+impl Default for RequestType {
+    fn default() -> Self {
+        RequestType::Exit
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum CachePolicy {
     BypassCache,
     PreferCache,
     OnlyCache,
+}
+
+impl Default for CachePolicy {
+    fn default() -> Self {
+        CachePolicy::BypassCache
+    }
 }

@@ -4,6 +4,7 @@ pub use connection_module::Connector;
 
 pub mod request_response;
 pub use request_response::ResponseMessage;
+pub use request_response::RequestResponse;
 
 pub mod ssh;
 pub use ssh::Ssh2;

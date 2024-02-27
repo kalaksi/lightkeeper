@@ -87,6 +87,8 @@ impl CommandHandlerModel {
     fn stop(&mut self) {
         self.connection_manager.stop();
         self.host_manager.borrow_mut().stop();
+        self.command_handler.stop();
+        self.monitor_manager.stop();
     }
 
     fn reconfigure(&mut self, main_config: QVariant, hosts_config: QVariant) {
@@ -105,12 +107,15 @@ impl CommandHandlerModel {
             self.connection_manager.new_request_sender(),
             self.host_manager.borrow().new_state_update_sender()
         );
+        self.monitor_manager.start_processing_responses();
+
         self.command_handler.configure(
             &hosts_config,
             &main_config.preferences,
             self.connection_manager.new_request_sender(),
             self.host_manager.borrow().new_state_update_sender()
         );
+        self.command_handler.start_processing_responses();
     }
 
     // Return CommandDatas relevant to category as QVariants.
@@ -222,7 +227,8 @@ impl CommandHandlerModel {
         };
 
         match display_options.action {
-            UIAction::None => {
+            UIAction::None |
+            UIAction::FollowOutput => {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
 
                 if invocation_id > 0 {
@@ -277,7 +283,7 @@ impl CommandHandlerModel {
                 let remote_file_path = parameters.first().unwrap().clone();
                 if self.configuration.preferences.use_remote_editor {
                     if self.configuration.preferences.terminal == configuration::INTERNAL {
-                        let command = self.command_handler.open_remote_text_editor_command(&host_id, &remote_file_path);
+                        let command = self.command_handler.open_remote_text_editor(&host_id, &remote_file_path);
                         let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
                         self.terminalViewOpened(QString::from(display_options.tab_title), command_qsl);
                     }
@@ -291,14 +297,11 @@ impl CommandHandlerModel {
                         self.textEditorViewOpened(QString::from(command_id), invocation_id, QString::from(file_contents));
                     }
                     else {
-                        self.command_handler.open_external_text_editor(&host_id, &command_id, &remote_file_path);
+                        let local_file_path = self.command_handler.open_external_text_editor(&host_id, &command_id, &remote_file_path);
+                        let _invocation_id = self.command_handler.upload_file(&host_id, &command_id, &local_file_path);
                     }
                 }
             },
-            UIAction::FollowOutput => {
-                // TODO
-                todo!()
-            }
         }
     }
 
