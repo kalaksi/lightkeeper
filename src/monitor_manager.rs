@@ -22,6 +22,7 @@ use crate::utils::ErrorMessage;
 pub struct MonitorManager {
     // Host name is the first key, monitor id is the second key.
     monitors: Arc<Mutex<HashMap<String, HashMap<String, Monitor>>>>,
+    platform_info_providers: Arc<Mutex<HashMap<String, Monitor>>>,
     /// For communication to ConnectionManager.
     request_sender: Option<mpsc::Sender<ConnectorRequest>>,
     // Channel to send state updates to HostManager.
@@ -120,6 +121,13 @@ impl MonitorManager {
                 }).unwrap();
             }
 
+            // For platform info modules.
+            if monitor.get_connector_spec().unwrap_or_default().id == "ssh" {
+                let mut platform_info_providers = self.platform_info_providers.lock().unwrap();
+                let ssh_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
+                platform_info_providers.entry(ssh_provider.get_module_spec().id.clone()).or_insert(ssh_provider);
+            }
+
             monitor_collection.insert(module_spec.id, monitor);
         }
     }
@@ -149,29 +157,33 @@ impl MonitorManager {
 
     /// Refreshes platform info and such in preparation for actual monitor refresh.
     pub fn refresh_platform_info(&mut self, host_id: &String, cache_policy: Option<CachePolicy>) {
+        let platform_info_providers = self.platform_info_providers.lock().unwrap();
         let monitors = self.monitors.lock().unwrap();
         let monitors_for_host = monitors.iter().filter(|(name, _)| &host_id == name);
+
+        let cache_policy = if let Some(cache_policy) = cache_policy {
+            cache_policy
+        }
+        else if !self.cache_settings.enable_cache {
+            CachePolicy::BypassCache
+        }
+        else if self.cache_settings.provide_initial_value {
+            CachePolicy::PreferCache
+        }
+        else {
+            CachePolicy::BypassCache
+        };
+
         for (host_name, monitor_collection) in monitors_for_host {
-
             let host = self.host_manager.borrow().get_host(host_name);
-            let cache_policy = if let Some(cache_policy) = cache_policy {
-                cache_policy
-            }
-            else if !self.cache_settings.enable_cache {
-                CachePolicy::BypassCache
-            }
-            else if self.cache_settings.provide_initial_value {
-                CachePolicy::PreferCache
-            }
-            else {
-                CachePolicy::BypassCache
-            };
 
-            // Executed only if required connector is available.
-            // TODO: remove hardcoding and execute once per connector type.
-            if monitor_collection.iter().any(|(_, monitor)| monitor.get_connector_spec().unwrap_or_default().id == "ssh") {
-                // Note that these do not increment the invocation ID counter.
-                let info_provider = internal::PlatformInfoSsh::new_monitoring_module(&HashMap::new());
+            for info_provider in platform_info_providers.values() {
+                // Executed only if required connector is used on the host.
+                if monitor_collection.values().all(|monitor|
+                    monitor.get_connector_spec().unwrap_or_default().id != info_provider.get_connector_spec().unwrap().id
+                ) {
+                    continue;
+                }
 
                 let commands = match get_monitor_connector_messages(&host, &info_provider, &DataPoint::empty()) {
                     Ok(messages) => messages,
@@ -197,13 +209,13 @@ impl MonitorManager {
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
                     invocation_id: self.invocation_id_counter,
+                    response_sender: self.new_response_sender(),
                     request_type: RequestType::MonitorCommand {
                         parent_datapoint: None,
                         extension_monitors: Vec::new(),
                         cache_policy: cache_policy,
                         commands: commands,
                     },
-                    response_sender: self.new_response_sender()
                 }).unwrap();
             }
         }
@@ -320,13 +332,13 @@ impl MonitorManager {
                 source_id: monitor.get_module_spec().id,
                 host: host.clone(),
                 invocation_id: current_invocation_id,
+                response_sender: self.new_response_sender(),
                 request_type: RequestType::MonitorCommand {
                     parent_datapoint: None,
                     extension_monitors: extension_ids,
                     cache_policy: cache_policy,
                     commands: messages,
                 },
-                response_sender: self.new_response_sender(),
             }).unwrap();
         }
 
@@ -341,6 +353,7 @@ impl MonitorManager {
     pub fn start_processing_responses(&mut self) {
         let thread = Self::_start_processing_responses(
             self.monitors.clone(),
+            self.platform_info_providers.clone(),
             self.request_sender.as_ref().unwrap().clone(),
             self.state_update_sender.as_ref().unwrap().clone(),
             self.response_sender_prototype.as_ref().unwrap().clone(),
@@ -352,6 +365,7 @@ impl MonitorManager {
 
     fn _start_processing_responses(
         monitors: Arc<Mutex<HashMap<String, HashMap<String, Monitor>>>>,
+        platform_info_providers: Arc<Mutex<HashMap<String, Monitor>>>,
         request_sender: mpsc::Sender<ConnectorRequest>,
         state_update_sender: mpsc::Sender<StateUpdateMessage>,
         response_sender: mpsc::Sender<RequestResponse>,
@@ -363,13 +377,13 @@ impl MonitorManager {
                 let response = match response_receiver.recv() {
                     Ok(response) => response,
                     Err(error) => {
-                        log::error!("Stopped receiver thread: {}", error);
+                        log::error!("Stopped response receiver thread: {}", error);
                         return;
                     }
                 };
 
                 if response.stop {
-                    log::debug!("Stopped response receiver thread");
+                    log::debug!("Gracefully stopping receiver thread");
                     return;
                 }
 
@@ -383,14 +397,18 @@ impl MonitorManager {
                     return;
                 }
 
-                let monitor_id = &response.source_id;
                 let monitors = monitors.lock().unwrap();
-                let monitor = &monitors[&response.host.name][monitor_id];
+                let platform_info_providers = platform_info_providers.lock().unwrap();
+                let monitor_id = &response.source_id;
+                // Search from internal monitors first.
+                let monitor = platform_info_providers.get(monitor_id).unwrap_or_else(|| {
+                    &monitors[&response.host.name][monitor_id]
+                });
 
                 // Have to be done separately because of name conflict.
-                let parent_datapoint = match &response.request_type {
+                let parent_datapoint = match response.request_type.clone() {
                     RequestType::MonitorCommand { parent_datapoint, .. } => parent_datapoint.clone().unwrap_or_default(),
-                    _ => panic!()
+                    _ => panic!("Invalid request type: {:?}", response.request_type)
                 };
 
                 let mut datapoint_result;
@@ -475,13 +493,13 @@ impl MonitorManager {
                         source_id: next_monitor.get_module_spec().id,
                         host: response.host.clone(),
                         invocation_id: response.invocation_id,
+                        response_sender: response_sender.clone(),
                         request_type: RequestType::MonitorCommand {
                             parent_datapoint: Some(parent_datapoint.clone()),
                             extension_monitors: extension_monitors,
                             cache_policy: cache_policy,
                             commands: messages,
                         },
-                        response_sender: response_sender.clone(),
                     }).unwrap();
                 }
                 else {

@@ -14,8 +14,7 @@ use crate::module::monitoring::DataPoint;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
-use crate::module::ModuleFactory;
-use crate::module::ModuleSpecification;
+use crate::module::{ModuleSpecification, ModuleFactory, ModuleType};
 use crate::module::connection::*;
 use crate::cache::{Cache, CacheScope};
 
@@ -67,7 +66,7 @@ impl ConnectionManager {
                 let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
 
                 if let Some(mut connector_spec) = monitor.get_connector_spec() {
-                    connector_spec.module_type = String::from("connector");
+                    connector_spec.module_type = ModuleType::Connector;
 
                     let connector_settings = match host_config.connectors.get(&connector_spec.id) {
                         Some(config) => config.settings.clone(),
@@ -177,7 +176,7 @@ impl ConnectionManager {
                 };
 
                 if let RequestType::Exit = request.request_type {
-                    log::debug!("Gracefully exiting connection manager thread");
+                    log::debug!("Gracefully stopping connection manager thread");
 
                     if cache_settings.enable_cache {
                         match command_cache.lock().unwrap().write_to_disk() {
@@ -191,12 +190,12 @@ impl ConnectionManager {
 
                 // Requests with no connector dependency.
                 if request.connector_spec.is_none() {
-                    request.response_sender.send(RequestResponse::new_empty(request.source_id, request.host, request.invocation_id)).unwrap();
+                    request.response_sender.send(RequestResponse::new_empty(&request)).unwrap();
                     continue;
                 }
 
                 let mut connector_spec = request.connector_spec.as_ref().unwrap().clone();
-                connector_spec.module_type = String::from("connector");
+                connector_spec.module_type = ModuleType::Connector;
                 let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
 
                 // Stateless connectors.
@@ -242,7 +241,7 @@ impl ConnectionManager {
                     if !connector.is_connected() {
                         if let Err(error) = connector.connect(&request.host.ip_address) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
-                            let response = RequestResponse::new_error(request.source_id, request.host, request.invocation_id, format!("Error while connecting: {}", error));
+                            let response = RequestResponse::new_error(&request, format!("Error while connecting: {}", error));
                             request.response_sender.send(response).unwrap();
                             continue;
                         }
@@ -300,6 +299,7 @@ impl ConnectionManager {
 
         // Some commands are supposed to not actually execute.
         if request_message.is_empty() {
+            log::debug!("[{}] Empty command", host.name);
             return Ok(ResponseMessage::empty());
         }
 
@@ -330,7 +330,7 @@ impl ConnectionManager {
                 if response.return_code != 0 {
                     log::debug!("Command returned non-zero exit code: {}", response.return_code)
                 }
-                else {
+                if *cache_policy != CachePolicy::BypassCache {
                     // Doesn't cache failed commands.
                     let mut cached_response = response.clone();
                     cached_response.is_from_cache = true;
@@ -417,7 +417,7 @@ impl Debug for ConnectorRequest {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub enum RequestType {
     MonitorCommand {
         cache_policy: CachePolicy,
@@ -439,24 +439,14 @@ pub enum RequestType {
         metadata: FileMetadata,
     },
     /// Causes the receiver thread to exit.
+    #[default]
     Exit,
 }
 
-impl Default for RequestType {
-    fn default() -> Self {
-        RequestType::Exit
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum CachePolicy {
+    #[default]
     BypassCache,
     PreferCache,
     OnlyCache,
-}
-
-impl Default for CachePolicy {
-    fn default() -> Self {
-        CachePolicy::BypassCache
-    }
 }

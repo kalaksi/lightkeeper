@@ -14,6 +14,7 @@ pub mod monitoring;
 
 pub mod module_specification;
 pub use module_specification::ModuleSpecification;
+pub use module_specification::ModuleType;
 
 pub mod platform_info;
 pub use platform_info::PlatformInfo;

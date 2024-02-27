@@ -113,6 +113,7 @@ fn run(args: Args) -> ExitReason {
     host_manager.borrow_mut().start_receiving_updates();
     connection_manager.start_processing_requests();
     command_handler.start_processing_responses();
+    monitor_manager.start_processing_responses();
 
     let module_metadatas = module_factory.get_module_metadatas();
     let mut frontend = frontend::qt::QmlFrontend::new(

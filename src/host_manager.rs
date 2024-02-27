@@ -131,7 +131,7 @@ impl HostManager {
                 };
 
                 if state_update.stop {
-                    log::debug!("Restarting state manager thread.");
+                    log::debug!("Gracefully stopping receiver thread");
                     return;
                 }
 

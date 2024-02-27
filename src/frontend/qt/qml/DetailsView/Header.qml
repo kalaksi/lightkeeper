@@ -81,7 +81,7 @@ Item {
         SmallText {
             id: jobsText
             rightPadding: Theme.spacingLoose * 2
-            text: root.pendingInvocations + " jobs"
+            text: root.pendingInvocations + " jobs left"
             color: root.pendingInvocations > 0 ? Theme.textColor : Theme.disabledTextColor
         }
 

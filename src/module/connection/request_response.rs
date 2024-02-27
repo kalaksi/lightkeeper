@@ -20,24 +20,27 @@ impl RequestResponse {
             host: request.host.clone(),
             invocation_id: request.invocation_id.clone(),
             responses: responses,
+            request_type: request.request_type.clone(),
             ..Default::default()
         }
     }
 
-    pub fn new_empty(source_id: String, host: Host, invocation_id: u64) -> RequestResponse {
+    pub fn new_empty(request: &ConnectorRequest) -> RequestResponse {
         RequestResponse {
-            source_id: source_id,
-            host: host,
-            invocation_id: invocation_id,
+            source_id: request.source_id.clone(),
+            host: request.host.clone(),
+            invocation_id: request.invocation_id.clone(),
+            request_type: request.request_type.clone(),
             ..Default::default()
         }
     }
 
-    pub fn new_error(source_id: String, host: Host, invocation_id: u64, error: String) -> RequestResponse {
+    pub fn new_error(request: &ConnectorRequest, error: String) -> RequestResponse {
         RequestResponse {
-            source_id: source_id,
-            host: host,
-            invocation_id: invocation_id,
+            source_id: request.source_id.clone(),
+            host: request.host.clone(),
+            invocation_id: request.invocation_id.clone(),
+            request_type: request.request_type.clone(),
             responses: vec![Err(error)],
             ..Default::default()
         }

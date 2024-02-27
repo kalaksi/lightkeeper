@@ -1,13 +1,11 @@
 extern crate qmetaobject;
 
 use qmetaobject::*;
+use std::str::FromStr;
 
 use crate::{
-    configuration::Configuration,
-    configuration::Hosts,
-    configuration::Groups,
-    configuration::{HostSettings, self},
-    module::Metadata,
+    configuration::{self, Configuration, Groups, HostSettings, Hosts},
+    module::{Metadata, ModuleType},
 };
 
 
@@ -347,7 +345,7 @@ impl ConfigManagerModel {
         let group_monitors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().monitors;
 
         let all_monitors = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.module_type == "monitor")
+            .filter(|metadata| metadata.module_spec.module_type == ModuleType::Monitor)
             .map(|metadata| metadata.module_spec.id.clone())
             .collect::<Vec<String>>();
 
@@ -363,7 +361,7 @@ impl ConfigManagerModel {
     fn get_monitor_description(&self, module_name: QString) -> QString {
         let module_name = module_name.to_string();
         let module_description = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == "monitor")
+            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == ModuleType::Monitor)
             .map(|metadata| metadata.description.clone())
             .next().unwrap_or_default();
 
@@ -456,7 +454,7 @@ impl ConfigManagerModel {
         let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
 
         let all_connectors = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.module_type == "connector")
+            .filter(|metadata| metadata.module_spec.module_type == ModuleType::Connector)
             .map(|metadata| metadata.module_spec.id.clone())
             .collect::<Vec<String>>();
 
@@ -472,7 +470,7 @@ impl ConfigManagerModel {
     fn get_connector_description(&self, module_name: QString) -> QString {
         let module_name = module_name.to_string();
         let module_description = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == "connector")
+            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == ModuleType::Connector)
             .map(|metadata| metadata.description.clone())
             .next().unwrap_or_default();
 
@@ -543,7 +541,7 @@ impl ConfigManagerModel {
         let group_commands = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().commands;
 
         let all_commands = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.module_type == "command")
+            .filter(|metadata| metadata.module_spec.module_type == ModuleType::Command)
             .map(|metadata| metadata.module_spec.id.clone())
             .collect::<Vec<String>>();
 
@@ -559,7 +557,7 @@ impl ConfigManagerModel {
     fn get_command_description(&self, module_name: QString) -> QString {
         let module_name = module_name.to_string();
         let module_description = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == "command")
+            .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == ModuleType::Command)
             .map(|metadata| metadata.description.clone())
             .next().unwrap_or_default();
 
@@ -628,8 +626,7 @@ impl ConfigManagerModel {
 
     fn get_all_module_settings(&self, module_type: QString, module_id: QString) -> QVariantMap {
         let module_id = module_id.to_string();
-        let module_type = module_type.to_string();
-        // TODO: Consider version too.
+        let module_type = ModuleType::from_str(module_type.to_string().as_str()).unwrap();
         let module_settings = self.module_metadatas.iter()
             .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == module_type)
             .map(|metadata| metadata.settings.clone())

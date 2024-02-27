@@ -26,7 +26,7 @@ impl Module for Http {
 
 impl ConnectionModule for Http {
     fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, String> {
-        if wait_full_response {
+        if !wait_full_response {
             // Not supported.
             panic!()
         }

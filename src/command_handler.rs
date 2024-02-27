@@ -204,10 +204,10 @@ impl CommandHandler {
             source_id: command.get_module_spec().id,
             host: host.clone(),
             invocation_id: self.invocation_id_counter,
+            response_sender: self.new_response_sender(),
             request_type: RequestType::Download {
                 remote_file_path: connector_messages[0].to_owned(),
             },
-            response_sender: self.new_response_sender(),
         }).unwrap();
 
         (self.invocation_id_counter, local_file_path)
@@ -242,11 +242,11 @@ impl CommandHandler {
                         source_id: command.get_module_spec().id,
                         host: host.clone(),
                         invocation_id: self.invocation_id_counter,
+                        response_sender: self.new_response_sender(),
                         request_type: RequestType::Upload {
                             local_file_path: local_file_path.clone(),
                             metadata: metadata,
                         },
-                        response_sender: self.new_response_sender(),
                     }).unwrap();
                 }
             },
@@ -326,11 +326,12 @@ impl CommandHandler {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
+            // TODO: proper invocation id needed?
             invocation_id: 0,
+            response_sender: self.new_response_sender(),
             request_type: RequestType::Download {
                 remote_file_path: connector_messages[0].to_owned(),
             },
-            response_sender: self.new_response_sender()
         }).unwrap();
 
         file_handler::convert_to_local_paths(&host, remote_file_path).1
@@ -369,7 +370,7 @@ impl CommandHandler {
                 };
 
                 if response.stop {
-                    log::debug!("Stopped response receiver thread");
+                    log::debug!("Gracefully stopping receiver thread");
                     return;
                 }
 
@@ -399,7 +400,7 @@ impl CommandHandler {
                             RequestType::Upload { local_file_path, metadata } => {
                                 Self::process_upload_file_response(&command, &local_file_path, metadata, false, new_state_update_sender, response);
                             },
-                            _ => panic!(),
+                            _ => panic!("Invalid request type: {:?}", response.request_type)
                         }
                     },
                     _ => panic!("Unsupported UIAction"),
