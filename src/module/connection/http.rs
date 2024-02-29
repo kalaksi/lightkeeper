@@ -28,7 +28,7 @@ impl ConnectionModule for Http {
     fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, String> {
         if !wait_full_response {
             // Not supported.
-            panic!()
+            panic!("Partial responses are not supported")
         }
 
         if message.is_empty() {

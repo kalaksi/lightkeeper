@@ -43,7 +43,7 @@ impl CommandModule for Prune {
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "-X", "POST", "http://localhost/images/prune"]);
+            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "-X", "POST", "http://localhost/images/prune"]);
             Ok(command.to_string())
         }
         else {

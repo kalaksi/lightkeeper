@@ -267,7 +267,7 @@ impl ConnectionManager {
                                 if commands.len() != 1 {
                                     panic!("Follow output is only supported for a single command");
                                 }
-                                vec![Self::process_command_follow_output(&request.host, &mut connector, &commands.first().unwrap())]
+                                vec![Self::process_command_follow_output(&request, &mut connector, &commands.first().unwrap(), request.response_sender.clone())]
                             },
                             RequestType::Download { remote_file_path: file_path } =>
                                 vec![Self::process_download(&request.host, &mut connector, &file_path)],
@@ -344,11 +344,29 @@ impl ConnectionManager {
         }
     }
 
-    fn process_command_follow_output(host: &Host, connector: &mut Connector, request_message: &String) -> Result<ResponseMessage, String> {
-        log::debug!("[{}] Processing command: {}", host.name, request_message);
+    fn process_command_follow_output(
+        request: &ConnectorRequest,
+        connector: &mut Connector,
+        request_message: &String,
+        response_sender: mpsc::Sender<RequestResponse>,
+    ) -> Result<ResponseMessage, String> {
+
+        log::debug!("[{}] Processing command: {}", request.host.name, request_message);
         let response_result = connector.send_message(&request_message, false);
 
         if let Ok(response) = response_result {
+            while response.is_partial {
+                let partial_response_result = connector.receive_partial_response();
+                if let Ok(partial_response) = partial_response_result {
+                    let response = RequestResponse::new(&request, vec![Ok(partial_response)]);
+                    response_sender.send(response).unwrap();
+                }
+                else {
+                    log::error!("[{}] Error while receiving partial response: {}", request.host.name, partial_response_result.err().unwrap());
+                    break;
+                }
+            }
+
             if response.return_code != 0 {
                 log::debug!("Command returned non-zero exit code: {}", response.return_code)
             }

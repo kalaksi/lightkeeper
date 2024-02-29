@@ -44,6 +44,8 @@ pub struct Ssh2 {
     private_key_passphrase: Option<String>,
     agent_key_identifier: Option<String>,
     connection_timeout: u16,
+    // TODO: multiple parallel channels for multiple commands?
+    open_channel: Option<ssh2::Channel>,
 }
 
 impl Module for Ssh2 {
@@ -63,6 +65,7 @@ impl Module for Ssh2 {
             private_key_passphrase: settings.get("private_key_passphrase").cloned(),
             agent_key_identifier: settings.get("agent_key_identifier").cloned(),
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
+            open_channel: None,
         }
     }
 }
@@ -155,6 +158,9 @@ impl ConnectionModule for Ssh2 {
             }
         };
 
+        // Merge stderr etc. to the same stream as stdout.
+        channel.handle_extended_data(ssh2::ExtendedData::Merge).unwrap();
+
         if let Err(error) = channel.exec(message) {
             return Err(format!("Error executing command '{}': {}", message, error));
         };
@@ -163,26 +169,65 @@ impl ConnectionModule for Ssh2 {
 
         if wait_full_result {
             if let Err(error) = channel.read_to_string(&mut output) {
-                return Err(format!("Invalid output string received: {}", error));
+                return Err(format!("Invalid output received: {}", error));
             };
         }
         else {
             let mut buffer = [0u8; 256];
-            if let Ok(count) = channel.read(&mut buffer) {
-                if count > 0 {
-                    let output = std::str::from_utf8(&buffer).unwrap().to_string();
-                    return Ok(ResponseMessage::new_partial(output));
-                }
-            }
+            output = match channel.read(&mut buffer) {
+                Ok(_count) => std::str::from_utf8(&buffer).unwrap().to_string(),
+                Err(error) => return Err(format!("Invalid output received: {}", error)),
+            };
         }
 
-        let exit_status = channel.exit_status().unwrap_or(-1);
+        if channel.eof() {
+            let exit_status = channel.exit_status().unwrap_or(-1);
 
-        if let Err(error) = channel.wait_close() {
-            log::error!("Error while closing channel: {}", error);
-        };
+            if let Err(error) = channel.wait_close() {
+                log::error!("Error while closing channel: {}", error);
+            };
 
-        Ok(ResponseMessage::new(strip_newline(&output), exit_status))
+            Ok(ResponseMessage::new(strip_newline(&output), exit_status))
+        }
+        else {
+            if wait_full_result {
+                panic!("Channel is not at EOF even though full response was requested");
+            }
+
+            self.open_channel = Some(channel);
+            Ok(ResponseMessage::new_partial(output))
+        }
+    }
+
+    fn receive_partial_response(&mut self) -> Result<ResponseMessage, String> {
+        if let Some(channel) = &mut self.open_channel {
+            let mut buffer = [0u8; 1024];
+            let output = match channel.read(&mut buffer) {
+                Ok(count) => {
+                    std::str::from_utf8(&buffer[0..count]).unwrap().to_string()
+                },
+                Err(error) => {
+                    return Err(format!("Invalid output received: {}", error))
+                },
+            };
+
+            if channel.eof() {
+                let exit_status = channel.exit_status().unwrap_or(-1);
+
+                if let Err(error) = channel.wait_close() {
+                    log::error!("Error while closing channel: {}", error);
+                };
+
+                self.open_channel = None;
+                Ok(ResponseMessage::new(strip_newline(&output), exit_status))
+            }
+            else {
+                Ok(ResponseMessage::new_partial(output))
+            }
+        }
+        else {
+            panic!("No open channel available");
+        }
     }
 
     fn download_file(&self, source: &String) -> io::Result<(FileMetadata, Vec<u8>)> {

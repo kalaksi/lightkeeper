@@ -48,7 +48,7 @@ impl CommandModule for Restart {
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             let url = format!("http://localhost/containers/{}/restart", target_id);
-            command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "-X", "POST", &url]);
+            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "-X", "POST", &url]);
             Ok(command.to_string())
         }
         else {

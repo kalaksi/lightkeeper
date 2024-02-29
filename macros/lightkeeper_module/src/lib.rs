@@ -276,7 +276,6 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let struct_name = &ast.ident;
 
     quote! {
-        #[derive(Clone)]
         #original
 
         impl MetadataSupport for #struct_name {

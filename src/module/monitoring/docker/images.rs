@@ -67,7 +67,7 @@ impl MonitoringModule for Images {
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
            host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
             // TODO: somehow connect directly to the unix socket instead of using curl?
-            command.arguments(vec!["curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);
+            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);
             Ok(command.to_string())
         }
         else {
