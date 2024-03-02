@@ -10,24 +10,18 @@ import "../Text"
 Dialog {
     id: root
     property string text: ""
+    property alias textFormat: dialogText.textFormat
+    property alias wrapMode: dialogText.wrapMode
+
     modal: true
     opacity: 0.0
     // TODO: more accurate calculation?
-    implicitWidth: dialogText.implicitWidth + 100
-    implicitHeight: dialogText.implicitHeight + 100
+    implicitWidth: dialogText.contentWidth + 100
+    implicitHeight: dialogText.contentHeight + 100
     standardButtons: Dialog.Close
 
     background: DialogBackground { }
 
-
-    onVisibleChanged: {
-        if (visible) {
-            root.opacity = 1.0
-        }
-        else {
-            root.opacity = 0.0
-        }
-    }
 
     WorkingSprite {
         visible: root.text === ""
@@ -40,7 +34,6 @@ Dialog {
 
         NormalText {
             id: dialogText
-            anchors.fill: parent
             wrapMode: Text.WordWrap
             textFormat: Text.MarkdownText
             text: root.text
@@ -53,19 +46,19 @@ Dialog {
 
     Behavior on width {
         NumberAnimation {
-            duration: Theme.animation_duration()
+            duration: Theme.animationDuration
         }
     }
 
     Behavior on height {
         NumberAnimation {
-            duration: Theme.animation_duration()
+            duration: Theme.animationDuration
         }
     }
 
     Behavior on opacity {
         NumberAnimation {
-            duration: Theme.animation_duration()
+            duration: Theme.animationDuration
         }
     }
 }

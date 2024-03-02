@@ -21,7 +21,10 @@ pub struct HostDataManagerModel {
     reset: qt_method!(fn(&mut self)),
     stop: qt_method!(fn(&mut self)),
 
+    //
     // Signals
+    //
+
     updateReceived: qt_signal!(host_id: QString),
     host_initialized: qt_signal!(host_id: QString),
     host_initialized_from_cache: qt_signal!(host_id: QString),
@@ -30,7 +33,10 @@ pub struct HostDataManagerModel {
     monitoring_data_received: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant),
     error_received: qt_signal!(criticality: QString, error: QString),
 
+    //
     // Slots
+    //
+
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     getDisplayData: qt_method!(fn(&self) -> QVariant),
     getCategories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
@@ -48,6 +54,9 @@ pub struct HostDataManagerModel {
     get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QStringList),
     get_host_data_json: qt_method!(fn(&self, host_id: QString) -> QString),
 
+    //
+    // Private properties
+    //
 
     // Basically contains the state of hosts and relevant data. Received from HostManager.
     display_data: frontend::DisplayData,

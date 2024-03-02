@@ -31,6 +31,7 @@ impl CommandModule for Refresh {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("refresh"),
             display_text: String::from("Refresh package lists"),
+            action: UIAction::FollowOutput,
             ..Default::default()
         }
     }
@@ -56,10 +57,14 @@ impl CommandModule for Refresh {
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         // TODO: view output messages of installation (can be pretty long)?
         if response.return_code == 0 {
-            Ok(CommandResult::default())
+            Ok(CommandResult::new_hidden(response.message.clone()))
         }
         else {
             Ok(CommandResult::new_error(response.message.clone()))
         }
     }
+
+    // TODO
+    // fn process_partial_response(&self, _host: Host, _response: ResponseMessage) -> Result<DataPoint, String> {
+    // }
 }

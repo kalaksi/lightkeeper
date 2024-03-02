@@ -18,15 +18,6 @@ Dialog {
     background: DialogBackground { }
 
 
-    onVisibleChanged: {
-        if (visible) {
-            root.opacity = 1.0
-        }
-        else {
-            root.opacity = 0.0
-        }
-    }
-
     ScrollView {
         id: scrollView
         anchors.fill: parent

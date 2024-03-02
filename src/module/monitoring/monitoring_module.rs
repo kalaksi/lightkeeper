@@ -47,6 +47,10 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
     fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>, _parent_result: DataPoint) -> Result<DataPoint, String> {
         Err(String::new())
     }
+
+    fn process_partial_response(&self, _host: Host, _response: ResponseMessage) -> Result<DataPoint, String> {
+        panic!("Processing of partial responses not implemented")
+    }
 }
 
 // Implemented by the macro.

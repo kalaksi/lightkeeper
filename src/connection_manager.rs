@@ -352,29 +352,39 @@ impl ConnectionManager {
     ) -> Result<ResponseMessage, String> {
 
         log::debug!("[{}] Processing command: {}", request.host.name, request_message);
-        let response_result = connector.send_message(&request_message, false);
+        let mut response_message_result = connector.send_message(&request_message, false);
 
-        if let Ok(response) = response_result {
-            while response.is_partial {
-                let partial_response_result = connector.receive_partial_response();
-                if let Ok(partial_response) = partial_response_result {
-                    let response = RequestResponse::new(&request, vec![Ok(partial_response)]);
+        // Paradoxical name...
+        let mut full_partial_message = String::new();
+
+        loop {
+            if let Ok(mut response_message) = response_message_result {
+                if response_message.is_partial {
+                    full_partial_message.push_str(&response_message.message);
+                    response_message.message = full_partial_message.clone();
+
+                    let response = RequestResponse::new(&request, vec![Ok(response_message)]);
                     response_sender.send(response).unwrap();
+
+                    response_message_result = connector.receive_partial_response();
                 }
                 else {
-                    log::error!("[{}] Error while receiving partial response: {}", request.host.name, partial_response_result.err().unwrap());
-                    break;
+                    full_partial_message.push_str(&response_message.message);
+                    response_message.message = full_partial_message.clone();
+
+                    if response_message.return_code != 0 {
+                        log::debug!("Command returned non-zero exit code: {}", response_message.return_code)
+                    }
+
+                    break Ok(response_message);
                 }
             }
-
-            if response.return_code != 0 {
-                log::debug!("Command returned non-zero exit code: {}", response.return_code)
+            else {
+                log::error!("[{}] Error while receiving partial response: {}", request.host.name, response_message_result.clone().err().unwrap());
+                break response_message_result;
             }
-            Ok(response)
         }
-        else {
-            response_result
-        }
+
     }
 
     fn process_download(host: &Host, connector: &mut Connector, file_path: &String) -> Result<ResponseMessage, String> {

@@ -18,6 +18,10 @@ use crate::monitor_manager::MonitorManager;
 pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
 
+    //
+    // Slots
+    //
+
     stop: qt_method!(fn(&mut self)),
     reconfigure: qt_method!(fn(&mut self, config: QVariant, hosts_config: QVariant)),
 
@@ -44,11 +48,16 @@ pub struct CommandHandlerModel {
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     force_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
+    //
+    // Signals
+    //
+
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
     input_dialog_opened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QStringList),
     text_dialog_opened: qt_signal!(invocation_id: u64),
     confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QStringList),
+    commandOutputDialogOpened: qt_signal!(title: QString, invocation_id: u64),
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
     textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
@@ -56,6 +65,10 @@ pub struct CommandHandlerModel {
     command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
     host_initializing: qt_signal!(host_id: QString),
+
+    //
+    // Private properties
+    //
 
     command_handler: CommandHandler,
     monitor_manager: MonitorManager,
@@ -227,13 +240,19 @@ impl CommandHandlerModel {
         };
 
         match display_options.action {
-            UIAction::None |
-            UIAction::FollowOutput => {
+            UIAction::None => {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
 
                 if invocation_id > 0 {
                     let button_identifier = format!("{}|{}", command_id, parameters.first().unwrap_or(&String::new()));
                     self.command_executed(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_identifier.into());
+                }
+            },
+            UIAction::FollowOutput => {
+                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                if invocation_id > 0 {
+                    let title = QString::from(format!("{}: {}", command_id, parameters.first().unwrap_or(&String::new())));
+                    self.commandOutputDialogOpened(title, invocation_id);
                 }
             },
             UIAction::DetailsDialog => {

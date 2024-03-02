@@ -17,7 +17,8 @@ use crate::host_manager::HostManager;
 use crate::module::command::UIAction;
 use crate::module::connection::request_response::RequestResponse;
 use crate::module::module_factory::ModuleFactory;
-use crate::utils::{ShellCommand, ErrorMessage};
+use crate::utils;
+use crate::utils::*;
 use crate::{
     configuration::Preferences,
     Host,

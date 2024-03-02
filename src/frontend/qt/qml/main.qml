@@ -14,7 +14,6 @@ import "js/Utils.js" as Utils
 
 ApplicationWindow {
     property var _detailsDialogs: {}
-    property int _textDialogPendingInvocation: 0
 
     id: root
     visible: true
@@ -166,8 +165,11 @@ ApplicationWindow {
                 dialog.errorText = commandResult.error
                 dialog.criticality = commandResult.criticality
             }
-            else if (_textDialogPendingInvocation === commandResult.invocation_id) {
+            else if (textDialog.pendingInvocation === commandResult.invocation_id) {
                 textDialog.text = commandResult.message
+            }
+            else if (commandOutputDialog.pendingInvocation === commandResult.invocation_id) {
+                commandOutputDialog.text = commandResult.message
             }
         }
 
@@ -198,8 +200,13 @@ ApplicationWindow {
         }
 
         function onText_dialog_opened(invocationId) {
-            _textDialogPendingInvocation = invocationId
+            textDialog.pendingInvocation = invocationId
             textDialog.open()
+        }
+
+        function onCommandOutputDialogOpened(title, invocationId) {
+            commandOutputDialog.pendingInvocation = invocationId
+            commandOutputDialog.open()
         }
 
         function onInput_dialog_opened(input_specs_json, hostId, commandId, commandParams) {
@@ -374,7 +381,21 @@ ApplicationWindow {
     }
 
     TextDialog {
+        id: commandOutputDialog
+        property int pendingInvocation: 0
+
+        anchors.centerIn: parent
+        width: root.width * 0.8
+        height: root.height * 0.8
+
+        textFormat: Text.PlainText
+        wrapMode: Text.NoWrap
+    }
+
+    TextDialog {
         id: textDialog
+        property int pendingInvocation: 0
+
         visible: false
         anchors.centerIn: parent
         width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
