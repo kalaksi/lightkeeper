@@ -668,6 +668,7 @@ dependencies = [
  "qmetaobject",
  "rand",
  "rayon",
+ "regex",
  "serde",
  "serde_derive",
  "serde_json",

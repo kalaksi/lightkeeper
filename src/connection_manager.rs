@@ -359,19 +359,16 @@ impl ConnectionManager {
 
         loop {
             if let Ok(mut response_message) = response_message_result {
-                if response_message.is_partial {
-                    full_partial_message.push_str(&response_message.message);
-                    response_message.message = full_partial_message.clone();
+                full_partial_message.push_str(&response_message.message);
+                response_message.message = full_partial_message.clone();
 
+                if response_message.is_partial {
                     let response = RequestResponse::new(&request, vec![Ok(response_message)]);
                     response_sender.send(response).unwrap();
 
                     response_message_result = connector.receive_partial_response();
                 }
                 else {
-                    full_partial_message.push_str(&response_message.message);
-                    response_message.message = full_partial_message.clone();
-
                     if response_message.return_code != 0 {
                         log::debug!("Command returned non-zero exit code: {}", response_message.return_code)
                     }

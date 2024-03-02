@@ -1,3 +1,6 @@
+use regex::Regex;
+
+use std::cmp::max;
 use std::collections::HashMap;
 use crate::frontend;
 use crate::host::*;
@@ -15,8 +18,9 @@ use lightkeeper_module::command_module;
 pub struct Refresh;
 
 impl Module for Refresh {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Self { }
+    fn new(_settings: &HashMap<String, String>) -> Refresh {
+        Refresh {
+        }
     }
 }
 
@@ -55,12 +59,31 @@ impl CommandModule for Refresh {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        // TODO: view output messages of installation (can be pretty long)?
-        if response.return_code == 0 {
-            Ok(CommandResult::new_hidden(response.message.clone()))
+        if response.is_partial {
+            let mut progress = 0;
+            for line in response.message.lines().rev() {
+                if line.starts_with("Reading state information") {
+                    progress = 90;
+                }
+                else if line.starts_with("Reading package lists") {
+                    progress = 80;
+                }
+                else if line.starts_with("Hit:") {
+                    // Approximates the progress since the output doesn't tell the total amount.
+                    let hits = response.message.lines().filter(|line| line.starts_with("Hit:")).count();
+                    progress = std::cmp::min(70, hits / 2 * 10) as u8;
+                }
+            }
+
+            Ok(CommandResult::new_partial(response.message.clone(), progress))
         }
         else {
-            Ok(CommandResult::new_error(response.message.clone()))
+            if response.return_code == 0 {
+                Ok(CommandResult::new_hidden(response.message.clone()))
+            }
+            else {
+                Ok(CommandResult::new_error(response.message.clone()))
+            }
         }
     }
 

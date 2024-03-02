@@ -141,7 +141,7 @@ TableView {
 
                     Row {
                         visible: styledValue.display_options.display_style === "ProgressBar"
-                        spacing: 5
+                        spacing: Theme.spacingNormal
 
                         ProgressBar {
                             anchors.verticalCenter: parent.verticalCenter

@@ -1,3 +1,5 @@
+use regex::Regex;
+
 use std::collections::HashMap;
 use crate::frontend;
 use crate::host::*;
@@ -6,17 +8,22 @@ use crate::module::command::*;
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
+
+
+
 #[command_module(
     name="docker-compose-build",
     version="0.0.1",
     description="Builds local docker-compose service images.",
 )]
 pub struct Build {
+    regex_step: Regex,
 }
 
 impl Module for Build {
     fn new(_settings: &HashMap<String, String>) -> Build {
         Build {
+            regex_step: Regex::new(r"(?i)\w*step (\d+)/(\d+)").unwrap(),
         }
     }
 }
@@ -65,12 +72,24 @@ impl CommandModule for Build {
 
     fn process_response(&self, _host: Host, response: &connection::ResponseMessage) -> Result<CommandResult, String> {
         if response.is_partial {
-            // TODO
-            Ok(CommandResult::new_partial(response.message.clone(), 100))
+            let mut progress: u8 = 0;
+            for line in response.message.lines().rev() {
+                if let Some(captures) = self.regex_step.captures(line) {
+                    let current = captures.get(1).unwrap().as_str().parse::<u8>().unwrap();
+                    let total = captures.get(2).unwrap().as_str().parse::<u8>().unwrap();
+                    progress = (current as f32 / total as f32 * 100.0) as u8;
+                    break;
+                }
+                else {
+                    progress = 1;
+                }
+            }
+
+            Ok(CommandResult::new_partial(response.message.clone(), progress))
         }
         else {
             if response.return_code == 0 {
-                Ok(CommandResult::default())
+                Ok(CommandResult::new_hidden(response.message.clone()))
             } else {
                 Err(response.message.clone())
             }

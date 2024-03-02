@@ -170,6 +170,7 @@ ApplicationWindow {
             }
             else if (commandOutputDialog.pendingInvocation === commandResult.invocation_id) {
                 commandOutputDialog.text = commandResult.message
+                commandOutputDialog.progress = commandResult.progress
             }
         }
 
@@ -380,16 +381,13 @@ ApplicationWindow {
         }
     }
 
-    TextDialog {
+    CommandOutputDialog {
         id: commandOutputDialog
         property int pendingInvocation: 0
 
         anchors.centerIn: parent
-        width: root.width * 0.8
+        width: root.width * 0.6
         height: root.height * 0.8
-
-        textFormat: Text.PlainText
-        wrapMode: Text.NoWrap
     }
 
     TextDialog {
