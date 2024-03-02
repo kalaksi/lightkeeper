@@ -7,7 +7,7 @@ You can see executed commands through debug log and on server's logs (depends on
 **LightkeeperRM aims to be customizable**, modular and easily extendable, so that it can be modified for different needs.  
   
 **User-interface is compact** and aims to keep only the most essential information visible. Clicking and navigating between different views is kept to a minimum.  
-In case you find the GUI insufficient and need to dig deeper, you can always use a button for launching a terminal that logs you in through SSH.
+In case you find the GUI insufficient and need to dig deeper, you can always use a button, or hotkey, for launching a terminal that logs you in through SSH.
 
 **Extensive keyboard shortcuts**. (work in progress)
   
