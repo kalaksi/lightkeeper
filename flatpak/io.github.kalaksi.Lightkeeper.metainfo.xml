@@ -5,6 +5,9 @@
   <summary>A standalone, customizable server management tool</summary>
   <metadata_license>CC-BY-SA-4.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.kalaksi">
+    <name>Kalaksi</name>
+  </developer>
   <description>
     <p>
       LightkeeperRM is a standalone, customizable, modular, server management tool.
