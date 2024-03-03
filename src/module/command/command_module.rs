@@ -139,6 +139,11 @@ impl CommandResult {
         self.invocation_id = invocation_id;
         self.to_owned()
     }
+
+    pub fn with_criticality(&mut self, criticality: Criticality) -> Self {
+        self.criticality = criticality;
+        self.to_owned()
+    }
 }
 
 impl Default for CommandResult {

@@ -27,10 +27,6 @@ Dialog {
         root.progress = 0
     }
 
-    WorkingSprite {
-        visible: root.text === ""
-    }
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 10
@@ -53,19 +49,31 @@ Dialog {
                 text: root.progress + " %"
             }
         }
-        
 
         ScrollView {
             id: scrollView
-            visible: root.text !== ""
             contentWidth: parent.width
+            contentHeight: dialogText.contentHeight
 
             Layout.fillHeight: true
+            Layout.rightMargin: Theme.marginScrollbar
+
+            WorkingSprite {
+                visible: root.text === ""
+                height: parent.height
+                width: parent.width
+            }
 
             NormalText {
                 id: dialogText
+                visible: root.text !== ""
                 wrapMode: Text.WrapAnywhere
                 text: root.text
+
+                onTextChanged: {
+                    // Scroll to bottom
+                    scrollView.ScrollBar.vertical.position = 1.0 - scrollView.ScrollBar.vertical.size
+                }
             }
         }
 

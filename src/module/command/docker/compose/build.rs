@@ -72,16 +72,13 @@ impl CommandModule for Build {
 
     fn process_response(&self, _host: Host, response: &connection::ResponseMessage) -> Result<CommandResult, String> {
         if response.is_partial {
-            let mut progress: u8 = 0;
+            let mut progress: u8 = 1;
             for line in response.message.lines().rev() {
                 if let Some(captures) = self.regex_step.captures(line) {
                     let current = captures.get(1).unwrap().as_str().parse::<u8>().unwrap();
                     let total = captures.get(2).unwrap().as_str().parse::<u8>().unwrap();
                     progress = (current as f32 / total as f32 * 100.0) as u8;
                     break;
-                }
-                else {
-                    progress = 1;
                 }
             }
 
@@ -91,7 +88,8 @@ impl CommandModule for Build {
             if response.return_code == 0 {
                 Ok(CommandResult::new_hidden(response.message.clone()))
             } else {
-                Err(response.message.clone())
+                Ok(CommandResult::new_hidden(response.message.clone())
+                                 .with_criticality(crate::enums::Criticality::Error))
             }
         }
     }

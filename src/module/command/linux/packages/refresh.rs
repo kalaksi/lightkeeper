@@ -1,6 +1,4 @@
-use regex::Regex;
 
-use std::cmp::max;
 use std::collections::HashMap;
 use crate::frontend;
 use crate::host::*;
@@ -58,22 +56,19 @@ impl CommandModule for Refresh {
         Ok(command.to_string())
     }
 
-    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+    fn process_response(&self, host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_partial {
-            let mut progress = 0;
-            for line in response.message.lines().rev() {
-                if line.starts_with("Reading state information") {
-                    progress = 90;
-                }
-                else if line.starts_with("Reading package lists") {
-                    progress = 80;
-                }
-                else if line.starts_with("Hit:") {
-                    // Approximates the progress since the output doesn't tell the total amount.
-                    let hits = response.message.lines().filter(|line| line.starts_with("Hit:")).count();
-                    progress = std::cmp::min(70, hits / 2 * 10) as u8;
-                }
+            let progress = if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
+                              host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+                self.parse_progress_for_apt(response)
             }
+            else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
+                    host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+                1
+            }
+            else {
+                panic!()
+            };
 
             Ok(CommandResult::new_partial(response.message.clone(), progress))
         }
@@ -82,12 +77,29 @@ impl CommandModule for Refresh {
                 Ok(CommandResult::new_hidden(response.message.clone()))
             }
             else {
-                Ok(CommandResult::new_error(response.message.clone()))
+                Ok(CommandResult::new_hidden(response.message.clone())
+                                 .with_criticality(crate::enums::Criticality::Error))
             }
         }
     }
+}
 
-    // TODO
-    // fn process_partial_response(&self, _host: Host, _response: ResponseMessage) -> Result<DataPoint, String> {
-    // }
+impl Refresh {
+    fn parse_progress_for_apt(&self, response: &ResponseMessage) -> u8 {
+        for line in response.message.lines().rev() {
+            if line.starts_with("Reading state information") {
+                return 90;
+            }
+            else if line.starts_with("Reading package lists") {
+                return 80;
+            }
+            else if line.starts_with("Hit:") {
+                // Approximates the progress since the output doesn't tell the total amount.
+                let hits = response.message.lines().filter(|line| line.starts_with("Hit:")).count();
+                return std::cmp::min(70, hits / 2 * 10) as u8;
+            }
+        }
+
+        0
+    }
 }
