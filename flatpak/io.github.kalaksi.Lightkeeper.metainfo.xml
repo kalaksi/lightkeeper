@@ -25,6 +25,15 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.11.0" date="2024-03-03">
+      <description>
+        <ul>
+	  <li>Adds amount of unprocessed commands in header bar for better view of progress.</li>
+	  <li>Now shows and follows command output for some longer running commands.</li>
+	  <li>Updated dependencies</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.10.0" date="2023-12-23">
       <description>
         <ul>
