@@ -15,6 +15,9 @@ fi
 echo -e "\n* Updating Cargo.toml..."
 sed -i 's|^version = ".*|version = "'$version_only'"|' Cargo.toml
 
+# Test build and update cargo.lock
+cargo build
+
 pushd flatpak &>/dev/null
 
 echo -e "\n* Updating flatpak cargo-source and metainfo files..."
