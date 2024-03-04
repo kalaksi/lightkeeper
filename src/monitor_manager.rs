@@ -404,26 +404,25 @@ impl MonitorManager {
                 let monitor = platform_info_providers.get(monitor_id).unwrap_or_else(|| {
                     &monitors[&response.host.name][monitor_id]
                 });
-
-                // Have to be done separately because of name conflict.
                 let parent_datapoint = match response.request_type.clone() {
-                    RequestType::MonitorCommand { parent_datapoint, .. } => parent_datapoint.clone().unwrap_or_default(),
-                    _ => panic!("Invalid request type: {:?}", response.request_type)
+                    RequestType::MonitorCommand { parent_datapoint, .. } => parent_datapoint,
+                    _ => panic!()
                 };
 
                 let mut datapoint_result;
                 if results_len == 0 {
                     // Some special modules require no connectors and receive no response messages, such
                     // as `os`, which only uses existing platform info.
-                    datapoint_result = monitor.process_response(response.host.clone(), ResponseMessage::empty(), parent_datapoint.clone())
+                    datapoint_result = monitor.process_response(response.host.clone(), ResponseMessage::empty(), DataPoint::empty());
                 }
                 else if responses.len() > 0 {
-                    datapoint_result = monitor.process_responses(response.host.clone(), responses.clone(), parent_datapoint.clone());
+                    datapoint_result = monitor.process_responses(response.host.clone(), responses.clone(), parent_datapoint.clone().unwrap_or_default());
+
                     if let Err(error) = datapoint_result {
                         if error.is_empty() {
                             // Was not implemented, so try the other method.
                             let message = responses[0].clone();
-                            datapoint_result = monitor.process_response(response.host.clone(), message.clone(), parent_datapoint.clone())
+                            datapoint_result = monitor.process_response(response.host.clone(), message.clone(), parent_datapoint.clone().unwrap_or_default())
                                                         .map(|mut data_point| { data_point.is_from_cache = message.is_from_cache; data_point });
                         }
                         else {
@@ -448,7 +447,7 @@ impl MonitorManager {
                             errors.push(ErrorMessage::new(Criticality::Error, error));
                         }
                         // In case this was an extension module, retain the parents data point unmodified.
-                        parent_datapoint.clone()
+                        parent_datapoint.clone().unwrap_or_default()
                     }
                 };
 
@@ -460,7 +459,7 @@ impl MonitorManager {
                     RequestType::MonitorCommand { cache_policy, .. } => cache_policy,
                     _ => panic!()
                 };
-                let mut extension_monitors = match response.request_type {
+                let mut extension_monitors = match response.request_type.clone() {
                     RequestType::MonitorCommand { extension_monitors, .. } => extension_monitors,
                     _ => panic!()
                 };
@@ -469,17 +468,18 @@ impl MonitorManager {
                     // Process extension modules until the final result is reached.
                     let next_monitor_id = extension_monitors.remove(0);
                     let next_monitor = &monitors[&response.host.name][&next_monitor_id];
+                    let next_parent_datapoint = parent_datapoint.unwrap_or_else(|| new_data_point.clone());
 
-                    let messages = match get_monitor_connector_messages(&response.host, &monitor, &parent_datapoint) {
+                    let messages = match get_monitor_connector_messages(&response.host, &next_monitor, &next_parent_datapoint) {
                         Ok(messages) => messages,
                         Err(error) => {
-                            log::error!("Monitor \"{}\" failed: {}", monitor.get_module_spec().id, error);
-                            let ui_error = format!("{}: {}", monitor.get_module_spec().id, error);
+                            log::error!("Monitor \"{}\" failed: {}", next_monitor.get_module_spec().id, error);
+                            let ui_error = format!("{}: {}", next_monitor.get_module_spec().id, error);
 
                             state_update_sender.send(StateUpdateMessage {
                                 host_name: response.host.name.clone(),
-                                display_options: monitor.get_display_options(),
-                                module_spec: monitor.get_module_spec(),
+                                display_options: next_monitor.get_display_options(),
+                                module_spec: next_monitor.get_module_spec(),
                                 errors: vec![ErrorMessage::new(Criticality::Error, ui_error)],
                                 ..Default::default()
                             }).unwrap();
@@ -495,7 +495,7 @@ impl MonitorManager {
                         invocation_id: response.invocation_id,
                         response_sender: response_sender.clone(),
                         request_type: RequestType::MonitorCommand {
-                            parent_datapoint: Some(parent_datapoint.clone()),
+                            parent_datapoint: Some(new_data_point.clone()),
                             extension_monitors: extension_monitors,
                             cache_policy: cache_policy,
                             commands: messages,

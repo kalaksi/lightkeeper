@@ -207,7 +207,7 @@ impl ConnectionManager {
                             RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
                                 commands.par_iter().map(|command| {
                                     let mut par_connector = module_factory.new_connector(&connector_spec, &HashMap::new());
-                                    Self::process_command(&request.host, command_cache.clone(), &cache_policy, &mut par_connector, command )
+                                    Self::process_command(&request.host, command_cache.clone(), &cache_policy, &mut par_connector, command)
                                 }).collect()
                             },
                             RequestType::Command { commands } => {
