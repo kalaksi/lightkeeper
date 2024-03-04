@@ -28,36 +28,43 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.11.2" date="2024-03-04">
+      <description>
+        <ul>
+          <li>Fix processing of extension modules (broke in 0.11.1)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.11.1" date="2024-03-03">
       <description>
         <ul>
-	  <li>Adds amount of unprocessed commands in header bar for better view of progress.</li>
-	  <li>Now shows and follows command output for some longer running commands.</li>
-	  <li>Updated dependencies</li>
+          <li>Adds amount of unprocessed commands in header bar for better view of progress.</li>
+          <li>Now shows and follows command output for some longer running commands.</li>
+          <li>Updated dependencies</li>
         </ul>
       </description>
     </release>
     <release version="0.10.0" date="2023-12-23">
       <description>
         <ul>
-	  <li>Copy &amp; paste for internal terminal</li>
-	  <li>Search box for internal terminal</li>
-	  <li>Better scroll bar for internal terminal</li>
-	  <li>Keyboard shortcut for opening a new host shell</li>
+          <li>Copy &amp; paste for internal terminal</li>
+          <li>Search box for internal terminal</li>
+          <li>Better scroll bar for internal terminal</li>
+          <li>Keyboard shortcut for opening a new host shell</li>
         </ul>
       </description>
     </release>
     <release version="0.9.1" date="2023-12-16">
       <description>
         <ul>
-	  <li>Fix input issues caused by recently added shortcuts</li>
+          <li>Fix input issues caused by recently added shortcuts</li>
         </ul>
       </description>
     </release>
     <release version="0.9.0" date="2023-12-16">
       <description>
         <ul>
-	  <li>More keyboart shortcuts</li>
+          <li>More keyboart shortcuts</li>
           <li>Help dialog for keyboard shortcuts</li>
           <li>Other small improvements and fixes</li>
         </ul>
@@ -67,7 +74,7 @@
       <description>
         <ul>
           <li>New tab-layout added</li>
-	  <li>Time range filtering to log viewer</li>
+          <li>Time range filtering to log viewer</li>
           <li>Improved keyboard shortcuts</li>
           <li>Various other small fixes and improvements</li>
         </ul>
