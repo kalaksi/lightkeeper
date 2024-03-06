@@ -9,18 +9,18 @@ import ".."
 
 
 // This component should be a direct child of main window.
-Dialog {
+LightkeeperDialog {
     id: root
     property string groupName: ""
     property string moduleId: ""
     property string moduleType: ""
     property bool _loading: groupName === "" || moduleId === "" || moduleType === ""
 
-    modal: true
+
+    title: `Module settings: ${root.moduleId}`
     implicitWidth: 600
     implicitHeight: 650
     standardButtons: Dialog.Ok | Dialog.Cancel
-    background: DialogBackground { }
 
     signal configSaved(string moduleType, string groupName, string moduleId)
 
@@ -75,8 +75,9 @@ Dialog {
     contentItem: ScrollView {
         id: scrollView
         anchors.fill: parent
-        anchors.margins: Theme.margin_dialog()
-        anchors.bottomMargin: Theme.margin_dialog_bottom()
+        anchors.margins: Theme.marginDialog
+        anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
         contentWidth: availableWidth
         clip: true
 
@@ -86,12 +87,6 @@ Dialog {
             anchors.fill: parent
             anchors.rightMargin: Theme.marginScrollbar
             spacing: Theme.spacing_normal()
-
-            BigText {
-                text: `Module settings: ${root.moduleId}`
-                anchors.horizontalCenter: parent.horizontalCenter
-                height: implicitHeight + Theme.spacing_loose()
-            }
 
             Repeater {
                 id: repeater

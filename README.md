@@ -1,15 +1,15 @@
 # LightkeeperRM
 
 **LightkeeperRM (Remote Management) is a modular drop-in replacement for maintaining servers over SSH with shell commands.**
-No additional daemons or other software is needed on servers. LightkeeperRM will only run standard Linux commands already available on the server.
-You can see executed commands through debug log and on server's logs (depends on server's settings), so it's easy to audit and debug.  
+No additional daemons or other software is needed on target hosts. LightkeeperRM will only run standard Linux commands already available on the host.
+You can see executed commands through debug log and on target hosts's logs (depending on setup), so it's easy to audit and debug.
   
 **LightkeeperRM aims to be customizable**, modular and easily extendable, so that it can be modified for different needs.  
   
 **User-interface is compact** and aims to keep only the most essential information visible. Clicking and navigating between different views is kept to a minimum.  
 In case you find the GUI insufficient and need to dig deeper, you can always use a button, or hotkey, for launching a terminal that logs you in through SSH.
 
-**Extensive keyboard shortcuts**. (work in progress)
+**Extensive keyboard shortcuts**.
   
 *NOTE: this is currently a pre-release and still has bugs and is missing some features. Documentation is also not yet complete.*
 
@@ -91,7 +91,7 @@ Copyright © 2023 kalaksi@users.noreply.github.com.
 
 This software is licensed under GNU General Public License 3.
 
-**NOTE: If you need a non-GPL license for commercial use, get in contact.**
+**NOTE: If you need a non-GPL license, get in contact.**
 
 ## Crate dependencies
 All crate dependencies contain permissive licenses (mostly MIT license).  

@@ -10,7 +10,7 @@ import "../js/Utils.js" as Utils
 import ".."
 
 // This component should be a direct child of main window.
-Dialog {
+LightkeeperDialog {
     id: root
     property string hostId: ""
     property int buttonSize: 42
@@ -19,11 +19,10 @@ Dialog {
     property var _availableGroups: ConfigManager.get_available_groups(hostId)
     property int _contentWidth: 360
     property bool _loading: true
+    title: "Host details"
 
-    modal: true
     implicitWidth: 550
     implicitHeight: 650
-    background: DialogBackground { }
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     signal configurationChanged()
@@ -76,15 +75,10 @@ Dialog {
         id: content
         visible: !root._loading
         anchors.fill: parent
-        anchors.margins: Theme.margin_dialog()
-        anchors.bottomMargin: Theme.margin_dialog_bottom()
-        spacing: Theme.spacing_loose()
-
-        BigText {
-            text: "Host details"
-
-            Layout.alignment: Qt.AlignHCenter
-        }
+        anchors.margins: Theme.marginDialog
+        anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
+        spacing: Theme.spacingLoose
 
         Column {
             Layout.alignment: Qt.AlignHCenter
@@ -129,7 +123,7 @@ Dialog {
         // Just for extra spacing
         Item {
             Layout.fillWidth: true
-            height: Theme.spacing_normal()
+            height: Theme.spacingNormal
         }
 
         BigText {
@@ -139,7 +133,7 @@ Dialog {
         }
 
         Row {
-            spacing: Theme.spacing_normal()
+            spacing: Theme.spacingNormal
 
             Layout.alignment: Qt.AlignHCenter
             Layout.fillHeight: true
@@ -223,7 +217,7 @@ Dialog {
             ColumnLayout {
                 width: configButton.width
                 height: tabView.height
-                spacing: Theme.spacing_normal()
+                spacing: Theme.spacingNormal
 
                 property bool isValidGroupSelection: tabView._selectedGroup !== "" && tabView._selectedGroupTab === tabView.currentIndex
 

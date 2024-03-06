@@ -8,7 +8,7 @@ import "../Text"
 import ".."
 
 // This component should be a direct child of main window.
-Dialog {
+LightkeeperDialog {
     id: root
     required property string groupName 
     property var _connectorList: []
@@ -17,10 +17,9 @@ Dialog {
     property bool _loading: true
     property int _buttonSize: 26
 
-    modal: true
+    title: `Configuration group: ${root.groupName}`
     implicitWidth: 600
     implicitHeight: 650
-    background: DialogBackground { }
     standardButtons: Dialog.Cancel | Dialog.Ok
 
     onOpened: {
@@ -56,8 +55,9 @@ Dialog {
     contentItem: ScrollView {
         id: scrollView
         anchors.fill: parent
-        anchors.margins: Theme.margin_dialog()
-        anchors.bottomMargin: Theme.margin_dialog_bottom()
+        anchors.margins: Theme.marginDialog
+        anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
         contentWidth: availableWidth
         clip: true
 
@@ -67,13 +67,6 @@ Dialog {
             anchors.fill: parent
             anchors.rightMargin: Theme.marginScrollbar
             spacing: Theme.spacingTight
-
-            BigText {
-                text: `Configuration group: ${root.groupName}`
-
-                Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: Theme.spacingLoose
-            }
 
             RowLayout {
                 width: parent.width
@@ -323,7 +316,7 @@ Dialog {
                                     }
 
                                     Layout.alignment: Qt.AlignVCenter
-                                    Layout.rightMargin: Theme.spacing_loose()
+                                    Layout.rightMargin: Theme.spacingLoose
                                 }
                                 */
 

@@ -363,7 +363,7 @@ ApplicationWindow {
         id: hostConfigurationDialog
         visible: false
         anchors.centerIn: parent
-        bottomMargin: 0.12 * parent.height
+        bottomMargin: 0.15 * parent.height
 
         onConfigurationChanged: {
             reloadConfiguration()
@@ -374,7 +374,7 @@ ApplicationWindow {
         id: preferencesDialog
         visible: false
         anchors.centerIn: parent
-        bottomMargin: 0.12 * parent.height
+        bottomMargin: 0.15 * parent.height
 
         onConfigurationChanged: {
             reloadConfiguration()

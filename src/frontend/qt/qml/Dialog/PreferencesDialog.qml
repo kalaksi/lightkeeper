@@ -10,15 +10,14 @@ import "../js/Utils.js" as Utils
 import ".."
 
 // This component should be a direct child of main window.
-Dialog {
+LightkeeperDialog {
     id: root
     property var _preferences: ConfigManager.get_preferences()
     property bool _loading: true
 
-    modal: true
+    title: "Preferences"
     implicitWidth: 550
     implicitHeight: 650
-    background: DialogBackground { }
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     signal configurationChanged()
@@ -60,16 +59,10 @@ Dialog {
     contentItem: ColumnLayout {
         id: content
         visible: !root._loading
-        anchors.margins: Theme.margin_dialog()
-        anchors.bottomMargin: Theme.margin_dialog_bottom()
-        spacing: Theme.spacing_loose()
-
-        BigText {
-            text: "Preferences"
-
-            Layout.alignment: Qt.AlignHCenter
-            Layout.bottomMargin: Theme.spacing_loose()
-        }
+        anchors.margins: Theme.marginDialog
+        anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
+        spacing: Theme.spacingLoose
 
         RowLayout {
             Layout.fillWidth: true

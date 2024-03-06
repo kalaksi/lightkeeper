@@ -14,7 +14,7 @@ Dialog {
     property string _errorText: ""
     modal: true
     implicitWidth: 400
-    implicitHeight: rootColumn.implicitHeight + Theme.margin_dialog_bottom()
+    implicitHeight: rootColumn.implicitHeight + Theme.marginDialogBottom
     standardButtons: Dialog.Ok | Dialog.Cancel
     background: DialogBackground { }
 

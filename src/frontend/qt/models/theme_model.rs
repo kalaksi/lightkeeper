@@ -17,6 +17,7 @@ pub struct ThemeModel {
     textColor: qt_property!(QString; CONST),
     textColorDark: qt_property!(QString; CONST),
     borderColor: qt_property!(QString; CONST),
+    titleBarColor: qt_property!(QString; CONST),
     highlightColorBright: qt_property!(QString; CONST),
     backgroundColorDark: qt_property!(QString; CONST),
     backgroundColor: qt_property!(QString; CONST),
@@ -28,6 +29,10 @@ pub struct ThemeModel {
     spacingNormal: qt_property!(i8; CONST),
     spacingTight: qt_property!(i8; CONST),
     marginScrollbar: qt_property!(i8; CONST),
+    marginDialog: qt_property!(i8; CONST),
+    marginDialogTop: qt_property!(i8; CONST),
+    // Content will often overflow behind the dialog buttons (ugh...), reserve more space for them with this.
+    marginDialogBottom: qt_property!(i8; CONST),
     animationDuration: qt_property!(i32; CONST),
     groupboxMinWidth: qt_property!(i32; CONST),
     groupboxMaxWidth: qt_property!(i32; CONST),
@@ -38,9 +43,6 @@ pub struct ThemeModel {
 
     // NOTE: Old methods, will be deprecated.
 
-    margin_dialog: qt_method!(fn(&self) -> i8),
-    // Content will often overflow behind the dialog buttons (ugh...), reserve more space for them with this.
-    margin_dialog_bottom: qt_method!(fn(&self) -> i8),
     spacing_loose: qt_method!(fn(&self) -> i8),
     spacing_normal: qt_method!(fn(&self) -> i8),
     spacing_tight: qt_method!(fn(&self) -> i8),
@@ -77,6 +79,7 @@ impl ThemeModel {
             textColor: QString::from("#fcfcfc"),
             textColorDark: QString::from("#a0a0a0"),
             borderColor: QString::from("#505050"),
+            titleBarColor: QString::from("#404040"),
             highlightColorBright: QString::from("#50ff2222"),
             backgroundColorDark: QString::from("#252525"),
             backgroundColor: QString::from("#2a2e32"),
@@ -88,6 +91,9 @@ impl ThemeModel {
             spacingNormal: 8,
             spacingTight: 2,
             marginScrollbar: 16,
+            marginDialog: 30,
+            marginDialogTop: 45,
+            marginDialogBottom: 80,
             animationDuration: 175,
             groupboxMinWidth: 450,
             groupboxMaxWidth: 650,
@@ -111,14 +117,6 @@ impl ThemeModel {
         else {
             QString::from("")
         }
-    }
-
-    fn margin_dialog(&self) -> i8 {
-        30
-    }
-
-    fn margin_dialog_bottom(&self) -> i8 {
-        80
     }
 
     fn spacing_loose(&self) -> i8 {

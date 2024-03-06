@@ -28,7 +28,6 @@ Dialog {
 
     header: Rectangle {
         id: customHeader
-        z: 1
         width: root.width
         height: 30
         radius: root.borderRadius
