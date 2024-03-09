@@ -10,6 +10,9 @@ use crate::file_handler;
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
 const GROUPS_FILE: &str = "groups.yml";
+const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
+const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
+const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 
 
@@ -123,8 +126,17 @@ pub struct ConfigGroup {
     pub commands: HashMap<String, CommandConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub connectors: HashMap<String, ConnectorConfig>,
-
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub config_helper: ConfigHelperData,
 }
+
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
+pub struct ConfigHelperData {
+    pub ignored_commands: Vec<String>,
+    pub ignored_monitors: Vec<String>,
+    pub ignored_connectors: Vec<String>,
+}
+
 
 impl HostSettings {
     pub fn default_address() -> String {
@@ -308,10 +320,6 @@ impl Configuration {
     }
 
     pub fn write_initial_config(config_dir: &PathBuf) -> io::Result<()> {
-        let default_main_config = include_str!("../config.example.yml");
-        let default_hosts_config = include_str!("../hosts.example.yml");
-        let default_groups_config = include_str!("../groups.example.yml");
-
         let main_config_file_path = config_dir.join(MAIN_CONFIG_FILE);
         let hosts_file_path = config_dir.join(HOSTS_FILE);
         let groups_file_path = config_dir.join(GROUPS_FILE);
@@ -321,7 +329,7 @@ impl Configuration {
         let main_config_file = fs::OpenOptions::new().write(true).create_new(true).open(main_config_file_path.clone());
         match main_config_file {
             Ok(mut file) => {
-                if let Err(error) = file.write_all(default_main_config.as_bytes()) {
+                if let Err(error) = file.write_all(DEFAULT_MAIN_CONFIG.as_bytes()) {
                     let message = format!("Failed to write main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
@@ -338,7 +346,7 @@ impl Configuration {
         let hosts_config_file = fs::OpenOptions::new().write(true).create_new(true).open(hosts_file_path.clone());
         match hosts_config_file {
             Ok(mut file) => {
-                if let Err(error) = file.write_all(default_hosts_config.as_bytes()) {
+                if let Err(error) = file.write_all(DEFAULT_HOSTS_CONFIG.as_bytes()) {
                     let message = format!("Failed to write host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
@@ -355,7 +363,7 @@ impl Configuration {
         let groups_config_file = fs::OpenOptions::new().write(true).create_new(true).open(groups_file_path.clone());
         match groups_config_file {
             Ok(mut file) => {
-                if let Err(error) = file.write_all(default_groups_config.as_bytes()) {
+                if let Err(error) = file.write_all(DEFAULT_GROUPS_CONFIG.as_bytes()) {
                     let message = format!("Failed to write group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
@@ -483,4 +491,8 @@ impl Configuration {
     pub fn version_is_latest(version: &str) -> bool {
         version == "latest"
     }
+}
+
+pub fn get_default_config_groups() -> Groups {
+    serde_yaml::from_str(DEFAULT_GROUPS_CONFIG).unwrap()
 }

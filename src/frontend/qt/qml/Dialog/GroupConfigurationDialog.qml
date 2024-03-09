@@ -31,7 +31,7 @@ LightkeeperDialog {
     }
 
     onAccepted: {
-        ConfigManager.end_group_configuration()
+        ConfigManager.endGroupConfiguration()
         reset()
     }
 
@@ -89,7 +89,7 @@ LightkeeperDialog {
                             option_descriptions: connectors.map((connector) => ConfigManager.get_connector_description(connector))
                         }]
                         moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
-                            ConfigManager.add_group_connector(root.groupName, inputValues[0])
+                            ConfigManager.addGroupConnector(root.groupName, inputValues[0])
                             refreshConnectorList()
                         })
                         moduleAddDialog.open()
@@ -237,7 +237,7 @@ LightkeeperDialog {
                             option_descriptions: monitors.map((monitor) => ConfigManager.get_monitor_description(monitor))
                         }]
                         moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
-                            ConfigManager.add_group_monitor(root.groupName, inputValues[0])
+                            ConfigManager.addGroupMonitor(root.groupName, inputValues[0])
                             refreshMonitorList()
                         })
                         moduleAddDialog.open()
@@ -410,7 +410,7 @@ LightkeeperDialog {
                             option_descriptions: commands.map((command) => ConfigManager.get_command_description(command))
                         }]
                         moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
-                            ConfigManager.add_group_command(root.groupName, inputValues[0])
+                            ConfigManager.addGroupCommand(root.groupName, inputValues[0])
                             refreshCommandList()
                         })
                         moduleAddDialog.open()

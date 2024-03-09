@@ -22,6 +22,10 @@ Dialog {
 
     background: DialogBackground { }
 
+    onClosed: {
+        root.text = ""
+    }
+
 
     WorkingSprite {
         visible: root.text === ""
@@ -34,14 +38,11 @@ Dialog {
 
         NormalText {
             id: dialogText
+            anchors.fill: parent
             wrapMode: Text.WordWrap
             textFormat: Text.MarkdownText
             text: root.text
         }
-    }
-
-    onClosed: {
-        root.text = ""
     }
 
     Behavior on width {

@@ -284,7 +284,7 @@ LightkeeperDialog {
                     onClicked: {
                         ConfigManager.begin_group_configuration()
                         ConfigManager.remove_group(tabView._selectedGroup)
-                        ConfigManager.end_group_configuration()
+                        ConfigManager.endGroupConfiguration()
                         refreshGroups()
                     }
                 }
@@ -312,7 +312,7 @@ LightkeeperDialog {
 
         onInputValuesGiven: function(inputValues) {
             ConfigManager.add_group(inputValues[0])
-            ConfigManager.end_group_configuration()
+            ConfigManager.endGroupConfiguration()
             refreshGroups()
         }
 

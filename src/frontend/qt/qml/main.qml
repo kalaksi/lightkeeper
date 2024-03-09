@@ -223,28 +223,6 @@ ApplicationWindow {
     }
 
     Connections {
-        target: _hostTableModel
-
-        function onSelectedRowChanged() {
-            detailsView.hostId = _hostTableModel.getSelectedHostId()
-
-            if (detailsView.hostId !== "") {
-                if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
-                    CommandHandler.initialize_host(detailsView.hostId)
-                }
-            }
-        }
-
-        function onSelectionActivated() {
-            body.splitSize = 0.8
-        }
-
-        function onSelectionDeactivated() {
-            body.splitSize = 0.0
-        }
-    }
-
-    Connections {
         target: DesktopPortal
         function onOpenFileResponse(token) {
             console.log("************ Received open file response: " + token)
@@ -290,6 +268,24 @@ ApplicationWindow {
                     id: _hostTableModel
                     selectedRow: -1
                     displayData: HostDataManager.getDisplayData()
+
+                    onSelectedRowChanged: {
+                        detailsView.hostId = _hostTableModel.getSelectedHostId()
+
+                        if (detailsView.hostId !== "") {
+                            if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
+                                CommandHandler.initialize_host(detailsView.hostId)
+                            }
+                        }
+                    }
+
+                    onSelectionActivated: {
+                        body.splitSize = 0.8
+                    }
+
+                    onSelectionDeactivated: {
+                        body.splitSize = 0.0
+                    }
                 }
             }
 
@@ -374,6 +370,17 @@ ApplicationWindow {
         id: preferencesDialog
         visible: false
         anchors.centerIn: parent
+        bottomMargin: 0.15 * parent.height
+
+        onConfigurationChanged: {
+            reloadConfiguration()
+        }
+    }
+
+    ConfigHelperDialog {
+        id: configHelperDialog
+        width: root.width * 0.6
+        height: root.height * 0.7
         bottomMargin: 0.15 * parent.height
 
         onConfigurationChanged: {

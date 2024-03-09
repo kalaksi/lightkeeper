@@ -4,9 +4,13 @@ import org.kde.kirigami 2.19 as Kirigami
 
 Item {
     id: root
+    default property alias contentItem: contentItem.data
+    property bool useRounding: true
     property bool firstItem: false
     property bool selected: false
+    property int padding: 0
     implicitHeight: 40
+    implicitWidth: parent.width
 
     signal clicked()
 
@@ -14,7 +18,7 @@ Item {
     Rectangle {
         id: rounded
         anchors.fill: parent
-        radius: parent.firstItem ? 9 : 0
+        radius: root.useRounding && parent.firstItem ? 9 : 0
         color: getBackgroundColor(root.selected)
 
         MouseArea {
@@ -31,6 +35,15 @@ Item {
         anchors.right: rounded.right
     }
 
+    Item {
+        id: contentItem
+        height: parent.height
+        width: parent.width - padding
+        anchors.centerIn: parent
+    }
+
+    // It seems that at least Qt 6.6 now has native support for alternating row colors.
+    // TODO: use the native support when it's available.
     function getBackgroundColor(selected) {
         if (selected === true) {
             return Qt.darker(Kirigami.Theme.highlightColor)

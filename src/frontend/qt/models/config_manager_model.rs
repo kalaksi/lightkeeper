@@ -54,12 +54,15 @@ pub struct ConfigManagerModel {
     //
     begin_group_configuration: qt_method!(fn(&self)),
     cancel_group_configuration: qt_method!(fn(&self)),
-    end_group_configuration: qt_method!(fn(&self)),
+    endGroupConfiguration: qt_method!(fn(&self)),
 
     get_all_groups: qt_method!(fn(&self) -> QStringList),
     add_group: qt_method!(fn(&self, group_name: QString)),
     remove_group: qt_method!(fn(&self, group_name: QString)),
     get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
+
+    compareToDefault: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    ignoreFromConfigHelper: qt_method!(fn(&self, group_name: QString, commands: QStringList, monitors: QStringList, connectors: QStringList)),
 
     //
     // Group configuration: connectors
@@ -67,7 +70,7 @@ pub struct ConfigManagerModel {
     getUnselectedConnectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_connector_description: qt_method!(fn(&self, connector_name: QString) -> QString),
     get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
-    add_group_connector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
+    addGroupConnector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
     get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
     get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
     set_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString)),
@@ -80,7 +83,7 @@ pub struct ConfigManagerModel {
     getUnselectedMonitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_monitor_description: qt_method!(fn(&self, monitor_name: QString) -> QString),
     get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
-    add_group_monitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
+    addGroupMonitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     remove_group_monitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     // These 2 are currently not really used.
     get_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QString),
@@ -95,7 +98,7 @@ pub struct ConfigManagerModel {
     getUnselectedCommands: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_command_description: qt_method!(fn(&self, command_name: QString) -> QString),
     get_group_commands: qt_method!(fn(&self, group_name: QString) -> QStringList),
-    add_group_command: qt_method!(fn(&self, group_name: QString, command_name: QString)),
+    addGroupCommand: qt_method!(fn(&self, group_name: QString, command_name: QString)),
     remove_group_command: qt_method!(fn(&self, group_name: QString, command_name: QString)),
     get_group_command_settings_keys: qt_method!(fn(&self, group_name: QString, command_name: QString) -> QStringList),
     get_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString),
@@ -254,7 +257,7 @@ impl ConfigManagerModel {
         self.groups_config = self.groups_config_backup.take().unwrap();
     }
 
-    fn end_group_configuration(&mut self) {
+    fn endGroupConfiguration(&mut self) {
         self.groups_config_backup = None;
         if let Err(error) = Configuration::write_groups_config(&self.config_dir, &self.groups_config) {
             self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
@@ -377,7 +380,7 @@ impl ConfigManagerModel {
         group_monitors_keys.into_iter().map(QString::from).collect()
     }
 
-    fn add_group_monitor(&mut self, group_name: QString, monitor_name: QString) {
+    fn addGroupMonitor(&mut self, group_name: QString, monitor_name: QString) {
         let group_name = group_name.to_string();
         let monitor_name = monitor_name.to_string();
         self.groups_config.groups.get_mut(&group_name).unwrap().monitors.insert(monitor_name, Default::default());
@@ -486,7 +489,7 @@ impl ConfigManagerModel {
         group_connectors_keys.into_iter().map(QString::from).collect()
     }
 
-    fn add_group_connector(&mut self, group_name: QString, connector_name: QString) {
+    fn addGroupConnector(&mut self, group_name: QString, connector_name: QString) {
         let group_name = group_name.to_string();
         let connector_name = connector_name.to_string();
         self.groups_config.groups.get_mut(&group_name).unwrap().connectors.insert(connector_name, Default::default());
@@ -574,7 +577,7 @@ impl ConfigManagerModel {
         group_commands_keys.into_iter().map(QString::from).collect()
     }
 
-    fn add_group_command(&mut self, group_name: QString, command_name: QString) {
+    fn addGroupCommand(&mut self, group_name: QString, command_name: QString) {
         let group_name = group_name.to_string();
         let command_name = command_name.to_string();
         self.groups_config.groups.get_mut(&group_name).unwrap().commands.insert(command_name, Default::default());
@@ -641,6 +644,48 @@ impl ConfigManagerModel {
             result.insert(setting_key.clone().into(), qvariant.into());
         }
         result
+    }
+
+    fn compareToDefault(&self, group_name: QString) -> QStringList {
+        let group_name = group_name.to_string();
+        let default_groups = configuration::get_default_config_groups();
+        let group_settings = self.groups_config.groups.get(&group_name).unwrap();
+        let config_helper_data = &group_settings.config_helper;
+
+        let default_settings = default_groups.groups.get(&group_name).unwrap();
+        let new_commands = default_settings.commands.keys()
+            .filter(|id| !group_settings.commands.contains_key(*id) && !config_helper_data.ignored_commands.contains(*id))
+            .collect::<Vec<_>>();
+
+        let new_monitors = default_settings.monitors.keys()
+            .filter(|id| !group_settings.monitors.contains_key(*id) && !config_helper_data.ignored_monitors.contains(*id))
+
+            .collect::<Vec<_>>();
+
+        let new_connectors = default_settings.connectors.keys()
+            .filter(|id| !group_settings.connectors.contains_key(*id) && !config_helper_data.ignored_connectors.contains(*id))
+            .collect::<Vec<_>>();
+
+        let mut result = QStringList::default();
+        for id in new_commands {
+            result.push(QString::from(format!("Command: {},{}", id, self.get_command_description(QString::from(id.clone())))));
+        }
+        for id in new_monitors {
+            result.push(QString::from(format!("Monitor: {},{}", id, self.get_monitor_description(QString::from(id.clone())))));
+        }
+        for id in new_connectors {
+            result.push(QString::from(format!("Connector: {},{}", id, self.get_connector_description(QString::from(id.clone())))));
+        }
+        result
+    }
+
+    fn ignoreFromConfigHelper(&mut self, group_name: QString, commands: QStringList, monitors: QStringList, connectors: QStringList) {
+        let group_name = group_name.to_string();
+        let group_settings = self.groups_config.groups.get_mut(&group_name).unwrap();
+
+        group_settings.config_helper.ignored_commands = commands.into_iter().map(|command| command.to_string()).collect();
+        group_settings.config_helper.ignored_monitors = monitors.into_iter().map(|monitor| monitor.to_string()).collect();
+        group_settings.config_helper.ignored_connectors = connectors.into_iter().map(|connector| connector.to_string()).collect();
     }
 
 }
