@@ -18,6 +18,7 @@ LightkeeperDialog {
     property var missingModules: ConfigManager.compareToDefault(groupName).map((item) => item.split(",", 2))
     visible: missingModules.length > 0
     anchors.centerIn: parent
+    bottomMargin: 0.20 * parent.height
     width: parent.width * 0.6
     height: parent.height * 0.7
     title: "Configuration helper"

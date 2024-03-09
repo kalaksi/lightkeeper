@@ -351,13 +351,11 @@ ApplicationWindow {
     // Modal dialogs
     InputDialog {
         id: inputDialog
-        visible: false
         anchors.centerIn: parent
     }
 
     HostConfigurationDialog {
         id: hostConfigurationDialog
-        visible: false
         anchors.centerIn: parent
         bottomMargin: 0.15 * parent.height
 
@@ -368,7 +366,6 @@ ApplicationWindow {
 
     PreferencesDialog {
         id: preferencesDialog
-        visible: false
         anchors.centerIn: parent
         bottomMargin: 0.15 * parent.height
 
@@ -379,25 +376,21 @@ ApplicationWindow {
 
     ConfigHelperDialog {
         groupName: "linux"
-        bottomMargin: 0.15 * parent.height
         onConfigurationChanged: reloadConfiguration()
     }
 
     ConfigHelperDialog {
         groupName: "docker"
-        bottomMargin: 0.14 * parent.height
         onConfigurationChanged: reloadConfiguration()
     }
 
     ConfigHelperDialog {
         groupName: "docker-compose"
-        bottomMargin: 0.13 * parent.height
         onConfigurationChanged: reloadConfiguration()
     }
 
     ConfigHelperDialog {
         groupName: "systemd-service"
-        bottomMargin: 0.12 * parent.height
         onConfigurationChanged: reloadConfiguration()
     }
 
@@ -414,7 +407,6 @@ ApplicationWindow {
         id: textDialog
         property int pendingInvocation: 0
 
-        visible: false
         anchors.centerIn: parent
         width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
@@ -422,7 +414,6 @@ ApplicationWindow {
 
     HotkeyHelp {
         id: hotkeyHelp
-        visible: false
         anchors.centerIn: parent
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
