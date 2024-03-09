@@ -648,11 +648,17 @@ impl ConfigManagerModel {
 
     fn compareToDefault(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
-        let default_groups = configuration::get_default_config_groups();
-        let group_settings = self.groups_config.groups.get(&group_name).unwrap();
-        let config_helper_data = &group_settings.config_helper;
+        let mut result = QStringList::default();
 
+        let group_settings = match self.groups_config.groups.get(&group_name) {
+            Some(group_settings) => group_settings,
+            // Don't return anything if group doesn't exist.
+            None => return result,
+        };
+        let config_helper_data = &group_settings.config_helper;
+        let default_groups = configuration::get_default_config_groups();
         let default_settings = default_groups.groups.get(&group_name).unwrap();
+
         let new_commands = default_settings.commands.keys()
             .filter(|id| !group_settings.commands.contains_key(*id) && !config_helper_data.ignored_commands.contains(*id))
             .collect::<Vec<_>>();
@@ -666,7 +672,6 @@ impl ConfigManagerModel {
             .filter(|id| !group_settings.connectors.contains_key(*id) && !config_helper_data.ignored_connectors.contains(*id))
             .collect::<Vec<_>>();
 
-        let mut result = QStringList::default();
         for id in new_commands {
             result.push(QString::from(format!("Command: {},{}", id, self.get_command_description(QString::from(id.clone())))));
         }
