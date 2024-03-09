@@ -271,6 +271,7 @@ impl ModuleFactory {
             (monitoring::linux::Ram::get_metadata(), monitoring::linux::Ram::new_monitoring_module),
             (monitoring::linux::Who::get_metadata(), monitoring::linux::Who::new_monitoring_module),
             (monitoring::storage::Filesystem::get_metadata(), monitoring::storage::Filesystem::new_monitoring_module),
+            (monitoring::storage::Cryptsetup::get_metadata(),  monitoring::storage::Cryptsetup::new_monitoring_module),
             (monitoring::storage::lvm::LogicalVolume::get_metadata(), monitoring::storage::lvm::LogicalVolume::new_monitoring_module),
             (monitoring::storage::lvm::VolumeGroup::get_metadata(), monitoring::storage::lvm::VolumeGroup::new_monitoring_module),
             (monitoring::storage::lvm::PhysicalVolume::get_metadata(), monitoring::storage::lvm::PhysicalVolume::new_monitoring_module),

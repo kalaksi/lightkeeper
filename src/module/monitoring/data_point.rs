@@ -99,6 +99,16 @@ impl DataPoint {
         }
     }
 
+    pub fn with_description<Stringable: ToString>(mut self, description: Stringable) -> Self {
+        self.description = description.to_string();
+        self
+    }
+
+    pub fn with_tags(mut self, tags: Vec<String>) -> Self {
+        self.tags = tags;
+        self
+    }
+
     pub fn is_internal(&self) -> bool {
         self.value.starts_with("_")
     }

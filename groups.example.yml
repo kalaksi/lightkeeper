@@ -30,6 +30,7 @@ groups:
       storage-lvm-logical-volume: {}
       storage-lvm-volume-group: {}
       storage-lvm-physical-volume: {}
+      storage-cryptsetup: {}
     commands:
       logs: {}
       linux-shell: {}
