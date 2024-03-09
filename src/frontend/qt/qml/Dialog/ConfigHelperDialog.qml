@@ -13,11 +13,14 @@ import "../Misc"
 /// This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
+    required property string groupName
     property int tableRowHeight: 50
-    property var missingModules: ConfigManager.compareToDefault("linux").map((item) => item.split(","))
+    property var missingModules: ConfigManager.compareToDefault(groupName).map((item) => item.split(",", 2))
     visible: missingModules.length > 0
-    title: "Configuration helper"
     anchors.centerIn: parent
+    width: parent.width * 0.6
+    height: parent.height * 0.7
+    title: "Configuration helper"
 
     standardButtons: Dialog.Yes | Dialog.No
 
@@ -31,13 +34,13 @@ LightkeeperDialog {
             let moduleName = parts[1]
 
             if (moduleType === "Monitor") {
-                ConfigManager.addGroupMonitor("linux", moduleName)
+                ConfigManager.addGroupMonitor(root.groupName, moduleName)
             }
             else if (moduleType === "Command") {
-                ConfigManager.addGroupCommand("linux", moduleName)
+                ConfigManager.addGroupCommand(root.groupName, moduleName)
             }
             else if (moduleType === "Connector") {
-                ConfigManager.addGroupConnector("linux", moduleName)
+                ConfigManager.addGroupConnector(root.groupName, moduleName)
             }
 
         }
@@ -50,7 +53,7 @@ LightkeeperDialog {
         let commandModules = table.model.filter((row) => row[0].startsWith("Command: ")).map((row) => row[0].split(": ")[1])
         let monitorModules = table.model.filter((row) => row[0].startsWith("Monitor: ")).map((row) => row[0].split(": ")[1])
         let connectorModules = table.model.filter((row) => row[0].startsWith("Connector: ")).map((row) => row[0].split(": ")[1])
-        ConfigManager.ignoreFromConfigHelper("linux", commandModules, monitorModules, connectorModules)
+        ConfigManager.ignoreFromConfigHelper(root.groupName, commandModules, monitorModules, connectorModules)
         ConfigManager.endGroupConfiguration()
     }
 
@@ -68,7 +71,7 @@ LightkeeperDialog {
         }
 
         NormalText {
-            text: "It seems that you are missing these modules from the 'linux' configuration group:"
+            text: `It seems that you are missing these modules from the '${root.groupName}' configuration group:`
         }
 
         BorderRectangle {

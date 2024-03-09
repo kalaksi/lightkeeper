@@ -378,14 +378,27 @@ ApplicationWindow {
     }
 
     ConfigHelperDialog {
-        id: configHelperDialog
-        width: root.width * 0.6
-        height: root.height * 0.7
+        groupName: "linux"
         bottomMargin: 0.15 * parent.height
+        onConfigurationChanged: reloadConfiguration()
+    }
 
-        onConfigurationChanged: {
-            reloadConfiguration()
-        }
+    ConfigHelperDialog {
+        groupName: "docker"
+        bottomMargin: 0.14 * parent.height
+        onConfigurationChanged: reloadConfiguration()
+    }
+
+    ConfigHelperDialog {
+        groupName: "docker-compose"
+        bottomMargin: 0.13 * parent.height
+        onConfigurationChanged: reloadConfiguration()
+    }
+
+    ConfigHelperDialog {
+        groupName: "systemd-service"
+        bottomMargin: 0.12 * parent.height
+        onConfigurationChanged: reloadConfiguration()
     }
 
     CommandOutputDialog {
