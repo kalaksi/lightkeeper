@@ -661,25 +661,33 @@ impl ConfigManagerModel {
 
         let new_commands = default_settings.commands.keys()
             .filter(|id| !group_settings.commands.contains_key(*id) && !config_helper_data.ignored_commands.contains(*id))
+            // Will return empty description if not found.
+            .map(|id| (id, self.get_command_description(QString::from(id.clone()))))
+            .filter(|(_, description)| !description.is_empty())
             .collect::<Vec<_>>();
 
         let new_monitors = default_settings.monitors.keys()
             .filter(|id| !group_settings.monitors.contains_key(*id) && !config_helper_data.ignored_monitors.contains(*id))
-
+            // Will return empty description if not found.
+            .map(|id| (id, self.get_monitor_description(QString::from(id.clone()))))
+            .filter(|(_, description)| !description.is_empty())
             .collect::<Vec<_>>();
 
         let new_connectors = default_settings.connectors.keys()
             .filter(|id| !group_settings.connectors.contains_key(*id) && !config_helper_data.ignored_connectors.contains(*id))
+            // Will return empty description if not found.
+            .map(|id| (id, self.get_connector_description(QString::from(id.clone()))))
+            .filter(|(_, description)| !description.is_empty())
             .collect::<Vec<_>>();
 
-        for id in new_commands {
-            result.push(QString::from(format!("Command: {},{}", id, self.get_command_description(QString::from(id.clone())))));
+        for (id, description) in new_commands {
+            result.push(QString::from(format!("Command: {},{}", id, description)));
         }
-        for id in new_monitors {
-            result.push(QString::from(format!("Monitor: {},{}", id, self.get_monitor_description(QString::from(id.clone())))));
+        for (id, description) in new_monitors {
+            result.push(QString::from(format!("Monitor: {},{}", id, description)));
         }
-        for id in new_connectors {
-            result.push(QString::from(format!("Connector: {},{}", id, self.get_connector_description(QString::from(id.clone())))));
+        for (id, description) in new_connectors {
+            result.push(QString::from(format!("Connector: {},{}", id, description)));
         }
         result
     }
