@@ -80,6 +80,10 @@ When running without flatpak, the default configuration directory is usually `~/
 With flatpak, it's the usual app specific directory: `~/.var/app/io.github.kalaksi.Lightkeeper/config` and `~/.var/app/io.github.kalaksi.Lightkeeper/cache`.
 You can use a custom configuration directory with the `-c`/`--config-dir` option.
 
+# Debug logging
+Log levels are controlled with environment variable `RUST_LOG`, so use `RUST_LOG=debug`.
+
+
 # Testing
 `test`-directory contains Vagrantfiles for virtual machines and also matching LightkeeperRM configurations.  
 Use `--config-dir` to load the test configuration. For example, `./target/debug/lightkeeper --config-dir test` if building from source.
