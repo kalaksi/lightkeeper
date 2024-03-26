@@ -73,6 +73,7 @@ groups:
       docker-compose-stop: {}
       docker-compose-shell: {}
       docker-compose-logs: {}
+      docker-compose-build: {}
 
   # Monitors and commands for SystemD services.
   systemd-service:
