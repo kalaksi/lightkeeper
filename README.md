@@ -68,6 +68,16 @@ If you're using the ping monitor, you need to give Lightkeeper binary more netwo
 $ setcap cap_net_raw+ep $MY_BINARY
 ```
 
+# Server OS support
+The (current) goal is to support:
+- Debian
+- Ubuntu
+- RHEL
+- CentOS
+- NixOS
+- Linux in general (basic functionality for most distributions)
+
+
 # Configuration
 **NOTE: There is currently an assumption that your user can run sudo without password (or has root privileges) on the target host since some commands need higher privileges.**  
   
