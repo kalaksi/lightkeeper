@@ -33,7 +33,7 @@ impl LkError {
 
 impl fmt::Display for LkError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}: {}", self.kind, self.message)
+        write!(f, "{}", self.message)
     }
 }
 
