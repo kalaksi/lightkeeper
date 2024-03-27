@@ -68,6 +68,7 @@ fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber) 
                     "debian" => flavor = platform_info::Flavor::Debian,
                     "centos" => flavor = platform_info::Flavor::CentOS,
                     "ubuntu" => flavor = platform_info::Flavor::Ubuntu,
+                    "nixos" => flavor = platform_info::Flavor::NixOS,
                     _ => ()
                 }
             },
