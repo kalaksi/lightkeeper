@@ -46,24 +46,20 @@ impl MonitoringModule for Ram {
         }
     }
 
-    fn process_response(&self, host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let line = response.message.lines().filter(|line| line.contains("Mem:")).collect::<Vec<&str>>();
-            let parts = line[0].split_whitespace().collect::<Vec<&str>>();
+    fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
+        let line = response.message.lines().filter(|line| line.contains("Mem:")).collect::<Vec<&str>>();
+        let parts = line[0].split_whitespace().collect::<Vec<&str>>();
 
-            let total = parts[1].parse::<u64>().unwrap();
-            // used
-            // free
-            // shared
-            // cache
-            let available = parts[6].parse::<u64>().unwrap();
+        let total = parts[1].parse::<u64>().unwrap();
+        // used
+        // free
+        // shared
+        // cache
+        let available = parts[6].parse::<u64>()
+            .map_err(|_| format!("Unsupported platform"))?;
 
-            let usage_percent = 1.0 - (available as f64 / total as f64);
-            let value = format!("{} / {} M  ({:.0} %)", total - available, total, usage_percent * 100.0);
-            Ok(DataPoint::new(value))
-        }
-        else {
-            Err(String::from("Unsupported platform"))
-        }
+        let usage_percent = 1.0 - (available as f64 / total as f64);
+        let value = format!("{} / {} M  ({:.0} %)", total - available, total, usage_percent * 100.0);
+        Ok(DataPoint::new(value))
     }
 }
