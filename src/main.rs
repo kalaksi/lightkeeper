@@ -14,7 +14,7 @@ mod connection_manager;
 mod command_handler;
 mod file_handler;
 mod cache;
-mod error;
+pub mod error;
 
 use std::sync::Arc;
 use std::cell::RefCell;
