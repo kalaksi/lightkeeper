@@ -49,17 +49,6 @@ ApplicationWindow {
             ToolButton {
                 enabled: _hostTableModel.selectedRow >= 0
                 opacity: Theme.opacity(enabled)
-                icon.source: "qrc:/main/images/button/entry-edit"
-                onClicked: {
-                    ConfigManager.begin_host_configuration()
-                    hostConfigurationDialog.hostId = _hostTableModel.getSelectedHostId()
-                    hostConfigurationDialog.open()
-                }
-            }
-
-            ToolButton {
-                enabled: _hostTableModel.selectedRow >= 0
-                opacity: Theme.opacity(enabled)
                 icon.source: "qrc:/main/images/button/remove"
                 onClicked: {
                     ConfigManager.begin_host_configuration()
@@ -70,6 +59,17 @@ ApplicationWindow {
             }
 
             ToolSeparator {
+            }
+
+            ToolButton {
+                enabled: _hostTableModel.selectedRow >= 0
+                opacity: Theme.opacity(enabled)
+                icon.source: "qrc:/main/images/button/entry-edit"
+                onClicked: {
+                    ConfigManager.begin_host_configuration()
+                    hostConfigurationDialog.hostId = _hostTableModel.getSelectedHostId()
+                    hostConfigurationDialog.open()
+                }
             }
 
 
