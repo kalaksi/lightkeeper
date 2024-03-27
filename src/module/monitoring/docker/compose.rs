@@ -62,7 +62,9 @@ impl MonitoringModule for Compose {
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "10") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
+
             // Docker API is much better suited for this than using the docker-compose CLI. More effective too.
             // TODO: find down-status compose-projects with find-command?
             command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);

@@ -54,7 +54,8 @@ impl MonitoringModule for Containers {
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "10") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
             // TODO: somehow connect directly to the unix socket instead of using curl?
             command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
             Ok(command.to_string())
