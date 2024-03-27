@@ -417,7 +417,7 @@ impl CommandHandler {
         let command_id = &command.get_module_spec().id;
         let (messages, errors): (Vec<_>, Vec<_>) =  response.responses.into_iter().partition(Result::is_ok);
         let messages = messages.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-        let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err())).collect::<Vec<_>>();
+        let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err().to_string())).collect::<Vec<_>>();
 
         let mut result;
         if !messages.is_empty() {

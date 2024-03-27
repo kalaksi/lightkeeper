@@ -390,7 +390,7 @@ impl MonitorManager {
                 let results_len = response.responses.len();
                 let (responses, errors): (Vec<_>, Vec<_>) =  response.responses.into_iter().partition(Result::is_ok);
                 let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-                let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err())).collect::<Vec<_>>();
+                let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err().message().to_owned())).collect::<Vec<_>>();
 
                 // If CachePolicy::OnlyCache is used and an entry is not found, don't continue.
                 if responses.iter().any(|response| response.is_not_found()) {

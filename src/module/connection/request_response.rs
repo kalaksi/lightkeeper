@@ -1,20 +1,22 @@
 use serde_derive::{Serialize, Deserialize};
 
-use crate::{connection_manager::{ConnectorRequest, RequestType}, host::Host};
+use crate::error::LkError;
+use crate::connection_manager::{ConnectorRequest, RequestType};
+use crate::host::Host;
 
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default)]
 pub struct RequestResponse {
     pub source_id: String,
     pub host: Host,
     pub invocation_id: u64,
     pub request_type: RequestType,
-    pub responses: Vec<Result<ResponseMessage, String>>,
+    pub responses: Vec<Result<ResponseMessage, LkError>>,
     pub stop: bool,
 }
 
 impl RequestResponse {
-    pub fn new(request: &ConnectorRequest, responses: Vec<Result<ResponseMessage, String>>) -> RequestResponse {
+    pub fn new(request: &ConnectorRequest, responses: Vec<Result<ResponseMessage, LkError>>) -> RequestResponse {
         RequestResponse {
             source_id: request.source_id.clone(),
             host: request.host.clone(),
@@ -35,7 +37,7 @@ impl RequestResponse {
         }
     }
 
-    pub fn new_error(request: &ConnectorRequest, error: String) -> RequestResponse {
+    pub fn new_error(request: &ConnectorRequest, error: LkError) -> RequestResponse {
         RequestResponse {
             source_id: request.source_id.clone(),
             host: request.host.clone(),

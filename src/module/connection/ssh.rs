@@ -5,13 +5,13 @@ use std::{
     net::ToSocketAddrs,
     collections::HashMap,
     path::Path,
-    io,
     io::Read,
     io::Write,
 };
 
 use chrono::Utc;
-use ssh2::Session;
+use ssh2;
+use crate::error::*;
 use crate::file_handler::FileMetadata;
 use crate::utils::strip_newline;
 use lightkeeper_module::connection_module;
@@ -34,7 +34,7 @@ use crate::module::connection::*;
     }
 )]
 pub struct Ssh2 {
-    session: Session,
+    session: ssh2::Session,
     is_initialized: bool,
     address: IpAddr,
     port: u16,
@@ -51,7 +51,7 @@ pub struct Ssh2 {
 impl Module for Ssh2 {
     fn new(settings: &HashMap<String, String>) -> Self {
         // This can fail for unknown reasons, no way to propery handle the error.
-        let session = Session::new().unwrap();
+        let session = ssh2::Session::new().unwrap();
 
         Ssh2 {
             session: session,
@@ -71,7 +71,7 @@ impl Module for Ssh2 {
 }
 
 impl ConnectionModule for Ssh2 {
-    fn connect(&mut self, address: &IpAddr) -> Result<(), String> {
+    fn connect(&mut self, address: &IpAddr) -> Result<(), LkError> {
         if self.is_initialized {
             return Ok(())
         }
@@ -80,42 +80,42 @@ impl ConnectionModule for Ssh2 {
 
         let socket_address = format!("{}:{}", address, self.port).to_socket_addrs().unwrap().next().unwrap();
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
-        let stream = match TcpStream::connect_timeout(&socket_address, connection_timeout) {
-            Ok(stream) => stream,
-            Err(error) => return Err(error.to_string())
-        };
+        let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
 
         log::info!("Connected to {}:{}", address, self.port);
 
-        self.session = Session::new().unwrap();
+        self.session = ssh2::Session::new().unwrap();
         self.session.set_tcp_stream(stream);
-        if let Err(error) = self.session.handshake() {
-            return Err(format!("Handshake error: {}", error));
-        };
+
+        let known_hosts_path = Path::new(&std::env::var("HOME").unwrap()).join(".ssh/known_hosts");
+        let mut known_hosts = self.session.known_hosts().unwrap();
+        if let Err(error) = known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH) {
+            log::warn!("Failed to read known hosts file: {}", error);
+        }
+
+        self.session.handshake()?;
 
         if self.password.is_some() {
-            if let Err(error) = self.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str()) {
-                return Err(format!("Failed to authenticate with password: {}", error));
-            };
+            self.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str())
+                .map_err(|error| LkError::new_other(format!("Failed to authenticate with password: {}", error)))?;
         }
         else if self.private_key_path.is_some() {
             let path = Path::new(self.private_key_path.as_ref().unwrap());
             let passphrase_option = self.private_key_passphrase.as_ref().map(|pass| pass.as_str());
 
-            if let Err(error) = self.session.userauth_pubkey_file(self.username.as_str(), None, path, passphrase_option) {
-                return Err(format!("Failed to authenticate with private key: {}", error));
-            };
+            self.session.userauth_pubkey_file(self.username.as_str(), None, path, passphrase_option)
+                .map_err(|error| LkError::new_other(format!("Failed to authenticate with private key: {}", error)))?;
         }
         else {
             log::debug!("Password or key is not set, using SSH agent for authentication.");
             let mut agent = self.session.agent()
-                .map_err(|error| format!("Failed to connect to SSH agent: {}", error))?;
+                .map_err(|error| LkError::new_other(format!("Failed to connect to SSH agent: {}", error)))?;
 
             agent.connect()
-                .map_err(|error| format!("Failed to connect to SSH agent: {}", error))?;
+                 .map_err(|error| LkError::new_other(format!("Failed to connect to SSH agent: {}", error)))?;
 
-            agent.list_identities().map_err(|error| error.to_string())?;
-            let mut valid_identities = agent.identities().map_err(|error| error.to_string())?;
+            agent.list_identities()?;
+            let mut valid_identities = agent.identities()?;
 
             if let Some(selected_id) = self.agent_key_identifier.as_ref() {
                 valid_identities.retain(|identity| identity.comment() == selected_id.as_str());
@@ -129,7 +129,7 @@ impl ConnectionModule for Ssh2 {
             }
 
             if !self.session.authenticated() {
-                return Err(format!("Failed to authenticate with SSH agent."));
+                return Err(LkError::new_other("Failed to authenticate with SSH agent."));
             }
         }
 
@@ -137,7 +137,7 @@ impl ConnectionModule for Ssh2 {
         Ok(())
     }
 
-    fn send_message(&mut self, message: &str, wait_full_result: bool) -> Result<ResponseMessage, String> {
+    fn send_message(&mut self, message: &str, wait_full_result: bool) -> Result<ResponseMessage, LkError> {
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }
@@ -147,45 +147,38 @@ impl ConnectionModule for Ssh2 {
             Err(error) => {
                 // Error is likely duo to disconnected or timeouted session. Try to reconnect once.
                 log::error!("Reconnecting channel due to error: {}", error);
-                if let Err(error) = self.reconnect() {
-                    return Err(format!("Error reconnecting: {}", error));
-                }
+                self.reconnect()
+                    .map_err(|error| format!("Error reconnecting: {}", error))?;
 
-                match self.session.channel_session() {
-                    Ok(channel) => channel,
-                    Err(error) => return Err(format!("Error opening channel: {}", error))
-                }
+                self.session.channel_session()
+                    .map_err(|error| format!("Error opening channel: {}", error))?
             }
         };
 
         // Merge stderr etc. to the same stream as stdout.
         channel.handle_extended_data(ssh2::ExtendedData::Merge).unwrap();
 
-        if let Err(error) = channel.exec(message) {
-            return Err(format!("Error executing command '{}': {}", message, error));
-        };
+        channel.exec(message)
+               .map_err(|error| format!("Error executing command '{}': {}", message, error))?;
 
         let mut output = String::new();
 
         if wait_full_result {
-            if let Err(error) = channel.read_to_string(&mut output) {
-                return Err(format!("Invalid output received: {}", error));
-            };
+            channel.read_to_string(&mut output)
+                   .map_err(|error| format!("Invalid output received: {}", error))?;
         }
         else {
             let mut buffer = [0u8; 256];
-            output = match channel.read(&mut buffer) {
-                Ok(_count) => std::str::from_utf8(&buffer).unwrap().to_string(),
-                Err(error) => return Err(format!("Invalid output received: {}", error)),
-            };
+            output = channel.read(&mut buffer)
+                .map(|_| std::str::from_utf8(&buffer).unwrap().to_string())
+                .map_err(|error| format!("Invalid output received: {}", error))?;
         }
 
         if channel.eof() {
             let exit_status = channel.exit_status().unwrap_or(-1);
 
-            if let Err(error) = channel.wait_close() {
-                log::error!("Error while closing channel: {}", error);
-            };
+            channel.wait_close()
+                   .map_err(|error| format!("Error while closing channel: {}", error))?;
 
             Ok(ResponseMessage::new(strip_newline(&output), exit_status))
         }
@@ -199,24 +192,18 @@ impl ConnectionModule for Ssh2 {
         }
     }
 
-    fn receive_partial_response(&mut self) -> Result<ResponseMessage, String> {
+    fn receive_partial_response(&mut self) -> Result<ResponseMessage, LkError> {
         if let Some(channel) = &mut self.open_channel {
             let mut buffer = [0u8; 1024];
-            let output = match channel.read(&mut buffer) {
-                Ok(count) => {
-                    std::str::from_utf8(&buffer[0..count]).unwrap().to_string()
-                },
-                Err(error) => {
-                    return Err(format!("Invalid output received: {}", error))
-                },
-            };
+            let output = channel.read(&mut buffer)
+                .map(|count| std::str::from_utf8(&buffer[0..count]).unwrap().to_string())
+                .map_err(|error| format!("Invalid output received: {}", error))?;
 
             if channel.eof() {
                 let exit_status = channel.exit_status().unwrap_or(-1);
 
-                if let Err(error) = channel.wait_close() {
-                    log::error!("Error while closing channel: {}", error);
-                };
+                channel.wait_close()
+                       .map_err(|error| format!("Error while closing channel: {}", error))?;
 
                 self.open_channel = None;
                 Ok(ResponseMessage::new(strip_newline(&output), exit_status))
@@ -230,37 +217,29 @@ impl ConnectionModule for Ssh2 {
         }
     }
 
-    fn download_file(&self, source: &String) -> io::Result<(FileMetadata, Vec<u8>)> {
-        let sftp = self.session.sftp().unwrap();
-        match sftp.open(Path::new(&source)) {
-            Ok(mut file) => {
-                let mut contents = Vec::new();
-                if let Err(error) = file.read_to_end(&mut contents) {
-                    Err(error)
-                }
-                else {
-                    let stat = file.stat().unwrap();
-                    let metadata = FileMetadata {
-                        download_time: Utc::now(),
-                        local_path: None,
-                        remote_path: source.clone(),
-                        remote_file_hash: sha256::digest(contents.as_slice()),
-                        owner_uid: stat.uid.unwrap(),
-                        owner_gid: stat.gid.unwrap(),
-                        permissions: stat.perm.unwrap(),
-                        temporary: true,
-                    };
-                    Ok((metadata, contents))
-                }
-            }
-            Err(error) => {
-                Err(io::Error::new(io::ErrorKind::Other, error.message()))
-            }
-        }
+    fn download_file(&self, source: &String) -> Result<(FileMetadata, Vec<u8>), LkError> {
+        let sftp = self.session.sftp()?;
+
+        let mut file = sftp.open(Path::new(&source))?;
+        let mut contents = Vec::new();
+        let _bytes_written = file.read_to_end(&mut contents)?;
+        let stat = file.stat()?;
+        let metadata = FileMetadata {
+            download_time: Utc::now(),
+            local_path: None,
+            remote_path: source.clone(),
+            remote_file_hash: sha256::digest(contents.as_slice()),
+            owner_uid: stat.uid.unwrap(),
+            owner_gid: stat.gid.unwrap(),
+            permissions: stat.perm.unwrap(),
+            temporary: true,
+        };
+
+        Ok((metadata, contents))
     }
 
-    fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> io::Result<()> {
-        let sftp = self.session.sftp().unwrap();
+    fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> Result<(), LkError> {
+        let sftp = self.session.sftp()?;
 
         let file = sftp.open_mode(
             Path::new(&metadata.remote_path),
@@ -269,22 +248,15 @@ impl ConnectionModule for Ssh2 {
             ssh2::OpenType::File,
         );
 
-        match file {
-            Ok(mut file) => {
-                file.write(&contents)?;
-                Ok(())
-            }
-            Err(error) => {
-                Err(io::Error::new(io::ErrorKind::Other, error.message()))
-            }
-        }
+        file?.write(&contents)
+             .map(|_| Ok(()))?
     }
 
     fn is_connected(&self) -> bool {
         self.is_initialized
     }
 
-    fn reconnect(&mut self) -> Result<(), String> {
+    fn reconnect(&mut self) -> Result<(), LkError> {
         self.disconnect();
         log::debug!("Disconnected");
         self.connect(&self.address.clone())
@@ -296,3 +268,20 @@ impl ConnectionModule for Ssh2 {
     }
 }
 
+
+/// Simplify conversion from SSH2 errors to internal error type.
+/// See: https://github.com/alexcrichton/ssh2-rs/blob/master/libssh2-sys/lib.rs
+impl From<ssh2::Error> for LkError {
+    fn from(error: ssh2::Error) -> Self {
+        match error.code() {
+            ssh2::ErrorCode::Session(code) => {
+                match code {
+                    // LIBSSH2_ERROR_KEX_FAILURE
+                    -5 => LkError::new(ErrorKind::HostKeyNotVerified, error),
+                    _ => LkError::new(ErrorKind::Other, error),
+                }
+            },
+            _ => LkError::new(ErrorKind::Other, error),
+        }
+    }
+}

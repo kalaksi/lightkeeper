@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::process;
 
 use lightkeeper_module::stateless_connection_module;
+use crate::error::LkError;
 use crate::module::*;
 use crate::module::connection::*;
 
@@ -25,7 +26,7 @@ impl Module for LocalCommand {
 }
 
 impl ConnectionModule for LocalCommand {
-    fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, String> {
+    fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, LkError> {
         if !wait_full_response {
             // Not supported.
             panic!("Partial responses are not supported")

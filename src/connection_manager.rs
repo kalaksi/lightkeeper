@@ -10,6 +10,7 @@ use std::{
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::error::LkError;
 use crate::module::monitoring::DataPoint;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
@@ -241,7 +242,7 @@ impl ConnectionManager {
                     if !connector.is_connected() {
                         if let Err(error) = connector.connect(&request.host.ip_address) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
-                            let response = RequestResponse::new_error(&request, format!("Error while connecting: {}", error));
+                            let response = RequestResponse::new_error(&request, error);
                             request.response_sender.send(response).unwrap();
                             continue;
                         }
@@ -290,7 +291,7 @@ impl ConnectionManager {
                        command_cache: Arc<Mutex<Cache<String, ResponseMessage>>>,
                        cache_policy: &CachePolicy,
                        connector: &mut Connector,
-                       request_message: &String) -> Result<ResponseMessage, String> {
+                       request_message: &String) -> Result<ResponseMessage, LkError> {
 
         let mut command_cache = command_cache.lock().unwrap();
 
@@ -319,11 +320,10 @@ impl ConnectionManager {
             log::debug!("[{}] Using cached response for command {}", host.name, request_message);
             return Ok(cached_response);
         }
+        else if *cache_policy == CachePolicy::OnlyCache {
+            return Ok(ResponseMessage::not_found());
+        }
         else {
-            if *cache_policy == CachePolicy::OnlyCache {
-                return Ok(ResponseMessage::not_found());
-            }
-
             let response_result = connector.send_message(&request_message, true);
 
             if let Ok(response) = response_result {
@@ -349,7 +349,7 @@ impl ConnectionManager {
         connector: &mut Connector,
         request_message: &String,
         response_sender: mpsc::Sender<RequestResponse>,
-    ) -> Result<ResponseMessage, String> {
+    ) -> Result<ResponseMessage, LkError> {
 
         log::debug!("[{}] Processing command: {}", request.host.name, request_message);
         let mut response_message_result = connector.send_message(&request_message, false);
@@ -384,20 +384,20 @@ impl ConnectionManager {
 
     }
 
-    fn process_download(host: &Host, connector: &mut Connector, file_path: &String) -> Result<ResponseMessage, String> {
+    fn process_download(host: &Host, connector: &mut Connector, file_path: &String) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Downloading file: {}", host.name, file_path);
         match connector.download_file(&file_path) {
             Ok((metadata, contents)) => {
                 match file_handler::create_file(&host, &file_path, metadata, contents) {
                     Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
-                    Err(error) => Err(error.to_string()),
+                    Err(error) => Err(error.into()),
                 }
             },
-            Err(error) => Err(error.to_string()),
+            Err(error) => Err(error.into()),
         }
     }
 
-    fn process_upload(host: &Host, connector: &mut Connector, local_file_path: &String) -> Result<ResponseMessage, String> {
+    fn process_upload(host: &Host, connector: &mut Connector, local_file_path: &String) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
         match file_handler::read_file(&local_file_path) {
             Ok((metadata, contents)) => {
@@ -405,10 +405,10 @@ impl ConnectionManager {
 
                 match result {
                     Ok(_) => Ok(ResponseMessage::empty()),
-                    Err(error) => Err(error.to_string()),
+                    Err(error) => Err(error.into()),
                 }
             },
-            Err(error) => Err(error.to_string()),
+            Err(error) => Err(error.into()),
         }
     }
 }
