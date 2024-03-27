@@ -49,12 +49,12 @@ impl CommandModule for Update {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["apt", "--only-upgrade", "-y", "install", package]); 
         }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
-                host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+        else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec!["dnf", "upgrade", "-y", package]);
         }
         else {
@@ -65,12 +65,12 @@ impl CommandModule for Update {
 
     fn process_response(&self, host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_partial {
-            let progress = if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
-                              host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+            let progress = if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
+                              host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
                 self.parse_progress_for_apt(response)
             }
-            else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
-                    host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+            else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+                    host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
                 1
             }
             else {

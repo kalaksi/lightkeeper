@@ -48,14 +48,14 @@ impl MonitoringModule for Ping {
     fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec![
                 "ping", "-c", self.count.to_string().as_str(), "-W", self.timeout.to_string().as_str(), host.ip_address.to_string().as_str()
             ]);
         }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
-                host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+        else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec![
                 "ping", "-c", self.count.to_string().as_str(), "-W", self.timeout.to_string().as_str(), host.ip_address.to_string().as_str()
             ]);

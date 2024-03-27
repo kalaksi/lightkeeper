@@ -63,14 +63,14 @@ impl MonitoringModule for Service {
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         let mut command = ShellCommand::new();
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "10") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["busctl", "--no-pager", "--json=short", "call", "org.freedesktop.systemd1",
                                     "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
             Ok(command.to_string())
         }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
-                host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+        else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec!["busctl", "--no-pager", "call", "org.freedesktop.systemd1",
                                     "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
             Ok(command.to_string())
@@ -84,14 +84,14 @@ impl MonitoringModule for Service {
 
         let mut result = DataPoint::empty();
 
-        let all_units = if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
-                           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+        let all_units = if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "10") ||
+                           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
 
             let mut response: DbusResponse = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
             response.data.remove(0)
         }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
-                host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+        else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             // First 2 words are like: a(ssssssouso) 253 
             let actual_content = response.message.splitn(3, " ").last().unwrap_or("");
             // Removes first and last quotes and then splits.

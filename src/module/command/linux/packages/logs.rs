@@ -53,8 +53,8 @@ impl CommandModule for Logs {
             page_size
         };
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["tail", "-n", &row_count.to_string(), "/var/log/apt/term.log"]);
         }
         else {

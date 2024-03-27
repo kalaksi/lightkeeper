@@ -66,7 +66,7 @@ impl CommandModule for LVResize {
         if !string_validation::is_numeric_with_unit(&new_size, &self.get_display_options().user_parameters[0].units) {
             Err(format!("Invalid size: {}", new_size))
         }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") {
+        else if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") {
             command.arguments(vec!["lvresize", "--size", &new_size, lv_path]);
             Ok(command.to_string())
         }

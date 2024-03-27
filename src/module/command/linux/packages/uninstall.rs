@@ -46,16 +46,16 @@ impl CommandModule for Uninstall {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "9") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") {
+        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
             command.arguments(vec!["apt-get", "remove", "-y", package]);
 
             if self.purge {
                 command.argument("--purge");
             }
         }
-        else if host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
-                host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+        else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec!["dnf", "remove", "-y", package]);
         }
         else {

@@ -42,13 +42,13 @@ impl MonitoringModule for Package {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.version_is_same_or_greater_than(Flavor::Debian, "9") ||
-           host.platform.version_is_same_or_greater_than(Flavor::Ubuntu, "20") {
+        if host.platform.is_same_or_greater(Flavor::Debian, "9") ||
+           host.platform.is_same_or_greater(Flavor::Ubuntu, "20") {
 
             command.arguments(vec!["apt", "list", "--upgradable"]);
             Ok(command.to_string())
         }
-        else if host.platform.version_is_same_or_greater_than(Flavor::CentOS, "8") {
+        else if host.platform.is_same_or_greater(Flavor::CentOS, "8") {
             command.arguments(vec!["dnf", "check-update", "--quiet", "--color=never", "--assumeno"]);
             Ok(command.to_string())
         }
@@ -60,8 +60,8 @@ impl MonitoringModule for Package {
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         let mut result = DataPoint::empty();
 
-        if host.platform.version_is_same_or_greater_than(Flavor::Debian, "9") ||
-           host.platform.version_is_same_or_greater_than(Flavor::Ubuntu, "20") {
+        if host.platform.is_same_or_greater(Flavor::Debian, "9") ||
+           host.platform.is_same_or_greater(Flavor::Ubuntu, "20") {
             let lines = response.message.lines().filter(|line| line.contains("[upgradable"));
             for line in lines {
                 let mut parts = line.split_whitespace();
@@ -79,7 +79,7 @@ impl MonitoringModule for Package {
                 result.multivalue.push(data_point);
             }
         }
-        else if host.platform.version_is_same_or_greater_than(Flavor::CentOS, "8") {
+        else if host.platform.is_same_or_greater(Flavor::CentOS, "8") {
             let lines = response.message.lines().filter(|line| !line.is_empty());
             for line in lines {
                 let mut parts = line.split_whitespace();

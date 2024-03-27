@@ -50,10 +50,10 @@ impl CommandModule for Shell {
         let mut command = ShellCommand::new();
         command.use_sudo = false;
 
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "4") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "16") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "4") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "4") {
+        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "4") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "16") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "4") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "4") {
 
             if self.as_root {
                 if host.settings.contains(&crate::host::HostSetting::UseSudo) {

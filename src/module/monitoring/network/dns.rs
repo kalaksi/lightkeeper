@@ -45,10 +45,10 @@ impl MonitoringModule for Dns {
     }
 
     fn get_connector_messages(&self, host: Host, _parent_result: DataPoint) -> Result<Vec<String>, String> {
-        if host.platform.version_is_same_or_greater_than(platform_info::Flavor::Debian, "10") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::CentOS, "8") ||
-           host.platform.version_is_same_or_greater_than(platform_info::Flavor::RedHat, "8") {
+        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "10") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
 
             let command_resolvconf = ShellCommand::new_from(vec!["grep", "-E", "^nameserver", "/etc/resolv.conf"]);
             // TODO: use busctl instead?
