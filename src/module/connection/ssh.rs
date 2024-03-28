@@ -9,7 +9,7 @@ use std::{
 
 use chrono::Utc;
 use ssh2;
-use crate::error::*;
+use crate::{error::*, file_handler};
 use crate::file_handler::FileMetadata;
 use crate::utils::strip_newline;
 use lightkeeper_module::connection_module;
@@ -267,7 +267,15 @@ impl ConnectionModule for Ssh2 {
 
 impl Ssh2 {
     fn verify_host_key(&self, hostname: &str) -> Result<(), LkError> {
-        let known_hosts_path = Path::new(&std::env::var("HOME").unwrap()).join(".ssh/known_hosts");
+        let config_dir = file_handler::get_config_dir()?;
+        let known_hosts_path = config_dir.join("known_hosts");
+
+        // Create known_hosts if it's missing.
+        if !known_hosts_path.exists() {
+            log::info!("Creating file '{}'", known_hosts_path.display());
+            let _ = std::fs::File::create(&known_hosts_path)?;
+        }
+
         let mut known_hosts = self.session.known_hosts().unwrap();
         if let Err(error) = known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH) {
             log::warn!("Failed to read known hosts file: {}", error);
@@ -283,7 +291,7 @@ impl Ssh2 {
                     // known_hosts.write_file(&file, KnownHostFileKind::OpenSSH).unwrap();
                 },
                 ssh2::CheckResult::Mismatch => {
-                    let message = format!("Host key for '{}' does not match the known hosts", hostname);
+                    let message = format!("Host key for '{}' does not match a known host", hostname);
                     Err(LkError::new(ErrorKind::HostKeyNotVerified, message))
                 },
                 ssh2::CheckResult::Failure => {
