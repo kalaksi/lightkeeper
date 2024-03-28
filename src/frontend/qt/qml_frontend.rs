@@ -39,10 +39,11 @@ impl QmlFrontend {
         resources::init_resources();
 
         let style = main_config.display_options.as_ref().unwrap().qtquick_style.as_str();
-        if !style.is_empty() {
-            if std::env::var("QT_QUICK_CONTROLS_STYLE").is_err() && std::env::var("QT_STYLE_OVERRIDE").is_err() {
-                std::env::set_var("QT_STYLE_OVERRIDE", style);
-            }
+        if !style.is_empty() &&
+           std::env::var("QT_QUICK_CONTROLS_STYLE").is_err() &&
+           std::env::var("QT_STYLE_OVERRIDE").is_err() {
+
+            std::env::set_var("QT_STYLE_OVERRIDE", style);
         }
 
         let theme_model = ThemeModel::new(main_config.display_options.clone().unwrap());

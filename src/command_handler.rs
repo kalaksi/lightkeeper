@@ -215,7 +215,7 @@ impl CommandHandler {
     }
 
     pub fn upload_file(&mut self, host_id: &String, command_id: &String, local_file_path: &String) -> u64 {
-        let host = self.host_manager.borrow().get_host(&host_id);
+        let host = self.host_manager.borrow().get_host(host_id);
         let commands = self.commands.lock().unwrap();
         let command = &commands[host_id][command_id];
 

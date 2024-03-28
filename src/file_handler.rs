@@ -200,7 +200,7 @@ pub fn convert_to_local_metadata_path(host: &Host, remote_file_path: &String) ->
     get_metadata_path(&file_path)
 }
 
-pub fn get_content_file_path(metadata_path: &String) -> Option<String> {
+pub fn get_content_file_path(metadata_path: &str) -> Option<String> {
     let file_path = metadata_path.strip_suffix(METADATA_SUFFIX).unwrap().to_string();
     if Path::new(&file_path).is_file() {
         Some(file_path)

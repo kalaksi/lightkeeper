@@ -134,7 +134,7 @@ impl ModuleFactory {
             if let Some(parent_spec) = &metadata.parent_module {
                 let parent_spec = ModuleSpecification::new_with_type(parent_spec.id.as_str(), parent_spec.version.as_str(), ModuleType::Monitor);
                 let matches = self.monitor_modules.iter().filter(|(metadata, _)| metadata.module_spec == parent_spec).collect::<Vec<_>>();
-                if matches.len() == 0 {
+                if matches.is_empty() {
                     panic!("Parent module '{}' for monitoring extension module '{}' was not found.", parent_spec.id, metadata.module_spec.id);
                 }
                 // Currently, multiple extension modules for the same parent/base are not supported.
@@ -168,15 +168,15 @@ impl ModuleFactory {
         for (metadata, module_constructor) in self.monitor_modules.iter() {
             let module_instance = module_constructor(&HashMap::new());
 
-            documentation.push_str(&format!("{}:\n", metadata.module_spec.to_string()));
+            documentation.push_str(&format!("{}:\n", metadata.module_spec));
 
             if let Some(parent_spec) = &metadata.parent_module {
-                documentation.push_str(&format!("  extends module: {}\n", parent_spec.to_string()));
+                documentation.push_str(&format!("  extends module: {}\n", parent_spec));
             };
 
             documentation.push_str(&format!("  description: {}\n", &metadata.description.replace("    ", "  ")));
-            documentation.push_str(&format!("  settings:\n"));
-            if metadata.settings.len() > 0 {
+            documentation.push_str("  settings:\n");
+            if metadata.settings.is_empty() {
                 for (key, value) in metadata.settings.iter() {
                     documentation.push_str(&format!("    {}: {}\n", key, value));
                 }
@@ -201,14 +201,14 @@ impl ModuleFactory {
         for (metadata, module_constructor) in self.command_modules.iter() {
             let module_instance = module_constructor(&HashMap::new());
 
-            documentation.push_str(&format!("{}:\n", metadata.module_spec.to_string()));
+            documentation.push_str(&format!("{}:\n", metadata.module_spec));
 
             if let Some(parent_spec) = &metadata.parent_module {
-                documentation.push_str(&format!("extends module: {}\n", parent_spec.to_string()));
+                documentation.push_str(&format!("extends module: {}\n", parent_spec));
             };
 
             documentation.push_str(&format!("  description: {}\n", &metadata.description.replace("    ", "  ")));
-            documentation.push_str(&format!("  settings:\n"));
+            documentation.push_str("  settings:\n");
             if metadata.settings.len() > 0 {
                 for (key, value) in metadata.settings.iter() {
                     documentation.push_str(&format!("    {}: {}\n", key, value));
@@ -237,10 +237,10 @@ impl ModuleFactory {
         let mut documentation = String::from("Connector modules:\n");
 
         for (metadata, _) in self.connector_modules.iter() {
-            documentation.push_str(&format!("{}:\n", metadata.module_spec.to_string()));
+            documentation.push_str(&format!("{}:\n", metadata.module_spec));
             documentation.push_str(&format!("  description: {}\n", &metadata.description));
-            documentation.push_str(&format!("  settings:\n"));
-            if metadata.settings.len() > 0 {
+            documentation.push_str("  settings:\n");
+            if metadata.settings.is_empty() {
                 for (key, value) in metadata.settings.iter() {
                     documentation.push_str(&format!("    {}: {}\n", key, value));
                 }

@@ -296,8 +296,8 @@ impl HostDataManagerModel {
         }
     }
 
-    fn is_empty_category(&self, host_id: String, category: String) -> bool {
-        let display_data = self.display_data.hosts.get(&host_id).unwrap();
+    fn is_empty_category(&self, host_id: &str, category: &str) -> bool {
+        let display_data = self.display_data.hosts.get(host_id).unwrap();
         display_data.host_state.monitor_data.values()
             .filter(|monitor_data| monitor_data.display_options.category == category)
             .all(|monitor_data| monitor_data.values.iter()
@@ -307,6 +307,7 @@ impl HostDataManagerModel {
 
     // Get a readily sorted list of unique categories for a host. Gathered from the monitoring data.
     fn getCategories(&self, host_id: QString, ignore_empty: bool) -> QStringList {
+        let host_id = host_id.to_string();
         let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
 
         // Get unique categories from monitoring datas, and sort them according to config and alphabetically.
@@ -322,16 +323,17 @@ impl HostDataManagerModel {
 
         // First add categories in the order they are defined in the config.
         for prioritized_category in self.display_options_category_order.iter() {
-            if categories.contains(prioritized_category) {
-                if !ignore_empty || !self.is_empty_category(host_id.to_string(), prioritized_category.to_string()) {
-                    result.push(QString::from(prioritized_category.clone()));
-                }
+            if categories.contains(prioritized_category) &&
+               !ignore_empty ||
+               !self.is_empty_category(&host_id, &prioritized_category) {
+
+                result.push(QString::from(prioritized_category.clone()));
             }
         }
 
         for remaining_category in categories.iter() {
             if !self.display_options_category_order.contains(remaining_category) {
-                if !ignore_empty || !self.is_empty_category(host_id.to_string(), remaining_category.to_string()) {
+                if !ignore_empty || !self.is_empty_category(&host_id, &remaining_category) {
                     result.push(QString::from(remaining_category.clone()));
                 }
             }

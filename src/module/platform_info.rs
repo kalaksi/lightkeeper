@@ -33,18 +33,6 @@ impl PlatformInfo {
         let parsed_version = VersionNumber::from_str(version).unwrap();
         self.os_flavor == flavor && self.os_version >= parsed_version
     }
-
-    // Version is given as str for convenience.
-    pub fn is_same_as(&self, flavor: Flavor, version: &str) -> bool {
-        let parsed_version = VersionNumber::from_str(version).unwrap();
-        self.os_flavor == flavor && self.os_version == parsed_version
-    }
-
-    // Version is given as str for convenience.
-    pub fn older_than(&self, flavor: Flavor, version: &str) -> bool {
-        let parsed_version = VersionNumber::from_str(version).unwrap();
-        self.os_flavor == flavor && self.os_version < parsed_version
-    }
 }
 
 #[derive(Clone, PartialEq, Eq, EnumString, Display, Serialize, Deserialize)]
