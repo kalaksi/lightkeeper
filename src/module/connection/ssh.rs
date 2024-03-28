@@ -1,7 +1,5 @@
 use std::{
     net::TcpStream,
-    net::IpAddr,
-    net::Ipv4Addr,
     net::ToSocketAddrs,
     collections::HashMap,
     path::Path,
@@ -30,13 +28,14 @@ use crate::module::connection::*;
       private_key_passphrase => "Passphrase for the private key file. Default: empty.",
       connection_timeout => "Timeout (in seconds) for the SSH connection. Default: 15.",
       agent_key_identifier => "Identifier for selecting key from ssh-agent. This is the comment part of the \
-                               key (e.g. user@desktop). Default: empty (all keys are tried)."
+                               key (e.g. user@desktop). Default: empty (all keys are tried).",
+      verify_host_key => "Whether to verify the host key using a known_hosts-file. Default: true.",
     }
 )]
 pub struct Ssh2 {
     session: ssh2::Session,
     is_initialized: bool,
-    address: IpAddr,
+    address: String,
     port: u16,
     username: String,
     password: Option<String>,
@@ -44,6 +43,7 @@ pub struct Ssh2 {
     private_key_passphrase: Option<String>,
     agent_key_identifier: Option<String>,
     connection_timeout: u16,
+    verify_host_key: bool,
     // TODO: multiple parallel channels for multiple commands?
     open_channel: Option<ssh2::Channel>,
 }
@@ -56,7 +56,7 @@ impl Module for Ssh2 {
         Ssh2 {
             session: session,
             is_initialized: false,
-            address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            address: String::from("0.0.0.0"),
             port: settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap(),
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
             password: settings.get("password").cloned(),
@@ -65,20 +65,20 @@ impl Module for Ssh2 {
             private_key_passphrase: settings.get("private_key_passphrase").cloned(),
             agent_key_identifier: settings.get("agent_key_identifier").cloned(),
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
+            verify_host_key: settings.get("verify_host_key").unwrap_or(&String::from("true")).parse::<bool>().unwrap(),
             open_channel: None,
         }
     }
 }
 
 impl ConnectionModule for Ssh2 {
-    fn connect(&mut self, address: IpAddr) -> Result<(), LkError> {
+    fn connect(&mut self, address: &str) -> Result<(), LkError> {
         if self.is_initialized {
             return Ok(())
         }
 
-        self.address = address;
-
-        let socket_address = format!("{}:{}", address, self.port).to_socket_addrs().unwrap().next().unwrap();
+        self.address = address.to_string();
+        let socket_address = format!("{}:{}", self.address, self.port).to_socket_addrs().unwrap().next().unwrap();
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
         let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
 
@@ -86,14 +86,11 @@ impl ConnectionModule for Ssh2 {
 
         self.session = ssh2::Session::new().unwrap();
         self.session.set_tcp_stream(stream);
-
-        let known_hosts_path = Path::new(&std::env::var("HOME").unwrap()).join(".ssh/known_hosts");
-        let mut known_hosts = self.session.known_hosts().unwrap();
-        if let Err(error) = known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH) {
-            log::warn!("Failed to read known hosts file: {}", error);
-        }
-
         self.session.handshake()?;
+
+        if self.verify_host_key {
+            self.verify_host_key(address)?;
+        }
 
         if self.password.is_some() {
             self.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str())
@@ -259,12 +256,45 @@ impl ConnectionModule for Ssh2 {
     fn reconnect(&mut self) -> Result<(), LkError> {
         self.disconnect();
         log::debug!("Disconnected");
-        self.connect(self.address)
+        self.connect(&self.address.clone())
     }
 
     fn disconnect(&mut self) {
         let _ = self.session.disconnect(None, "", None);
         self.is_initialized = false;
+    }
+}
+
+impl Ssh2 {
+    fn verify_host_key(&self, hostname: &str) -> Result<(), LkError> {
+        let known_hosts_path = Path::new(&std::env::var("HOME").unwrap()).join(".ssh/known_hosts");
+        let mut known_hosts = self.session.known_hosts().unwrap();
+        if let Err(error) = known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH) {
+            log::warn!("Failed to read known hosts file: {}", error);
+        }
+
+        if let Some((key, _key_type)) = self.session.host_key() {
+            match known_hosts.check(hostname, key) {
+                ssh2::CheckResult::Match => Ok(()),
+                ssh2::CheckResult::NotFound => {
+                    let message = format!("Host key for '{}' not found in known hosts", hostname);
+                    Err(LkError::new(ErrorKind::HostKeyNotVerified, message))
+                    // known_hosts.add(host, key, host, key_type.into()).unwrap();
+                    // known_hosts.write_file(&file, KnownHostFileKind::OpenSSH).unwrap();
+                },
+                ssh2::CheckResult::Mismatch => {
+                    let message = format!("Host key for '{}' does not match the known hosts", hostname);
+                    Err(LkError::new(ErrorKind::HostKeyNotVerified, message))
+                },
+                ssh2::CheckResult::Failure => {
+                    let message = format!("Failed to get host key for '{}'", hostname);
+                    Err(LkError::new(ErrorKind::HostKeyNotVerified, message))
+                }
+            }
+        }
+        else {
+            Err(LkError::new(ErrorKind::HostKeyNotVerified, "Failed to get host key"))
+        }
     }
 }
 
@@ -274,7 +304,7 @@ impl ConnectionModule for Ssh2 {
 impl From<ssh2::Error> for LkError {
     fn from(error: ssh2::Error) -> Self {
         match error.code() {
-            ssh2::ErrorCode::Session(-5) => LkError::new(ErrorKind::HostKeyNotVerified, error),
+            ssh2::ErrorCode::Session(-5) => LkError::new(ErrorKind::ConnectionFailed, error),
             _ => LkError::new(ErrorKind::Other, error),
         }
     }

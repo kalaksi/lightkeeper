@@ -1,6 +1,5 @@
 
 use std::collections::HashMap;
-use std::net::IpAddr;
 use crate::error::LkError;
 use crate::module::MetadataSupport;
 use crate::module::module::Module;
@@ -38,7 +37,7 @@ pub trait ConnectionModule : MetadataSupport + Module {
     // These are only relevant to modules that use a persistent connection.
 
     /// Connect to the specified address. Should do nothing if already connected.
-    fn connect(&mut self, _address: IpAddr) -> Result<(), LkError> {
+    fn connect(&mut self, _address: &str) -> Result<(), LkError> {
         Ok(())
     }
 

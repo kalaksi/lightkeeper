@@ -59,6 +59,16 @@ impl Host {
         }
         Ok(())
     }
+
+    /// Returns address for host preferring FQDN if configured.
+    pub fn get_address(&self) -> String {
+        if !self.fqdn.is_empty() {
+            self.fqdn.clone()
+        }
+        else {
+            self.ip_address.to_string()
+        }
+    }
 }
 
 impl Default for Host {

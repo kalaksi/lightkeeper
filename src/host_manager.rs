@@ -190,17 +190,19 @@ impl HostManager {
                         else {
                             host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
 
-                            let monitoring_data = host_state.monitor_data.get_mut(&state_update.module_spec.id).unwrap();
-                            monitoring_data.values.push_back(message_data_point.clone());
+                            // Monitoring data for platform info providers / internal modules won't exist in `monitor_data`.
+                            if let Some(monitoring_data) = host_state.monitor_data.get_mut(&state_update.module_spec.id) {
+                                monitoring_data.values.push_back(message_data_point.clone());
 
-                            if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
-                                monitoring_data.values.pop_front();
+                                if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
+                                    monitoring_data.values.pop_front();
+                                }
+
+                                // Also add to a list of new data points.
+                                let mut new = host_state.monitor_data.get(&state_update.module_spec.id).unwrap().clone();
+                                new.values = VecDeque::from(vec![message_data_point.clone()]);
+                                new_monitoring_data = Some((state_update.invocation_id, new));
                             }
-
-                            // Also add to a list of new data points.
-                            let mut new = host_state.monitor_data.get(&state_update.module_spec.id).unwrap().clone();
-                            new.values = VecDeque::from(vec![message_data_point.clone()]);
-                            new_monitoring_data = Some((state_update.invocation_id, new));
                         }
                     }
                 }

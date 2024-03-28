@@ -240,7 +240,7 @@ impl ConnectionManager {
 
                     let mut connector = connector_mutex.lock().unwrap();
                     if !connector.is_connected() {
-                        if let Err(error) = connector.connect(request.host.ip_address) {
+                        if let Err(error) = connector.connect(&request.host.get_address()) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
                             let response = RequestResponse::new_error(&request, error);
                             request.response_sender.send(response).unwrap();

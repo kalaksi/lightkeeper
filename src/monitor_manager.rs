@@ -444,10 +444,7 @@ impl MonitorManager {
                         log::debug!("[{}] Data point received for monitor {}: {} {}", response.host.name, monitor_id, data_point.label, data_point);
                         data_point
                     },
-                    Err(error) => {
-                        if !error.is_empty() {
-                            errors.push(ErrorMessage::new(Criticality::Error, error));
-                        }
+                    Err(_) => {
                         // In case this was an extension module, retain the parents data point unmodified.
                         parent_datapoint.clone().unwrap_or_default()
                     }
