@@ -77,6 +77,9 @@ pub enum Flavor {
     RedHat,
     CentOS,
     NixOS,
+    Fedora,
+    OpenSUSE,
+    Alpine,
 }
 
 impl Default for Flavor {

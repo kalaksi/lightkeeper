@@ -69,6 +69,10 @@ fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber) 
                     "centos" => flavor = platform_info::Flavor::CentOS,
                     "ubuntu" => flavor = platform_info::Flavor::Ubuntu,
                     "nixos" => flavor = platform_info::Flavor::NixOS,
+                    "arch" => flavor = platform_info::Flavor::ArchLinux,
+                    "fedora" => flavor = platform_info::Flavor::Fedora,
+                    "opensuse" => flavor = platform_info::Flavor::OpenSUSE,
+                    "alpine" => flavor = platform_info::Flavor::Alpine,
                     _ => ()
                 }
             },

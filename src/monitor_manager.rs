@@ -423,7 +423,7 @@ impl MonitorManager {
                             // Was not implemented, so try the other method.
                             let message = responses[0].clone();
                             datapoint_result = monitor.process_response(response.host.clone(), message.clone(), parent_datapoint.clone().unwrap_or_default())
-                                                        .map(|mut data_point| { data_point.is_from_cache = message.is_from_cache; data_point });
+                                                      .map(|mut data_point| { data_point.is_from_cache = message.is_from_cache; data_point });
                         }
                         else {
                             datapoint_result = Err(error);
