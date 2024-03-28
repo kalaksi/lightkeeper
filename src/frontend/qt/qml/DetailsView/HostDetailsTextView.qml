@@ -19,10 +19,10 @@ Item {
     Connections {
         target: HostDataManager
 
-        function onCommand_result_received(commandResultJson) {
+        function onCommandResultReceived(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)
 
-            if (root.pendingInvocation === commandResult.invocation_id) {
+            if (root.pendingInvocation === invocationId) {
                 root.pendingInvocations = -1
 
                 // If message seems to contain JSON...

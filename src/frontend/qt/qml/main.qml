@@ -144,7 +144,7 @@ ApplicationWindow {
             hostTable.highlightMonitor(hostId, monitorId, newCriticality)
         }
 
-        function onCommand_result_received(commandResultJson) {
+        function onCommandResultReceived(commandResultJson, invocationId) {
             let commandResult = JSON.parse(commandResultJson)
 
             if (commandResult.show_in_notification === true &&
@@ -158,17 +158,17 @@ ApplicationWindow {
                 }
             }
 
-            let dialogInstanceId = _detailsDialogs[commandResult.invocation_id]
+            let dialogInstanceId = _detailsDialogs[invocationId]
             if (typeof dialogInstanceId !== "undefined") {
                 let dialog = detailsDialogManager.get(dialogInstanceId)
                 dialog.text = commandResult.message
                 dialog.errorText = commandResult.error
                 dialog.criticality = commandResult.criticality
             }
-            else if (textDialog.pendingInvocation === commandResult.invocation_id) {
+            else if (textDialog.pendingInvocation === invocationId) {
                 textDialog.text = commandResult.message
             }
-            else if (commandOutputDialog.pendingInvocation === commandResult.invocation_id) {
+            else if (commandOutputDialog.pendingInvocation === invocationId) {
                 commandOutputDialog.text = commandResult.message
                 commandOutputDialog.progress = commandResult.progress
             }

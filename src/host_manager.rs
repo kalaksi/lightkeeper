@@ -147,14 +147,14 @@ impl HostManager {
 
                 host_state.just_initialized = false;
                 host_state.just_initialized_from_cache = false;
-                let mut new_monitoring_data: Option<MonitoringData> = None;
-                let mut new_command_results: Option<CommandResult> = None;
+                let mut new_monitoring_data: Option<(u64, MonitoringData)> = None;
+                let mut new_command_results: Option<(u64, CommandResult)> = None;
 
                 if let Some(message_data_point) = state_update.data_point {
 
                     // Specially structured data point for passing platform info here.
                     if message_data_point.is_internal() {
-                        host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != message_data_point.invocation_id);
+                        host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
 
                         if let Ok(platform) = Self::read_platform_info(&message_data_point) {
                             host_state.host.platform = platform;
@@ -175,20 +175,20 @@ impl HostManager {
                     }
                     else {
                         // Initial NoData point will have invocation ID 0.
-                        if message_data_point.invocation_id == 0 {
+                        if state_update.invocation_id == 0 {
                             let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
                             new_data.values.push_back(message_data_point.clone());
                             host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
                         }
                         else if message_data_point.criticality == Criticality::NoData {
                             host_state.monitor_invocations.push(InvocationDetails {
-                                invocation_id: message_data_point.invocation_id,
+                                invocation_id: state_update.invocation_id,
                                 time: chrono::Utc::now(),
                                 category: state_update.display_options.category,
                             });
                         }
                         else {
-                            host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != message_data_point.invocation_id);
+                            host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
 
                             let monitoring_data = host_state.monitor_data.get_mut(&state_update.module_spec.id).unwrap();
                             monitoring_data.values.push_back(message_data_point.clone());
@@ -200,23 +200,35 @@ impl HostManager {
                             // Also add to a list of new data points.
                             let mut new = host_state.monitor_data.get(&state_update.module_spec.id).unwrap().clone();
                             new.values = VecDeque::from(vec![message_data_point.clone()]);
-                            new_monitoring_data = Some(new);
+                            new_monitoring_data = Some((state_update.invocation_id, new));
                         }
                     }
                 }
                 else if let Some(command_result) = state_update.command_result {
                     if command_result.criticality == Criticality::NoData {
                         host_state.command_invocations.push(InvocationDetails {
-                            invocation_id: command_result.invocation_id,
+                            invocation_id: state_update.invocation_id,
                             time: chrono::Utc::now(),
                             category: state_update.display_options.category,
                         });
                     }
                     else {
-                        host_state.command_invocations.retain(|invocation| invocation.invocation_id != command_result.invocation_id);
+                        host_state.command_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
                         host_state.command_results.insert(state_update.module_spec.id, command_result.clone());
                         // Also add to a list of new command results.
-                        new_command_results = Some(command_result);
+                        new_command_results = Some((state_update.invocation_id, command_result));
+                    }
+                }
+                else {
+                    match state_update.module_spec.module_type {
+                        crate::module::ModuleType::Command => {
+                            host_state.command_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
+                        },
+                        crate::module::ModuleType::Monitor => {
+                            host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
+                        },
+                        crate::module::ModuleType::Unknown |
+                        crate::module::ModuleType::Connector => {},
                     }
                 }
 
@@ -227,7 +239,7 @@ impl HostManager {
                     observer.send(frontend::HostDisplayData {
                         host_state: host_state.clone(),
                         new_monitoring_data: new_monitoring_data.clone(),
-                        new_command_results: new_command_results.clone(),
+                        new_command_result: new_command_results.clone(),
                         new_errors: state_update.errors.clone(),
                         ..Default::default()
                     }).unwrap();
@@ -304,6 +316,8 @@ pub struct StateUpdateMessage {
     /// Only used with commands.
     pub command_result: Option<CommandResult>,
     pub errors: Vec<ErrorMessage>,
+    /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
+    pub invocation_id: u64,
     /// Stops the receiver thread.
     pub stop: bool,
 }

@@ -35,8 +35,8 @@ impl DisplayData {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HostDisplayData {
     pub host_state: HostState,
-    pub new_monitoring_data: Option<MonitoringData>,
-    pub new_command_results: Option<CommandResult>,
+    pub new_monitoring_data: Option<(u64, MonitoringData)>,
+    pub new_command_result: Option<(u64, CommandResult)>,
     pub new_errors: Vec<ErrorMessage>,
     pub stop: bool,
 }
@@ -65,7 +65,7 @@ impl Default for HostDisplayData {
                 command_invocations: Vec::new(),
             },
             new_monitoring_data: None,
-            new_command_results: None,
+            new_command_result: None,
             new_errors: Vec::new(),
             stop: false,
         }

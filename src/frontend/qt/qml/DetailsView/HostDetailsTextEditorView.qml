@@ -22,10 +22,10 @@ Item {
     Connections {
         target: HostDataManager
 
-        function onCommand_result_received(commandResultJson) {
+        function onCommandResultReceived(commandResultJson, invocationId) {
             let commandResult = JSON.parse(commandResultJson)
 
-            if (root.pendingInvocation === commandResult.invocation_id) {
+            if (root.pendingInvocation === invocationId) {
                 root.pendingInvocation = 0
 
                 if (commandResult.criticality === "Normal") {

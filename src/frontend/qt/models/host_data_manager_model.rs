@@ -29,8 +29,8 @@ pub struct HostDataManagerModel {
     host_initialized: qt_signal!(host_id: QString),
     host_initialized_from_cache: qt_signal!(host_id: QString),
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
-    command_result_received: qt_signal!(command_result: QString),
-    monitoring_data_received: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant),
+    commandResultReceived: qt_signal!(command_result: QString, invocation_id: u64),
+    monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant, invocation_id: u64),
     error_received: qt_signal!(criticality: QString, error: QString),
 
     //
@@ -118,15 +118,16 @@ impl HostDataManagerModel {
                         self_pinned.borrow().host_initialized_from_cache(QString::from(host_state.host.name.clone()));
                     }
 
-                    if let Some(command_result) = new_display_data.new_command_results {
+                    if let Some((invocation_id, command_result)) = new_display_data.new_command_result {
                         let json = QString::from(serde_json::to_string(&command_result).unwrap());
-                        self_pinned.borrow().command_result_received(json);
+                        self_pinned.borrow().commandResultReceived(json, invocation_id);
                     }
 
-                    if let Some(new_monitor_data) = new_display_data.new_monitoring_data {
-                        self_pinned.borrow().monitoring_data_received(QString::from(host_state.host.name.clone()),
-                                                                      QString::from(new_monitor_data.display_options.category.clone()),
-                                                                      new_monitor_data.to_qvariant());
+                    if let Some((invocation_id, new_monitor_data)) = new_display_data.new_monitoring_data {
+                        self_pinned.borrow().monitoringDataReceived(QString::from(host_state.host.name.clone()),
+                                                                    QString::from(new_monitor_data.display_options.category.clone()),
+                                                                    new_monitor_data.to_qvariant(),
+                                                                    invocation_id);
 
 
                         // Find out any monitor state changes and signal accordingly.

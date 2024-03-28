@@ -118,6 +118,7 @@ impl MonitorManager {
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
                     data_point: Some(DataPoint::no_data()),
+                    invocation_id: 0,
                     ..Default::default()
                 }).unwrap();
             }
@@ -201,7 +202,8 @@ impl MonitorManager {
                     host_name: host.name.clone(),
                     display_options: info_provider.get_display_options(),
                     module_spec: info_provider.get_module_spec(),
-                    data_point: Some(DataPoint::pending(self.invocation_id_counter)),
+                    data_point: Some(DataPoint::pending()),
+                    invocation_id: self.invocation_id_counter,
                     ..Default::default()
                 }).unwrap();
 
@@ -306,7 +308,8 @@ impl MonitorManager {
                 host_name: host.name.clone(),
                 display_options: monitor.get_display_options(),
                 module_spec: monitor.get_module_spec(),
-                data_point: Some(DataPoint::pending(current_invocation_id)),
+                data_point: Some(DataPoint::pending()),
+                invocation_id: current_invocation_id,
                 ..Default::default()
             }).unwrap();
 
@@ -320,6 +323,7 @@ impl MonitorManager {
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
                         errors: vec![ErrorMessage::new(Criticality::Error, error.to_string())],
+                        invocation_id: current_invocation_id,
                         ..Default::default()
                     }).unwrap();
 
@@ -437,9 +441,8 @@ impl MonitorManager {
                 }
 
                 let new_data_point = match datapoint_result {
-                    Ok(mut data_point) => {
+                    Ok(data_point) => {
                         log::debug!("[{}] Data point received for monitor {}: {} {}", response.host.name, monitor_id, data_point.label, data_point);
-                        data_point.invocation_id = response.invocation_id;
                         data_point
                     },
                     Err(error) => {
@@ -473,14 +476,14 @@ impl MonitorManager {
                     let messages = match get_monitor_connector_messages(&response.host, &next_monitor, &next_parent_datapoint) {
                         Ok(messages) => messages,
                         Err(error) => {
-                            log::error!("Monitor \"{}\" failed: {}", next_monitor.get_module_spec().id, error);
-                            let ui_error = format!("{}: {}", next_monitor.get_module_spec().id, error);
+                            log::error!("Monitor failed: {}", error);
 
                             state_update_sender.send(StateUpdateMessage {
                                 host_name: response.host.name.clone(),
                                 display_options: next_monitor.get_display_options(),
                                 module_spec: next_monitor.get_module_spec(),
-                                errors: vec![ErrorMessage::new(Criticality::Error, ui_error)],
+                                errors: vec![ErrorMessage::new(Criticality::Error, error.to_string())],
+                                invocation_id: response.invocation_id,
                                 ..Default::default()
                             }).unwrap();
 
@@ -509,6 +512,7 @@ impl MonitorManager {
                         module_spec: monitor.get_module_spec(),
                         data_point: Some(new_data_point),
                         errors: errors,
+                        invocation_id: response.invocation_id,
                         ..Default::default()
                     }).unwrap();
                 }

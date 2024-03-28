@@ -161,7 +161,7 @@ impl CommandHandler {
             host_name: host.name.clone(),
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
-            command_result: Some(CommandResult::pending(self.invocation_id_counter)),
+            command_result: Some(CommandResult::pending()),
             ..Default::default()
         }).unwrap();
 
@@ -448,7 +448,6 @@ impl CommandHandler {
                 };
 
                 log::debug!("[{}] Command result received: {}", response.host.name, log_message);
-                command_result.invocation_id = response.invocation_id;
                 command_result.command_id = command.get_module_spec().id;
                 Some(command_result)
             },
@@ -468,6 +467,7 @@ impl CommandHandler {
             module_spec: command.get_module_spec(),
             command_result: new_command_result,
             errors: errors,
+            invocation_id: response.invocation_id,
             ..Default::default()
         }).unwrap();
     }
@@ -480,7 +480,6 @@ impl CommandHandler {
             Ok(response_message) => {
                 let (_, contents) = file_handler::read_file(&response_message.message).unwrap();
                 CommandResult::new_hidden(String::from_utf8(contents).unwrap())
-                            .with_invocation_id(response.invocation_id)
             },
             Err(error) => {
                 let error_message = format!("Error downloading file: {}", error);
@@ -494,6 +493,7 @@ impl CommandHandler {
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: Some(command_result),
+            invocation_id: response.invocation_id,
             ..Default::default()
         }).unwrap();
     }
@@ -557,13 +557,11 @@ impl CommandHandler {
                 }
 
                 CommandResult::new_info("File updated")
-                              .with_invocation_id(response.invocation_id)
             },
             Err(error) => {
                 let error_message = format!("Error uploading file: {}", error);
                 log::error!("{}", error_message);
                 CommandResult::new_critical_error(error_message)
-                              .with_invocation_id(response.invocation_id)
             }
         };
 
@@ -572,6 +570,7 @@ impl CommandHandler {
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: Some(command_result),
+            invocation_id: response.invocation_id,
             ..Default::default()
         }).unwrap();
     }

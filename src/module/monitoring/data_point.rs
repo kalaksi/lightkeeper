@@ -20,8 +20,6 @@ pub struct DataPoint {
     // TODO: rename to children?
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
-    /// Unique invocation ID. Used by UI as an identifier for asynchronously executed requests and received results.
-    pub invocation_id: u64,
     pub is_from_cache: bool,
 }
 
@@ -84,10 +82,9 @@ impl DataPoint {
         }
     }
 
-    pub fn pending(invocation_id: u64) -> Self {
+    pub fn pending() -> Self {
         DataPoint {
             criticality: Criticality::NoData,
-            invocation_id: invocation_id,
             ..Default::default()
         }
     }
@@ -128,7 +125,6 @@ impl Default for DataPoint {
             command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
-            invocation_id: 0,
             is_from_cache: false,
         }
     }

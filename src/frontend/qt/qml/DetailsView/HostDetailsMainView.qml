@@ -32,8 +32,8 @@ Item {
     Connections {
         target: HostDataManager
 
-        function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
-            if (host_id === root.hostId) {
+        function onMonitoringDataReceived(hostId, category, monitoringDataQv, invocationId) {
+            if (hostId === root.hostId) {
                 root.refresh()
             }
         }
@@ -89,9 +89,9 @@ Item {
                     Connections {
                         target: HostDataManager
 
-                        function onCommand_result_received(commandResultJson) {
+                        function onCommandResultReceived(commandResultJson, invocationId) {
                             let commandResult = JSON.parse(commandResultJson)
-                            cooldownTimer.finishCooldown(commandResult.invocation_id)
+                            cooldownTimer.finishCooldown(invocationId)
 
                             if (!cooldownTimer.refreshAfterCommands.includes(commandResult.command_id)) {
                                 cooldownTimer.refreshAfterCommands.push(commandResult.command_id)
@@ -126,8 +126,8 @@ Item {
 
                         Connections {
                             target: HostDataManager
-                            function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
-                                if (host_id === root.hostId && category === modelData) {
+                            function onMonitoringDataReceived(hostId, category, monitoring_data_qv) {
+                                if (hostId === root.hostId && category === modelData) {
                                     groupBoxLabel.refreshProgress = HostDataManager.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
 
                                     if (isCategoryReady(category)) {
@@ -263,9 +263,9 @@ Item {
 
                             Connections {
                                 target: HostDataManager
-                                function onMonitoring_data_received(host_id, category, monitoring_data_qv) {
-                                    if (host_id === root.hostId && category === modelData) {
-                                        propertyTable.model.update(monitoring_data_qv)
+                                function onMonitoringDataReceived(hostId, category, monitoringDataQv) {
+                                    if (hostId === root.hostId && category === modelData) {
+                                        propertyTable.model.update(monitoringDataQv)
                                     }
                                 }
                             }
