@@ -64,7 +64,7 @@ impl From<String> for LkError {
     }
 }
 
-#[derive(Clone, Default, Debug, Display)]
+#[derive(Clone, Default, Debug, Display, PartialEq, Eq)]
 pub enum ErrorKind {
     /// The requested operation is not supported on the platform.
     UnsupportedPlatform,
