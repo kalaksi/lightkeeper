@@ -171,7 +171,7 @@ impl MonitorConfig {
     }
 
     pub fn is_enabled(enabled: &Option<bool>) -> bool {
-        enabled.clone().unwrap_or(true)
+        (*enabled).unwrap_or(true)
     }
 }
 
@@ -232,10 +232,10 @@ impl Configuration {
         let old_templates_file_path = config_dir.join("templates.yml");
 
         // If main configuration is missing, this is probably the first run, so create initial configurations.
-        if let Err(_) = fs::metadata(&main_config_file_path) {
+        if fs::metadata(&main_config_file_path).is_err() {
             Self::write_initial_config(&config_dir)?;
         }
-        else if let Ok(_) = fs::metadata(config_dir.join("templates.yml")) {
+        else if fs::metadata(config_dir.join("templates.yml")).is_ok() {
             log::warn!("Old templates.yml configuration file found. Renaming old configuration files and reinitializing.");
 
             // This is the old groups.yml file. Rename old files with .old suffix and do a new init.

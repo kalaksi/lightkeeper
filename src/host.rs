@@ -19,16 +19,16 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(name: &String, ip_address: &String, fqdn: &String, settings: &Vec<HostSetting>) -> Result<Self, String> {
+    pub fn new(name: &str, ip_address: &str, fqdn: &str, settings: &[HostSetting]) -> Result<Self, String> {
         let mut new = Host {
-            name: name.clone(),
-            fqdn: fqdn.clone(),
+            name: name.to_string(),
+            fqdn: fqdn.to_string(),
             ip_address: match Ipv4Addr::from_str(ip_address) {
                 Ok(address) => IpAddr::V4(address),
-                Err(error) => return Err(format!("{}", error)),
+                Err(error) => return Err(error.to_string()),
             },
             platform: PlatformInfo::new(),
-            settings: settings.clone(),
+            settings: settings.to_vec(),
         };
 
         new.resolve_ip()?;
@@ -52,7 +52,7 @@ impl Host {
                     self.ip_address = addresses.next().unwrap().ip();
                 }
                 else {
-                    return Err(format!("Failed to resolve: No addresses found."));
+                    return Err(String::from("Failed to resolve: No addresses found."));
                 }
                 return Ok(());
             }
@@ -74,16 +74,11 @@ impl Default for Host {
 }
 
 /// Host settings should be controlled only through configuration files.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum HostSetting {
     None,
+    #[default]
     /// Use sudo for commands that require higher privileges.
     UseSudo,
-}
-
-impl Default for HostSetting {
-    fn default() -> Self {
-        HostSetting::None
-    }
 }

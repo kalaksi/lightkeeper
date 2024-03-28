@@ -22,10 +22,10 @@ pub struct TcpConnect {
 }
 
 impl Module for TcpConnect {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         TcpConnect {
-            port: _settings.get("port").and_then(|value| Some(value.parse().unwrap())).unwrap_or(22),
-            timeout: _settings.get("timeout").and_then(|value| Some(value.parse().unwrap())).unwrap_or(10),
+            port: settings.get("port").map(|value| value.parse().unwrap()).unwrap_or(22),
+            timeout: settings.get("timeout").map(|value| value.parse().unwrap()).unwrap_or(10),
         }
     }
 }

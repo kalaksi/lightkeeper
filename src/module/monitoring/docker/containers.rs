@@ -88,7 +88,7 @@ impl MonitoringModule for Containers {
                 let mut point = DataPoint::value_with_level(container.state.to_string(), container.get_criticality());
                 // Names may still contain a leading slash that can cause issues with docker commands.
                 point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
-                point.command_params = vec![cleanup_name(&container.names.first().unwrap_or(&container.id))];
+                point.command_params = vec![cleanup_name(container.names.first().unwrap_or(&container.id))];
                 point
             }).collect();
         }
@@ -98,10 +98,10 @@ impl MonitoringModule for Containers {
 }
 
 
-pub fn cleanup_name(container_name: &String) -> String {
-    let mut result = container_name.clone();
+pub fn cleanup_name(container_name: &str) -> String {
+    let mut result = container_name.to_string();
 
-    if container_name.chars().next().unwrap() == '/' {
+    if container_name.starts_with('/') {
         result.remove(0);
     }
 

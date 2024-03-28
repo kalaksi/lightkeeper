@@ -55,12 +55,9 @@ impl MonitoringModule for ImageUpdates {
         let result = parent_result.multivalue.iter().map(|data_point| {
             let image_repo_tag = data_point.command_params.get(1).unwrap();
 
-            if data_point.tags.contains(&String::from("Local")) {
-                // Local images can not be used.
-                String::new()
-            }
-            else if image_repo_tag.is_empty() {
-                // Containers without a tag can not be used.
+            if data_point.tags.contains(&String::from("Local")) ||
+               image_repo_tag.is_empty() {
+                // Containers without a tag and local images can not be used.
                 String::new()
             }
             else {

@@ -71,7 +71,7 @@ impl MonitoringModule for Dns {
         let resolvconf_response = &responses[0];
         if resolvconf_response.is_success() {
             for line in resolvconf_response.message.lines() {
-                let mut parts = line.split(" ");
+                let mut parts = line.split(' ');
                 let dns_server = parts.nth(1).unwrap_or_default().trim().to_string();
 
                 let mut datapoint = DataPoint::label(dns_server);

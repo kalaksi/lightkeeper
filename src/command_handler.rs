@@ -126,7 +126,7 @@ impl CommandHandler {
     }
 
     /// Returns invocation ID or 0 on error.
-    pub fn execute(&mut self, host_id: &String, command_id: &String, parameters: &Vec<String>) -> u64 {
+    pub fn execute(&mut self, host_id: &String, command_id: &String, parameters: &[String]) -> u64 {
 
         let host = self.host_manager.borrow().get_host(host_id);
 
@@ -188,7 +188,7 @@ impl CommandHandler {
     //
 
     pub fn download_editable_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> (u64, String) {
-        let host = self.host_manager.borrow().get_host(&host_id);
+        let host = self.host_manager.borrow().get_host(host_id);
         let commands = self.commands.lock().unwrap();
         let command = &commands[host_id][command_id];
 
@@ -266,14 +266,14 @@ impl CommandHandler {
         self.invocation_id_counter
     }
 
-    pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &Vec<String>) -> ShellCommand {
-        let host = self.host_manager.borrow().get_host(&host_id);
-        let mut command = self.remote_ssh_command(&host_id);
+    pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &[String]) -> ShellCommand {
+        let host = self.host_manager.borrow().get_host(host_id);
+        let mut command = self.remote_ssh_command(host_id);
 
         let commands = self.commands.lock().unwrap();
         let command_module = &commands[host_id][command_id];
 
-        let connector_messages = get_command_connector_messages(&host, command_module, &parameters).map_err(|error| {
+        let connector_messages = get_command_connector_messages(&host, command_module, parameters).map_err(|error| {
             log::error!("Command failed: {}", error);
             return;
         }).unwrap();
@@ -285,7 +285,7 @@ impl CommandHandler {
 
     // TODO: this will block the UI thread. Improve!
     pub fn open_external_terminal(&self, host_id: &String, command_id: &String, parameters: Vec<String>) {
-        let command_args = self.open_remote_terminal_command(&host_id, &command_id, &parameters);
+        let command_args = self.open_remote_terminal_command(host_id, command_id, &parameters);
 
         log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.to_string());
         let result = ShellCommand::new()
@@ -299,8 +299,8 @@ impl CommandHandler {
         }
     }
 
-    pub fn open_remote_text_editor(&self, host_id: &String, remote_file_path: &String) -> ShellCommand {
-        let mut command = self.remote_ssh_command(&host_id);
+    pub fn open_remote_text_editor(&self, host_id: &String, remote_file_path: &str) -> ShellCommand {
+        let mut command = self.remote_ssh_command(host_id);
 
         if self.preferences.sudo_remote_editor {
             command.argument("sudo");
@@ -314,7 +314,7 @@ impl CommandHandler {
     // TODO: this will block the UI thread? Improve!
     /// Returns local file path where file was downloaded.
     pub fn open_external_text_editor(&self, host_id: &String, command_id: &String, remote_file_path: &String) -> String {
-        let host = self.host_manager.borrow().get_host(&host_id);
+        let host = self.host_manager.borrow().get_host(host_id);
         let commands = self.commands.lock().unwrap();
         let command = &commands[host_id][command_id];
 
@@ -387,19 +387,19 @@ impl CommandHandler {
                     UIAction::TextDialog |
                     UIAction::LogView |
                     UIAction::LogViewWithTimeControls =>
-                        Self::process_command_response(&command, new_state_update_sender, response),
+                        Self::process_command_response(command, new_state_update_sender, response),
                     UIAction::TextEditor => {
                         match response.request_type.clone() {
                             RequestType::Download { .. } => {
                                 if preferences.text_editor == crate::configuration::INTERNAL {
-                                    Self::process_download_for_internal_editor(&command, new_state_update_sender, response);
+                                    Self::process_download_for_internal_editor(command, new_state_update_sender, response);
                                 }
                                 else {
-                                    Self::process_download_for_external_editor(&command, &preferences.text_editor, new_state_update_sender, response);
+                                    Self::process_download_for_external_editor(command, &preferences.text_editor, new_state_update_sender, response);
                                 }
                             },
                             RequestType::Upload { local_file_path, metadata } => {
-                                Self::process_upload_file_response(&command, &local_file_path, metadata, false, new_state_update_sender, response);
+                                Self::process_upload_file_response(command, &local_file_path, metadata, false, new_state_update_sender, response);
                             },
                             _ => panic!("Invalid request type: {:?}", response.request_type)
                         }
@@ -549,7 +549,7 @@ impl CommandHandler {
         let command_result = match message_result {
             Ok(_) => {
                 if remove_file {
-                    file_handler::remove_file(&local_file_path).unwrap();
+                    file_handler::remove_file(local_file_path).unwrap();
                 }
                 else {
                     // Updates file hash in metadata.
@@ -619,7 +619,7 @@ impl CommandHandler {
     }
 
     fn remote_ssh_command(&self, host_id: &String) -> ShellCommand {
-        let host = self.host_manager.borrow().get_host(&host_id);
+        let host = self.host_manager.borrow().get_host(host_id);
 
         let ssh_settings = self.hosts_config.hosts[host_id]
                                             .connectors["ssh"]

@@ -72,8 +72,7 @@ impl MonitorManager {
                 new_monitors.push(monitor);
             }
 
-            let base_modules = new_monitors.iter().filter(|monitor| monitor.get_metadata_self().parent_module.is_some())
-                                                  .map(|monitor| monitor.get_metadata_self().parent_module.unwrap())
+            let base_modules = new_monitors.iter().filter_map(|monitor| monitor.get_metadata_self().parent_module)
                                                   .collect::<Vec<_>>();
 
             for monitor in new_monitors {

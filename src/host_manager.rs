@@ -61,7 +61,7 @@ impl HostManager {
         for (host_id, host_config) in config.hosts.iter() {
             log::debug!("Found configuration for host {}", host_id);
 
-            let host = match Host::new(&host_id, &host_config.address, &host_config.fqdn, &host_config.settings.clone()) {
+            let host = match Host::new(host_id, &host_config.address, &host_config.fqdn, &host_config.settings) {
                 Ok(host) => host,
                 Err(error) => {
                     log::error!("{}", error);
@@ -258,7 +258,7 @@ impl HostManager {
                     display_data.all_monitor_names.push(monitor_id.clone());
 
                     let header = match monitor_data.display_options.unit.is_empty() {
-                        true => format!("{}", monitor_data.display_options.display_text),
+                        true => monitor_data.display_options.display_text.to_string(),
                         false => format!("{} ({})", monitor_data.display_options.display_text, monitor_data.display_options.unit),
                     };
                     display_data.table_headers.push(header);

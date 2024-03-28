@@ -8,10 +8,6 @@ use crate::module::command::CommandResult;
 use crate::module::monitoring::MonitoringData;
 use crate::utils::ErrorMessage;
 
-// TODO: refactor, maybe split to multiple files, draw() isn't used anywhere but the CLI
-pub trait Frontend {
-    fn draw(display_data: &DisplayData);
-}
 
 #[derive(Default, Clone)]
 pub struct DisplayData {
@@ -54,7 +50,7 @@ impl Default for HostDisplayData {
     fn default() -> Self {
         HostDisplayData {
             host_state: HostState {
-                host: Host::new(&String::new(), &String::from("127.0.0.1"), &String::new(), &Vec::new()).unwrap(),
+                host: Host::new("", &String::from("127.0.0.1"), &String::new(), &Vec::new()).unwrap(),
                 status: HostStatus::default(),
                 just_initialized: false,
                 just_initialized_from_cache: false,

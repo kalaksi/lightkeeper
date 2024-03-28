@@ -208,7 +208,7 @@ impl ConnectionManager {
                             RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
                                 commands.par_iter().map(|command| {
                                     let mut par_connector = module_factory.new_connector(&connector_spec, &HashMap::new());
-                                    Self::process_command(&request.host, command_cache.clone(), &cache_policy, &mut par_connector, command)
+                                    Self::process_command(&request.host, command_cache.clone(), cache_policy, &mut par_connector, command)
                                 }).collect()
                             },
                             RequestType::Command { commands } => {
@@ -220,7 +220,7 @@ impl ConnectionManager {
                             RequestType::CommandFollowOutput { commands: _ } =>
                                 panic!("Follow output is currently not supported for stateless connectors"),
                             RequestType::Download { remote_file_path: file_path } =>
-                                vec![Self::process_download(&request.host, &mut connector, &file_path)],
+                                vec![Self::process_download(&request.host, &mut connector, file_path)],
                             RequestType::Upload { metadata: _, local_file_path } =>
                                 vec![Self::process_upload(&request.host, &mut connector, local_file_path)],
                             // Exit is handled earlier.
@@ -240,7 +240,7 @@ impl ConnectionManager {
 
                     let mut connector = connector_mutex.lock().unwrap();
                     if !connector.is_connected() {
-                        if let Err(error) = connector.connect(&request.host.ip_address) {
+                        if let Err(error) = connector.connect(request.host.ip_address) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
                             let response = RequestResponse::new_error(&request, error);
                             request.response_sender.send(response).unwrap();
@@ -268,10 +268,10 @@ impl ConnectionManager {
                                 if commands.len() != 1 {
                                     panic!("Follow output is only supported for a single command");
                                 }
-                                vec![Self::process_command_follow_output(&request, &mut connector, &commands.first().unwrap(), request.response_sender.clone())]
+                                vec![Self::process_command_follow_output(&request, &mut connector, commands.first().unwrap(), request.response_sender.clone())]
                             },
                             RequestType::Download { remote_file_path: file_path } =>
-                                vec![Self::process_download(&request.host, &mut connector, &file_path)],
+                                vec![Self::process_download(&request.host, &mut connector, file_path)],
                             RequestType::Upload { metadata: _, local_file_path } =>
                                 vec![Self::process_upload(&request.host, &mut connector, local_file_path)],
                             // Exit is handled earlier.
@@ -324,7 +324,7 @@ impl ConnectionManager {
             return Ok(ResponseMessage::not_found());
         }
         else {
-            let response_result = connector.send_message(&request_message, true);
+            let response_result = connector.send_message(request_message, true);
 
             if let Ok(response) = response_result {
                 if response.return_code != 0 {
@@ -353,7 +353,7 @@ impl ConnectionManager {
     ) -> Result<ResponseMessage, LkError> {
 
         log::debug!("[{}] Processing command: {}", request.host.name, request_message);
-        let mut response_message_result = connector.send_message(&request_message, false);
+        let mut response_message_result = connector.send_message(request_message, false);
 
         // Paradoxical name...
         let mut full_partial_message = String::new();
@@ -364,7 +364,7 @@ impl ConnectionManager {
                 response_message.message = full_partial_message.clone();
 
                 if response_message.is_partial {
-                    let response = RequestResponse::new(&request, vec![Ok(response_message)]);
+                    let response = RequestResponse::new(request, vec![Ok(response_message)]);
                     response_sender.send(response).unwrap();
 
                     response_message_result = connector.receive_partial_response();
@@ -387,27 +387,25 @@ impl ConnectionManager {
 
     fn process_download(host: &Host, connector: &mut Connector, file_path: &String) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Downloading file: {}", host.name, file_path);
-        match connector.download_file(&file_path) {
+        match connector.download_file(file_path) {
             Ok((metadata, contents)) => {
-                match file_handler::create_file(&host, &file_path, metadata, contents) {
+                match file_handler::create_file(host, file_path, metadata, contents) {
                     Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
                     Err(error) => Err(error.into()),
                 }
             },
-            Err(error) => Err(error.into()),
+            Err(error) => Err(error),
         }
     }
 
     fn process_upload(host: &Host, connector: &mut Connector, local_file_path: &String) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
-        match file_handler::read_file(&local_file_path) {
+        match file_handler::read_file(local_file_path) {
             Ok((metadata, contents)) => {
                 let result = connector.upload_file(&metadata, contents);
 
-                match result {
-                    Ok(_) => Ok(ResponseMessage::empty()),
-                    Err(error) => Err(error.into()),
-                }
+                // Returns empty or error as is.
+                result.map(|_| ResponseMessage::empty())
             },
             Err(error) => Err(error.into()),
         }

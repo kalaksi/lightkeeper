@@ -79,7 +79,7 @@ impl HostDataManagerModel {
 
         let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
 
-        let model = HostDataManagerModel {
+        HostDataManagerModel {
             display_data: display_data,
             update_receiver: Some(receiver),
             update_receiver_thread: None,
@@ -89,9 +89,7 @@ impl HostDataManagerModel {
             configuration_cache_settings: config.cache_settings,
             update_sender_prototype: Some(sender),
             ..Default::default()
-        };
-
-        model
+        }
     }
 
     fn receive_updates(&mut self) {

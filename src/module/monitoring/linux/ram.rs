@@ -56,7 +56,7 @@ impl MonitoringModule for Ram {
         // shared
         // cache
         let available = parts[6].parse::<u64>()
-            .map_err(|_| format!("Unsupported platform"))?;
+            .map_err(|_| String::from("Unsupported platform"))?;
 
         let usage_percent = 1.0 - (available as f64 / total as f64);
         let value = format!("{} / {} M  ({:.0} %)", total - available, total, usage_percent * 100.0);

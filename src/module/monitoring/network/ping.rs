@@ -24,8 +24,8 @@ pub struct Ping {
 impl Module for Ping {
     fn new(_settings: &HashMap<String, String>) -> Self {
         Ping {
-            count: _settings.get("count").and_then(|value| Some(value.parse().unwrap())).unwrap_or(2),
-            timeout: _settings.get("timeout").and_then(|value| Some(value.parse().unwrap())).unwrap_or(10),
+            count: _settings.get("count").map(|value| value.parse().unwrap()).unwrap_or(2),
+            timeout: _settings.get("timeout").map(|value| value.parse().unwrap()).unwrap_or(10),
         }
     }
 }
@@ -49,13 +49,9 @@ impl MonitoringModule for Ping {
         let mut command = ShellCommand::new();
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
-            command.arguments(vec![
-                "ping", "-c", self.count.to_string().as_str(), "-W", self.timeout.to_string().as_str(), host.ip_address.to_string().as_str()
-            ]);
-        }
-        else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec![
                 "ping", "-c", self.count.to_string().as_str(), "-W", self.timeout.to_string().as_str(), host.ip_address.to_string().as_str()
             ]);
@@ -72,7 +68,7 @@ impl MonitoringModule for Ping {
             Ok(DataPoint::value_with_level(average_latency.to_string(), Criticality::Normal))
         }
         else {
-            Ok(DataPoint::value_with_level(String::from(response.message), Criticality::Critical))
+            Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
         }
     }
 }

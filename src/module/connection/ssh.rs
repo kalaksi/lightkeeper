@@ -71,12 +71,12 @@ impl Module for Ssh2 {
 }
 
 impl ConnectionModule for Ssh2 {
-    fn connect(&mut self, address: &IpAddr) -> Result<(), LkError> {
+    fn connect(&mut self, address: IpAddr) -> Result<(), LkError> {
         if self.is_initialized {
             return Ok(())
         }
 
-        self.address = address.clone();
+        self.address = address;
 
         let socket_address = format!("{}:{}", address, self.port).to_socket_addrs().unwrap().next().unwrap();
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
@@ -259,7 +259,7 @@ impl ConnectionModule for Ssh2 {
     fn reconnect(&mut self) -> Result<(), LkError> {
         self.disconnect();
         log::debug!("Disconnected");
-        self.connect(&self.address.clone())
+        self.connect(self.address)
     }
 
     fn disconnect(&mut self) {
@@ -274,13 +274,7 @@ impl ConnectionModule for Ssh2 {
 impl From<ssh2::Error> for LkError {
     fn from(error: ssh2::Error) -> Self {
         match error.code() {
-            ssh2::ErrorCode::Session(code) => {
-                match code {
-                    // LIBSSH2_ERROR_KEX_FAILURE
-                    -5 => LkError::new(ErrorKind::HostKeyNotVerified, error),
-                    _ => LkError::new(ErrorKind::Other, error),
-                }
-            },
+            ssh2::ErrorCode::Session(-5) => LkError::new(ErrorKind::HostKeyNotVerified, error),
             _ => LkError::new(ErrorKind::Other, error),
         }
     }

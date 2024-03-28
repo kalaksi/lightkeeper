@@ -50,13 +50,9 @@ impl CommandModule for Shell {
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
-
-            command.arguments(vec!["docker", "exec", "-it", target_id, "/bin/sh"]);
-        }
-
-        else if host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
 
             command.arguments(vec!["docker", "exec", "-it", target_id, "/bin/sh"]);
         }

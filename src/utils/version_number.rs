@@ -18,7 +18,7 @@ impl VersionNumber {
         let mut parts = version_string.split('.').collect::<Vec<&str>>();
 
         // Drop everything after dashes.
-        parts = parts.iter().map(|part| part.split('-').next().unwrap_or(&"0")).collect();
+        parts = parts.iter().map(|part| part.split('-').next().unwrap_or("0")).collect();
 
         let major = parts.first().unwrap_or(&"0")
                          .parse::<u16>().unwrap_or_default();
@@ -41,7 +41,7 @@ impl FromStr for VersionNumber {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::from_string(&s.to_string()))
+        Ok(Self::from_string(s))
     }
 }
 
