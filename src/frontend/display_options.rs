@@ -100,6 +100,7 @@ pub enum DisplayStyle {
 pub enum UserInputFieldType {
     #[default]
     Text,
+    Bool,
     Integer,
     DecimalNumber,
     Option,
@@ -118,46 +119,45 @@ pub struct UserInputField {
 }
 
 impl UserInputField {
-    pub fn number<Stringable: ToString>(label: Stringable, default_value: Stringable) -> Self {
+    pub fn yes_no_question(label: &str) -> Self {
+        UserInputField {
+            field_type: UserInputFieldType::Bool,
+            label: label.to_string(),
+            ..Default::default()
+        }
+    }
+    pub fn number(label: &str, default_value: &str) -> Self {
         UserInputField {
             field_type: UserInputFieldType::Integer,
             label: label.to_string(),
             default_value: default_value.to_string(),
-            units: Vec::new(),
             validator_regexp: String::from("^\\d+$"),
-            additional_validator_regexp: String::new(),
-            options: Vec::new(),
-            option_descriptions: Vec::new(),
+            ..Default::default()
         }
     }
 
-    pub fn decimal_number<Stringable: ToString>(label: Stringable, default_value: Stringable) -> Self {
+    pub fn decimal_number(label: &str, default_value: &str) -> Self {
         UserInputField {
             field_type: UserInputFieldType::DecimalNumber,
             label: label.to_string(),
             default_value: default_value.to_string(),
-            units: Vec::new(),
             validator_regexp: String::from("^\\d+(\\.\\d+)?$"),
-            additional_validator_regexp: String::new(),
-            options: Vec::new(),
-            option_descriptions: Vec::new(),
+            ..Default::default()
         }
     }
 
-    pub fn number_with_units<Stringable: ToString>(label: Stringable, default_value: Stringable, units: Vec<String>) -> Self {
+    pub fn number_with_units(label: &str, default_value: &str, units: Vec<String>) -> Self {
         UserInputField {
             field_type: UserInputFieldType::Integer,
             label: label.to_string(),
             default_value: default_value.to_string(),
             validator_regexp: format!("^\\d+ ?({})$", units.join("|")),
-            additional_validator_regexp: String::new(),
             units: units,
-            options: Vec::new(),
-            option_descriptions: Vec::new(),
+            ..Default::default()
         }
     }
 
-    pub fn decimal_number_with_units<Stringable: ToString>(label: Stringable, default_value: Stringable, units: Vec<String>) -> Self {
+    pub fn decimal_number_with_units(label: &str, default_value: &str, units: Vec<String>) -> Self {
         UserInputField {
             field_type: UserInputFieldType::DecimalNumber,
             label: label.to_string(),
@@ -167,8 +167,7 @@ impl UserInputField {
             validator_regexp: format!("^\\d+(\\.\\d*)? ?({})$", units.join("|")),
             additional_validator_regexp: format!("^\\d+(\\.\\d+)? ?({})$", units.join("|")),
             units: units,
-            options: Vec::new(),
-            option_descriptions: Vec::new(),
+            ..Default::default()
         }
     }
 }
