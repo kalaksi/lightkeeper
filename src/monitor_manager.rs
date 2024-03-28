@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
 
+use crate::error::LkError;
 use crate::module::connection::RequestResponse;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
@@ -188,7 +189,7 @@ impl MonitorManager {
                 let commands = match get_monitor_connector_messages(&host, &info_provider, &DataPoint::empty()) {
                     Ok(messages) => messages,
                     Err(error) => {
-                        log::error!("Monitor \"{}\" failed: {}", info_provider.get_module_spec().id, error);
+                        log::error!("Monitor failed: {}", error);
                         return;
                     }
                 };
@@ -312,14 +313,13 @@ impl MonitorManager {
             let messages = match get_monitor_connector_messages(&host, &monitor, &DataPoint::empty()) {
                 Ok(messages) => messages,
                 Err(error) => {
-                    log::error!("Monitor \"{}\" failed: {}", monitor.get_module_spec().id, error);
-                    let ui_error = format!("{}: {}", monitor.get_module_spec().id, error);
+                    log::error!("Monitor failed: {}", error);
 
                     self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
                         host_name: host.name.clone(),
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
-                        errors: vec![ErrorMessage::new(Criticality::Error, ui_error)],
+                        errors: vec![ErrorMessage::new(Criticality::Error, error.to_string())],
                         ..Default::default()
                     }).unwrap();
 
@@ -519,14 +519,14 @@ impl MonitorManager {
 
 }
 
-fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoint: &DataPoint) -> Result<Vec<String>, String> {
+fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoint: &DataPoint) -> Result<Vec<String>, LkError> {
     let mut all_messages: Vec<String> = Vec::new();
 
     match monitor.get_connector_messages(host.clone(), parent_datapoint.clone()) {
         Ok(messages) => all_messages.extend(messages),
         Err(error) => {
             if !error.is_empty() {
-                return Err(error);
+                return Err(LkError::from(error).set_source(monitor.get_module_spec().id));
             }
         }
     }
@@ -535,7 +535,7 @@ fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoi
         Ok(message) => all_messages.push(message),
         Err(error) => {
             if !error.is_empty() {
-                return Err(error);
+                return Err(LkError::from(error).set_source(monitor.get_module_spec().id));
             }
         }
     }

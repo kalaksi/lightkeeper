@@ -339,7 +339,8 @@ impl ConnectionManager {
                 Ok(response)
             }
             else {
-                response_result
+                // Add module name to error details.
+                response_result.map_err(|error| error.set_source(connector.get_module_spec().id))
             }
         }
     }

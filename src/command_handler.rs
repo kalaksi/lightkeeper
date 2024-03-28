@@ -11,6 +11,7 @@ use std::rc::Rc;
 
 use crate::configuration::Hosts;
 use crate::enums::Criticality;
+use crate::error::LkError;
 use crate::file_handler;
 use crate::file_handler::write_file_metadata;
 use crate::host_manager::HostManager;
@@ -141,7 +142,7 @@ impl CommandHandler {
         let messages = match get_command_connector_messages(&host, command, parameters) {
             Ok(messages) => messages,
             Err(error) => {
-                log::error!("Command \"{}\" failed: {}", command_id, error);
+                log::error!("Command failed: {}", error);
                 state_update_sender.send(StateUpdateMessage {
                     host_name: host.name,
                     display_options: command.get_display_options(),
@@ -192,7 +193,7 @@ impl CommandHandler {
         let command = &commands[host_id][command_id];
 
         let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
-            log::error!("Command \"{}\" failed: {}", command_id, error);
+            log::error!("Command failed: {}", error);
             return;
         }).unwrap();
 
@@ -273,7 +274,7 @@ impl CommandHandler {
         let command_module = &commands[host_id][command_id];
 
         let connector_messages = get_command_connector_messages(&host, command_module, &parameters).map_err(|error| {
-            log::error!("Command \"{}\" failed: {}", command_id, error);
+            log::error!("Command failed: {}", error);
             return;
         }).unwrap();
 
@@ -318,7 +319,7 @@ impl CommandHandler {
         let command = &commands[host_id][command_id];
 
         let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
-            log::error!("Command \"{}\" failed: {}", command_id, error);
+            log::error!("Command failed: {}", error);
             return;
         }).unwrap();
 
@@ -648,14 +649,14 @@ impl CommandHandler {
     }
 }
 
-fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[String]) -> Result<Vec<String>, String> {
+fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[String]) -> Result<Vec<String>, LkError> {
     let mut all_messages: Vec<String> = Vec::new();
 
     match command.get_connector_messages(host.clone(), parameters.to_owned()) {
         Ok(messages) => all_messages.extend(messages),
         Err(error) => {
             if !error.is_empty() {
-                return Err(error);
+                return Err(LkError::from(error).set_source(command.get_module_spec().id))
             }
         }
     }
@@ -664,7 +665,7 @@ fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[
         Ok(message) => all_messages.push(message),
         Err(error) => {
             if !error.is_empty() {
-                return Err(error);
+                return Err(LkError::from(error).set_source(command.get_module_spec().id))
             }
         }
     }

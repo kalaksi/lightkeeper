@@ -6,6 +6,7 @@ use std::fmt;
 
 #[derive(Clone, Debug)]
 pub struct LkError {
+    source: String,
     kind: ErrorKind,
     message: String,
 }
@@ -13,6 +14,7 @@ pub struct LkError {
 impl LkError {
     pub fn new<Stringable: ToString>(kind: ErrorKind, message: Stringable) -> LkError {
         LkError {
+            source: String::new(),
             kind: kind,
             message: message.to_string(),
         }
@@ -20,6 +22,11 @@ impl LkError {
 
     pub fn new_other<Stringable: ToString>(message: Stringable) -> LkError {
         LkError::new(ErrorKind::Other, message)
+    }
+
+    pub fn set_source<Stringable: ToString>(mut self, source: Stringable) -> LkError {
+        self.source = source.to_string();
+        self
     }
 
     pub fn kind(&self) -> &ErrorKind {
@@ -33,7 +40,12 @@ impl LkError {
 
 impl fmt::Display for LkError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.message)
+        if self.source.is_empty() {
+            write!(f, "{}", self.message)
+        }
+        else {
+            write!(f, "{}: {}", self.source, self.message)
+        }
     }
 }
 
@@ -54,6 +66,8 @@ impl From<String> for LkError {
 
 #[derive(Clone, Default, Debug, Display)]
 pub enum ErrorKind {
+    /// The requested operation is not supported on the platform.
+    UnsupportedPlatform,
     /// Connection timed out, was refused or disconnected.
     ConnectionFailed,
     /// Encountered an unknown host key.
