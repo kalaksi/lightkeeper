@@ -100,7 +100,6 @@ pub enum DisplayStyle {
 pub enum UserInputFieldType {
     #[default]
     Text,
-    Bool,
     Integer,
     DecimalNumber,
     Option,
@@ -119,13 +118,6 @@ pub struct UserInputField {
 }
 
 impl UserInputField {
-    pub fn yes_no_question(label: &str) -> Self {
-        UserInputField {
-            field_type: UserInputFieldType::Bool,
-            label: label.to_string(),
-            ..Default::default()
-        }
-    }
     pub fn number(label: &str, default_value: &str) -> Self {
         UserInputField {
             field_type: UserInputFieldType::Integer,
@@ -157,7 +149,9 @@ impl UserInputField {
         }
     }
 
-    pub fn decimal_number_with_units(label: &str, default_value: &str, units: Vec<String>) -> Self {
+    pub fn decimal_number_with_units<Stringable: ToString>(label: &str, default_value: &str, units: Vec<Stringable>) -> Self {
+        let units = units.into_iter().map(|unit| unit.to_string()).collect::<Vec<_>>();
+
         UserInputField {
             field_type: UserInputFieldType::DecimalNumber,
             label: label.to_string(),

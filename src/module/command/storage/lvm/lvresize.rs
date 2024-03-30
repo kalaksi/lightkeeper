@@ -38,15 +38,7 @@ impl CommandModule for LVResize {
             display_text: String::from("Resize"),
             user_parameters: vec![
                 frontend::UserInputField::decimal_number_with_units("New size", "20G", vec![
-                    String::from("r"), String::from("R"),
-                    String::from("b"), String::from("B"),
-                    String::from("s"), String::from("S"),
-                    String::from("k"), String::from("K"),
-                    String::from("m"), String::from("M"),
-                    String::from("g"), String::from("G"),
-                    String::from("t"), String::from("T"),
-                    String::from("p"), String::from("P"),
-                    String::from("e"), String::from("E")
+                    "r", "R", "b", "B", "s", "S", "k", "K", "m", "M", "g", "G", "t", "T", "p", "P", "e", "E"
                 ]),
             ],
             ..Default::default()
