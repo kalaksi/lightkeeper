@@ -6,7 +6,7 @@ use std::fmt;
 
 #[derive(Clone, Debug)]
 pub struct LkError {
-    source: String,
+    source_id: String,
     kind: ErrorKind,
     message: String,
 }
@@ -14,7 +14,7 @@ pub struct LkError {
 impl LkError {
     pub fn new<Stringable: ToString>(kind: ErrorKind, message: Stringable) -> LkError {
         LkError {
-            source: String::new(),
+            source_id: String::new(),
             kind: kind,
             message: message.to_string(),
         }
@@ -25,7 +25,7 @@ impl LkError {
     }
 
     pub fn set_source<Stringable: ToString>(mut self, source: Stringable) -> LkError {
-        self.source = source.to_string();
+        self.source_id = source.to_string();
         self
     }
 
@@ -40,11 +40,11 @@ impl LkError {
 
 impl fmt::Display for LkError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.source.is_empty() {
+        if self.source_id.is_empty() {
             write!(f, "{}", self.message)
         }
         else {
-            write!(f, "{}: {}", self.source, self.message)
+            write!(f, "{}: {}", self.source_id, self.message)
         }
     }
 }
