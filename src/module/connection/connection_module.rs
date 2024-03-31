@@ -25,6 +25,10 @@ pub trait ConnectionModule : MetadataSupport + Module {
         Err(LkError::new_other("Not implemented"))
     }
 
+    fn verify_host_key(&mut self, _hostname: &str, _key_id: &str) -> Result<(), LkError> {
+        Err(LkError::new_other("Not implemented"))
+    }
+
     /// Check the connection status. Only relevant to modules that use a persistent connection.
     fn is_connected(&self) -> bool {
         false

@@ -174,7 +174,7 @@ ApplicationWindow {
             }
         }
 
-        function onError_received(criticality, message) {
+        function onErrorReceived(criticality, message) {
             if (criticality === "Critical") {
                 // TODO: something better. This is not really an alert dialog.
                 textDialog.text = message
@@ -184,13 +184,21 @@ ApplicationWindow {
                 snackbarContainer.addSnackbar(criticality, message)
             }
         }
+
+        function onVerificationRequested(hostId, connectorId, message, keyId) {
+            let text = message + "\n\n" + keyId
+            confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text, }) 
+            confirmationDialogLoader.item.onAccepted.connect(function() {
+                CommandHandler.verifyHostKey(hostId, connectorId, keyId)
+                CommandHandler.initializeHost(hostId)
+            })
+        }
     }
 
     Connections {
         target: CommandHandler
 
-        // Set up confirmation dialog on signal.
-        function onConfirmation_dialog_opened(text, hostId, commandId, commandParams) {
+        function onConfirmationDialogOpened(text, hostId, commandId, commandParams) {
             confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text }) 
             confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.execute_confirmed(hostId, commandId, commandParams))
         }
@@ -210,8 +218,8 @@ ApplicationWindow {
             commandOutputDialog.open()
         }
 
-        function onInput_dialog_opened(input_specs_json, hostId, commandId, commandParams) {
-            let inputSpecs = JSON.parse(input_specs_json)
+        function onInputDialogOpened(inputSpecsJson, hostId, commandId, commandParams) {
+            let inputSpecs = JSON.parse(inputSpecsJson)
 
             inputDialog.inputSpecs = inputSpecs
             // TODO: need to clear previous connections?
@@ -274,7 +282,7 @@ ApplicationWindow {
 
                         if (detailsView.hostId !== "") {
                             if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
-                                CommandHandler.initialize_host(detailsView.hostId)
+                                CommandHandler.initializeHost(detailsView.hostId)
                             }
                         }
                     }

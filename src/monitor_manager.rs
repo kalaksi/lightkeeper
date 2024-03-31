@@ -9,13 +9,11 @@ use crate::error::LkError;
 use crate::module::connection::RequestResponse;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
-use crate::enums::Criticality;
 use crate::module::connection::ResponseMessage;
 use crate::module::{monitoring::*, ModuleSpecification};
 use crate::module::ModuleFactory;
 use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, RequestType, CachePolicy };
-use crate::utils::ErrorMessage;
 
 
 // Default needs to be implemented because of Qt QObject requirements.
@@ -321,7 +319,7 @@ impl MonitorManager {
                         host_name: host.name.clone(),
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
-                        errors: vec![ErrorMessage::new(Criticality::Error, error.to_string())],
+                        errors: vec![error],
                         invocation_id: current_invocation_id,
                         ..Default::default()
                     }).unwrap();
@@ -393,7 +391,7 @@ impl MonitorManager {
                 let results_len = response.responses.len();
                 let (responses, errors): (Vec<_>, Vec<_>) =  response.responses.into_iter().partition(Result::is_ok);
                 let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-                let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err().message().to_owned())).collect::<Vec<_>>();
+                let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
                 // If CachePolicy::OnlyCache is used and an entry is not found, don't continue.
                 if responses.iter().any(|response| response.is_not_found()) {
@@ -451,7 +449,7 @@ impl MonitorManager {
                 };
 
                 for error in errors.iter() {
-                    log::error!("[{}] Error from monitor {}: {}", response.host.name, monitor_id, error.message);
+                    log::error!("[{}] Error from monitor {}: {}", response.host.name, monitor_id, error.message());
                 }
 
                 let cache_policy = match response.request_type {
@@ -478,7 +476,7 @@ impl MonitorManager {
                                 host_name: response.host.name.clone(),
                                 display_options: next_monitor.get_display_options(),
                                 module_spec: next_monitor.get_module_spec(),
-                                errors: vec![ErrorMessage::new(Criticality::Error, error.to_string())],
+                                errors: vec![error],
                                 invocation_id: response.invocation_id,
                                 ..Default::default()
                             }).unwrap();

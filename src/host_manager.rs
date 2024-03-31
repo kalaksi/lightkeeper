@@ -7,6 +7,8 @@ use std::sync::{Arc, Mutex};
 
 use serde_derive::{Deserialize, Serialize};
 
+use crate::error::LkError;
+use crate::frontend::frontend::VerificationRequest;
 use crate::module::platform_info;
 use crate::module::{
     ModuleSpecification,
@@ -236,13 +238,25 @@ impl HostManager {
 
                 host_state.update_status();
 
+                let (verification_requests, unhandled_errors): (Vec<_>, Vec<_>) = state_update.errors.into_iter()
+                    .partition(|error| error.kind() == &crate::error::ErrorKind::HostKeyNotVerified);
+
+                let verification_requests: Vec<_> = verification_requests.iter()
+                    .map(|error| VerificationRequest {
+                        source_id: error.source_id().to_owned(),
+                        key_id: error.parameter().to_owned().unwrap(),
+                        message: error.message().to_owned(),
+                    }) .collect();
+
+
                 // Send the state update to the front end.
                 for observer in observers.lock().unwrap().iter() {
                     observer.send(frontend::HostDisplayData {
                         host_state: host_state.clone(),
                         new_monitoring_data: new_monitoring_data.clone(),
                         new_command_result: new_command_results.clone(),
-                        new_errors: state_update.errors.clone(),
+                        new_errors: unhandled_errors.iter().cloned().map(ErrorMessage::from).collect(),
+                        verification_requests: verification_requests.clone(),
                         ..Default::default()
                     }).unwrap();
                 }
@@ -317,7 +331,7 @@ pub struct StateUpdateMessage {
     pub data_point: Option<DataPoint>,
     /// Only used with commands.
     pub command_result: Option<CommandResult>,
-    pub errors: Vec<ErrorMessage>,
+    pub errors: Vec<LkError>,
     /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
     pub invocation_id: u64,
     /// Stops the receiver thread.

@@ -36,9 +36,10 @@ pub struct CommandHandlerModel {
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
     hasFileChanged: qt_method!(fn(&self, local_file_path: QString, contents: QString) -> bool),
+    verifyHostKey: qt_method!(fn(&self, host_id: QString, connector_id: QString, key_id: QString)),
 
     // Host initialization methods.
-    initialize_host: qt_method!(fn(&self, host_id: QString)),
+    initializeHost: qt_method!(fn(&self, host_id: QString)),
     force_initialize_host: qt_method!(fn(&self, host_id: QString)),
     force_initialize_hosts: qt_method!(fn(&self)),
 
@@ -54,9 +55,9 @@ pub struct CommandHandlerModel {
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     details_dialog_opened: qt_signal!(invocation_id: u64),
-    input_dialog_opened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QStringList),
+    inputDialogOpened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QStringList),
     text_dialog_opened: qt_signal!(invocation_id: u64),
-    confirmation_dialog_opened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QStringList),
+    confirmationDialogOpened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QStringList),
     commandOutputDialogOpened: qt_signal!(title: QString, invocation_id: u64),
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
     textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
@@ -215,10 +216,10 @@ impl CommandHandlerModel {
 
         if !display_options.user_parameters.is_empty() {
             let input_specs: QString = QString::from(serde_json::to_string(&display_options.user_parameters).unwrap());
-            self.input_dialog_opened(input_specs, host_id, command_id, parameters);
+            self.inputDialogOpened(input_specs, host_id, command_id, parameters);
         }
         else if !display_options.confirmation_text.is_empty() {
-            self.confirmation_dialog_opened(QString::from(display_options.confirmation_text), host_id, command_id, parameters);
+            self.confirmationDialogOpened(QString::from(display_options.confirmation_text), host_id, command_id, parameters);
         }
         else {
             self.execute_confirmed(host_id, command_id, parameters);
@@ -353,7 +354,14 @@ impl CommandHandlerModel {
         self.command_handler.has_file_changed(&local_file_path, contents)
     }
 
-    fn initialize_host(&mut self, host_id: QString) {
+    fn verifyHostKey(&self, host_id: QString, connector_id: QString, key_id: QString) {
+        let host_id = host_id.to_string();
+        let connector_id = connector_id.to_string();
+        let key_id = key_id.to_string();
+        self.command_handler.verify_host_key(&host_id, &connector_id, &key_id);
+    }
+
+    fn initializeHost(&mut self, host_id: QString) {
         self.monitor_manager.refresh_platform_info(&host_id.to_string(), None);
         self.host_initializing(host_id);
     }

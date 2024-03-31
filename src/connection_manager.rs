@@ -195,8 +195,7 @@ impl ConnectionManager {
                     continue;
                 }
 
-                let mut connector_spec = request.connector_spec.as_ref().unwrap().clone();
-                connector_spec.module_type = ModuleType::Connector;
+                let connector_spec = request.connector_spec.as_ref().unwrap().clone();
                 let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
 
                 // Stateless connectors.
@@ -204,6 +203,17 @@ impl ConnectionManager {
                     worker_pool.install(|| {
                         log::debug!("[{}] Worker {} processing a stateless request", request.host.name, rayon::current_thread_index().unwrap());
                         let mut connector = module_factory.new_connector(&connector_spec, &HashMap::new());
+
+                        // Key verifications have to be done before anything else.
+                        match request.request_type {
+                            RequestType::KeyVerification { key_id } => {
+                                log::debug!("[{}] Verifying host key", request.host.name);
+                                connector.verify_host_key(&request.host.get_address(), &key_id).unwrap();
+                                return;
+                            },
+                            _ => {}
+                        }
+
                         let responses = match &request.request_type {
                             RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
                                 commands.par_iter().map(|command| {
@@ -223,8 +233,7 @@ impl ConnectionManager {
                                 vec![Self::process_download(&request.host, &mut connector, file_path)],
                             RequestType::Upload { metadata: _, local_file_path } =>
                                 vec![Self::process_upload(&request.host, &mut connector, local_file_path)],
-                            // Exit is handled earlier.
-                            RequestType::Exit => panic!(),
+                            _ => panic!(),
                         };
 
                         let response = RequestResponse::new(&request, responses);
@@ -237,12 +246,22 @@ impl ConnectionManager {
                     // Imagine MAX_WORKERS amount of requests sequentially for the same host and connector.
                     let host_connectors = stateful_connectors.get_mut(&request.host.name).unwrap();
                     let connector_mutex = host_connectors.get_mut(&connector_spec).unwrap();
-
                     let mut connector = connector_mutex.lock().unwrap();
+
+                    // Key verifications have to be done before anything else.
+                    match request.request_type.clone() {
+                        RequestType::KeyVerification { key_id } => {
+                            log::debug!("[{}] Verifying host key", request.host.name);
+                            connector.verify_host_key(&request.host.get_address(), &key_id).unwrap();
+                            continue;
+                        },
+                        _ => {}
+                    }
+
                     if !connector.is_connected() {
                         if let Err(error) = connector.connect(&request.host.get_address()) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
-                            let response = RequestResponse::new_error(&request, error);
+                            let response = RequestResponse::new_error(&request, error.set_source(connector.get_module_spec().id));
                             request.response_sender.send(response).unwrap();
                             continue;
                         }
@@ -274,8 +293,7 @@ impl ConnectionManager {
                                 vec![Self::process_download(&request.host, &mut connector, file_path)],
                             RequestType::Upload { metadata: _, local_file_path } =>
                                 vec![Self::process_upload(&request.host, &mut connector, local_file_path)],
-                            // Exit is handled earlier.
-                            RequestType::Exit => panic!(),
+                            _ => panic!(),
                         };
                         drop(connector);
 
@@ -461,6 +479,9 @@ pub enum RequestType {
     Upload {
         local_file_path: String,
         metadata: FileMetadata,
+    },
+    KeyVerification {
+        key_id: String,
     },
     /// Causes the receiver thread to exit.
     #[default]

@@ -31,7 +31,8 @@ pub struct HostDataManagerModel {
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     commandResultReceived: qt_signal!(command_result: QString, invocation_id: u64),
     monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant, invocation_id: u64),
-    error_received: qt_signal!(criticality: QString, error: QString),
+    errorReceived: qt_signal!(criticality: QString, error: QString),
+    verificationRequested: qt_signal!(host_id: QString, connector_id: QString, message: QString, key_id: QString),
 
     //
     // Slots
@@ -147,7 +148,16 @@ impl HostDataManagerModel {
                     }
 
                     for error in new_display_data.new_errors {
-                        self_pinned.borrow().error_received(QString::from(error.criticality.to_string()), QString::from(error.message));
+                        self_pinned.borrow().errorReceived(QString::from(error.criticality.to_string()), QString::from(error.message));
+                    }
+
+                    for request in new_display_data.verification_requests {
+                        self_pinned.borrow().verificationRequested(
+                            QString::from(host_state.host.name.clone()),
+                            QString::from(request.source_id),
+                            QString::from(request.message),
+                            QString::from(request.key_id),
+                        );
                     }
 
                     self_pinned.borrow().updateReceived(QString::from(host_state.host.name.clone()));
@@ -162,7 +172,7 @@ impl HostDataManagerModel {
                                 This version is still an early release and may be missing some features and contain bugs.  
                                 See https://github.com/kalaksi/lightkeeper for the issue tracker and some documentation.")
                 );
-                self.error_received(QString::from(Criticality::Critical.to_string()), QString::from(error.message));
+                self.errorReceived(QString::from(Criticality::Critical.to_string()), QString::from(error.message));
             }
 
             let receiver = self.update_receiver.take().unwrap();

@@ -34,6 +34,9 @@ pub struct HostDisplayData {
     pub new_monitoring_data: Option<(u64, MonitoringData)>,
     pub new_command_result: Option<(u64, CommandResult)>,
     pub new_errors: Vec<ErrorMessage>,
+    /// Verification requests from connectors. Usually for key verification.
+    /// Commands can already request (more diverse) user input so they don't use this.
+    pub verification_requests: Vec<VerificationRequest>,
     pub stop: bool,
 }
 
@@ -63,7 +66,16 @@ impl Default for HostDisplayData {
             new_monitoring_data: None,
             new_command_result: None,
             new_errors: Vec::new(),
+            verification_requests: Vec::new(),
             stop: false,
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct VerificationRequest {
+    pub source_id: String,
+    pub message: String,
+    /// Key fingerprint or similar identifier for the key.
+    pub key_id: String,
 }

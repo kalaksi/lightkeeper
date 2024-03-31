@@ -10,7 +10,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::configuration::Hosts;
-use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::file_handler;
 use crate::file_handler::write_file_metadata;
@@ -18,6 +17,7 @@ use crate::host_manager::HostManager;
 use crate::module::command::UIAction;
 use crate::module::connection::request_response::RequestResponse;
 use crate::module::module_factory::ModuleFactory;
+use crate::module::ModuleType;
 use crate::utils::*;
 use crate::{
     configuration::Preferences,
@@ -266,6 +266,23 @@ impl CommandHandler {
         self.invocation_id_counter
     }
 
+    pub fn verify_host_key(&self, host_id: &String, connector_id: &String, key_id: &String) {
+        let host = self.host_manager.borrow().get_host(host_id);
+        // Version numbers aren't currently used, so it's hardcoded here.
+        let module_spec = crate::module::ModuleSpecification::new_with_type(&connector_id, "0.0.1", ModuleType::Connector);
+
+        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+            connector_spec: Some(module_spec),
+            source_id: String::new(),
+            host: host.clone(),
+            invocation_id: 0,
+            response_sender: self.new_response_sender(),
+            request_type: RequestType::KeyVerification {
+                key_id: key_id.to_owned(),
+            },
+        }).unwrap();
+    }
+
     pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &[String]) -> ShellCommand {
         let host = self.host_manager.borrow().get_host(host_id);
         let mut command = self.remote_ssh_command(host_id);
@@ -418,7 +435,7 @@ impl CommandHandler {
         let command_id = &command.get_module_spec().id;
         let (messages, errors): (Vec<_>, Vec<_>) =  response.responses.into_iter().partition(Result::is_ok);
         let messages = messages.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-        let mut errors = errors.into_iter().map(|error| ErrorMessage::new(Criticality::Error, error.unwrap_err().to_string())).collect::<Vec<_>>();
+        let mut errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
         let mut result;
         if !messages.is_empty() {
@@ -452,13 +469,13 @@ impl CommandHandler {
                 Some(command_result)
             },
             Err(error) => {
-                errors.push(ErrorMessage::new(Criticality::Error, error));
+                errors.push(LkError::new_other(error));
                 None
             }
         };
 
         for error in errors.iter() {
-            log::error!("[{}] Error from command {}: {}", response.host.name, command_id, error.message);
+            log::error!("[{}] Error from command {}: {}", response.host.name, command_id, error.message());
         }
 
         state_update_sender.send(StateUpdateMessage {

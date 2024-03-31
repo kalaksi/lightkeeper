@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::{
     net::TcpStream,
     net::ToSocketAddrs,
@@ -7,6 +8,8 @@ use std::{
     io::Write,
 };
 
+use base64::Engine;
+use hex::FromHex;
 use chrono::Utc;
 use ssh2;
 use crate::{error::*, file_handler};
@@ -15,6 +18,9 @@ use crate::utils::strip_newline;
 use lightkeeper_module::connection_module;
 use crate::module::*;
 use crate::module::connection::*;
+
+static MODULE_NAME: &str = "ssh";
+
 
 #[connection_module(
     name="ssh",
@@ -82,14 +88,14 @@ impl ConnectionModule for Ssh2 {
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
         let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
 
-        log::info!("Connected to {}:{}", address, self.port);
+        log::info!("Connected to {}:{}", self.address, self.port);
 
         self.session = ssh2::Session::new().unwrap();
         self.session.set_tcp_stream(stream);
         self.session.handshake()?;
 
         if self.verify_host_key {
-            self.verify_host_key(address)?;
+            self.check_known_hosts(address, self.port)?;
         }
 
         if self.password.is_some() {
@@ -249,6 +255,48 @@ impl ConnectionModule for Ssh2 {
              .map(|_| Ok(()))?
     }
 
+    fn verify_host_key(&mut self, hostname: &str, key_id: &str) -> Result<(), LkError> {
+        // TODO: something's not right. self.address is unset when this function is visited even though connect()
+        // (and setting of self.address) should happen before key verification. Using hostname instead of self.address as a workaround.
+        let known_hosts_path = Self::get_known_hosts_path()?;
+
+        let mut known_hosts = self.session.known_hosts().unwrap();
+        known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
+                   .map_err(|error| LkError::new_other(format!("Failed to read known hosts file: {}", error)))?;
+
+        let host_and_port = format!("[{}]:{}", hostname, self.port);
+
+        // The session probably gets disconnected since receiving host key fails if not reconnecting.
+        let socket_address = format!("{}:{}", hostname, self.port).to_socket_addrs().unwrap().next().unwrap();
+        let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
+        let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
+
+        log::info!("Connected to {}:{}", hostname, self.port);
+        self.address = hostname.to_string();
+
+        self.session = ssh2::Session::new().unwrap();
+        self.session.set_tcp_stream(stream);
+        self.session.handshake()?;
+
+        if let Some((key, key_type)) = self.session.host_key() {
+            let key_string = Self::get_host_key_id(key_type, key);
+
+            if key_string == key_id {
+                known_hosts.add(&host_and_port, key, hostname, key_type.into())
+                           .map_err(|error| LkError::new_other(format!("Failed to add host key to known hosts: {}", error)))?;
+                known_hosts.write_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
+                           .map_err(|error| LkError::new_other(format!("Failed to write known hosts file: {}", error)))?;
+                Ok(())
+            }
+            else {
+                Err(LkError::new_other("Host key changed again?!"))
+            }
+        }
+        else {
+            Err(LkError::new_other("Failed to get host key"))
+        }
+    }
+
     fn is_connected(&self) -> bool {
         self.is_initialized
     }
@@ -266,9 +314,8 @@ impl ConnectionModule for Ssh2 {
 }
 
 impl Ssh2 {
-    fn verify_host_key(&self, hostname: &str) -> Result<(), LkError> {
-        let config_dir = file_handler::get_config_dir()?;
-        let known_hosts_path = config_dir.join("known_hosts");
+    fn check_known_hosts(&self, hostname: &str, port: u16) -> Result<(), LkError> {
+        let known_hosts_path = Self::get_known_hosts_path()?;
 
         // Create known_hosts if it's missing.
         if !known_hosts_path.exists() {
@@ -281,28 +328,48 @@ impl Ssh2 {
             log::warn!("Failed to read known hosts file: {}", error);
         }
 
-        if let Some((key, _key_type)) = self.session.host_key() {
-            match known_hosts.check(hostname, key) {
+        if let Some((key, key_type)) = self.session.host_key() {
+            let key_string = Self::get_host_key_id(key_type, key);
+
+            match known_hosts.check_port(hostname, port, key) {
                 ssh2::CheckResult::Match => Ok(()),
                 ssh2::CheckResult::NotFound => {
-                    let message = format!("Host key for '{}' not found in known hosts", hostname);
-                    Err(LkError::new(ErrorKind::HostKeyNotVerified, message))
+                    let message = format!("Host key for '{}' was not found in known hosts.\nDo you want to trust this key:", hostname);
+                    Err(LkError::host_key_unverified(MODULE_NAME, &message, &key_string))
                     // known_hosts.add(host, key, host, key_type.into()).unwrap();
                     // known_hosts.write_file(&file, KnownHostFileKind::OpenSSH).unwrap();
                 },
                 ssh2::CheckResult::Mismatch => {
-                    let message = format!("Host key for '{}' does not match a known host", hostname);
-                    Err(LkError::new(ErrorKind::HostKeyNotVerified, message))
+                    let message = format!("Host key for '{}' HAS CHANGED! Do you trust this NEW key:", hostname);
+                    Err(LkError::host_key_unverified(MODULE_NAME, &message, &key_string))
                 },
                 ssh2::CheckResult::Failure => {
                     let message = format!("Failed to get host key for '{}'", hostname);
-                    Err(LkError::new(ErrorKind::HostKeyNotVerified, message))
+                    Err(LkError::new_other(message))
                 }
             }
         }
         else {
-            Err(LkError::new(ErrorKind::HostKeyNotVerified, "Failed to get host key"))
+            Err(LkError::new_other("Failed to get host key"))
         }
+    }
+
+    fn get_known_hosts_path() -> Result<PathBuf, LkError> {
+        let config_dir = file_handler::get_config_dir()?;
+        Ok(config_dir.join("known_hosts"))
+    }
+
+    fn get_host_key_id(key_type: ssh2::HostKeyType, key: &[u8]) -> String {
+        let fp_hex = sha256::digest(key);
+        let fp_bytes = Vec::<u8>::from_hex(fp_hex.clone()).unwrap();
+        let fp_base64 = base64::engine::general_purpose::STANDARD_NO_PAD.encode(fp_bytes);
+
+        format!("{:?} {}\n\nFingerprints:\nSHA256 (hex): {}\nSHA256 (base64): {}",
+            key_type,
+            base64::engine::general_purpose::STANDARD_NO_PAD.encode(key),
+            fp_hex,
+            fp_base64
+        )
     }
 }
 
