@@ -9,6 +9,7 @@ pub struct LkError {
     source_id: String,
     kind: ErrorKind,
     message: String,
+    parameter: Option<String>,
 }
 
 impl LkError {
@@ -17,6 +18,16 @@ impl LkError {
             source_id: String::new(),
             kind: kind,
             message: message.to_string(),
+            parameter: None,
+        }
+    }
+
+    pub fn host_key_unverified<Stringable: ToString>(source_id: Stringable, message: Stringable, key_id: Stringable) -> LkError {
+        LkError {
+            source_id: source_id.to_string(),
+            kind: ErrorKind::HostKeyNotVerified,
+            message: message.to_string(),
+            parameter: Some(key_id.to_string())
         }
     }
 
@@ -29,12 +40,20 @@ impl LkError {
         self
     }
 
+    pub fn source_id(&self) -> &String {
+        &self.source_id
+    }
+
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     pub fn message(&self) -> &String {
         &self.message
+    }
+
+    pub fn parameter(&self) -> &Option<String> {
+        &self.parameter
     }
 }
 
