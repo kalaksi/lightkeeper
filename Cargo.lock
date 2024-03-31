@@ -669,6 +669,7 @@ dependencies = [
  "cstr",
  "dbus",
  "env_logger",
+ "hex",
  "lightkeeper_module",
  "log",
  "oping",

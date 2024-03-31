@@ -32,5 +32,6 @@ rayon = "1.7.0"
 rand = "0.8.5"
 regex = "1.10.3"
 base64 = "0.22.0"
+hex = "0.4.3"
 
 lightkeeper_module = { path = "macros/lightkeeper_module" }
