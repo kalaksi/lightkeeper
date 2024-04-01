@@ -32,7 +32,7 @@ impl CommandModule for RebuildDryrun {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("build-file"),
             display_text: String::from("nixos-rebuild dry-run"),
-            action: UIAction::TextDialog,
+            action: UIAction::FollowOutput,
             ..Default::default()
         }
     }
@@ -51,12 +51,18 @@ impl CommandModule for RebuildDryrun {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        if response.return_code == 0 {
-            Ok(CommandResult::new_hidden(response.message.clone()))
+        if response.is_partial {
+            let progress: u8 = 10;
+            Ok(CommandResult::new_partial(response.message.clone(), progress))
         }
         else {
-            Ok(CommandResult::new_hidden(response.message.clone())
-                             .with_criticality(crate::enums::Criticality::Error))
+            if response.return_code == 0 {
+                Ok(CommandResult::new_hidden(response.message.clone()))
+            }
+            else {
+                Ok(CommandResult::new_hidden(response.message.clone())
+                                .with_criticality(crate::enums::Criticality::Error))
+            }
         }
     }
 }
