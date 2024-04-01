@@ -70,7 +70,7 @@ impl MonitoringModule for Interface {
                 continue;
             }
 
-            let mut data_point = DataPoint::labeled_value(interface.ifname.clone(), interface.operstate.clone());
+            let mut data_point = DataPoint::labeled_value(interface.ifname.clone(), interface.operstate.clone().to_lowercase());
             if let Some(address) = &interface.address {
                 data_point.description = format!("{}", address);
             }
