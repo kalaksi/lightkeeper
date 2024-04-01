@@ -10,7 +10,6 @@ use crate::{
 
 
 #[allow(non_snake_case)]
-// TODO: use camelcase with qml models?
 #[derive(QObject, Default)]
 pub struct ConfigManagerModel {
     base: qt_base_class!(trait QObject),
@@ -57,7 +56,7 @@ pub struct ConfigManagerModel {
     endGroupConfiguration: qt_method!(fn(&self)),
 
     get_all_groups: qt_method!(fn(&self) -> QStringList),
-    add_group: qt_method!(fn(&self, group_name: QString)),
+    addGroup: qt_method!(fn(&self, group_name: QString)),
     remove_group: qt_method!(fn(&self, group_name: QString)),
     get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
 
@@ -292,7 +291,7 @@ impl ConfigManagerModel {
         all_groups.into_iter().map(QString::from).collect()
     }
 
-    fn add_group(&mut self, group_name: QString) {
+    fn addGroup(&mut self, group_name: QString) {
         let group_name = group_name.to_string();
         self.groups_config.groups.insert(group_name, Default::default());
     }
@@ -696,9 +695,9 @@ impl ConfigManagerModel {
         let group_name = group_name.to_string();
         let group_settings = self.groups_config.groups.get_mut(&group_name).unwrap();
 
-        group_settings.config_helper.ignored_commands = commands.into_iter().map(|command| command.to_string()).collect();
-        group_settings.config_helper.ignored_monitors = monitors.into_iter().map(|monitor| monitor.to_string()).collect();
-        group_settings.config_helper.ignored_connectors = connectors.into_iter().map(|connector| connector.to_string()).collect();
+        group_settings.config_helper.ignored_commands = commands.into_iter().map(ToString::to_string).collect();
+        group_settings.config_helper.ignored_monitors = monitors.into_iter().map(ToString::to_string).collect();
+        group_settings.config_helper.ignored_connectors = connectors.into_iter().map(ToString::to_string).collect();
     }
 
 }

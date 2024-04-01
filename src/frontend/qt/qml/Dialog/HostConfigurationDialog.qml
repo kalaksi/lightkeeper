@@ -311,7 +311,7 @@ LightkeeperDialog {
         }]
 
         onInputValuesGiven: function(inputValues) {
-            ConfigManager.add_group(inputValues[0])
+            ConfigManager.addGroup(inputValues[0])
             ConfigManager.endGroupConfiguration()
             refreshGroups()
         }
