@@ -14,6 +14,7 @@ const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
 const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
+pub const CURRENT_SCHEMA_VERSION: u16 = 2;
 
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -23,6 +24,7 @@ pub struct Configuration {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub display_options: Option<DisplayOptions>,
     pub cache_settings: CacheSettings,
+    pub schema_version: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -460,6 +462,7 @@ impl Configuration {
                     preferences: config.preferences.clone(),
                     cache_settings: config.cache_settings.clone(),
                     display_options: None,
+                    schema_version: config.schema_version.clone(),
                 };
 
                 let main_config = serde_yaml::to_string(&config_without_display_options).unwrap();
@@ -478,6 +481,41 @@ impl Configuration {
         }
 
         Ok(())
+    }
+
+    /// Helps keep the configuration up-to-date.
+    pub fn upgrade_schema(main_config: &mut Configuration, groups_config: &mut Groups) {
+        let default_groups = get_default_config_groups();
+
+        if main_config.schema_version.is_none() {
+            main_config.schema_version = Some(1);
+        }
+
+        let old_version = main_config.schema_version.unwrap();
+        while main_config.schema_version.unwrap() < CURRENT_SCHEMA_VERSION {
+            // NOTE: Default config groups should rarely be removed since they are used in older schema upgrades.
+            match main_config.schema_version.unwrap() {
+                1 => {
+                    groups_config.groups.entry(String::from("nixos")).or_insert(default_groups.groups["nixos"].to_owned());
+                },
+                _ => {}
+            }
+
+            main_config.schema_version = main_config.schema_version.map(|version| version + 1);
+        }
+
+        if old_version < main_config.schema_version.unwrap() {
+            log::info!("Upgraded configuration schema from version {} to {}", old_version, main_config.schema_version.unwrap());
+        }
+    }
+
+    pub fn is_schema_outdated(schema_version: Option<u16>) -> bool {
+        if let Some(version) = schema_version {
+            version < CURRENT_SCHEMA_VERSION
+        }
+        else {
+            true
+        }
     }
 
     fn is_default<T: Default + PartialEq>(t: &T) -> bool {

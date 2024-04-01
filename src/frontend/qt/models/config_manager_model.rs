@@ -17,7 +17,7 @@ pub struct ConfigManagerModel {
     //
     // Signals
     //
-    file_write_error: qt_signal!(config_dir: QString, error_message: QString),
+    fileError: qt_signal!(config_dir: QString, error_message: QString),
 
     //
     // Common
@@ -117,15 +117,27 @@ pub struct ConfigManagerModel {
 #[allow(non_snake_case)]
 impl ConfigManagerModel {
     pub fn new(config_dir: String,
-               main_config: Configuration,
+               mut main_config: Configuration,
                hosts_config: Hosts,
-               groups_config: Groups,
+               mut groups_config: Groups,
                module_metadatas: Vec<Metadata>) -> Self {
         
         let mut hosts_config = hosts_config;
         // Sort host groups alphabetically.
         for host in hosts_config.hosts.values_mut() {
             host.groups.sort_by_key(|key| key.to_lowercase());
+        }
+
+        if Configuration::is_schema_outdated(main_config.schema_version) {
+            Configuration::upgrade_schema(&mut main_config, &mut groups_config);
+
+            // If writes fail, log errors but continue nevertheless.
+            if let Err(error) = Configuration::write_main_config(&config_dir, &main_config) {
+                ::log::error!("Failed to write main configuration: {}", error);
+            }
+            if let Err(error) = Configuration::write_groups_config(&config_dir, &groups_config) {
+                ::log::error!("Failed to write groups configuration: {}", error);
+            }
         }
 
         ConfigManagerModel {
@@ -161,7 +173,7 @@ impl ConfigManagerModel {
                                                                 .split(' ').map(|arg| arg.to_string()).collect();
 
         if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
-            self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
         }
     }
 
@@ -199,7 +211,7 @@ impl ConfigManagerModel {
                 self.groups_config = groups_config;
             },
             Err(error) => {
-                self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+                self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
             }
         }
 
@@ -221,7 +233,7 @@ impl ConfigManagerModel {
             }
 
             if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
-                self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+                self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
                 false
             }
             else {
@@ -244,7 +256,7 @@ impl ConfigManagerModel {
     fn end_host_configuration(&mut self) {
         self.hosts_config_backup = None;
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
-            self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
         }
     }
 
@@ -259,7 +271,7 @@ impl ConfigManagerModel {
     fn endGroupConfiguration(&mut self) {
         self.groups_config_backup = None;
         if let Err(error) = Configuration::write_groups_config(&self.config_dir, &self.groups_config) {
-            self.file_write_error(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
         }
     }
 

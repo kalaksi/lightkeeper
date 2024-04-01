@@ -382,6 +382,7 @@ ApplicationWindow {
         }
     }
 
+    // TODO: Repeater didn't work, figure out why.
     ConfigHelperDialog {
         groupName: "linux"
         onConfigurationChanged: reloadConfiguration()
@@ -399,6 +400,11 @@ ApplicationWindow {
 
     ConfigHelperDialog {
         groupName: "systemd-service"
+        onConfigurationChanged: reloadConfiguration()
+    }
+
+    ConfigHelperDialog {
+        groupName: "nixos"
         onConfigurationChanged: reloadConfiguration()
     }
 
