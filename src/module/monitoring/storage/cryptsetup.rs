@@ -54,9 +54,11 @@ impl MonitoringModule for Cryptsetup {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
-        // TODO: centos support
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
 
             if self.only_crypttab {
                 Ok(String::from("grep -v '^#' /etc/crypttab"))

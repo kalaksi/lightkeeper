@@ -49,7 +49,9 @@ impl MonitoringModule for PhysicalVolume {
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
             command.arguments(vec!["pvs", "--separator", "|", "--options", "pv_name,pv_attr,pv_size,pv_free", "--units", "H"]);
             Ok(command.to_string())
         }

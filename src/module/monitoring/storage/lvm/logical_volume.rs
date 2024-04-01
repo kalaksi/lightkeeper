@@ -57,7 +57,9 @@ impl MonitoringModule for LogicalVolume {
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
             command.arguments(vec![
                 "lvs", "--separator", "|", "--options", "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent", "--units", "H"
             ]);
