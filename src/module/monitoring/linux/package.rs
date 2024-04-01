@@ -52,6 +52,11 @@ impl MonitoringModule for Package {
             command.arguments(vec!["dnf", "check-update", "--quiet", "--color=never", "--assumeno"]);
             Ok(command.to_string())
         }
+        else if host.platform.is_same_or_greater(Flavor::NixOS, "20") {
+            // On NixOS, things are more complicated. No easy way to get version update information, so ignoring for now.
+            Ok(String::new())
+
+        }
         else {
             Err(String::from("Unsupported platform"))
         }

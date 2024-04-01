@@ -318,7 +318,7 @@ impl ConnectionManager {
 
         // Some commands are supposed to not actually execute.
         if request_message.is_empty() {
-            log::debug!("[{}] Empty command", host.name);
+            log::debug!("[{}] Ignoring empty command", host.name);
             return Ok(ResponseMessage::empty());
         }
 
