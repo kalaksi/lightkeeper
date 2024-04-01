@@ -301,6 +301,7 @@ impl ModuleFactory {
             (command::linux::packages::UpdateAll::get_metadata(), command::linux::packages::UpdateAll::new_command_module),
             (command::linux::packages::Refresh::get_metadata(), command::linux::packages::Refresh::new_command_module),
             (command::linux::packages::Logs::get_metadata(), command::linux::packages::Logs::new_command_module),
+            (command::nixos::RebuildDryrun::get_metadata(), command::nixos::RebuildDryrun::new_command_module),
             (command::storage::FileSpaceUsage::get_metadata(), command::storage::FileSpaceUsage::new_command_module),
             (command::storage::lvm::Snapshot::get_metadata(), command::storage::lvm::Snapshot::new_command_module),
             (command::storage::lvm::LVResize::get_metadata(), command::storage::lvm::LVResize::new_command_module),

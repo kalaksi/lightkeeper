@@ -20,3 +20,5 @@ pub mod systemd;
 pub mod docker;
 
 pub mod storage;
+
+pub mod nixos;

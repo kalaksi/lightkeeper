@@ -11,3 +11,4 @@ pub mod linux;
 pub mod os;
 pub mod storage;
 pub mod systemd;
+pub mod nixos;
