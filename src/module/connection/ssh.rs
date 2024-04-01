@@ -36,6 +36,7 @@ static MODULE_NAME: &str = "ssh";
       agent_key_identifier => "Identifier for selecting key from ssh-agent. This is the comment part of the \
                                key (e.g. user@desktop). Default: empty (all keys are tried).",
       verify_host_key => "Whether to verify the host key using a known_hosts-file. Default: true.",
+      custom_known_hosts_path => "Path to a custom known_hosts file. Default: (inside configuration directory).",
     }
 )]
 pub struct Ssh2 {
@@ -50,13 +51,14 @@ pub struct Ssh2 {
     agent_key_identifier: Option<String>,
     connection_timeout: u16,
     verify_host_key: bool,
+    custom_known_hosts_path: Option<PathBuf>,
+
     // TODO: multiple parallel channels for multiple commands?
     open_channel: Option<ssh2::Channel>,
 }
 
 impl Module for Ssh2 {
     fn new(settings: &HashMap<String, String>) -> Self {
-        // This can fail for unknown reasons, no way to propery handle the error.
         let session = ssh2::Session::new().unwrap();
 
         Ssh2 {
@@ -72,6 +74,7 @@ impl Module for Ssh2 {
             agent_key_identifier: settings.get("agent_key_identifier").cloned(),
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
             verify_host_key: settings.get("verify_host_key").unwrap_or(&String::from("true")).parse::<bool>().unwrap(),
+            custom_known_hosts_path: settings.get("custom_known_hosts_path").map(|path| PathBuf::from(path)),
             open_channel: None,
         }
     }
@@ -257,29 +260,28 @@ impl ConnectionModule for Ssh2 {
 
     fn verify_host_key(&mut self, hostname: &str, key_id: &str) -> Result<(), LkError> {
         // TODO: something's not right. self.address is unset when this function is visited even though connect()
-        // (and setting of self.address) should happen before key verification. Using hostname instead of self.address as a workaround.
-        let known_hosts_path = Self::get_known_hosts_path()?;
+        // (and setting of self.address) should happen before key verification. Setting self.address again as a workaround.
+        self.address = hostname.to_string();
+
+        let known_hosts_path = self.get_known_hosts_path()?;
 
         let mut known_hosts = self.session.known_hosts().unwrap();
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
                    .map_err(|error| LkError::new_other(format!("Failed to read known hosts file: {}", error)))?;
 
-        let host_and_port = format!("[{}]:{}", hostname, self.port);
-
         // The session probably gets disconnected since receiving host key fails if not reconnecting.
-        let socket_address = format!("{}:{}", hostname, self.port).to_socket_addrs().unwrap().next().unwrap();
+        let socket_address = format!("{}:{}", self.address, self.port).to_socket_addrs().unwrap().next().unwrap();
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
         let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
 
-        log::info!("Connected to {}:{}", hostname, self.port);
-        self.address = hostname.to_string();
-
+        log::info!("Connected to {}:{}", self.address, self.port);
         self.session = ssh2::Session::new().unwrap();
         self.session.set_tcp_stream(stream);
         self.session.handshake()?;
 
         if let Some((key, key_type)) = self.session.host_key() {
             let key_string = Self::get_host_key_id(key_type, key);
+            let host_and_port = format!("[{}]:{}", hostname, self.port);
 
             if key_string == key_id {
                 known_hosts.add(&host_and_port, key, hostname, key_type.into())
@@ -315,7 +317,7 @@ impl ConnectionModule for Ssh2 {
 
 impl Ssh2 {
     fn check_known_hosts(&self, hostname: &str, port: u16) -> Result<(), LkError> {
-        let known_hosts_path = Self::get_known_hosts_path()?;
+        let known_hosts_path = self.get_known_hosts_path()?;
 
         // Create known_hosts if it's missing.
         if !known_hosts_path.exists() {
@@ -354,9 +356,14 @@ impl Ssh2 {
         }
     }
 
-    fn get_known_hosts_path() -> Result<PathBuf, LkError> {
-        let config_dir = file_handler::get_config_dir()?;
-        Ok(config_dir.join("known_hosts"))
+    fn get_known_hosts_path(&self) -> Result<PathBuf, LkError> {
+        if self.custom_known_hosts_path.is_some() {
+            Ok(self.custom_known_hosts_path.as_ref().unwrap().clone())
+        }
+        else {
+            let config_dir = file_handler::get_config_dir()?;
+            Ok(config_dir.join("known_hosts"))
+        }
     }
 
     fn get_host_key_id(key_type: ssh2::HostKeyType, key: &[u8]) -> String {
