@@ -326,9 +326,8 @@ impl Ssh2 {
         }
 
         let mut known_hosts = self.session.known_hosts().unwrap();
-        if let Err(error) = known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH) {
-            log::warn!("Failed to read known hosts file: {}", error);
-        }
+        known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
+                   .map_err(|error| LkError::new_other(format!("Failed to read known hosts file: {}", error)))?;
 
         if let Some((key, key_type)) = self.session.host_key() {
             let key_string = Self::get_host_key_id(key_type, key);
