@@ -48,6 +48,8 @@ groups:
       storage-lvm-lvrefresh: {}
 
   nixos:
+    monitors:
+      nixos-rebuild-generations: {}
     commands:
       nixos-rebuild-dryrun: {}
 

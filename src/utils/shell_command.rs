@@ -6,6 +6,7 @@ use std::process;
 pub struct ShellCommand {
     arguments: VecDeque<String>,
     piped_to: VecDeque<Vec<String>>,
+    pub ignore_stderr: bool,
     pub use_sudo: bool,
 }
 
@@ -14,6 +15,7 @@ impl ShellCommand {
         ShellCommand {
             arguments: VecDeque::new(),
             piped_to: VecDeque::new(),
+            ignore_stderr: false,
             use_sudo: false,
         }
     }
@@ -85,6 +87,10 @@ impl ToString for ShellCommand {
             };
 
             let mut command_string = format!("{:?}", command);
+
+            if self.ignore_stderr {
+                command_string = format!("{} 2>/dev/null", command_string);
+            }
 
             if !self.piped_to.is_empty() {
                 for piped_arguments in self.piped_to.iter() {
