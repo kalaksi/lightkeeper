@@ -49,8 +49,10 @@ impl CommandModule for LVRefresh {
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {
-            // TODO: centos?
+           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
 
             command.arguments(vec!["lvchange", "--refresh", lv_path]);
             Ok(command.to_string())
