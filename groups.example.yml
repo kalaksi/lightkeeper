@@ -47,6 +47,10 @@ groups:
       storage-lvm-lvremove: {}
       storage-lvm-lvrefresh: {}
 
+  nixos:
+    commands:
+      nixos-rebuild-dryrun: {}
+
   # Monitors and commands for Docker.
   docker:
     monitors:

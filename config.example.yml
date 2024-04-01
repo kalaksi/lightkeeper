@@ -42,34 +42,38 @@ display_options:
       command_order: ["shell", "reboot", "shutdown", "logs"]
       # Order of monitors.
       monitor_order: ["uptime", "load", "ram", "os", "kernel", "filesystem"]
-    storage:
+    nixos:
       priority: 2
+      color: "#80b3825d"
+      command_order: ["nixos-rebuild-dryrun"]
+    storage:
+      priority: 3
       color: "#80b3825d"
       command_order: ["storage-lvm-lvrefresh", "storage-lvm-snapshot", "storage-lvm-lvresize", "storage-lvm-lvremove"]
       monitor_order: ["filesystem", "storage-lvm-logical-volume", "storage-lvm-volume-group", "storage-lvm-physical-volume"]
     network:
-      priority: 3
+      priority: 4
       color: "#80b3825d"
       monitor_order: ["oping", "ping", "tcp-connect", "ssh", "network-dns", "interface", "network-routes"]
     systemd:
-      priority: 4
+      priority: 5
       color: "#8030d475"
       command_order: ["systemd-service-logs", "systemd-service-stop", "systemd-service-start", "systemd-service-mask", "systemd-service-unmask"]
     package:
-      priority: 5
+      priority: 6
       command_order: ["linux-packages-logs", "linux-packages-clean", "linux-packages-refresh", "linux-packages-update-all"]
     docker-compose:
-      priority: 6
+      priority: 7
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-compose-edit", "docker-compose-start", "docker-compose-stop", "docker-compose-build", "docker-compose-pull", "docker-compose-up", "docker-compose-shell", "docker-compose-logs"]
       collapsible_commands: ["docker-compose-start", "docker-compose-stop", "docker-compose-edit", "docker-compose-build", "docker-compose-pull", "docker-compose-up"]
     docker-containers:
-      priority: 7
+      priority: 8
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
     docker-images:
-      priority: 8
+      priority: 9
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
