@@ -45,7 +45,7 @@ display_options:
     nixos:
       priority: 2
       color: "#80b3825d"
-      command_order: ["nixos-rebuild-dryrun"]
+      command_order: ["nixos-collectgarbage", "nixos-rebuild-dryrun", "nixos-rebuild-switch"]
     storage:
       priority: 3
       color: "#80b3825d"
