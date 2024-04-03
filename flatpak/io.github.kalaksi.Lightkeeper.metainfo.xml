@@ -28,6 +28,17 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.13.0" date="2024-04-03">
+      <description>
+        <ul>
+          <li>SSH host key verification using internal known_hosts file or user-specified</li>
+          <li>Add proper support for NixOS</li>
+          <li>Basic monitors and commands for managing NixOS</li>
+          <li>Error handling improvements</li>
+          <li>Rounded app icon (#12)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.12.1" date="2024-03-09">
       <description>
         <ul>
