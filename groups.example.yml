@@ -51,8 +51,10 @@ groups:
     monitors:
       nixos-rebuild-generations: {}
     commands:
+      nixos-channel-update: {}
       nixos-rebuild-dryrun: {}
       nixos-rebuild-switch: {}
+      nixos-rebuild-rollback: {}
       nixos-collectgarbage: {}
 
   # Monitors and commands for Docker.
