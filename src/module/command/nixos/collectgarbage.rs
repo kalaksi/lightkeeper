@@ -11,13 +11,18 @@ use lightkeeper_module::command_module;
     name="nixos-collectgarbage",
     version="0.0.1",
     description="Collects garbage from the Nix store.",
+    settings={
+        delete_older_than => "Delete generations of profiles older than the specified number of days. Default: 7.",
+    }
 )]
 pub struct CollectGarbage {
+    delete_older_than: u32,
 }
 
 impl Module for CollectGarbage {
-    fn new(_settings: &HashMap<String, String>) -> CollectGarbage {
+    fn new(settings: &HashMap<String, String>) -> CollectGarbage {
         CollectGarbage {
+            delete_older_than: settings.get("delete_older_than").unwrap_or(&String::from("7")).parse::<u32>().unwrap_or(0),
         }
     }
 }
@@ -32,7 +37,7 @@ impl CommandModule for CollectGarbage {
             category: String::from("nixos"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("clear"),
-            display_text: String::from("Collect garbage"),
+            display_text: String::from("Delete old generations and collect garbage"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }
@@ -43,7 +48,7 @@ impl CommandModule for CollectGarbage {
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
         if host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
-            command.arguments(vec!["nix-collect-garbage", "-d"]); 
+            command.arguments(vec!["nix-collect-garbage", "--delete-older-than", format!("{}d", self.delete_older_than).as_str()]); 
         }
         else {
             return Err(String::from("Unsupported platform"));
