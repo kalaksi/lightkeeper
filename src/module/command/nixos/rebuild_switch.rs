@@ -15,12 +15,14 @@ use lightkeeper_module::command_module;
 )]
 pub struct RebuildSwitch {
     regex_path_count: Regex,
+    regex_build_count: Regex,
 }
 
 impl Module for RebuildSwitch {
     fn new(_settings: &HashMap<String, String>) -> RebuildSwitch {
         RebuildSwitch {
             regex_path_count: Regex::new(r"(?i)these (\d+) paths will be fetched").unwrap(),
+            regex_build_count: Regex::new(r"(?i)these (\d+) derivations will be built").unwrap(),
         }
     }
 }
@@ -55,21 +57,48 @@ impl CommandModule for RebuildSwitch {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+        // TODO: deduplicate this code with other rebuild-modules
         if response.is_partial {
             let mut progress: u8 = 0;
             let mut copied: u16 = 0;
+            let mut built: u16 = 0;
             let mut to_fetch: u16 = 0;
+            let mut to_build: u16 = 0;
 
             for line in response.message.lines() {
-                if let Some(captures) = self.regex_path_count.captures(line) {
-                    to_fetch = captures.get(1).unwrap().as_str().parse().unwrap();
+                if to_fetch == 0 {
+                    if let Some(captures) = self.regex_path_count.captures(line) {
+                        to_fetch = captures.get(1).unwrap().as_str().parse().unwrap();
+                    }
+                }
+                if to_build == 0 {
+                    if let Some(captures) = self.regex_build_count.captures(line) {
+                        to_build = captures.get(1).unwrap().as_str().parse().unwrap();
+                    }
+                }
+
+                if line.starts_with("activating the configuration") {
+                    progress = 90;
+                }
+                else if line.starts_with("building the system configuraion") {
                     progress = 10;
                 }
-                if line.contains("copying path '") {
+                else if line.starts_with("building '") {
+                    built += 1;
+                }
+                else if line.starts_with("copying path '") {
                     copied += 1;
-                    progress = 10 + (copied as f32 / to_fetch as f32 * 80.0) as u8;
                 }
             }
+
+            if to_build > 0 {
+                progress += (built as f32 / to_build as f32 * 35.0) as u8;
+            }
+
+            if to_fetch > 0 {
+                progress += (copied as f32 / to_fetch as f32 * 35.0) as u8;
+            }
+
             Ok(CommandResult::new_partial(response.message.clone(), progress))
         }
         else {
