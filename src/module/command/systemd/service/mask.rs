@@ -49,7 +49,12 @@ impl CommandModule for Mask {
 
             Err(format!("Invalid unit name: {}", service))
         }
-        else if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") {
+        else if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
+
             command.arguments(vec!["systemctl", "mask", service]);
             Ok(command.to_string())
         }
