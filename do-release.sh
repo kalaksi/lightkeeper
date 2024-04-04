@@ -18,6 +18,15 @@ sed -i 's|^version = ".*|version = "'$version_only'"|' Cargo.toml
 # Test build and update cargo.lock
 cargo build
 
+# Make sure all QML files are defined in resources
+qml_files=$(find src/frontend/qt/qml \( -name '*.qml' -or -name '*.js' \) | sed 's/^src\/frontend\/qt\/qml\///')
+for f in $qml_files; do
+    if ! fgrep -q "\"$f\"" "src/frontend/qt/resources_qml.rs"; then
+        echo "File $f not found in QML resource file"
+        exit 1
+    fi
+done
+
 pushd flatpak &>/dev/null
 
 echo -e "\n* Updating flatpak cargo-source and metainfo files..."
@@ -56,6 +65,7 @@ if [ -d ../io.github.kalaksi.Lightkeeper ]; then
         # Will fail if branch already exists.
         git checkout -b $minor_version
     fi
+    # Pushing the changes has to be done manually
     git commit -a -m "Update to version $version_only"
     cd -
 fi

@@ -5,6 +5,7 @@ extern crate qmetaobject;
 use qmetaobject::*;
 use super::{
     resources,
+    resources_qml,
     models::*,
 };
 use crate::{
@@ -37,6 +38,7 @@ impl QmlFrontend {
 
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
+        resources_qml::init_resources();
 
         let style = main_config.display_options.as_ref().unwrap().qtquick_style.as_str();
         if !style.is_empty() &&
@@ -67,12 +69,6 @@ impl QmlFrontend {
         config: configuration::Configuration) -> ExitReason {
 
         let sandboxed = env::var("FLATPAK_ID").is_ok();
-        let main_qml_path = match sandboxed {
-            // Inside flatpak.
-            true => "/app/qml/main.qml",
-            // If running from the source directory, use the QML file from there.
-            false => "src/frontend/qt/qml/main.qml",
-        };
 
         let command_handler_model = CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, config);
 
@@ -101,7 +97,7 @@ impl QmlFrontend {
             engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
             engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
             engine.set_object_property(QString::from("DesktopPortal"), qt_data_desktop_portal.pinned());
-            engine.load_file(QString::from(main_qml_path));
+            engine.load_url(QUrl::from(QString::from("qrc:/qml/main.qml")));
             engine.exec();
         }
 
