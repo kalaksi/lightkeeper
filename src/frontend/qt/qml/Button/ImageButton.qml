@@ -40,12 +40,12 @@ Item {
         checkable: root.checkable
 
         ToolTip.visible: root.tooltip !== "" && hovered
-        ToolTip.delay: Theme.tooltip_delay()
+        ToolTip.delay: Theme.tooltipDelay
         ToolTip.text: root.tooltip
 
         Row {
             anchors.centerIn: parent
-            spacing: Theme.spacing_normal()
+            spacing: Theme.spacingNormal
 
             Image {
                 source: root.imageSource
@@ -82,12 +82,12 @@ Item {
         checkable: root.checkable
 
         ToolTip.visible: root.tooltip !== "" && hovered
-        ToolTip.delay: Theme.tooltip_delay()
+        ToolTip.delay: Theme.tooltipDelay
         ToolTip.text: root.tooltip
 
         Row {
             anchors.centerIn: parent
-            spacing: Theme.spacing_normal()
+            spacing: Theme.spacingNormal
 
             Image {
                 source: root.imageSource
@@ -111,7 +111,7 @@ Item {
     }
 
     // TODO: provide this info somehow in qrc or theme file along the icon's path.
-    // Icon padding/margins vary a bit so patching a better sizing here.
+    /// Icon padding/margins vary a bit so patching a better sizing here.
     function getIconRelativeSize(resourcePath) {
         let icon_name = resourcePath.split("/").pop()
         if (icon_name === "start") {

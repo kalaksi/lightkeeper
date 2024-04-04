@@ -24,7 +24,7 @@ Item {
         anchors.centerIn: parent
 
         ToolTip.visible: hovered
-        ToolTip.delay: Theme.tooltip_delay()
+        ToolTip.delay: Theme.tooltipDelay
         ToolTip.text: "Refresh"
 
         onClicked: {

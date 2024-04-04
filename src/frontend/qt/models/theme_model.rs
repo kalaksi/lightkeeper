@@ -40,6 +40,8 @@ pub struct ThemeModel {
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
     colorForCriticality: qt_method!(fn(&self, criticality: QString) -> QString),
 
+    tooltipDelay: qt_property!(i32; CONST),
+
     // NOTE: Old methods, will be deprecated.
 
     spacing_loose: qt_method!(fn(&self) -> i8),
@@ -55,7 +57,6 @@ pub struct ThemeModel {
     opacity: qt_method!(fn(&self, is_enabled: bool) -> QString),
 
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
-    tooltip_delay: qt_method!(fn(&self) -> QVariant),
     animation_duration: qt_method!(fn(&self) -> QVariant),
     get_display_options: qt_method!(fn(&self) -> QVariant),
     icon_for_criticality: qt_method!(fn(&self, alert_level: QString) -> QString),
@@ -95,6 +96,7 @@ impl ThemeModel {
             animationDuration: 175,
             groupboxMinWidth: 450,
             groupboxMaxWidth: 650,
+            tooltipDelay: 800,
             ..Default::default()
         }
     }
@@ -167,10 +169,6 @@ impl ThemeModel {
         else {
             QString::from("0")
         }
-    }
-
-    fn tooltip_delay(&self) -> QVariant {
-        QVariant::from(800)
     }
 
     fn animation_duration(&self) -> QVariant {
