@@ -113,18 +113,14 @@ impl MonitoringModule for ImageUpdates {
                 }
             }
             else if let Ok(tag_details) = serde_json::from_str::<TagDetails>(response.message.as_str()) {
-                let images_for_arch = tag_details.images.iter()
+                let mut images_for_arch = tag_details.images.iter()
                     .filter(|image_details| Architecture::from(&image_details.architecture) == host.platform.architecture)
                     .collect::<Vec<_>>();
 
-                if images_for_arch.len() > 1 {
-                    // Multiple images for arch found.
-                    new_point.criticality = Criticality::Warning;
-                    new_point.label = String::from("Unknown");
-                    new_point.description = old_point.value;
-                }
-                else if images_for_arch.len() == 1 {
-                    let image_details = images_for_arch.first().unwrap();
+                if images_for_arch.len() >= 1 {
+                    // last_pushed is a string but because of the format sorting also works as string.
+                    images_for_arch.sort_by(|a, b| a.last_pushed.cmp(&b.last_pushed));
+                    let image_details = images_for_arch.last().unwrap();
                     let last_pushed = NaiveDateTime::parse_from_str(image_details.last_pushed.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap().and_utc();
                     let local_image_age = old_point.value.split_once(" ").unwrap().0.parse::<i64>().unwrap();
                     // When local image was pulled.
