@@ -1,5 +1,4 @@
 import QtQuick 2.15
-import QtQuick.Controls 1.4
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
 
@@ -324,6 +323,8 @@ LightkeeperDialog {
     GroupConfigurationDialog {
         id: groupConfigDialog
         visible: false
+        // contentItem's margin seems to affect this dialog's position, so compensating for it here.
+        x: -100 + Theme.marginDialog
         groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex]
     }
 
