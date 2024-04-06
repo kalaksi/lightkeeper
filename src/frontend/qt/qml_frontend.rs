@@ -38,7 +38,6 @@ impl QmlFrontend {
 
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
-        resources_qml::init_resources();
 
         let style = main_config.display_options.as_ref().unwrap().qtquick_style.as_str();
         if !style.is_empty() &&
@@ -97,7 +96,7 @@ impl QmlFrontend {
             engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
             engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
             engine.set_object_property(QString::from("DesktopPortal"), qt_data_desktop_portal.pinned());
-            engine.load_url(QUrl::from(QString::from("qrc:/qml/main.qml")));
+            self.load_qml(&mut engine);
             engine.exec();
         }
 
@@ -106,5 +105,17 @@ impl QmlFrontend {
 
     pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {
         self.update_sender_prototype.clone()
+    }
+
+    // In development, using file paths helps avoid recompilation when only QML changes.
+    #[cfg(debug_assertions)]
+    fn load_qml(&self, engine: &mut QmlEngine) {
+        engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn load_qml(&self, engine: &mut QmlEngine) {
+        resources_qml::init_resources();
+        engine.load_url(QUrl::from(QString::from("qrc:/qml/main.qml")));
     }
 }

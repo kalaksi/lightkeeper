@@ -1,5 +1,7 @@
 use qmetaobject::qrc;
 
+// Enabled only for non-debug builds. Debug-builds use file paths directly to avoid recompilation.
+#[cfg(not(debug_assertions))]
 pub fn init_resources() {
     qrc!(resources_qml, 
         "src/frontend/qt/qml" as "qml" {
