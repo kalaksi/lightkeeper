@@ -206,7 +206,7 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._selectedGroups[selectedGroupsList.currentIndex]
-                                ConfigManager.remove_host_from_group(root.hostId, selectedGroup)
+                                ConfigManager.removeHostFromGroup(root.hostId, selectedGroup)
                                 root.refreshGroups();
                             }
                         }
@@ -271,7 +271,7 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                ConfigManager.add_host_to_group(root.hostId, selectedGroup)
+                                ConfigManager.addHostToGroup(root.hostId, selectedGroup)
                                 refreshGroups()
                             }
                         }

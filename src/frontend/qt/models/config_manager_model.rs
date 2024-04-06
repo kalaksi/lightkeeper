@@ -45,8 +45,8 @@ pub struct ConfigManagerModel {
 
     getSelectedGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     getAvailableGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
-    add_host_to_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
-    remove_host_from_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
+    addHostToGroup: qt_method!(fn(&self, host_name: QString, group_name: QString)),
+    removeHostFromGroup: qt_method!(fn(&self, host_name: QString, group_name: QString)),
 
     //
     // Group configuration
@@ -338,7 +338,7 @@ impl ConfigManagerModel {
         available_groups.into_iter().map(QString::from).collect()
     }
 
-    fn add_host_to_group(&mut self, host_name: QString, group_name: QString) {
+    fn addHostToGroup(&mut self, host_name: QString, group_name: QString) {
         let host_name = host_name.to_string();
         let group_name = group_name.to_string();
         let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
@@ -346,7 +346,7 @@ impl ConfigManagerModel {
         host_settings.groups.push(group_name);
     }
 
-    fn remove_host_from_group(&mut self, host_name: QString, group_name: QString) {
+    fn removeHostFromGroup(&mut self, host_name: QString, group_name: QString) {
         let host_name = host_name.to_string();
         let group_name = group_name.to_string();
         let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
