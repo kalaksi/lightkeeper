@@ -6,6 +6,7 @@ import QtQuick.Layouts 1.11
 import "../StyleOverride"
 import "../Button"
 import "../Text"
+import "../Misc"
 import "../js/Utils.js" as Utils
 import ".."
 
@@ -13,10 +14,10 @@ import ".."
 LightkeeperDialog {
     id: root
     property string hostId: ""
-    property int buttonSize: 42
-    property var hostSettings: JSON.parse(ConfigManager.get_host_settings(hostId))
-    property var _selectedGroups: ConfigManager.get_selected_groups(hostId)
-    property var _availableGroups: ConfigManager.get_available_groups(hostId)
+    property int buttonSize: 38
+    property var hostSettings: JSON.parse(ConfigManager.getHostSettings(hostId))
+    property var _selectedGroups: ConfigManager.getSelectedGroups(hostId)
+    property var _availableGroups: ConfigManager.getAvailableGroups(hostId)
     property int _contentWidth: 360
     property bool _loading: true
     title: "Host details"
@@ -42,12 +43,12 @@ LightkeeperDialog {
         // TODO: GUI for host settings (UseSudo etc.)
 
         if (Utils.isIpv4OrIpv6Address(hostAddressField.text)) {
-            ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
+            ConfigManager.setHostSettings(root.hostId, hostIdField.text, JSON.stringify({
                 address: hostAddressField.text,
             }))
         }
         else {
-            ConfigManager.set_host_settings(root.hostId, hostIdField.text, JSON.stringify({
+            ConfigManager.setHostSettings(root.hostId, hostIdField.text, JSON.stringify({
                 fqdn: hostAddressField.text,
             }))
         }
@@ -75,14 +76,13 @@ LightkeeperDialog {
         id: content
         visible: !root._loading
         anchors.fill: parent
-        anchors.margins: Theme.marginDialog
+        anchors.margins: 100
         anchors.topMargin: Theme.marginDialogTop
         anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
 
         Column {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: root._contentWidth
+            Layout.fillWidth: true
 
             Label {
                 text: "Name"
@@ -101,8 +101,7 @@ LightkeeperDialog {
         }
 
         Column {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: root._contentWidth
+            Layout.fillWidth: true
 
             Label {
                 text: "IP Address or domain name"
@@ -132,160 +131,190 @@ LightkeeperDialog {
             Layout.alignment: Qt.AlignHCenter
         }
 
-        Row {
-            spacing: Theme.spacingNormal
+        ColumnLayout {
+            spacing: 0
 
-            Layout.alignment: Qt.AlignHCenter
             Layout.fillHeight: true
-            Layout.preferredWidth: root._contentWidth
+            Layout.fillWidth: true
 
-            TabView {
-                id: tabView
-                width: parent.width
-                height: parent.height
+            TabBar {
+                id: tabBar
+                currentIndex: 0
+                height: 40
 
-                property string _selectedGroup: ""
-                // Clearing _selectedGroup on tab change would be simpler, but couldn't find a way to detect a tab change.
-                property int _selectedGroupTab: -1
+                Layout.fillWidth: true
 
-
-                Tab {
-                    title: `Selected (${root._selectedGroups.length})    `
-
-                    ListView {
-                        id: selectedGroupsList
-                        clip: true
-                        // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
-                        boundsBehavior: Flickable.StopAtBounds
-
-                        ScrollBar.vertical: ScrollBar {
-                            active: true
-                        }
-
-                        model: root._selectedGroups
-                        delegate: ItemDelegate {
-                            width: selectedGroupsList.width
-                            text: modelData
-                            highlighted: tabView.isSelected(modelData)
-                            onClicked: tabView.selectGroup(modelData, tabView.currentIndex)
-                        }
-                    }
+                TabButton {
+                    text: `Selected (${root._selectedGroups.length})`
                 }
 
-                Tab {
-                    title: `Available (${root._availableGroups.length})`
-
-                    ListView {
-                        id: availableGroupsList
-                        clip: true
-                        // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
-                        boundsBehavior: Flickable.StopAtBounds
-
-                        ScrollBar.vertical: ScrollBar {
-                            active: true
-                        }
-
-                        model: root._availableGroups
-
-                        delegate: ItemDelegate {
-                            width: availableGroupsList.width
-                            text: modelData
-                            highlighted: tabView.isSelected(modelData)
-                            onClicked: tabView.selectGroup(modelData, tabView.currentIndex)
-                        }
-                    }
-                }
-
-                function selectGroup(group, tabIndex) {
-                    if (tabView.isSelected(group)) {
-                        tabView._selectedGroup = ""
-                        tabView._selectedGroupTab = -1
-                    }
-                    else {
-                        tabView._selectedGroup = group 
-                        tabView._selectedGroupTab = tabIndex
-                    }
-                }
-
-                function isSelected(group) {
-                    return tabView._selectedGroup === group &&
-                           tabView._selectedGroupTab === tabView.currentIndex
+                TabButton {
+                    text: `Available (${root._availableGroups.length})`
                 }
             }
 
-            // Add, remove and configure buttons.
-            ColumnLayout {
-                width: configButton.width
-                height: tabView.height
-                spacing: Theme.spacingNormal
+            StackLayout {
+                id: tabStackLayout
+                currentIndex: tabBar.currentIndex
 
-                property bool isValidGroupSelection: tabView._selectedGroup !== "" && tabView._selectedGroupTab === tabView.currentIndex
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
-                ImageButton {
-                    id: addButton
-                    visible: tabView.currentIndex === 1
-                    enabled: parent.isValidGroupSelection
-                    imageSource: "qrc:/main/images/button/add"
-                    size: root.buttonSize
-                    onClicked: {
-                        ConfigManager.add_host_to_group(root.hostId, tabView._selectedGroup)
-                        refreshGroups()
+                RowLayout {
+                    BorderRectangle {
+                        borderColor: Theme.borderColor
+                        backgroundColor: Theme.backgroundColor
+                        border: 1
+
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
+
+                        ListView {
+                            id: selectedGroupsList
+                            anchors.fill: parent
+                            clip: true
+                            // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
+                            boundsBehavior: Flickable.StopAtBounds
+
+
+                            ScrollBar.vertical: ScrollBar {
+                                active: true
+                            }
+
+                            model: root._selectedGroups
+                            delegate: ItemDelegate {
+                                width: selectedGroupsList.width
+                                text: modelData
+                                highlighted: ListView.isCurrentItem
+                                onClicked: selectedGroupsList.currentIndex = index
+                            }
+                        }
                     }
 
-                    Layout.topMargin: 30
+                    // Add, remove and configure buttons.
+                    ColumnLayout {
+                        width: root.buttonSize
+                        spacing: Theme.spacingNormal
+                        layoutDirection: Qt.LeftToRight
+
+                        Layout.fillHeight: true
+
+                        ImageButton {
+                            id: removeButton
+                            enabled: selectedGroupsList.currentIndex !== -1
+                            imageSource: "qrc:/main/images/button/remove"
+                            size: root.buttonSize
+                            onClicked: {
+                                let selectedGroup = root._selectedGroups[selectedGroupsList.currentIndex]
+                                ConfigManager.remove_host_from_group(root.hostId, selectedGroup)
+                                root.refreshGroups();
+                            }
+                        }
+
+                        ImageButton {
+                            enabled: selectedGroupsList.currentIndex !== -1
+                            imageSource: "qrc:/main/images/button/configure"
+                            size: root.buttonSize
+                            onClicked: {
+                                groupConfigDialog.groupName = root._selectedGroups[selectedGroupsList.currentIndex]
+                                groupConfigDialog.open()
+                            }
+                        }
+
+                        // Spacer
+                        Item {
+                            Layout.fillHeight: true
+                        }
+                    }
                 }
 
-                ImageButton {
-                    id: removeButton
-                    visible: tabView.currentIndex === 0
-                    enabled: parent.isValidGroupSelection
-                    imageSource: "qrc:/main/images/button/remove"
-                    size: root.buttonSize
-                    onClicked: {
-                        ConfigManager.remove_host_from_group(root.hostId, tabView._selectedGroup)
-                        // Forces re-evaluation of lists.
-                        root._selectedGroups = ConfigManager.get_selected_groups(root.hostId)
-                        root._availableGroups = ConfigManager.get_available_groups(root.hostId)
+                RowLayout {
+                    BorderRectangle {
+                        borderColor: Theme.borderColor
+                        backgroundColor: Theme.backgroundColor
+                        border: 1
+
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
+
+                        ListView {
+                            id: availableGroupsList
+                            anchors.fill: parent
+                            clip: true
+                            // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
+                            boundsBehavior: Flickable.StopAtBounds
+
+                            ScrollBar.vertical: ScrollBar {
+                                active: true
+                            }
+
+                            model: root._availableGroups
+
+                            delegate: ItemDelegate {
+                                width: availableGroupsList.width
+                                text: modelData
+                                highlighted: ListView.isCurrentItem
+                                onClicked: availableGroupsList.currentIndex = index
+                            }
+                        }
                     }
 
-                    Layout.topMargin: 30
-                }
+                    ColumnLayout {
+                        width: root.buttonSize
+                        height: tabStackLayout.height
+                        spacing: Theme.spacingNormal
 
-                ImageButton {
-                    id: configButton
-                    enabled: parent.isValidGroupSelection
-                    imageSource: "qrc:/main/images/button/configure"
-                    size: root.buttonSize
-                    onClicked: groupConfigDialog.open()
-                }
+                        ImageButton {
+                            id: addButton
+                            enabled: availableGroupsList.currentIndex !== -1
+                            imageSource: "qrc:/main/images/button/add"
+                            size: root.buttonSize
+                            onClicked: {
+                                let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
+                                ConfigManager.add_host_to_group(root.hostId, selectedGroup)
+                                refreshGroups()
+                            }
+                        }
 
-                // Spacer
-                Item {
-                    Layout.fillHeight: true
-                }
+                        ImageButton {
+                            enabled: availableGroupsList.currentIndex !== -1
+                            imageSource: "qrc:/main/images/button/configure"
+                            size: root.buttonSize
+                            onClicked: {
+                                let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
+                                groupConfigDialog.groupName = selectedGroup
+                                groupConfigDialog.open()
+                            }
+                        }
 
-                ImageButton {
-                    id: createGroupButton
-                    visible: tabView.currentIndex === 1
-                    imageSource: "qrc:/main/images/button/group-new"
-                    tooltip: "Create new group"
-                    size: root.buttonSize
+                        // Spacer
+                        Item {
+                            Layout.fillHeight: true
+                        }
 
-                    onClicked: groupAddDialog.open()
-                }
+                        ImageButton {
+                            id: createGroupButton
+                            imageSource: "qrc:/main/images/button/group-new"
+                            tooltip: "Create new group"
+                            size: root.buttonSize
 
-                ImageButton {
-                    id: deleteGroupButton
-                    visible: tabView.currentIndex === 1
-                    imageSource: "qrc:/main/images/button/delete"
-                    tooltip: "Delete group"
-                    size: root.buttonSize
+                            onClicked: groupAddDialog.open()
+                        }
 
-                    onClicked: {
-                        ConfigManager.begin_group_configuration()
-                        ConfigManager.remove_group(tabView._selectedGroup)
-                        ConfigManager.endGroupConfiguration()
-                        refreshGroups()
+                        ImageButton {
+                            id: deleteGroupButton
+                            imageSource: "qrc:/main/images/button/delete"
+                            tooltip: "Delete group"
+                            size: root.buttonSize
+
+                            onClicked: {
+                                let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
+                                ConfigManager.begin_group_configuration()
+                                ConfigManager.remove_group(selectedGroup)
+                                ConfigManager.endGroupConfiguration()
+                                refreshGroups()
+                            }
+                        }
                     }
                 }
             }
@@ -295,7 +324,7 @@ LightkeeperDialog {
     GroupConfigurationDialog {
         id: groupConfigDialog
         visible: false
-        groupName: tabView._selectedGroup
+        groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex]
     }
 
     InputDialog {
@@ -327,8 +356,8 @@ LightkeeperDialog {
 
     // Forces re-evaluation of lists.
     function refreshGroups() {
-        root._selectedGroups = ConfigManager.get_selected_groups(root.hostId)
-        root._availableGroups = ConfigManager.get_available_groups(root.hostId)
+        root._selectedGroups = ConfigManager.getSelectedGroups(root.hostId)
+        root._availableGroups = ConfigManager.getAvailableGroups(root.hostId)
     }
 
     function fieldsAreValid() {

@@ -37,14 +37,14 @@ pub struct ConfigManagerModel {
     add_host: qt_method!(fn(&self, host_name: QString)),
     removeHost: qt_method!(fn(&self, host_name: QString)),
     // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
-    get_host_settings: qt_method!(fn(&self, host_name: QString) -> QString),
-    set_host_settings: qt_method!(fn(&self, old_host_name: QString, new_host_name: QString, host_settings_json: QString)),
+    getHostSettings: qt_method!(fn(&self, host_name: QString) -> QString),
+    setHostSettings: qt_method!(fn(&self, old_host_name: QString, new_host_name: QString, host_settings_json: QString)),
     begin_host_configuration: qt_method!(fn(&self)),
     cancel_host_configuration: qt_method!(fn(&self)),
     end_host_configuration: qt_method!(fn(&self)),
 
-    get_selected_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
-    get_available_groups: qt_method!(fn(&self, host_name: QString) -> QStringList),
+    getSelectedGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
+    getAvailableGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     add_host_to_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
     remove_host_from_group: qt_method!(fn(&self, host_name: QString, group_name: QString)),
 
@@ -275,14 +275,14 @@ impl ConfigManagerModel {
         }
     }
 
-    fn get_host_settings(&self, host_name: QString) -> QString {
+    fn getHostSettings(&self, host_name: QString) -> QString {
         let host_name = host_name.to_string();
         let host_settings = self.hosts_config.hosts.get(&host_name).unwrap_or(&Default::default()).clone();
 
         QString::from(serde_json::to_string(&host_settings).unwrap())
     }
 
-    fn set_host_settings(&mut self, old_host_name: QString, new_host_name: QString, host_settings_json: QString) {
+    fn setHostSettings(&mut self, old_host_name: QString, new_host_name: QString, host_settings_json: QString) {
         let old_host_name = old_host_name.to_string();
         let new_host_name = new_host_name.to_string();
         let host_settings: HostSettings = serde_json::from_str(&host_settings_json.to_string()).unwrap();
@@ -313,7 +313,7 @@ impl ConfigManagerModel {
         self.groups_config.groups.remove(&group_name);
     }
 
-    fn get_selected_groups(&self, host_name: QString) -> QStringList {
+    fn getSelectedGroups(&self, host_name: QString) -> QStringList {
         let host_name = host_name.to_string();
         let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
         let groups_sorted = {
@@ -325,7 +325,7 @@ impl ConfigManagerModel {
         groups_sorted.into_iter().map(QString::from).collect()
     }
 
-    fn get_available_groups(&self, host_name: QString) -> QStringList {
+    fn getAvailableGroups(&self, host_name: QString) -> QStringList {
         let host_name = host_name.to_string();
         let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
 
