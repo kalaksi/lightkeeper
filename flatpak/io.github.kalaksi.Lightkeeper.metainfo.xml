@@ -28,6 +28,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.14.0" date="2024-04-07">
+      <description>
+        <ul>
+          <li>Update for config group list implementation in host settings</li>
+          <li>Adds QML files to a resource file to simplify packaging</li>
+          <li>Middle-click paste for terminal view</li>
+          <li>Some bugfixes</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.13.0" date="2024-04-03">
       <description>
         <ul>
