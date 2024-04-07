@@ -107,6 +107,16 @@ Item {
         }
     }
 
+    // Adds middle-click paste functionality.
+    MouseArea {
+        anchors.fill: terminal
+        acceptedButtons: Qt.MiddleButton
+        propagateComposedEvents: true
+        cursorShape: Qt.IBeamCursor
+
+        onClicked: terminal.pasteSelection()
+    }
+
     Repeater {
         id: matchHighlights
         anchors.fill: terminal
