@@ -79,7 +79,7 @@ Rectangle {
         id: animation
 
         NumberAnimation {
-            to: 1.0
+            to: 0.8
             duration: root.fadeDuration
         }
 
@@ -90,6 +90,19 @@ Rectangle {
         NumberAnimation {
             to: 0.0
             duration: root.fadeDuration
+        }
+    }
+
+    // When hovering, set opacity to 1.0 and stop the animation.
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        onEntered: {
+            animation.stop()
+            root.opacity = 1.0
+        }
+        onExited: {
+            animation.start()
         }
     }
 
