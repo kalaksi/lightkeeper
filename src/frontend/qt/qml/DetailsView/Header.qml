@@ -18,7 +18,6 @@ Item {
     property bool showOpenInWindowButton: false
     property bool showSaveButton: false
     property bool disableSaveButton: false
-    property int pendingInvocations: 0
     property var tabs: []
     property alias tabIndex: tabBar.currentIndex
     property bool _maximized: false
@@ -76,13 +75,6 @@ Item {
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-        }
-
-        SmallText {
-            id: jobsText
-            rightPadding: Theme.spacingLoose * 2
-            text: root.pendingInvocations + " jobs left"
-            color: root.pendingInvocations > 0 ? Theme.textColor : Theme.disabledTextColor
         }
 
         RefreshButton {

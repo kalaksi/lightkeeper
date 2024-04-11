@@ -14,6 +14,7 @@ import "js/Utils.js" as Utils
 
 ApplicationWindow {
     property var _detailsDialogs: {}
+    property int errorCount: 0
 
     id: root
     visible: true
@@ -53,8 +54,9 @@ ApplicationWindow {
     }
 
     footer: StatusBar {
-        errorCount: 5
-        jobsLeft: 3
+        id: statusBar
+        errorCount: root.errorCount
+        jobsLeft: 0
     }
 
     Connections {
@@ -63,6 +65,10 @@ ApplicationWindow {
         function onUpdateReceived(hostId) {
             _hostTableModel.dataChangedForHost(hostId)
             _hostTableModel.displayData = HostDataManager.getDisplayData()
+
+            if (hostId === _hostTableModel.getSelectedHostId()) {
+                statusBar.jobsLeft = HostDataManager.getPendingCommandCount(hostId) + HostDataManager.getPendingMonitorCount(hostId)
+            }
         }
 
         function onHost_initialized(hostId) {
@@ -89,6 +95,7 @@ ApplicationWindow {
             if (commandResult.show_in_notification === true &&
                 (commandResult.criticality !== "Normal" || Theme.hide_info_notifications() === false)) {
 
+                root.errorCount += 1;
                 if (commandResult.error !== "") {
                     snackbarContainer.addSnackbar(commandResult.criticality, commandResult.error)
                 }
@@ -114,6 +121,7 @@ ApplicationWindow {
         }
 
         function onErrorReceived(criticality, message) {
+            root.errorCount += 1;
             if (criticality === "Critical") {
                 // TODO: something better. This is not really an alert dialog.
                 textDialog.text = message
@@ -177,6 +185,7 @@ ApplicationWindow {
         }
 
         function onError(message) {
+            root.errorCount += 1;
             snackbarContainer.addSnackbar("Critical", message)
         }
     }
@@ -223,6 +232,8 @@ ApplicationWindow {
                             if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
                                 CommandHandler.initializeHost(detailsView.hostId)
                             }
+                            statusBar.jobsLeft = HostDataManager.getPendingCommandCount(detailsView.hostId) +
+                                                HostDataManager.getPendingMonitorCount(detailsView.hostId)
                         }
                     }
 

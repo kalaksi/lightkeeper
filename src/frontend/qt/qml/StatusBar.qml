@@ -8,8 +8,8 @@ import "Text"
 
 ToolBar {
     id: root
-    property int errorCount: 0
-    property int jobsLeft: 0
+    required property int errorCount
+    required property int jobsLeft
     padding: 0
 
     background: BorderRectangle {
@@ -23,11 +23,15 @@ ToolBar {
 
         NormalText {
             id: errorCountText
-            text: "Error Count: " + root.errorCount
+            text: "Errors: " + root.errorCount
         }
 
         NormalText {
-            text: "Jobs Left: " + root.jobsLeft
+            id: jobsText
+            rightPadding: Theme.spacingLoose * 2
+            text: root.jobsLeft + " jobs left"
+            // This makes the text less prominent when there are no jobs left.
+            // color: root.jobsLeft > 0 ? Theme.textColor : Theme.disabledTextColor
         }
     }
 }
