@@ -161,7 +161,10 @@ Item {
         anchors.bottom: root.bottom
         anchors.left: root.left
         anchors.right: root.right
-        anchors.margins: Theme.spacingNormal
+        anchors.topMargin: Theme.spacingNormal
+        anchors.leftMargin: Theme.spacingNormal
+        anchors.rightMargin: Theme.spacingNormal
+        anchors.bottomMargin: 1
     }
 
     Component {
