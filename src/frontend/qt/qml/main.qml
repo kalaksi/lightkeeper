@@ -28,94 +28,33 @@ ApplicationWindow {
 
     onClosing: root.quit()
 
-    menuBar: ToolBar {
-        background: BorderRectangle {
-            backgroundColor: Theme.backgroundColor
-            borderColor: Theme.borderColor
-            borderBottom: 1
+    menuBar: MainMenuBar {
+        onClickedAdd: {
+            hostConfigurationDialog.hostId = ""
+            hostConfigurationDialog.open()
         }
-
-        RowLayout {
-            anchors.fill: parent
-
-            ToolButton {
-                icon.source: "qrc:/main/images/button/add"
-                onClicked: {
-                    hostConfigurationDialog.hostId = ""
-                    hostConfigurationDialog.open()
-                }
-            }
-
-            ToolButton {
-                enabled: _hostTableModel.selectedRow >= 0
-                opacity: Theme.opacity(enabled)
-                icon.source: "qrc:/main/images/button/remove"
-                onClicked: {
-                    ConfigManager.begin_host_configuration()
-                    ConfigManager.removeHost(_hostTableModel.getSelectedHostId())
-                    ConfigManager.end_host_configuration()
-                    reloadConfiguration()
-                }
-            }
-
-            ToolSeparator {
-            }
-
-            ToolButton {
-                enabled: _hostTableModel.selectedRow >= 0
-                opacity: Theme.opacity(enabled)
-                icon.source: "qrc:/main/images/button/entry-edit"
-                onClicked: {
-                    ConfigManager.begin_host_configuration()
-                    hostConfigurationDialog.hostId = _hostTableModel.getSelectedHostId()
-                    hostConfigurationDialog.open()
-                }
-            }
-
-
-            /* TODO: implement later?
-            Row {
-                id: searchRow
-                spacing: Theme.spacing_loose()
-
-                Layout.fillWidth: true
-                Layout.leftMargin: Theme.spacing_loose() * 4
-
-                Label {
-                    text: "Search:"
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                TextField {
-                    id: searchInput
-                    text: "Search by name or address"
-
-                    width: parent.width * 0.5
-                }
-            }
-            */
-
-            // Spacer
-            Item {
-                Layout.fillWidth: true
-            }
-
-
-            ToolButton {
-                icon.source: "qrc:/main/images/button/keyboard-shortcuts"
-                onClicked: hotkeyHelp.open()
-            }
-
-            ToolSeparator {
-            }
-
-            ToolButton {
-                icon.source: "qrc:/main/images/button/configure"
-                onClicked: {
-                    preferencesDialog.open()
-                }
-            }
+        onClickedRemove: {
+            ConfigManager.begin_host_configuration()
+            ConfigManager.removeHost(_hostTableModel.getSelectedHostId())
+            ConfigManager.end_host_configuration()
+            reloadConfiguration()
         }
+        onClickedEdit: {
+            ConfigManager.begin_host_configuration()
+            hostConfigurationDialog.hostId = _hostTableModel.getSelectedHostId()
+            hostConfigurationDialog.open()
+        }
+        onClickedPreferences: {
+            preferencesDialog.open()
+        }
+        onClickedHotkeyHelp: {
+            hotkeyHelp.open()
+        }
+    }
+
+    footer: StatusBar {
+        errorCount: 5
+        jobsLeft: 3
     }
 
     Connections {
@@ -319,10 +258,9 @@ ApplicationWindow {
             }
         }
 
-        // Animations
         Behavior on splitSize {
             NumberAnimation {
-                duration: Theme.animation_duration()
+                duration: Theme.animationDuration
                 easing.type: Easing.OutQuad
 
                 onFinished: {
