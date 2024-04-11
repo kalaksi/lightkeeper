@@ -7,9 +7,9 @@ import "js/Utils.js" as Utils
 Item {
     id: root
     property int spacing: 10
-    property int showDuration: Theme.notification_show_duration()
+    property int showDuration: 5000
     property int animationDuration: Theme.animation_duration()
-    property int snackbarHeight: 75
+    property int snackbarHeight: 80
     property int snackbarMaximumWidth: 600
     property var _instances: []
 
