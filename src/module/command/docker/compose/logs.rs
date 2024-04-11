@@ -54,19 +54,9 @@ impl CommandModule for Logs {
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
-
-            command.arguments(vec!["docker-compose", "-f", compose_file, "logs", "--no-color", "-t"]);
-
-            if page_number > 0 {
-                let row_count = page_number * page_size;
-                command.arguments(vec!["--tail", &row_count.to_string()]);
-            }
-
-            command.argument(service_name);
-        }
-        else if host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
 
             command.arguments(vec!["docker", "compose", "-f", compose_file, "logs", "--no-color", "-t"]);
 
