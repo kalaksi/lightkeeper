@@ -1,6 +1,5 @@
 import QtQuick 2.15
 
-import "Text"
 
 Item {
     id: root

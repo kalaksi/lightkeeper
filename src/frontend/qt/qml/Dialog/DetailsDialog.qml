@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
 
 import ".."
+import "../Text"
 
 
 Window {
@@ -37,7 +38,7 @@ Window {
             }
         }
 
-        AlertMessage {
+        AlertText {
             id: textContent
             text: root.errorText
             criticality: root.criticality

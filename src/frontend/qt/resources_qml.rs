@@ -6,7 +6,6 @@ pub fn init_resources() {
     qrc!(resources_qml, 
         "src/frontend/qt/qml" as "qml" {
             "main.qml",
-            "AlertMessage.qml",
             "DebugRectangle.qml",
             "DynamicObjectManager.qml",
             "HostStatus.qml",
@@ -59,6 +58,7 @@ pub fn init_resources() {
             "StyleOverride/Label.qml",
             "StyleOverride/RoundButton.qml",
             "StyleOverride/TextField.qml",
+            "Text/AlertText.qml",
             "Text/BaseText.qml",
             "Text/BigText.qml",
             "Text/NormalText.qml",
