@@ -16,8 +16,10 @@ Rectangle {
 
     Rectangle {
         id: background
-        width: parent.width - borderLeft - borderRight
-        height: parent.height - borderTop - borderBottom
-        anchors.centerIn: parent
+        anchors.fill: parent
+        anchors.topMargin: root.borderTop
+        anchors.bottomMargin: root.borderBottom
+        anchors.leftMargin: root.borderLeft
+        anchors.rightMargin: root.borderRight
     }
 }
