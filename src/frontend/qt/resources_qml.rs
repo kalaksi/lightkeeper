@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use qmetaobject::qrc;
 
 // Enabled only for non-debug builds. Debug-builds use file paths directly to avoid recompilation.

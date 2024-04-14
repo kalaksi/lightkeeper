@@ -3,11 +3,10 @@ use std::{sync::mpsc, cell::RefCell};
 use std::env;
 extern crate qmetaobject;
 use qmetaobject::*;
-use super::{
-    resources,
-    resources_qml,
-    models::*,
-};
+use super::resources;
+#[allow(unused_imports)]
+use super::resources_qml;
+use super::models::*;
 use crate::{
     frontend,
     command_handler::CommandHandler,

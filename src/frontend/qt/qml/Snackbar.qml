@@ -1,4 +1,6 @@
 import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.11
 
 import "Text"
 import "js/Utils.js" as Utils
@@ -12,10 +14,11 @@ Rectangle {
     property int fadeDuration: 200
     property int showDuration: 5000
     property int maximumWidth: 600
+    property int maximumHeight: 120
 
     visible: getText() !== ""
     width: Utils.clamp(textContent.implicitWidth + iconBackground.width + root.contentPadding * 3, root.maximumWidth / 3, root.maximumWidth)
-    implicitHeight: Math.max(textContent.implicitHeight, image.height) + root.contentPadding
+    implicitHeight: Math.min(textContent.implicitHeight + root.contentPadding * 2, root.maximumHeight)
     radius: 5
     opacity: 0.0
     color: Theme.backgroundColor
@@ -47,31 +50,36 @@ Rectangle {
         color: root.color
     }
 
-    Row {
+    RowLayout {
         id: row
-        padding: root.contentPadding
         spacing: iconBackgroundCutoff.width + root.contentPadding * 2
         anchors.fill: parent
-        anchors.centerIn: parent
 
         Image {
             id: image
-            anchors.verticalCenter: parent.verticalCenter
             antialiasing: true
-            source: Theme.icon_for_criticality(root.criticality)
+            source: Theme.iconForCriticality(root.criticality)
             width: 32
             height: 32
+
+            Layout.leftMargin: iconBackground.width / 2 - width / 2
+            Layout.alignment: Qt.AlignCenter
         }
 
-        NormalText {
-            id: textContent
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.text
-            wrapMode: Text.Wrap
+        ScrollView {
             width: row.width - iconBackground.width - root.contentPadding * 2
+            contentWidth: availableWidth
             height: row.height - root.contentPadding * 2
-            // TODO: handle overly long messages better
-            clip: true
+
+            Layout.alignment: Qt.AlignCenter
+            Layout.fillWidth: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+            NormalText {
+                id: textContent
+                text: root.text
+                wrapMode: Text.Wrap
+            }
         }
     }
 
@@ -79,7 +87,7 @@ Rectangle {
         id: animation
 
         NumberAnimation {
-            to: 0.8
+            to: 0.85
             duration: root.fadeDuration
         }
 
@@ -97,6 +105,7 @@ Rectangle {
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
+        propagateComposedEvents: true
         onEntered: {
             animation.stop()
             root.opacity = 1.0

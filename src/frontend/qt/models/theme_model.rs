@@ -39,8 +39,10 @@ pub struct ThemeModel {
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
     colorForCriticality: qt_method!(fn(&self, criticality: QString) -> QString),
+    iconForCriticality: qt_method!(fn(&self, alert_level: QString) -> QString),
 
     tooltipDelay: qt_property!(i32; CONST),
+
 
     // NOTE: Old methods, will be deprecated.
 
@@ -59,7 +61,6 @@ pub struct ThemeModel {
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     animation_duration: qt_method!(fn(&self) -> QVariant),
     get_display_options: qt_method!(fn(&self) -> QVariant),
-    icon_for_criticality: qt_method!(fn(&self, alert_level: QString) -> QString),
     hide_info_notifications: qt_method!(fn(&self) -> bool),
 
     i_display_options: configuration::DisplayOptions,
@@ -196,7 +197,7 @@ impl ThemeModel {
         self.i_display_options.to_qvariant()
     }
 
-    fn icon_for_criticality(&self, criticality: QString) -> QString {
+    fn iconForCriticality(&self, criticality: QString) -> QString {
         let criticality = criticality.to_string();
 
         if criticality.is_empty() {

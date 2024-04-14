@@ -19,7 +19,7 @@ Item {
         Image {
             id: image
             antialiasing: true
-            source: Theme.icon_for_criticality(root.criticality)
+            source: Theme.iconForCriticality(root.criticality)
             width: 22 * root.imageScale
             height: 22 * root.imageScale
             anchors.verticalCenter: parent.verticalCenter
