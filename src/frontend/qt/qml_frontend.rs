@@ -38,7 +38,7 @@ impl QmlFrontend {
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
 
-        let style = main_config.display_options.as_ref().unwrap().qtquick_style.as_str();
+        let style = main_config.display_options.qtquick_style.as_str();
         if !style.is_empty() &&
            std::env::var("QT_QUICK_CONTROLS_STYLE").is_err() &&
            std::env::var("QT_STYLE_OVERRIDE").is_err() {
@@ -46,7 +46,7 @@ impl QmlFrontend {
             std::env::set_var("QT_STYLE_OVERRIDE", style);
         }
 
-        let theme_model = ThemeModel::new(main_config.display_options.clone().unwrap());
+        let theme_model = ThemeModel::new(main_config.display_options.clone());
         let host_data_manager = HostDataManagerModel::new(display_data, main_config.clone());
         let config_manager = ConfigManagerModel::new(config_dir, main_config, hosts_config, group_config, module_metadatas);
 

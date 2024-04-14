@@ -21,8 +21,7 @@ pub const CURRENT_SCHEMA_VERSION: u16 = 2;
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
     pub preferences: Preferences,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub display_options: Option<DisplayOptions>,
+    pub display_options: DisplayOptions,
     pub cache_settings: CacheSettings,
     pub schema_version: Option<u16>,
 }
@@ -57,12 +56,32 @@ pub struct Preferences {
     pub terminal_args: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
+    // Currently not writing everything in the config file since they are not user-configurable.
+    #[serde(default)]
     pub qtquick_style: String,
+    #[serde(default)]
     pub hide_info_notifications: bool,
-    pub categories: HashMap<String, Category>,
+    #[serde(default)]
+    pub categories: Option<HashMap<String, Category>>,
+    #[serde(default)]
+    pub show_status_bar: bool
+}
+
+impl Default for DisplayOptions {
+    fn default() -> Self {
+        let default_main_config = get_default_main_config();
+
+        DisplayOptions {
+            qtquick_style: default_main_config.display_options.qtquick_style,
+            hide_info_notifications: default_main_config.display_options.hide_info_notifications,
+            categories: default_main_config.display_options.categories,
+            show_status_bar: default_main_config.display_options.show_status_bar,
+        }
+    }
+
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -260,10 +279,11 @@ impl Configuration {
                                      .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
         // Display options are currently defined in the app's defaults and not really user-configurable.
-        let default_main_config = include_str!("../config.example.yml");
-        let default_parsed = serde_yaml::from_str::<Configuration>(default_main_config)
-                                        .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
-        main_config.display_options = Some(default_parsed.display_options.unwrap());
+        let mut actual_display_options = get_default_main_config().display_options;
+
+        // Exceptions. Allow some to be configurable.
+        actual_display_options.show_status_bar = main_config.display_options.show_status_bar;
+        main_config.display_options = actual_display_options;
 
         log::info!("Reading host configuration from {}", hosts_file_path.display());
         let hosts_contents = fs::read_to_string(hosts_file_path)?;
@@ -458,10 +478,14 @@ impl Configuration {
         match main_config_file {
             Ok(mut file) => {
                 // Display options are currently not really user-configurable.
+                let mut actual_display_options = get_default_main_config().display_options;
+                // Exceptions. Allow some to be configurable.
+                actual_display_options.show_status_bar = config.display_options.show_status_bar;
+
                 let config_without_display_options = Configuration {
                     preferences: config.preferences.clone(),
                     cache_settings: config.cache_settings.clone(),
-                    display_options: None,
+                    display_options: actual_display_options,
                     schema_version: config.schema_version.clone(),
                 };
 
@@ -533,4 +557,8 @@ impl Configuration {
 
 pub fn get_default_config_groups() -> Groups {
     serde_yaml::from_str(DEFAULT_GROUPS_CONFIG).unwrap()
+}
+
+pub fn get_default_main_config() -> Configuration {
+    serde_yaml::from_str(DEFAULT_MAIN_CONFIG).unwrap()
 }

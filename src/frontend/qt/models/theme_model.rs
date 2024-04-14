@@ -35,7 +35,10 @@ pub struct ThemeModel {
     animationDuration: qt_property!(i32; CONST),
     groupboxMinWidth: qt_property!(i32; CONST),
     groupboxMaxWidth: qt_property!(i32; CONST),
-    hideInfoNotifications: qt_property!(bool; READ hideInfoNotifications),
+
+    // Display options
+    hideInfoNotifications: qt_property!(bool; CONST),
+    showStatusBar: qt_property!(bool; CONST),
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
@@ -73,7 +76,6 @@ impl ThemeModel {
         // could be used to set values to this model. Or maybe use Kirigami's models and leave anything extra here?
         // OTOH, this model could be easier to use and more flexible.
         ThemeModel {
-            i_display_options: display_options,
             disabledTextColor: QString::from("#50fcfcfc"),
             iconColor: QString::from("#a0a0a0"),
             textColor: QString::from("#fcfcfc"),
@@ -97,12 +99,16 @@ impl ThemeModel {
             groupboxMinWidth: 450,
             groupboxMaxWidth: 650,
             tooltipDelay: 800,
+
+            hideInfoNotifications: display_options.hide_info_notifications,
+            showStatusBar: display_options.show_status_bar,
+            i_display_options: display_options,
             ..Default::default()
         }
     }
 
     fn categoryColor(&self, category: QString) -> QString {
-        if let Some(category) = self.i_display_options.categories.get(&category.to_string()) {
+        if let Some(category) = self.i_display_options.categories.clone().unwrap_or_default().get(&category.to_string()) {
             QString::from(category.color.clone().unwrap_or_else(|| String::from("#505050")))
         }
         else {
@@ -111,7 +117,7 @@ impl ThemeModel {
     }
 
     fn categoryIcon(&self, category: QString) -> QString {
-        if let Some(category) = self.i_display_options.categories.get(&category.to_string()) {
+        if let Some(category) = self.i_display_options.categories.clone().unwrap_or_default().get(&category.to_string()) {
             QString::from(category.icon.clone().unwrap_or_default())
         }
         else {
@@ -156,7 +162,7 @@ impl ThemeModel {
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
         // TODO: take category into consideration instead of accepting matching id from any of them.
-        let allows_collapsing = self.i_display_options.categories.values().any(|category| {
+        let allows_collapsing = self.i_display_options.categories.clone().unwrap_or_default().values().any(|category| {
             match &category.collapsible_commands {
                 Some(collapsible_commands) => collapsible_commands.contains(&command_id.to_string()),
                 None => false,
@@ -213,9 +219,5 @@ impl ThemeModel {
             Criticality::Error => QString::from("qrc:/main/images/alert/error"),
             Criticality::Critical => QString::from("qrc:/main/images/alert/error"),
         }
-    }
-
-    fn hideInfoNotifications(&self) -> bool {
-        self.i_display_options.hide_info_notifications
     }
 }

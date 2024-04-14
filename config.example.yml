@@ -32,6 +32,7 @@ display_options:
   # Empty means default.
   qtquick_style: ""
   hide_info_notifications: false
+  show_status_bar: true
   categories:
     host:
       # Priority controls the order of the category tiles. Host should be first.

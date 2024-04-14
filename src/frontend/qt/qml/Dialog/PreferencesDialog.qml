@@ -12,7 +12,7 @@ import ".."
 // This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
-    property var _preferences: ConfigManager.get_preferences()
+    property var _preferences: ConfigManager.getPreferences()
     property bool _loading: true
 
     title: "Preferences"
@@ -23,22 +23,23 @@ LightkeeperDialog {
     signal configurationChanged()
 
     onOpened: {
-        root._preferences = ConfigManager.get_preferences()
+        root._preferences = ConfigManager.getPreferences()
         root._loading = false
     }
 
     onAccepted: {
         let newPreferences = {
-            refresh_hosts_on_start: content.children[1].children[1].checkState === Qt.Checked,
-            use_remote_editor: content.children[2].children[1].checkState === Qt.Checked,
-            remote_text_editor: content.children[3].children[1].text,
-            sudo_remote_editor: content.children[4].children[1].checkState === Qt.Checked,
-            text_editor: content.children[5].children[1].text,
-            terminal: content.children[6].children[1].text.split(" ")[0],
-            terminal_args: content.children[6].children[1].text.split(" ").slice(1).join(" ")
+            refreshHostsOnStart: refreshHostsOnStart.checkState === Qt.Checked,
+            useRemoteEditor: useRemoteEditor.checkState === Qt.Checked,
+            remoteTextEditor: remoteTextEditor.text,
+            sudoRemoteEditor: useSudoRemoteEditor.checkState === Qt.Checked,
+            textEditor: textEditor.text,
+            terminal: terminalAndArgs.text.split(" ")[0],
+            terminalArgs: terminalAndArgs.text.split(" ").slice(1).join(" "),
+            showStatusBar: showStatusBar.checkState === Qt.Checked,
         }
 
-        ConfigManager.set_preferences(newPreferences)
+        ConfigManager.setPreferences(newPreferences)
         root._loading = true
         root.configurationChanged()
     }
@@ -85,7 +86,8 @@ LightkeeperDialog {
             }
 
             CheckBox {
-                checkState: root._preferences.refresh_hosts_on_start ? Qt.Checked : Qt.Unchecked
+                id: refreshHostsOnStart
+                checkState: root._preferences.refreshHostsOnStart ? Qt.Checked : Qt.Unchecked
 
                 Layout.leftMargin: content.width * 0.30
             }
@@ -114,7 +116,7 @@ LightkeeperDialog {
 
             CheckBox {
                 id: useRemoteEditor
-                checkState: root._preferences.use_remote_editor ? Qt.Checked : Qt.Unchecked
+                checkState: root._preferences.useRemoteEditor ? Qt.Checked : Qt.Unchecked
 
                 Layout.leftMargin: content.width * 0.30
             }
@@ -131,8 +133,9 @@ LightkeeperDialog {
             }
 
             TextField {
+                id: remoteTextEditor
                 enabled: useRemoteEditor.checkState === Qt.Checked
-                text: root._preferences.remote_text_editor
+                text: root._preferences.remoteTextEditor
 
                 Layout.preferredWidth: content.width * 0.35
             }
@@ -160,8 +163,9 @@ LightkeeperDialog {
             }
 
             CheckBox {
+                id: useSudoRemoteEditor
                 enabled: useRemoteEditor.checkState === Qt.Checked
-                checkState: root._preferences.sudo_remote_editor ? Qt.Checked : Qt.Unchecked
+                checkState: root._preferences.sudoRemoteEditor ? Qt.Checked : Qt.Unchecked
 
                 Layout.leftMargin: content.width * 0.30
             }
@@ -188,7 +192,8 @@ LightkeeperDialog {
             }
 
             TextField {
-                text: root._preferences.text_editor
+                id: textEditor
+                text: root._preferences.textEditor
                 enabled: !ConfigManager.isSandboxed()
 
                 Layout.preferredWidth: content.width * 0.35
@@ -216,10 +221,39 @@ LightkeeperDialog {
             }
 
             TextField {
-                text: root._preferences.terminal + " " + root._preferences.terminal_args
+                id: terminalAndArgs
+                text: root._preferences.terminal + " " + root._preferences.terminalArgs
                 enabled: !ConfigManager.isSandboxed()
 
                 Layout.preferredWidth: content.width * 0.35
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            Column {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+
+                Label {
+                    width: parent.width
+                    text: "Show status bar"
+                }
+
+                SmallText {
+                    width: parent.width
+                    text: ""
+                    color: Theme.textColorDark
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            CheckBox {
+                id: showStatusBar
+                checkState: root._preferences.showStatusBar ? Qt.Checked : Qt.Unchecked
+
+                Layout.leftMargin: content.width * 0.30
             }
         }
 

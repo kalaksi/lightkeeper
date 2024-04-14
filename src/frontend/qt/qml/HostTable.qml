@@ -85,7 +85,7 @@ TableView {
                 OptionalText {
                     anchors.verticalCenter: parent.verticalCenter
                     placeholder: "IP address not available"
-                    text: value
+                    text: value || ""
                 }
             }
         }

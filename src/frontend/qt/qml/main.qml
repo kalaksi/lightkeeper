@@ -55,6 +55,7 @@ ApplicationWindow {
 
     footer: StatusBar {
         id: statusBar
+        visible: Theme.showStatusBar === true
         errorCount: root.errorCount
         jobsLeft: 0
     }

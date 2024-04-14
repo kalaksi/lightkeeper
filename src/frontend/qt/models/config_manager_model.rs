@@ -4,8 +4,7 @@ use qmetaobject::*;
 use std::str::FromStr;
 
 use crate::{
-    configuration::{self, Configuration, Groups, HostSettings, Hosts},
-    module::{Metadata, ModuleType},
+    configuration::{self, Configuration, Groups, HostSettings, Hosts}, module::{Metadata, ModuleType}
 };
 
 
@@ -28,8 +27,8 @@ pub struct ConfigManagerModel {
     //
     // Preferences
     //
-    get_preferences: qt_method!(fn(&self) -> QVariantMap),
-    set_preferences: qt_method!(fn(&self, preferences: QVariantMap)),
+    getPreferences: qt_method!(fn(&self) -> QVariantMap),
+    setPreferences: qt_method!(fn(&self, preferences: QVariantMap)),
 
     //
     // Host configuration
@@ -150,27 +149,30 @@ impl ConfigManagerModel {
         }
     }
 
-    fn get_preferences(&self) -> QVariantMap {
+    fn getPreferences(&self) -> QVariantMap {
         let mut preferences = QVariantMap::default();
-        preferences.insert("refresh_hosts_on_start".into(), self.main_config.preferences.refresh_hosts_on_start.into());
-        preferences.insert("use_remote_editor".into(), self.main_config.preferences.use_remote_editor.into());
-        preferences.insert("remote_text_editor".into(), QString::from(self.main_config.preferences.remote_text_editor.clone()).into());
-        preferences.insert("sudo_remote_editor".into(), self.main_config.preferences.sudo_remote_editor.into());
-        preferences.insert("text_editor".into(), QString::from(self.main_config.preferences.text_editor.clone()).into());
+        preferences.insert("refreshHostsOnStart".into(), self.main_config.preferences.refresh_hosts_on_start.into());
+        preferences.insert("useRemoteEditor".into(), self.main_config.preferences.use_remote_editor.into());
+        preferences.insert("remoteTextEditor".into(), QString::from(self.main_config.preferences.remote_text_editor.clone()).into());
+        preferences.insert("sudoRemoteEditor".into(), self.main_config.preferences.sudo_remote_editor.into());
+        preferences.insert("textEditor".into(), QString::from(self.main_config.preferences.text_editor.clone()).into());
         preferences.insert("terminal".into(), QString::from(self.main_config.preferences.terminal.clone()).into());
-        preferences.insert("terminal_args".into(), QString::from(self.main_config.preferences.terminal_args.join(" ")).into());
+        preferences.insert("terminalArgs".into(), QString::from(self.main_config.preferences.terminal_args.join(" ")).into());
+        preferences.insert("showStatusBar".into(), self.main_config.display_options.show_status_bar.into());
         preferences
     }
 
-    fn set_preferences(&mut self, preferences: QVariantMap) {
-        self.main_config.preferences.refresh_hosts_on_start = preferences.value("refresh_hosts_on_start".into(), false.into()).to_bool();
-        self.main_config.preferences.use_remote_editor = preferences.value("use_remote_editor".into(), false.into()).to_bool();
-        self.main_config.preferences.remote_text_editor = preferences.value("remote_text_editor".into(), QString::from("vim").into()).to_qbytearray().to_string();
-        self.main_config.preferences.sudo_remote_editor = preferences.value("sudo_remote_editor".into(), false.into()).to_bool();
-        self.main_config.preferences.text_editor = preferences.value("text_editor".into(), QString::from("kate").into()).to_qbytearray().to_string();
+    fn setPreferences(&mut self, preferences: QVariantMap) {
+        self.main_config.preferences.refresh_hosts_on_start = preferences.value("refreshHostsOnStart".into(), false.into()).to_bool();
+        self.main_config.preferences.use_remote_editor = preferences.value("useRemoteEditor".into(), false.into()).to_bool();
+        self.main_config.preferences.remote_text_editor = preferences.value("remoteTextEditor".into(), QString::from("vim").into()).to_qbytearray().to_string();
+        self.main_config.preferences.sudo_remote_editor = preferences.value("sudoRemoteEditor".into(), false.into()).to_bool();
+        self.main_config.preferences.text_editor = preferences.value("textEditor".into(), QString::from("kate").into()).to_qbytearray().to_string();
         self.main_config.preferences.terminal = preferences.value("terminal".into(), QString::from("xterm").into()).to_qbytearray().to_string();
-        self.main_config.preferences.terminal_args = preferences.value("terminal_args".into(), QString::from("-e").into()).to_qbytearray().to_string()
+        self.main_config.preferences.terminal_args = preferences.value("terminalArgs".into(), QString::from("-e").into()).to_qbytearray().to_string()
                                                                 .split(' ').map(|arg| arg.to_string()).collect();
+
+        self.main_config.display_options.show_status_bar = preferences.value("showStatusBar".into(), true.into()).to_bool();
 
         if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
             self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
