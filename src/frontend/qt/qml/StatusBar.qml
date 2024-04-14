@@ -35,12 +35,16 @@ ToolBar {
         }
 
         NormalText {
+            // TODO: disabled for now, enable implementing showing and clearing of errors (if ever needed).
+            visible: false
             id: errorCountText
             text: root.errorCount + " errors"
             color: Theme.textColorDark
         }
 
         ToolSeparator {
+            // TODO: disabled for now, enable implementing showing and clearing of errors (if ever needed).
+            visible: false
             Layout.margins: parent.height / 6
             Layout.maximumHeight: parent.height - parent.height / 6
             Layout.alignment: Qt.AlignVCenter
