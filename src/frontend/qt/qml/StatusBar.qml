@@ -36,7 +36,7 @@ ToolBar {
 
         NormalText {
             id: errorCountText
-            text: "Errors: " + root.errorCount
+            text: root.errorCount + " errors"
             color: Theme.textColorDark
         }
 
@@ -49,7 +49,7 @@ ToolBar {
         NormalText {
             id: jobsText
             rightPadding: Theme.spacingLoose * 2
-            text: "Jobs left: " + root.jobsLeft
+            text: root.jobsLeft + " jobs left"
             // This makes the text less prominent when there are no jobs left.
             // color: root.jobsLeft > 0 ? Theme.textColor : Theme.disabledTextColor
             color: Theme.textColorDark

@@ -92,10 +92,13 @@ ApplicationWindow {
         function onCommandResultReceived(commandResultJson, invocationId) {
             let commandResult = JSON.parse(commandResultJson)
 
+            if (["Error", "Critical"].includes(commandResult.criticality)) {
+                root.errorCount += 1;
+            }
+
             if (commandResult.show_in_notification === true &&
                 (commandResult.criticality !== "Normal" || Theme.hide_info_notifications() === false)) {
 
-                root.errorCount += 1;
                 if (commandResult.error !== "") {
                     snackbarContainer.addSnackbar(commandResult.criticality, commandResult.error)
                 }

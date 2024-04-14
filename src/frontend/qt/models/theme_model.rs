@@ -35,6 +35,7 @@ pub struct ThemeModel {
     animationDuration: qt_property!(i32; CONST),
     groupboxMinWidth: qt_property!(i32; CONST),
     groupboxMaxWidth: qt_property!(i32; CONST),
+    hideInfoNotifications: qt_property!(bool; READ hideInfoNotifications),
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
@@ -61,7 +62,6 @@ pub struct ThemeModel {
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     animation_duration: qt_method!(fn(&self) -> QVariant),
     get_display_options: qt_method!(fn(&self) -> QVariant),
-    hide_info_notifications: qt_method!(fn(&self) -> bool),
 
     i_display_options: configuration::DisplayOptions,
 }
@@ -215,7 +215,7 @@ impl ThemeModel {
         }
     }
 
-    fn hide_info_notifications(&self) -> bool {
+    fn hideInfoNotifications(&self) -> bool {
         self.i_display_options.hide_info_notifications
     }
 }
