@@ -179,7 +179,7 @@ impl PropertyTableModel {
         }
 
         let category = &row_datas.first().unwrap().display_options.category;
-        let monitor_order = match &self.i_display_options.categories.clone().unwrap_or_default().get(category) {
+        let monitor_order = match &self.i_display_options.categories.get(category) {
             Some(category_data) => category_data.monitor_order.clone().unwrap_or_default(),
             None => Vec::new(),
         };

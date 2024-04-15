@@ -75,8 +75,8 @@ pub struct DisplayOptions {
     pub qtquick_style: String,
     #[serde(default)]
     pub hide_info_notifications: bool,
-    #[serde(default)]
-    pub categories: Option<HashMap<String, Category>>,
+    #[serde(default, skip_serializing_if = "Configuration::always")]
+    pub categories: HashMap<String, Category>,
     #[serde(default)]
     pub show_status_bar: bool
 }

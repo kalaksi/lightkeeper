@@ -72,7 +72,7 @@ pub struct HostDataManagerModel {
 #[allow(non_snake_case)]
 impl HostDataManagerModel {
     pub fn new(display_data: frontend::DisplayData, config: configuration::Configuration) -> Self {
-        let mut priorities = config.display_options.categories.unwrap_or_default().iter()
+        let mut priorities = config.display_options.categories.iter()
                                                               .map(|(category, options)| (category.clone(), options.priority))
                                                               .collect::<Vec<_>>();
 

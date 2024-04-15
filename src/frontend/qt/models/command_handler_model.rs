@@ -141,7 +141,7 @@ impl CommandHandlerModel {
                                                         .map(|(_, data)| data)
                                                         .collect::<Vec<CommandData>>();
 
-        let command_order = match self.configuration.display_options.categories.clone().unwrap_or_default().get(&category_string) {
+        let command_order = match self.configuration.display_options.categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
             None => Vec::new(),
         };
@@ -179,7 +179,7 @@ impl CommandHandlerModel {
 
         let mut valid_commands_sorted = Vec::<CommandData>::new();
 
-        let command_order = match self.configuration.display_options.categories.clone().unwrap_or_default().get(&category_string) {
+        let command_order = match self.configuration.display_options.categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
             None => Vec::new(),
         };

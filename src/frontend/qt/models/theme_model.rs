@@ -108,7 +108,7 @@ impl ThemeModel {
     }
 
     fn categoryColor(&self, category: QString) -> QString {
-        if let Some(category) = self.i_display_options.categories.clone().unwrap_or_default().get(&category.to_string()) {
+        if let Some(category) = self.i_display_options.categories.get(&category.to_string()) {
             QString::from(category.color.clone().unwrap_or_else(|| String::from("#505050")))
         }
         else {
@@ -117,7 +117,7 @@ impl ThemeModel {
     }
 
     fn categoryIcon(&self, category: QString) -> QString {
-        if let Some(category) = self.i_display_options.categories.clone().unwrap_or_default().get(&category.to_string()) {
+        if let Some(category) = self.i_display_options.categories.get(&category.to_string()) {
             QString::from(category.icon.clone().unwrap_or_default())
         }
         else {
@@ -162,7 +162,7 @@ impl ThemeModel {
 
     fn allow_collapsing_command(&self, command_id: QString) -> QString {
         // TODO: take category into consideration instead of accepting matching id from any of them.
-        let allows_collapsing = self.i_display_options.categories.clone().unwrap_or_default().values().any(|category| {
+        let allows_collapsing = self.i_display_options.categories.values().any(|category| {
             match &category.collapsible_commands {
                 Some(collapsible_commands) => collapsible_commands.contains(&command_id.to_string()),
                 None => false,
