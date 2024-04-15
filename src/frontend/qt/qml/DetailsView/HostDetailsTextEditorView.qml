@@ -57,7 +57,7 @@ Item {
         id: rootScrollView
         visible: root.text !== ""
         anchors.fill: parent
-        anchors.margins: Theme.spacing_loose()
+        anchors.margins: Theme.spacingLoose
         clip: true
 
         TextEdit {

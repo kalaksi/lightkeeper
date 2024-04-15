@@ -86,7 +86,7 @@ LightkeeperDialog {
             visible: !root._loading
             anchors.fill: parent
             anchors.rightMargin: Theme.marginScrollbar
-            spacing: Theme.spacing_normal()
+            spacing: Theme.spacingNormal
 
             Repeater {
                 id: repeater
@@ -96,7 +96,7 @@ LightkeeperDialog {
                     id: rowLayout
                     width: parent.width
                     height: textContainer.implicitHeight
-                    spacing: Theme.spacing_normal()
+                    spacing: Theme.spacingNormal
 
                     Column {
                         id: textContainer

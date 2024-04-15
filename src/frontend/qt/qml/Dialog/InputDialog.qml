@@ -50,7 +50,7 @@ Dialog {
 
                 Column {
                     visible: modelData.field_type === "Option"
-                    spacing: Theme.spacing_normal()
+                    spacing: Theme.spacingNormal
 
                     Layout.minimumWidth: 220
 

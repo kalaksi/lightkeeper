@@ -50,12 +50,7 @@ pub struct ThemeModel {
 
     // NOTE: Old methods, will be deprecated.
 
-    spacing_loose: qt_method!(fn(&self) -> i8),
-    spacing_normal: qt_method!(fn(&self) -> i8),
-    spacing_tight: qt_method!(fn(&self) -> i8),
     common_indentation: qt_method!(fn(&self) -> i8),
-
-    // TODO: deprecated
     background_color: qt_method!(fn(&self) -> QString),
     color_highlight: qt_method!(fn(&self) -> QString),
     color_highlight_light: qt_method!(fn(&self) -> QString),
@@ -123,18 +118,6 @@ impl ThemeModel {
         else {
             QString::from("")
         }
-    }
-
-    fn spacing_loose(&self) -> i8 {
-        12
-    }
-
-    fn spacing_normal(&self) -> i8 {
-        8
-    }
-
-    fn spacing_tight(&self) -> i8 {
-        2
     }
 
     fn common_indentation(&self) -> i8 {
