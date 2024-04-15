@@ -47,8 +47,8 @@ modules:
     buildsystem: simple
     sources:
       - type: archive
-        url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/v0.14.0.tar.gz
-        sha256: 8e7860ce5c1420a3a2717900a73e32abb9d623cc0081f7f9924beb9de51c923c
+        url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/v0.15.0.tar.gz
+        sha256: f190e6e3f28b82d9a8defb097ee0430daaedcf3383d9f64628f2f271f786ef2a
       - "cargo-sources.json"
     build-options:
       append-path: /usr/lib/sdk/rust-stable/bin
