@@ -20,10 +20,21 @@ pub const CURRENT_SCHEMA_VERSION: u16 = 2;
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
+    #[serde(default)]
     pub preferences: Preferences,
+    #[serde(default)]
     pub display_options: DisplayOptions,
+    #[serde(default)]
     pub cache_settings: CacheSettings,
+    #[serde(default)]
     pub schema_version: Option<u16>,
+}
+
+impl Default for Preferences {
+    fn default() -> Self {
+        let default_main_config = get_default_main_config();
+        default_main_config.preferences
+    }
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -38,7 +49,7 @@ pub struct Hosts {
     pub hosts: HashMap<String, HostSettings>,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Preferences {
     #[serde(default)]
@@ -73,18 +84,11 @@ pub struct DisplayOptions {
 impl Default for DisplayOptions {
     fn default() -> Self {
         let default_main_config = get_default_main_config();
-
-        DisplayOptions {
-            qtquick_style: default_main_config.display_options.qtquick_style,
-            hide_info_notifications: default_main_config.display_options.hide_info_notifications,
-            categories: default_main_config.display_options.categories,
-            show_status_bar: default_main_config.display_options.show_status_bar,
-        }
+        default_main_config.display_options
     }
-
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CacheSettings {
     /// Enable cache. Set false to disable completely and make sure cache file is empty.
@@ -98,6 +102,13 @@ pub struct CacheSettings {
     pub prefer_cache: bool,
     /// How long entries in cache are considered valid.
     pub time_to_live: u64,
+}
+
+impl Default for CacheSettings {
+    fn default() -> Self {
+        let default_main_config = get_default_main_config();
+        default_main_config.cache_settings
+    }
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
