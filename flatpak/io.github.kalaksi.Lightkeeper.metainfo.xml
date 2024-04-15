@@ -28,6 +28,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.15.0" date="2024-04-15">
+      <description>
+        <ul>
+          <li>Updated obsolete docker-compose commands</li>
+          <li>Better handling for long error messages in UI</li>
+          <li>Added a status bar and moved job count there</li>
+          <li>Added a search bar for hosts</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.14.0" date="2024-04-07">
       <description>
         <ul>
