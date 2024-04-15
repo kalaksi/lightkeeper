@@ -28,7 +28,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.15.0" date="2024-04-15">
+    <release version="0.15.1" date="2024-04-15">
       <description>
         <ul>
           <li>Updated obsolete docker-compose commands</li>
