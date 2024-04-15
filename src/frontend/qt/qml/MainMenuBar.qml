@@ -14,6 +14,7 @@ ToolBar {
     signal clickedEdit()
     signal clickedPreferences()
     signal clickedHotkeyHelp()
+    signal filterChanged(string search)
 
     background: BorderRectangle {
         backgroundColor: Theme.backgroundColor
@@ -46,34 +47,26 @@ ToolBar {
             onClicked: root.clickedEdit()
         }
 
-
-        /* TODO: implement later?
-        Row {
-            id: searchRow
-            spacing: Theme.spacing_loose()
-
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing_loose() * 4
-
-            Label {
-                text: "Search:"
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            TextField {
-                id: searchInput
-                text: "Search by name or address"
-
-                width: parent.width * 0.5
-            }
-        }
-        */
-
-        // Spacer
         Item {
             Layout.fillWidth: true
-        }
 
+            Row {
+                spacing: Theme.spacingLoose
+                anchors.centerIn: parent
+
+                Label {
+                    text: "Search:"
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                TextField {
+                    id: searchInput
+                    placeholderText: "by name or address..."
+                    width: root.width * 0.4
+                    onTextChanged: root.filterChanged(searchInput.text)
+                }
+            }
+        }
 
         ToolButton {
             icon.source: "qrc:/main/images/button/keyboard-shortcuts"

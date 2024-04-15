@@ -51,6 +51,9 @@ ApplicationWindow {
         onClickedHotkeyHelp: {
             hotkeyHelp.open()
         }
+        onFilterChanged: function(searchText) {
+            _hostTableModel.filter(searchText)
+        }
     }
 
     footer: StatusBar {

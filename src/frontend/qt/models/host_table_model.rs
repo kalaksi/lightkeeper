@@ -12,45 +12,69 @@ use super::HostDataModel;
 pub struct HostTableModel {
     base: qt_base_class!(trait QAbstractTableModel),
     displayData: qt_property!(QVariant; WRITE set_display_data),
-    dataChangedForHost: qt_method!(fn(&self, host_id: QString)),
-
     // toggleRow is preferred for setting selected row.
     selectedRow: qt_property!(i32; NOTIFY selectedRowChanged),
+
     selectedRowChanged: qt_signal!(),
     selectionActivated: qt_signal!(),
     selectionDeactivated: qt_signal!(),
+
+    dataChangedForHost: qt_method!(fn(&self, host_id: QString)),
     toggleRow: qt_method!(fn(&mut self, row: i32)),
     getSelectedHostId: qt_method!(fn(&self) -> QString),
+    filter: qt_method!(fn(&self, filter: QString)),
 
     host_row_map: HashMap<String, usize>,
     i_display_data: frontend::DisplayData,
     // Currently stores the same data as HostDataManagerModel but that might change.
     /// Holds preprocessed data more fitting for table rows.
     row_data: Vec<HostDataModel>,
+    search_filter: String,
 }
 
 #[allow(non_snake_case)]
 impl HostTableModel {
     fn set_display_data(&mut self, display_data: QVariant) {
+        // Remember currently selected host.
+        let selected_host_id = self.getSelectedHostId();
+
         self.begin_reset_model();
-
         self.i_display_data = frontend::DisplayData::from_qvariant(display_data).unwrap();
+        self.update_row_data();
+        self.end_reset_model();
 
-        let mut host_ids_ordered = self.i_display_data.hosts.keys().collect::<Vec<&String>>();
-        host_ids_ordered.sort_by_key(|key| key.to_lowercase());
+        self.selectedRow = match self.host_row_map.get(&selected_host_id.to_string()) {
+            Some(row) => *row as i32,
+            None => -1,
+        };
+
+        if self.selectedRow >= 0 {
+            self.selectionActivated();
+        }
+    }
+
+    fn update_row_data(&mut self) {
+        let mut filtered_hosts = self.i_display_data.hosts.iter().filter(|(host_id, host_display_data)| {
+            self.search_filter.is_empty() ||
+            host_id.to_lowercase().contains(&self.search_filter) ||
+            host_display_data.host_state.host.fqdn.to_lowercase().contains(&self.search_filter) ||
+            host_display_data.host_state.host.ip_address.to_string().to_lowercase().contains(&self.search_filter)
+        }).collect::<Vec<_>>();
+
+        filtered_hosts.sort_by_key(|(key, _)| key.to_lowercase());
+
+        // Remember currently selected host.
+        let selected_host_id = self.getSelectedHostId();
 
         self.host_row_map.clear();
         self.row_data.clear();
-        for host_id in host_ids_ordered {
-            let host_data = self.i_display_data.hosts.get(host_id).unwrap();
+
+        for (host_id, host_data) in filtered_hosts {
             self.host_row_map.insert(host_id.clone(), self.row_data.len());
             self.row_data.push(HostDataModel::from(host_data));
         }
 
-        self.end_reset_model();
-
-        // Remember currently selected host. If missing, then go back to -1.
-        let selected_host_id = self.getSelectedHostId();
+        // Restore host selection.
         self.selectedRow = match self.host_row_map.get(&selected_host_id.to_string()) {
             Some(row) => *row as i32,
             None => -1,
@@ -90,10 +114,22 @@ impl HostTableModel {
     }
 
     fn getSelectedHostId(&self) -> QString {
-        match self.row_data.get(self.selectedRow as usize) {
-            Some(host) => host.name.clone(),
-            None => QString::from(""),
+        if self.selectedRow >= 0 {
+            match self.row_data.get(self.selectedRow as usize) {
+                Some(host) => host.name.clone(),
+                None => QString::from(""),
+            }
         }
+        else {
+            QString::from("")
+        }
+    }
+
+    fn filter(&mut self, filter: QString) {
+        self.search_filter = filter.to_string().to_lowercase();
+        self.begin_reset_model();
+        self.update_row_data();
+        self.end_reset_model();
     }
 }
 
