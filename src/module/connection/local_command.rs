@@ -26,12 +26,7 @@ impl Module for LocalCommand {
 }
 
 impl ConnectionModule for LocalCommand {
-    fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, LkError> {
-        if !wait_full_response {
-            // Not supported.
-            panic!("Partial responses are not supported")
-        }
-
+    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         // TODO: don't assume bash exists even though it's very common?
         let output = process::Command::new("bash")
                                       .args(&["-c", message])

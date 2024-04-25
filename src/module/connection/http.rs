@@ -26,12 +26,7 @@ impl Module for Http {
 }
 
 impl ConnectionModule for Http {
-    fn send_message(&mut self, message: &str, wait_full_response: bool) -> Result<ResponseMessage, LkError> {
-        if !wait_full_response {
-            // Not supported.
-            panic!("Partial responses are not supported")
-        }
-
+    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }

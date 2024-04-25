@@ -7,7 +7,6 @@ use std::{
     thread,
 };
 
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::error::LkError;
@@ -22,7 +21,7 @@ use crate::cache::{Cache, CacheScope};
 use self::request_response::RequestResponse;
 
 
-type ConnectorStates = HashMap<ModuleSpecification, Arc<Mutex<Connector>>>;
+type ConnectorStates = HashMap<ModuleSpecification, Connector>;
 
 
 const MAX_WORKER_THREADS: usize = 8;
@@ -76,7 +75,7 @@ impl ConnectionManager {
 
                     let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
                     if !connector.get_metadata_self().is_stateless {
-                        host_connectors.entry(connector_spec).or_insert_with(|| Arc::new(Mutex::new(connector)));
+                        host_connectors.entry(connector_spec).or_insert_with(|| connector);
                     }
                 }
             }
@@ -96,7 +95,7 @@ impl ConnectionManager {
 
                     let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
                     if !connector.get_metadata_self().is_stateless {
-                        host_connectors.entry(connector_spec).or_insert_with(|| Arc::new(Mutex::new(connector)));
+                        host_connectors.entry(connector_spec).or_insert_with(|| connector);
                     }
                 }
             }
@@ -156,7 +155,7 @@ impl ConnectionManager {
     }
 
     fn process_requests(
-        mut stateful_connectors: HashMap<String, ConnectorStates>,
+        stateful_connectors: HashMap<String, ConnectorStates>,
         receiver: mpsc::Receiver<ConnectorRequest>,
         module_factory: Arc<ModuleFactory>,
         cache_settings: CacheSettings) -> thread::JoinHandle<()> {
@@ -176,202 +175,168 @@ impl ConnectionManager {
                     }
                 };
 
-                if let RequestType::Exit = request.request_type {
-                    log::debug!("Gracefully stopping connection manager thread");
+                worker_pool.install(|| {
 
-                    if cache_settings.enable_cache {
-                        match command_cache.lock().unwrap().write_to_disk() {
-                            Ok(count) => log::debug!("Wrote {} entries to cache file", count),
-                            // Failing to write the file is not critical.
-                            Err(error) => log::error!("{}", error),
+                    if let RequestType::Exit = request.request_type {
+                        log::debug!("Gracefully stopping connection manager thread");
+
+                        if cache_settings.enable_cache {
+                            match command_cache.lock().unwrap().write_to_disk() {
+                                Ok(count) => log::debug!("Wrote {} entries to cache file", count),
+                                // Failing to write the file is not critical.
+                                Err(error) => log::error!("{}", error),
+                            }
                         }
+                        return;
                     }
-                    return;
-                }
 
-                // Requests with no connector dependency.
-                if request.connector_spec.is_none() {
-                    request.response_sender.send(RequestResponse::new_empty(&request)).unwrap();
-                    continue;
-                }
-
-                let connector_spec = request.connector_spec.as_ref().unwrap().clone();
-                let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
-
-                // Stateless connectors.
-                if connector_metadata.is_stateless {
-                    worker_pool.install(|| {
-                        log::debug!("[{}] Worker {} processing a stateless request", request.host.name, rayon::current_thread_index().unwrap());
-                        let mut connector = module_factory.new_connector(&connector_spec, &HashMap::new());
-
-                        // Key verifications have to be done before anything else.
-                        match request.request_type {
-                            RequestType::KeyVerification { key_id } => {
-                                log::debug!("[{}] Verifying host key", request.host.name);
-                                connector.verify_host_key(&request.host.get_address(), &key_id).unwrap();
-                                return;
-                            },
-                            _ => {}
+                    let connector_spec = match &request.connector_spec {
+                        Some(spec) => spec.clone(),
+                        None => {
+                            // Requests with no connector dependency.
+                            request.response_sender.send(RequestResponse::new_empty(&request)).unwrap();
+                            return;
                         }
+                    };
+                        
+                    let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
 
-                        let responses = match &request.request_type {
-                            RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
-                                commands.par_iter().map(|command| {
-                                    let mut par_connector = module_factory.new_connector(&connector_spec, &HashMap::new());
-                                    Self::process_command(&request.host, command_cache.clone(), cache_policy, &mut par_connector, command)
-                                }).collect()
-                            },
-                            RequestType::Command { commands } => {
-                                commands.par_iter().map(|command| {
-                                    let mut par_connector = module_factory.new_connector(&connector_spec, &HashMap::new());
-                                    Self::process_command(&request.host, command_cache.clone(), &CachePolicy::BypassCache, &mut par_connector, command )
-                                }).collect()
-                            },
-                            RequestType::CommandFollowOutput { commands: _ } =>
-                                panic!("Follow output is currently not supported for stateless connectors"),
-                            RequestType::Download { remote_file_path: file_path } =>
-                                vec![Self::process_download(&request.host, &mut connector, file_path)],
-                            RequestType::Upload { metadata: _, local_file_path } =>
-                                vec![Self::process_upload(&request.host, &mut connector, local_file_path)],
-                            _ => panic!(),
-                        };
-
-                        let response = RequestResponse::new(&request, responses);
-                        request.response_sender.send(response).unwrap();
-                    });
-                }
-                // Stateful connectors.
-                else {
-                    // TODO: This will block the thread unnecessarily. Need a better solution for parallel update of multiple hosts.
-                    // Imagine MAX_WORKERS amount of requests sequentially for the same host and connector.
-                    let host_connectors = stateful_connectors.get_mut(&request.host.name).unwrap();
-                    let connector_mutex = host_connectors.get_mut(&connector_spec).unwrap();
-                    let mut connector = connector_mutex.lock().unwrap();
+                    // Stateless connectors.
+                    let mut stateless_connector;
+                    let connector = if connector_metadata.is_stateless {
+                        log::debug!("[{}] Worker {} processing a stateless request", request.host.name, rayon::current_thread_index().unwrap());
+                        stateless_connector = Box::new(module_factory.new_connector(&connector_spec, &HashMap::new()));
+                        &mut stateless_connector
+                    }
+                    // Stateful connectors.
+                    else {
+                        let host_connectors = stateful_connectors.get(&request.host.name).unwrap();
+                        host_connectors.get(&connector_spec).unwrap()
+                    };
 
                     // Key verifications have to be done before anything else.
-                    match request.request_type.clone() {
+                    match request.request_type {
                         RequestType::KeyVerification { key_id } => {
                             log::debug!("[{}] Verifying host key", request.host.name);
                             connector.verify_host_key(&request.host.get_address(), &key_id).unwrap();
-                            continue;
+                            return;
                         },
                         _ => {}
                     }
 
+                    // TODO: not very elegant. No need to set multiple times.
+                    connector.set_target(&request.host.get_address());
+                    /* TODO
                     if !connector.is_connected() {
                         if let Err(error) = connector.connect(&request.host.get_address()) {
                             log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
                             let response = RequestResponse::new_error(&request, error.set_source(connector.get_module_spec().id));
                             request.response_sender.send(response).unwrap();
-                            continue;
+                            return;
                         }
-                    }
-                    drop(connector);
+                    } */
 
-                    worker_pool.install(|| {
-                        log::debug!("[{}] Worker {} processing a stateful request", request.host.name, rayon::current_thread_index().unwrap());
+                    log::debug!("[{}] Worker {} processing request", request.host.name, rayon::current_thread_index().unwrap());
 
-                        let mut connector = connector_mutex.lock().unwrap();
-                        let responses = match &request.request_type {
-                            RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
-                                commands.iter().map(|command| {
-                                    Self::process_command(&request.host, command_cache.clone(), cache_policy, &mut connector, command )
-                                }).collect()
-                            },
-                            RequestType::Command { commands } => {
-                                commands.iter().map(|command| {
-                                    Self::process_command(&request.host, command_cache.clone(), &CachePolicy::BypassCache, &mut connector, command )
-                                }).collect()
-                            },
-                            RequestType::CommandFollowOutput { commands } => {
-                                if commands.len() != 1 {
-                                    panic!("Follow output is only supported for a single command");
-                                }
-                                vec![Self::process_command_follow_output(&request, &mut connector, commands.first().unwrap(), request.response_sender.clone())]
-                            },
-                            RequestType::Download { remote_file_path: file_path } =>
-                                vec![Self::process_download(&request.host, &mut connector, file_path)],
-                            RequestType::Upload { metadata: _, local_file_path } =>
-                                vec![Self::process_upload(&request.host, &mut connector, local_file_path)],
-                            _ => panic!(),
-                        };
-                        drop(connector);
+                    let responses = match &request.request_type {
+                        RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
+                            Self::process_commands(&request.host, command_cache.clone(), cache_policy, &connector, commands)
+                        },
+                        RequestType::Command { commands } => {
+                            Self::process_commands(&request.host, command_cache.clone(), &CachePolicy::BypassCache, &connector, commands)
+                        },
+                        RequestType::CommandFollowOutput { commands } => {
+                            if commands.len() != 1 {
+                                panic!("Follow output is only supported for a single command");
+                            }
+                            vec![Self::process_command_follow_output(&request, &connector, commands.first().unwrap(), request.response_sender.clone())]
+                        },
+                        RequestType::Download { remote_file_path: file_path } =>
+                            vec![Self::process_download(&request.host, &connector, file_path)],
+                        RequestType::Upload { metadata: _, local_file_path } =>
+                            vec![Self::process_upload(&request.host, &connector, local_file_path)],
+                        _ => panic!(),
+                    };
 
-                        let response = RequestResponse::new(&request, responses);
-                        request.response_sender.send(response).unwrap();
-                    });
-                }
+                    let response = RequestResponse::new(&request, responses);
+                    request.response_sender.send(response).unwrap();
+                });
             }
         })
     }
 
-    fn process_command(host: &Host,
-                       command_cache: Arc<Mutex<Cache<String, ResponseMessage>>>,
-                       cache_policy: &CachePolicy,
-                       connector: &mut Connector,
-                       request_message: &String) -> Result<ResponseMessage, LkError> {
+    fn process_commands(host: &Host,
+                        command_cache: Arc<Mutex<Cache<String, ResponseMessage>>>,
+                        cache_policy: &CachePolicy,
+                        connector: &Connector,
+                        request_messages: &Vec<String>) -> Vec<Result<ResponseMessage, LkError>> {
 
         let mut command_cache = command_cache.lock().unwrap();
 
         // let request = request.lock().unwrap();
-        log::debug!("[{}] Processing command: {}", host.name, request_message);
+        let mut results = Vec::new();
+        for request_message in request_messages {
+            log::debug!("[{}] Processing command: {}", host.name, request_message);
 
-        // Some commands are supposed to not actually execute.
-        if request_message.is_empty() {
-            log::debug!("[{}] Ignoring empty command", host.name);
-            return Ok(ResponseMessage::empty());
-        }
+            // Some commands are supposed to not actually execute.
+            if request_message.is_empty() {
+                log::debug!("[{}] Ignoring empty command", host.name);
+                results.push(Ok(ResponseMessage::empty()));
+            }
 
-        let cache_key = match connector.get_metadata_self().cache_scope {
-            CacheScope::Global => format!("{}|{}", connector.get_module_spec(), request_message),
-            CacheScope::Host => format!("{}|{}|{}", host.name, connector.get_module_spec(), request_message),
-        };
+            let cache_key = match connector.get_metadata_self().cache_scope {
+                CacheScope::Global => format!("{}|{}", connector.get_module_spec(), request_message),
+                CacheScope::Host => format!("{}|{}|{}", host.name, connector.get_module_spec(), request_message),
+            };
 
-        let cached_response = if *cache_policy == CachePolicy::OnlyCache || *cache_policy == CachePolicy::PreferCache {
-            command_cache.get(&cache_key)
-        }
-        else {
-            None
-        };
-
-        if let Some(cached_response) = cached_response {
-            log::debug!("[{}] Using cached response for command {}", host.name, request_message);
-            return Ok(cached_response);
-        }
-        else if *cache_policy == CachePolicy::OnlyCache {
-            return Ok(ResponseMessage::not_found());
-        }
-        else {
-            let response_result = connector.send_message(request_message, true);
-
-            if let Ok(response) = response_result {
-                if response.return_code != 0 {
-                    log::debug!("Command returned non-zero exit code: {}", response.return_code)
-                }
-                if *cache_policy != CachePolicy::BypassCache {
-                    // Doesn't cache failed commands.
-                    let mut cached_response = response.clone();
-                    cached_response.is_from_cache = true;
-                    command_cache.insert(cache_key, cached_response);
-                }
-                Ok(response)
+            let cached_response = if *cache_policy == CachePolicy::OnlyCache || *cache_policy == CachePolicy::PreferCache {
+                command_cache.get(&cache_key)
             }
             else {
-                // Add module name to error details.
-                response_result.map_err(|error| error.set_source(connector.get_module_spec().id))
+                None
+            };
+
+            if let Some(cached_response) = cached_response {
+                log::debug!("[{}] Using cached response for command {}", host.name, request_message);
+                results.push(Ok(cached_response));
+            }
+            else if *cache_policy == CachePolicy::OnlyCache {
+                results.push(Ok(ResponseMessage::not_found()));
+            }
+            else {
+                let response_result = connector.send_message(request_message);
+
+                if let Ok(response) = response_result {
+                    if response.return_code != 0 {
+                        log::debug!("Command returned non-zero exit code: {}", response.return_code)
+                    }
+                    if *cache_policy != CachePolicy::BypassCache {
+                        // Doesn't cache failed commands.
+                        let mut cached_response = response.clone();
+                        cached_response.is_from_cache = true;
+                        command_cache.insert(cache_key, cached_response);
+                    }
+                    results.push(Ok(response))
+                }
+                else {
+                    // Add module name to error details.
+                    results.push(response_result.map_err(|error| error.set_source(connector.get_module_spec().id)))
+                }
             }
         }
+
+        results
     }
 
     fn process_command_follow_output(
         request: &ConnectorRequest,
-        connector: &mut Connector,
+        connector: &Connector,
         request_message: &String,
         response_sender: mpsc::Sender<RequestResponse>,
     ) -> Result<ResponseMessage, LkError> {
 
         log::debug!("[{}] Processing command: {}", request.host.name, request_message);
-        let mut response_message_result = connector.send_message(request_message, false);
+        let mut response_message_result = connector.send_message_partial(request_message, request.invocation_id);
 
         // Paradoxical name...
         let mut full_partial_message = String::new();
@@ -385,7 +350,7 @@ impl ConnectionManager {
                     let response = RequestResponse::new(request, vec![Ok(response_message)]);
                     response_sender.send(response).unwrap();
 
-                    response_message_result = connector.receive_partial_response();
+                    response_message_result = connector.receive_partial_response(request.invocation_id);
                 }
                 else {
                     if response_message.return_code != 0 {
@@ -403,7 +368,7 @@ impl ConnectionManager {
 
     }
 
-    fn process_download(host: &Host, connector: &mut Connector, file_path: &String) -> Result<ResponseMessage, LkError> {
+    fn process_download(host: &Host, connector: &Connector, file_path: &String) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Downloading file: {}", host.name, file_path);
         match connector.download_file(file_path) {
             Ok((metadata, contents)) => {
@@ -416,7 +381,7 @@ impl ConnectionManager {
         }
     }
 
-    fn process_upload(host: &Host, connector: &mut Connector, local_file_path: &String) -> Result<ResponseMessage, LkError> {
+    fn process_upload(host: &Host, connector: &Connector, local_file_path: &String) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
         match file_handler::read_file(local_file_path) {
             Ok((metadata, contents)) => {

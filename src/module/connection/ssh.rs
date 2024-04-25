@@ -1,4 +1,7 @@
 use std::path::PathBuf;
+use std::sync::MutexGuard;
+use std::time::Duration;
+use std::sync::Mutex;
 use std::{
     net::TcpStream,
     net::ToSocketAddrs,
@@ -37,13 +40,12 @@ static MODULE_NAME: &str = "ssh";
                                key (e.g. user@desktop). Default: empty (all keys are tried).",
       verify_host_key => "Whether to verify the host key using a known_hosts-file. Default: true.",
       custom_known_hosts_path => "Path to a custom known_hosts file. Default: (inside configuration directory).",
+      parallel_sessions => "Number of parallel login sessions. Improves performance. Default: 2.",
     }
 )]
 pub struct Ssh2 {
-    session: ssh2::Session,
-    is_initialized: bool,
-    address: String,
-    port: u16,
+    address: Mutex<String>,
+    port: Mutex<u16>,
     username: String,
     password: Option<String>,
     private_key_path: Option<String>,
@@ -53,19 +55,34 @@ pub struct Ssh2 {
     verify_host_key: bool,
     custom_known_hosts_path: Option<PathBuf>,
 
-    // TODO: multiple parallel channels for multiple commands?
+    available_sessions: Vec<Mutex<SharedSessionData>>,
+}
+
+pub struct SharedSessionData {
+    is_initialized: bool,
+    session: ssh2::Session,
     open_channel: Option<ssh2::Channel>,
+    // For incomplete invocations, tag with the invocation ID.
+    invocation_id: u64,
 }
 
 impl Module for Ssh2 {
     fn new(settings: &HashMap<String, String>) -> Self {
-        let session = ssh2::Session::new().unwrap();
+        let parallel_sessions = settings.get("parallel_sessions").unwrap_or(&String::from("2")).parse::<u16>().unwrap();
+        let mut available_sessions = Vec::new();
+
+        for _ in 0..parallel_sessions {
+            available_sessions.push(Mutex::new(SharedSessionData {
+                is_initialized: false,
+                session: ssh2::Session::new().unwrap(),
+                open_channel: None,
+                invocation_id: 0,
+            }));
+        }
 
         Ssh2 {
-            session: session,
-            is_initialized: false,
-            address: String::from("0.0.0.0"),
-            port: settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap(),
+            address: Mutex::new(String::from("0.0.0.0")),
+            port: Mutex::new(settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap()),
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
             password: settings.get("password").cloned(),
             private_key_path: settings.get("private_key_path").cloned(),
@@ -75,88 +92,33 @@ impl Module for Ssh2 {
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
             verify_host_key: settings.get("verify_host_key").unwrap_or(&String::from("true")).parse::<bool>().unwrap(),
             custom_known_hosts_path: settings.get("custom_known_hosts_path").map(|path| PathBuf::from(path)),
-            open_channel: None,
+            available_sessions: available_sessions,
         }
     }
 }
 
 impl ConnectionModule for Ssh2 {
-    fn connect(&mut self, address: &str) -> Result<(), LkError> {
-        if self.is_initialized {
-            return Ok(())
-        }
-
-        self.address = address.to_string();
-        let socket_address = format!("{}:{}", self.address, self.port).to_socket_addrs().unwrap().next().unwrap();
-        let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
-        let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
-
-        log::info!("Connected to {}:{}", self.address, self.port);
-
-        self.session = ssh2::Session::new().unwrap();
-        self.session.set_tcp_stream(stream);
-        self.session.handshake()?;
-
-        if self.verify_host_key {
-            self.check_known_hosts(address, self.port)?;
-        }
-
-        if self.password.is_some() {
-            self.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str())
-                .map_err(|error| LkError::new_other(format!("Failed to authenticate with password: {}", error)))?;
-        }
-        else if self.private_key_path.is_some() {
-            let path = Path::new(self.private_key_path.as_ref().unwrap());
-            let passphrase_option = self.private_key_passphrase.as_ref().map(|pass| pass.as_str());
-
-            self.session.userauth_pubkey_file(self.username.as_str(), None, path, passphrase_option)
-                .map_err(|error| LkError::new_other(format!("Failed to authenticate with private key: {}", error)))?;
-        }
-        else {
-            log::info!("Password or key is not set, using SSH agent for authentication.");
-            let mut agent = self.session.agent()
-                .map_err(|error| LkError::new_other(format!("Failed to connect to SSH agent: {}", error)))?;
-
-            agent.connect()
-                 .map_err(|error| LkError::new_other(format!("Failed to connect to SSH agent: {}", error)))?;
-
-            agent.list_identities()?;
-            let mut valid_identities = agent.identities()?;
-
-            if let Some(selected_id) = self.agent_key_identifier.as_ref() {
-                valid_identities.retain(|identity| identity.comment() == selected_id.as_str());
-            }
-
-            for identity in valid_identities.iter() {
-                log::debug!("Trying to authenticate with key \"{}\".", identity.comment());
-                if agent.userauth(self.username.as_str(), identity).is_ok() {
-                    break;
-                }
-            }
-
-            if !self.session.authenticated() {
-                return Err(LkError::new_other("Failed to authenticate with SSH agent."));
-            }
-        }
-
-        self.is_initialized = true;
-        Ok(())
+    fn set_target(&self, address: &str) {
+        let mut mutex_address = self.address.lock().unwrap();
+         *mutex_address = address.to_string();
     }
 
-    fn send_message(&mut self, message: &str, wait_full_result: bool) -> Result<ResponseMessage, LkError> {
+    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }
 
-        let mut channel = match self.session.channel_session() {
+        let mut session_data = self.wait_for_session(0)?;
+
+        let mut channel = match session_data.session.channel_session() {
             Ok(channel) => channel,
             Err(error) => {
                 // Error is likely duo to disconnected or timeouted session. Try to reconnect once.
                 log::error!("Reconnecting channel due to error: {}", error);
-                self.reconnect()
+                self.reconnect(&mut session_data)
                     .map_err(|error| format!("Error reconnecting: {}", error))?;
 
-                self.session.channel_session()
+                session_data.session.channel_session()
                     .map_err(|error| format!("Error opening channel: {}", error))?
             }
         };
@@ -169,62 +131,91 @@ impl ConnectionModule for Ssh2 {
 
         let mut output = String::new();
 
-        if wait_full_result {
-            channel.read_to_string(&mut output)
-                   .map_err(|error| format!("Invalid output received: {}", error))?;
+        channel.read_to_string(&mut output)
+               .map_err(|error| format!("Invalid output received: {}", error))?;
+
+        if !channel.eof() {
+            return Err(LkError::new(ErrorKind::Other, "Channel is not at EOF even though full response was requested"));
         }
-        else {
-            let mut buffer = [0u8; 256];
-            output = channel.read(&mut buffer)
-                .map(|_| std::str::from_utf8(&buffer).unwrap().to_string())
-                .map_err(|error| format!("Invalid output received: {}", error))?;
-        }
+
+        let exit_status = channel.exit_status().unwrap_or(-1);
+
+        channel.wait_close()
+               .map_err(|error| format!("Error while closing channel: {}", error))?;
+
+        Ok(ResponseMessage::new(strip_newline(&output), exit_status))
+    }
+
+    fn send_message_partial(&self, message: &str, invocation_id: u64) -> Result<ResponseMessage, LkError> {
+        let mut session_data = self.wait_for_session(0)?;
+
+        let mut channel = match session_data.session.channel_session() {
+            Ok(channel) => channel,
+            Err(error) => {
+                // Error is likely duo to disconnected or timeouted session. Try to reconnect once.
+                log::error!("Reconnecting channel due to error: {}", error);
+                self.reconnect(&mut session_data)
+                    .map_err(|error| format!("Error reconnecting: {}", error))?;
+
+                session_data.session.channel_session()
+                    .map_err(|error| format!("Error opening channel: {}", error))?
+            }
+        };
+
+        // Merge stderr etc. to the same stream as stdout.
+        channel.handle_extended_data(ssh2::ExtendedData::Merge).unwrap();
+        
+        channel.exec(message)
+               .map_err(|error| format!("Error executing command '{}': {}", message, error))?;
+
+        let mut buffer = [0u8; 256];
+        let output = channel.read(&mut buffer)
+            .map(|_| std::str::from_utf8(&buffer).unwrap().to_string())
+            .map_err(|error| format!("Invalid output received: {}", error))?;
 
         if channel.eof() {
             let exit_status = channel.exit_status().unwrap_or(-1);
-
             channel.wait_close()
                    .map_err(|error| format!("Error while closing channel: {}", error))?;
 
             Ok(ResponseMessage::new(strip_newline(&output), exit_status))
         }
         else {
-            if wait_full_result {
-                panic!("Channel is not at EOF even though full response was requested");
-            }
-
-            self.open_channel = Some(channel);
+            session_data.invocation_id = invocation_id;
             Ok(ResponseMessage::new_partial(output))
         }
     }
 
-    fn receive_partial_response(&mut self) -> Result<ResponseMessage, LkError> {
-        if let Some(channel) = &mut self.open_channel {
-            let mut buffer = [0u8; 1024];
-            let output = channel.read(&mut buffer)
-                .map(|count| std::str::from_utf8(&buffer[0..count]).unwrap().to_string())
-                .map_err(|error| format!("Invalid output received: {}", error))?;
+    fn receive_partial_response(&self, invocation_id: u64) -> Result<ResponseMessage, LkError> {
+        let mut partial_session = self.wait_for_session(invocation_id)?;
+        let mut channel = partial_session.open_channel.take().unwrap();
 
-            if channel.eof() {
-                let exit_status = channel.exit_status().unwrap_or(-1);
+        let mut buffer = [0u8; 1024];
+        let output = channel.read(&mut buffer)
+            .map(|count| std::str::from_utf8(&buffer[0..count]).unwrap().to_string())
+            .map_err(|error| {
+                partial_session.invocation_id = 0;
+                format!("Invalid output received: {}", error)
+            })?;
 
-                channel.wait_close()
-                       .map_err(|error| format!("Error while closing channel: {}", error))?;
+        if channel.eof() {
+            partial_session.invocation_id = 0;
+            let exit_status = channel.exit_status().unwrap_or(-1);
 
-                self.open_channel = None;
-                Ok(ResponseMessage::new(strip_newline(&output), exit_status))
-            }
-            else {
-                Ok(ResponseMessage::new_partial(output))
-            }
+            channel.wait_close()
+                .map_err(|error| format!("Error while closing channel: {}", error))?;
+
+            Ok(ResponseMessage::new(strip_newline(&output), exit_status))
         }
         else {
-            panic!("No open channel available");
+            partial_session.open_channel = Some(channel);
+            Ok(ResponseMessage::new_partial(output))
         }
     }
 
     fn download_file(&self, source: &String) -> Result<(FileMetadata, Vec<u8>), LkError> {
-        let sftp = self.session.sftp()?;
+        let session_data = self.wait_for_session(0)?;
+        let sftp = session_data.session.sftp()?;
 
         let mut file = sftp.open(Path::new(&source))?;
         let mut contents = Vec::new();
@@ -245,7 +236,8 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> Result<(), LkError> {
-        let sftp = self.session.sftp()?;
+        let session_data = self.wait_for_session(0)?;
+        let sftp = session_data.session.sftp()?;
 
         let file = sftp.open_mode(
             Path::new(&metadata.remote_path),
@@ -258,30 +250,34 @@ impl ConnectionModule for Ssh2 {
              .map(|_| Ok(()))?
     }
 
-    fn verify_host_key(&mut self, hostname: &str, key_id: &str) -> Result<(), LkError> {
+    fn verify_host_key(&self, hostname: &str, key_id: &str) -> Result<(), LkError> {
         // TODO: something's not right. self.address is unset when this function is visited even though connect()
         // (and setting of self.address) should happen before key verification. Setting self.address again as a workaround.
-        self.address = hostname.to_string();
+        // Check if this is still the case?
+        let mut session_data = self.wait_for_session(0)?;
+        let mut self_address = self.address.lock().unwrap();
+        *self_address = hostname.to_string();
+        let self_port = *self.port.lock().unwrap();
 
         let known_hosts_path = self.get_known_hosts_path()?;
 
-        let mut known_hosts = self.session.known_hosts().unwrap();
+        let mut known_hosts = session_data.session.known_hosts().unwrap();
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
                    .map_err(|error| LkError::new_other(format!("Failed to read known hosts file: {}", error)))?;
 
         // The session probably gets disconnected since receiving host key fails if not reconnecting.
-        let socket_address = format!("{}:{}", self.address, self.port).to_socket_addrs().unwrap().next().unwrap();
+        let socket_address = format!("{}:{}", self_address, self_port).to_socket_addrs().unwrap().next().unwrap();
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
         let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
 
-        log::info!("Connected to {}:{}", self.address, self.port);
-        self.session = ssh2::Session::new().unwrap();
-        self.session.set_tcp_stream(stream);
-        self.session.handshake()?;
+        log::info!("Connected to {}:{}", self_address, self_port);
+        session_data.session = ssh2::Session::new().unwrap();
+        session_data.session.set_tcp_stream(stream);
+        session_data.session.handshake()?;
 
-        if let Some((key, key_type)) = self.session.host_key() {
+        if let Some((key, key_type)) = session_data.session.host_key() {
             let key_string = Self::get_host_key_id(key_type, key);
-            let host_and_port = format!("[{}]:{}", hostname, self.port);
+            let host_and_port = format!("[{}]:{}", hostname, self_port);
 
             if key_string == key_id {
                 known_hosts.add(&host_and_port, key, hostname, key_type.into())
@@ -298,25 +294,105 @@ impl ConnectionModule for Ssh2 {
             Err(LkError::new_other("Failed to get host key"))
         }
     }
-
-    fn is_connected(&self) -> bool {
-        self.is_initialized
-    }
-
-    fn reconnect(&mut self) -> Result<(), LkError> {
-        self.disconnect();
-        log::debug!("Disconnected");
-        self.connect(&self.address.clone())
-    }
-
-    fn disconnect(&mut self) {
-        let _ = self.session.disconnect(None, "", None);
-        self.is_initialized = false;
-    }
 }
 
 impl Ssh2 {
-    fn check_known_hosts(&self, hostname: &str, port: u16) -> Result<(), LkError> {
+    fn wait_for_session(&self, invocation_id: u64) -> Result<MutexGuard<SharedSessionData>, LkError> {
+        loop {
+            for session in self.available_sessions.iter() {
+                if let Ok(mut session_data) = session.try_lock() {
+                    // Incomplete commands will want a specific invocation. ID 0 means not used.
+                    if session_data.invocation_id > 0 && session_data.invocation_id != invocation_id {
+                        continue;
+                    }
+
+                    if !session_data.is_initialized {
+                        let address = self.address.lock().unwrap().clone();
+                        let port = *self.port.lock().unwrap();
+                        if let Err(error) = self.connect(&mut session_data, &address, port) {
+                            log::error!("Error while connecting {}: {}", address, error);
+                            return Err(error);
+                        }
+                    }
+                    return Ok(session_data);
+                }
+            }
+
+            std::thread::sleep(Duration::from_millis(500));
+        }
+    }
+
+    fn connect(&self, session_data: &mut MutexGuard<SharedSessionData>, address: &str, port: u16) -> Result<(), LkError> {
+        if session_data.is_initialized {
+            return Ok(())
+        }
+
+        let socket_address = format!("{}:{}", address, port).to_socket_addrs().unwrap().next().unwrap();
+        let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
+        let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
+        log::info!("Connected to {}:{}", address, port);
+
+        session_data.session = ssh2::Session::new().unwrap();
+        session_data.session.set_tcp_stream(stream);
+        session_data.session.handshake()?;
+
+        if self.verify_host_key {
+            self.check_known_hosts(&session_data, &address, port)?;
+        }
+
+        if self.password.is_some() {
+            session_data.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str())
+                .map_err(|error| LkError::new_other(format!("Failed to authenticate with password: {}", error)))?;
+        }
+        else if self.private_key_path.is_some() {
+            let path = Path::new(self.private_key_path.as_ref().unwrap());
+            let passphrase_option = self.private_key_passphrase.as_ref().map(|pass| pass.as_str());
+
+            session_data.session.userauth_pubkey_file(self.username.as_str(), None, path, passphrase_option)
+                .map_err(|error| LkError::new_other(format!("Failed to authenticate with private key: {}", error)))?;
+        }
+        else {
+            log::info!("Password or key is not set, using SSH agent for authentication.");
+            let mut agent = session_data.session.agent()
+                .map_err(|error| LkError::new_other(format!("Failed to connect to SSH agent: {}", error)))?;
+
+            agent.connect()
+                 .map_err(|error| LkError::new_other(format!("Failed to connect to SSH agent: {}", error)))?;
+
+            agent.list_identities()?;
+            let mut valid_identities = agent.identities()?;
+
+            if let Some(selected_id) = self.agent_key_identifier.as_ref() {
+                valid_identities.retain(|identity| identity.comment() == selected_id.as_str());
+            }
+
+            for identity in valid_identities.iter() {
+                log::debug!("Trying to authenticate with key \"{}\".", identity.comment());
+                if agent.userauth(self.username.as_str(), identity).is_ok() {
+                    break;
+                }
+            }
+
+            if !session_data.session.authenticated() {
+                return Err(LkError::new_other("Failed to authenticate with SSH agent."));
+            }
+        }
+
+        session_data.is_initialized = true;
+        Ok(())
+    }
+
+    fn reconnect(&self, session_data: &mut MutexGuard<SharedSessionData>) -> Result<(), LkError> {
+        let address = self.address.lock().unwrap().clone();
+        let port = *self.port.lock().unwrap();
+
+        session_data.session.disconnect(None, "", None)?;
+        session_data.is_initialized = false;
+        log::debug!("Disconnected");
+        self.connect(session_data, &address, port)
+    }
+
+    fn check_known_hosts(&self, session_data: &MutexGuard<SharedSessionData>, hostname: &str, port: u16) -> Result<(), LkError> {
         let known_hosts_path = self.get_known_hosts_path()?;
 
         // Create known_hosts if it's missing.
@@ -325,11 +401,11 @@ impl Ssh2 {
             let _ = std::fs::File::create(&known_hosts_path)?;
         }
 
-        let mut known_hosts = self.session.known_hosts().unwrap();
+        let mut known_hosts = session_data.session.known_hosts().unwrap();
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
                    .map_err(|error| LkError::new_other(format!("Failed to read known hosts file: {}", error)))?;
 
-        if let Some((key, key_type)) = self.session.host_key() {
+        if let Some((key, key_type)) = session_data.session.host_key() {
             let key_string = Self::get_host_key_id(key_type, key);
 
             match known_hosts.check_port(hostname, port, key) {
