@@ -13,6 +13,8 @@ use crate::module::connection::*;
     description="Sends a HTTP request",
 )]
 pub struct Http {
+    // A temporary state for resource reuse when receiving multiple commands.
+    agent: ureq::Agent,
 }
 
 impl Http {
@@ -21,6 +23,7 @@ impl Http {
 impl Module for Http {
     fn new(_settings: &HashMap<String, String>) -> Self {
         Http {
+            agent: ureq::Agent::new(),
         }
     }
 }
@@ -37,9 +40,9 @@ impl ConnectionModule for Http {
 
         // Currently only supports GET and POST requests.
         let response = if data.is_empty() {
-            ureq::get(url).call().map_err(|error| format!("Error while sending GET request: {}", error))?
+            self.agent.get(url).call().map_err(|error| format!("Error while sending GET request: {}", error))?
         } else {
-            ureq::post(url).send_string(data).map_err(|error| format!("Error while sending POST request: {}", error))?
+            self.agent.post(url).send_string(data).map_err(|error| format!("Error while sending POST request: {}", error))?
         };
 
         let response_string = response.into_string().map_err(|error| format!("Error while reading response: {}", error))?;
