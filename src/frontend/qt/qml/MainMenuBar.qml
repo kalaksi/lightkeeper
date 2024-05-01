@@ -8,6 +8,7 @@ import "Text"
 
 ToolBar {
     id: root
+    property bool enableShortcuts: false
 
     signal clickedAdd()
     signal clickedRemove()
@@ -64,6 +65,7 @@ ToolBar {
                     placeholderText: "by name or address..."
                     width: root.width * 0.4
                     onTextChanged: root.filterChanged(searchInput.text)
+                    focus: true
                 }
             }
         }
@@ -80,5 +82,11 @@ ToolBar {
             icon.source: "qrc:/main/images/button/configure"
             onClicked: root.clickedPreferences()
         }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequences: [StandardKey.Find, "/"]
+        onActivated: searchInput.forceActiveFocus()
     }
 }

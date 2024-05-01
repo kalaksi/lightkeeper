@@ -54,6 +54,9 @@ ApplicationWindow {
         onFilterChanged: function(searchText) {
             _hostTableModel.filter(searchText)
         }
+
+        // Shortcuts are enabled if no host is selected.
+        enableShortcuts: _hostTableModel.selectedRow === -1
     }
 
     footer: StatusBar {
