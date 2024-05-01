@@ -19,7 +19,7 @@ ApplicationWindow {
     id: root
     visible: true
     minimumWidth: 1400
-    minimumHeight: 800
+    minimumHeight: 810
     width: minimumWidth + 100
     height: minimumHeight
 
