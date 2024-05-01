@@ -175,21 +175,21 @@ impl ConnectionManager {
                     }
                 };
 
-                worker_pool.install(|| {
+                if let RequestType::Exit = request.request_type {
+                    log::debug!("Gracefully stopping connection manager thread");
+                    
 
-                    if let RequestType::Exit = request.request_type {
-                        log::debug!("Gracefully stopping connection manager thread");
-
-                        if cache_settings.enable_cache {
-                            match command_cache.lock().unwrap().write_to_disk() {
-                                Ok(count) => log::debug!("Wrote {} entries to cache file", count),
-                                // Failing to write the file is not critical.
-                                Err(error) => log::error!("{}", error),
-                            }
+                    if cache_settings.enable_cache {
+                        match command_cache.lock().unwrap().write_to_disk() {
+                            Ok(count) => log::debug!("Wrote {} entries to cache file", count),
+                            // Failing to write the file is not critical.
+                            Err(error) => log::error!("{}", error),
                         }
-                        return;
                     }
+                    return;
+                }
 
+                worker_pool.install(|| {
                     let connector_spec = match &request.connector_spec {
                         Some(spec) => spec.clone(),
                         None => {
