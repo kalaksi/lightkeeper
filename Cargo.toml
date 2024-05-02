@@ -10,28 +10,25 @@ path = "src/main.rs"
 [dependencies]
 oping = "0.4.0"
 dbus = "0.9.7"
-clap = { version = "4.3.12", features = ["derive"] }
-log = "0.4.20"
-env_logger = "0.10.0"
+clap = { version = "4.5.4", features = ["derive"] }
+log = "0.4.21"
+env_logger = "0.11.3"
 ssh2 = "0.9.4"
-serde = "1.0.188"
-serde_derive = "1.0.188"
-serde_yaml = "0.9.25"
-serde_json = "1.0.105"
-chrono = { version = "0.4.28", features = ["serde"]}
-# TODO: remove later if not implementing CLI.
-# tabled = { version = "0.6.1", features = ["color"] }
-# owo-colors = "3.4.0"
-qmetaobject = "0.2.9"
-cstr = "0.2.11"
-sha256 = "1.4.0"
-strum = "0.25.0"
-strum_macros = "0.25.2"
-ureq = "2.7.1"
-rayon = "1.7.0"
+serde = "1.0.200"
+serde_derive = "1.0.200"
+serde_yaml = "0.9.33"
+serde_json = "1.0.116"
+chrono = { version = "0.4.38", features = ["serde"]}
+qmetaobject = "0.2.10"
+cstr = "0.2.12"
+sha256 = "1.5.0"
+strum = "0.26.2"
+strum_macros = "0.26.2"
+ureq = "2.9.7"
+rayon = "1.10.0"
 rand = "0.8.5"
-regex = "1.10.3"
-base64 = "0.22.0"
+regex = "1.10.4"
+base64 = "0.22.1"
 hex = "0.4.3"
 
 lightkeeper_module = { path = "macros/lightkeeper_module" }
