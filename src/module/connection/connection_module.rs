@@ -36,11 +36,6 @@ pub trait ConnectionModule : MetadataSupport + Module {
         Err(LkError::new_other("Not implemented"))
     }
 
-    /// Check the connection status. Only relevant to modules that use a persistent connection.
-    fn is_connected(&self) -> bool {
-        true
-    }
-
     fn new_connection_module(settings: &HashMap<String, String>) -> Connector where Self: Sized + 'static + Send + Sync {
         Box::new(Self::new(settings))
     }

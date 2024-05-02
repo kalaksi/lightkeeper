@@ -2,7 +2,7 @@ extern crate qmetaobject;
 use qmetaobject::*;
 
 use crate::frontend;
-use super::monitor_data_model::MonitorDataModel;
+use super::MonitorDataModel;
 
 /// HostData is the corresponding Qt struct for frontend::HostDisplayData.
 /// Contains host and state information.

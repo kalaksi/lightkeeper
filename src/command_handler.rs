@@ -320,7 +320,7 @@ impl CommandHandler {
         }
 
         command.argument(self.preferences.remote_text_editor.clone());
-        command.argument(remote_file_path.clone());
+        command.argument(remote_file_path);
         command
     }
 

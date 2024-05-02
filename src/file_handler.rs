@@ -221,7 +221,7 @@ pub fn convert_to_local_paths(host: &Host, remote_file_path: &str) -> (String, S
 
     // Using only hash as the file name would suffice but providing some parts of
     // the file path and name will help the user to identify the file in e.g. text editor.
-    let hash = sha256::digest(remote_file_path.clone());
+    let hash = sha256::digest(remote_file_path);
     let mut components = Path::new(remote_file_path).components().rev();
 
     let mut file_name = hash;
