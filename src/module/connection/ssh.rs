@@ -23,7 +23,7 @@ use crate::module::*;
 use crate::module::connection::*;
 
 static MODULE_NAME: &str = "ssh";
-const SESSION_WAIT_SLEEP: u64 = 400;
+const SESSION_WAIT_SLEEP: u64 = 200;
 
 
 #[connection_module(

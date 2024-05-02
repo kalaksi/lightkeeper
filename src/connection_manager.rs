@@ -24,7 +24,7 @@ use self::request_response::RequestResponse;
 type ConnectorStates = HashMap<ModuleSpecification, Connector>;
 
 
-const MAX_WORKER_THREADS: usize = 8;
+const MAX_WORKER_THREADS: usize = 4;
 
 
 // Default needs to be implemented because of Qt QObject requirements.
@@ -164,9 +164,14 @@ impl ConnectionManager {
             let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build().unwrap();
             log::debug!("Created worker pool with {} threads", MAX_WORKER_THREADS);
 
-            let command_cache = Arc::new(Mutex::new(Self::initialize_cache(cache_settings.clone())));
+            let original_command_cache = Arc::new(Mutex::new(Self::initialize_cache(cache_settings.clone())));
+            let stateful_connectors_arc = Arc::new(stateful_connectors);
 
             loop {
+                let command_cache = original_command_cache.clone();
+                let module_factory = module_factory.clone();
+                let stateful_connectors = stateful_connectors_arc.clone();
+
                 let request = match receiver.recv() {
                     Ok(data) => data,
                     Err(error) => {
@@ -180,7 +185,7 @@ impl ConnectionManager {
                     
 
                     if cache_settings.enable_cache {
-                        match command_cache.lock().unwrap().write_to_disk() {
+                        match &command_cache.lock().unwrap().write_to_disk() {
                             Ok(count) => log::debug!("Wrote {} entries to cache file", count),
                             // Failing to write the file is not critical.
                             Err(error) => log::error!("{}", error),
@@ -189,22 +194,24 @@ impl ConnectionManager {
                     return;
                 }
 
-                worker_pool.install(|| {
-                    let connector_spec = match &request.connector_spec {
-                        Some(spec) => spec.clone(),
-                        None => {
-                            // Requests with no connector dependency.
-                            request.response_sender.send(RequestResponse::new_empty(&request)).unwrap();
-                            return;
-                        }
-                    };
-                        
+                let connector_spec = match &request.connector_spec {
+                    Some(spec) => spec.clone(),
+                    None => {
+                        // Requests with no connector dependency.
+                        request.response_sender.send(RequestResponse::new_empty(&request)).unwrap();
+                        continue;
+                    }
+                };
+
+                worker_pool.spawn(move || {
+                    log::debug!("[{}][{}] Worker {} processing a request",
+                        request.host.name, request.source_id, rayon::current_thread_index().unwrap_or_default());
+
                     let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
 
                     // Stateless connectors.
                     let mut stateless_connector;
                     let connector = if connector_metadata.is_stateless {
-                        log::debug!("[{}] Worker {} processing a stateless request", request.host.name, rayon::current_thread_index().unwrap());
                         stateless_connector = Box::new(module_factory.new_connector(&connector_spec, &HashMap::new()));
                         &mut stateless_connector
                     }
@@ -226,24 +233,13 @@ impl ConnectionManager {
 
                     // TODO: not very elegant. No need to set multiple times.
                     connector.set_target(&request.host.get_address());
-                    /* TODO
-                    if !connector.is_connected() {
-                        if let Err(error) = connector.connect(&request.host.get_address()) {
-                            log::error!("[{}] Error while connecting {}: {}", request.host.name, request.host.ip_address, error);
-                            let response = RequestResponse::new_error(&request, error.set_source(connector.get_module_spec().id));
-                            request.response_sender.send(response).unwrap();
-                            return;
-                        }
-                    } */
-
-                    log::debug!("[{}] Worker {} processing request", request.host.name, rayon::current_thread_index().unwrap());
 
                     let responses = match &request.request_type {
                         RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
-                            Self::process_commands(&request.host, command_cache.clone(), cache_policy, &connector, commands)
+                            Self::process_commands(&request, command_cache.clone(), &cache_policy, &connector, &commands)
                         },
                         RequestType::Command { commands } => {
-                            Self::process_commands(&request.host, command_cache.clone(), &CachePolicy::BypassCache, &connector, commands)
+                            Self::process_commands(&request, command_cache.clone(), &CachePolicy::BypassCache, &connector, &commands)
                         },
                         RequestType::CommandFollowOutput { commands } => {
                             if commands.len() != 1 {
@@ -252,9 +248,9 @@ impl ConnectionManager {
                             vec![Self::process_command_follow_output(&request, &connector, commands.first().unwrap(), request.response_sender.clone())]
                         },
                         RequestType::Download { remote_file_path: file_path } =>
-                            vec![Self::process_download(&request.host, &connector, file_path)],
+                            vec![Self::process_download(&request.host, &connector, &file_path)],
                         RequestType::Upload { metadata: _, local_file_path } =>
-                            vec![Self::process_upload(&request.host, &connector, local_file_path)],
+                            vec![Self::process_upload(&request.host, &connector, &local_file_path)],
                         _ => panic!(),
                     };
 
@@ -265,31 +261,32 @@ impl ConnectionManager {
         })
     }
 
-    fn process_commands(host: &Host,
+    fn process_commands(request: &ConnectorRequest,
                         command_cache: Arc<Mutex<Cache<String, ResponseMessage>>>,
                         cache_policy: &CachePolicy,
                         connector: &Connector,
                         request_messages: &Vec<String>) -> Vec<Result<ResponseMessage, LkError>> {
 
-        let mut command_cache = command_cache.lock().unwrap();
 
         // let request = request.lock().unwrap();
         let mut results = Vec::new();
         for request_message in request_messages {
-            log::debug!("[{}] Processing command: {}", host.name, request_message);
-
             // Some commands are supposed to not actually execute.
             if request_message.is_empty() {
-                log::debug!("[{}] Ignoring empty command", host.name);
+                log::debug!("[{}][{}] Ignoring empty command", request.host.name, request.source_id);
                 results.push(Ok(ResponseMessage::empty()));
+            }
+            else {
+                log::debug!("[{}][{}] Command: {}", request.host.name, request.source_id, request_message);
             }
 
             let cache_key = match connector.get_metadata_self().cache_scope {
                 CacheScope::Global => format!("{}|{}", connector.get_module_spec(), request_message),
-                CacheScope::Host => format!("{}|{}|{}", host.name, connector.get_module_spec(), request_message),
+                CacheScope::Host => format!("{}|{}|{}", request.host.name, connector.get_module_spec(), request_message),
             };
 
             let cached_response = if *cache_policy == CachePolicy::OnlyCache || *cache_policy == CachePolicy::PreferCache {
+                let mut command_cache = command_cache.lock().unwrap();
                 command_cache.get(&cache_key)
             }
             else {
@@ -297,7 +294,7 @@ impl ConnectionManager {
             };
 
             if let Some(cached_response) = cached_response {
-                log::debug!("[{}] Using cached response for command {}", host.name, request_message);
+                log::debug!("[{}][{}] Using cached response for command {}", request.host.name, request.source_id, request_message);
                 results.push(Ok(cached_response));
             }
             else if *cache_policy == CachePolicy::OnlyCache {
@@ -308,12 +305,13 @@ impl ConnectionManager {
 
                 if let Ok(response) = response_result {
                     if response.return_code != 0 {
-                        log::debug!("Command returned non-zero exit code: {}", response.return_code)
+                        log::debug!("[{}][{}] Command returned non-zero exit code: {}", request.host.name, request.source_id, response.return_code)
                     }
                     if *cache_policy != CachePolicy::BypassCache {
                         // Doesn't cache failed commands.
                         let mut cached_response = response.clone();
                         cached_response.is_from_cache = true;
+                        let mut command_cache = command_cache.lock().unwrap();
                         command_cache.insert(cache_key, cached_response);
                     }
                     results.push(Ok(response))
@@ -368,7 +366,7 @@ impl ConnectionManager {
 
     }
 
-    fn process_download(host: &Host, connector: &Connector, file_path: &String) -> Result<ResponseMessage, LkError> {
+    fn process_download(host: &Host, connector: &Connector, file_path: &str) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Downloading file: {}", host.name, file_path);
         match connector.download_file(file_path) {
             Ok((metadata, contents)) => {
@@ -381,7 +379,7 @@ impl ConnectionManager {
         }
     }
 
-    fn process_upload(host: &Host, connector: &Connector, local_file_path: &String) -> Result<ResponseMessage, LkError> {
+    fn process_upload(host: &Host, connector: &Connector, local_file_path: &str) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
         match file_handler::read_file(local_file_path) {
             Ok((metadata, contents)) => {
