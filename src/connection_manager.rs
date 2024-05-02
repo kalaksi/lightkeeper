@@ -305,7 +305,8 @@ impl ConnectionManager {
 
                 if let Ok(response) = response_result {
                     if response.return_code != 0 {
-                        log::debug!("[{}][{}] Command returned non-zero exit code: {}", request.host.name, request.source_id, response.return_code)
+                        log::debug!("[{}][{}] Command returned non-zero exit code: {}",
+                            request.host.name, request.source_id, response.return_code)
                     }
                     if *cache_policy != CachePolicy::BypassCache {
                         // Doesn't cache failed commands.
@@ -333,7 +334,7 @@ impl ConnectionManager {
         response_sender: mpsc::Sender<RequestResponse>,
     ) -> Result<ResponseMessage, LkError> {
 
-        log::debug!("[{}] Processing command: {}", request.host.name, request_message);
+        log::debug!("[{}][{}] Command: {}", request.host.name, request.source_id, request_message);
         let mut response_message_result = connector.send_message_partial(request_message, request.invocation_id);
 
         // Paradoxical name...
@@ -352,14 +353,16 @@ impl ConnectionManager {
                 }
                 else {
                     if response_message.return_code != 0 {
-                        log::debug!("Command returned non-zero exit code: {}", response_message.return_code)
+                        log::debug!("[{}][{}] Command returned non-zero exit code: {}",
+                            request.host.name, request.source_id, response_message.return_code)
                     }
 
                     break Ok(response_message);
                 }
             }
             else {
-                log::error!("[{}] Error while receiving partial response: {}", request.host.name, response_message_result.clone().err().unwrap());
+                log::error!("[{}][{}] Error while receiving partial response: {}",
+                    request.host.name, request.source_id, response_message_result.clone().err().unwrap());
                 break response_message_result;
             }
         }

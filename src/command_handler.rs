@@ -460,7 +460,7 @@ impl CommandHandler {
                     command_result.message.clone()
                 };
 
-                log::debug!("[{}] Command result received: {}", response.host.name, log_message);
+                log::debug!("[{}][{}] Command result received: {}", response.host.name, response.source_id, log_message);
                 command_result.command_id = command.get_module_spec().id;
                 Some(command_result)
             },
@@ -471,7 +471,7 @@ impl CommandHandler {
         };
 
         for error in errors.iter() {
-            log::error!("[{}] Error from command {}: {}", response.host.name, command_id, error.message());
+            log::error!("[{}][{}] Error: {}", response.host.name, command_id, error.message());
         }
 
         state_update_sender.send(StateUpdateMessage {

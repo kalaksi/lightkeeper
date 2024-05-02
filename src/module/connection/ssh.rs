@@ -189,7 +189,10 @@ impl ConnectionModule for Ssh2 {
 
     fn receive_partial_response(&self, invocation_id: u64) -> Result<ResponseMessage, LkError> {
         let mut partial_session = self.wait_for_session(invocation_id)?;
-        let mut channel = partial_session.open_channel.take().unwrap();
+        let mut channel = match partial_session.open_channel.take() {
+            Some(channel) => channel,
+            None => return Err(LkError::new_other("Can't do partial receive. No open channel available.")),
+        };
 
         let mut buffer = [0u8; 1024];
         let output = channel.read(&mut buffer)
