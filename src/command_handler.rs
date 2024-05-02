@@ -73,10 +73,6 @@ impl CommandHandler {
                      request_sender: mpsc::Sender<ConnectorRequest>,
                      state_update_sender: mpsc::Sender<StateUpdateMessage>) {
 
-        if self.response_receiver_thread.is_some() {
-            self.stop();
-        }
-
         self.commands.lock().unwrap().clear();
 
         self.request_sender = Some(request_sender);

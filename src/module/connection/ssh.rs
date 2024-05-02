@@ -23,6 +23,7 @@ use crate::module::*;
 use crate::module::connection::*;
 
 static MODULE_NAME: &str = "ssh";
+const SESSION_WAIT_SLEEP: u64 = 400;
 
 
 #[connection_module(
@@ -213,7 +214,7 @@ impl ConnectionModule for Ssh2 {
         }
     }
 
-    fn download_file(&self, source: &String) -> Result<(FileMetadata, Vec<u8>), LkError> {
+    fn download_file(&self, source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {
         let session_data = self.wait_for_session(0)?;
         let sftp = session_data.session.sftp()?;
 
@@ -224,7 +225,7 @@ impl ConnectionModule for Ssh2 {
         let metadata = FileMetadata {
             download_time: Utc::now(),
             local_path: None,
-            remote_path: source.clone(),
+            remote_path: source.to_string(),
             remote_file_hash: sha256::digest(contents.as_slice()),
             owner_uid: stat.uid.unwrap(),
             owner_gid: stat.gid.unwrap(),
@@ -298,13 +299,16 @@ impl ConnectionModule for Ssh2 {
 
 impl Ssh2 {
     fn wait_for_session(&self, invocation_id: u64) -> Result<MutexGuard<SharedSessionData>, LkError> {
+        // log::debug!("Waiting for session");
         loop {
-            for session in self.available_sessions.iter() {
+            for (index, session) in self.available_sessions.iter().enumerate() {
                 if let Ok(mut session_data) = session.try_lock() {
                     // Incomplete commands will want a specific invocation. ID 0 means not used.
                     if session_data.invocation_id > 0 && session_data.invocation_id != invocation_id {
                         continue;
                     }
+
+                    log::debug!("Attached to session {}", index);
 
                     if !session_data.is_initialized {
                         let address = self.address.lock().unwrap().clone();
@@ -318,7 +322,7 @@ impl Ssh2 {
                 }
             }
 
-            std::thread::sleep(Duration::from_millis(500));
+            std::thread::sleep(Duration::from_millis(SESSION_WAIT_SLEEP));
         }
     }
 

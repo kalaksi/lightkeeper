@@ -146,7 +146,7 @@ impl MonitorManager {
         else {
             CachePolicy::BypassCache
         };
-        let host_ids = self.monitors.lock().unwrap().iter().map(|(name, _)| name.clone()).collect::<Vec<_>>();
+        let host_ids = self.monitors.lock().unwrap().keys().cloned().collect::<Vec<_>>();
         for host_id in &host_ids {
             self.refresh_platform_info(host_id, Some(cache_policy));
         }
@@ -439,7 +439,7 @@ impl MonitorManager {
 
                 let new_data_point = match datapoint_result {
                     Ok(data_point) => {
-                        log::debug!("[{}] Data point received for monitor {}: {} {}", response.host.name, monitor_id, data_point.label, data_point);
+                        log::debug!("[{}][{}] Data point received: {} {}", response.host.name, monitor_id, data_point.label, data_point);
                         data_point
                     },
                     Err(_) => {
@@ -449,7 +449,7 @@ impl MonitorManager {
                 };
 
                 for error in errors.iter() {
-                    log::error!("[{}] Error from monitor {}: {}", response.host.name, monitor_id, error.message());
+                    log::error!("[{}][{}] Error: {}", response.host.name, monitor_id, error.message());
                 }
 
                 let cache_policy = match response.request_type {
@@ -470,7 +470,7 @@ impl MonitorManager {
                     let messages = match get_monitor_connector_messages(&response.host, &next_monitor, &next_parent_datapoint) {
                         Ok(messages) => messages,
                         Err(error) => {
-                            log::error!("Monitor failed: {}", error);
+                            log::error!("[{}][{}] Monitor failed: {}", response.host.name, monitor_id, error);
 
                             state_update_sender.send(StateUpdateMessage {
                                 host_name: response.host.name.clone(),

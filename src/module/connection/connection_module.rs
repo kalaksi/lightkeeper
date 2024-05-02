@@ -24,7 +24,7 @@ pub trait ConnectionModule : MetadataSupport + Module {
         panic!("Not implemented");
     }
 
-    fn download_file(&self, _source: &String) -> Result<(FileMetadata, Vec<u8>), LkError> {
+    fn download_file(&self, _source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {
         Err(LkError::new_other("Not implemented"))
     }
 
