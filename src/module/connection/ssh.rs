@@ -183,6 +183,7 @@ impl ConnectionModule for Ssh2 {
         }
         else {
             session_data.invocation_id = invocation_id;
+            session_data.open_channel = Some(channel);
             Ok(ResponseMessage::new_partial(output))
         }
     }
@@ -302,7 +303,6 @@ impl ConnectionModule for Ssh2 {
 
 impl Ssh2 {
     fn wait_for_session(&self, invocation_id: u64) -> Result<MutexGuard<SharedSessionData>, LkError> {
-        // log::debug!("Waiting for session");
         loop {
             for (index, session) in self.available_sessions.iter().enumerate() {
                 if let Ok(mut session_data) = session.try_lock() {
@@ -321,6 +321,7 @@ impl Ssh2 {
                             return Err(error);
                         }
                     }
+
                     return Ok(session_data);
                 }
             }
