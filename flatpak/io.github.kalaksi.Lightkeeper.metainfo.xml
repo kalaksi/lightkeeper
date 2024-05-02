@@ -28,7 +28,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.16.0" date="2024-05-02">
+    <release version="0.16.1" date="2024-05-02">
       <description>
         <ul>
           <li>Speed improvements to SSH commands with parallelization</li>
