@@ -114,7 +114,7 @@ impl MonitorManager {
                     host_name: host_id,
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
-                    data_point: Some(DataPoint::no_data()),
+                    data_point: Some(DataPoint::pending()),
                     invocation_id: 0,
                     ..Default::default()
                 }).unwrap();

@@ -75,13 +75,6 @@ impl DataPoint {
         Default::default()
     }
 
-    pub fn no_data() -> Self {
-        DataPoint {
-            criticality: Criticality::NoData,
-            ..Default::default()
-        }
-    }
-
     pub fn pending() -> Self {
         DataPoint {
             criticality: Criticality::NoData,
