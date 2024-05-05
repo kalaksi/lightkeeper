@@ -27,7 +27,7 @@ pub struct CommandHandlerModel {
 
     get_all_host_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
-    get_commands_on_level: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
+    getCommandsOnLevel: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
     executeConfirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
@@ -44,7 +44,7 @@ pub struct CommandHandlerModel {
     force_initialize_hosts: qt_method!(fn(&self)),
 
     // Monitor refresh methods.
-    force_refresh_monitors_of_command: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
+    forceRefreshMonitorsOfCommand: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
     cached_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     force_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
@@ -63,9 +63,9 @@ pub struct CommandHandlerModel {
     textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
     logsViewOpened: qt_signal!(time_controls: bool, title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
-    command_executed: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
+    commandExecuted: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
-    host_initializing: qt_signal!(host_id: QString),
+    hostInitializing: qt_signal!(host_id: QString),
 
     //
     // Private properties
@@ -165,7 +165,7 @@ impl CommandHandlerModel {
 
     // `parent_id` is either command ID or category ID (for category-level commands).
     // Returns CommandData as JSON strings.
-    fn get_commands_on_level(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList {
+    fn getCommandsOnLevel(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList {
         let category_string = category.to_string();
         let parent_id_string = parent_id.to_string();
         let multivalue_level: u8 = multivalue_level.to_string().parse().unwrap();
@@ -246,7 +246,7 @@ impl CommandHandlerModel {
 
                 if invocation_id > 0 {
                     let button_identifier = format!("{}|{}", command_id, parameters.first().unwrap_or(&String::new()));
-                    self.command_executed(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_identifier.into());
+                    self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_identifier.into());
                 }
             },
             UIAction::FollowOutput => {
@@ -363,23 +363,23 @@ impl CommandHandlerModel {
 
     fn initializeHost(&mut self, host_id: QString) {
         self.monitor_manager.refresh_platform_info(&host_id.to_string(), None);
-        self.host_initializing(host_id);
+        self.hostInitializing(host_id);
     }
 
     fn force_initialize_host(&mut self, host_id: QString) {
         self.monitor_manager.refresh_platform_info(&host_id.to_string(), Some(CachePolicy::BypassCache));
-        self.host_initializing(host_id);
+        self.hostInitializing(host_id);
     }
 
     fn force_initialize_hosts(&mut self) {
         let host_ids = self.monitor_manager.refresh_platform_info_all(Some(CachePolicy::BypassCache));
         for host_id in host_ids {
-            self.host_initializing(QString::from(host_id));
+            self.hostInitializing(QString::from(host_id));
         }
     }
 
     // Finds related monitors for a command and refresh them.
-    fn force_refresh_monitors_of_command(&mut self, host_id: QString, command_id: QString) -> QVariantList  {
+    fn forceRefreshMonitorsOfCommand(&mut self, host_id: QString, command_id: QString) -> QVariantList  {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
 

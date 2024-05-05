@@ -5,6 +5,7 @@ import CooldownTimerModel 1.0
 
 
 // Countdown timer for the cooldown canvas animation
+// TODO: deprecated
 Item {
     id: root
 

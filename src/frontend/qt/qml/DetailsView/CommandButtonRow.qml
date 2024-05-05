@@ -20,7 +20,6 @@ Item {
     property int animationDuration: 150
     property bool hoverEnabled: true
 
-    property var _commandCooldowns: {}
     property bool _showBackground: false
     property bool _showCommands: false
     property var _alwaysShownCommands: commands.filter(command => Theme.allow_collapsing_command(command.command_id) === "0")
@@ -35,7 +34,6 @@ Item {
     signal expanded()
 
     Component.onCompleted: {
-        root._commandCooldowns = {}
 
         // No sense in allowing only 1 command to collapse.
         if (root.commands.length < 2) {
@@ -67,12 +65,11 @@ Item {
                     property string buttonIdentifier: modelData.command_params.length > 0 ?
                         modelData.command_id + '|' + modelData.command_params[0] : modelData.command_id + '|'
 
-                    id: commandButton
                     size: root.buttonSize
                     roundButton: root.roundButtons
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
-                    cooldownPercent: 0.0
+                    progressPercent: 100
                     onClicked: root.clicked(modelData.command_id, modelData.command_params)
                     hoverEnabled: root.hoverEnabled
                 }
@@ -134,20 +131,22 @@ Item {
 
     function getButtonIdentifiers() {
         let result = []
-
         for (let i = 0; i < commandRepeater.count; i++) {
             let button = commandRepeater.itemAt(i)
             result.push(button.buttonIdentifier)
         }
-
         return result
     }
 
-    function updateCooldown(buttonIdentifier, cooldownPercent) {
-        let button = commandRepeater.itemAt(getButtonIdentifiers().indexOf(buttonIdentifier))
+    // Allows updating one button at a time.
+    // State has to be stored and handled on higher level and not in e.g. CommandButton or CommandButtonRow since those are not persistent.
+    function updateProgress(buttonId, progressPercent) {
+        let button = commandRepeater.itemAt(getButtonIdentifiers().indexOf(buttonId))
+
         // Assign new value only if necessary.
-        if (button !== undefined && button.cooldownPercent !== cooldownPercent) {
-            button.cooldownPercent = cooldownPercent
+        if (button !== null && button.progressPercent !== progressPercent) {
+            // console.log("Updating progress for button " + buttonId + " to " + progressPercent)
+            button.progressPercent = progressPercent
         }
     }
 

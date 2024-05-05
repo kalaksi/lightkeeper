@@ -11,10 +11,10 @@ Item {
     property alias imageSource: imageButton.imageSource
     property alias roundButton: imageButton.roundButton
     property alias hoverEnabled: imageButton.hoverEnabled
-    property real cooldownPercent: 0.0
+    property int progressPercent: 100
 
-    onCooldownPercentChanged: {
-        cooldownCanvas.requestPaint()
+    onProgressPercentChanged: {
+        progressCanvas.requestPaint()
     }
 
     width: root.size
@@ -30,10 +30,10 @@ Item {
         onClicked: () => root.clicked()
     }
 
-    // Cooldown animation that blocks the button until timeout timer is finished or finish() called.
+    // progress animation that blocks the button until timeout timer is finished or finish() called.
     Canvas {
-        id: cooldownCanvas
-        visible: root.cooldownPercent > 0.0
+        id: progressCanvas
+        visible: root.progressPercent >= 0 && root.progressPercent < 100
         anchors.fill: parent
         onPaint: {
             let context = getContext("2d")
@@ -44,7 +44,7 @@ Item {
             context.translate(radius, radius)
             context.rotate(-Math.PI / 2)
             context.beginPath()
-            context.arc(0, 0, radius, 0, 2 * Math.PI * (1 - root.cooldownPercent), true)
+            context.arc(0, 0, radius, 0, 2 * Math.PI * (1 - root.progressPercent * 0.01), true)
             context.lineTo(0, 0)
             context.closePath()
             context.fillStyle = "#80FFFFFF"
@@ -58,6 +58,6 @@ Item {
         anchors.fill: parent
         acceptedButtons: Qt.AllButtons
         propagateComposedEvents: false
-        visible: cooldownCanvas.visible
+        visible: progressCanvas.visible
     }
 }

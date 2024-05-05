@@ -59,7 +59,7 @@ pub struct ThemeModel {
 
     allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
     animation_duration: qt_method!(fn(&self) -> QVariant),
-    get_display_options: qt_method!(fn(&self) -> QVariant),
+    getDisplayOptions: qt_method!(fn(&self) -> QVariant),
 
     i_display_options: configuration::DisplayOptions,
 }
@@ -182,7 +182,7 @@ impl ThemeModel {
         }
     }
 
-    fn get_display_options(&self) -> QVariant {
+    fn getDisplayOptions(&self) -> QVariant {
         self.i_display_options.to_qvariant()
     }
 

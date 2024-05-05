@@ -5,33 +5,64 @@ use std::collections::HashMap;
 
 
 
-const COOLDOWN_LENGTH: u32 = 45000;
+// In milliseconds. 0 means no cooldown (infinite animation).
+const COOLDOWN_LENGTH: u32 = 0;
 
 #[allow(non_snake_case)]
 #[derive(QObject, Default)]
+
 /// For command cooldown mechanism.
+/// State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
+/// TODO: deprecated
 pub struct CooldownTimerModel {
     base: qt_base_class!(trait QObject),
 
     allFinished: qt_signal!(),
 
-    // State has to be stored and handled here and not in CommandButton or CommandButtonRow since table content isn't persistent.
-    startCooldown: qt_method!(fn(&mut self, button_identifier: QString, invocation_id: u64)),
+    startProgress: qt_method!(fn(&mut self, button_identifier: QString)),
+    updateProgress: qt_method!(fn(&mut self, button_identifier: QString, new_progress: u16)),
+    getProgress: qt_method!(fn(&self, button_identifier: QString) -> u16),
+
+    progress_percents: HashMap<String, u16>,
+    invocation_buttons: HashMap<u64, String>,
+
     updateCooldowns: qt_method!(fn(&mut self, cooldown_decrement: u32) -> u32),
+    startCooldown: qt_method!(fn(&mut self, button_identifier: QString, invocation_id: u64)),
     finishCooldown: qt_method!(fn(&mut self, invocation_id: u64)),
     getCooldown: qt_method!(fn(&self, button_identifier: QString) -> f32),
-
     cooldown_times: HashMap<String, u32>,
     cooldowns_finishing: Vec<String>,
-    invocation_buttons: HashMap<u64, String>,
 }
 
 #[allow(non_snake_case)]
 impl CooldownTimerModel {
+    fn startProgress(&mut self, button_identifier: QString) {
+        let button_identifier = button_identifier.to_string();
+        self.progress_percents.insert(button_identifier, 0);
+    }
+
+    fn updateProgress(&mut self, button_identifier: QString, new_progress: u16) {
+        let button_identifier = button_identifier.to_string();
+        if new_progress >= 100 {
+            self.progress_percents.remove(&button_identifier);
+        }
+        else {
+            if let Some(progress) = self.progress_percents.get_mut(&button_identifier) {
+                *progress = new_progress;
+
+            }
+        }
+    }
+
     fn startCooldown(&mut self, button_identifier: QString, invocation_id: u64) {
         let button_identifier = button_identifier.to_string();
         self.cooldown_times.insert(button_identifier.clone(), COOLDOWN_LENGTH);
         self.invocation_buttons.insert(invocation_id, button_identifier);
+    }
+
+    fn getProgress(&self, button_identifier: QString) -> u16 {
+        let button_identifier = button_identifier.to_string();
+        *self.progress_percents.get(&button_identifier).unwrap_or(&0)
     }
 
     fn updateCooldowns(&mut self, cooldown_decrement: u32) -> u32 {

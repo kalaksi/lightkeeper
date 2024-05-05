@@ -70,6 +70,7 @@ Item {
                 GroupBox {
                     id: groupBox
                     property bool blocked: true
+                    property var _invocationIdToButton: {}
 
                     leftPadding: Theme.spacingTight
                     rightPadding: Theme.spacingTight
@@ -86,25 +87,40 @@ Item {
                         color: Theme.categoryBackgroundColor
                     }
 
-                    Connections {
-                        target: HostDataManager
-
-                        function onCommandResultReceived(commandResultJson, invocationId) {
-                            let commandResult = JSON.parse(commandResultJson)
-                            cooldownTimer.finishCooldown(invocationId)
-
-                            if (!cooldownTimer.refreshAfterCommands.includes(commandResult.command_id)) {
-                                cooldownTimer.refreshAfterCommands.push(commandResult.command_id)
-                            }
-                        }
+                    Component.onCompleted: {
+                        groupBox._invocationIdToButton = {}
                     }
 
                     Connections {
                         target: CommandHandler
 
-                        function onCommand_executed(invocationId, hostId, commandId, category, buttonIdentifier) {
+                        function onCommandExecuted(invocationId, hostId, commandId, category, buttonId) {
                             if (hostId === root.hostId && category === modelData) {
-                                cooldownTimer.startCooldown(buttonIdentifier, invocationId)
+                                // State has to be stored and handled on higher level and not in e.g.
+                                // CommandButton or CommandButtonRow since those are not persistent.
+                                groupBox._invocationIdToButton[invocationId] = buttonId
+
+                                categoryCommands.updateProgress(buttonId, 0)
+                                propertyTable.updateProgress(buttonId, 0)
+                            }
+                        }
+                    }
+
+                    Connections {
+                        target: HostDataManager
+
+                        function onCommandResultReceived(commandResultJson, invocationId) {
+                            if (groupBox._invocationIdToButton[invocationId] !== undefined) {
+                                let buttonId = groupBox._invocationIdToButton[invocationId]
+                                let progress = HostDataManager.getPendingCommandProgress(invocationId)
+                                categoryCommands.updateProgress(buttonId, progress)
+                                propertyTable.updateProgress(buttonId, progress)
+
+                                if (progress >= 100) {
+                                    let commandResult = JSON.parse(commandResultJson)
+                                    CommandHandler.forceRefreshMonitorsOfCommand(root.hostId, commandResult.command_id)
+                                    delete groupBox._invocationIdToButton[invocationId]
+                                }
                             }
                         }
                     }
@@ -130,7 +146,7 @@ Item {
                                 if (hostId === root.hostId && category === modelData) {
                                     groupBoxLabel.refreshProgress = HostDataManager.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
 
-                                    if (isCategoryReady(category)) {
+                                    if (groupBoxLabel.refreshProgress >= 100) {
                                         groupBox.blocked = false
                                     }
                                 }
@@ -139,8 +155,8 @@ Item {
 
                         Connections {
                             target: CommandHandler
-                            function onHost_initializing(host_id) {
-                                if (host_id === root.hostId) {
+                            function onHostInitializing(hostId) {
+                                if (hostId === root.hostId) {
                                     groupBoxLabel.refreshProgress = 0
                                     groupBox.blocked = true
                                 }
@@ -160,7 +176,7 @@ Item {
                             size: 34
                             flatButtons: false
                             roundButtons: false
-                            commands: Parse.ListOfJsons(CommandHandler.get_commands_on_level(root.hostId, modelData, "", 0))
+                            commands: Parse.ListOfJsons(CommandHandler.getCommandsOnLevel(root.hostId, modelData, "", 0))
                             hoverEnabled: !groupBox.blocked
 
                             Layout.alignment: Qt.AlignHCenter
@@ -169,18 +185,6 @@ Item {
 
                             onClicked: function(commandId, params) {
                                 CommandHandler.execute(root.hostId, commandId, params)
-                            }
-
-                            Connections {
-                                target: cooldownTimer
-
-                                function onTriggered() {
-                                    let buttonIdentifiers = categoryCommands.getButtonIdentifiers()
-                                    for (let identifier of buttonIdentifiers) {
-                                        let cooldownPercent = cooldownTimer.getCooldown(identifier)
-                                        categoryCommands.updateCooldown(identifier, cooldownPercent)
-                                    }
-                                }
                             }
                         }
 
@@ -256,7 +260,6 @@ Item {
                             monitoring_datas: HostDataManager.get_category_monitor_ids(root.hostId, modelData)
                                                              .map(monitorId => HostDataManager.get_monitoring_data(root.hostId, monitorId))
                             command_datas: CommandHandler.get_category_commands(root.hostId, modelData)
-                            cooldownTimer: cooldownTimer
 
                             Layout.fillHeight: true
                             Layout.fillWidth: true
@@ -282,24 +285,6 @@ Item {
                             preventStealing: true
                         }
                     }
-
-                    // State has to be stored and handled on groupbox level and not in e.g.
-                    // CommandButton or CommandButtonRow since those are not persistent.
-                    CooldownTimer {
-                        id: cooldownTimer
-
-                        // Automatic refresh is done after all commands have been executed.
-                        // This keeps track which commands were executed.
-                        property var refreshAfterCommands: []
-
-                        onAllFinished: {
-                            // Refresh the monitor(s) related to commands that were executed.
-                            for (const commandId of refreshAfterCommands) {
-                                CommandHandler.force_refresh_monitors_of_command(root.hostId, commandId)
-                            }
-                            refreshAfterCommands = []
-                        }
-                    }
                 }
             }
         }
@@ -312,10 +297,6 @@ Item {
             root._categories =  HostDataManager.getCategories(root.hostId, !root._showEmptyCategories)
                                                .map(category_qv => category_qv.toString())
         }
-    }
-
-    function isCategoryReady(category) {
-        return HostDataManager.getPendingMonitorCountForCategory(root.hostId, category) == 0
     }
 
     function focus() {

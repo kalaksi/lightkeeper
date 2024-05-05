@@ -23,7 +23,6 @@ TableView {
     property var monitoring_datas: []
     // CommandDatas as QVariants.
     property var command_datas: []
-    property var cooldownTimer: {}
 
     // Number of the row that has command row menu expanded.
     // Only one menu can be open at a time.
@@ -43,8 +42,11 @@ TableView {
     model: PropertyTableModel {
         monitoring_datas: root.monitoring_datas
         command_datas: root.command_datas
-        display_options: Theme.get_display_options()
+        display_options: Theme.getDisplayOptions()
     }
+
+
+    signal buttonProgressUpdated(string buttonId, int progress)
 
 
     ScrollBar.vertical: ScrollBar {
@@ -223,19 +225,19 @@ TableView {
                     }
 
                     Connections {
-                        target: root.cooldownTimer
+                        target: root
 
-                        function onTriggered() {
-                            let buttonIdentifiers = commandButtonRow.getButtonIdentifiers()
-                            for (let identifier of buttonIdentifiers) {
-                                let cooldownPercent = root.cooldownTimer.getCooldown(identifier)
-                                commandButtonRow.updateCooldown(identifier, cooldownPercent)
-                            }
+                        function onButtonProgressUpdated(buttonId, progress) {
+                            commandButtonRow.updateProgress(buttonId, progress)
                         }
                     }
                 }
             }
         }
+    }
+
+    function updateProgress(buttonId, progress) {
+        root.buttonProgressUpdated(buttonId, progress)
     }
 
     function toggleRow(row) {

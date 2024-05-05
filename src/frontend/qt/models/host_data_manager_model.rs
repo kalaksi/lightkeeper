@@ -45,9 +45,12 @@ pub struct HostDataManagerModel {
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
+    // TODO: refactor into separate model so that the call is more like `.monitors.pendingCount()` or something?
     getPendingMonitorCount: qt_method!(fn(&self, host_id: QString) -> u64),
     getPendingMonitorCountForCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
     getPendingCommandCount: qt_method!(fn(&self, host_id: QString) -> u64),
+    getPendingCommandCountForCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
+    getPendingCommandProgress: qt_method!(fn(&self, invocation_id: u64) -> u8),
 
     // These methods are used to get the data in JSON and parsed in QML side.
     // JSON is required since there doesn't seem to be a way to return a self-defined QObject.
@@ -290,7 +293,7 @@ impl HostDataManagerModel {
         let category = category.to_string();
 
         let host_display_data = self.display_data.hosts.get(&host_id).unwrap();
-        host_display_data.host_state.monitor_invocations.iter()
+        host_display_data.host_state.monitor_invocations.values()
             .filter(|invocation| invocation.category == category)
             .count() as u64
     }
@@ -304,6 +307,26 @@ impl HostDataManagerModel {
         else {
             0
         }
+    }
+
+    fn getPendingCommandCountForCategory(&self, host_id: QString, category: QString) -> u64 {
+        let host_id = host_id.to_string();
+        let category = category.to_string();
+
+        let host_display_data = self.display_data.hosts.get(&host_id).unwrap();
+        host_display_data.host_state.command_invocations.values()
+            .filter(|invocation| invocation.category == category)
+            .count() as u64
+    }
+
+    fn getPendingCommandProgress(&self, invocation_id: u64) -> u8 {
+        for host_display_data in self.display_data.hosts.values() {
+            if let Some(command_invocation) = host_display_data.host_state.command_invocations.get(&invocation_id) {
+                return command_invocation.progress;
+            }
+        }
+
+        return 100;
     }
 
     fn is_empty_category(&self, host_id: &str, category: &str) -> bool {
