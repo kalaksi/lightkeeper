@@ -156,7 +156,7 @@ impl HostManager {
 
                     // Specially structured data point for passing platform info here.
                     if message_data_point.is_internal() {
-                        host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
+                        host_state.monitor_invocations.remove(&state_update.invocation_id);
 
                         if let Ok(platform) = Self::read_platform_info(&message_data_point) {
                             host_state.host.platform = platform;
@@ -183,14 +183,12 @@ impl HostManager {
                             host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
                         }
                         else if message_data_point.criticality == Criticality::NoData {
-                            host_state.monitor_invocations.push(InvocationDetails {
-                                invocation_id: state_update.invocation_id,
-                                time: chrono::Utc::now(),
-                                category: state_update.display_options.category,
-                            });
+                            host_state.monitor_invocations
+                                .entry(state_update.invocation_id)
+                                .or_insert(InvocationDetails::new(state_update.invocation_id, state_update.display_options.category));
                         }
                         else {
-                            host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
+                            host_state.monitor_invocations.remove(&state_update.invocation_id);
 
                             // Monitoring data for platform info providers / internal modules won't exist in `monitor_data`.
                             if let Some(monitoring_data) = host_state.monitor_data.get_mut(&state_update.module_spec.id) {
@@ -210,14 +208,20 @@ impl HostManager {
                 }
                 else if let Some(command_result) = state_update.command_result {
                     if command_result.criticality == Criticality::NoData {
-                        host_state.command_invocations.push(InvocationDetails {
-                            invocation_id: state_update.invocation_id,
-                            time: chrono::Utc::now(),
-                            category: state_update.display_options.category,
-                        });
+                        host_state.command_invocations
+                            .entry(state_update.invocation_id)
+                            .or_insert(InvocationDetails::new(state_update.invocation_id, state_update.display_options.category));
                     }
                     else {
-                        host_state.command_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
+                        // Can be a partial result.
+                        if command_result.progress < 100 {
+                            host_state.command_invocations
+                                .entry(state_update.invocation_id)
+                                .and_modify(|invocation| invocation.progress = command_result.progress);
+                        }
+                        else {
+                            host_state.command_invocations.remove(&state_update.invocation_id);
+                        }
                         host_state.command_results.insert(state_update.module_spec.id, command_result.clone());
                         // Also add to a list of new command results.
                         new_command_results = Some((state_update.invocation_id, command_result));
@@ -226,10 +230,10 @@ impl HostManager {
                 else {
                     match state_update.module_spec.module_type {
                         crate::module::ModuleType::Command => {
-                            host_state.command_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
+                            host_state.command_invocations.remove(&state_update.invocation_id);
                         },
                         crate::module::ModuleType::Monitor => {
-                            host_state.monitor_invocations.retain(|invocation| invocation.invocation_id != state_update.invocation_id);
+                            host_state.command_invocations.remove(&state_update.invocation_id);
                         },
                         crate::module::ModuleType::Unknown |
                         crate::module::ModuleType::Connector => {},
@@ -385,8 +389,8 @@ pub struct HostState {
     pub monitor_data: HashMap<String, MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
     // Invocations in progress. Keeps track of monitor or command progress. Empty when all is done.
-    pub monitor_invocations: Vec<InvocationDetails>,
-    pub command_invocations: Vec<InvocationDetails>,
+    pub monitor_invocations: HashMap<u64, InvocationDetails>,
+    pub command_invocations: HashMap<u64, InvocationDetails>,
 }
 
 impl HostState {
@@ -399,8 +403,8 @@ impl HostState {
             is_initialized: false,
             monitor_data: HashMap::new(),
             command_results: HashMap::new(),
-            monitor_invocations: Vec::new(),
-            command_invocations: Vec::new(),
+            monitor_invocations: HashMap::new(),
+            command_invocations: HashMap::new(),
         }
     }
 
@@ -438,4 +442,16 @@ pub struct InvocationDetails {
     pub invocation_id: u64,
     pub time: chrono::DateTime<chrono::Utc>,
     pub category: String,
+    pub progress: u8,
+}
+
+impl InvocationDetails {
+    pub fn new(invocation_id: u64, category: String) -> Self {
+        InvocationDetails {
+            invocation_id: invocation_id,
+            time: chrono::Utc::now(),
+            category: category,
+            progress: 0,
+        }
+    }
 }
