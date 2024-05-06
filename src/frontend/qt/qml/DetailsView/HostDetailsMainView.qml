@@ -183,7 +183,8 @@ Item {
                             Layout.topMargin: size * 0.20
                             Layout.bottomMargin: size * 0.30
 
-                            onClicked: function(commandId, params) {
+                            onClicked: function(buttonId, commandId, params) {
+                                // TODO: buttonId
                                 CommandHandler.execute(root.hostId, commandId, params)
                             }
                         }

@@ -118,7 +118,7 @@ Item {
         showSaveButton: getCurrentTabContent() instanceof HostDetailsTextEditorView
         disableSaveButton: true
 
-        onRefreshClicked: CommandHandler.force_initialize_host(hostId)
+        onRefreshClicked: CommandHandler.forceInitializeHost(hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.close()

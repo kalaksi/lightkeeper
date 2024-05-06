@@ -25,13 +25,12 @@ pub struct CommandHandlerModel {
     stop: qt_method!(fn(&mut self)),
     reconfigure: qt_method!(fn(&mut self, config: QVariant, hosts_config: QVariant)),
 
-    get_all_host_categories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
+    getAllHostCategories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     getCommandsOnLevel: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
     executeConfirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
-    execute_confirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
@@ -40,8 +39,8 @@ pub struct CommandHandlerModel {
 
     // Host initialization methods.
     initializeHost: qt_method!(fn(&self, host_id: QString)),
-    force_initialize_host: qt_method!(fn(&self, host_id: QString)),
-    force_initialize_hosts: qt_method!(fn(&self)),
+    forceInitializeHost: qt_method!(fn(&self, host_id: QString)),
+    forceInitializeHosts: qt_method!(fn(&self)),
 
     // Monitor refresh methods.
     forceRefreshMonitorsOfCommand: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
@@ -54,9 +53,9 @@ pub struct CommandHandlerModel {
     //
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
-    details_dialog_opened: qt_signal!(invocation_id: u64),
+    detailsDialogOpened: qt_signal!(invocation_id: u64),
     inputDialogOpened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QStringList),
-    text_dialog_opened: qt_signal!(invocation_id: u64),
+    textDialogOpened: qt_signal!(invocation_id: u64),
     confirmationDialogOpened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QStringList),
     commandOutputDialogOpened: qt_signal!(title: QString, invocation_id: u64),
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
@@ -222,15 +221,11 @@ impl CommandHandlerModel {
             self.confirmationDialogOpened(QString::from(display_options.confirmation_text), host_id, command_id, parameters);
         }
         else {
-            self.execute_confirmed(host_id, command_id, parameters);
+            self.executeConfirmed(host_id, command_id, parameters);
         }
     }
 
     fn executeConfirmed(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
-        self.execute_confirmed(host_id, command_id, parameters);
-    }
-
-    fn execute_confirmed(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
@@ -259,7 +254,7 @@ impl CommandHandlerModel {
             UIAction::DetailsDialog => {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
-                    self.details_dialog_opened(invocation_id)
+                    self.detailsDialogOpened(invocation_id)
                 }
             },
             UIAction::TextView => {
@@ -272,7 +267,7 @@ impl CommandHandlerModel {
             UIAction::TextDialog => {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
-                    self.text_dialog_opened(invocation_id)
+                    self.textDialogOpened(invocation_id)
                 }
             },
             UIAction::LogView => {
@@ -366,12 +361,12 @@ impl CommandHandlerModel {
         self.hostInitializing(host_id);
     }
 
-    fn force_initialize_host(&mut self, host_id: QString) {
+    fn forceInitializeHost(&mut self, host_id: QString) {
         self.monitor_manager.refresh_platform_info(&host_id.to_string(), Some(CachePolicy::BypassCache));
         self.hostInitializing(host_id);
     }
 
-    fn force_initialize_hosts(&mut self) {
+    fn forceInitializeHosts(&mut self) {
         let host_ids = self.monitor_manager.refresh_platform_info_all(Some(CachePolicy::BypassCache));
         for host_id in host_ids {
             self.hostInitializing(QString::from(host_id));
@@ -415,7 +410,7 @@ impl CommandHandlerModel {
         QVariantList::from_iter(invocation_ids)
     }
 
-    fn get_all_host_categories(&self, host_id: QString) -> QVariantList {
+    fn getAllHostCategories(&self, host_id: QString) -> QVariantList {
         if host_id.is_empty() {
             return QVariantList::default()
         }

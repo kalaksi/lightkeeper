@@ -79,14 +79,14 @@ ApplicationWindow {
         }
 
         function onHost_initialized(hostId) {
-            let categories = CommandHandler.get_all_host_categories(hostId)
+            let categories = CommandHandler.getAllHostCategories(hostId)
             for (const category of categories) {
                 CommandHandler.refresh_monitors_of_category(hostId, category)
             }
         }
 
         function onHost_initialized_from_cache(hostId) {
-            let categories = CommandHandler.get_all_host_categories(hostId)
+            let categories = CommandHandler.getAllHostCategories(hostId)
             for (const category of categories) {
                 CommandHandler.cached_refresh_monitors_of_category(hostId, category)
             }
@@ -157,15 +157,15 @@ ApplicationWindow {
 
         function onConfirmationDialogOpened(text, hostId, commandId, commandParams) {
             confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text }) 
-            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.execute_confirmed(hostId, commandId, commandParams))
+            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.executeConfirmed(hostId, commandId, commandParams))
         }
 
-        function onDetails_dialog_opened(invocationId) {
+        function onDetailsDialogOpened(invocationId) {
             let instanceId = detailsDialogManager.create()
             _detailsDialogs[invocationId] = instanceId
         }
 
-        function onText_dialog_opened(invocationId) {
+        function onTextDialogOpened(invocationId) {
             textDialog.pendingInvocation = invocationId
             textDialog.open()
         }
@@ -181,7 +181,7 @@ ApplicationWindow {
             inputDialog.inputSpecs = inputSpecs
             // TODO: need to clear previous connections?
             inputDialog.onInputValuesGiven.connect((inputValues) => {
-                CommandHandler.execute_confirmed(hostId, commandId, commandParams.concat(inputValues))
+                CommandHandler.executeConfirmed(hostId, commandId, commandParams.concat(inputValues))
             })
             inputDialog.open()
         }
@@ -211,7 +211,7 @@ ApplicationWindow {
         console.log("Current color palette: ", palette)
 
         if (HostDataManager.refresh_hosts_on_start()) {
-            CommandHandler.force_initialize_hosts()
+            CommandHandler.forceInitializeHosts()
         }
     }
 
