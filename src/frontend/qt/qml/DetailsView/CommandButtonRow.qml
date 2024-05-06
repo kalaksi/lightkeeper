@@ -62,7 +62,7 @@ Item {
                 model: !root.collapsible || root._showCommands ?  root.commands : root._alwaysShownCommands
 
                 CommandButton {
-                    property string buttonIdentifier: modelData.command_params.length > 0 ?
+                    buttonId: modelData.command_params.length > 0 ?
                         modelData.command_id + '|' + modelData.command_params[0] : modelData.command_id + '|'
 
                     size: root.buttonSize
@@ -70,7 +70,10 @@ Item {
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
                     progressPercent: 100
-                    onClicked: root.clicked(modelData.command_id, modelData.command_params)
+                    onClicked: function(buttonId) {
+                        // TODO: buttonId
+                        root.clicked(modelData.command_id, modelData.command_params)
+                    }
                     hoverEnabled: root.hoverEnabled
                 }
             }

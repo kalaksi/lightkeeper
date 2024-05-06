@@ -220,7 +220,8 @@ TableView {
                         root.expandedCommandRow = row
                     }
 
-                    onClicked: function(commandId, params) {
+                    onClicked: function(buttonId, commandId, params) {
+                        // TODO: buttonId
                         CommandHandler.execute(root.hostId, commandId, params)
                     }
 

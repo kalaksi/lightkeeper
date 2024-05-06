@@ -6,6 +6,7 @@ import QtGraphicalEffects 1.15
 
 Item {
     id: root
+    property string buttonId: ""
     property int size: 0.8 * parent.height
     property alias tooltip: imageButton.tooltip
     property alias imageSource: imageButton.imageSource
@@ -20,14 +21,14 @@ Item {
     width: root.size
     height: root.size
 
-    signal clicked()
+    signal clicked(string buttonId)
 
     ImageButton {
         id: imageButton
         anchors.fill: parent
         flatButton: false
         roundButton: true
-        onClicked: () => root.clicked()
+        onClicked: () => root.clicked(root.buttonId)
     }
 
     // progress animation that blocks the button until timeout timer is finished or finish() called.
