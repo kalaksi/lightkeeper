@@ -41,7 +41,7 @@ pub struct HostDataManagerModel {
     get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     getDisplayData: qt_method!(fn(&self) -> QVariant),
     getCategories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
-    get_category_monitor_ids: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
+    getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
@@ -243,7 +243,7 @@ impl HostDataManagerModel {
     }
 
     // Get list of monitors for category.
-    fn get_category_monitor_ids(&self, host_id: QString, category: QString) -> QStringList {
+    fn getCategoryMonitorIds(&self, host_id: QString, category: QString) -> QStringList {
         let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
         let category = category.to_string();
 

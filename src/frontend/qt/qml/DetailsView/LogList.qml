@@ -312,7 +312,7 @@ ListView {
             return;
         }
 
-        CommandHandler.execute(root.hostId, root.commandId, [root._unitId, query])
+        CommandHandler.execute("", root.hostId, root.commandId, [root._unitId, query])
     }
     */
 }

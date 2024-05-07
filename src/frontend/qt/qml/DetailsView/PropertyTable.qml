@@ -17,7 +17,6 @@ import "../js/ValueUnit.js" as ValueUnit
 // Table for displaying monitoring data and command buttons.
 TableView {
     id: root 
-    property string hostId: ""
     property string category: ""
     // MonitoringDatas as QVariants.
     property var monitoring_datas: []
@@ -46,6 +45,7 @@ TableView {
     }
 
 
+    signal buttonClicked(string buttonId, string commandId, var params)
     signal buttonProgressUpdated(string buttonId, int progress)
 
 
@@ -221,8 +221,7 @@ TableView {
                     }
 
                     onClicked: function(buttonId, commandId, params) {
-                        // TODO: buttonId
-                        CommandHandler.execute(root.hostId, commandId, params)
+                        root.buttonClicked(buttonId, commandId, params)
                     }
 
                     Connections {

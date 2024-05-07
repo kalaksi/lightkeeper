@@ -26,11 +26,11 @@ pub struct CommandHandlerModel {
     reconfigure: qt_method!(fn(&mut self, config: QVariant, hosts_config: QVariant)),
 
     getAllHostCategories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
-    get_category_commands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+    getCategoryCommands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     getCommandsOnLevel: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
-    execute: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
-    executeConfirmed: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList)),
+    execute: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
+    executeConfirmed: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
@@ -54,9 +54,9 @@ pub struct CommandHandlerModel {
 
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     detailsDialogOpened: qt_signal!(invocation_id: u64),
-    inputDialogOpened: qt_signal!(input_specs: QString, host_id: QString, command_id: QString, parameters: QStringList),
+    inputDialogOpened: qt_signal!(input_specs: QString, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList),
     textDialogOpened: qt_signal!(invocation_id: u64),
-    confirmationDialogOpened: qt_signal!(text: QString, host_id: QString, command_id: QString, parameters: QStringList),
+    confirmationDialogOpened: qt_signal!(text: QString, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList),
     commandOutputDialogOpened: qt_signal!(title: QString, invocation_id: u64),
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
     textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
@@ -132,7 +132,7 @@ impl CommandHandlerModel {
     }
 
     // Return CommandDatas relevant to category as QVariants.
-    fn get_category_commands(&self, host_id: QString, category: QString) -> QVariantList {
+    fn getCategoryCommands(&self, host_id: QString, category: QString) -> QVariantList {
         let category_string = category.to_string();
 
         let mut category_commands = self.command_handler.get_commands_for_host(host_id.to_string())
@@ -207,7 +207,7 @@ impl CommandHandlerModel {
                             .count() as u32
     }
 
-    fn execute(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
+    fn execute(&mut self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList) {
         let display_options = match self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()) {
             Some(command_data) => command_data.display_options,
             None => return,
@@ -215,17 +215,17 @@ impl CommandHandlerModel {
 
         if !display_options.user_parameters.is_empty() {
             let input_specs: QString = QString::from(serde_json::to_string(&display_options.user_parameters).unwrap());
-            self.inputDialogOpened(input_specs, host_id, command_id, parameters);
+            self.inputDialogOpened(input_specs, button_id, host_id, command_id, parameters);
         }
         else if !display_options.confirmation_text.is_empty() {
-            self.confirmationDialogOpened(QString::from(display_options.confirmation_text), host_id, command_id, parameters);
+            self.confirmationDialogOpened(QString::from(display_options.confirmation_text), button_id, host_id, command_id, parameters);
         }
         else {
-            self.executeConfirmed(host_id, command_id, parameters);
+            self.executeConfirmed(button_id, host_id, command_id, parameters);
         }
     }
 
-    fn executeConfirmed(&mut self, host_id: QString, command_id: QString, parameters: QStringList) {
+    fn executeConfirmed(&mut self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList) {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
@@ -240,8 +240,7 @@ impl CommandHandlerModel {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
 
                 if invocation_id > 0 {
-                    let button_identifier = format!("{}|{}", command_id, parameters.first().unwrap_or(&String::new()));
-                    self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_identifier.into());
+                    self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_id.into());
                 }
             },
             UIAction::FollowOutput => {

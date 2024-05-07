@@ -30,7 +30,7 @@ Item {
     implicitWidth: calculateWidth(!collapsible)
     implicitHeight: size
 
-    signal clicked(string commandId, var params)
+    signal clicked(string buttonId, string commandId, var params)
     signal expanded()
 
     Component.onCompleted: {
@@ -72,7 +72,7 @@ Item {
                     progressPercent: 100
                     onClicked: function(buttonId) {
                         // TODO: buttonId
-                        root.clicked(modelData.command_id, modelData.command_params)
+                        root.clicked(buttonId, modelData.command_id, modelData.command_params)
                     }
                     hoverEnabled: root.hoverEnabled
                 }

@@ -184,8 +184,7 @@ Item {
                             Layout.bottomMargin: size * 0.30
 
                             onClicked: function(buttonId, commandId, params) {
-                                // TODO: buttonId
-                                CommandHandler.execute(root.hostId, commandId, params)
+                                CommandHandler.execute(buttonId, root.hostId, commandId, params)
                             }
                         }
 
@@ -256,14 +255,17 @@ Item {
 
                         PropertyTable {
                             id: propertyTable
-                            hostId: root.hostId
                             category: modelData
-                            monitoring_datas: HostDataManager.get_category_monitor_ids(root.hostId, modelData)
+                            monitoring_datas: HostDataManager.getCategoryMonitorIds(root.hostId, modelData)
                                                              .map(monitorId => HostDataManager.get_monitoring_data(root.hostId, monitorId))
-                            command_datas: CommandHandler.get_category_commands(root.hostId, modelData)
+                            command_datas: CommandHandler.getCategoryCommands(root.hostId, modelData)
 
                             Layout.fillHeight: true
                             Layout.fillWidth: true
+
+                            onButtonClicked: function(buttonId, commandId, params) {
+                                CommandHandler.execute(buttonId, root.hostId, commandId, params)
+                            }
 
                             Connections {
                                 target: HostDataManager

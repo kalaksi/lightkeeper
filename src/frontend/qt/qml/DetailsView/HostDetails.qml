@@ -288,7 +288,7 @@ Item {
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "Ctrl+T"
-        onActivated: CommandHandler.executeConfirmed(root.hostId, "linux-shell", {})
+        onActivated: CommandHandler.executeConfirmed("", root.hostId, "linux-shell", {})
     }
 
 

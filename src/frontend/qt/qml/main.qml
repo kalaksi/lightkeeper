@@ -155,9 +155,9 @@ ApplicationWindow {
     Connections {
         target: CommandHandler
 
-        function onConfirmationDialogOpened(text, hostId, commandId, commandParams) {
+        function onConfirmationDialogOpened(text, buttonId, hostId, commandId, commandParams) {
             confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text }) 
-            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.executeConfirmed(hostId, commandId, commandParams))
+            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.executeConfirmed(buttonId, hostId, commandId, commandParams))
         }
 
         function onDetailsDialogOpened(invocationId) {
@@ -175,13 +175,13 @@ ApplicationWindow {
             commandOutputDialog.open()
         }
 
-        function onInputDialogOpened(inputSpecsJson, hostId, commandId, commandParams) {
+        function onInputDialogOpened(inputSpecsJson, buttonId, hostId, commandId, commandParams) {
             let inputSpecs = JSON.parse(inputSpecsJson)
 
             inputDialog.inputSpecs = inputSpecs
             // TODO: need to clear previous connections?
             inputDialog.onInputValuesGiven.connect((inputValues) => {
-                CommandHandler.executeConfirmed(hostId, commandId, commandParams.concat(inputValues))
+                CommandHandler.executeConfirmed(buttonId, hostId, commandId, commandParams.concat(inputValues))
             })
             inputDialog.open()
         }
