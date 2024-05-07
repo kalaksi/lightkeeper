@@ -233,7 +233,7 @@ impl HostManager {
                             host_state.command_invocations.remove(&state_update.invocation_id);
                         },
                         crate::module::ModuleType::Monitor => {
-                            host_state.command_invocations.remove(&state_update.invocation_id);
+                            host_state.monitor_invocations.remove(&state_update.invocation_id);
                         },
                         crate::module::ModuleType::Unknown |
                         crate::module::ModuleType::Connector => {},
