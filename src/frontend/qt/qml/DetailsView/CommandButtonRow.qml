@@ -136,7 +136,7 @@ Item {
         let result = []
         for (let i = 0; i < commandRepeater.count; i++) {
             let button = commandRepeater.itemAt(i)
-            result.push(button.buttonIdentifier)
+            result.push(button.buttonId)
         }
         return result
     }
