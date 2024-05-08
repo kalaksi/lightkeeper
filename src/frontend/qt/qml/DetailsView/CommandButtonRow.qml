@@ -25,6 +25,8 @@ Item {
     property var _alwaysShownCommands: commands.filter(command => Theme.allow_collapsing_command(command.command_id) === "0")
     // Shown when `collapsible` is enabled and all of the commands aren't already visible.
     property bool _showMenu: collapsible && _alwaysShownCommands.length < commands.length
+    /// Have to store button states so that they can be restored when expanding/collapsing.
+    property var _buttonProgressStates: {}
 
 
     implicitWidth: calculateWidth(!collapsible)
@@ -34,11 +36,12 @@ Item {
     signal expanded()
 
     Component.onCompleted: {
-
         // No sense in allowing only 1 command to collapse.
         if (root.commands.length < 2) {
             root.collapsible = false
         }
+
+        root._buttonProgressStates = {}
     }
 
     Rectangle {
@@ -59,19 +62,17 @@ Item {
 
             Repeater {
                 id: commandRepeater
-                model: !root.collapsible || root._showCommands ?  root.commands : root._alwaysShownCommands
-
+                model: root.commands
+                
                 CommandButton {
-                    buttonId: modelData.command_params.length > 0 ?
-                        modelData.command_id + '|' + modelData.command_params[0] : modelData.command_id + '|'
-
+                    visible: !root.collapsible || root._showCommands || root._alwaysShownCommands.includes(modelData)
+                    buttonId: root.createButtonId(modelData)
                     size: root.buttonSize
                     roundButton: root.roundButtons
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
-                    progressPercent: 100
+                    progressPercent: root._buttonProgressStates[buttonId] !== undefined ? root._buttonProgressStates[buttonId] : 100
                     onClicked: function(buttonId) {
-                        // TODO: buttonId
                         root.clicked(buttonId, modelData.command_id, modelData.command_params)
                     }
                     hoverEnabled: root.hoverEnabled
@@ -132,6 +133,16 @@ Item {
         }
     ]
 
+    function createButtonId(commandButton) {
+        if (commandButton.command_params.length > 0) {
+            return commandButton.command_id + '|' + commandButton.command_params[0]
+
+        }
+        else {
+            return modelData.command_id + '|'
+        }
+    }
+
     function getButtonIdentifiers() {
         let result = []
         for (let i = 0; i < commandRepeater.count; i++) {
@@ -149,6 +160,7 @@ Item {
         // Assign new value only if necessary.
         if (button !== null && button.progressPercent !== progressPercent) {
             // console.log("Updating progress for button " + buttonId + " to " + progressPercent)
+            root._buttonProgressStates[buttonId] = progressPercent
             button.progressPercent = progressPercent
         }
     }

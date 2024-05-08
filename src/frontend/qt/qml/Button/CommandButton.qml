@@ -71,7 +71,7 @@ Item {
             // Circling arcs around the round button.
             context.translate(radius, radius)
             context.rotate(-Math.PI / 2 + root.circlingAngle)
-            context.strokeStyle = "#A0FFFFFF"
+            context.strokeStyle = "#C0FFFFFF"
             context.lineWidth = lineWidth
             context.beginPath()
             context.arc(0, 0, radius - lineWidth / 2.0, 0, Math.PI / 2.0)
