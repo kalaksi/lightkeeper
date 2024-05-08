@@ -248,6 +248,7 @@ impl CommandHandlerModel {
                 if invocation_id > 0 {
                     let title = QString::from(format!("{}: {}", command_id, parameters.first().unwrap_or(&String::new())));
                     self.commandOutputDialogOpened(title, invocation_id);
+                    self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_id.into());
                 }
             },
             UIAction::DetailsDialog => {
