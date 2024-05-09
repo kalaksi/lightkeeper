@@ -50,8 +50,8 @@ pub struct ConfigManagerModel {
     //
     // Group configuration
     //
-    begin_group_configuration: qt_method!(fn(&self)),
-    cancel_group_configuration: qt_method!(fn(&self)),
+    beginGroupConfiguration: qt_method!(fn(&self)),
+    cancelGroupConfiguration: qt_method!(fn(&self)),
     endGroupConfiguration: qt_method!(fn(&self)),
 
     get_all_groups: qt_method!(fn(&self) -> QStringList),
@@ -262,11 +262,11 @@ impl ConfigManagerModel {
         }
     }
 
-    fn begin_group_configuration(&mut self) {
+    fn beginGroupConfiguration(&mut self) {
         self.groups_config_backup = Some(self.groups_config.clone());
     }
 
-    fn cancel_group_configuration(&mut self) {
+    fn cancelGroupConfiguration(&mut self) {
         self.groups_config = self.groups_config_backup.take().unwrap();
     }
 

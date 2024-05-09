@@ -308,7 +308,7 @@ LightkeeperDialog {
 
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                ConfigManager.begin_group_configuration()
+                                ConfigManager.beginGroupConfiguration()
                                 ConfigManager.remove_group(selectedGroup)
                                 ConfigManager.endGroupConfiguration()
                                 refreshGroups()
@@ -347,11 +347,11 @@ LightkeeperDialog {
         }
 
         onOpened: {
-            ConfigManager.begin_group_configuration()
+            ConfigManager.beginGroupConfiguration()
         }
 
         onRejected: {
-            ConfigManager.cancel_group_configuration()
+            ConfigManager.cancelGroupConfiguration()
         }
     }
 

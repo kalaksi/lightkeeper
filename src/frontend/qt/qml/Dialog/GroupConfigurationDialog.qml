@@ -23,7 +23,7 @@ LightkeeperDialog {
     standardButtons: Dialog.Cancel | Dialog.Ok
 
     onOpened: {
-        ConfigManager.begin_group_configuration()
+        ConfigManager.beginGroupConfiguration()
         root._connectorList = ConfigManager.get_group_connectors(root.groupName) 
         root._monitorList = ConfigManager.get_group_monitors(root.groupName)
         root._commandList = ConfigManager.get_group_commands(root.groupName)
@@ -36,7 +36,7 @@ LightkeeperDialog {
     }
 
     onRejected: {
-        ConfigManager.cancel_group_configuration()
+        ConfigManager.cancelGroupConfiguration()
         reset()
     }
 
