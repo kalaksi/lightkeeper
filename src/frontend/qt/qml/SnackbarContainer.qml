@@ -31,7 +31,8 @@ Item {
         onTriggered: {
             // Destroy oldest snackbar.
             if (root._instances.length > 0 &&
-                Date.now() - root._instances[0].creationTime > root.showDuration) {
+                Date.now() - root._instances[0].creationTime > root.showDuration &&
+                root._instances[0].opacity < 0.01) {
 
                 root._instances[0].destroy()
                 root._instances.splice(0, 1)
