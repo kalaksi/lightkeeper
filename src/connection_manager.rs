@@ -309,17 +309,20 @@ impl ConnectionManager {
 
                 if let Ok(response) = response_result {
                     if response.return_code != 0 {
-                        log::debug!("[{}][{}] Command returned non-zero exit code: {}",
-                            request.host.name, request.source_id, response.return_code)
+                        log::warn!("[{}][{}] Command returned non-zero exit code: {}",
+                            request.host.name, request.source_id, response.return_code);
+                        results.push(Err(LkError::new_other(response.message)));
                     }
-                    if *cache_policy != CachePolicy::BypassCache {
-                        // Doesn't cache failed commands.
-                        let mut cached_response = response.clone();
-                        cached_response.is_from_cache = true;
-                        let mut command_cache = command_cache.lock().unwrap();
-                        command_cache.insert(cache_key, cached_response);
+                    else {
+                        if *cache_policy != CachePolicy::BypassCache {
+                            // Doesn't cache failed commands.
+                            let mut cached_response = response.clone();
+                            cached_response.is_from_cache = true;
+                            let mut command_cache = command_cache.lock().unwrap();
+                            command_cache.insert(cache_key, cached_response);
+                        }
+                        results.push(Ok(response))
                     }
-                    results.push(Ok(response))
                 }
                 else {
                     // Add module name to error details.
@@ -360,7 +363,7 @@ impl ConnectionManager {
                 }
                 else {
                     if response_message.return_code != 0 {
-                        log::debug!("[{}][{}] Command returned non-zero exit code: {}",
+                        log::warn!("[{}][{}] Command returned non-zero exit code: {}",
                             request.host.name, request.source_id, response_message.return_code)
                     }
 

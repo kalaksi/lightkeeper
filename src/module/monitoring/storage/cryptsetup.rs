@@ -92,7 +92,7 @@ impl MonitoringModule for Cryptsetup {
         }
         else {
             let lsblk: Lsblk = serde_json::from_str(&response.message)
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| format!("Failed to parse output: {}", e))?;
 
             result.multivalue = lsblk.blockdevices.iter()
                 .filter(|block_device| block_device.fstype == Some(String::from("crypto_LUKS")))
