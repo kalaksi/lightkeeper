@@ -109,7 +109,7 @@ impl ConnectionModule for Ssh2 {
             return Ok(ResponseMessage::empty());
         }
 
-        let mut session_data = self.wait_for_session(0)?;
+        let mut session_data = self.wait_for_session(0, true)?;
 
         let mut channel = match session_data.session.channel_session() {
             Ok(channel) => channel,
@@ -148,7 +148,7 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn send_message_partial(&self, message: &str, invocation_id: u64) -> Result<ResponseMessage, LkError> {
-        let mut session_data = self.wait_for_session(0)?;
+        let mut session_data = self.wait_for_session(0, true)?;
 
         let mut channel = match session_data.session.channel_session() {
             Ok(channel) => channel,
@@ -189,7 +189,7 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn receive_partial_response(&self, invocation_id: u64) -> Result<ResponseMessage, LkError> {
-        let mut partial_session = self.wait_for_session(invocation_id)?;
+        let mut partial_session = self.wait_for_session(invocation_id, true)?;
         let mut channel = match partial_session.open_channel.take() {
             Some(channel) => channel,
             None => return Err(LkError::new_other("Can't do partial receive. No open channel available.")),
@@ -219,7 +219,7 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn download_file(&self, source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {
-        let session_data = self.wait_for_session(0)?;
+        let session_data = self.wait_for_session(0, true)?;
         let sftp = session_data.session.sftp()?;
 
         let mut file = sftp.open(Path::new(&source))?;
@@ -241,7 +241,7 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> Result<(), LkError> {
-        let session_data = self.wait_for_session(0)?;
+        let session_data = self.wait_for_session(0, true)?;
         let sftp = session_data.session.sftp()?;
 
         let file = sftp.open_mode(
@@ -259,7 +259,7 @@ impl ConnectionModule for Ssh2 {
         // TODO: something's not right. self.address is unset when this function is visited even though connect()
         // (and setting of self.address) should happen before key verification. Setting self.address again as a workaround.
         // Check if this is still the case?
-        let mut session_data = self.wait_for_session(0)?;
+        let mut session_data = self.wait_for_session(0, false)?;
         let mut self_address = self.address.lock().unwrap();
         *self_address = hostname.to_string();
         let self_port = *self.port.lock().unwrap();
@@ -302,7 +302,7 @@ impl ConnectionModule for Ssh2 {
 }
 
 impl Ssh2 {
-    fn wait_for_session(&self, invocation_id: u64) -> Result<MutexGuard<SharedSessionData>, LkError> {
+    fn wait_for_session(&self, invocation_id: u64, connect_automatically: bool) -> Result<MutexGuard<SharedSessionData>, LkError> {
         loop {
             for (index, session) in self.available_sessions.iter().enumerate() {
                 if let Ok(mut session_data) = session.try_lock() {
@@ -313,7 +313,7 @@ impl Ssh2 {
 
                     log::debug!("Attached to session {}", index);
 
-                    if !session_data.is_initialized {
+                    if connect_automatically && !session_data.is_initialized {
                         let address = self.address.lock().unwrap().clone();
                         let port = *self.port.lock().unwrap();
                         if let Err(error) = self.connect(&mut session_data, &address, port) {

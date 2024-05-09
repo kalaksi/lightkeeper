@@ -221,6 +221,9 @@ impl ConnectionManager {
                         host_connectors.get(&connector_spec).unwrap()
                     };
 
+                    // TODO: not very elegant. No need to set multiple times.
+                    connector.set_target(&request.host.get_address());
+
                     // Key verifications have to be done before anything else.
                     match request.request_type {
                         RequestType::KeyVerification { key_id } => {
@@ -230,9 +233,6 @@ impl ConnectionManager {
                         },
                         _ => {}
                     }
-
-                    // TODO: not very elegant. No need to set multiple times.
-                    connector.set_target(&request.host.get_address());
 
                     let responses = match &request.request_type {
                         RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
@@ -323,7 +323,10 @@ impl ConnectionManager {
                 }
                 else {
                     // Add module name to error details.
-                    results.push(response_result.map_err(|error| error.set_source(connector.get_module_spec().id)))
+                    results.push(response_result.map_err(|error| error.set_source(connector.get_module_spec().id)));
+
+                    // Abort on any errors.
+                    break;
                 }
             }
         }
