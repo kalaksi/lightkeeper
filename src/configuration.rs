@@ -70,14 +70,14 @@ pub struct Preferences {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
-    // Currently not writing everything in the config file since they are not user-configurable.
     #[serde(default)]
     pub qtquick_style: String,
     #[serde(default)]
     pub hide_info_notifications: bool,
+    // Currently not writing everything in the config file since they are not user-configurable.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub categories: HashMap<String, Category>,
-    #[serde(default)]
+    #[serde(default = "DisplayOptions::default_show_status_bar")]
     pub show_status_bar: bool
 }
 
@@ -85,6 +85,12 @@ impl Default for DisplayOptions {
     fn default() -> Self {
         let default_main_config = get_default_main_config();
         default_main_config.display_options
+    }
+}
+
+impl DisplayOptions {
+    pub fn default_show_status_bar() -> bool {
+        true
     }
 }
 
