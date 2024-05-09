@@ -10,6 +10,7 @@ Rectangle {
     id: root
     required property string text
     required property string criticality
+    property var creationTime: Date.now()
     property int contentPadding: 10
     property int fadeDuration: 200
     property int showDuration: 5000

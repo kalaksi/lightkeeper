@@ -27,10 +27,20 @@ Item {
 
     Timer {
         id: cleanupTimer 
-        // Has to give time for the fade out to happen. Seems to require some extra time.
-        interval: root.showDuration + root.animationDuration + 100
-        onTriggered: destroyOldestSnackbar()
-        repeat: root._instances.length > 0
+        interval: 200
+        onTriggered: {
+            // Destroy oldest snackbar.
+            if (root._instances.length > 0 &&
+                Date.now() - root._instances[0].creationTime > root.showDuration) {
+
+                root._instances[0].destroy()
+                root._instances.splice(0, 1)
+            }
+
+            if (root._instances.length > 0) {
+                start()
+            }
+        }
     }
 
     function addSnackbar(criticality, text) {
@@ -51,12 +61,5 @@ Item {
 
         root._instances.push(newSnackbar)
         cleanupTimer.start()
-    }
-
-    function destroyOldestSnackbar() {
-        if (root._instances.length > 0) {
-            root._instances[0].destroy()
-            root._instances.splice(0, 1)
-        }
     }
 }
