@@ -44,19 +44,24 @@ Item {
     }
 
     function addSnackbar(criticality, text) {
+        // If previous errors exist, give some extra time so boxes won't disappear at the same time.
+        let extraDisplayMs = root._instances.length * 500
+
         let newSnackbar = snackbarComponent.createObject(root, {
+            creationTime: Date.now() + extraDisplayMs,
             criticality: criticality,
             text: text,
             fadeDuration: root.animationDuration,
-            showDuration: root.showDuration,
+            showDuration: root.showDuration + extraDisplayMs,
             maximumWidth: root.snackbarMaximumWidth,
             height: root.snackbarHeight,
             "anchors.right": root.right,
             y: root.height - root.snackbarHeight - root.spacing,
         })
 
-        for (let existingInstance of root._instances) {
-            existingInstance.y -= newSnackbar.height + root.spacing
+        for (let i = 0; i < root._instances.length; i++) {
+            let y_multiplier = root._instances.length - i
+            root._instances[i].y = root.height - root.snackbarHeight - root.spacing - (root.snackbarHeight + root.spacing) * y_multiplier
         }
 
         root._instances.push(newSnackbar)
