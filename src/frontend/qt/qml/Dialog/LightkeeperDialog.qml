@@ -13,7 +13,7 @@ Dialog {
     modal: true
     title: ""
 
-    property int borderRadius: 10
+    property int borderRadius: 6
     property color headerBackground: Theme.titleBarColor
 
     background: Rectangle {
