@@ -27,7 +27,7 @@ ListView {
     highlightFollowsCurrentItem: true
     highlightMoveDuration: 0
     highlight: Rectangle {
-        color: Theme.color_highlight_light()
+        color: Theme.highlightColorLight
     }
 
     model: []

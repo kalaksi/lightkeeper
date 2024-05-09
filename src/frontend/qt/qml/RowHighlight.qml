@@ -20,7 +20,7 @@ Rectangle {
 
         onEntered: {
             if (!root.selected) {
-                root.color = Theme.color_highlight()
+                root.color = Theme.highlightColor
             }
         }
 
@@ -35,7 +35,7 @@ Rectangle {
             root.selected = !root.selected
 
             if (root.selected) {
-                root.color = Theme.color_highlight()
+                root.color = Theme.highlightColor
             }
             else {
                 root.color = Theme.backgroundColor
@@ -53,7 +53,7 @@ Rectangle {
         NumberAnimation {
             duration: {
                 if (root.height > 0) {
-                    return Theme.animation_duration()
+                    return Theme.animationDuration
                 }
                 else {
                     // Usually, the initial size is often 0 and unnecessary animating happens when contents are rendered.
@@ -65,7 +65,7 @@ Rectangle {
 
     Behavior on color {
         ColorAnimation {
-            duration: Theme.animation_duration()
+            duration: Theme.animationDuration
         }
     }
 }

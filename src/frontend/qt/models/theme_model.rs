@@ -10,14 +10,14 @@ use crate::{configuration, enums::Criticality};
 #[allow(non_snake_case)]
 pub struct ThemeModel {
     base: qt_base_class!(trait QObject),
-
-    // NOTE: New way of doing things. Use Qt properties and camelCase.
     disabledTextColor: qt_property!(QString; CONST),
     iconColor: qt_property!(QString; CONST),
     textColor: qt_property!(QString; CONST),
     textColorDark: qt_property!(QString; CONST),
     borderColor: qt_property!(QString; CONST),
     titleBarColor: qt_property!(QString; CONST),
+    highlightColor: qt_property!(QString; CONST),
+    highlightColorLight: qt_property!(QString; CONST),
     highlightColorBright: qt_property!(QString; CONST),
     backgroundColorDark: qt_property!(QString; CONST),
     backgroundColor: qt_property!(QString; CONST),
@@ -35,31 +35,21 @@ pub struct ThemeModel {
     animationDuration: qt_property!(i32; CONST),
     groupboxMinWidth: qt_property!(i32; CONST),
     groupboxMaxWidth: qt_property!(i32; CONST),
+    commonIndent: qt_property!(i32; CONST),
 
     // Display options
     hideInfoNotifications: qt_property!(bool; CONST),
     showStatusBar: qt_property!(bool; CONST),
+    tooltipDelay: qt_property!(i32; CONST),
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
     colorForCriticality: qt_method!(fn(&self, criticality: QString) -> QString),
     iconForCriticality: qt_method!(fn(&self, alert_level: QString) -> QString),
-
-    tooltipDelay: qt_property!(i32; CONST),
-
-
-    // NOTE: Old methods, will be deprecated.
-
-    common_indentation: qt_method!(fn(&self) -> i8),
-    background_color: qt_method!(fn(&self) -> QString),
-    color_highlight: qt_method!(fn(&self) -> QString),
-    color_highlight_light: qt_method!(fn(&self) -> QString),
-
     opacity: qt_method!(fn(&self, is_enabled: bool) -> QString),
-
-    allow_collapsing_command: qt_method!(fn(&self, command_id: QString) -> QString),
-    animation_duration: qt_method!(fn(&self) -> QVariant),
     getDisplayOptions: qt_method!(fn(&self) -> QVariant),
+    allowCollapsingCommand: qt_method!(fn(&self, command_id: QString) -> QString),
+
 
     i_display_options: configuration::DisplayOptions,
 }
@@ -77,6 +67,8 @@ impl ThemeModel {
             textColorDark: QString::from("#a0a0a0"),
             borderColor: QString::from("#505050"),
             titleBarColor: QString::from("#404040"),
+            highlightColor: QString::from("#242628"),
+            highlightColorLight: QString::from("#30ffffff"),
             highlightColorBright: QString::from("#50ff2222"),
             backgroundColorDark: QString::from("#252525"),
             backgroundColor: QString::from("#2a2e32"),
@@ -93,6 +85,7 @@ impl ThemeModel {
             animationDuration: 175,
             groupboxMinWidth: 450,
             groupboxMaxWidth: 650,
+            commonIndent: 16,
             tooltipDelay: 800,
 
             hideInfoNotifications: display_options.hide_info_notifications,
@@ -120,22 +113,6 @@ impl ThemeModel {
         }
     }
 
-    fn common_indentation(&self) -> i8 {
-        16
-    }
-
-    fn background_color(&self) -> QString {
-        QString::from("#2a2e32")
-    }
-
-    fn color_highlight(&self) -> QString {
-        QString::from("#242628")
-    }
-
-    fn color_highlight_light(&self) -> QString {
-        QString::from("#30ffffff")
-    }
-
     fn opacity(&self, is_enabled: bool) -> QString {
         if is_enabled {
             return QString::from("1.0");
@@ -143,7 +120,7 @@ impl ThemeModel {
         QString::from("0.3")
     }
 
-    fn allow_collapsing_command(&self, command_id: QString) -> QString {
+    fn allowCollapsingCommand(&self, command_id: QString) -> QString {
         // TODO: take category into consideration instead of accepting matching id from any of them.
         let allows_collapsing = self.i_display_options.categories.values().any(|category| {
             match &category.collapsible_commands {
@@ -158,10 +135,6 @@ impl ThemeModel {
         else {
             QString::from("0")
         }
-    }
-
-    fn animation_duration(&self) -> QVariant {
-        QVariant::from(175)
     }
 
     fn colorForCriticality(&self, criticality: QString) -> QString {

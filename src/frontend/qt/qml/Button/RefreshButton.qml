@@ -84,14 +84,14 @@ Item {
                 target: readyAnimationImage
                 property: "opacity"
                 to: 0.2
-                duration: Theme.animation_duration()
+                duration: Theme.animationDuration
             }
 
             PropertyAnimation {
                 target: readyAnimationImage
                 property: "scale"
                 to: 2.0
-                duration: Theme.animation_duration()
+                duration: Theme.animationDuration
             }
         }
     }

@@ -22,7 +22,7 @@ Item {
 
     property bool _showBackground: false
     property bool _showCommands: false
-    property var _alwaysShownCommands: commands.filter(command => Theme.allow_collapsing_command(command.command_id) === "0")
+    property var _alwaysShownCommands: commands.filter(command => Theme.allowCollapsingCommand(command.command_id) === "0")
     // Shown when `collapsible` is enabled and all of the commands aren't already visible.
     property bool _showMenu: collapsible && _alwaysShownCommands.length < commands.length
     /// Have to store button states so that they can be restored when expanding/collapsing.

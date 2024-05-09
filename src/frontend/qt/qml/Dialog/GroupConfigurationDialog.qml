@@ -108,7 +108,7 @@ LightkeeperDialog {
                 placeholder: "No changes"
                 text: ""
 
-                Layout.leftMargin: Theme.common_indentation()
+                Layout.leftMargin: Theme.commonIndent
             }
 
 
@@ -118,7 +118,7 @@ LightkeeperDialog {
 
                 Column {
                     Layout.fillWidth: true
-                    Layout.leftMargin: Theme.common_indentation()
+                    Layout.leftMargin: Theme.commonIndent
 
                     RowHighlight {
                         id: connectorHighlighter
@@ -201,7 +201,7 @@ LightkeeperDialog {
                                 text: modelData + ": "
                                 color: Theme.textColorDark
 
-                                Layout.leftMargin: Theme.common_indentation()
+                                Layout.leftMargin: Theme.commonIndent
                             }
 
                             SmallText {
@@ -256,7 +256,7 @@ LightkeeperDialog {
                 placeholder: "No changes"
                 text: ""
 
-                Layout.leftMargin: Theme.common_indentation()
+                Layout.leftMargin: Theme.commonIndent
             }
 
             Repeater {
@@ -265,7 +265,7 @@ LightkeeperDialog {
 
                 Column {
                     Layout.fillWidth: true
-                    Layout.leftMargin: Theme.common_indentation()
+                    Layout.leftMargin: Theme.commonIndent
 
                     RowHighlight {
                         id: monitorHighlighter
@@ -374,7 +374,7 @@ LightkeeperDialog {
                                 color: Theme.textColorDark
 
                                 Layout.fillWidth: true
-                                Layout.leftMargin: Theme.common_indentation()
+                                Layout.leftMargin: Theme.commonIndent
                             }
 
                             SmallText {
@@ -429,7 +429,7 @@ LightkeeperDialog {
                 placeholder: "No changes"
                 text: ""
 
-                Layout.leftMargin: Theme.common_indentation()
+                Layout.leftMargin: Theme.commonIndent
             }
 
             Repeater {
@@ -438,7 +438,7 @@ LightkeeperDialog {
 
                 Column {
                     Layout.fillWidth: true
-                    Layout.leftMargin: Theme.common_indentation()
+                    Layout.leftMargin: Theme.commonIndent
 
                     RowHighlight {
                         id: commandHighlighter
@@ -523,7 +523,7 @@ LightkeeperDialog {
                                 color: Theme.textColorDark
 
                                 Layout.fillWidth: true
-                                Layout.leftMargin: Theme.common_indentation()
+                                Layout.leftMargin: Theme.commonIndent
                             }
 
                             SmallText {
