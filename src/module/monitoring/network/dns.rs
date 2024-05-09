@@ -68,6 +68,7 @@ impl MonitoringModule for Dns {
 
         let mut result = DataPoint::empty();
 
+
         let resolvconf_response = &responses[0];
         if resolvconf_response.is_success() {
             for line in resolvconf_response.message.lines() {
@@ -81,19 +82,21 @@ impl MonitoringModule for Dns {
             }
         }
 
-        let resolvectl_response = &responses[1];
-        if resolvectl_response.is_success() {
-            for line in resolvectl_response.message.lines() {
-                if line.starts_with("Link") {
-                    let mut parts = line.split("): ");
-                    let dns_servers = parts.nth(1).unwrap_or_default()
-                                           .split_whitespace();
+        // resolvectl-command might have failed and response missing.
+        if let Some(resolvectl_response) = &responses.get(1) {
+            if resolvectl_response.is_success() {
+                for line in resolvectl_response.message.lines() {
+                    if line.starts_with("Link") {
+                        let mut parts = line.split("): ");
+                        let dns_servers = parts.nth(1).unwrap_or_default()
+                                            .split_whitespace();
 
-                    for dns_server in dns_servers {
-                        let mut datapoint = DataPoint::label(dns_server);
-                        datapoint.description = String::from("systemd-resolved");
-                        datapoint.is_from_cache = resolvectl_response.is_from_cache;
-                        result.multivalue.push(datapoint);
+                        for dns_server in dns_servers {
+                            let mut datapoint = DataPoint::label(dns_server);
+                            datapoint.description = String::from("systemd-resolved");
+                            datapoint.is_from_cache = resolvectl_response.is_from_cache;
+                            result.multivalue.push(datapoint);
+                        }
                     }
                 }
             }
