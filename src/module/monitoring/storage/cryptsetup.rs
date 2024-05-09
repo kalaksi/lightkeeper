@@ -91,7 +91,9 @@ impl MonitoringModule for Cryptsetup {
             }).collect();
         }
         else {
-            let lsblk: Lsblk = serde_json::from_str(&response.message).unwrap();
+            let lsblk: Lsblk = serde_json::from_str(&response.message)
+                .map_err(|e| e.to_string())?;
+
             result.multivalue = lsblk.blockdevices.iter()
                 .filter(|block_device| block_device.fstype == Some(String::from("crypto_LUKS")))
                 .map(|block_device| {
