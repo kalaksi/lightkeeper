@@ -510,7 +510,6 @@ impl MonitorManager {
                         ..Default::default()
                     }).unwrap();
                 }
-
             }
         })
     }

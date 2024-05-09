@@ -20,7 +20,7 @@ impl ErrorMessage {
 impl From<LkError> for ErrorMessage {
     fn from(error: LkError) -> Self {
         ErrorMessage {
-            message: error.message().to_string(),
+            message: error.to_string(),
             criticality: Criticality::Error,
         }
     }

@@ -311,7 +311,10 @@ impl ConnectionManager {
                     if response.return_code != 0 {
                         log::warn!("[{}][{}] Command returned non-zero exit code: {}",
                             request.host.name, request.source_id, response.return_code);
-                        results.push(Err(LkError::new_other(response.message)));
+
+                        let error = LkError::new_other(response.message)
+                                            .set_source(request.source_id.clone());
+                        results.push(Err(error));
                     }
                     else {
                         if *cache_policy != CachePolicy::BypassCache {
