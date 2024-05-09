@@ -1,74 +1,20 @@
 preferences:
-  # Refresh all hosts on application start.
+  use_sandbox_mode: false
   refresh_hosts_on_start: false
-  # Some commands allow you to edit a remote file.
-  # This can be done directly over a terminal or by temporarily downloading the file for editing locally.
-  # If set to true, will launch a terminal for editing directly using a CLI text editor.
   use_remote_editor: true
-  # This is the command (or path) to the remote CLI text editor.
-  remote_text_editor: "nano"
-  # Use sudo when editing remote files?
   sudo_remote_editor: true
-  # Likewise, command (or path) to an editor for editing locally.
-  # If set to "internal", will use the integrated text editor.
-  text_editor: "internal"
-  # Some commands may launch a terminal for you. Here you can configure the terminal and parameters.
-  # If set to "internal", will use the integrated terminal.
-  terminal: "internal"
-  terminal_args: [""]
-
-# Caching can provide speed benefits especially if you have many hosts.
-# Recommended to be left disabled for now.
+  remote_text_editor: nano
+  text_editor: internal
+  terminal: internal
+  terminal_args:
+  - ''
+display_options:
+  qtquick_style: ''
+  hide_info_notifications: false
 cache_settings:
   enable_cache: false
   provide_initial_value: true
   initial_value_time_to_live: 604800
   prefer_cache: true
   time_to_live: 8400
-
-# Control category order, command buttons orders, colors. Defaults should be good.
-# NOTE: Currently, you shouldn't manually edit display_options at all.
-display_options:
-  # Empty means default.
-  qtquick_style: ""
-  hide_info_notifications: false
-  categories:
-    host:
-      # Priority controls the order of the category tiles. Host should be first.
-      priority: 1
-      # Color of the label bar.
-      color: "#80b3825d"
-      # Order of command buttons.
-      command_order: ["shell", "reboot", "shutdown", "logs"]
-      # Order of monitors.
-      monitor_order: ["uptime", "load", "ram", "os", "kernel", "filesystem"]
-    storage:
-      priority: 2
-      color: "#80b3825d"
-      command_order: ["storage-lvm-snapshot", "storage-lvm-lvresize", "storage-lvm-lvremove"]
-      monitor_order: ["filesystem", "storage-lvm-logical-volume", "storage-lvm-volume-group", "storage-lvm-physical-volume"]
-    network:
-      priority: 3
-      color: "#80b3825d"
-      monitor_order: ["oping", "ping", "tcp-connect", "ssh", "network-dns", "interface", "network-routes"]
-    systemd:
-      priority: 4
-      color: "#8030d475"
-      command_order: ["systemd-service-logs", "systemd-service-stop", "systemd-service-start", "systemd-service-mask", "systemd-service-unmask"]
-    package:
-      priority: 5
-    docker-compose:
-      priority: 6
-      icon: "qrc:///main/images/docker"
-      color: "#8010a0ee"
-      command_order: ["docker-compose-edit", "docker-compose-shell", "docker-compose-logs", "docker-compose-start", "docker-compose-stop", "docker-compose-pull", "docker-compose-up"]
-      collapsible_commands: [ "docker-compose-start", "docker-compose-stop", "docker-compose-edit" ]
-    docker-containers:
-      priority: 7
-      icon: "qrc:///main/images/docker"
-      color: "#8010a0ee"
-    docker-images:
-      priority: 8
-      icon: "qrc:///main/images/docker"
-      color: "#8010a0ee"
-      command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
+schema_version: 2
