@@ -292,7 +292,7 @@ impl ConfigManagerModel {
     fn setHostSettings(&mut self, old_host_name: QString, new_host_name: QString, host_settings_json: QString) {
         let old_host_name = old_host_name.to_string();
         let new_host_name = new_host_name.to_string();
-        let host_settings: HostSettings = serde_json::from_str(&host_settings_json.to_string()).unwrap();
+        let new_settings: HostSettings = serde_json::from_str(&host_settings_json.to_string()).unwrap();
 
         if old_host_name != new_host_name {
             let host_config = self.hosts_config.hosts.remove(&old_host_name).unwrap();
@@ -300,8 +300,9 @@ impl ConfigManagerModel {
         }
 
         let host_config = self.hosts_config.hosts.get_mut(&new_host_name).unwrap();
-        host_config.address = host_settings.address;
-        host_config.fqdn = host_settings.fqdn;
+        host_config.address = new_settings.address;
+        host_config.fqdn = new_settings.fqdn;
+        host_config.overrides = new_settings.overrides;
     }
 
     fn get_all_groups(&self) -> QStringList {

@@ -43,7 +43,7 @@ LightkeeperDialog {
         let newSettings = {
             overrides: {
                 connectors: {},
-                settings: {}
+                host_settings: {}
             }
         }
 
