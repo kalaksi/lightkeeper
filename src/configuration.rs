@@ -144,8 +144,13 @@ pub struct HostSettings {
     pub fqdn: String,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub settings: Vec<HostSetting>,
-    // Currently, you have to use config groups instead of setting these directly on host.
-    // So these are never written but will be populated from groups on config read.
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub overrides: ConfigGroup,
+    /// Effective configuration after merging everything. Will not be stored in config file, but is available in runtime.
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub effective: ConfigGroup,
+
+    // Deprecated.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub monitors: HashMap<String, MonitorConfig>,
     #[serde(default, skip_serializing_if = "Configuration::always")]
@@ -154,10 +159,8 @@ pub struct HostSettings {
     pub connectors: HashMap<String, ConnectorConfig>,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct ConfigGroup {
-    #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub host_settings: Vec<HostSetting>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub monitors: HashMap<String, MonitorConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
@@ -323,39 +326,62 @@ impl Configuration {
             return Err(io::Error::new(io::ErrorKind::Other, error_message));
         }
 
+        // Merge config groups to form the final, effective config.
         for (_, host_config) in hosts.hosts.iter_mut() {
-            for group_id in host_config.groups.clone().iter() {
+            host_config.effective = ConfigGroup::default();
+
+            for group_id in host_config.groups.iter() {
                 let group_config = all_groups.groups.get(group_id).unwrap();
-
-                // NOTE: Host settings are not merged.
-                if !group_config.host_settings.is_empty() {
-                    host_config.settings = group_config.host_settings.clone();
-                }
-
-                // Merge groups.
-                group_config.monitors.iter().for_each(|(monitor_id, new_config)| {
-                    let mut merged_config = host_config.monitors.get(monitor_id).cloned().unwrap_or(MonitorConfig::default());
-                    merged_config.settings.extend(new_config.settings.clone());
-                    merged_config.is_critical = new_config.is_critical;
-                    host_config.monitors.insert(monitor_id.clone(), merged_config);
-                });
-
-                group_config.commands.iter().for_each(|(command_id, new_config)| {
-                    let mut merged_config = host_config.commands.get(command_id).cloned().unwrap_or(CommandConfig::default());
-                    merged_config.settings.extend(new_config.settings.clone());
-                    merged_config.version = new_config.version.clone();
-                    host_config.commands.insert(command_id.clone(), merged_config);
-                });
-
-                group_config.connectors.iter().for_each(|(connector_id, new_config)| {
-                    let mut merged_config = host_config.connectors.get(connector_id).cloned().unwrap_or(ConnectorConfig::default());
-                    merged_config.settings.extend(new_config.settings.clone());
-                    host_config.connectors.insert(connector_id.clone(), merged_config);
-                });
+                host_config.effective = Self::merge_group_config(&host_config.effective, group_config);
             }
+
+            // Old, deprecated host overrides.
+            let old_overrides = ConfigGroup {
+                commands: host_config.commands.clone(),
+                monitors: host_config.monitors.clone(),
+                connectors: host_config.connectors.clone(),
+                config_helper: Default::default(),
+            };
+            let all_overrides = Self::merge_group_config(&old_overrides, &host_config.overrides);
+
+            // New host overrides.
+            host_config.effective = Self::merge_group_config(&host_config.effective, &all_overrides);
+            host_config.overrides = all_overrides;
         }
 
         Ok((main_config, hosts, all_groups))
+    }
+
+    /// Merges configuration groups, second parameter will overwrite conflicting contents from first.
+    pub fn merge_group_config(first_config: &ConfigGroup, second_config: &ConfigGroup) -> ConfigGroup {
+        let mut result = first_config.clone();
+
+        second_config.monitors.iter().for_each(|(monitor_id, new_config)| {
+            let mut merged_config = first_config.monitors.get(monitor_id).cloned().unwrap_or_default();
+            merged_config.settings.extend(new_config.settings.clone());
+
+            if let Some(enabled) = new_config.enabled {
+                merged_config.enabled = Some(enabled);
+            }
+
+            merged_config.is_critical = new_config.is_critical;
+            result.monitors.insert(monitor_id.clone(), merged_config);
+        });
+
+        second_config.commands.iter().for_each(|(command_id, new_config)| {
+            let mut merged_config = first_config.commands.get(command_id).cloned().unwrap_or_default();
+            merged_config.settings.extend(new_config.settings.clone());
+            merged_config.version = new_config.version.clone();
+            result.commands.insert(command_id.clone(), merged_config);
+        });
+
+        second_config.connectors.iter().for_each(|(connector_id, new_config)| {
+            let mut merged_config = first_config.connectors.get(connector_id).cloned().unwrap_or_default();
+            merged_config.settings.extend(new_config.settings.clone());
+            result.connectors.insert(connector_id.clone(), merged_config);
+        });
+
+        result
     }
 
     pub fn write_initial_config(config_dir: &PathBuf) -> io::Result<()> {
@@ -432,7 +458,11 @@ impl Configuration {
         let hosts_config_file = fs::OpenOptions::new().write(true).truncate(true).open(hosts_file_path.clone());
         match hosts_config_file {
             Ok(mut file) => {
-                let hosts_config = serde_yaml::to_string(hosts).unwrap();
+                let mut sanitized_hosts = hosts.clone();
+                sanitized_hosts.hosts.values_mut().for_each(|host| host.effective = ConfigGroup::default());
+
+                let hosts_config = serde_yaml::to_string(&sanitized_hosts).unwrap();
+
                 if let Err(error) = file.write_all(hosts_config.as_bytes()) {
                     let message = format!("Failed to write host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
                     return Err(io::Error::new(io::ErrorKind::Other, message));

@@ -82,7 +82,7 @@ impl CommandHandler {
         self.hosts_config = hosts_config.clone();
 
         for (host_id, host_config) in hosts_config.hosts.iter() {
-            for (command_id, command_config) in host_config.commands.iter() {
+            for (command_id, command_config) in host_config.effective.commands.iter() {
 
                 let command_spec = crate::module::ModuleSpecification::new(command_id, &command_config.version);
                 if let Some(command) = self.module_factory.new_command(&command_spec, &command_config.settings) {
@@ -634,9 +634,7 @@ impl CommandHandler {
     fn remote_ssh_command(&self, host_id: &String) -> ShellCommand {
         let host = self.host_manager.borrow().get_host(host_id);
 
-        let ssh_settings = self.hosts_config.hosts[host_id]
-                                            .connectors["ssh"]
-                                            .settings.clone();
+        let ssh_settings = self.hosts_config.hosts[host_id].effective.connectors["ssh"].settings.clone();
 
         let remote_address = if !host.fqdn.is_empty() {
             host.fqdn.clone()

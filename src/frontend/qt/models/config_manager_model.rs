@@ -35,12 +35,12 @@ pub struct ConfigManagerModel {
     //
     add_host: qt_method!(fn(&self, host_name: QString)),
     removeHost: qt_method!(fn(&self, host_name: QString)),
-    // Returns host settings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
+    /// Returns HostSettings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     getHostSettings: qt_method!(fn(&self, host_name: QString) -> QString),
     setHostSettings: qt_method!(fn(&self, old_host_name: QString, new_host_name: QString, host_settings_json: QString)),
-    begin_host_configuration: qt_method!(fn(&self)),
-    cancel_host_configuration: qt_method!(fn(&self)),
-    end_host_configuration: qt_method!(fn(&self)),
+    beginHostConfiguration: qt_method!(fn(&self)),
+    cancelHostConfiguration: qt_method!(fn(&self)),
+    endHostConfiguration: qt_method!(fn(&self)),
 
     getSelectedGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     getAvailableGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
@@ -247,15 +247,15 @@ impl ConfigManagerModel {
         }
     }
 
-    fn begin_host_configuration(&mut self) {
+    fn beginHostConfiguration(&mut self) {
         self.hosts_config_backup = Some(self.hosts_config.clone());
     }
 
-    fn cancel_host_configuration(&mut self) {
+    fn cancelHostConfiguration(&mut self) {
         self.hosts_config = self.hosts_config_backup.take().unwrap();
     }
 
-    fn end_host_configuration(&mut self) {
+    fn endHostConfiguration(&mut self) {
         self.hosts_config_backup = None;
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
             self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));

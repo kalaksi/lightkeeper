@@ -35,13 +35,13 @@ ApplicationWindow {
             hostConfigurationDialog.open()
         }
         onClickedRemove: {
-            ConfigManager.begin_host_configuration()
+            ConfigManager.beginHostConfiguration()
             ConfigManager.removeHost(_hostTableModel.getSelectedHostId())
-            ConfigManager.end_host_configuration()
+            ConfigManager.endHostConfiguration()
             reloadConfiguration()
         }
         onClickedEdit: {
-            ConfigManager.begin_host_configuration()
+            ConfigManager.beginHostConfiguration()
             hostConfigurationDialog.hostId = _hostTableModel.getSelectedHostId()
             hostConfigurationDialog.open()
         }

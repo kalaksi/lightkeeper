@@ -61,14 +61,14 @@ impl ConnectionManager {
             stateful_connectors.entry(host_id.clone()).or_insert(HashMap::new());
             let host_connectors = stateful_connectors.get_mut(host_id).unwrap();
 
-            for (monitor_id, monitor_config) in host_config.monitors.iter() {
+            for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
                 let monitor_spec = ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
                 let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
 
                 if let Some(mut connector_spec) = monitor.get_connector_spec() {
                     connector_spec.module_type = ModuleType::Connector;
 
-                    let connector_settings = match host_config.connectors.get(&connector_spec.id) {
+                    let connector_settings = match host_config.effective.connectors.get(&connector_spec.id) {
                         Some(config) => config.settings.clone(),
                         None => HashMap::new(),
                     };
@@ -80,7 +80,7 @@ impl ConnectionManager {
                 }
             }
 
-            for (command_id, command_config) in host_config.commands.iter() {
+            for (command_id, command_config) in host_config.effective.commands.iter() {
                 let command_spec = ModuleSpecification::new(command_id, &command_config.version);
                 let command = match self.module_factory.new_command(&command_spec, &command_config.settings) {
                     Some(command) => command,
@@ -88,7 +88,7 @@ impl ConnectionManager {
                 };
 
                 if let Some(connector_spec) = command.get_connector_spec() {
-                    let connector_settings = match host_config.connectors.get(&connector_spec.id) {
+                    let connector_settings = match host_config.effective.connectors.get(&connector_spec.id) {
                         Some(config) => config.settings.clone(),
                         None => HashMap::new(),
                     };

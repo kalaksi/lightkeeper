@@ -22,13 +22,13 @@ LightkeeperDialog {
     title: "Host details"
 
     implicitWidth: 550
-    implicitHeight: 650
+    implicitHeight: 680
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     signal configurationChanged()
 
     onOpened: {
-        ConfigManager.begin_host_configuration()
+        ConfigManager.beginHostConfiguration()
         if (root.hostId === "") {
             ConfigManager.add_host("new-host-id")
             root.hostId = "new-host-id"
@@ -51,14 +51,14 @@ LightkeeperDialog {
                 fqdn: hostAddressField.text,
             }))
         }
-        ConfigManager.end_host_configuration()
+        ConfigManager.endHostConfiguration()
         root._loading = true
         
         root.configurationChanged()
     }
 
     onRejected: {
-        ConfigManager.cancel_host_configuration()
+        ConfigManager.cancelHostConfiguration()
         root._loading = true
     }
 
@@ -113,6 +113,37 @@ LightkeeperDialog {
                 text: root.hostSettings.address === undefined ? root.hostSettings.fqdn : root.hostSettings.address 
                 validator: RegularExpressionValidator {
                     regularExpression: /[\.\:a-zA-Z\d\-]+/
+                }
+                onTextChanged: updateOkButton()
+            }
+        }
+
+        Column {
+            Layout.fillWidth: true
+
+            Label {
+                text: "SSH port override"
+            }
+
+            SmallText {
+                text: "Allows overriding on host-level.\nUsually port is configured in a group, e.g. in defaults-group."
+                color: Theme.textColorDark
+            }
+
+            TextField {
+                id: sshPortField
+                width: parent.width
+                text: {
+                    if (root.hostSettings.overrides !== undefined &&
+                        root.hostSettings.overrides.connectors["ssh"] !== undefined &&
+                        root.hostSettings.overrides.connectors["ssh"].settings["port"] !== undefined) {
+
+                        return root.hostSettings.overrides.connectors["ssh"].settings["port"]
+                    }
+                    return ""
+                }
+                validator: RegularExpressionValidator {
+                    regularExpression: /[1-9][0-9]{0,4}/
                 }
                 onTextChanged: updateOkButton()
             }
@@ -362,7 +393,9 @@ LightkeeperDialog {
     }
 
     function fieldsAreValid() {
-        return hostIdField.acceptableInput && hostAddressField.acceptableInput
+        return hostIdField.acceptableInput &&
+               hostAddressField.acceptableInput &&
+               sshPortField.acceptableInput
     }
 
     function updateOkButton() {
