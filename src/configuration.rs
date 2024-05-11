@@ -353,6 +353,8 @@ impl Configuration {
             // New host overrides.
             host_config.effective = Self::merge_group_config(&host_config.effective, &all_overrides);
             host_config.overrides = all_overrides;
+
+            // Clear old, deprecated settings.
             host_config.commands = HashMap::new();
             host_config.monitors = HashMap::new();
             host_config.connectors = HashMap::new();
