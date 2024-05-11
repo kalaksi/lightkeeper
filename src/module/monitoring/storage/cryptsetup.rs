@@ -56,15 +56,15 @@ impl MonitoringModule for Cryptsetup {
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
 
             if self.only_crypttab {
                 Ok(String::from("grep -v '^#' /etc/crypttab"))
             }
             else {
-                Ok(String::from("lsblk -b -o NAME,PATH,SIZE,FSTYPE,MOUNTPOINT --json"))
+                Ok(String::from("lsblk -b -p -o NAME,SIZE,FSTYPE,MOUNTPOINT --json"))
             }
         }
         else {
@@ -99,7 +99,7 @@ impl MonitoringModule for Cryptsetup {
                 .map(|block_device| {
                     let pv_path = block_device.children.as_deref().unwrap_or_default().iter()
                         .filter(|child| child.fstype == Some(String::from("LVM2_member")))
-                        .map(|child| child.path.clone())
+                        .map(|child| child.name.clone())
                         .collect::<Vec<String>>();
 
                     let tags = if let Some(mountpoint) = &block_device.mountpoint {
@@ -131,7 +131,8 @@ impl MonitoringModule for Cryptsetup {
                         format!("{:.2} T", size_bytes as f64 / TB_BYTES as f64)
                     };
 
-                    DataPoint::labeled_value_with_level(block_device.path.clone(), String::from(""), Criticality::Normal)
+                    let short_name = block_device.name.split('/').last().unwrap_or(&block_device.name);
+                    DataPoint::labeled_value_with_level(short_name.to_string(), String::from(""), Criticality::Normal)
                               .with_tags(tags)
                               .with_description(format!("{}", si_size))
 
@@ -151,7 +152,6 @@ pub struct Lsblk {
 #[derive(Deserialize)]
 pub struct BlockDevice {
     pub name: String,
-    pub path: String,
     pub size: u64,
     pub fstype: Option<String>,
     pub mountpoint: Option<String>,
