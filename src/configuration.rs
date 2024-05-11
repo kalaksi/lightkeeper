@@ -143,20 +143,23 @@ pub struct HostSettings {
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub fqdn: String,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub settings: Vec<HostSetting>,
-    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub overrides: ConfigGroup,
     /// Effective configuration after merging everything. Will not be stored in config file, but is available in runtime.
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub effective: ConfigGroup,
 
-    // Deprecated.
+    /// Deprecated.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub monitors: HashMap<String, MonitorConfig>,
+    /// Deprecated.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub commands: HashMap<String, CommandConfig>,
+    /// Deprecated.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub connectors: HashMap<String, ConnectorConfig>,
+    /// Deprecated.
+    #[serde(default, skip_serializing_if = "Configuration::always")]
+    pub settings: Vec<HostSetting>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -167,6 +170,8 @@ pub struct ConfigGroup {
     pub commands: HashMap<String, CommandConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub connectors: HashMap<String, ConnectorConfig>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub host_settings: Vec<HostSetting>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub config_helper: ConfigHelperData,
 }
@@ -340,6 +345,7 @@ impl Configuration {
                 commands: host_config.commands.clone(),
                 monitors: host_config.monitors.clone(),
                 connectors: host_config.connectors.clone(),
+                host_settings: host_config.settings.clone(),
                 config_helper: Default::default(),
             };
             let all_overrides = Self::merge_group_config(&old_overrides, &host_config.overrides);
@@ -347,6 +353,10 @@ impl Configuration {
             // New host overrides.
             host_config.effective = Self::merge_group_config(&host_config.effective, &all_overrides);
             host_config.overrides = all_overrides;
+            host_config.commands = HashMap::new();
+            host_config.monitors = HashMap::new();
+            host_config.connectors = HashMap::new();
+            host_config.settings = Vec::new();
         }
 
         Ok((main_config, hosts, all_groups))
@@ -380,6 +390,10 @@ impl Configuration {
             merged_config.settings.extend(new_config.settings.clone());
             result.connectors.insert(connector_id.clone(), merged_config);
         });
+
+        if second_config.host_settings.len() > 0 {
+            result.host_settings = second_config.host_settings.clone();
+        }
 
         result
     }

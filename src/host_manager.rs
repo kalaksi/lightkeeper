@@ -63,7 +63,7 @@ impl HostManager {
         for (host_id, host_config) in config.hosts.iter() {
             log::debug!("Found configuration for host {}", host_id);
 
-            let host = match Host::new(host_id, &host_config.address, &host_config.fqdn, &host_config.settings) {
+            let host = match Host::new(host_id, &host_config.address, &host_config.fqdn, &host_config.effective.host_settings) {
                 Ok(host) => host,
                 Err(error) => {
                     log::error!("{}", error);

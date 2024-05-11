@@ -40,17 +40,35 @@ LightkeeperDialog {
 
     onAccepted: {
         // TODO: GUI for host settings (UseSudo etc.)
+        let newSettings = {
+            overrides: {
+                connectors: {},
+                settings: {}
+            }
+        }
 
         if (Utils.isIpv4OrIpv6Address(hostAddressField.text)) {
-            ConfigManager.setHostSettings(root.hostId, hostIdField.text, JSON.stringify({
-                address: hostAddressField.text,
-            }))
+            newSettings.address = hostAddressField.text
         }
         else {
-            ConfigManager.setHostSettings(root.hostId, hostIdField.text, JSON.stringify({
-                fqdn: hostAddressField.text,
-            }))
+            newSettings.fqdn = hostAddressField.text
         }
+
+        if (sshPortField.text !== "" && sshPortField.acceptableInput) {
+            newSettings.overrides.connectors = {
+                ssh: {
+                    settings: {
+                        port: sshPortField.text
+                    }
+                }
+            }
+        }
+
+        if (useSudoCheckbox.checked) {
+            newSettings.overrides.host_settings = ["use_sudo"]
+        }
+
+        ConfigManager.setHostSettings(root.hostId, hostIdField.text, JSON.stringify(newSettings))
         ConfigManager.endHostConfiguration()
         root._loading = true
         
@@ -146,6 +164,21 @@ LightkeeperDialog {
                     regularExpression: /[1-9][0-9]{0,4}/
                 }
                 onTextChanged: updateOkButton()
+            }
+        }
+
+        Row {
+            Layout.fillWidth: true
+
+            Switch {
+                id: useSudoCheckbox
+                enabled: false
+                checked: true
+                onCheckedChanged: updateOkButton()
+            }
+
+            Label {
+                text: "Use sudo"
             }
         }
 
@@ -394,8 +427,7 @@ LightkeeperDialog {
 
     function fieldsAreValid() {
         return hostIdField.acceptableInput &&
-               hostAddressField.acceptableInput &&
-               sshPortField.acceptableInput
+               hostAddressField.acceptableInput
     }
 
     function updateOkButton() {
