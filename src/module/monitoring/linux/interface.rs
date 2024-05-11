@@ -52,7 +52,15 @@ impl MonitoringModule for Interface {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
+        if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+            Ok(String::from("/sbin/ip -j addr show"))
+        }
+        else if host.platform.os_flavor == platform_info::Flavor::CentOS ||
+                host.platform.os_flavor == platform_info::Flavor::RedHat {
+            Err(String::from("Unsupported platform"))
+        }
+        else if host.platform.os == platform_info::OperatingSystem::Linux {
             Ok(String::from("ip -j addr show"))
         }
         else {
