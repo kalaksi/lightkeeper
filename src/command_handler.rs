@@ -281,7 +281,7 @@ impl CommandHandler {
 
     pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &[String]) -> ShellCommand {
         let host = self.host_manager.borrow().get_host(host_id);
-        let mut command = self.remote_ssh_command(host_id);
+        let mut command = self.remote_ssh_command(&host);
 
         let commands = self.commands.lock().unwrap();
         let command_module = &commands[host_id][command_id];
@@ -313,7 +313,8 @@ impl CommandHandler {
     }
 
     pub fn open_remote_text_editor(&self, host_id: &String, remote_file_path: &str) -> ShellCommand {
-        let mut command = self.remote_ssh_command(host_id);
+        let host = self.host_manager.borrow().get_host(host_id);
+        let mut command = self.remote_ssh_command(&host);
 
         if self.preferences.sudo_remote_editor {
             command.argument("sudo");
@@ -631,10 +632,8 @@ impl CommandHandler {
         content_hash != metadata.remote_file_hash
     }
 
-    fn remote_ssh_command(&self, host_id: &String) -> ShellCommand {
-        let host = self.host_manager.borrow().get_host(host_id);
-
-        let ssh_settings = self.hosts_config.hosts[host_id].effective.connectors["ssh"].settings.clone();
+    fn remote_ssh_command(&self, host: &Host) -> ShellCommand {
+        let ssh_settings = self.hosts_config.hosts[&host.name].effective.connectors["ssh"].settings.clone();
 
         let remote_address = if !host.fqdn.is_empty() {
             host.fqdn.clone()
@@ -648,13 +647,17 @@ impl CommandHandler {
             String::from("ssh"),
             String::from("-t"),
             String::from("-p"), ssh_settings.get("port").unwrap_or(&String::from("22")).clone(),
-            remote_address,
         ]);
 
         if let Some(username) = ssh_settings.get("username") {
             command.arguments(vec![String::from("-l"), username.clone()]);
         }
 
+        if let Some(private_key_path) = ssh_settings.get("private_key_path") {
+            command.arguments(vec![String::from("-i"), private_key_path.clone()]);
+        }
+
+        command.argument(remote_address);
         command
     }
 }
