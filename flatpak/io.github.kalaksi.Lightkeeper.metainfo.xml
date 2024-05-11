@@ -28,6 +28,19 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.17.0" date="2024-05-11">
+      <description>
+        <ul>
+          <li>Add per-host SSH port override option</li>
+          <li>New progress animation for buttons</li>
+          <li>Updated dependencies</li>
+          <li>Fix SSH key verification with parallel sessions</li>
+          <li>Fix missing terminal key auth parameters</li>
+          <li>Improvements to error snackbar handling</li>
+          <li>Many fixes to different monitor modules</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.16.1" date="2024-05-02">
       <description>
         <ul>
