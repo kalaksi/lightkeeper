@@ -23,6 +23,7 @@ pub struct ConfigManagerModel {
     //
     isSandboxed: qt_method!(fn(&self) -> bool),
     reloadConfiguration: qt_method!(fn(&self) -> QVariantList),
+    getCurrentWorkDir: qt_method!(fn(&self) -> QString),
 
     //
     // Preferences
@@ -222,6 +223,10 @@ impl ConfigManagerModel {
         result.push(self.main_config.clone().to_qvariant());
         result.push(self.hosts_config.clone().to_qvariant());
         result
+    }
+
+    fn getCurrentWorkDir(&self) -> QString {
+        QString::from(std::env::current_dir().unwrap().to_string_lossy().to_string())
     }
 
     /// Updates preferences.use_sandbox_mode. Returns true if value was changed and was written to config.

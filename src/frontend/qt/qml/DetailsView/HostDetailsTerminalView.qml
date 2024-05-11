@@ -12,6 +12,7 @@ import "../Text"
 Item {
     id: root
     property bool enableShortcuts: false
+    property string workDir: ConfigManager.getCurrentWorkDir()
     property var _searchMatches: []
 
 
@@ -34,7 +35,7 @@ Item {
         smooth: true
         session: QMLTermSession {
             id: terminalSession
-            initialWorkingDirectory: "$HOME"
+            initialWorkingDirectory: root.workDir
             onMatchFound: function(startColumn, startLine, endColumn, endLine) {
                 // Doesn't currently append results since only match can currently be shown at once.
                 let newResult = [{
