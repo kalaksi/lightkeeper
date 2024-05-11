@@ -57,8 +57,6 @@ groups:
       storage-lvm-lvremove: {}
       reboot: {}
   defaults:
-    host_settings:
-    - use_sudo
     monitors:
       docker-compose:
         settings:
