@@ -22,9 +22,10 @@ Item {
 
     property bool _showBackground: false
     property bool _showCommands: false
-    property var _alwaysShownCommands: commands.filter(command => Theme.allowCollapsingCommand(command.command_id) === "0")
+    property var _alwaysShownCommandIds: commands.filter(command => Theme.allowCollapsingCommand(command.command_id) === "0")
+                                                 .map(command => command.command_id)
     // Shown when `collapsible` is enabled and all of the commands aren't already visible.
-    property bool _showMenu: collapsible && _alwaysShownCommands.length < commands.length
+    property bool _showMenu: collapsible && _alwaysShownCommandIds.length < commands.length
     /// Have to store button states so that they can be restored when expanding/collapsing.
     property var _buttonProgressStates: {}
 
@@ -65,7 +66,7 @@ Item {
                 model: root.commands
                 
                 CommandButton {
-                    visible: !root.collapsible || root._showCommands || root._alwaysShownCommands.includes(modelData)
+                    visible: !root.collapsible || root._showCommands || root._alwaysShownCommandIds.includes(modelData.command_id)
                     buttonId: root.createButtonId(modelData)
                     size: root.buttonSize
                     roundButton: root.roundButtons
@@ -172,7 +173,7 @@ Item {
             return root.size * (commands.length + spaceForMenu)
         }
         else {
-            return root.size * (root._alwaysShownCommands.length + spaceForMenu) 
+            return root.size * (root._alwaysShownCommandIds.length + spaceForMenu) 
         }
     }
 

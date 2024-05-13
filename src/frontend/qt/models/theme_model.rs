@@ -120,6 +120,7 @@ impl ThemeModel {
         QString::from("0.3")
     }
 
+    // TODO: better place.
     fn allowCollapsingCommand(&self, command_id: QString) -> QString {
         // TODO: take category into consideration instead of accepting matching id from any of them.
         let allows_collapsing = self.i_display_options.categories.values().any(|category| {
