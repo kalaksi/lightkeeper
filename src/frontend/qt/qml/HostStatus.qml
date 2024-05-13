@@ -12,6 +12,14 @@ Item {
     property bool showIcon: true
     anchors.fill: parent
 
+    Component.onCompleted: {
+        colors = {
+            up: "forestgreen",
+            down: "firebrick",
+            _: "orange",
+        }
+    }
+
     FontLoader {
         id: fontStatus
         source: "qrc:/main/fonts/pressstart2p"
@@ -47,15 +55,6 @@ Item {
 
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-        }
-    }
-
-
-    Component.onCompleted: {
-        colors = {
-            up: "forestgreen",
-            down: "firebrick",
-            _: "orange",
         }
     }
 

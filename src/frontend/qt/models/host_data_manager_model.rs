@@ -55,7 +55,7 @@ pub struct HostDataManagerModel {
     // These methods are used to get the data in JSON and parsed in QML side.
     // JSON is required since there doesn't seem to be a way to return a self-defined QObject.
     get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
-    get_summary_monitor_data: qt_method!(fn(&self, host_id: QString) -> QStringList),
+    getSummaryMonitorData: qt_method!(fn(&self, host_id: QString) -> QStringList),
     get_host_data_json: qt_method!(fn(&self, host_id: QString) -> QString),
 
     //
@@ -375,7 +375,7 @@ impl HostDataManagerModel {
         result
     }
 
-    fn get_summary_monitor_data(&self, host_id: QString) -> QStringList {
+    fn getSummaryMonitorData(&self, host_id: QString) -> QStringList {
         let mut result = QStringList::default();
         if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
             let overridden_monitors = display_data.host_state.monitor_data.values()

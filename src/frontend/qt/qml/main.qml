@@ -243,7 +243,7 @@ ApplicationWindow {
                                 CommandHandler.initializeHost(detailsView.hostId)
                             }
                             statusBar.jobsLeft = HostDataManager.getPendingCommandCount(detailsView.hostId) +
-                                                HostDataManager.getPendingMonitorCount(detailsView.hostId)
+                                                 HostDataManager.getPendingMonitorCount(detailsView.hostId)
                         }
                     }
 
