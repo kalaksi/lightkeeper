@@ -704,4 +704,3 @@ impl CommandData {
         }
     }
 }
-

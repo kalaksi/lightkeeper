@@ -74,6 +74,7 @@ impl CommandResult {
             message: message.to_string(),
             criticality: Criticality::Normal,
             show_in_notification: false,
+            progress: 100,
             ..Default::default()
         }
     }
@@ -93,6 +94,7 @@ impl CommandResult {
             message: message.to_string(),
             criticality: Criticality::Info,
             show_in_notification: true,
+            progress: 100,
             ..Default::default()
         }
     }
@@ -102,6 +104,7 @@ impl CommandResult {
             message: message.to_string(),
             criticality: Criticality::Warning,
             show_in_notification: true,
+            progress: 100,
             ..Default::default()
         }
     }
@@ -111,6 +114,7 @@ impl CommandResult {
             error: error.to_string(),
             criticality: Criticality::Error,
             show_in_notification: true,
+            progress: 100,
             ..Default::default()
         }
     }
@@ -120,6 +124,7 @@ impl CommandResult {
             error: error.to_string(),
             criticality: Criticality::Critical,
             show_in_notification: true,
+            progress: 100,
             ..Default::default()
         }
     }
