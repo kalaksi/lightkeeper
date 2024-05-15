@@ -53,10 +53,7 @@ impl MonitoringModule for Dns {
 
             let command_resolvconf = ShellCommand::new_from(vec!["grep", "-E", "^nameserver", "/etc/resolv.conf"]);
             // TODO: use busctl instead?
-            let mut command_resolvectl = ShellCommand::new_from(vec!["resolvectl", "dns"]);
-            // Most likely means that resolved isn't available so quietly ignoring errors.
-            command_resolvectl.ignore_error = true;
-
+            let command_resolvectl = ShellCommand::new_from(vec!["resolvectl", "dns"]);
             Ok(vec![command_resolvconf.to_string(), command_resolvectl.to_string()])
         }
         else {
@@ -85,19 +82,21 @@ impl MonitoringModule for Dns {
             }
         }
 
-        let resolvectl_response = &responses[1];
-        if !resolvectl_response.message.contains(".service not found") {
-            for line in resolvectl_response.message.lines() {
-                if line.starts_with("Link") {
-                    let mut parts = line.split("): ");
-                    let dns_servers = parts.nth(1).unwrap_or_default()
-                                        .split_whitespace();
+        // resolvectl-command might have failed and response missing.
+        if let Some(resolvectl_response) = &responses.get(1) {
+            if resolvectl_response.is_success() {
+                for line in resolvectl_response.message.lines() {
+                    if line.starts_with("Link") {
+                        let mut parts = line.split("): ");
+                        let dns_servers = parts.nth(1).unwrap_or_default()
+                                            .split_whitespace();
 
-                    for dns_server in dns_servers {
-                        let mut datapoint = DataPoint::label(dns_server);
-                        datapoint.description = String::from("systemd-resolved");
-                        datapoint.is_from_cache = resolvectl_response.is_from_cache;
-                        result.multivalue.push(datapoint);
+                        for dns_server in dns_servers {
+                            let mut datapoint = DataPoint::label(dns_server);
+                            datapoint.description = String::from("systemd-resolved");
+                            datapoint.is_from_cache = resolvectl_response.is_from_cache;
+                            result.multivalue.push(datapoint);
+                        }
                     }
                 }
             }
