@@ -622,14 +622,21 @@ impl CommandHandler {
             log::debug!("Removed file {}", local_file_path);
         }
         else {
-            log::debug!("Failed to remove file {}", local_file_path);
+            log::error!("Failed to remove file {}", local_file_path);
         }
     }
 
     pub fn has_file_changed(&self, local_file_path: &String, new_contents: Vec<u8>) -> bool {
-        let metadata = file_handler::read_file_metadata(local_file_path).unwrap();
-        let content_hash = sha256::digest(new_contents.as_slice());
-        content_hash != metadata.remote_file_hash
+        match file_handler::read_file_metadata(local_file_path) {
+            Ok(metadata) => {
+                let content_hash = sha256::digest(new_contents.as_slice());
+                content_hash != metadata.remote_file_hash
+            },
+            Err(error) => {
+                log::error!("Error reading file metadata: {}", error);
+                false
+            }
+        }
     }
 
     fn remote_ssh_command(&self, host: &Host) -> ShellCommand {
