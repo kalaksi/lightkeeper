@@ -34,6 +34,8 @@ services:
       pvcreate /dev/loop0
       vgcreate test_vg /dev/loop0
       lvcreate -L 128M -n test_lv test_vg
+    else 
+      losetup /dev/loop0 /mnt/test.img
     fi
   SHELL
 end
