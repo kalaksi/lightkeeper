@@ -311,10 +311,6 @@ impl ConnectionManager {
                     if response.return_code != 0 {
                         log::warn!("[{}][{}] Command returned non-zero exit code: {}",
                             request.host.name, request.source_id, response.return_code);
-
-                        let error = LkError::new_other(response.message)
-                                            .set_source(request.source_id.clone());
-                        results.push(Err(error));
                     }
                     else {
                         if *cache_policy != CachePolicy::BypassCache {
@@ -324,8 +320,8 @@ impl ConnectionManager {
                             let mut command_cache = command_cache.lock().unwrap();
                             command_cache.insert(cache_key, cached_response);
                         }
-                        results.push(Ok(response))
                     }
+                    results.push(Ok(response))
                 }
                 else {
                     // Add module name to error details.
