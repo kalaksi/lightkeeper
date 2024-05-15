@@ -376,8 +376,10 @@ impl HostDataManagerModel {
     }
 
     fn getSummaryMonitorData(&self, host_id: QString) -> QStringList {
+        let host_id = host_id.to_string();
         let mut result = QStringList::default();
-        if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
+
+        if let Some(display_data) = self.display_data.hosts.get(&host_id) {
             let overridden_monitors = display_data.host_state.monitor_data.values()
                 .filter(|data| !data.display_options.override_summary_monitor_id.is_empty())
                 .map(|data| &data.display_options.override_summary_monitor_id)
@@ -395,6 +397,7 @@ impl HostDataManagerModel {
                 result.push(serde_json::to_string(&monitoring_data).unwrap().into());
             }
         }
+
         result
     }
 
