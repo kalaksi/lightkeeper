@@ -58,11 +58,13 @@ groups:
       reboot: {}
   defaults:
     monitors:
+      ping:
+        is_critical: true
       docker-compose:
         settings:
           working_dir: /mnt/containers
       tcp-connect:
-        is_critical: true
+        is_critical: false
     connectors:
       ssh:
         settings:
