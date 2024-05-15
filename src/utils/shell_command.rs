@@ -7,7 +7,6 @@ pub struct ShellCommand {
     arguments: VecDeque<String>,
     piped_to: VecDeque<Vec<String>>,
     pub ignore_stderr: bool,
-    pub ignore_error: bool,
     pub use_sudo: bool,
 }
 
@@ -17,7 +16,6 @@ impl ShellCommand {
             arguments: VecDeque::new(),
             piped_to: VecDeque::new(),
             ignore_stderr: false,
-            ignore_error: false,
             use_sudo: false,
         }
     }
@@ -92,10 +90,6 @@ impl ToString for ShellCommand {
 
             if self.ignore_stderr {
                 command_string = format!("{} 2>/dev/null", command_string);
-            }
-
-            if self.ignore_error {
-                command_string = format!("{} || true", command_string);
             }
 
             if !self.piped_to.is_empty() {
