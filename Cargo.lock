@@ -600,7 +600,7 @@ dependencies = [
 
 [[package]]
 name = "lightkeeper"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "base64",
  "chrono",

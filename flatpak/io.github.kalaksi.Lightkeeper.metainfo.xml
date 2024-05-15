@@ -28,6 +28,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.17.1" date="2024-05-15">
+      <description>
+        <ul>
+          <li>Fix for some command buttons not being shown</li>
+          <li>Workaround for summary status icons not being shown initially</li>
+          <li>Fix error handling of file downloads</li>
+          <li>Some other minor fixes</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.17.0" date="2024-05-11">
       <description>
         <ul>
