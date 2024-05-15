@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::collections::HashMap;
 use crate::frontend;
 use crate::host::*;
@@ -63,9 +64,28 @@ impl CommandModule for Pull {
 
     fn process_response(&self, _host: Host, response: &connection::ResponseMessage) -> Result<CommandResult, String> {
         if response.return_code == 0 {
-            Ok(CommandResult::default())
+            Ok(CommandResult::new_hidden(&response.message))
         } else {
-            Err(response.message.clone())
+            let mut errors = 0;
+            // Check if the error is because it's a locally built image.
+            for line in response.message.lines() {
+                let errors_regex = Regex::new(r"\w*(\d+) errors? occurred").unwrap();
+                if errors_regex.is_match(line) {
+                    errors = errors_regex.captures(line).unwrap().get(1).unwrap().as_str().parse().unwrap_or_default();
+                }
+                // Locally built localhost/something-tagged images may result in this error.
+                // Ignoring the error for now, but may mask real errors, in theory.
+                else if line.contains("dial tcp 127.0.0.1:80: connect: connection refused") {
+                    errors -= 1;
+                }
+            }
+
+            if errors > 0 {
+                Err(response.message.clone())
+            }
+            else {
+                Ok(CommandResult::new_hidden(&response.message))
+            }
         }
     }
 }
