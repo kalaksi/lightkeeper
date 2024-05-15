@@ -14,7 +14,7 @@ pub fn init_resources() {
             "JsonTextFormat.qml",
             "MainMenuBar.qml",
             "MonitorSummary.qml",
-            "PingAnimation.qml",
+            "WaveAnimation.qml",
             "RowHighlight.qml",
             "SnackbarContainer.qml",
             "Snackbar.qml",

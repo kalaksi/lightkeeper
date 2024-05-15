@@ -3,7 +3,6 @@ import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtGraphicalEffects 1.15
 
-// TODO: rename to WaveAnimation.
 Item {
     id: root
     property string color: "#555555"

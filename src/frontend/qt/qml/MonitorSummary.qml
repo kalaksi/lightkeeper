@@ -76,7 +76,7 @@ Item {
                     opacity: 0
                 }
 
-                PingAnimation {
+                WaveAnimation {
                     anchors.centerIn: statusImage
                     color: parent.color
                     visible: parent.monitorId in root.highlights && !parent.isFromCache
