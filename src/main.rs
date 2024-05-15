@@ -116,6 +116,11 @@ fn run(args: Args) -> ExitReason {
     command_handler.start_processing_responses();
     monitor_manager.start_processing_responses();
 
+    // TODO: Needs a proper fix.
+    // Wait a small amount as a workaround so initial data points have time to get sent to host manager.
+    // Otherwise, initial status summary circles are randomly not shown.
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
     let module_metadatas = module_factory.get_module_metadatas();
     let mut frontend = frontend::qt::QmlFrontend::new(
         host_manager.borrow().get_display_data(),
