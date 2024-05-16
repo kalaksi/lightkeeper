@@ -22,6 +22,7 @@ pub struct ConfigManagerModel {
     // Common
     //
     isSandboxed: qt_method!(fn(&self) -> bool),
+    isDevBuild: qt_method!(fn(&self) -> bool),
     reloadConfiguration: qt_method!(fn(&self) -> QVariantList),
     getCurrentWorkDir: qt_method!(fn(&self) -> QString),
 
@@ -203,6 +204,10 @@ impl ConfigManagerModel {
 
     fn isSandboxed(&self) -> bool {
         self.main_config.preferences.use_sandbox_mode
+    }
+
+    fn isDevBuild(&self) -> bool {
+        cfg!(debug_assertions)
     }
 
     fn reloadConfiguration(&mut self) -> QVariantList {
