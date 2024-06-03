@@ -45,7 +45,7 @@ impl CommandModule for Snapshot {
             display_text: String::from("Create a snapshot"),
             depends_on_no_tags: vec![String::from("Snapshot")],
             user_parameters: vec![
-                frontend::UserInputField::decimal_number_with_units("Snapshot size", "3G", vec![
+                frontend::UserInputField::decimal_number_with_units("Snapshot size", "3G", &[
                     "r", "R", "b", "B", "s", "S", "k", "K", "m", "M", "g", "G", "t", "T", "p", "P", "e", "E"
                 ]),
             ],

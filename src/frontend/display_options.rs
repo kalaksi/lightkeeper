@@ -138,18 +138,18 @@ impl UserInputField {
         }
     }
 
-    pub fn number_with_units(label: &str, default_value: &str, units: Vec<String>) -> Self {
+    pub fn number_with_units(label: &str, default_value: &str, units: &[&str]) -> Self {
         UserInputField {
             field_type: UserInputFieldType::Integer,
             label: label.to_string(),
             default_value: default_value.to_string(),
             validator_regexp: format!("^\\d+ ?({})$", units.join("|")),
-            units: units,
+            units: units.iter().map(ToString::to_string).collect(),
             ..Default::default()
         }
     }
 
-    pub fn decimal_number_with_units<Stringable: ToString>(label: &str, default_value: &str, units: Vec<Stringable>) -> Self {
+    pub fn decimal_number_with_units(label: &str, default_value: &str, units: &[&str]) -> Self {
         let units = units.into_iter().map(|unit| unit.to_string()).collect::<Vec<_>>();
 
         UserInputField {
