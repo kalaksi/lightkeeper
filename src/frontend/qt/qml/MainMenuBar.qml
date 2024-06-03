@@ -71,15 +71,6 @@ ToolBar {
         }
 
         ToolButton {
-            visible: ConfigManager.isDevBuild()
-            icon.source: "qrc:/main/images/button/start"
-            text: "Run tests"
-            onClicked: {
-                console.log("TODO")
-            }
-        }
-
-        ToolButton {
             icon.source: "qrc:/main/images/button/keyboard-shortcuts"
             onClicked: root.clickedHotkeyHelp()
         }
