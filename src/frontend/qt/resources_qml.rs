@@ -6,7 +6,7 @@ use qmetaobject::qrc;
 pub fn init_resources() {
     qrc!(resources_qml, 
         "src/frontend/qt/qml" as "qml" {
-            "main.qml",
+            "Main.qml",
             "DebugRectangle.qml",
             "DynamicObjectManager.qml",
             "HostStatus.qml",

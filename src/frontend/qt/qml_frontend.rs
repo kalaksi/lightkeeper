@@ -109,12 +109,12 @@ impl QmlFrontend {
     // In development, using file paths helps avoid recompilation when only QML changes.
     #[cfg(debug_assertions)]
     fn load_qml(&self, engine: &mut QmlEngine) {
-        engine.load_file(QString::from("src/frontend/qt/qml/main.qml"));
+        engine.load_file(QString::from("src/frontend/qt/qml/Main.qml"));
     }
 
     #[cfg(not(debug_assertions))]
     fn load_qml(&self, engine: &mut QmlEngine) {
         resources_qml::init_resources();
-        engine.load_url(QUrl::from(QString::from("qrc:/qml/main.qml")));
+        engine.load_url(QUrl::from(QString::from("qrc:/qml/Main.qml")));
     }
 }
