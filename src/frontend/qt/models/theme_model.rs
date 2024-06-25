@@ -33,6 +33,7 @@ pub struct ThemeModel {
     // Content will often overflow behind the dialog buttons (ugh...), reserve more space for them with this.
     marginDialogBottom: qt_property!(i8; CONST),
     animationDuration: qt_property!(i32; CONST),
+    animationDurationFast: qt_property!(i32; CONST),
     groupboxMinWidth: qt_property!(i32; CONST),
     groupboxMaxWidth: qt_property!(i32; CONST),
     commonIndent: qt_property!(i32; CONST),
@@ -83,6 +84,7 @@ impl ThemeModel {
             marginDialogTop: 45,
             marginDialogBottom: 80,
             animationDuration: 175,
+            animationDurationFast: 80,
             groupboxMinWidth: 450,
             groupboxMaxWidth: 650,
             commonIndent: 16,

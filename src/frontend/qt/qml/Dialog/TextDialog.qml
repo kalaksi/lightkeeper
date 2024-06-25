@@ -47,19 +47,19 @@ Dialog {
 
     Behavior on width {
         NumberAnimation {
-            duration: Theme.animationDuration
+            duration: Theme.animationDurationFast
         }
     }
 
     Behavior on height {
         NumberAnimation {
-            duration: Theme.animationDuration
+            duration: Theme.animationDurationFast
         }
     }
 
     Behavior on opacity {
         NumberAnimation {
-            duration: Theme.animationDuration
+            duration: Theme.animationDurationFast
         }
     }
 }
