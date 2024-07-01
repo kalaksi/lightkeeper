@@ -14,14 +14,12 @@ use lightkeeper_module::command_module;
     description="Runs 'nixos-rebuild switch' and shows output",
 )]
 pub struct RebuildSwitch {
-    regex_path_count: Regex,
     regex_build_count: Regex,
 }
 
 impl Module for RebuildSwitch {
     fn new(_settings: &HashMap<String, String>) -> RebuildSwitch {
         RebuildSwitch {
-            regex_path_count: Regex::new(r"(?i)these (\d+) paths will be fetched").unwrap(),
             regex_build_count: Regex::new(r"(?i)these (\d+) derivations will be built").unwrap(),
         }
     }
@@ -60,17 +58,10 @@ impl CommandModule for RebuildSwitch {
         // TODO: deduplicate this code with other rebuild-modules
         if response.is_partial {
             let mut progress: u8 = 0;
-            let mut copied: u16 = 0;
             let mut built: u16 = 0;
-            let mut to_fetch: u16 = 0;
             let mut to_build: u16 = 0;
 
             for line in response.message.lines() {
-                if to_fetch == 0 {
-                    if let Some(captures) = self.regex_path_count.captures(line) {
-                        to_fetch = captures.get(1).unwrap().as_str().parse().unwrap();
-                    }
-                }
                 if to_build == 0 {
                     if let Some(captures) = self.regex_build_count.captures(line) {
                         to_build = captures.get(1).unwrap().as_str().parse().unwrap();
@@ -86,17 +77,10 @@ impl CommandModule for RebuildSwitch {
                 else if line.starts_with("building '") {
                     built += 1;
                 }
-                else if line.starts_with("copying path '") {
-                    copied += 1;
-                }
             }
 
             if to_build > 0 {
-                progress += (built as f32 / to_build as f32 * 35.0) as u8;
-            }
-
-            if to_fetch > 0 {
-                progress += (copied as f32 / to_fetch as f32 * 35.0) as u8;
+                progress += (built as f32 / to_build as f32 * 70.0) as u8;
             }
 
             Ok(CommandResult::new_partial(response.message.clone(), progress))

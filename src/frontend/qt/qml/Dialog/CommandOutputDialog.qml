@@ -64,6 +64,7 @@ Dialog {
                 width: parent.width
             }
 
+            // TODO: use list view for better performance
             NormalText {
                 id: dialogText
                 visible: root.text !== ""
