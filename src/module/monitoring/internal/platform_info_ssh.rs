@@ -39,8 +39,19 @@ impl MonitoringModule for PlatformInfoSsh {
         let mut platform = PlatformInfo::default();
         platform.os = platform_info::OperatingSystem::Linux;
 
-        (platform.os_flavor, platform.os_version) = parse_os_release(&response[0].message);
-        platform.architecture = parse_architecture(&response[1].message);
+        if let Some(first) = response.get(0) {
+            (platform.os_flavor, platform.os_version) = parse_os_release(&first.message);
+        }
+        else {
+            return Err(String::from("No response for OS release"));
+        }
+
+        if let Some(second) = response.get(1) {
+            platform.architecture = platform_info::Architecture::from(&second.message.trim())
+        }
+        else {
+            return Err(String::from("No response for architecture"));
+        }
 
         // Special kind of datapoint for internal use.
         let mut datapoint = DataPoint::new(String::from("_platform_info"));
@@ -82,13 +93,4 @@ fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber) 
     }
 
     (flavor, version)
-}
-
-fn parse_architecture(message: &String) -> platform_info::Architecture {
-    if message.contains("x86_64") {
-        platform_info::Architecture::X86_64
-    }
-    else {
-        platform_info::Architecture::Unknown
-    }
 }

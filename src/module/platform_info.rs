@@ -80,6 +80,8 @@ impl Default for Flavor {
 pub enum Architecture {
     Unknown,
     X86_64,
+    Arm64,
+    Arm,
 }
 
 impl Default for Architecture {
@@ -94,6 +96,9 @@ impl<Stringable: ToString> From<&Stringable> for Architecture {
             "x86_64" => Self::X86_64,
             "x86-64" => Self::X86_64,
             "amd64" => Self::X86_64,
+            "aarch64" => Self::Arm64,
+            "arm64" => Self::Arm64,
+            "arm" => Self::Arm,
             _ => Self::Unknown,
         }
     }
