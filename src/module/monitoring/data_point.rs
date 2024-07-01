@@ -24,9 +24,9 @@ pub struct DataPoint {
 }
 
 impl DataPoint {
-    pub fn new(value: String) -> Self {
+    pub fn new<Stringable: ToString>(value: Stringable) -> Self {
         DataPoint {
-            value: value,
+            value: value.to_string(),
             criticality: Criticality::Normal,
             ..Default::default()
         }

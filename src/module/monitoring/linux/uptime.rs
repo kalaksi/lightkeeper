@@ -1,6 +1,6 @@
 
 use std::collections::HashMap;
-use chrono::{ NaiveDateTime, Utc };
+use crate::enums::criticality::Criticality;
 use crate::module::connection::ResponseMessage;
 use crate::module::platform_info;
 use crate::{
@@ -41,7 +41,7 @@ impl MonitoringModule for Uptime {
 
     fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, String> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            Ok(String::from("uptime -s"))
+            Ok(String::from("uptime"))
         }
         else {
             Err(String::from("Unsupported platform"))
@@ -49,10 +49,19 @@ impl MonitoringModule for Uptime {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
-        let boot_datetime = NaiveDateTime::parse_from_str(&response.message, "%Y-%m-%d %H:%M:%S")
-                                        .map_err(|e| e.to_string())?;
+        if let Some((_, tail)) = response.message.split_once("up ") {
+            if let Some((uptime, _)) = tail.split_once(",") {
+                if let Some((days, _)) = uptime.split_once(" day") {
+                    if let Ok(days) = days.trim().parse::<f64>() {
+                        return Ok(DataPoint::new(days.to_string()));
+                    }
+                }
+                else {
+                    return Ok(DataPoint::new("0"));
+                }
+            }
+        }
 
-        let uptime = Utc::now().naive_utc() - boot_datetime;
-        Ok(DataPoint::new(uptime.num_days().to_string()))
+        Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
     }
 }
