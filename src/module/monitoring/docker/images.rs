@@ -101,6 +101,7 @@ impl MonitoringModule for Images {
             };
 
             let mut point = DataPoint::labeled_value(label, image.created.to_string());
+            point.description = format!("Size: {} MB", image.size / 1024 / 1024);
 
             // TODO: make sure timezone is accounted for correctly?
             let creation_time = Utc.timestamp_opt(point.value.parse::<i64>().unwrap(), 0).unwrap();
@@ -139,6 +140,6 @@ struct ImageDetails {
     // repo_digests: Option<Vec<String>>,
     repo_tags: Option<Vec<String>>,
     // shared_size: i64,
-    // size: i64,
+    size: i64,
     // virtual_size: i64,
 }
