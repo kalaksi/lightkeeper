@@ -304,6 +304,7 @@ impl ModuleFactory {
             (command::linux::packages::Logs::get_metadata(), command::linux::packages::Logs::new_command_module),
             (command::nixos::RebuildDryrun::get_metadata(), command::nixos::RebuildDryrun::new_command_module),
             (command::nixos::RebuildSwitch::get_metadata(), command::nixos::RebuildSwitch::new_command_module),
+            (command::nixos::RebuildBoot::get_metadata(), command::nixos::RebuildBoot::new_command_module),
             (command::nixos::RebuildRollback::get_metadata(), command::nixos::RebuildRollback::new_command_module),
             (command::nixos::CollectGarbage::get_metadata(), command::nixos::CollectGarbage::new_command_module),
             (command::nixos::ChannelUpdate::get_metadata(), command::nixos::ChannelUpdate::new_command_module),
