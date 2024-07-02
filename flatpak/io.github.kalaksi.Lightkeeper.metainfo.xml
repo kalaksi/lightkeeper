@@ -30,10 +30,12 @@
   <releases>
     <release version="0.17.2" date="2024-07-02">
       <description>
+        <ul>
           <li>Fixes issues in some NixOS commands and adds nixos-rebuild-boot</li>
           <li>ARM architecture detection for docker images</li>
           <li>Show size of docker images</li>
           <li>Speedup for some animations</li>
+        </ul>
       </description>
     </release>
     <release version="0.17.1" date="2024-05-15">
