@@ -28,7 +28,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.17.2" date="2024-07-02">
+    <release version="0.17.3" date="2024-07-02">
       <description>
         <ul>
           <li>Fixes issues in some NixOS commands and adds nixos-rebuild-boot</li>
