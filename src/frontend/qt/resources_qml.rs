@@ -61,6 +61,7 @@ pub fn init_resources() {
             "StyleOverride/Label.qml",
             "StyleOverride/RoundButton.qml",
             "StyleOverride/TextField.qml",
+            "Tests/tst_hotkeyhelp.qml",
             "Text/AlertText.qml",
             "Text/BaseText.qml",
             "Text/BigText.qml",
