@@ -286,10 +286,10 @@ impl CommandHandler {
         let commands = self.commands.lock().unwrap();
         let command_module = &commands[host_id][command_id];
 
-        let connector_messages = get_command_connector_messages(&host, command_module, parameters).map_err(|error| {
+        let connector_messages = get_command_connector_messages(&host, command_module, parameters).unwrap_or_else(|error| {
             log::error!("Command failed: {}", error);
-            return;
-        }).unwrap();
+            Vec::new()
+        });
 
         command.arguments(connector_messages);
         ::log::debug!("Opening terminal with command: {}", command.to_string());
