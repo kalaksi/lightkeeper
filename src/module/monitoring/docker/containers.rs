@@ -81,8 +81,9 @@ impl MonitoringModule for Containers {
         let mut parent_data = DataPoint::empty();
 
         if !containers.is_empty() {
-            let most_critical_container = containers.iter().max_by_key(|container| container.get_criticality()).unwrap();
-            parent_data.criticality = most_critical_container.get_criticality();
+            if let Some(most_critical_container) = containers.iter().max_by_key(|container| container.get_criticality()) {
+                parent_data.criticality = most_critical_container.get_criticality();
+            }
 
             parent_data.multivalue = containers.iter().map(|container| {
                 let mut point = DataPoint::value_with_level(container.state.to_string(), container.get_criticality());

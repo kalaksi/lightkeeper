@@ -103,8 +103,9 @@ impl DataPoint {
         self.value.starts_with("_")
     }
     pub fn update_criticality_from_children(&mut self) {
-        let most_critical = self.multivalue.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
-        self.criticality = std::cmp::max(self.criticality, most_critical.criticality);
+        if let Some(most_critical) = self.multivalue.iter().max_by_key(|datapoint| datapoint.criticality) {
+            self.criticality = std::cmp::max(self.criticality, most_critical.criticality);
+        }
     }
 }
 

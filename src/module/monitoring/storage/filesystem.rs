@@ -110,8 +110,7 @@ impl MonitoringModule for Filesystem {
             result.multivalue.push(data_point);
         }
 
-        let most_critical = result.multivalue.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
-        result.criticality = most_critical.criticality;
+        result.update_criticality_from_children();
 
         Ok(result)
     }

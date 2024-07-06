@@ -104,24 +104,31 @@ impl MonitoringModule for Images {
             point.description = format!("Size: {} MB", image.size / 1024 / 1024);
 
             // TODO: make sure timezone is accounted for correctly?
-            let creation_time = Utc.timestamp_opt(point.value.parse::<i64>().unwrap(), 0).unwrap();
-            let duration_days = Utc::now().signed_duration_since(creation_time).num_days();
+            if let Ok(parsed_value) = point.value.parse::<i64>() {
+                let creation_time = Utc.timestamp_opt(parsed_value, 0).unwrap();
+                let duration_days = Utc::now().signed_duration_since(creation_time).num_days();
 
-            if duration_days >= self.age_critical_threshold {
-                point.criticality = Criticality::Critical;
+                if duration_days >= self.age_critical_threshold {
+                    point.criticality = Criticality::Critical;
+                }
+                else if duration_days >= self.age_error_threshold {
+                    point.criticality = Criticality::Error;
+                }
+                else if duration_days >= self.age_warning_threshold {
+                    point.criticality = Criticality::Warning;
+                }
+
+                point.value = format!("{} days old", duration_days);
             }
-            else if duration_days >= self.age_error_threshold {
+            else {
+                point.value = String::from("Parse error");
                 point.criticality = Criticality::Error;
-            }
-            else if duration_days >= self.age_warning_threshold {
-                point.criticality = Criticality::Warning;
             }
 
             if repo_tag.starts_with(&self.local_image_prefix) {
                 point.tags.push(String::from("Local"));
             }
 
-            point.value = format!("{} days old", duration_days);
             point.command_params = vec![image.id.clone(), repo_tag];
             root_point.multivalue.push(point);
         }

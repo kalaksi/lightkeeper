@@ -78,12 +78,11 @@ impl MonitoringModule for VolumeGroup {
             let mut data_point = DataPoint::labeled_value(vg_name.clone(), String::from("OK"));
             data_point.description = format!("free: {} / {}", vg_free, vg_size);
 
-            match vg_attr.chars().nth(0).unwrap() {
-                'r' => data_point.tags.push(String::from("Read-only")),
-                _ => {}
+            if vg_attr.chars().nth(0) == Some('r') {
+                data_point.tags.push(String::from("Read-only"));
             }
 
-            if vg_attr.chars().nth(5).unwrap() == 'p' {
+            if vg_attr.chars().nth(5) == Some('p') {
                 data_point.criticality = crate::enums::Criticality::Error;
                 data_point.value = String::from("Partial");
             }

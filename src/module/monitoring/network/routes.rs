@@ -62,10 +62,14 @@ impl MonitoringModule for Routes {
         let lines = response.message.lines();
         for line in lines {
             // Get substring before word "proto".
-            let route = line.split("proto").next().unwrap().trim().to_string();
+            let route = line.split("proto").next().unwrap_or_default().trim().to_string();
             let mut parts = route.split("dev");
-            let subnet = parts.next().unwrap().trim().to_string();
-            let interface = parts.next().unwrap().trim().to_string();
+            let subnet = parts.next().unwrap_or_default().trim().to_string();
+            let interface = parts.next().unwrap_or_default().trim().to_string();
+
+            if subnet.is_empty() && interface.is_empty() {
+                return Err(format!("Couldn't parse route: {}", line));
+            }
 
             let data_point = DataPoint::labeled_value(subnet, interface);
             result.multivalue.push(data_point);

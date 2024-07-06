@@ -156,14 +156,14 @@ impl MonitoringModule for Compose {
                 panic!("Containers under same project can't have different compose-files");
             }
 
-            let most_critical = data_points.iter().max_by_key(|datapoint| datapoint.criticality).unwrap();
-            projects_datapoint.criticality = std::cmp::max(projects_datapoint.criticality, most_critical.criticality);
+            if let Some(most_critical) = data_points.iter().max_by_key(|datapoint| datapoint.criticality) {
+                projects_datapoint.criticality = std::cmp::max(projects_datapoint.criticality, most_critical.criticality);
 
-            let mut services_datapoint = DataPoint::labeled_value_with_level(project.clone(), most_critical.value.clone(), most_critical.criticality);
-            services_datapoint.command_params = vec![compose_file, project.clone()];
-            services_datapoint.multivalue = data_points;
-
-            projects_datapoint.multivalue.push(services_datapoint);
+                let mut services_datapoint = DataPoint::labeled_value_with_level(project.clone(), most_critical.value.clone(), most_critical.criticality);
+                services_datapoint.command_params = vec![compose_file, project.clone()];
+                services_datapoint.multivalue = data_points;
+                projects_datapoint.multivalue.push(services_datapoint);
+            }
         }
 
         Ok(projects_datapoint)

@@ -78,7 +78,7 @@ impl MonitoringModule for PhysicalVolume {
             let mut data_point = DataPoint::labeled_value(pv_name.clone(), String::from("OK"));
             data_point.description = format!("free: {} / {}", pv_free, pv_size);
 
-            if pv_attr.chars().nth(2).unwrap() == 'm' {
+            if pv_attr.chars().nth(2) == Some('m') {
                 data_point.criticality = crate::enums::Criticality::Critical;
                 data_point.value = String::from("Missing");
             }

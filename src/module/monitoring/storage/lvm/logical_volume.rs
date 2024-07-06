@@ -147,13 +147,13 @@ impl MonitoringModule for LogicalVolume {
             }
             else if !snapshot_full_percent.is_empty() {
                 data_point.value = format!("{}% full", snapshot_full_percent);
-                let fullness = snapshot_full_percent.parse::<f32>().unwrap();
-
-                if fullness > self.threshold_warning && data_point.criticality < Criticality::Warning {
-                    data_point.criticality = Criticality::Warning;
-                }
-                if fullness > self.threshold_error && data_point.criticality < Criticality::Error {
-                    data_point.criticality = Criticality::Error;
+                if let Ok(fullness) = snapshot_full_percent.parse::<f32>() {
+                    if fullness > self.threshold_warning && data_point.criticality < Criticality::Warning {
+                        data_point.criticality = Criticality::Warning;
+                    }
+                    if fullness > self.threshold_error && data_point.criticality < Criticality::Error {
+                        data_point.criticality = Criticality::Error;
+                    }
                 }
             }
 

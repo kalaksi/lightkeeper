@@ -167,10 +167,7 @@ impl MonitoringModule for Service {
             point
         }).collect();
 
-        if !result.multivalue.is_empty() {
-            let most_critical = result.multivalue.iter().max_by_key(|value| value.criticality).unwrap();
-            result.criticality = most_critical.criticality;
-        }
+        result.update_criticality_from_children();
 
         Ok(result)
     }
