@@ -28,6 +28,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.17.4" date="2024-07-06">
+      <description>
+        <ul>
+          <li>Fixes crash/panic in LVM module when loading host</li>
+          <li>Fix for error handling of a failed command</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.17.3" date="2024-07-02">
       <description>
         <ul>
