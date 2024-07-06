@@ -161,8 +161,9 @@ impl MonitoringModule for LogicalVolume {
             result.multivalue.push(data_point);
         }
 
-        let most_critical = result.multivalue.iter().max_by_key(|point| point.criticality).unwrap();
-        result.criticality = most_critical.criticality;
+        if let Some(most_critical) = result.multivalue.iter().max_by_key(|point| point.criticality) {
+            result.criticality = most_critical.criticality;
+        }
 
         Ok(result)
     }
