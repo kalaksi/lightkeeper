@@ -11,12 +11,13 @@ import "./Button"
 import "./DetailsView"
 import "./Misc"
 import "js/Utils.js" as Utils
+import "js/Test.js" as Test 
 
 ApplicationWindow {
     property var _detailsDialogs: {}
     property int errorCount: 0
 
-    id: root
+    id: "root"
     visible: true
     minimumWidth: 1400
     minimumHeight: 810
@@ -29,6 +30,11 @@ ApplicationWindow {
 
     onClosing: root.quit()
 
+    /// For testing.
+    function test() {
+        return Test.test(root)
+    }
+
     menuBar: MainMenuBar {
         onClickedAdd: {
             hostConfigurationDialog.hostId = ""
@@ -36,13 +42,13 @@ ApplicationWindow {
         }
         onClickedRemove: {
             ConfigManager.beginHostConfiguration()
-            ConfigManager.removeHost(_hostTableModel.getSelectedHostId())
+            ConfigManager.removeHost(hostTableModel.getSelectedHostId())
             ConfigManager.endHostConfiguration()
             reloadConfiguration()
         }
         onClickedEdit: {
             ConfigManager.beginHostConfiguration()
-            hostConfigurationDialog.hostId = _hostTableModel.getSelectedHostId()
+            hostConfigurationDialog.hostId = hostTableModel.getSelectedHostId()
             hostConfigurationDialog.open()
         }
         onClickedPreferences: {
@@ -52,11 +58,12 @@ ApplicationWindow {
             hotkeyHelp.open()
         }
         onFilterChanged: function(searchText) {
-            _hostTableModel.filter(searchText)
+            hostTableModel.filter(searchText)
         }
 
         // Shortcuts are enabled if no host is selected.
-        enableShortcuts: _hostTableModel.selectedRow === -1
+        enableShortcuts: hostTableModel.selectedRow === -1
+        enableEditButtons: hostTableModel.selectedRow !== -1
     }
 
     footer: StatusBar {
@@ -70,10 +77,10 @@ ApplicationWindow {
         target: HostDataManager
 
         function onUpdateReceived(hostId) {
-            _hostTableModel.dataChangedForHost(hostId)
-            _hostTableModel.displayData = HostDataManager.getDisplayData()
+            hostTableModel.dataChangedForHost(hostId)
+            hostTableModel.displayData = HostDataManager.getDisplayData()
 
-            if (hostId === _hostTableModel.getSelectedHostId()) {
+            if (hostId === hostTableModel.getSelectedHostId()) {
                 statusBar.jobsLeft = HostDataManager.getPendingCommandCount(hostId) + HostDataManager.getPendingMonitorCount(hostId)
             }
         }
@@ -217,7 +224,8 @@ ApplicationWindow {
 
 
     Item {
-        id: body
+        id: "body"
+        objectName: "body"
         anchors.fill: parent
         property real splitSize: 0.0
 
@@ -226,17 +234,18 @@ ApplicationWindow {
             orientation: Qt.Vertical
 
             HostTable {
-                id: hostTable
+                id: "hostTable"
+                objectName: "hostTable"
                 width: parent.width
                 SplitView.fillHeight: true
 
                 model: HostTableModel {
-                    id: _hostTableModel
+                    id: "hostTableModel"
                     selectedRow: -1
                     displayData: HostDataManager.getDisplayData()
 
                     onSelectedRowChanged: {
-                        detailsView.hostId = _hostTableModel.getSelectedHostId()
+                        detailsView.hostId = hostTableModel.getSelectedHostId()
 
                         if (detailsView.hostId !== "") {
                             if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
@@ -258,10 +267,11 @@ ApplicationWindow {
             }
 
             HostDetails {
-                id: detailsView
+                id: "detailsView"
+                objectName: "detailsView"
                 visible: body.splitSize > 0.01
                 width: parent.width
-                hostId: _hostTableModel.getSelectedHostId()
+                hostId: hostTableModel.getSelectedHostId()
 
                 SplitView.minimumHeight: 0.5 * body.splitSize * body.height
                 SplitView.preferredHeight: body.splitSize * body.height
@@ -274,7 +284,7 @@ ApplicationWindow {
                     body.splitSize = 1.0
                 }
                 onCloseClicked: {
-                    _hostTableModel.toggleRow(_hostTableModel.selectedRow)
+                    hostTableModel.toggleRow(hostTableModel.selectedRow)
                 }
             }
         }
@@ -294,11 +304,11 @@ ApplicationWindow {
 
     // Dynamic component loaders
     Loader {
-        id: confirmationDialogLoader
+        id: "confirmationDialogLoader"
     }
 
     DynamicObjectManager {
-        id: detailsDialogManager
+        id: "detailsDialogManager"
 
         DetailsDialog {
             y: root.y + 50
@@ -309,7 +319,7 @@ ApplicationWindow {
     }
 
     SnackbarContainer {
-        id: snackbarContainer
+        id: "snackbarContainer"
         anchors.fill: parent
         anchors.margins: 20
     }
@@ -317,12 +327,12 @@ ApplicationWindow {
 
     // Modal dialogs
     InputDialog {
-        id: inputDialog
+        id: "inputDialog"
         anchors.centerIn: parent
     }
 
     HostConfigurationDialog {
-        id: hostConfigurationDialog
+        id: "hostConfigurationDialog"
         anchors.centerIn: parent
         bottomMargin: 0.15 * parent.height
 
@@ -332,7 +342,7 @@ ApplicationWindow {
     }
 
     PreferencesDialog {
-        id: preferencesDialog
+        id: "preferencesDialog"
         anchors.centerIn: parent
         bottomMargin: 0.15 * parent.height
 
@@ -368,7 +378,7 @@ ApplicationWindow {
     }
 
     CommandOutputDialog {
-        id: commandOutputDialog
+        id: "commandOutputDialog"
         property int pendingInvocation: 0
 
         anchors.centerIn: parent
@@ -377,7 +387,7 @@ ApplicationWindow {
     }
 
     TextDialog {
-        id: textDialog
+        id: "textDialog"
         property int pendingInvocation: 0
 
         anchors.centerIn: parent
@@ -386,7 +396,7 @@ ApplicationWindow {
     }
 
     HotkeyHelp {
-        id: hotkeyHelp
+        id: "hotkeyHelp"
         anchors.centerIn: parent
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
@@ -399,8 +409,8 @@ ApplicationWindow {
 
     function reloadConfiguration() {
         HostDataManager.reset()
-        _hostTableModel.toggleRow(_hostTableModel.selectedRow)
-        _hostTableModel.displayData = HostDataManager.getDisplayData()
+        hostTableModel.toggleRow(hostTableModel.selectedRow)
+        hostTableModel.displayData = HostDataManager.getDisplayData()
 
         let configs = ConfigManager.reloadConfiguration()
         CommandHandler.reconfigure(configs[0], configs[1])

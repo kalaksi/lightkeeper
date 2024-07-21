@@ -28,10 +28,10 @@ pub struct QmlFrontend {
 impl QmlFrontend {
     /// Parameters provide the initial data and configuration for the frontend.
     pub fn new(display_data: frontend::DisplayData,
-               config_dir: String,
-               main_config: configuration::Configuration,
-               hosts_config: configuration::Hosts,
-               group_config: configuration::Groups,
+               config_dir: &String,
+               main_config: &configuration::Configuration,
+               hosts_config: &configuration::Hosts,
+               group_config: &configuration::Groups,
                module_metadatas: Vec<Metadata>
             ) -> QmlFrontend {
 
@@ -48,7 +48,7 @@ impl QmlFrontend {
 
         let theme_model = ThemeModel::new(main_config.display_options.clone());
         let host_data_manager = HostDataManagerModel::new(display_data, main_config.clone());
-        let config_manager = ConfigManagerModel::new(config_dir, main_config, hosts_config, group_config, module_metadatas);
+        let config_manager = ConfigManagerModel::new(config_dir.clone(), main_config.clone(), hosts_config.clone(), group_config.clone(), module_metadatas);
 
         QmlFrontend {
             theme: Some(theme_model),
@@ -58,13 +58,13 @@ impl QmlFrontend {
         }
     }
 
-    // Takes ownership of most components (excl. HostDataManager).
+    /// Takes ownership of most components (excl. HostDataManager).
     pub fn start(&mut self,
         command_handler: CommandHandler,
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
         host_manager: Rc<RefCell<host_manager::HostManager>>,
-        config: configuration::Configuration) -> ExitReason {
+        config: configuration::Configuration) -> (ExitReason, QmlEngine) {
 
         let sandboxed = env::var("FLATPAK_ID").is_ok();
 
@@ -80,13 +80,13 @@ impl QmlFrontend {
         let qt_data_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
         let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
         let sandboxed_updated = qt_data_config_manager.pinned().borrow_mut().setSandboxed(sandboxed);
+        let mut engine = QmlEngine::new();
 
         if sandboxed_updated {
             // Currently needs a restart so configuration is updated everywhere. Should happen only on first start.
-            return ExitReason::Restart;
+            return (ExitReason::Restart, engine);
         }
         else {
-            let mut engine = QmlEngine::new();
             if sandboxed {
                 engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml/"));
             }
@@ -99,7 +99,38 @@ impl QmlFrontend {
             engine.exec();
         }
 
-        ExitReason::Quit
+        (ExitReason::Quit, engine)
+    }
+
+    #[cfg(debug_assertions)]
+    /// Only available in dev build.
+    pub fn start_testing(&mut self,
+        command_handler: CommandHandler,
+        monitor_manager: MonitorManager,
+        connection_manager: ConnectionManager,
+        host_manager: Rc<RefCell<host_manager::HostManager>>,
+        config: configuration::Configuration) -> QmlEngine {
+
+        let command_handler_model = CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, config);
+
+        qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
+        qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
+        qml_register_type::<CooldownTimerModel>(cstr::cstr!("CooldownTimerModel"), 1, 0, cstr::cstr!("CooldownTimerModel"));
+
+        let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
+        let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
+        let qt_data_command_handler = QObjectBox::new(command_handler_model);
+        let qt_data_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
+        let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
+
+        let mut engine = QmlEngine::new();
+        engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
+        engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
+        engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
+        engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
+        engine.set_object_property(QString::from("DesktopPortal"), qt_data_desktop_portal.pinned());
+        self.load_qml(&mut engine);
+        engine
     }
 
     pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {

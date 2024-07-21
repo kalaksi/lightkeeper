@@ -1,6 +1,6 @@
 # LightkeeperRM
 
-**LightkeeperRM (Remote Management) is a modular drop-in replacement for maintaining servers over SSH with shell commands.**
+**LightkeeperRM (Remote Management) is a lightweight and modular drop-in replacement for maintaining servers over SSH with shell commands.**
 No additional daemons or other software is needed on target hosts. LightkeeperRM will only run standard Linux commands already available on the host.
 You can see executed commands through debug log and on target hosts's logs (depending on setup), so it's easy to audit and debug.
 Lightkeeper simplifies general maintenance tasks such as upgrades, ad-hoc monitoring, debugging and configuration.
@@ -101,9 +101,9 @@ Log levels are controlled with environment variable `RUST_LOG`, so use `RUST_LOG
 
 
 # Testing
-`test`-directory contains Vagrantfiles for virtual machines and also matching LightkeeperRM configurations.  
-Use `--config-dir` to load the test configuration. For example, `./target/debug/lightkeeper --config-dir test` if building from source.
-
+`test-env`-directory contains Vagrantfiles for virtual machines and also matching configurations for testing.  
+You can use `--config-dir` to load the test configuration for manual testing. For example, `./target/debug/lightkeeper --config-dir test` if building from source.  
+For automatic testing, run `cargo test`.
 
 # License
 ## Lightkeeper

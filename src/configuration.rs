@@ -264,7 +264,7 @@ pub struct ConnectorConfig {
 }
 
 impl Configuration {
-    pub fn read(config_dir: &String) -> io::Result<(Configuration, Hosts, Groups)> {
+    pub fn read(config_dir: &str) -> io::Result<(Configuration, Hosts, Groups)> {
         let config_dir = if config_dir.is_empty() {
             file_handler::get_config_dir().unwrap()
         }

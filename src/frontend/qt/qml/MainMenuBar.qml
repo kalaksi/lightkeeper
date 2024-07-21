@@ -9,6 +9,8 @@ import "Text"
 ToolBar {
     id: root
     property bool enableShortcuts: false
+    property bool enableEditButtons: false
+
 
     signal clickedAdd()
     signal clickedRemove()
@@ -32,7 +34,7 @@ ToolBar {
         }
 
         ToolButton {
-            enabled: _hostTableModel.selectedRow >= 0
+            enabled: root.enableEditButtons
             opacity: Theme.opacity(enabled)
             icon.source: "qrc:/main/images/button/remove"
             onClicked: root.clickedRemove()
@@ -42,7 +44,7 @@ ToolBar {
         }
 
         ToolButton {
-            enabled: _hostTableModel.selectedRow >= 0
+            enabled: root.enableEditButtons
             opacity: Theme.opacity(enabled)
             icon.source: "qrc:/main/images/button/entry-edit"
             onClicked: root.clickedEdit()
