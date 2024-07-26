@@ -27,6 +27,9 @@ function testSelectHost(app) {
     table.model.selectedRow = 1
 
     assert(table.model.getSelectedHostId(), "centos8")
+
+    let details = findByName(app.contentItem, "detailsView")
+    assert(detailsView.visible, true)
 }
 
 //
@@ -42,10 +45,10 @@ function getTableElement(table, row, column) {
 //
 // Common helper functions.
 //
-
 function assert(value, expected) {
     if (value !== expected) {
-        throw "expected: " + expected + ", got: " + value
+        let caller = new Error().stack.split("\n")[1].trim()
+        throw `${caller}: expected: ${expected}, got: ${value}`
     }
 }
 
