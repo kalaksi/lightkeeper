@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::configuration::Hosts;
-use crate::error::LkError;
+use crate::error::*;
 use crate::file_handler;
 use crate::file_handler::write_file_metadata;
 use crate::host_manager::HostManager;
@@ -675,7 +675,7 @@ fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[
     match command.get_connector_messages(host.clone(), parameters.to_owned()) {
         Ok(messages) => all_messages.extend(messages),
         Err(error) => {
-            if !error.is_empty() {
+            if error.kind() != &ErrorKind::NotImplemented {
                 return Err(LkError::from(error).set_source(command.get_module_spec().id))
             }
         }
@@ -684,7 +684,7 @@ fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[
     match command.get_connector_message(host.clone(), parameters.to_owned()) {
         Ok(message) => all_messages.push(message),
         Err(error) => {
-            if !error.is_empty() {
+            if error.kind() != &ErrorKind::NotImplemented {
                 return Err(LkError::from(error).set_source(command.get_module_spec().id))
             }
         }

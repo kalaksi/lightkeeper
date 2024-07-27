@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::enums::Criticality;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::*;
@@ -40,7 +41,7 @@ impl CommandModule for Start {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let compose_file = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
@@ -58,7 +59,7 @@ impl CommandModule for Start {
             }
         }
         else {
-            return Err(String::from("Unsupported platform"));
+            return Err(LkError::new_unsupported_platform())
         }
         Ok(command.to_string())
     }

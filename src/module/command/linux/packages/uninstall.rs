@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -40,7 +41,7 @@ impl CommandModule for Uninstall {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let package = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
@@ -59,7 +60,7 @@ impl CommandModule for Uninstall {
             command.arguments(vec!["dnf", "remove", "-y", package]);
         }
         else {
-            return Err(String::from("Unsupported platform"));
+            return Err(LkError::new_unsupported_platform());
         }
         Ok(command.to_string())
     }

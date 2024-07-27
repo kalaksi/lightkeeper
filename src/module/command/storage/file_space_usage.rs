@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -48,7 +49,7 @@ impl CommandModule for FileSpaceUsage {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let mountpoint = &parameters[0];
 
         let mut command = ShellCommand::new();
@@ -61,9 +62,8 @@ impl CommandModule for FileSpaceUsage {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
-
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

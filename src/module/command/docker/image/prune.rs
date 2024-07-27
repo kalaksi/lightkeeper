@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use serde_derive::Deserialize;
 use serde_json;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -38,7 +39,7 @@ impl CommandModule for Prune {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
@@ -47,7 +48,7 @@ impl CommandModule for Prune {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

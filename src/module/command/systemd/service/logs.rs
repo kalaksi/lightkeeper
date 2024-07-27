@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -39,7 +40,7 @@ impl CommandModule for Logs {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let service = parameters.get(0).unwrap();
         let start_time = parameters.get(1).cloned().unwrap_or(String::from(""));
         let end_time = parameters.get(2).cloned().unwrap_or(String::from(""));
@@ -52,7 +53,7 @@ impl CommandModule for Logs {
         if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
             string_validation::begins_with_dash(service){
 
-            return Err(format!("Invalid unit name: {}", service));
+            return Err(LkError::new_other(format!("Invalid unit name: {}", service)));
         }
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "8") ||
@@ -78,7 +79,7 @@ impl CommandModule for Logs {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

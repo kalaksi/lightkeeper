@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -45,7 +46,7 @@ impl CommandModule for LVResize {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let lv_path = parameters.get(0).unwrap();
         let _vg_name = parameters.get(1).unwrap();
         let _lv_name = parameters.get(2).unwrap();
@@ -56,7 +57,7 @@ impl CommandModule for LVResize {
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if !string_validation::is_numeric_with_unit(&new_size, &self.get_display_options().user_parameters[0].units) {
-            Err(format!("Invalid size: {}", new_size))
+            Err(LkError::new_other(format!("Invalid size: {}", new_size)))
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
@@ -67,7 +68,7 @@ impl CommandModule for LVResize {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

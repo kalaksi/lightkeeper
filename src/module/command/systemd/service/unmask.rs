@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -38,7 +39,7 @@ impl CommandModule for Unmask {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let service = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
@@ -47,7 +48,7 @@ impl CommandModule for Unmask {
         if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
             string_validation::begins_with_dash(service){
 
-            Err(format!("Invalid unit name: {}", service))
+            Err(LkError::new_other(format!("Invalid unit name: {}", service)))
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
             host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
@@ -59,7 +60,7 @@ impl CommandModule for Unmask {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

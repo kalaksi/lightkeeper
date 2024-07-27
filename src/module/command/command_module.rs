@@ -4,13 +4,7 @@ use serde_derive::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 
 use crate::{
-    module::Module,
-    module::ModuleSpecification,
-    module::MetadataSupport,
-    module::connection::ResponseMessage,
-    enums::Criticality,
-    frontend,
-    host::Host,
+    enums::Criticality, error::LkError, frontend, host::Host, module::{connection::ResponseMessage, MetadataSupport, Module, ModuleSpecification}
 };
 
 pub type Command = Box<dyn CommandModule + Send + Sync>;
@@ -32,12 +26,12 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> Result<String, String> {
-        Err(String::new())
+    fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
+        Err(LkError::new_not_implemented())
     }
 
-    fn get_connector_messages(&self, _host: Host, _parameters: Vec<String>) -> Result<Vec<String>, String> {
-        Err(String::new())
+    fn get_connector_messages(&self, _host: Host, _parameters: Vec<String>) -> Result<Vec<String>, LkError> {
+        Err(LkError::new_not_implemented())
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

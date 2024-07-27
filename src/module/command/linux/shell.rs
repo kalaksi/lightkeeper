@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -46,7 +47,7 @@ impl CommandModule for Shell {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
         command.use_sudo = false;
 
@@ -61,7 +62,7 @@ impl CommandModule for Shell {
             }
         }
         else {
-            return Err(String::from("Unsupported platform"));
+            return Err(LkError::new_unsupported_platform());
         }
 
         Ok(command.to_string())

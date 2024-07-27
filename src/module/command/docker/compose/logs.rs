@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::*;
@@ -40,7 +41,7 @@ impl CommandModule for Logs {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let compose_file = parameters.get(0).unwrap();
         // let project = parameters.get(1).unwrap();
         let service_name = parameters.get(2).unwrap();
@@ -68,7 +69,7 @@ impl CommandModule for Logs {
             command.argument(service_name);
         }
         else {
-            return Err(String::from("Unsupported platform"));
+            return Err(LkError::new_unsupported_platform())
         }
         Ok(command.to_string())
     }

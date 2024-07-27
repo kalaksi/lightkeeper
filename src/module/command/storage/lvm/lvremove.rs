@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -40,7 +41,7 @@ impl CommandModule for LVRemove {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let lv_path = parameters.get(0).unwrap();
         let _vg_name = parameters.get(1).unwrap();
         let _lv_name = parameters.get(2).unwrap();
@@ -58,7 +59,7 @@ impl CommandModule for LVRemove {
             Ok(command.to_string())
         }
         else {
-            Err(format!("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

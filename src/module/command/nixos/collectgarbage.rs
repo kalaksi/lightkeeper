@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -43,7 +44,7 @@ impl CommandModule for CollectGarbage {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
@@ -51,7 +52,7 @@ impl CommandModule for CollectGarbage {
             command.arguments(vec!["nix-collect-garbage", "--delete-older-than", format!("{}d", self.delete_older_than).as_str()]); 
         }
         else {
-            return Err(String::from("Unsupported platform"));
+            return Err(LkError::new_unsupported_platform());
         }
         Ok(command.to_string())
     }

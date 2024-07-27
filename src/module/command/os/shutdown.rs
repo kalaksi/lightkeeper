@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -36,7 +37,7 @@ impl CommandModule for Shutdown {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
@@ -45,7 +46,7 @@ impl CommandModule for Shutdown {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            return Err(LkError::new_unsupported_platform());
         }
     }
 

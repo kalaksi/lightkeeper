@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -37,7 +38,7 @@ impl CommandModule for Logs {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         // let start_time = parameters.get(0).cloned().unwrap_or(String::from("-1h"));
         // let end_time = parameters.get(1).cloned().unwrap_or(String::from("now"));
         let page_number = parameters.get(2).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(-1);
@@ -58,7 +59,7 @@ impl CommandModule for Logs {
             command.arguments(vec!["tail", "-n", &row_count.to_string(), "/var/log/apt/term.log"]);
         }
         else {
-            return Err(String::from("Unsupported platform"));
+            return Err(LkError::new_unsupported_platform())
         }
         Ok(command.to_string())
     }

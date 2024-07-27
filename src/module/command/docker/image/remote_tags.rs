@@ -4,6 +4,7 @@ use chrono::NaiveDateTime;
 use serde_derive::Deserialize;
 use serde_json;
 
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -52,13 +53,13 @@ impl CommandModule for RemoteTags {
         }
     }
 
-    fn get_connector_messages(&self, _host: Host, parameters: Vec<String>) -> Result<Vec<String>, String> {
+    fn get_connector_messages(&self, _host: Host, parameters: Vec<String>) -> Result<Vec<String>, LkError> {
         let _image_id = &parameters[0];
         let image_repo_tag = &parameters[1];
 
         if image_repo_tag.is_empty() {
             // Containers without a tag can not be used.
-            Err(String::from("Container has no tag and can not be used."))
+            Err(LkError::new_other("Container has no tag and can not be used."))
         }
         else {
             let (image, _tag) = image_repo_tag.split_once(":").unwrap_or(("", ""));

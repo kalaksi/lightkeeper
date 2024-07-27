@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::command::UIAction;
@@ -39,7 +40,7 @@ impl CommandModule for Logs {
         }
     }
 
-    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let start_time = parameters.get(0).cloned().unwrap_or(String::from("-1h"));
         let end_time = parameters.get(1).cloned().unwrap_or(String::from("now"));
         let page_number = parameters.get(2).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(-1);
@@ -63,14 +64,14 @@ impl CommandModule for Logs {
                 else {
                     match NaiveDateTime::parse_from_str(start_time.as_str(), "%Y-%m-%d %H:%M:%S") {
                         Ok(_) => command.arguments(vec!["--since", &start_time]),
-                        Err(_) => return Err(format!("Invalid start time: {}", start_time)),
+                        Err(_) => return Err(LkError::new_other(format!("Invalid start time: {}", start_time))),
                     };
                 }
             }
             if !end_time.is_empty() && end_time != "now" {
                 match NaiveDateTime::parse_from_str(end_time.as_str(), "%Y-%m-%d %H:%M:%S") {
                     Ok(_) => command.arguments(vec!["--until", &end_time]),
-                    Err(_) => return Err(format!("Invalid end time: {}", end_time)),
+                    Err(_) => return Err(LkError::new_other(format!("Invalid end time: {}", end_time))),
                 };
             }
 
@@ -82,7 +83,7 @@ impl CommandModule for Logs {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            return Err(LkError::new_unsupported_platform());
         }
     }
 

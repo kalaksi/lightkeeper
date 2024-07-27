@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
 use crate::module::*;
@@ -39,7 +40,7 @@ impl CommandModule for Edit {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> Result<String, String> {
+    fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let compose_file = parameters.first().unwrap().clone();
         Ok(compose_file)
     }
