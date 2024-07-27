@@ -1,6 +1,7 @@
 use serde_derive::Deserialize;
 use serde_json;
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{
     Host,
@@ -51,20 +52,20 @@ impl MonitoringModule for Interface {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             Ok(String::from("/sbin/ip -j addr show"))
         }
         else if host.platform.os_flavor == platform_info::Flavor::CentOS ||
                 host.platform.os_flavor == platform_info::Flavor::RedHat {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             Ok(String::from("ip -j addr show"))
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

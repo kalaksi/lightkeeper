@@ -420,13 +420,13 @@ impl Ssh2 {
                 ssh2::CheckResult::Match => Ok(()),
                 ssh2::CheckResult::NotFound => {
                     let message = format!("Host key for '{}' was not found in known hosts.\nDo you want to trust this key:", hostname);
-                    Err(LkError::host_key_unverified(MODULE_NAME, &message, &key_string))
+                    Err(LkError::new_host_key_unverified(MODULE_NAME, &message, &key_string))
                     // known_hosts.add(host, key, host, key_type.into()).unwrap();
                     // known_hosts.write_file(&file, KnownHostFileKind::OpenSSH).unwrap();
                 },
                 ssh2::CheckResult::Mismatch => {
                     let message = format!("Host key for '{}' HAS CHANGED! Do you trust this NEW key:", hostname);
-                    Err(LkError::host_key_unverified(MODULE_NAME, &message, &key_string))
+                    Err(LkError::new_host_key_unverified(MODULE_NAME, &message, &key_string))
                 },
                 ssh2::CheckResult::Failure => {
                     let message = format!("Failed to get host key for '{}'", hostname);

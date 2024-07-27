@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::enums::Criticality;
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{
     Host,
@@ -59,12 +60,12 @@ impl MonitoringModule for Filesystem {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             Ok(String::from("df -hPT"))
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

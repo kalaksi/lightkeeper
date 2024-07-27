@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::utils::ShellCommand;
 use crate::{
@@ -44,7 +45,7 @@ impl MonitoringModule for Dns {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_messages(&self, host: Host, _parent_result: DataPoint) -> Result<Vec<String>, String> {
+    fn get_connector_messages(&self, host: Host, _parent_result: DataPoint) -> Result<Vec<String>, LkError> {
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "10") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
@@ -57,7 +58,7 @@ impl MonitoringModule for Dns {
             Ok(vec![command_resolvconf.to_string(), command_resolvectl.to_string()])
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

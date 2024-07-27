@@ -4,6 +4,7 @@ use std::fmt;
 use serde_derive::Deserialize;
 use serde_json;
 
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, enums::Criticality, frontend };
 use lightkeeper_module::monitoring_module;
@@ -47,7 +48,7 @@ impl MonitoringModule for Containers {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
@@ -61,7 +62,7 @@ impl MonitoringModule for Containers {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

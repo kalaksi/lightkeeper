@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::utils::ShellCommand;
 use crate::{ Host, enums::Criticality, frontend };
@@ -45,7 +46,7 @@ impl MonitoringModule for Ping {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
@@ -57,8 +58,9 @@ impl MonitoringModule for Ping {
             ]);
         }
         else {
-            return Err(String::from("Unsupported platform"));
+            return Err(LkError::new_unsupported_platform());
         }
+
         Ok(command.to_string())
     }
 

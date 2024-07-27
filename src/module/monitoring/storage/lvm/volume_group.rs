@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{
     Host,
@@ -43,7 +44,7 @@ impl MonitoringModule for VolumeGroup {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
@@ -56,7 +57,7 @@ impl MonitoringModule for VolumeGroup {
             Ok(command.to_string())
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

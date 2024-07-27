@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
 
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::Host;
 use crate::utils::{VersionNumber, string_manipulation};
@@ -28,7 +29,7 @@ impl MonitoringModule for PlatformInfoSsh {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_messages(&self, _host: Host, _result: DataPoint) -> Result<Vec<String>, String> {
+    fn get_connector_messages(&self, _host: Host, _result: DataPoint) -> Result<Vec<String>, LkError> {
         Ok(vec![
             String::from("cat /etc/os-release"),
             String::from("uname -m"),

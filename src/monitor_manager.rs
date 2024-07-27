@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
 
-use crate::error::LkError;
+use crate::error::*;
 use crate::module::connection::RequestResponse;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
@@ -522,7 +522,7 @@ fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoi
     match monitor.get_connector_messages(host.clone(), parent_datapoint.clone()) {
         Ok(messages) => all_messages.extend(messages),
         Err(error) => {
-            if !error.is_empty() {
+            if error.kind() != &ErrorKind::NotImplemented {
                 return Err(LkError::from(error).set_source(monitor.get_module_spec().id));
             }
         }
@@ -531,8 +531,8 @@ fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoi
     match monitor.get_connector_message(host.clone(), parent_datapoint.clone()) {
         Ok(message) => all_messages.push(message),
         Err(error) => {
-            if !error.is_empty() {
-                return Err(LkError::from(error).set_source(monitor.get_module_spec().id));
+            if error.kind() != &ErrorKind::NotImplemented {
+                return Err(error.set_source(monitor.get_module_spec().id));
             }
         }
     }

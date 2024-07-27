@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
 
+use crate::error::LkError;
 use crate::host::HostSetting;
 use crate::module::connection::ResponseMessage;
 use crate::module::platform_info::Flavor;
@@ -38,7 +39,7 @@ impl MonitoringModule for Package {
         }
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
@@ -58,7 +59,7 @@ impl MonitoringModule for Package {
 
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

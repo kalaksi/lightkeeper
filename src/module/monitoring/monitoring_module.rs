@@ -10,6 +10,7 @@ use crate::{
     module::connection::ResponseMessage,
     frontend::DisplayOptions,
     frontend::DisplayStyle,
+    error::LkError,
 };
 
 pub type Monitor = Box<dyn MonitoringModule + Send + Sync>;
@@ -31,12 +32,12 @@ pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
         }
     }
 
-    fn get_connector_message(&self, _host: Host, _parent_result: DataPoint) -> Result<String, String> {
-        Err(String::new())
+    fn get_connector_message(&self, _host: Host, _parent_result: DataPoint) -> Result<String, LkError> {
+        Err(LkError::new_not_implemented())
     }
 
-    fn get_connector_messages(&self, _host: Host, _parent_result: DataPoint) -> Result<Vec<String>, String> {
-        Err(String::new())
+    fn get_connector_messages(&self, _host: Host, _parent_result: DataPoint) -> Result<Vec<String>, LkError> {
+        Err(LkError::new_not_implemented())
     }
 
     fn process_response(&self, _host: Host, _response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {

@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{
     Host,
@@ -43,7 +44,7 @@ impl MonitoringModule for Routes {
         Some(ModuleSpecification::new("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, String> {
+    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") {
             Ok(String::from("/sbin/ip route ls"))
@@ -52,7 +53,7 @@ impl MonitoringModule for Routes {
             Ok(String::from("ip route ls"))
         }
         else {
-            Err(String::from("Unsupported platform"))
+            Err(LkError::new_unsupported_platform())
         }
     }
 

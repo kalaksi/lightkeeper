@@ -22,7 +22,25 @@ impl LkError {
         }
     }
 
-    pub fn host_key_unverified<Stringable: ToString>(source_id: Stringable, message: Stringable, key_id: Stringable) -> LkError {
+    pub fn new_not_implemented() -> LkError {
+        LkError {
+            source_id: String::new(),
+            kind: ErrorKind::NotImplemented,
+            message: "Not implemented".to_string(),
+            parameter: None,
+        }
+    }
+
+    pub fn new_unsupported_platform() -> LkError {
+        LkError {
+            source_id: String::new(),
+            kind: ErrorKind::UnsupportedPlatform,
+            message: "Unsupported platform".to_string(),
+            parameter: None,
+        }
+    }
+
+    pub fn new_host_key_unverified<Stringable: ToString>(source_id: Stringable, message: Stringable, key_id: Stringable) -> LkError {
         LkError {
             source_id: source_id.to_string(),
             kind: ErrorKind::HostKeyNotVerified,
@@ -91,6 +109,8 @@ pub enum ErrorKind {
     ConnectionFailed,
     /// Encountered an unknown host key.
     HostKeyNotVerified,
+    /// Not implemented.
+    NotImplemented,
     #[default]
     /// Other unspecified error.
     Other,

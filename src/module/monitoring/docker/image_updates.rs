@@ -5,6 +5,7 @@ use serde_derive::Deserialize;
 use serde_json;
 use chrono::Utc;
 
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::enums::Criticality;
 use crate::Host;
@@ -47,7 +48,7 @@ impl MonitoringModule for ImageUpdates {
         }
     }
 
-    fn get_connector_messages(&self, _host: Host, parent_result: DataPoint) -> Result<Vec<String>, String> {
+    fn get_connector_messages(&self, _host: Host, parent_result: DataPoint) -> Result<Vec<String>, LkError> {
         if parent_result.is_empty() {
             return Ok(Vec::new());
         }
