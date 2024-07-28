@@ -69,7 +69,7 @@ impl CommandModule for Logs {
             command.argument(service_name);
         }
         else {
-            return Err(LkError::new_unsupported_platform())
+            return Err(LkError::unsupported_platform())
         }
         Ok(command.to_string())
     }

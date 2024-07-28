@@ -58,7 +58,7 @@ impl MonitoringModule for Dns {
             Ok(vec![command_resolvconf.to_string(), command_resolvectl.to_string()])
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 

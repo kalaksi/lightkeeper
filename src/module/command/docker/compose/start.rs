@@ -59,7 +59,7 @@ impl CommandModule for Start {
             }
         }
         else {
-            return Err(LkError::new_unsupported_platform())
+            return Err(LkError::unsupported_platform())
         }
         Ok(command.to_string())
     }

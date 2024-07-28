@@ -51,7 +51,7 @@ impl CommandModule for Stop {
         if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
             string_validation::begins_with_dash(service){
 
-            Err(LkError::new_other_p("Invalid unit name", service))
+            Err(LkError::other_p("Invalid unit name", service))
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
             host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
@@ -63,7 +63,7 @@ impl CommandModule for Stop {
             Ok(command.to_string())
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 

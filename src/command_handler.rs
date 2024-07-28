@@ -466,7 +466,7 @@ impl CommandHandler {
                 Some(command_result)
             },
             Err(error) => {
-                errors.push(LkError::new_other(error));
+                errors.push(LkError::other(error));
                 None
             }
         };

@@ -254,7 +254,7 @@ impl ConnectionManager {
                             vec![Self::process_upload(&request.host, &connector, &local_file_path)],
                         _ => {
                             log::error!("[{}][{}] Unsupported request type", request.host.name, request.source_id);
-                            vec![Err(LkError::new_other("Unsupported request type"))]
+                            vec![Err(LkError::other("Unsupported request type"))]
                         }
                     };
 

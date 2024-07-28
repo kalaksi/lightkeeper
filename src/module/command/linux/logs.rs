@@ -64,14 +64,14 @@ impl CommandModule for Logs {
                 else {
                     match NaiveDateTime::parse_from_str(start_time.as_str(), "%Y-%m-%d %H:%M:%S") {
                         Ok(_) => command.arguments(vec!["--since", &start_time]),
-                        Err(_) => return Err(LkError::new_other_p("Invalid start time", &start_time)),
+                        Err(_) => return Err(LkError::other_p("Invalid start time", &start_time)),
                     };
                 }
             }
             if !end_time.is_empty() && end_time != "now" {
                 match NaiveDateTime::parse_from_str(end_time.as_str(), "%Y-%m-%d %H:%M:%S") {
                     Ok(_) => command.arguments(vec!["--until", &end_time]),
-                    Err(_) => return Err(LkError::new_other_p("Invalid end time: {}", &end_time)),
+                    Err(_) => return Err(LkError::other_p("Invalid end time: {}", &end_time)),
                 };
             }
 
@@ -83,7 +83,7 @@ impl CommandModule for Logs {
             Ok(command.to_string())
         }
         else {
-            return Err(LkError::new_unsupported_platform());
+            return Err(LkError::unsupported_platform());
         }
     }
 

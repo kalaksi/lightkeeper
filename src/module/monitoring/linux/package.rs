@@ -59,7 +59,7 @@ impl MonitoringModule for Package {
 
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 

@@ -57,7 +57,7 @@ impl MonitoringModule for PhysicalVolume {
             Ok(command.to_string())
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 

@@ -59,13 +59,13 @@ impl MonitoringModule for Interface {
         }
         else if host.platform.os_flavor == platform_info::Flavor::CentOS ||
                 host.platform.os_flavor == platform_info::Flavor::RedHat {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             Ok(String::from("ip -j addr show"))
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 

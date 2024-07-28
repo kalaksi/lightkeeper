@@ -54,7 +54,7 @@ impl CommandModule for RebuildRollback {
             command.arguments(vec!["nixos-rebuild", "--rollback", "switch"]);
         }
         else {
-            return Err(LkError::new_unsupported_platform());
+            return Err(LkError::unsupported_platform());
         }
         Ok(command.to_string())
     }

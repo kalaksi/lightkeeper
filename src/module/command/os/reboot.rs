@@ -46,7 +46,7 @@ impl CommandModule for Reboot {
             Ok(command.to_string())
         }
         else {
-            return Err(LkError::new_unsupported_platform());
+            return Err(LkError::unsupported_platform());
         }
     }
 

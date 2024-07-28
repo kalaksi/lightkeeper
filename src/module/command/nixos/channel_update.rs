@@ -46,7 +46,7 @@ impl CommandModule for ChannelUpdate {
             command.arguments(vec!["nix-channel", "--update"]);
         }
         else {
-            return Err(LkError::new_unsupported_platform());
+            return Err(LkError::unsupported_platform());
         }
         Ok(command.to_string())
     }

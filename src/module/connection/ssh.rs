@@ -192,7 +192,7 @@ impl ConnectionModule for Ssh2 {
         let mut partial_session = self.wait_for_session(invocation_id, true)?;
         let mut channel = match partial_session.open_channel.take() {
             Some(channel) => channel,
-            None => return Err(LkError::new_other("Can't do partial receive. No open channel available.")),
+            None => return Err(LkError::other("Can't do partial receive. No open channel available.")),
         };
 
         let mut buffer = [0u8; 1024];
@@ -268,7 +268,7 @@ impl ConnectionModule for Ssh2 {
 
         let mut known_hosts = session_data.session.known_hosts().unwrap();
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
-                   .map_err(|error| LkError::new_other_p("Failed to read known hosts file", error))?;
+                   .map_err(|error| LkError::other_p("Failed to read known hosts file", error))?;
 
         // The session probably gets disconnected since receiving host key fails if not reconnecting.
         let socket_address = format!("{}:{}", self_address, self_port).to_socket_addrs().unwrap().next().unwrap();
@@ -286,17 +286,17 @@ impl ConnectionModule for Ssh2 {
 
             if key_string == key_id {
                 known_hosts.add(&host_and_port, key, hostname, key_type.into())
-                           .map_err(|error| LkError::new_other_p("Failed to add host key to known hosts", error))?;
+                           .map_err(|error| LkError::other_p("Failed to add host key to known hosts", error))?;
                 known_hosts.write_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
-                           .map_err(|error| LkError::new_other_p("Failed to write known hosts file", error))?;
+                           .map_err(|error| LkError::other_p("Failed to write known hosts file", error))?;
                 Ok(())
             }
             else {
-                Err(LkError::new_other("Host key changed again?!"))
+                Err(LkError::other("Host key changed again?!"))
             }
         }
         else {
-            Err(LkError::new_other("Failed to get host key"))
+            Err(LkError::other("Failed to get host key"))
         }
     }
 }
@@ -350,22 +350,22 @@ impl Ssh2 {
 
         if self.password.is_some() {
             session_data.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str())
-                .map_err(|error| LkError::new_other(format!("Failed to authenticate with password: {}", error)))?;
+                .map_err(|error| LkError::other(format!("Failed to authenticate with password: {}", error)))?;
         }
         else if self.private_key_path.is_some() {
             let path = Path::new(self.private_key_path.as_ref().unwrap());
             let passphrase_option = self.private_key_passphrase.as_ref().map(|pass| pass.as_str());
 
             session_data.session.userauth_pubkey_file(self.username.as_str(), None, path, passphrase_option)
-                .map_err(|error| LkError::new_other(format!("Failed to authenticate with private key: {}", error)))?;
+                .map_err(|error| LkError::other(format!("Failed to authenticate with private key: {}", error)))?;
         }
         else {
             log::info!("Password or key is not set, using SSH agent for authentication.");
             let mut agent = session_data.session.agent()
-                .map_err(|error| LkError::new_other(format!("Failed to connect to SSH agent: {}", error)))?;
+                .map_err(|error| LkError::other(format!("Failed to connect to SSH agent: {}", error)))?;
 
             agent.connect()
-                 .map_err(|error| LkError::new_other(format!("Failed to connect to SSH agent: {}", error)))?;
+                 .map_err(|error| LkError::other(format!("Failed to connect to SSH agent: {}", error)))?;
 
             agent.list_identities()?;
             let mut valid_identities = agent.identities()?;
@@ -382,7 +382,7 @@ impl Ssh2 {
             }
 
             if !session_data.session.authenticated() {
-                return Err(LkError::new_other("Failed to authenticate with SSH agent."));
+                return Err(LkError::other("Failed to authenticate with SSH agent."));
             }
         }
 
@@ -411,7 +411,7 @@ impl Ssh2 {
 
         let mut known_hosts = session_data.session.known_hosts().unwrap();
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
-                   .map_err(|error| LkError::new_other(format!("Failed to read known hosts file: {}", error)))?;
+                   .map_err(|error| LkError::other(format!("Failed to read known hosts file: {}", error)))?;
 
         if let Some((key, key_type)) = session_data.session.host_key() {
             let key_string = Self::get_host_key_id(key_type, key);
@@ -420,22 +420,22 @@ impl Ssh2 {
                 ssh2::CheckResult::Match => Ok(()),
                 ssh2::CheckResult::NotFound => {
                     let message = format!("Host key for '{}' was not found in known hosts.\nDo you want to trust this key:", hostname);
-                    Err(LkError::new_host_key_unverified(MODULE_NAME, &message, &key_string))
+                    Err(LkError::host_key_unverified(MODULE_NAME, &message, &key_string))
                     // known_hosts.add(host, key, host, key_type.into()).unwrap();
                     // known_hosts.write_file(&file, KnownHostFileKind::OpenSSH).unwrap();
                 },
                 ssh2::CheckResult::Mismatch => {
                     let message = format!("Host key for '{}' HAS CHANGED! Do you trust this NEW key:", hostname);
-                    Err(LkError::new_host_key_unverified(MODULE_NAME, &message, &key_string))
+                    Err(LkError::host_key_unverified(MODULE_NAME, &message, &key_string))
                 },
                 ssh2::CheckResult::Failure => {
                     let message = format!("Failed to get host key for '{}'", hostname);
-                    Err(LkError::new_other(message))
+                    Err(LkError::other(message))
                 }
             }
         }
         else {
-            Err(LkError::new_other("Failed to get host key"))
+            Err(LkError::other("Failed to get host key"))
         }
     }
 

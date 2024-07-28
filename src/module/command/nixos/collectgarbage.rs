@@ -52,7 +52,7 @@ impl CommandModule for CollectGarbage {
             command.arguments(vec!["nix-collect-garbage", "--delete-older-than", format!("{}d", self.delete_older_than).as_str()]); 
         }
         else {
-            return Err(LkError::new_unsupported_platform());
+            return Err(LkError::unsupported_platform());
         }
         Ok(command.to_string())
     }

@@ -43,7 +43,7 @@ impl MonitoringModule for Ram {
             Ok(String::from("free -m"))
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 

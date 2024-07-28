@@ -59,7 +59,7 @@ impl CommandModule for Logs {
             command.arguments(vec!["tail", "-n", &row_count.to_string(), "/var/log/apt/term.log"]);
         }
         else {
-            return Err(LkError::new_unsupported_platform())
+            return Err(LkError::unsupported_platform())
         }
         Ok(command.to_string())
     }

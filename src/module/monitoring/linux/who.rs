@@ -45,7 +45,7 @@ impl MonitoringModule for Who {
             Ok(String::from("who -s"))
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 

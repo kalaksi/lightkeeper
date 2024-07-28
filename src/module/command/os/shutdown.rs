@@ -46,7 +46,7 @@ impl CommandModule for Shutdown {
             Ok(command.to_string())
         }
         else {
-            return Err(LkError::new_unsupported_platform());
+            return Err(LkError::unsupported_platform());
         }
     }
 

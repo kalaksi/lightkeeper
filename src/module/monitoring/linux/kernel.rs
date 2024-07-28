@@ -44,7 +44,7 @@ impl MonitoringModule for Kernel {
             Ok(String::from("uname -r -m"))
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 

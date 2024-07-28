@@ -59,7 +59,7 @@ impl CommandModule for RemoteTags {
 
         if image_repo_tag.is_empty() {
             // Containers without a tag can not be used.
-            Err(LkError::new_other("Container has no tag and can not be used."))
+            Err(LkError::other("Container has no tag and can not be used."))
         }
         else {
             let (image, _tag) = image_repo_tag.split_once(":").unwrap_or(("", ""));

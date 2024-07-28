@@ -22,7 +22,7 @@ impl LkError {
         }
     }
 
-    pub fn new_not_implemented() -> LkError {
+    pub fn not_implemented() -> LkError {
         LkError {
             source_id: String::new(),
             kind: ErrorKind::NotImplemented,
@@ -31,7 +31,7 @@ impl LkError {
         }
     }
 
-    pub fn new_unsupported_platform() -> LkError {
+    pub fn unsupported_platform() -> LkError {
         LkError {
             source_id: String::new(),
             kind: ErrorKind::UnsupportedPlatform,
@@ -40,7 +40,7 @@ impl LkError {
         }
     }
 
-    pub fn new_host_key_unverified<Stringable: ToString>(source_id: Stringable, message: Stringable, key_id: Stringable) -> LkError {
+    pub fn host_key_unverified<Stringable: ToString>(source_id: Stringable, message: Stringable, key_id: Stringable) -> LkError {
         LkError {
             source_id: source_id.to_string(),
             kind: ErrorKind::HostKeyNotVerified,
@@ -49,11 +49,11 @@ impl LkError {
         }
     }
 
-    pub fn new_other<Stringable: ToString>(message: Stringable) -> LkError {
+    pub fn other<Stringable: ToString>(message: Stringable) -> LkError {
         LkError::new(ErrorKind::Other, message)
     }
 
-    pub fn new_other_p<Stringable: ToString>(message: &str, parameter: Stringable) -> LkError {
+    pub fn other_p<Stringable: ToString>(message: &str, parameter: Stringable) -> LkError {
         LkError {
             kind: ErrorKind::Other,
             source_id: String::new(),

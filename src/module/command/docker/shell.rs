@@ -58,7 +58,7 @@ impl CommandModule for Shell {
             command.arguments(vec!["docker", "exec", "-it", target_id, "/bin/sh"]);
         }
         else {
-            return Err(LkError::new_unsupported_platform())
+            return Err(LkError::unsupported_platform())
         }
 
         Ok(command.to_string())

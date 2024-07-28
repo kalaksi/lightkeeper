@@ -53,7 +53,7 @@ impl MonitoringModule for Routes {
             Ok(String::from("ip route ls"))
         }
         else {
-            Err(LkError::new_unsupported_platform())
+            Err(LkError::unsupported_platform())
         }
     }
 
