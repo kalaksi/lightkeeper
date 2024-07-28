@@ -6,10 +6,10 @@ use std::fmt;
 
 #[derive(Clone, Debug)]
 pub struct LkError {
-    source_id: String,
-    kind: ErrorKind,
-    message: String,
-    parameter: Option<String>,
+    pub source_id: String,
+    pub kind: ErrorKind,
+    pub message: String,
+    pub parameter: Option<String>,
 }
 
 impl LkError {
@@ -53,25 +53,18 @@ impl LkError {
         LkError::new(ErrorKind::Other, message)
     }
 
+    pub fn new_other_p<Stringable: ToString>(message: &str, parameter: Stringable) -> LkError {
+        LkError {
+            kind: ErrorKind::Other,
+            source_id: String::new(),
+            message: format!("{}: {}", message, parameter.to_string()),
+            parameter: Some(parameter.to_string())
+        }
+    }
+
     pub fn set_source<Stringable: ToString>(mut self, source: Stringable) -> LkError {
         self.source_id = source.to_string();
         self
-    }
-
-    pub fn source_id(&self) -> &String {
-        &self.source_id
-    }
-
-    pub fn kind(&self) -> &ErrorKind {
-        &self.kind
-    }
-
-    pub fn message(&self) -> &String {
-        &self.message
-    }
-
-    pub fn parameter(&self) -> &Option<String> {
-        &self.parameter
     }
 }
 

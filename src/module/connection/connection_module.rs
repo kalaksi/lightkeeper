@@ -25,15 +25,15 @@ pub trait ConnectionModule : MetadataSupport + Module {
     }
 
     fn download_file(&self, _source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {
-        Err(LkError::new_other("Not implemented"))
+        Err(LkError::new_not_implemented())
     }
 
     fn upload_file(&self, _metadata: &FileMetadata, _contents: Vec<u8>) -> Result<(), LkError> {
-        Err(LkError::new_other("Not implemented"))
+        Err(LkError::new_not_implemented())
     }
 
     fn verify_host_key(&self, _hostname: &str, _key_id: &str) -> Result<(), LkError> {
-        Err(LkError::new_other("Not implemented"))
+        Err(LkError::new_not_implemented())
     }
 
     fn new_connection_module(settings: &HashMap<String, String>) -> Connector where Self: Sized + 'static + Send + Sync {

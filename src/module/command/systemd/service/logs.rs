@@ -53,7 +53,7 @@ impl CommandModule for Logs {
         if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
             string_validation::begins_with_dash(service){
 
-            return Err(LkError::new_other(format!("Invalid unit name: {}", service)));
+            return Err(LkError::new_other_p("Invalid unit name", service));
         }
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "8") ||

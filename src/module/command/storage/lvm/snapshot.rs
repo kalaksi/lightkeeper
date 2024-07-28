@@ -69,7 +69,7 @@ impl CommandModule for Snapshot {
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if !string_validation::is_numeric_with_unit(&new_size, &self.get_display_options().user_parameters[0].units) {
-            Err(LkError::new_other(format!("Invalid size: {}", new_size)))
+            Err(LkError::new_other_p("Invalid size", &new_size))
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||

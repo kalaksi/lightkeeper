@@ -244,13 +244,13 @@ impl HostManager {
                 host_state.update_status();
 
                 let (verification_requests, unhandled_errors): (Vec<_>, Vec<_>) = state_update.errors.into_iter()
-                    .partition(|error| error.kind() == &crate::error::ErrorKind::HostKeyNotVerified);
+                    .partition(|error| error.kind == crate::error::ErrorKind::HostKeyNotVerified);
 
                 let verification_requests: Vec<_> = verification_requests.iter()
                     .map(|error| VerificationRequest {
-                        source_id: error.source_id().to_owned(),
-                        key_id: error.parameter().to_owned().unwrap(),
-                        message: error.message().to_owned(),
+                        source_id: error.source_id.to_owned(),
+                        key_id: error.parameter.to_owned().unwrap(),
+                        message: error.message.to_owned(),
                     }) .collect();
 
 

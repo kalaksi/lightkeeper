@@ -449,7 +449,7 @@ impl MonitorManager {
                 };
 
                 for error in errors.iter() {
-                    log::error!("[{}][{}] Error: {}", response.host.name, monitor_id, error.message());
+                    log::error!("[{}][{}] Error: {}", response.host.name, monitor_id, error.message);
                 }
 
                 let cache_policy = match response.request_type {
@@ -522,7 +522,7 @@ fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoi
     match monitor.get_connector_messages(host.clone(), parent_datapoint.clone()) {
         Ok(messages) => all_messages.extend(messages),
         Err(error) => {
-            if error.kind() != &ErrorKind::NotImplemented {
+            if error.kind != ErrorKind::NotImplemented {
                 return Err(LkError::from(error).set_source(monitor.get_module_spec().id));
             }
         }
@@ -531,7 +531,7 @@ fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoi
     match monitor.get_connector_message(host.clone(), parent_datapoint.clone()) {
         Ok(message) => all_messages.push(message),
         Err(error) => {
-            if error.kind() != &ErrorKind::NotImplemented {
+            if error.kind != ErrorKind::NotImplemented {
                 return Err(error.set_source(monitor.get_module_spec().id));
             }
         }

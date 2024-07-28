@@ -268,7 +268,7 @@ impl ConnectionModule for Ssh2 {
 
         let mut known_hosts = session_data.session.known_hosts().unwrap();
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
-                   .map_err(|error| LkError::new_other(format!("Failed to read known hosts file: {}", error)))?;
+                   .map_err(|error| LkError::new_other_p("Failed to read known hosts file", error))?;
 
         // The session probably gets disconnected since receiving host key fails if not reconnecting.
         let socket_address = format!("{}:{}", self_address, self_port).to_socket_addrs().unwrap().next().unwrap();
@@ -286,9 +286,9 @@ impl ConnectionModule for Ssh2 {
 
             if key_string == key_id {
                 known_hosts.add(&host_and_port, key, hostname, key_type.into())
-                           .map_err(|error| LkError::new_other(format!("Failed to add host key to known hosts: {}", error)))?;
+                           .map_err(|error| LkError::new_other_p("Failed to add host key to known hosts", error))?;
                 known_hosts.write_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
-                           .map_err(|error| LkError::new_other(format!("Failed to write known hosts file: {}", error)))?;
+                           .map_err(|error| LkError::new_other_p("Failed to write known hosts file", error))?;
                 Ok(())
             }
             else {
