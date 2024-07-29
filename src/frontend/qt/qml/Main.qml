@@ -17,7 +17,7 @@ ApplicationWindow {
     property var _detailsDialogs: {}
     property int errorCount: 0
 
-    id: "root"
+    id: root
     visible: true
     minimumWidth: 1400
     minimumHeight: 810
@@ -224,7 +224,7 @@ ApplicationWindow {
 
 
     Item {
-        id: "body"
+        id: body
         objectName: "body"
         anchors.fill: parent
         property real splitSize: 0.0
@@ -234,13 +234,13 @@ ApplicationWindow {
             orientation: Qt.Vertical
 
             HostTable {
-                id: "hostTable"
+                id: hostTable
                 objectName: "hostTable"
                 width: parent.width
                 SplitView.fillHeight: true
 
                 model: HostTableModel {
-                    id: "hostTableModel"
+                    id: hostTableModel
                     selectedRow: -1
                     displayData: HostDataManager.getDisplayData()
 
@@ -267,7 +267,7 @@ ApplicationWindow {
             }
 
             HostDetails {
-                id: "detailsView"
+                id: detailsView
                 objectName: "detailsView"
                 visible: body.splitSize > 0.01
                 width: parent.width
@@ -304,11 +304,11 @@ ApplicationWindow {
 
     // Dynamic component loaders
     Loader {
-        id: "confirmationDialogLoader"
+        id: confirmationDialogLoader
     }
 
     DynamicObjectManager {
-        id: "detailsDialogManager"
+        id: detailsDialogManager
 
         DetailsDialog {
             y: root.y + 50
@@ -319,7 +319,7 @@ ApplicationWindow {
     }
 
     SnackbarContainer {
-        id: "snackbarContainer"
+        id: snackbarContainer
         anchors.fill: parent
         anchors.margins: 20
     }
@@ -327,12 +327,12 @@ ApplicationWindow {
 
     // Modal dialogs
     InputDialog {
-        id: "inputDialog"
+        id: inputDialog
         anchors.centerIn: parent
     }
 
     HostConfigurationDialog {
-        id: "hostConfigurationDialog"
+        id: hostConfigurationDialog
         anchors.centerIn: parent
         bottomMargin: 0.15 * parent.height
 
@@ -342,7 +342,7 @@ ApplicationWindow {
     }
 
     PreferencesDialog {
-        id: "preferencesDialog"
+        id: preferencesDialog
         anchors.centerIn: parent
         bottomMargin: 0.15 * parent.height
 
@@ -378,7 +378,7 @@ ApplicationWindow {
     }
 
     CommandOutputDialog {
-        id: "commandOutputDialog"
+        id: commandOutputDialog
         property int pendingInvocation: 0
 
         anchors.centerIn: parent
@@ -387,7 +387,7 @@ ApplicationWindow {
     }
 
     TextDialog {
-        id: "textDialog"
+        id: textDialog
         property int pendingInvocation: 0
 
         anchors.centerIn: parent
@@ -396,7 +396,7 @@ ApplicationWindow {
     }
 
     HotkeyHelp {
-        id: "hotkeyHelp"
+        id: hotkeyHelp
         anchors.centerIn: parent
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
