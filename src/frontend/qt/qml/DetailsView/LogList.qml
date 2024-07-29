@@ -11,7 +11,8 @@ ListView {
     id: root 
     required property var rows
     property bool enableShortcuts: true
-    property bool _invertRowOrder: true
+    property string selectionColor: Theme.highlightColorLight
+    property bool invertRowOrder: true
     property string _lastQuery: ""
     property var _matchingRows: []
     property int _totalMatches: 0
@@ -27,12 +28,12 @@ ListView {
     highlightFollowsCurrentItem: true
     highlightMoveDuration: 0
     highlight: Rectangle {
-        color: Theme.highlightColorLight
+        color: root.selectionColor
     }
 
     model: []
     onRowsChanged: {
-        if (root._invertRowOrder) {
+        if (root.invertRowOrder) {
             root.rows.reverse()
         }
 
@@ -255,7 +256,7 @@ ListView {
     }
 
     function invertRowOrder() {
-        root._invertRowOrder = !root._invertRowOrder
+        root.invertRowOrder = !root.invertRowOrder
         root.rows.reverse()
         refresh()
     }

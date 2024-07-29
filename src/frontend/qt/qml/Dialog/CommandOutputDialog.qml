@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
 
 import ".."
+import "../DetailsView"
 import "../Text"
 import "../Misc"
 
@@ -16,8 +17,8 @@ Dialog {
 
     modal: true
     opacity: 0.0
-    implicitWidth: dialogText.contentWidth + 100
-    implicitHeight: dialogText.contentHeight + 100
+    implicitWidth: commandOutput.width + 100
+    implicitHeight: commandOutput.height + 100
     standardButtons: Dialog.Close
 
     background: DialogBackground { }
@@ -50,34 +51,18 @@ Dialog {
             }
         }
 
-        ScrollView {
-            id: scrollView
-            contentWidth: parent.width
-            contentHeight: dialogText.contentHeight
+        LogList {
+            id: commandOutput
+            visible: rows.length > 0
+            rows: root.text.split("\n")
+            enableShortcuts: false
+            selectionColor: "transparent"
+            invertRowOrder: false
 
+            Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.rightMargin: Theme.marginScrollbar
-
-            WorkingSprite {
-                visible: root.text === ""
-                height: parent.height
-                width: parent.width
-            }
-
-            // TODO: use list view for better performance
-            NormalText {
-                id: dialogText
-                visible: root.text !== ""
-                wrapMode: Text.WrapAnywhere
-                text: root.text
-
-                onTextChanged: {
-                    // Scroll to bottom
-                    scrollView.ScrollBar.vertical.position = 1.0 - scrollView.ScrollBar.vertical.size
-                }
-            }
         }
-
     }
 
     Behavior on width {
