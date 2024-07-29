@@ -46,16 +46,11 @@ ListView {
 
     delegate: Item {
         id: rowItem
-        // property bool isRefreshButton: index === root.model.length - 1
-        // height: isRefreshButton ? textContent.implicitHeight * 3 : textContent.implicitHeight
-        property bool isRefreshButton: false
-
         width: root.width
         height: textContent.implicitHeight
 
         SmallText {
             id: textContent
-            visible: !rowItem.isRefreshButton
             width: parent.width
             text: modelData
             font.family: "monospace"
@@ -86,23 +81,6 @@ ListView {
                 }
             }
         }
-
-        // Old implementation. Kept in case there's a need for such a button later.
-        /*
-        ImageButton {
-            visible: rowItem.isRefreshButton
-            size: textContent.implicitHeight * 2
-            imageSource: "qrc:/main/images/button/refresh"
-            text: "Load more"
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-
-            onClicked: {
-                let currentPage = Math.floor(root.rows.length / root.pageSize)
-                root.loadMore(currentPage + 1, root.pageSize)
-            }
-        }
-        */
     }
 
     Shortcut {
@@ -273,12 +251,6 @@ ListView {
         let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
         root._matchingRows = matchingRows
         root._totalMatches = totalMatches
-        /*
-        if (modelRows.length > 0) {
-            // Last placeholder item is reserved for "load more" button
-            modelRows.push("REFRESH")
-        }
-        */
         root.model = modelRows
     }
 
@@ -303,16 +275,4 @@ ListView {
         root._matchingRows = []
         root._totalMatches = 0
     }
-
-    /*
-    // TODO: button for displaying only matching rows (filter locally or remotely?)
-    function searchRows(query) {
-        dehighlight()
-        if (query.length === 0) {
-            return;
-        }
-
-        CommandHandler.execute("", root.hostId, root.commandId, [root._unitId, query])
-    }
-    */
 }

@@ -277,7 +277,7 @@ Item {
         onActivated: logList.search("up", searchField.text)
     }
 
-    // Executes searchagain.
+    // Executes search again.
     function refresh() {
         if (root.showTimeControls) {
             // TODO: implement checkbox for "Use UTC timezone"
