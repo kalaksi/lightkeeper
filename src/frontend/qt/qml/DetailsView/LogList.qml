@@ -13,6 +13,7 @@ ListView {
     property bool enableShortcuts: true
     property string selectionColor: Theme.highlightColorLight
     property bool invertRowOrder: true
+    property bool scrollToBottom: !invertRowOrder
     property string _lastQuery: ""
     property var _matchingRows: []
     property int _totalMatches: 0
@@ -47,7 +48,7 @@ ListView {
 
     delegate: Item {
         id: rowItem
-        width: root.width
+        width: root.width - scrollBar.width
         height: textContent.implicitHeight
 
         SmallText {
@@ -253,6 +254,11 @@ ListView {
         root._matchingRows = matchingRows
         root._totalMatches = totalMatches
         root.model = modelRows
+
+        if (root.scrollToBottom) {
+            root.currentIndex = root.rows.length - 1
+            // root.currentIndex = Math.min(root.currentIndex, root.rows.length - 1)
+        }
     }
 
     function invertRowOrder() {
