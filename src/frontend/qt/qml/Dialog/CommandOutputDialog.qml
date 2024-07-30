@@ -53,9 +53,9 @@ Dialog {
 
         LogList {
             id: commandOutput
-            visible: rows.length > 0
+            visible: root.text.length > 0
             rows: root.text.split("\n")
-            enableShortcuts: false
+            enableShortcuts: true
             selectionColor: "transparent"
             invertRowOrder: false
 

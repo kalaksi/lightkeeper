@@ -9,7 +9,7 @@ import "../js/Utils.js" as Utils
 
 ListView {
     id: root 
-    required property var rows
+    property var rows: []
     property bool enableShortcuts: true
     property string selectionColor: Theme.highlightColorLight
     property bool invertRowOrder: true
@@ -44,6 +44,7 @@ ListView {
 
     ScrollBar.vertical: ScrollBar {
         id: scrollBar
+        policy: ScrollBar.AlwaysOn
     }
 
     delegate: Item {
@@ -256,8 +257,7 @@ ListView {
         root.model = modelRows
 
         if (root.scrollToBottom) {
-            root.currentIndex = root.rows.length - 1
-            // root.currentIndex = Math.min(root.currentIndex, root.rows.length - 1)
+            root.positionViewAtEnd()
         }
     }
 
@@ -268,7 +268,7 @@ ListView {
     }
 
     function addRows(newRows) {
-        root.rows = newRows.concat(root.rows)
+        root.rows = root.rows.concat(newRows)
     }
 
     function getSearchDetails() {
