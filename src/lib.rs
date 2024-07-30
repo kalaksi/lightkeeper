@@ -53,7 +53,7 @@ pub fn run(
     main_config: &Configuration,
     hosts_config: &configuration::Hosts,
     group_config: &configuration::Groups,
-    test: bool) -> (ExitReason, QmlEngine) {
+    test: bool) -> ExitReason {
 
     let module_factory = Arc::<ModuleFactory>::new(ModuleFactory::new());
 
@@ -101,11 +101,10 @@ pub fn run(
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if test {
-        let qml_engine = frontend.start_testing(command_handler, monitor_manager, connection_manager, host_manager, main_config.clone());
-        (ExitReason::Quit, qml_engine)
+        let _engine = frontend.start_testing(command_handler, monitor_manager, connection_manager, host_manager, main_config.clone());
+        ExitReason::Quit
     }
     else {
-        let (exit_reason, qml_engine) = frontend.start(command_handler, monitor_manager, connection_manager, host_manager, main_config.clone());
-        (exit_reason, qml_engine)
+        frontend.start(command_handler, monitor_manager, connection_manager, host_manager, main_config.clone())
     }
 }

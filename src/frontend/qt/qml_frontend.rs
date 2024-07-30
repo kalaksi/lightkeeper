@@ -64,7 +64,7 @@ impl QmlFrontend {
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
         host_manager: Rc<RefCell<host_manager::HostManager>>,
-        config: configuration::Configuration) -> (ExitReason, QmlEngine) {
+        config: configuration::Configuration) -> ExitReason {
 
         let sandboxed = env::var("FLATPAK_ID").is_ok();
 
@@ -84,7 +84,7 @@ impl QmlFrontend {
 
         if sandboxed_updated {
             // Currently needs a restart so configuration is updated everywhere. Should happen only on first start.
-            return (ExitReason::Restart, engine);
+            return ExitReason::Restart;
         }
         else {
             if sandboxed {
@@ -99,7 +99,7 @@ impl QmlFrontend {
             engine.exec();
         }
 
-        (ExitReason::Quit, engine)
+        ExitReason::Quit
     }
 
     #[cfg(debug_assertions)]

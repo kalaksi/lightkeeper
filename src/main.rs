@@ -38,7 +38,7 @@ fn main() {
             }
         };
 
-        let (exit_reason, _engine) = lightkeeper::run(&args.config_dir, &main_config, &hosts_config, &group_config, false);
+        let exit_reason = lightkeeper::run(&args.config_dir, &main_config, &hosts_config, &group_config, false);
 
         match exit_reason {
             ExitReason::Quit => break,
