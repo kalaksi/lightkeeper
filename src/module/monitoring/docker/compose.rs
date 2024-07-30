@@ -127,7 +127,8 @@ impl MonitoringModule for Compose {
 
             let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.status.to_string(), container.get_criticality());
 
-            if container.image.starts_with(&self.local_image_prefix) {
+            if container.image.starts_with(&self.local_image_prefix) ||
+               container.image.starts_with("sha256:") {
                 data_point.tags.push(String::from("Local"));
             }
 
