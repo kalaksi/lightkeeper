@@ -257,6 +257,7 @@ impl ModuleFactory {
         self.connector_modules = vec![
             (connection::Ssh2::get_metadata(), connection::Ssh2::new_connection_module),
             (connection::Http::get_metadata(), connection::Http::new_connection_module),
+            (connection::HttpJwt::get_metadata(), connection::HttpJwt::new_connection_module),
             (connection::LocalCommand::get_metadata(), connection::LocalCommand::new_connection_module),
         ];
 

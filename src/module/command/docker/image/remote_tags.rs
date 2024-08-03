@@ -17,7 +17,7 @@ use lightkeeper_module::command_module;
 #[command_module(
     name="docker-image-remote-tags",
     version="0.0.1",
-    description="Shows available remote tags for a Docker image. Currently supports Docker Hub only.",
+    description="Shows available remote tags for a Docker image. Supports Docker Registry API v2.",
 )]
 pub struct RemoteTags {
     page_size: u64,
@@ -36,7 +36,7 @@ impl Module for RemoteTags {
 
 impl CommandModule for RemoteTags {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new("http", "0.0.1"))
+        Some(ModuleSpecification::new("http-jwt", "0.0.1"))
     }
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
@@ -59,13 +59,20 @@ impl CommandModule for RemoteTags {
 
         if image_repo_tag.is_empty() {
             // Containers without a tag can not be used.
-            Err(LkError::other("Container has no tag and can not be used."))
+            return Err(LkError::other("Container has no tag and can not be used."))
+        }
+
+        let (image, _tag) = image_repo_tag.split_once(":").unwrap_or((image_repo_tag, ""));
+
+        if image.contains(".") {
+            // Looks like a domain name. Use Docker Registry API v2.
+            let (domain, repository) = image.split_once("/").unwrap();
+            Ok(vec![format!("https://{}/v2/{}/tags/list?n={}&last={}", domain, repository, self.page_size, 0)])
         }
         else {
-            let (image, _tag) = image_repo_tag.split_once(":").unwrap_or(("", ""));
+            // Docker Hub.
+            // Has it's own API with richer data.
             let (namespace, image) = image.split_once("/").unwrap_or(("library", image));
-
-            // TODO: support other registries too.
             let tags = (1..=self.page_count).map(|page| {
                 format!("https://registry.hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size={}&page={}", namespace, image, self.page_size, page)
             }).collect();
@@ -78,29 +85,47 @@ impl CommandModule for RemoteTags {
         let non_empty_responses = responses.iter().filter(|response| !response.message.is_empty()).collect::<Vec<_>>();
 
         for response in non_empty_responses.iter() {
-            let tags: Tags = serde_json::from_str(&response.message).unwrap();
-            for tag_details in tags.results.iter() {
-                let images_for_arch = tag_details.images.iter()
-                    .filter(|image_details| Architecture::from(&image_details.architecture) == host.platform.architecture)
-                    .collect::<Vec<_>>();
+            // Docker registry API v2.
+            if let Ok(tags)  = serde_json::from_str(&response.message) {
+                let mut tags: Tags = tags;
+                tags.tags.sort();
+                tags.tags.reverse();
 
-                if images_for_arch.len() > 1 {
-                    result_rows.push(format!("**{}**: (Error, too many images for arch {} found)", tag_details.name, host.platform.architecture));
+                for tag in tags.tags.iter() {
+                    result_rows.push(format!("- **{}**", tag));
                 }
-                else if images_for_arch.len() == 1 {
-                    let image_details = images_for_arch.first().unwrap();
-                    let last_pushed_formatted = if let Some(last_pushed_str) = &image_details.last_pushed {
-                        let datetime = NaiveDateTime::parse_from_str(last_pushed_str.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap().and_utc();
-                        // TODO: format according to locale.
-                        datetime.format("%d.%m.%Y %H:%M:%S").to_string()
+            }
+            // Docker Hub API.
+            else if let Ok(tags) = serde_json::from_str(&response.message) {
+                let tags: DockerHubTags = tags;
+
+                for tag_details in tags.results.iter() {
+                    let images_for_arch = tag_details.images.iter()
+                        .filter(|image_details| Architecture::from(&image_details.architecture) == host.platform.architecture)
+                        .collect::<Vec<_>>();
+
+                    if images_for_arch.len() > 1 {
+                        result_rows.push(format!("**{}**: (Error, too many images for arch {} found)", tag_details.name, host.platform.architecture));
                     }
-                    else {
-                        String::from("(Unknown)")
-                    };
+                    else if images_for_arch.len() == 1 {
+                        let image_details = images_for_arch.first().unwrap();
+                        let last_pushed_formatted = if let Some(last_pushed_str) = &image_details.last_pushed {
+                            let datetime = NaiveDateTime::parse_from_str(last_pushed_str.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap().and_utc();
+                            // TODO: format according to locale.
+                            datetime.format("%d.%m.%Y %H:%M:%S").to_string()
+                        }
+                        else {
+                            String::from("(Unknown)")
+                        };
 
-                    let image_size_in_mb = image_details.size / 1024 / 1024;
-                    result_rows.push(format!("- **{}**, last pushed {} UTC ({} MB)", tag_details.name, last_pushed_formatted, image_size_in_mb));
+                        let image_size_in_mb = image_details.size / 1024 / 1024;
+                        result_rows.push(format!("- **{}**, last pushed {} UTC ({} MB)", tag_details.name, last_pushed_formatted, image_size_in_mb));
+                    }
                 }
+            }
+            // Unknown.
+            else {
+                result_rows.push(format!("- (Error: unknown response format)"));
             }
         }
 
@@ -110,6 +135,12 @@ impl CommandModule for RemoteTags {
 
 #[derive(Deserialize)]
 pub struct Tags {
+    pub name: String,
+    pub tags: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct DockerHubTags {
     pub count: u64,
     pub previous: Option<String>,
     pub next: Option<String>,

@@ -12,5 +12,8 @@ pub use ssh::Ssh2;
 pub mod http;
 pub use http::Http;
 
+pub mod http_jwt;
+pub use http_jwt::HttpJwt;
+
 pub mod local_command;
 pub use local_command::LocalCommand;
