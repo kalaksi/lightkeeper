@@ -1,7 +1,3 @@
-
-extern crate qmetaobject;
-use qmetaobject::*;
-
 pub mod error;
 pub mod module;
 pub mod configuration;

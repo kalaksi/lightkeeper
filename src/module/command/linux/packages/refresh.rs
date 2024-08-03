@@ -68,7 +68,7 @@ impl CommandModule for Refresh {
                 1
             }
             else {
-                panic!()
+                return Err(LkError::unsupported_platform().message);
             };
 
             Ok(CommandResult::new_partial(response.message.clone(), progress))

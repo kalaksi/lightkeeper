@@ -243,10 +243,12 @@ impl ConnectionManager {
                         },
                         RequestType::CommandFollowOutput { commands } => {
                             if commands.len() != 1 {
-                                panic!("Follow output is only supported for a single command");
+                                vec![Err(LkError::other("Follow output is only supported for a single command"))]
                             }
-                            let command = commands.first().unwrap();
-                            vec![Self::process_command_follow_output(&request, &connector, command, request.response_sender.clone())]
+                            else {
+                                let command = commands.first().unwrap();
+                                vec![Self::process_command_follow_output(&request, &connector, command, request.response_sender.clone())]
+                            }
                         },
                         RequestType::Download { remote_file_path: file_path } =>
                             vec![Self::process_download(&request.host, &connector, &file_path)],

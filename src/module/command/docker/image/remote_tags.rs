@@ -80,7 +80,7 @@ impl CommandModule for RemoteTags {
         }
     }
 
-    fn process_responses(&self, host: Host, responses: Vec<ResponseMessage>) -> Result<CommandResult, String> {
+    fn process_responses(&self, host: Host, responses: Vec<ResponseMessage>) -> Result<CommandResult, LkError> {
         let mut result_rows = Vec::new();
         let non_empty_responses = responses.iter().filter(|response| !response.message.is_empty()).collect::<Vec<_>>();
 

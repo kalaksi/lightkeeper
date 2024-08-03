@@ -438,10 +438,11 @@ impl CommandHandler {
         if !messages.is_empty() {
             result = command.process_responses(response.host.clone(), messages.clone());
             if let Err(error) = result {
-                if error == "NI" {
+                if error.kind == ErrorKind::NotImplemented {
                     let message = &messages[0];
                     // Wasn't implemented, try the other method.
-                    result = command.process_response(response.host.clone(), message);
+                    result = command.process_response(response.host.clone(), message)
+                                    .map_err(|error| LkError::from(error));
                 }
                 else {
                     result = Err(error);
@@ -449,7 +450,7 @@ impl CommandHandler {
             }
         }
         else {
-            result = Err(format!("No responses received for command {}", command_id));
+            result = Err(LkError::other("No responses received"));
         }
 
         let new_command_result = match result {
@@ -466,13 +467,13 @@ impl CommandHandler {
                 Some(command_result)
             },
             Err(error) => {
-                errors.push(LkError::other(error));
+                errors.push(error.set_source(command_id));
                 None
             }
         };
 
         for error in errors.iter() {
-            log::error!("[{}][{}] Error: {}", response.host.name, command_id, error.message);
+            log::error!("[{}][{}] Error: {}", response.host.name, error.source_id, error.message);
         }
 
         state_update_sender.send(StateUpdateMessage {

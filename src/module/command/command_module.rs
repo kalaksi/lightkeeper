@@ -38,8 +38,8 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
         Ok(CommandResult::new_info(response.message.clone()))
     }
 
-    fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>) -> Result<CommandResult, String> {
-        Err(String::from("NI"))
+    fn process_responses(&self, _host: Host, _responses: Vec<ResponseMessage>) -> Result<CommandResult, LkError> {
+        Err(LkError::not_implemented())
     }
 }
 
