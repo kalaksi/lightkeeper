@@ -158,6 +158,7 @@ impl CommandHandler {
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: Some(CommandResult::pending()),
+            invocation_id: self.invocation_id_counter,
             ..Default::default()
         }).unwrap();
 
@@ -228,6 +229,7 @@ impl CommandHandler {
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_error("File is unchanged")),
+                        invocation_id: self.invocation_id_counter,
                         ..Default::default()
                     }).unwrap();
                 }
@@ -254,6 +256,7 @@ impl CommandHandler {
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_critical_error(error)),
+                    invocation_id: self.invocation_id_counter,
                     ..Default::default()
                 }).unwrap();
             }
@@ -455,6 +458,8 @@ impl CommandHandler {
 
         let new_command_result = match result {
             Ok(mut command_result) => {
+                command_result.command_id = command_id.clone();
+
                 let log_message = if command_result.message.len() > 5000 {
                     format!("{}...(long message cut)...", &command_result.message[..5000])
                 }
@@ -462,8 +467,7 @@ impl CommandHandler {
                     command_result.message.clone()
                 };
 
-                log::debug!("[{}][{}] Command result received: {}", response.host.name, response.source_id, log_message);
-                command_result.command_id = command.get_module_spec().id;
+                log::debug!("[{}][{}] Command result received: {}", response.host.name, command_id, log_message);
                 Some(command_result)
             },
             Err(error) => {
@@ -545,6 +549,7 @@ impl CommandHandler {
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_critical_error(error_message)),
+                    invocation_id: response.invocation_id,
                     ..Default::default()
                 }).unwrap();
             }
