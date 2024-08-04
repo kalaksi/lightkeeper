@@ -17,25 +17,12 @@ pub use configuration::Configuration;
 use std::sync::Arc;
 use std::cell::RefCell;
 use std::rc::Rc;
-use clap::Parser;
 use host_manager::HostManager;
 use monitor_manager::MonitorManager;
 use connection_manager::ConnectionManager;
 use command_handler::CommandHandler;
 use host::Host;
 
-
-#[derive(Parser, Clone)]
-pub struct Args {
-    #[clap(short, long, default_value = "")]
-    pub config_dir: String,
-    #[clap(long)]
-    pub monitoring_module_info: bool,
-    #[clap(long)]
-    pub command_module_info: bool,
-    #[clap(long)]
-    pub connector_module_info: bool,
-}
 
 #[derive(PartialEq)]
 pub enum ExitReason {

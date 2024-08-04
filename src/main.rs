@@ -5,11 +5,23 @@
 use clap::Parser;
 use lightkeeper::*;
 
+#[derive(Parser, Clone)]
+pub struct Args {
+    #[clap(short, long, default_value = "")]
+    pub config_dir: String,
+    #[clap(long)]
+    pub monitoring_module_info: bool,
+    #[clap(long)]
+    pub command_module_info: bool,
+    #[clap(long)]
+    pub connector_module_info: bool,
+}
+
 
 
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    let args = lightkeeper::Args::parse();
+    let args = Args::parse();
 
     if args.monitoring_module_info {
         let module_factory = ModuleFactory::new();
