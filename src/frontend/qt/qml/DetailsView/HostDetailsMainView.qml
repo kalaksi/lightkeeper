@@ -19,7 +19,7 @@ Item {
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
     property int columnSpacing: Theme.spacingNormal
-    property var _hostDetailsJson: HostDataManager.get_host_data_json(hostId)
+    property var _hostDetailsJson: LK.hosts.get_host_data_json(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
     property var _categories: {}
     property bool _showEmptyCategories: true
@@ -30,7 +30,7 @@ Item {
     }
 
     Connections {
-        target: HostDataManager
+        target: LK.hosts
 
         function onMonitoringDataReceived(hostId, category, monitoringDataQv, invocationId) {
             if (hostId === root.hostId) {
@@ -92,7 +92,7 @@ Item {
                     }
 
                     Connections {
-                        target: CommandHandler
+                        target: LK.command
 
                         function onCommandExecuted(invocationId, hostId, commandId, category, buttonId) {
                             if (hostId === root.hostId && category === modelData) {
@@ -107,18 +107,18 @@ Item {
                     }
 
                     Connections {
-                        target: HostDataManager
+                        target: LK.hosts
 
                         function onCommandResultReceived(commandResultJson, invocationId) {
                             if (groupBox._invocationIdToButton[invocationId] !== undefined) {
                                 let buttonId = groupBox._invocationIdToButton[invocationId]
-                                let progress = HostDataManager.getPendingCommandProgress(invocationId)
+                                let progress = LK.hosts.getPendingCommandProgress(invocationId)
                                 categoryCommands.updateProgress(buttonId, progress)
                                 propertyTable.updateProgress(buttonId, progress)
 
                                 if (progress >= 100) {
                                     let commandResult = JSON.parse(commandResultJson)
-                                    CommandHandler.forceRefreshMonitorsOfCommand(root.hostId, commandResult.command_id)
+                                    LK.command.forceRefreshMonitorsOfCommand(root.hostId, commandResult.command_id)
                                     delete groupBox._invocationIdToButton[invocationId]
                                 }
                             }
@@ -135,16 +135,16 @@ Item {
                         icon: Theme.categoryIcon(modelData)
                         color: Theme.categoryColor(modelData)
                         onRefreshClicked: function() {
-                            CommandHandler.force_refresh_monitors_of_category(root.hostId, modelData)
+                            LK.command.force_refresh_monitors_of_category(root.hostId, modelData)
                             groupBoxLabel.refreshProgress = 0
                             groupBox.blocked = true
                         }
 
                         Connections {
-                            target: HostDataManager
+                            target: LK.hosts
                             function onMonitoringDataReceived(hostId, category, monitoring_data_qv) {
                                 if (hostId === root.hostId && category === modelData) {
-                                    groupBoxLabel.refreshProgress = HostDataManager.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
+                                    groupBoxLabel.refreshProgress = LK.hosts.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
 
                                     if (groupBoxLabel.refreshProgress >= 100) {
                                         groupBox.blocked = false
@@ -154,7 +154,7 @@ Item {
                         }
 
                         Connections {
-                            target: CommandHandler
+                            target: LK.command
                             function onHostInitializing(hostId) {
                                 if (hostId === root.hostId) {
                                     groupBoxLabel.refreshProgress = 0
@@ -176,7 +176,7 @@ Item {
                             size: 34
                             flatButtons: false
                             roundButtons: false
-                            commands: Parse.ListOfJsons(CommandHandler.getCommandsOnLevel(root.hostId, modelData, "", 0))
+                            commands: Parse.ListOfJsons(LK.command.getCommandsOnLevel(root.hostId, modelData, "", 0))
                             hoverEnabled: !groupBox.blocked
 
                             Layout.alignment: Qt.AlignHCenter
@@ -184,7 +184,7 @@ Item {
                             Layout.bottomMargin: size * 0.30
 
                             onClicked: function(buttonId, commandId, params) {
-                                CommandHandler.execute(buttonId, root.hostId, commandId, params)
+                                LK.command.execute(buttonId, root.hostId, commandId, params)
                             }
                         }
 
@@ -256,19 +256,19 @@ Item {
                         PropertyTable {
                             id: propertyTable
                             category: modelData
-                            monitoring_datas: HostDataManager.getCategoryMonitorIds(root.hostId, modelData)
-                                                             .map(monitorId => HostDataManager.get_monitoring_data(root.hostId, monitorId))
-                            command_datas: CommandHandler.getCategoryCommands(root.hostId, modelData)
+                            monitoring_datas: LK.hosts.getCategoryMonitorIds(root.hostId, modelData)
+                                                             .map(monitorId => LK.hosts.get_monitoring_data(root.hostId, monitorId))
+                            command_datas: LK.command.getCategoryCommands(root.hostId, modelData)
 
                             Layout.fillHeight: true
                             Layout.fillWidth: true
 
                             onButtonClicked: function(buttonId, commandId, params) {
-                                CommandHandler.execute(buttonId, root.hostId, commandId, params)
+                                LK.command.execute(buttonId, root.hostId, commandId, params)
                             }
 
                             Connections {
-                                target: HostDataManager
+                                target: LK.hosts
                                 function onMonitoringDataReceived(hostId, category, monitoringDataQv) {
                                     if (hostId === root.hostId && category === modelData) {
                                         propertyTable.model.update(monitoringDataQv)
@@ -295,9 +295,9 @@ Item {
 
     function refresh() {
         if (root.hostId !== "") {
-            root._hostDetailsJson = HostDataManager.get_host_data_json(hostId)
+            root._hostDetailsJson = LK.hosts.get_host_data_json(hostId)
             root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
-            root._categories =  HostDataManager.getCategories(root.hostId, !root._showEmptyCategories)
+            root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
                                                .map(category_qv => category_qv.toString())
         }
     }

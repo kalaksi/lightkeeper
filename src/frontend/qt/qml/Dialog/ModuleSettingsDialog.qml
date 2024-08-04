@@ -48,13 +48,13 @@ LightkeeperDialog {
             }
 
             if (root.moduleType === "connector") {
-                ConfigManager.set_group_connector_setting(root.groupName, root.moduleId, key, value)
+                LK.config.set_group_connector_setting(root.groupName, root.moduleId, key, value)
             }
             else if (root.moduleType === "monitor") {
-                ConfigManager.set_group_monitor_setting(root.groupName, root.moduleId, key, value)
+                LK.config.set_group_monitor_setting(root.groupName, root.moduleId, key, value)
             }
             else if (root.moduleType === "command") {
-                ConfigManager.set_group_command_setting(root.groupName, root.moduleId, key, value)
+                LK.config.set_group_command_setting(root.groupName, root.moduleId, key, value)
             }
         }
 
@@ -173,19 +173,19 @@ LightkeeperDialog {
 
     // TODO: implement model in rust?
     function getModuleSettingsModel() {
-        let settings = ConfigManager.get_all_module_settings(root.moduleType, root.moduleId)
+        let settings = LK.config.get_all_module_settings(root.moduleType, root.moduleId)
         let settingsArray = []
         for (let key in settings) {
             let value = ""
             let enabled = true
             if (root.moduleType === "connector") {
-                value = ConfigManager.get_group_connector_setting(root.groupName, root.moduleId, key)
+                value = LK.config.get_group_connector_setting(root.groupName, root.moduleId, key)
             }
             else if (root.moduleType === "monitor") {
-                value = ConfigManager.get_group_monitor_setting(root.groupName, root.moduleId, key)
+                value = LK.config.get_group_monitor_setting(root.groupName, root.moduleId, key)
             }
             else if (root.moduleType === "command") {
-                value = ConfigManager.get_group_command_setting(root.groupName, root.moduleId, key)
+                value = LK.config.get_group_command_setting(root.groupName, root.moduleId, key)
             }
 
             if (value === "unset") {

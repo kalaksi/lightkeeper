@@ -41,13 +41,13 @@ ApplicationWindow {
             hostConfigurationDialog.open()
         }
         onClickedRemove: {
-            ConfigManager.beginHostConfiguration()
-            ConfigManager.removeHost(hostTableModel.getSelectedHostId())
-            ConfigManager.endHostConfiguration()
+            LK.config.beginHostConfiguration()
+            LK.config.removeHost(hostTableModel.getSelectedHostId())
+            LK.config.endHostConfiguration()
             reloadConfiguration()
         }
         onClickedEdit: {
-            ConfigManager.beginHostConfiguration()
+            LK.config.beginHostConfiguration()
             hostConfigurationDialog.hostId = hostTableModel.getSelectedHostId()
             hostConfigurationDialog.open()
         }
@@ -74,28 +74,28 @@ ApplicationWindow {
     }
 
     Connections {
-        target: HostDataManager
+        target: LK.hosts
 
         function onUpdateReceived(hostId) {
             hostTableModel.dataChangedForHost(hostId)
-            hostTableModel.displayData = HostDataManager.getDisplayData()
+            hostTableModel.displayData = LK.hosts.getDisplayData()
 
             if (hostId === hostTableModel.getSelectedHostId()) {
-                statusBar.jobsLeft = HostDataManager.getPendingCommandCount(hostId) + HostDataManager.getPendingMonitorCount(hostId)
+                statusBar.jobsLeft = LK.hosts.getPendingCommandCount(hostId) + LK.hosts.getPendingMonitorCount(hostId)
             }
         }
 
         function onHost_initialized(hostId) {
-            let categories = CommandHandler.getAllHostCategories(hostId)
+            let categories = LK.command.getAllHostCategories(hostId)
             for (const category of categories) {
-                CommandHandler.refresh_monitors_of_category(hostId, category)
+                LK.command.refresh_monitors_of_category(hostId, category)
             }
         }
 
         function onHost_initialized_from_cache(hostId) {
-            let categories = CommandHandler.getAllHostCategories(hostId)
+            let categories = LK.command.getAllHostCategories(hostId)
             for (const category of categories) {
-                CommandHandler.cached_refresh_monitors_of_category(hostId, category)
+                LK.command.cached_refresh_monitors_of_category(hostId, category)
             }
         }
 
@@ -153,18 +153,18 @@ ApplicationWindow {
             let text = message + "\n\n" + keyId
             confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text, }) 
             confirmationDialogLoader.item.onAccepted.connect(function() {
-                CommandHandler.verifyHostKey(hostId, connectorId, keyId)
-                CommandHandler.initializeHost(hostId)
+                LK.command.verifyHostKey(hostId, connectorId, keyId)
+                LK.command.initializeHost(hostId)
             })
         }
     }
 
     Connections {
-        target: CommandHandler
+        target: LK.command
 
         function onConfirmationDialogOpened(text, buttonId, hostId, commandId, commandParams) {
             confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text }) 
-            confirmationDialogLoader.item.onAccepted.connect(() => CommandHandler.executeConfirmed(buttonId, hostId, commandId, commandParams))
+            confirmationDialogLoader.item.onAccepted.connect(() => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams))
         }
 
         function onDetailsDialogOpened(invocationId) {
@@ -188,7 +188,7 @@ ApplicationWindow {
             inputDialog.inputSpecs = inputSpecs
             // TODO: need to clear previous connections?
             inputDialog.onInputValuesGiven.connect((inputValues) => {
-                CommandHandler.executeConfirmed(buttonId, hostId, commandId, commandParams.concat(inputValues))
+                LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams.concat(inputValues))
             })
             inputDialog.open()
         }
@@ -211,14 +211,14 @@ ApplicationWindow {
         _detailsDialogs = {}
 
         // Starts the thread that receives host state updates in the backend.
-        HostDataManager.receive_updates()
+        LK.receiveUpdates()
         // Starts the thread that receives portal responses from D-Bus.
         DesktopPortal.receiveResponses()
 
         console.log("Current color palette: ", palette)
 
-        if (HostDataManager.refresh_hosts_on_start()) {
-            CommandHandler.forceInitializeHosts()
+        if (LK.hosts.refresh_hosts_on_start()) {
+            LK.command.forceInitializeHosts()
         }
     }
 
@@ -242,17 +242,17 @@ ApplicationWindow {
                 model: HostTableModel {
                     id: hostTableModel
                     selectedRow: -1
-                    displayData: HostDataManager.getDisplayData()
+                    displayData: LK.hosts.getDisplayData()
 
                     onSelectedRowChanged: {
                         detailsView.hostId = hostTableModel.getSelectedHostId()
 
                         if (detailsView.hostId !== "") {
-                            if (!HostDataManager.is_host_initialized(detailsView.hostId)) {
-                                CommandHandler.initializeHost(detailsView.hostId)
+                            if (!LK.hosts.is_host_initialized(detailsView.hostId)) {
+                                LK.command.initializeHost(detailsView.hostId)
                             }
-                            statusBar.jobsLeft = HostDataManager.getPendingCommandCount(detailsView.hostId) +
-                                                 HostDataManager.getPendingMonitorCount(detailsView.hostId)
+                            statusBar.jobsLeft = LK.hosts.getPendingCommandCount(detailsView.hostId) +
+                                                 LK.hosts.getPendingMonitorCount(detailsView.hostId)
                         }
                     }
 
@@ -408,17 +408,17 @@ ApplicationWindow {
 
 
     function reloadConfiguration() {
-        HostDataManager.reset()
+        LK.hosts.reset()
         hostTableModel.toggleRow(hostTableModel.selectedRow)
-        hostTableModel.displayData = HostDataManager.getDisplayData()
+        hostTableModel.displayData = LK.hosts.getDisplayData()
 
-        let configs = ConfigManager.reloadConfiguration()
-        CommandHandler.reconfigure(configs[0], configs[1])
+        let configs = LK.config.reloadConfiguration()
+        LK.command.reconfigure(configs[0], configs[1])
     }
 
     function quit() {
-        CommandHandler.stop()
-        HostDataManager.stop()
+        LK.command.stop()
+        LK.hosts.stop()
         DesktopPortal.stop()
         Qt.quit()
     }

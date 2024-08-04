@@ -12,7 +12,7 @@ import "../Text"
 Item {
     id: root
     property bool enableShortcuts: false
-    property string workDir: ConfigManager.getCurrentWorkDir()
+    property string workDir: LK.config.getCurrentWorkDir()
     property var _searchMatches: []
 
 

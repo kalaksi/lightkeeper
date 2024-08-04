@@ -25,7 +25,7 @@ Item {
 
 
     Connections {
-        target: HostDataManager
+        target: LK.hosts
 
         function onCommandResultReceived(commandResultJson, invocationId) {
             let commandResult = JSON.parse(commandResultJson)
@@ -286,14 +286,14 @@ Item {
             let fullStartTime = startTime.text
             let fullEndTime = endTime.text
 
-            root.pendingInvocation = CommandHandler.executePlain(
+            root.pendingInvocation = LK.command.executePlain(
                 root.hostId,
                 root.commandId,
                 [...root.commandParams, fullStartTime, fullEndTime, "", ""]
             )
         }
         else {
-            root.pendingInvocation = CommandHandler.executePlain(
+            root.pendingInvocation = LK.command.executePlain(
                 root.hostId,
                 root.commandId,
                 [...root.commandParams, "", "", "", ""]

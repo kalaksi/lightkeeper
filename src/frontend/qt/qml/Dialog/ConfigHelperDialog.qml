@@ -15,7 +15,7 @@ LightkeeperDialog {
     id: root
     required property string groupName
     property int tableRowHeight: 50
-    property var missingModules: ConfigManager.compareToDefault(groupName).map((item) => item.split(",", 2))
+    property var missingModules: LK.config.compareToDefault(groupName).map((item) => item.split(",", 2))
     visible: missingModules.length > 0
     anchors.centerIn: parent
     bottomMargin: 0.20 * parent.height
@@ -35,17 +35,17 @@ LightkeeperDialog {
             let moduleName = parts[1]
 
             if (moduleType === "Monitor") {
-                ConfigManager.addGroupMonitor(root.groupName, moduleName)
+                LK.config.addGroupMonitor(root.groupName, moduleName)
             }
             else if (moduleType === "Command") {
-                ConfigManager.addGroupCommand(root.groupName, moduleName)
+                LK.config.addGroupCommand(root.groupName, moduleName)
             }
             else if (moduleType === "Connector") {
-                ConfigManager.addGroupConnector(root.groupName, moduleName)
+                LK.config.addGroupConnector(root.groupName, moduleName)
             }
 
         }
-        ConfigManager.endGroupConfiguration()
+        LK.config.endGroupConfiguration()
         root.configurationChanged()
     }
 
@@ -54,8 +54,8 @@ LightkeeperDialog {
         let commandModules = table.model.filter((row) => row[0].startsWith("Command: ")).map((row) => row[0].split(": ")[1])
         let monitorModules = table.model.filter((row) => row[0].startsWith("Monitor: ")).map((row) => row[0].split(": ")[1])
         let connectorModules = table.model.filter((row) => row[0].startsWith("Connector: ")).map((row) => row[0].split(": ")[1])
-        ConfigManager.ignoreFromConfigHelper(root.groupName, commandModules, monitorModules, connectorModules)
-        ConfigManager.endGroupConfiguration()
+        LK.config.ignoreFromConfigHelper(root.groupName, commandModules, monitorModules, connectorModules)
+        LK.config.endGroupConfiguration()
     }
 
     contentItem: ColumnLayout {

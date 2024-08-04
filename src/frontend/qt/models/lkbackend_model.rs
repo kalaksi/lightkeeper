@@ -13,15 +13,15 @@ use super::{CommandHandlerModel, ConfigManagerModel, HostDataManagerModel};
 pub struct LkBackend{
     base: qt_base_class!(trait QObject),
 
-    pub command: qt_property!(RefCell<CommandHandlerModel>),
-    pub hosts: qt_property!(RefCell<HostDataManagerModel>),
-    pub config: qt_property!(RefCell<ConfigManagerModel>),
+    pub command: qt_property!(RefCell<CommandHandlerModel>; CONST),
+    pub hosts: qt_property!(RefCell<HostDataManagerModel>; CONST),
+    pub config: qt_property!(RefCell<ConfigManagerModel>; CONST),
 
     //
     // Slots
     //
 
-    receive_updates: qt_method!(fn(&self)),
+    receiveUpdates: qt_method!(fn(&self)),
     stop: qt_method!(fn(&mut self)),
 
     //
@@ -57,7 +57,7 @@ impl LkBackend {
         }
     }
 
-    fn receive_updates(&mut self) {
+    fn receiveUpdates(&mut self) {
         // Shouldn't (and can't) be run more than once.
         let update_receiver = if let Some(receiver) = self.update_receiver.take() {
             receiver
@@ -69,7 +69,7 @@ impl LkBackend {
 
         let process_update = qmetaobject::queued_callback(move |new_display_data: HostDisplayData| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
-                self_pinned.borrow_mut().hosts.borrow().process_update(new_display_data);
+                self_pinned.borrow().hosts.borrow_mut().process_update(new_display_data);
             }
         });
 

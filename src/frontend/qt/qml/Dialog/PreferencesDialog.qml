@@ -12,7 +12,7 @@ import ".."
 // This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
-    property var _preferences: ConfigManager.getPreferences()
+    property var _preferences: LK.config.getPreferences()
     property bool _loading: true
 
     title: "Preferences"
@@ -23,7 +23,7 @@ LightkeeperDialog {
     signal configurationChanged()
 
     onOpened: {
-        root._preferences = ConfigManager.getPreferences()
+        root._preferences = LK.config.getPreferences()
         root._loading = false
     }
 
@@ -39,7 +39,7 @@ LightkeeperDialog {
             showStatusBar: showStatusBar.checkState === Qt.Checked,
         }
 
-        ConfigManager.setPreferences(newPreferences)
+        LK.config.setPreferences(newPreferences)
         root._loading = true
         root.configurationChanged()
     }
@@ -194,7 +194,7 @@ LightkeeperDialog {
             TextField {
                 id: textEditor
                 text: root._preferences.textEditor
-                enabled: !ConfigManager.isSandboxed()
+                enabled: !LK.config.isSandboxed()
 
                 Layout.preferredWidth: content.width * 0.35
             }
@@ -223,7 +223,7 @@ LightkeeperDialog {
             TextField {
                 id: terminalAndArgs
                 text: root._preferences.terminal + " " + root._preferences.terminalArgs
-                enabled: !ConfigManager.isSandboxed()
+                enabled: !LK.config.isSandboxed()
 
                 Layout.preferredWidth: content.width * 0.35
             }

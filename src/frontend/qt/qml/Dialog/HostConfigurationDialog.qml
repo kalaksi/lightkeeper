@@ -14,9 +14,9 @@ LightkeeperDialog {
     id: root
     property string hostId: ""
     property int buttonSize: 38
-    property var hostSettings: JSON.parse(ConfigManager.getHostSettings(hostId))
-    property var _selectedGroups: ConfigManager.getSelectedGroups(hostId)
-    property var _availableGroups: ConfigManager.getAvailableGroups(hostId)
+    property var hostSettings: JSON.parse(LK.config.getHostSettings(hostId))
+    property var _selectedGroups: LK.config.getSelectedGroups(hostId)
+    property var _availableGroups: LK.config.getAvailableGroups(hostId)
     property int _contentWidth: 360
     property bool _loading: true
     title: "Host details"
@@ -28,9 +28,9 @@ LightkeeperDialog {
     signal configurationChanged()
 
     onOpened: {
-        ConfigManager.beginHostConfiguration()
+        LK.config.beginHostConfiguration()
         if (root.hostId === "") {
-            ConfigManager.add_host("new-host-id")
+            LK.config.add_host("new-host-id")
             root.hostId = "new-host-id"
         }
         refreshGroups()
@@ -68,15 +68,15 @@ LightkeeperDialog {
             newSettings.overrides.host_settings = ["use_sudo"]
         }
 
-        ConfigManager.setHostSettings(root.hostId, hostIdField.text, JSON.stringify(newSettings))
-        ConfigManager.endHostConfiguration()
+        LK.config.setHostSettings(root.hostId, hostIdField.text, JSON.stringify(newSettings))
+        LK.config.endHostConfiguration()
         root._loading = true
         
         root.configurationChanged()
     }
 
     onRejected: {
-        ConfigManager.cancelHostConfiguration()
+        LK.config.cancelHostConfiguration()
         root._loading = true
     }
 
@@ -269,7 +269,7 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._selectedGroups[selectedGroupsList.currentIndex]
-                                ConfigManager.removeHostFromGroup(root.hostId, selectedGroup)
+                                LK.config.removeHostFromGroup(root.hostId, selectedGroup)
                                 root.refreshGroups();
                             }
                         }
@@ -334,7 +334,7 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                ConfigManager.addHostToGroup(root.hostId, selectedGroup)
+                                LK.config.addHostToGroup(root.hostId, selectedGroup)
                                 refreshGroups()
                             }
                         }
@@ -372,9 +372,9 @@ LightkeeperDialog {
 
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                ConfigManager.beginGroupConfiguration()
-                                ConfigManager.remove_group(selectedGroup)
-                                ConfigManager.endGroupConfiguration()
+                                LK.config.beginGroupConfiguration()
+                                LK.config.remove_group(selectedGroup)
+                                LK.config.endGroupConfiguration()
                                 refreshGroups()
                             }
                         }
@@ -405,24 +405,24 @@ LightkeeperDialog {
         }]
 
         onInputValuesGiven: function(inputValues) {
-            ConfigManager.addGroup(inputValues[0])
-            ConfigManager.endGroupConfiguration()
+            LK.config.addGroup(inputValues[0])
+            LK.config.endGroupConfiguration()
             refreshGroups()
         }
 
         onOpened: {
-            ConfigManager.beginGroupConfiguration()
+            LK.config.beginGroupConfiguration()
         }
 
         onRejected: {
-            ConfigManager.cancelGroupConfiguration()
+            LK.config.cancelGroupConfiguration()
         }
     }
 
     // Forces re-evaluation of lists.
     function refreshGroups() {
-        root._selectedGroups = ConfigManager.getSelectedGroups(root.hostId)
-        root._availableGroups = ConfigManager.getAvailableGroups(root.hostId)
+        root._selectedGroups = LK.config.getSelectedGroups(root.hostId)
+        root._availableGroups = LK.config.getAvailableGroups(root.hostId)
     }
 
     function fieldsAreValid() {

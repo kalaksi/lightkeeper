@@ -17,7 +17,7 @@ Item {
 
 
     Connections {
-        target: HostDataManager
+        target: LK.hosts
 
         function onCommandResultReceived(commandResultJson) {
             let commandResult = JSON.parse(commandResultJson)

@@ -49,7 +49,7 @@ Item {
     }
 
     Connections {
-        target: CommandHandler
+        target: LK.command
 
         function onTextViewOpened(title, invocationId) {
             let tabData = {
@@ -118,7 +118,7 @@ Item {
         showSaveButton: getCurrentTabContent() instanceof HostDetailsTextEditorView
         disableSaveButton: true
 
-        onRefreshClicked: CommandHandler.forceInitializeHost(hostId)
+        onRefreshClicked: LK.command.forceInitializeHost(hostId)
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.close()
@@ -189,13 +189,13 @@ Item {
 
         HostDetailsTextEditorView {
             onSaved: function(commandId, localFilePath, content) {
-                pendingInvocation = CommandHandler.saveAndUploadFile(root.hostId, commandId, localFilePath, content)
+                pendingInvocation = LK.command.saveAndUploadFile(root.hostId, commandId, localFilePath, content)
             }
             onClosed: function(localFilePath) {
-                CommandHandler.removeFile(localFilePath)
+                LK.command.removeFile(localFilePath)
             }
             onContentChanged: function(localFilePath, content) {
-                mainViewHeader.disableSaveButton = !CommandHandler.hasFileChanged(localFilePath, content)
+                mainViewHeader.disableSaveButton = !LK.command.hasFileChanged(localFilePath, content)
             }
         }
     }
@@ -288,7 +288,7 @@ Item {
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "Ctrl+T"
-        onActivated: CommandHandler.executeConfirmed("", root.hostId, "linux-shell", {})
+        onActivated: LK.command.executeConfirmed("", root.hostId, "linux-shell", {})
     }
 
 

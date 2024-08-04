@@ -97,7 +97,7 @@ TableView {
                 implicitWidth: root.width * 0.3
 
                 MonitorSummary {
-                    model: HostDataManager.getSummaryMonitorData(value)
+                    model: LK.hosts.getSummaryMonitorData(value)
                     highlights: value in root._monitorHighlights ? root._monitorHighlights[value] : {}
                 }
             }

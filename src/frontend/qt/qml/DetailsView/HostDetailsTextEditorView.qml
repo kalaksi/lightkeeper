@@ -20,7 +20,7 @@ Item {
     signal contentChanged(localFilePath: string, newContent: string)
 
     Connections {
-        target: HostDataManager
+        target: LK.hosts
 
         function onCommandResultReceived(commandResultJson, invocationId) {
             let commandResult = JSON.parse(commandResultJson)

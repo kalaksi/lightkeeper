@@ -83,71 +83,68 @@ impl HostDataManagerModel {
     }
 
 
-    pub fn process_update(&self, new_display_data: frontend::HostDisplayData) {
-        let self_ptr = QPointer::from(&*self);
-        if let Some(self_pinned) = self_ptr.as_pinned() {
-            // HostDataModel cannot be passed between threads so parsing happens here.
-            let host_state = &new_display_data.host_state;
+    pub fn process_update(&mut self, new_display_data: frontend::HostDisplayData) {
+        // HostDataModel cannot be passed between threads so parsing happens here.
+        let host_state = &new_display_data.host_state;
 
-            let maybe_old_data = self_pinned.borrow_mut().display_data.hosts.insert(
-                host_state.host.name.clone(),
-                new_display_data.clone()
-            );
+        let maybe_old_data = self.display_data.hosts.insert(
+            host_state.host.name.clone(),
+            new_display_data.clone()
+        );
 
-            if host_state.just_initialized {
-                ::log::debug!("Host {} initialized", host_state.host.name);
-                self_pinned.borrow().host_initialized(QString::from(host_state.host.name.clone()));
-            }
-            else if host_state.just_initialized_from_cache {
-                ::log::debug!("Host {} initialized from cache", host_state.host.name);
-                self_pinned.borrow().host_initialized_from_cache(QString::from(host_state.host.name.clone()));
-            }
+        if host_state.just_initialized {
+            ::log::debug!("Host {} initialized", host_state.host.name);
+            self.host_initialized(QString::from(host_state.host.name.clone()));
+        }
+        else if host_state.just_initialized_from_cache {
+            ::log::debug!("Host {} initialized from cache", host_state.host.name);
+            self.host_initialized_from_cache(QString::from(host_state.host.name.clone()));
+        }
 
-            if let Some((invocation_id, command_result)) = new_display_data.new_command_result {
-                let json = QString::from(serde_json::to_string(&command_result).unwrap());
-                self_pinned.borrow().commandResultReceived(json, invocation_id);
-            }
+        if let Some((invocation_id, command_result)) = new_display_data.new_command_result {
+            let json = QString::from(serde_json::to_string(&command_result).unwrap());
+            self.commandResultReceived(json, invocation_id);
+        }
 
-            if let Some((invocation_id, new_monitor_data)) = new_display_data.new_monitoring_data {
-                self_pinned.borrow().monitoringDataReceived(QString::from(host_state.host.name.clone()),
-                                                            QString::from(new_monitor_data.display_options.category.clone()),
-                                                            new_monitor_data.to_qvariant(),
-                                                            invocation_id);
+        if let Some((invocation_id, new_monitor_data)) = new_display_data.new_monitoring_data {
+            self.monitoringDataReceived(QString::from(host_state.host.name.clone()),
+                                                        QString::from(new_monitor_data.display_options.category.clone()),
+                                                        new_monitor_data.to_qvariant(),
+                                                        invocation_id);
 
 
-                // Find out any monitor state changes and signal accordingly.
-                if let Some(old_data) = maybe_old_data {
-                    let new_criticality = new_monitor_data.values.back().unwrap().criticality;
+            // Find out any monitor state changes and signal accordingly.
+            if let Some(old_data) = maybe_old_data {
+                let new_criticality = new_monitor_data.values.back().unwrap().criticality;
 
-                    if let Some(old_monitor_data) = old_data.host_state.monitor_data.get(&new_monitor_data.monitor_id) {
-                        let old_criticality = old_monitor_data.values.back().unwrap().criticality;
+                if let Some(old_monitor_data) = old_data.host_state.monitor_data.get(&new_monitor_data.monitor_id) {
+                    let old_criticality = old_monitor_data.values.back().unwrap().criticality;
 
-                        if new_criticality != old_criticality {
-                            self_pinned.borrow().monitor_state_changed(
-                                QString::from(host_state.host.name.clone()),
-                                QString::from(new_monitor_data.monitor_id.clone()),
-                                QString::from(new_criticality.to_string())
-                            );
-                        }
+                    if new_criticality != old_criticality {
+                        self.monitor_state_changed(
+                            QString::from(host_state.host.name.clone()),
+                            QString::from(new_monitor_data.monitor_id.clone()),
+                            QString::from(new_criticality.to_string())
+                        );
                     }
                 }
             }
-
-            for error in new_display_data.new_errors {
-                self_pinned.borrow().errorReceived(QString::from(error.criticality.to_string()), QString::from(error.message));
-            }
-
-            for request in new_display_data.verification_requests {
-                self_pinned.borrow().verificationRequested(
-                    QString::from(host_state.host.name.clone()),
-                    QString::from(request.source_id),
-                    QString::from(request.message),
-                    QString::from(request.key_id),
-                );
-            }
-
-            self_pinned.borrow().updateReceived(QString::from(host_state.host.name.clone()));
         }
+
+        for error in new_display_data.new_errors {
+            self.errorReceived(QString::from(error.criticality.to_string()), QString::from(error.message));
+        }
+
+        for request in new_display_data.verification_requests {
+            self.verificationRequested(
+                QString::from(host_state.host.name.clone()),
+                QString::from(request.source_id),
+                QString::from(request.message),
+                QString::from(request.key_id),
+            );
+        }
+
+        self.updateReceived(QString::from(host_state.host.name.clone()));
 
         // This is the first launch so display a note about the project being in early development.
         if self.display_data.hosts.len() == 1 && self.display_data.hosts.contains_key("example-host") {
