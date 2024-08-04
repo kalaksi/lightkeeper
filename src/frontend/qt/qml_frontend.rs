@@ -72,14 +72,13 @@ impl QmlFrontend {
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
-        qml_register_type::<CooldownTimerModel>(cstr::cstr!("CooldownTimerModel"), 1, 0, cstr::cstr!("CooldownTimerModel"));
 
-        let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
-        let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
-        let qt_data_command_handler = QObjectBox::new(command_handler_model);
-        let qt_data_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
-        let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
-        let sandboxed_updated = qt_data_config_manager.pinned().borrow_mut().setSandboxed(sandboxed);
+        let qt_theme = QObjectBox::new(self.theme.take().unwrap());
+        let qt_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
+        let qt_command_handler = QObjectBox::new(command_handler_model);
+        let qt_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
+        let qt_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
+        let sandboxed_updated = qt_config_manager.pinned().borrow_mut().setSandboxed(sandboxed);
         let mut engine = QmlEngine::new();
 
         if sandboxed_updated {
@@ -90,11 +89,11 @@ impl QmlFrontend {
             if sandboxed {
                 engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml/"));
             }
-            engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
-            engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
-            engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
-            engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
-            engine.set_object_property(QString::from("DesktopPortal"), qt_data_desktop_portal.pinned());
+            engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
+            engine.set_object_property(QString::from("HostDataManager"), qt_host_data_manager.pinned());
+            engine.set_object_property(QString::from("CommandHandler"), qt_command_handler.pinned());
+            engine.set_object_property(QString::from("ConfigManager"), qt_config_manager.pinned());
+            engine.set_object_property(QString::from("DesktopPortal"), qt_desktop_portal.pinned());
             self.load_qml(&mut engine);
             engine.exec();
         }
@@ -115,7 +114,6 @@ impl QmlFrontend {
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
-        qml_register_type::<CooldownTimerModel>(cstr::cstr!("CooldownTimerModel"), 1, 0, cstr::cstr!("CooldownTimerModel"));
 
         let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
         let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());

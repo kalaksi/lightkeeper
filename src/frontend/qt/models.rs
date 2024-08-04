@@ -25,7 +25,4 @@ pub use property_table_model::PropertyTableModel;
 pub mod desktop_portal_model;
 pub use desktop_portal_model::DesktopPortalModel;
 
-pub mod cooldown_timer_model;
-pub use cooldown_timer_model::CooldownTimerModel;
-
 pub mod qmetatypes;
