@@ -1,3 +1,6 @@
+pub mod lkbackend_model;
+pub use lkbackend_model::LkBackend;
+
 pub mod theme_model;
 pub use theme_model::ThemeModel;
 

@@ -74,7 +74,6 @@ pub fn run(
 
     let module_metadatas = module_factory.get_module_metadatas();
     let mut frontend = frontend::qt::QmlFrontend::new(
-        host_manager.borrow().get_display_data(),
         config_dir,
         main_config,
         hosts_config,
@@ -84,10 +83,10 @@ pub fn run(
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if test {
-        let _engine = frontend.start_testing(command_handler, monitor_manager, connection_manager, host_manager, main_config.clone());
+        let _engine = frontend.start_testing(command_handler, monitor_manager, connection_manager, host_manager);
         ExitReason::Quit
     }
     else {
-        frontend.start(command_handler, monitor_manager, connection_manager, host_manager, main_config.clone())
+        frontend.start(command_handler, monitor_manager, connection_manager, host_manager)
     }
 }

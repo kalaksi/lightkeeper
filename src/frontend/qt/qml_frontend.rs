@@ -19,16 +19,18 @@ use crate::{
 
 
 pub struct QmlFrontend {
-    theme: Option<ThemeModel>,
+    config_dir: String,
+    main_config: configuration::Configuration,
+    hosts_config: configuration::Hosts,
+    group_config: configuration::Groups,
+    module_metadatas: Vec<Metadata>,
+    update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
     update_sender_prototype: mpsc::Sender<frontend::HostDisplayData>,
-    host_data_manager: Option<HostDataManagerModel>,
-    config_manager: Option<ConfigManagerModel>,
 }
 
 impl QmlFrontend {
     /// Parameters provide the initial data and configuration for the frontend.
-    pub fn new(display_data: frontend::DisplayData,
-               config_dir: &String,
+    pub fn new(config_dir: &String,
                main_config: &configuration::Configuration,
                hosts_config: &configuration::Hosts,
                group_config: &configuration::Groups,
@@ -46,15 +48,16 @@ impl QmlFrontend {
             std::env::set_var("QT_STYLE_OVERRIDE", style);
         }
 
-        let theme_model = ThemeModel::new(main_config.display_options.clone());
-        let host_data_manager = HostDataManagerModel::new(display_data, main_config.clone());
-        let config_manager = ConfigManagerModel::new(config_dir.clone(), main_config.clone(), hosts_config.clone(), group_config.clone(), module_metadatas);
+        let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
 
         QmlFrontend {
-            theme: Some(theme_model),
-            update_sender_prototype: host_data_manager.new_update_sender(),
-            host_data_manager: Some(host_data_manager),
-            config_manager: Some(config_manager),
+            main_config: main_config.clone(),
+            config_dir: config_dir.clone(),
+            hosts_config: hosts_config.clone(),
+            group_config: group_config.clone(),
+            module_metadatas: module_metadatas,
+            update_receiver: Some(receiver),
+            update_sender_prototype: sender,
         }
     }
 
@@ -63,22 +66,24 @@ impl QmlFrontend {
         command_handler: CommandHandler,
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
-        host_manager: Rc<RefCell<host_manager::HostManager>>,
-        config: configuration::Configuration) -> ExitReason {
-
-        let sandboxed = env::var("FLATPAK_ID").is_ok();
-
-        let command_handler_model = CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, config);
+        host_manager: Rc<RefCell<host_manager::HostManager>>) -> ExitReason {
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
 
-        let qt_theme = QObjectBox::new(self.theme.take().unwrap());
-        let qt_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
-        let qt_command_handler = QObjectBox::new(command_handler_model);
+        let display_data = host_manager.borrow().get_display_data();
+        let qt_theme = QObjectBox::new(ThemeModel::new(self.main_config.display_options.clone()));
         let qt_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
-        let qt_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
-        let sandboxed_updated = qt_config_manager.pinned().borrow_mut().setSandboxed(sandboxed);
+        let qt_lkbackend = QObjectBox::new(LkBackend::new(
+            self.update_sender_prototype.clone(),
+            self.update_receiver.take().unwrap(),
+            HostDataManagerModel::new(display_data, self.main_config.clone()),
+            CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, self.main_config.clone()),
+            ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
+        ));
+
+        let sandboxed = env::var("FLATPAK_ID").is_ok();
+        let sandboxed_updated = qt_lkbackend.pinned().borrow_mut().config.borrow_mut().setSandboxed(sandboxed);
         let mut engine = QmlEngine::new();
 
         if sandboxed_updated {
@@ -89,10 +94,8 @@ impl QmlFrontend {
             if sandboxed {
                 engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml/"));
             }
+            engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
             engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
-            engine.set_object_property(QString::from("HostDataManager"), qt_host_data_manager.pinned());
-            engine.set_object_property(QString::from("CommandHandler"), qt_command_handler.pinned());
-            engine.set_object_property(QString::from("ConfigManager"), qt_config_manager.pinned());
             engine.set_object_property(QString::from("DesktopPortal"), qt_desktop_portal.pinned());
             self.load_qml(&mut engine);
             engine.exec();
@@ -107,26 +110,26 @@ impl QmlFrontend {
         command_handler: CommandHandler,
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
-        host_manager: Rc<RefCell<host_manager::HostManager>>,
-        config: configuration::Configuration) -> QmlEngine {
-
-        let command_handler_model = CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, config);
+        host_manager: Rc<RefCell<host_manager::HostManager>>) -> QmlEngine {
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
 
-        let qt_data_theme = QObjectBox::new(self.theme.take().unwrap());
-        let qt_data_host_data_manager = QObjectBox::new(self.host_data_manager.take().unwrap());
-        let qt_data_command_handler = QObjectBox::new(command_handler_model);
-        let qt_data_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
-        let qt_data_config_manager = QObjectBox::new(self.config_manager.take().unwrap());
+        let display_data = host_manager.borrow().get_display_data();
+        let qt_theme = QObjectBox::new(ThemeModel::new(self.main_config.display_options.clone()));
+        let qt_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
+        let qt_lkbackend = QObjectBox::new(LkBackend::new(
+            self.update_sender_prototype.clone(),
+            self.update_receiver.take().unwrap(),
+            HostDataManagerModel::new(display_data, self.main_config.clone()),
+            CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, self.main_config.clone()),
+            ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
+        ));
 
         let mut engine = QmlEngine::new();
-        engine.set_object_property(QString::from("Theme"), qt_data_theme.pinned());
-        engine.set_object_property(QString::from("HostDataManager"), qt_data_host_data_manager.pinned());
-        engine.set_object_property(QString::from("CommandHandler"), qt_data_command_handler.pinned());
-        engine.set_object_property(QString::from("ConfigManager"), qt_data_config_manager.pinned());
-        engine.set_object_property(QString::from("DesktopPortal"), qt_data_desktop_portal.pinned());
+        engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
+        engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
+        engine.set_object_property(QString::from("DesktopPortal"), qt_desktop_portal.pinned());
         self.load_qml(&mut engine);
         engine
     }

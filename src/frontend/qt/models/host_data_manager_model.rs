@@ -1,6 +1,3 @@
-use std::thread;
-use std::sync::mpsc;
-
 extern crate qmetaobject;
 use qmetaobject::*;
 
@@ -16,10 +13,7 @@ use crate::utils::ErrorMessage;
 #[allow(non_snake_case)]
 pub struct HostDataManagerModel {
     base: qt_base_class!(trait QObject),
-
-    receive_updates: qt_method!(fn(&self)),
     reset: qt_method!(fn(&mut self)),
-    stop: qt_method!(fn(&mut self)),
 
     //
     // Signals
@@ -62,14 +56,11 @@ pub struct HostDataManagerModel {
     // Private properties
     //
 
-    // Basically contains the state of hosts and relevant data. Received from HostManager.
+    // Basically contains the state of hosts and relevant data.
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
     configuration_preferences: configuration::Preferences,
     configuration_cache_settings: configuration::CacheSettings,
-    update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
-    update_receiver_thread: Option<thread::JoinHandle<()>>,
-    update_sender_prototype: Option<mpsc::Sender<frontend::HostDisplayData>>,
 }
 
 #[allow(non_snake_case)]
@@ -81,143 +72,97 @@ impl HostDataManagerModel {
 
         priorities.sort_by(|left, right| left.1.cmp(&right.1));
 
-        let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
-
         HostDataManagerModel {
             display_data: display_data,
-            update_receiver: Some(receiver),
-            update_receiver_thread: None,
             // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             configuration_preferences: config.preferences,
             configuration_cache_settings: config.cache_settings,
-            update_sender_prototype: Some(sender),
             ..Default::default()
         }
     }
 
-    fn receive_updates(&mut self) {
-        // Shouldn't (and can't) be run more than once.
-        if self.update_receiver_thread.is_none() {
-            let self_ptr = QPointer::from(&*self);
 
-            let set_data = qmetaobject::queued_callback(move |new_display_data: frontend::HostDisplayData| {
-                if let Some(self_pinned) = self_ptr.as_pinned() {
-                    // HostDataModel cannot be passed between threads so parsing happens here.
-                    let host_state = &new_display_data.host_state;
+    pub fn process_update(&self, new_display_data: frontend::HostDisplayData) {
+        let self_ptr = QPointer::from(&*self);
+        if let Some(self_pinned) = self_ptr.as_pinned() {
+            // HostDataModel cannot be passed between threads so parsing happens here.
+            let host_state = &new_display_data.host_state;
 
-                    let maybe_old_data = self_pinned.borrow_mut().display_data.hosts.insert(
-                        host_state.host.name.clone(),
-                        new_display_data.clone()
-                    );
+            let maybe_old_data = self_pinned.borrow_mut().display_data.hosts.insert(
+                host_state.host.name.clone(),
+                new_display_data.clone()
+            );
 
-                    if host_state.just_initialized {
-                        ::log::debug!("Host {} initialized", host_state.host.name);
-                        self_pinned.borrow().host_initialized(QString::from(host_state.host.name.clone()));
-                    }
-                    else if host_state.just_initialized_from_cache {
-                        ::log::debug!("Host {} initialized from cache", host_state.host.name);
-                        self_pinned.borrow().host_initialized_from_cache(QString::from(host_state.host.name.clone()));
-                    }
-
-                    if let Some((invocation_id, command_result)) = new_display_data.new_command_result {
-                        let json = QString::from(serde_json::to_string(&command_result).unwrap());
-                        self_pinned.borrow().commandResultReceived(json, invocation_id);
-                    }
-
-                    if let Some((invocation_id, new_monitor_data)) = new_display_data.new_monitoring_data {
-                        self_pinned.borrow().monitoringDataReceived(QString::from(host_state.host.name.clone()),
-                                                                    QString::from(new_monitor_data.display_options.category.clone()),
-                                                                    new_monitor_data.to_qvariant(),
-                                                                    invocation_id);
-
-
-                        // Find out any monitor state changes and signal accordingly.
-                        if let Some(old_data) = maybe_old_data {
-                            let new_criticality = new_monitor_data.values.back().unwrap().criticality;
-
-                            if let Some(old_monitor_data) = old_data.host_state.monitor_data.get(&new_monitor_data.monitor_id) {
-                                let old_criticality = old_monitor_data.values.back().unwrap().criticality;
-
-                                if new_criticality != old_criticality {
-                                    self_pinned.borrow().monitor_state_changed(
-                                        QString::from(host_state.host.name.clone()),
-                                        QString::from(new_monitor_data.monitor_id.clone()),
-                                        QString::from(new_criticality.to_string())
-                                    );
-                                }
-                            }
-                        }
-                    }
-
-                    for error in new_display_data.new_errors {
-                        self_pinned.borrow().errorReceived(QString::from(error.criticality.to_string()), QString::from(error.message));
-                    }
-
-                    for request in new_display_data.verification_requests {
-                        self_pinned.borrow().verificationRequested(
-                            QString::from(host_state.host.name.clone()),
-                            QString::from(request.source_id),
-                            QString::from(request.message),
-                            QString::from(request.key_id),
-                        );
-                    }
-
-                    self_pinned.borrow().updateReceived(QString::from(host_state.host.name.clone()));
-                }
-            });
-
-            // This is the first launch so display a note about the project being in early development.
-            if self.display_data.hosts.len() == 1 && self.display_data.hosts.contains_key("example-host") {
-                let error = ErrorMessage::new(
-                    Criticality::Critical,
-                    String::from("Looks like this is the first time you have started LightkeeperRM.  
-                                This version is still an early release and may be missing some features and contain bugs.  
-                                See https://github.com/kalaksi/lightkeeper for the issue tracker and some documentation.")
-                );
-                self.errorReceived(QString::from(Criticality::Critical.to_string()), QString::from(error.message));
+            if host_state.just_initialized {
+                ::log::debug!("Host {} initialized", host_state.host.name);
+                self_pinned.borrow().host_initialized(QString::from(host_state.host.name.clone()));
+            }
+            else if host_state.just_initialized_from_cache {
+                ::log::debug!("Host {} initialized from cache", host_state.host.name);
+                self_pinned.borrow().host_initialized_from_cache(QString::from(host_state.host.name.clone()));
             }
 
-            let receiver = self.update_receiver.take().unwrap();
-            let thread = std::thread::spawn(move || {
-                loop {
-                    match receiver.recv() {
-                        Ok(received_data) => {
-                            if received_data.stop {
-                                ::log::debug!("Gracefully exiting UI state receiver thread");
-                                return;
-                            }
-                            else {
-                                set_data(received_data);
-                            }
-                        },
-                        Err(error) => {
-                            ::log::error!("Stopped UI state receiver thread: {}", error);
-                            return;
+            if let Some((invocation_id, command_result)) = new_display_data.new_command_result {
+                let json = QString::from(serde_json::to_string(&command_result).unwrap());
+                self_pinned.borrow().commandResultReceived(json, invocation_id);
+            }
+
+            if let Some((invocation_id, new_monitor_data)) = new_display_data.new_monitoring_data {
+                self_pinned.borrow().monitoringDataReceived(QString::from(host_state.host.name.clone()),
+                                                            QString::from(new_monitor_data.display_options.category.clone()),
+                                                            new_monitor_data.to_qvariant(),
+                                                            invocation_id);
+
+
+                // Find out any monitor state changes and signal accordingly.
+                if let Some(old_data) = maybe_old_data {
+                    let new_criticality = new_monitor_data.values.back().unwrap().criticality;
+
+                    if let Some(old_monitor_data) = old_data.host_state.monitor_data.get(&new_monitor_data.monitor_id) {
+                        let old_criticality = old_monitor_data.values.back().unwrap().criticality;
+
+                        if new_criticality != old_criticality {
+                            self_pinned.borrow().monitor_state_changed(
+                                QString::from(host_state.host.name.clone()),
+                                QString::from(new_monitor_data.monitor_id.clone()),
+                                QString::from(new_criticality.to_string())
+                            );
                         }
                     }
                 }
-            });
+            }
 
-            self.update_receiver_thread = Some(thread);
+            for error in new_display_data.new_errors {
+                self_pinned.borrow().errorReceived(QString::from(error.criticality.to_string()), QString::from(error.message));
+            }
+
+            for request in new_display_data.verification_requests {
+                self_pinned.borrow().verificationRequested(
+                    QString::from(host_state.host.name.clone()),
+                    QString::from(request.source_id),
+                    QString::from(request.message),
+                    QString::from(request.key_id),
+                );
+            }
+
+            self_pinned.borrow().updateReceived(QString::from(host_state.host.name.clone()));
         }
-    }
 
-    pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {
-        self.update_sender_prototype.as_ref().unwrap().clone()
+        // This is the first launch so display a note about the project being in early development.
+        if self.display_data.hosts.len() == 1 && self.display_data.hosts.contains_key("example-host") {
+            let error = ErrorMessage::new(
+                Criticality::Critical,
+                String::from("Looks like this is the first time you have started LightkeeperRM.  
+                            This version is still an early release and may be missing some features and contain bugs.  
+                            See https://github.com/kalaksi/lightkeeper for the issue tracker and some documentation.")
+            );
+            self.errorReceived(QString::from(Criticality::Critical.to_string()), QString::from(error.message));
+        }
     }
 
     pub fn reset(&mut self) {
         self.display_data.hosts.clear();
-    }
-
-    pub fn stop(&mut self) {
-        self.new_update_sender()
-            .send(frontend::HostDisplayData::stop()).unwrap();
-
-        if let Some(thread) = self.update_receiver_thread.take() {
-            thread.join().unwrap();
-        }
     }
 
     // TODO: remove
