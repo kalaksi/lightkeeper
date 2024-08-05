@@ -77,8 +77,10 @@ impl QmlFrontend {
         let qt_lkbackend = QObjectBox::new(LkBackend::new(
             self.update_sender_prototype.clone(),
             self.update_receiver.take().unwrap(),
+            host_manager,
+            connection_manager,
             HostDataManagerModel::new(display_data, self.main_config.clone()),
-            CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, self.main_config.clone()),
+            CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
             ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
         ));
 
@@ -121,8 +123,10 @@ impl QmlFrontend {
         let qt_lkbackend = QObjectBox::new(LkBackend::new(
             self.update_sender_prototype.clone(),
             self.update_receiver.take().unwrap(),
+            host_manager,
+            connection_manager,
             HostDataManagerModel::new(display_data, self.main_config.clone()),
-            CommandHandlerModel::new(command_handler, monitor_manager, connection_manager, host_manager, self.main_config.clone()),
+            CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
             ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
         ));
 

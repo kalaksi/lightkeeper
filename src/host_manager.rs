@@ -54,9 +54,8 @@ impl HostManager {
     }
 
     pub fn configure(&mut self, config: &configuration::Hosts) {
-        if self.receiver_thread.is_some() {
-            self.stop();
-        }
+        self.stop();
+
         let mut hosts = self.hosts.lock().unwrap();
         hosts.clear();
 
@@ -83,11 +82,11 @@ impl HostManager {
     }
 
     pub fn stop(&mut self) {
-        self.new_state_update_sender()
-            .send(StateUpdateMessage::stop())
-            .unwrap_or_else(|error| log::error!("Couldn't send stop command to state manager: {}", error));
-
         if let Some(thread) = self.receiver_thread.take() {
+            self.new_state_update_sender()
+                .send(StateUpdateMessage::stop())
+                .unwrap_or_else(|error| log::error!("Couldn't send stop command to state manager: {}", error));
+
             thread.join().unwrap();
         }
     }
@@ -124,6 +123,8 @@ impl HostManager {
         observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
+            log::debug!("Started receiving updates");
+
             loop {
                 let state_update = match receiver.recv() {
                     Ok(data) => data,

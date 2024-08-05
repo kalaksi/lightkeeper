@@ -57,6 +57,8 @@ impl MonitorManager {
                      request_sender: mpsc::Sender<ConnectorRequest>,
                      state_update_sender: mpsc::Sender<StateUpdateMessage>) {
 
+        self.stop();
+
         self.monitors.lock().unwrap().clear();
         self.request_sender = Some(request_sender);
         self.state_update_sender = Some(state_update_sender);
@@ -86,11 +88,11 @@ impl MonitorManager {
     }
 
     pub fn stop(&mut self) {
-        self.new_response_sender()
-            .send(RequestResponse::stop())
-            .unwrap_or_else(|error| log::error!("Couldn't send exit token to command handler: {}", error));
-
         if let Some(thread) = self.response_receiver_thread.take() {
+            self.new_response_sender()
+                .send(RequestResponse::stop())
+                .unwrap_or_else(|error| log::error!("Couldn't send exit token to command handler: {}", error));
+
             thread.join().unwrap();
         }
     }
@@ -374,6 +376,8 @@ impl MonitorManager {
     ) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
+            log::debug!("Started processing responses");
+
             loop {
                 let response = match response_receiver.recv() {
                     Ok(response) => response,

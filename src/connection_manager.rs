@@ -49,9 +49,7 @@ impl ConnectionManager {
     }
 
     pub fn configure(&mut self, hosts_config: &Hosts, cache_settings: &CacheSettings) {
-        if self.receiver_thread.is_some() {
-            self.stop();
-        }
+        self.stop();
 
         self.stateful_connectors = Some(HashMap::new());
         self.cache_settings = cache_settings.clone();
@@ -121,15 +119,11 @@ impl ConnectionManager {
     }
 
     pub fn stop(&mut self) {
-        self.new_request_sender()
-            .send(ConnectorRequest::exit_token())
-            .unwrap_or_else(|error| log::error!("Couldn't send exit token to connection manager: {}", error));
-
-        self.join();
-    }
-
-    pub fn join(&mut self) {
         if let Some(thread) = self.receiver_thread.take() {
+            self.new_request_sender()
+                .send(ConnectorRequest::exit_token())
+                .unwrap_or_else(|error| log::error!("Couldn't send exit token to connection manager: {}", error));
+
             thread.join().unwrap();
         }
     }

@@ -26,6 +26,7 @@ Item {
 
 
     Component.onCompleted: {
+        root._categories = []
         refresh()
     }
 

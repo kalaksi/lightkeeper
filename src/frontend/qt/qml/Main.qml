@@ -413,12 +413,11 @@ ApplicationWindow {
         hostTableModel.displayData = LK.hosts.getDisplayData()
 
         let configs = LK.config.reloadConfiguration()
-        LK.command.reconfigure(configs[0], configs[1])
+        LK.reconfigure(configs[0], configs[1])
     }
 
     function quit() {
-        LK.command.stop()
-        LK.hosts.stop()
+        LK.stop()
         DesktopPortal.stop()
         Qt.quit()
     }

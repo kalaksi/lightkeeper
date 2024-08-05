@@ -153,6 +153,7 @@ LightkeeperDialog {
                 width: parent.width
                 text: {
                     if (root.hostSettings.overrides !== undefined &&
+                        root.hostSettings.overrides.connectors !== undefined &&
                         root.hostSettings.overrides.connectors["ssh"] !== undefined &&
                         root.hostSettings.overrides.connectors["ssh"].settings["port"] !== undefined) {
 

@@ -19,7 +19,7 @@ pub struct HostDataManagerModel {
     // Signals
     //
 
-    updateReceived: qt_signal!(host_id: QString),
+    pub updateReceived: qt_signal!(host_id: QString),
     host_initialized: qt_signal!(host_id: QString),
     host_initialized_from_cache: qt_signal!(host_id: QString),
     monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
