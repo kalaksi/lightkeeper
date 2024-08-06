@@ -5,9 +5,9 @@ use qmetaobject::*;
 
 use crate::{
     configuration,
-    host_manager,
-    connection_manager::ConnectionManager,
+    connection_manager::{CachePolicy, ConnectionManager},
     frontend::HostDisplayData,
+    host_manager
 };
 
 use super::{CommandHandlerModel, ConfigManagerModel, HostDataManagerModel};
@@ -72,29 +72,6 @@ impl LkBackend {
         }
     }
 
-    fn setup_signals(&mut self) {
-        // function onHost_initialized(hostId) {
-        //     let categories = LK.command.getAllHostCategories(hostId)
-        //     for (const category of categories) {
-        //         LK.command.refresh_monitors_of_category(hostId, category)
-        //     }
-        // }
-
-        // let hosts_model = self.hosts.borrow();
-        // let hosts_model_ptr = QPointer::from(&*hosts_model);
-
-        // unsafe {
-        //     qmetaobject::connections::connect(
-        //         QPointer::from(&*hosts_model).cpp_ptr(),
-        //         hosts_model.updateReceived.to_cpp_representation(hosts_model)
-        //     );
-        // }
-
-        //     &HostDataManagerModel::updateDisplayData, move || {
-        //     self_pinned.borrow().hosts.borrow_mut().process_update(new_display_data);
-        // });
-    }
-
     fn receiveUpdates(&mut self) {
         // Shouldn't (and can't) be run more than once.
         let update_receiver = if let Some(receiver) = self.update_receiver.take() {
@@ -104,26 +81,23 @@ impl LkBackend {
         };
 
         let self_ptr = QPointer::from(&*self);
-        let mut is_set_up = false;
 
-        let process_update = qmetaobject::queued_callback(move |new_display_data: HostDisplayData| {
+        let process_update = qmetaobject::queued_callback(move |new_data: HostDisplayData| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
-                // TODO
-                // if new_display_data.host_state.just_initialized {
-                //     ::log::debug!("Host {} initialized", new_display_data.host_state.host.name);
-                //     self_pinned.borrow().command.
-                // }
-                // else if new_display_data.host_state.just_initialized_from_cache {
-                //     ::log::debug!("Host {} initialized from cache", new_display_data.host_state.host.name);
-                // }
 
-                if !is_set_up {
-                    // First, set up some signals.
-                    self_pinned.borrow_mut().setup_signals();
-                    is_set_up = true;
+                // Special case for host initialization. Proper monitor processing is started after initialization step.
+                if new_data.host_state.just_initialized {
+                    ::log::debug!("Host {} initialized", new_data.host_state.host.name);
+                    self_pinned.borrow().command.borrow_mut().refresh_host_monitors(new_data.host_state.host.name, None);
+                    return;
+                }
+                else if new_data.host_state.just_initialized_from_cache {
+                    ::log::debug!("Host {} initialized from cache", new_data.host_state.host.name);
+                    self_pinned.borrow().command.borrow_mut().refresh_host_monitors(new_data.host_state.host.name, Some(CachePolicy::OnlyCache));
+                    return;
                 }
 
-                self_pinned.borrow().hosts.borrow_mut().process_update(new_display_data);
+                self_pinned.borrow().hosts.borrow_mut().process_update(new_data);
             }
         });
 

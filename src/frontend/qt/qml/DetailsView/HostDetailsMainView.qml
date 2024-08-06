@@ -136,7 +136,7 @@ Item {
                         icon: Theme.categoryIcon(modelData)
                         color: Theme.categoryColor(modelData)
                         onRefreshClicked: function() {
-                            LK.command.force_refresh_monitors_of_category(root.hostId, modelData)
+                            LK.command.forceRefreshMonitorsOfCategory(root.hostId, modelData)
                             groupBoxLabel.refreshProgress = 0
                             groupBox.blocked = true
                         }

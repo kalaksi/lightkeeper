@@ -85,20 +85,6 @@ ApplicationWindow {
             }
         }
 
-        function onHost_initialized(hostId) {
-            let categories = LK.command.getAllHostCategories(hostId)
-            for (const category of categories) {
-                LK.command.refresh_monitors_of_category(hostId, category)
-            }
-        }
-
-        function onHost_initialized_from_cache(hostId) {
-            let categories = LK.command.getAllHostCategories(hostId)
-            for (const category of categories) {
-                LK.command.cached_refresh_monitors_of_category(hostId, category)
-            }
-        }
-
         function onMonitor_state_changed(hostId, monitorId, newCriticality) {
             hostTable.highlightMonitor(hostId, monitorId, newCriticality)
         }

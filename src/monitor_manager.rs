@@ -233,27 +233,17 @@ impl MonitorManager {
     }
 
     /// Returns the invocation IDs of the refresh operations.
-    pub fn refresh_monitors_of_category_control(&mut self, host_id: &String, category: &String, cache_policy: CachePolicy) -> Vec<u64> {
+    pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String, cache_policy: Option<CachePolicy>) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let monitors = self.monitors.lock().unwrap();
         let monitors_by_category = monitors[host_id].iter()
                                                     .filter(|(_, monitor)| &monitor.get_display_options().category == category)
                                                     .collect();
 
-        let invocation_ids = self.refresh_monitors(host, monitors_by_category, cache_policy);
-        self.invocation_id_counter += invocation_ids.len() as u64;
-        invocation_ids
-    }
-
-    /// Returns the invocation IDs of the refresh operations.
-    pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String) -> Vec<u64> {
-        let host = self.host_manager.borrow().get_host(host_id);
-        let monitors = self.monitors.lock().unwrap();
-        let monitors_by_category = monitors[host_id].iter()
-                                                    .filter(|(_, monitor)| &monitor.get_display_options().category == category)
-                                                    .collect();
-
-        let cache_policy = if !self.cache_settings.enable_cache {
+        let cache_policy = if let Some(cache_policy) = cache_policy {
+            cache_policy
+        }
+        else if !self.cache_settings.enable_cache {
             CachePolicy::BypassCache
         }
         else if self.cache_settings.prefer_cache {

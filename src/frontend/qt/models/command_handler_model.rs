@@ -40,9 +40,7 @@ pub struct CommandHandlerModel {
 
     // Monitor refresh methods.
     forceRefreshMonitorsOfCommand: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
-    cached_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
-    refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
-    force_refresh_monitors_of_category: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+    forceRefreshMonitorsOfCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
 
     //
     // Signals
@@ -104,6 +102,12 @@ impl CommandHandlerModel {
     pub fn stop(&mut self) {
         self.command_handler.stop();
         self.monitor_manager.stop();
+    }
+
+    pub fn refresh_host_monitors(&mut self, host_id: String, cache_policy: Option<CachePolicy>) {
+        for category in self.monitor_manager.get_all_host_categories(&host_id) {
+            let _invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id, &category, cache_policy);
+        }
     }
 
     // Return CommandDatas relevant to category as QVariants.
@@ -370,18 +374,8 @@ impl CommandHandlerModel {
         QVariantList::from_iter(invocation_ids)
     }
 
-    fn cached_refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
-        let invocation_ids = self.monitor_manager.refresh_monitors_of_category_control(&host_id.to_string(), &category.to_string(), CachePolicy::OnlyCache);
-        QVariantList::from_iter(invocation_ids)
-    }
-
-    fn refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
-        let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
-        QVariantList::from_iter(invocation_ids)
-    }
-
-    fn force_refresh_monitors_of_category(&mut self, host_id: QString, category: QString) -> QVariantList {
-        let invocation_ids = self.monitor_manager.refresh_monitors_of_category_control(&host_id.to_string(), &category.to_string(), CachePolicy::BypassCache);
+    fn forceRefreshMonitorsOfCategory(&mut self, host_id: QString, category: QString) -> QVariantList {
+        let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string(), Some(CachePolicy::BypassCache));
         QVariantList::from_iter(invocation_ids)
     }
 

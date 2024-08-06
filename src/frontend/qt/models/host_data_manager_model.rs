@@ -92,15 +92,6 @@ impl HostDataManagerModel {
             new_display_data.clone()
         );
 
-        if host_state.just_initialized {
-            ::log::debug!("Host {} initialized", host_state.host.name);
-            self.host_initialized(QString::from(host_state.host.name.clone()));
-        }
-        else if host_state.just_initialized_from_cache {
-            ::log::debug!("Host {} initialized from cache", host_state.host.name);
-            self.host_initialized_from_cache(QString::from(host_state.host.name.clone()));
-        }
-
         if let Some((invocation_id, command_result)) = new_display_data.new_command_result {
             let json = QString::from(serde_json::to_string(&command_result).unwrap());
             self.commandResultReceived(json, invocation_id);
