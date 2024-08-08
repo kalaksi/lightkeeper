@@ -83,6 +83,7 @@ pub fn run(
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if test {
+        #[cfg(debug_assertions)]
         let _engine = frontend.start_testing(command_handler, monitor_manager, connection_manager, host_manager);
         ExitReason::Quit
     }
