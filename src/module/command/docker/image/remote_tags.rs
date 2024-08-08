@@ -105,7 +105,7 @@ impl CommandModule for RemoteTags {
                         .collect::<Vec<_>>();
 
                     if images_for_arch.len() > 1 {
-                        result_rows.push(format!("**{}**: (Error, too many images for arch {} found)", tag_details.name, host.platform.architecture));
+                        result_rows.push(format!("- **{}**: (Error, too many images for arch {} found)", tag_details.name, host.platform.architecture));
                     }
                     else if images_for_arch.len() == 1 {
                         let image_details = images_for_arch.first().unwrap();
@@ -120,6 +120,9 @@ impl CommandModule for RemoteTags {
 
                         let image_size_in_mb = image_details.size / 1024 / 1024;
                         result_rows.push(format!("- **{}**, last pushed {} UTC ({} MB)", tag_details.name, last_pushed_formatted, image_size_in_mb));
+                    }
+                    else {
+                        result_rows.push(format!("- **{}**: (No suitable images for arch \"{}\")", tag_details.name, host.platform.architecture));
                     }
                 }
             }
