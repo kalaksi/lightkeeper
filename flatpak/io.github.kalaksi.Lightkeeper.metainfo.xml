@@ -28,7 +28,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.18.0" date="2024-08-08">
+    <release version="0.18.1" date="2024-08-08">
       <description>
         <ul>
           <li>Added a tray icon</li>
