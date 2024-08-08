@@ -14,6 +14,7 @@ Dialog {
     property string text: ""
     property bool showProgress: true
     property int progress: 0
+    property bool enableShortcuts: false
 
     modal: true
     opacity: 0.0
@@ -55,7 +56,7 @@ Dialog {
             id: commandOutput
             visible: root.text.length > 0
             rows: root.text.split("\n")
-            enableShortcuts: true
+            enableShortcuts: root.enableShortcuts
             selectionColor: "transparent"
             invertRowOrder: false
 

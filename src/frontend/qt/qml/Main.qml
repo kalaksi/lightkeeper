@@ -376,6 +376,7 @@ ApplicationWindow {
         id: commandOutputDialog
         property int pendingInvocation: 0
 
+        enableShortcuts: visible
         anchors.centerIn: parent
         width: root.width * 0.6
         height: root.height * 0.8
