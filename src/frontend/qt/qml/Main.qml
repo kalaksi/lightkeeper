@@ -392,6 +392,17 @@ ApplicationWindow {
         onActivated: root.quit()
     }
 
+    LightkeeperTray {
+        onActivated: {
+            if (root.visible) {
+                root.hide()
+            }
+            else {
+                root.show()
+            }
+        }
+    }
+
 
     function reloadConfiguration() {
         LK.hosts.reset()

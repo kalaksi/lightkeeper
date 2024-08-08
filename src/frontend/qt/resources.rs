@@ -64,6 +64,9 @@ pub fn init_resources() {
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
 
+            // Tray icon
+            "images/lightkeeper-tray-icon.png" as "images/tray-icon",
+
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
             "images/nixos.svg" as "images/nixos",
@@ -145,6 +148,9 @@ pub fn init_resources() {
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
+
+            // Tray icon
+            "images/lightkeeper-tray-icon.png" as "images/tray-icon",
 
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
