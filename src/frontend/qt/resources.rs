@@ -59,7 +59,7 @@ pub fn init_resources() {
             "images/breeze/dark/run-build-file.svg" as "images/button/build-file",
             "images/breeze/dark/help-keyboard-shortcuts.svg" as "images/button/keyboard-shortcuts",
             "images/breeze/dark/edit-undo.svg" as "images/button/undo",
-
+            "images/breeze/dark/view-certificate.svg" as "images/button/certificates",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -145,6 +145,7 @@ pub fn init_resources() {
             "images/breeze/light/run-build-file.svg" as "images/button/build-file",
             "images/breeze/light/help-keyboard-shortcuts.svg" as "images/button/keyboard-shortcuts",
             "images/breeze/light/edit-undo.svg" as "images/button/undo",
+            "images/breeze/light/view-certificate.svg" as "images/button/certificates",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",

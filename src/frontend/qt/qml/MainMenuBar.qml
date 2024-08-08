@@ -17,6 +17,7 @@ ToolBar {
     signal clickedEdit()
     signal clickedPreferences()
     signal clickedHotkeyHelp()
+    signal clickedCertificateMonitor()
     signal filterChanged(string search)
 
     background: BorderRectangle {
@@ -30,12 +31,16 @@ ToolBar {
 
         ToolButton {
             icon.source: "qrc:/main/images/button/add"
+            text: "Add host"
+            display: AbstractButton.IconOnly
             onClicked: root.clickedAdd()
         }
 
         ToolButton {
             enabled: root.enableEditButtons
             opacity: Theme.opacity(enabled)
+            text: "Remove host"
+            display: AbstractButton.IconOnly
             icon.source: "qrc:/main/images/button/remove"
             onClicked: root.clickedRemove()
         }
@@ -46,6 +51,8 @@ ToolBar {
         ToolButton {
             enabled: root.enableEditButtons
             opacity: Theme.opacity(enabled)
+            display: AbstractButton.IconOnly
+            text: "Edit host"
             icon.source: "qrc:/main/images/button/entry-edit"
             onClicked: root.clickedEdit()
         }
@@ -73,15 +80,27 @@ ToolBar {
         }
 
         ToolButton {
+            icon.source: "qrc:/main/images/button/certificates"
+            text: "Cert. monitor"
+            display: AbstractButton.TextBesideIcon
+            onClicked: root.clickedCertificateMonitor()
+        }
+
+        ToolSeparator { }
+
+        ToolButton {
             icon.source: "qrc:/main/images/button/keyboard-shortcuts"
+            text: "Keyboard shortcuts"
+            display: AbstractButton.IconOnly
             onClicked: root.clickedHotkeyHelp()
         }
 
-        ToolSeparator {
-        }
+        ToolSeparator { }
 
         ToolButton {
             icon.source: "qrc:/main/images/button/configure"
+            text: "Configuration"
+            display: AbstractButton.IconOnly
             onClicked: root.clickedPreferences()
         }
     }

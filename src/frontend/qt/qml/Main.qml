@@ -51,6 +51,9 @@ ApplicationWindow {
             hostConfigurationDialog.hostId = hostTableModel.getSelectedHostId()
             hostConfigurationDialog.open()
         }
+        onClickedCertificateMonitor: {
+            certificateMonitorDialog.open()
+        }
         onClickedPreferences: {
             preferencesDialog.open()
         }
@@ -325,6 +328,12 @@ ApplicationWindow {
         onConfigurationChanged: {
             reloadConfiguration()
         }
+    }
+
+    CertificateMonitorDialog {
+        id: certificateMonitorDialog
+        anchors.centerIn: parent
+        bottomMargin: 0.15 * parent.height
     }
 
     PreferencesDialog {

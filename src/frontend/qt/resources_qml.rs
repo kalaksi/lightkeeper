@@ -37,6 +37,7 @@ pub fn init_resources() {
             "DetailsView/LogList.qml",
             "DetailsView/PropertyTableCell.qml",
             "DetailsView/PropertyTable.qml",
+            "Dialog/CertificateMonitorDialog.qml",
             "Dialog/CommandOutputDialog.qml",
             "Dialog/ConfigHelperDialog.qml",
             "Dialog/ConfirmationDialog.qml",
