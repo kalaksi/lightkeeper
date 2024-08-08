@@ -16,7 +16,7 @@ echo -e "\n* Updating Cargo.toml..."
 sed -i 's|^version = ".*|version = "'$version_only'"|' Cargo.toml
 
 # Test build and update cargo.lock
-cargo build
+cargo build --release
 
 # Make sure all QML files are defined in resources
 qml_files=$(find src/frontend/qt/qml \( -name '*.qml' -or -name '*.js' \) | sed 's/^src\/frontend\/qt\/qml\///')
