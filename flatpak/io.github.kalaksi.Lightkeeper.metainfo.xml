@@ -28,6 +28,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.18.0" date="2024-08-08">
+      <description>
+        <ul>
+          <li>Added a tray icon</li>
+          <li>Performance improvements and looks for command output/progress dialog</li>
+          <li>docker-image-remote-tags: support for all Docker Registry API v2 registries</li>
+          <li>Other small improvements</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.17.4" date="2024-07-06">
       <description>
         <ul>
