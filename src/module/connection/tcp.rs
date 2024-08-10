@@ -14,7 +14,7 @@ use crate::module::connection::*;
     name="tcp",
     version="0.0.1",
     cache_scope="Global",
-    description="Connects using TCP.",
+    description="Connects using TCP. Used for testing TCP (and TLS) connections.",
     settings={
         timeout => "How many seconds to wait for response. Default: 10.",
         verify_certificate => "Assume TLS (e.g. HTTPS) and verify certificate. Default: false.",
@@ -24,7 +24,6 @@ use crate::module::connection::*;
 pub struct Tcp {
     timeout: u16,
     verify_certificate: bool,
-    ca_certificates_path: Option<String>,
     rustls_client_config: Option<Arc<rustls::ClientConfig>>,
 }
 
@@ -66,7 +65,6 @@ impl Module for Tcp {
         Tcp {
             verify_certificate: verify_certificate,
             timeout: settings.get("timeout").map(|value| value.parse().unwrap_or_default()).unwrap_or(10),
-            ca_certificates_path: settings.get("ca_certificates_path").cloned(),
             rustls_client_config: client_config
         }
     }
