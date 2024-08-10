@@ -92,6 +92,15 @@ impl ResponseMessage {
         }
     }
 
+    /// Generic error with return code 1.
+    pub fn new_error(message: String) -> ResponseMessage {
+        ResponseMessage {
+            message: message,
+            return_code: 1,
+            ..Default::default()
+        }
+    }
+
     pub fn empty() -> ResponseMessage {
         ResponseMessage {
             ..Default::default()

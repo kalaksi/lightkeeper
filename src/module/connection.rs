@@ -17,3 +17,6 @@ pub use http_jwt::HttpJwt;
 
 pub mod local_command;
 pub use local_command::LocalCommand;
+
+pub mod tcp;
+pub use tcp::Tcp;
