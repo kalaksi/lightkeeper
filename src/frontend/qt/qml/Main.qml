@@ -88,7 +88,7 @@ ApplicationWindow {
             }
         }
 
-        function onMonitor_state_changed(hostId, monitorId, newCriticality) {
+        function onMonitorStateChanged(hostId, monitorId, newCriticality) {
             hostTable.highlightMonitor(hostId, monitorId, newCriticality)
         }
 
@@ -237,7 +237,7 @@ ApplicationWindow {
                         detailsView.hostId = hostTableModel.getSelectedHostId()
 
                         if (detailsView.hostId !== "") {
-                            if (!LK.hosts.is_host_initialized(detailsView.hostId)) {
+                            if (!LK.hosts.isHostInitialized(detailsView.hostId)) {
                                 LK.command.initializeHost(detailsView.hostId)
                             }
                             statusBar.jobsLeft = LK.hosts.getPendingCommandCount(detailsView.hostId) +

@@ -70,6 +70,15 @@ LightkeeperDialog {
                 Item {
                     Layout.fillWidth: true
                 }
+
+                ToolButton {
+                    display: AbstractButton.IconOnly
+                    text: "Refresh"
+                    icon.source: "qrc:/main/images/button/refresh"
+                    onClicked: {
+                        
+                    }
+                }
             }
         }
 

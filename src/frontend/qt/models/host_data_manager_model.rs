@@ -19,10 +19,8 @@ pub struct HostDataManagerModel {
     // Signals
     //
 
-    pub updateReceived: qt_signal!(host_id: QString),
-    host_initialized: qt_signal!(host_id: QString),
-    host_initialized_from_cache: qt_signal!(host_id: QString),
-    monitor_state_changed: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
+    updateReceived: qt_signal!(host_id: QString),
+    monitorStateChanged: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     commandResultReceived: qt_signal!(command_result: QString, invocation_id: u64),
     monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant, invocation_id: u64),
     errorReceived: qt_signal!(criticality: QString, error: QString),
@@ -37,7 +35,7 @@ pub struct HostDataManagerModel {
     getCategories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
     getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
-    is_host_initialized: qt_method!(fn(&self, host_id: QString) -> bool),
+    isHostInitialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
     // TODO: refactor into separate model so that the call is more like `.monitors.pendingCount()` or something?
     getPendingMonitorCount: qt_method!(fn(&self, host_id: QString) -> u64),
@@ -112,7 +110,7 @@ impl HostDataManagerModel {
                     let old_criticality = old_monitor_data.values.back().unwrap().criticality;
 
                     if new_criticality != old_criticality {
-                        self.monitor_state_changed(
+                        self.monitorStateChanged(
                             QString::from(host_state.host.name.clone()),
                             QString::from(new_monitor_data.monitor_id.clone()),
                             QString::from(new_criticality.to_string())
@@ -195,7 +193,7 @@ impl HostDataManagerModel {
         self.configuration_preferences.refresh_hosts_on_start
     }
 
-    fn is_host_initialized(&self, host_id: QString) -> bool {
+    fn isHostInitialized(&self, host_id: QString) -> bool {
         if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
             if self.configuration_cache_settings.prefer_cache {
                 display_data.host_state.host.platform.is_set()

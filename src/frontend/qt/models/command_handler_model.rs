@@ -24,7 +24,6 @@ pub struct CommandHandlerModel {
     getAllHostCategories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     getCategoryCommands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
     getCommandsOnLevel: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
-    get_child_command_count: qt_method!(fn(&self, host_id: QString, category: QString) -> u32),
     execute: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executeConfirmed: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
@@ -175,15 +174,6 @@ impl CommandHandlerModel {
 
         // Return list of JSONs.
         valid_commands_sorted.iter().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
-    }
-
-    fn get_child_command_count(&self, host_id: QString, category: QString) -> u32 {
-        let category_string = category.to_string();
-
-        self.command_handler.get_commands_for_host(host_id.to_string()).into_iter()
-                            .filter(|(_, data)| data.display_options.category == category_string &&
-                                                !data.display_options.parent_id.is_empty())
-                            .count() as u32
     }
 
     fn execute(&mut self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList) {
