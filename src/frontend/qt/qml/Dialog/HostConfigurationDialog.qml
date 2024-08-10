@@ -30,7 +30,7 @@ LightkeeperDialog {
     onOpened: {
         LK.config.beginHostConfiguration()
         if (root.hostId === "") {
-            LK.config.add_host("new-host-id")
+            LK.config.addHost("new-host-id")
             root.hostId = "new-host-id"
         }
         refreshGroups()

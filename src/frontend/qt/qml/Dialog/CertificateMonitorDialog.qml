@@ -1,229 +1,117 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.11
-import QtQuick.Controls 1.4
 import QtQuick.Controls 2.15
+import Qt.labs.qmlmodels 1.0
 
 import "../StyleOverride"
 import "../Button"
 import "../Text"
+import "../Misc"
 import "../js/Utils.js" as Utils
 import ".."
 
 // This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
-    property var _preferences: LK.config.getPreferences()
-    property bool _loading: true
-
     title: "Certificate Monitor"
     implicitWidth: 800
     implicitHeight: 650
     standardButtons: Dialog.Close
 
+    property int tableRowHeight: 50
+
 
     contentItem: ColumnLayout {
         id: content
-        visible: !root._loading
         anchors.margins: Theme.marginDialog
         anchors.topMargin: Theme.marginDialogTop
         anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
 
-        RowLayout {
+        ToolBar {
             Layout.fillWidth: true
 
-            Column {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-
-                Label {
-                    width: parent.width
-                    text: "Refresh hosts on start"
-                }
-
-                SmallText {
-                    width: parent.width
-                    text: "Refresh all hosts on application start"
-                    color: Theme.textColorDark
-                    wrapMode: Text.WordWrap
-                }
+            background: Rectangle {
+                color: "transparent"
             }
 
-            CheckBox {
-                id: refreshHostsOnStart
-                checkState: root._preferences.refreshHostsOnStart ? Qt.Checked : Qt.Unchecked
+            // background: BorderRectangle {
+            //     backgroundColor: Theme.backgroundColor
+            //     borderColor: Theme.borderColor
+            //     borderBottom: 1
+            // }
 
-                Layout.leftMargin: content.width * 0.30
+            RowLayout {
+                anchors.fill: parent
+
+                ToolButton {
+                    icon.source: "qrc:/main/images/button/add"
+                    text: "Add monitor"
+                    display: AbstractButton.IconOnly
+                    onClicked: {
+                        LK.config.addCertificateMonitor("https://duckduckgo.com")
+                        root.refresh()
+                    }
+                }
+
+                ToolButton {
+                    enabled: true
+                    opacity: Theme.opacity(enabled)
+                    text: "Remove monitor"
+                    display: AbstractButton.IconOnly
+                    icon.source: "qrc:/main/images/button/remove"
+                    onClicked: {
+                        LK.config.removeCertificateMonitor("https://duckduckgo.com")
+                        root.refresh()
+                    }
+                }
+
+                // Spacer
+                Item {
+                    Layout.fillWidth: true
+                }
             }
         }
 
-        RowLayout {
+        BorderRectangle {
+            borderColor: Theme.borderColor
+            backgroundColor: Theme.backgroundColor
+            border: 1
+
             Layout.fillWidth: true
-
-            Column {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-
-                Label {
-                    width: parent.width
-                    text: "Use remote editor"
-                }
-
-                SmallText {
-                    width: parent.width
-                    text: "Some commands allow you to edit a remote file. If checked, will launch a terminal for editing " +
-                          "directly on the remote host instead of first downloading a local copy."
-                    color: Theme.textColorDark
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            CheckBox {
-                id: useRemoteEditor
-                checkState: root._preferences.useRemoteEditor ? Qt.Checked : Qt.Unchecked
-
-                Layout.leftMargin: content.width * 0.30
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-
-            Label {
-                text: "Remote text editor"
-
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignTop
-            }
-
-            TextField {
-                id: remoteTextEditor
-                enabled: useRemoteEditor.checkState === Qt.Checked
-                text: root._preferences.remoteTextEditor
-
-                Layout.preferredWidth: content.width * 0.35
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-
-            Column {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-
-                Label {
-
-                    width: parent.width
-                    text: "Use sudo with remote editor"
-                }
-
-                SmallText {
-                    width: parent.width
-                    text: "Use sudo when editing remote files?"
-                    color: Theme.textColorDark
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            CheckBox {
-                id: useSudoRemoteEditor
-                enabled: useRemoteEditor.checkState === Qt.Checked
-                checkState: root._preferences.sudoRemoteEditor ? Qt.Checked : Qt.Unchecked
-
-                Layout.leftMargin: content.width * 0.30
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-
-            Column {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-
-                Label {
-                    width: parent.width
-                    text: "Local text editor"
-                }
-
-                SmallText {
-                    width: parent.width
-                    text: "The text editor to use when editing files locally. Integrated editor is always used in flatpak sandbox."
-                    color: Theme.textColorDark
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            TextField {
-                id: textEditor
-                text: root._preferences.textEditor
-                enabled: !LK.config.isSandboxed()
-
-                Layout.preferredWidth: content.width * 0.35
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-
-            Column {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-
-                Label {
-                    width: parent.width
-                    text: "Terminal"
-                }
-
-                SmallText {
-                    width: parent.width
-                    text: "Terminal to use when launching a remote shell. Integrated editor is always used in flatpak sandbox."
-                    color: Theme.textColorDark
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            TextField {
-                id: terminalAndArgs
-                text: root._preferences.terminal + " " + root._preferences.terminalArgs
-                enabled: !LK.config.isSandboxed()
-
-                Layout.preferredWidth: content.width * 0.35
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-
-            Column {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-
-                Label {
-                    width: parent.width
-                    text: "Show status bar"
-                }
-
-                SmallText {
-                    width: parent.width
-                    text: ""
-                    color: Theme.textColorDark
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            CheckBox {
-                id: showStatusBar
-                checkState: root._preferences.showStatusBar ? Qt.Checked : Qt.Unchecked
-
-                Layout.leftMargin: content.width * 0.30
-            }
-        }
-
-        // Spacer
-        Item {
             Layout.fillHeight: true
+
+            TableView {
+                id: table
+                anchors.fill: parent
+                clip: true
+                // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
+                boundsBehavior: Flickable.StopAtBounds
+                onWidthChanged: forceLayout()
+                model: LK.config.getCertificateMonitors()
+
+                delegate: TableCell {
+                    padding: 20
+                    implicitWidth: table.width
+                    implicitHeight: root.tableRowHeight
+
+                    Row {
+                        spacing: Theme.spacingNormal
+                        anchors.fill: parent
+
+                        NormalText {
+                            width: Math.max(parent.width * 0.35, implicitWidth)
+                            text: modelData
+                            anchors.verticalCenter: parent.verticalCenter
+
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    function refresh() {
+        table.model = LK.config.getCertificateMonitors()
     }
 }

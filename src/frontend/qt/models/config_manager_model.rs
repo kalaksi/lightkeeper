@@ -16,6 +16,7 @@ pub struct ConfigManagerModel {
     //
     // Signals
     //
+    // TODO: use this? implement in some other way?
     fileError: qt_signal!(config_dir: QString, error_message: QString),
 
     //
@@ -33,9 +34,16 @@ pub struct ConfigManagerModel {
     setPreferences: qt_method!(fn(&self, preferences: QVariantMap)),
 
     //
+    // Certificate monitoring
+    //
+    getCertificateMonitors: qt_method!(fn(&self) -> QVariantList),
+    addCertificateMonitor: qt_method!(fn(&self, address: QString)),
+    removeCertificateMonitor: qt_method!(fn(&self, address: QString)),
+
+    //
     // Host configuration
     //
-    add_host: qt_method!(fn(&self, host_name: QString)),
+    addHost: qt_method!(fn(&self, host_name: QString)),
     removeHost: qt_method!(fn(&self, host_name: QString)),
     /// Returns HostSettings as JSON string, since it doesn't seem to be possible to return custom QObjects directly.
     getHostSettings: qt_method!(fn(&self, host_name: QString) -> QString),
@@ -181,7 +189,7 @@ impl ConfigManagerModel {
         }
     }
 
-    fn add_host(&mut self, host_name: QString) {
+    fn addHost(&mut self, host_name: QString) {
         let host_name = host_name.to_string();
         let config = HostSettings {
             groups: vec![
@@ -200,6 +208,31 @@ impl ConfigManagerModel {
         let host_name = host_name.to_string();
         ::log::info!("Removing host {}", host_name);
         self.hosts_config.hosts.remove(&host_name).unwrap();
+    }
+
+    fn getCertificateMonitors(&self) -> QVariantList{
+        let monitors = self.hosts_config.certificate_monitors.iter()
+            .map(|(domain, _settings)| format!("{}", domain).to_qvariant())
+            .collect::<Vec<_>>();
+
+        QVariantList::from_iter(monitors)
+    }
+
+
+    fn addCertificateMonitor(&mut self, domain: QString) {
+        self.hosts_config.certificate_monitors.insert(domain.to_string(), Default::default());
+
+        if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
+            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+        }
+    }
+
+    fn removeCertificateMonitor(&mut self, domain: QString) {
+        self.hosts_config.certificate_monitors.remove(&domain.to_string());
+
+        if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
+            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+        }
     }
 
     fn isSandboxed(&self) -> bool {

@@ -47,6 +47,8 @@ pub struct Groups {
 #[serde(deny_unknown_fields)]
 pub struct Hosts {
     pub hosts: HashMap<String, HostSettings>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub certificate_monitors: HashMap<String, MonitorConfig>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
