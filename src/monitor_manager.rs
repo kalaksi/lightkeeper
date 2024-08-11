@@ -73,7 +73,7 @@ impl MonitorManager {
 
         let mut settings = HashMap::new();
         settings.insert("addresses".to_string(), config_addresses.join(","));
-        let cert_monitor = internal::CertMonitor::new_monitoring_module(&HashMap::new());
+        let cert_monitor = internal::CertMonitor::new_monitoring_module(&settings);
         self.add_monitor(CERT_MONITOR_HOST_ID.to_string(), cert_monitor, true);
 
         // Regular host monitoring.
