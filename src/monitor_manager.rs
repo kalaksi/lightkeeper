@@ -15,6 +15,8 @@ use crate::module::ModuleFactory;
 use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, RequestType, CachePolicy };
 
+pub const CERT_MONITOR_HOST_ID: &str = "_cert-monitor";
+
 
 // Default needs to be implemented because of Qt QObject requirements.
 #[derive(Default)]
@@ -63,7 +65,23 @@ impl MonitorManager {
         self.request_sender = Some(request_sender);
         self.state_update_sender = Some(state_update_sender);
 
+        // Certificate monitors.
+        let config_addresses = hosts_config.certificate_monitors.iter().map(|(address, _)| address.clone()).collect::<Vec<_>>();
+        if config_addresses.len() > 0 {
+            log::debug!("Found configuration for certificate monitors");
+        }
+
+        let mut settings = HashMap::new();
+        settings.insert("addresses".to_string(), config_addresses.join(","));
+        let cert_monitor = internal::CertMonitor::new_monitoring_module(&HashMap::new());
+        self.add_monitor(CERT_MONITOR_HOST_ID.to_string(), cert_monitor, true);
+
+        // Regular host monitoring.
         for (host_id, host_config) in hosts_config.hosts.iter() {
+            // Names prefixed with _ are reserved for internal use.
+            if host_id.starts_with("_") {
+                continue;
+            }
 
             let mut new_monitors = Vec::<Monitor>::new();
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
@@ -230,6 +248,13 @@ impl MonitorManager {
         categories.sort();
         categories.dedup();
         categories
+    }
+
+    pub fn refresh_certificate_monitors(&mut self) -> Vec<u64> {
+        let monitors = self.monitors.lock().unwrap();
+        let certificate_monitors = monitors[CERT_MONITOR_HOST_ID].iter().collect();
+        let cert_monitor_host = self.host_manager.borrow().get_host(&CERT_MONITOR_HOST_ID.to_string());
+        self.refresh_monitors(cert_monitor_host, certificate_monitors, CachePolicy::BypassCache)
     }
 
     /// Returns the invocation IDs of the refresh operations.

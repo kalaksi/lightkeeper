@@ -154,7 +154,7 @@ impl QAbstractTableModel for HostTableModel {
             1 => row.name.to_qvariant(),
             2 => row.fqdn.to_qvariant(),
             3 => row.ip_address.to_qvariant(),
-            // Return host id to use with get_monitor_data().
+            // Return host id to use with different methods.
             4 => row.name.to_qvariant(),
             _ => panic!(),
         }

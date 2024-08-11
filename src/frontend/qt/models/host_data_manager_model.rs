@@ -8,7 +8,6 @@ use crate::module::monitoring::MonitoringData;
 use crate::utils::ErrorMessage;
 
 
-// TODO: use camelcase with qml models?
 #[derive(QObject, Default)]
 #[allow(non_snake_case)]
 pub struct HostDataManagerModel {
@@ -30,14 +29,13 @@ pub struct HostDataManagerModel {
     // Slots
     //
 
-    get_monitoring_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
+    getMonitoringData: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     getDisplayData: qt_method!(fn(&self) -> QVariant),
     getCategories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
     getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     isHostInitialized: qt_method!(fn(&self, host_id: QString) -> bool),
 
-    // TODO: refactor into separate model so that the call is more like `.monitors.pendingCount()` or something?
     getPendingMonitorCount: qt_method!(fn(&self, host_id: QString) -> u64),
     getPendingMonitorCountForCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
     getPendingCommandCount: qt_method!(fn(&self, host_id: QString) -> u64),
@@ -46,7 +44,6 @@ pub struct HostDataManagerModel {
 
     // These methods are used to get the data in JSON and parsed in QML side.
     // JSON is required since there doesn't seem to be a way to return a self-defined QObject.
-    get_monitor_data: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
     getSummaryMonitorData: qt_method!(fn(&self, host_id: QString) -> QStringList),
     get_host_data_json: qt_method!(fn(&self, host_id: QString) -> QString),
 
@@ -151,18 +148,8 @@ impl HostDataManagerModel {
         self.display_data.hosts.clear();
     }
 
-    // TODO: remove
-    fn get_monitor_data(&self, host_id: QString, monitor_id: QString) -> QString {
-        if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
-            if let Some(monitoring_data) = display_data.host_state.monitor_data.get(&monitor_id.to_string()) {
-                return QString::from(serde_json::to_string(monitoring_data).unwrap())
-            }
-        }
-        QString::from("{}")
-    }
-
     // Get monitoring data as a QVariant.
-    fn get_monitoring_data(&self, host_id: QString, monitor_id: QString) -> QVariant {
+    fn getMonitoringData(&self, host_id: QString, monitor_id: QString) -> QVariant {
         let monitor_id = monitor_id.to_string();
 
         let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();

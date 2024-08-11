@@ -38,8 +38,9 @@ pub struct CommandHandlerModel {
     forceInitializeHosts: qt_method!(fn(&self)),
 
     // Monitor refresh methods.
-    forceRefreshMonitorsOfCommand: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
-    forceRefreshMonitorsOfCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+    refreshMonitorsOfCommand: qt_method!(fn(&self, host_id: QString, command_id: QString) -> QVariantList),
+    refreshMonitorsOfCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+    refreshCertificateMonitors: qt_method!(fn(&self) -> QVariantList),
 
     //
     // Signals
@@ -343,7 +344,7 @@ impl CommandHandlerModel {
     }
 
     // Finds related monitors for a command and refresh them.
-    fn forceRefreshMonitorsOfCommand(&mut self, host_id: QString, command_id: QString) -> QVariantList  {
+    fn refreshMonitorsOfCommand(&mut self, host_id: QString, command_id: QString) -> QVariantList  {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
 
@@ -364,8 +365,13 @@ impl CommandHandlerModel {
         QVariantList::from_iter(invocation_ids)
     }
 
-    fn forceRefreshMonitorsOfCategory(&mut self, host_id: QString, category: QString) -> QVariantList {
+    fn refreshMonitorsOfCategory(&mut self, host_id: QString, category: QString) -> QVariantList {
         let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string(), Some(CachePolicy::BypassCache));
+        QVariantList::from_iter(invocation_ids)
+    }
+
+    fn refreshCertificateMonitors(&mut self) -> QVariantList {
+        let invocation_ids = self.monitor_manager.refresh_certificate_monitors();
         QVariantList::from_iter(invocation_ids)
     }
 

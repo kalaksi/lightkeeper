@@ -9,7 +9,7 @@ pub struct ModuleSpecification {
 }
 
 impl ModuleSpecification {
-    pub fn new(id: &str, version: &str) -> Self {
+    pub fn new(id: &str, version: &str, module_type: ModuleType) -> Self {
         if id.chars().any(char::is_whitespace) {
             panic!("No whitespace allowed in module ID.");
         }
@@ -17,7 +17,7 @@ impl ModuleSpecification {
         ModuleSpecification {
             id: id.to_string(),
             version: version.to_string(),
-            module_type: ModuleType::Unknown,
+            module_type: module_type,
         }
     }
 

@@ -15,6 +15,3 @@ pub use routes::Routes;
 
 pub mod dns;
 pub use dns::Dns;
-
-pub mod cert_monitor;
-pub use cert_monitor::CertMonitor;

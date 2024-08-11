@@ -35,6 +35,16 @@ impl Host {
         Ok(new)
     }
 
+    pub fn empty(name: &str, settings: &[HostSetting]) -> Self {
+        Host {
+            name: name.to_string(),
+            fqdn: String::default(),
+            ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            platform: PlatformInfo::default(),
+            settings: settings.to_vec(),
+        }
+    }
+
     // Make sure IP address is defined by resolving FQDN if IP address is missing.
     pub fn resolve_ip(&mut self) -> Result<(), String> {
         if self.ip_address.is_unspecified() {

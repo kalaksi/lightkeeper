@@ -59,6 +59,11 @@ impl HostManager {
         let mut hosts = self.hosts.lock().unwrap();
         hosts.clear();
 
+        // For certificate monitoring.
+        let cert_monitor_host = Host::empty(crate::monitor_manager::CERT_MONITOR_HOST_ID, &vec![]);
+        hosts.add(cert_monitor_host, HostStatus::Pending).unwrap();
+
+        // For regular host monitoring.
         for (host_id, host_config) in config.hosts.iter() {
             log::debug!("Found configuration for host {}", host_id);
 
@@ -70,7 +75,7 @@ impl HostManager {
                     continue;
                 }
             };
-            if let Err(error) = hosts.add(host.clone(), HostStatus::Pending) {
+            if let Err(error) = hosts.add(host, HostStatus::Pending) {
                 log::error!("{}", error.to_string());
                 continue;
             };
@@ -155,7 +160,6 @@ impl HostManager {
                 let mut new_command_results: Option<(u64, CommandResult)> = None;
 
                 if let Some(message_data_point) = state_update.data_point {
-
                     // Specially structured data point for passing platform info here.
                     if message_data_point.is_internal() {
                         host_state.monitor_invocations.remove(&state_update.invocation_id);
@@ -230,6 +234,8 @@ impl HostManager {
                     }
                 }
                 else {
+                    // Not all state updates will have valid data points or command results.
+                    // Still need to remove invocation data.
                     match state_update.module_spec.module_type {
                         crate::module::ModuleType::Command => {
                             host_state.command_invocations.remove(&state_update.invocation_id);

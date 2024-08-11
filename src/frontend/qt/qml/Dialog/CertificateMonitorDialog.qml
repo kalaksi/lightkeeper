@@ -76,7 +76,7 @@ LightkeeperDialog {
                     text: "Refresh"
                     icon.source: "qrc:/main/images/button/refresh"
                     onClicked: {
-                        
+                        LK.command.refreshCertificateMonitors()
                     }
                 }
             }

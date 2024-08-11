@@ -119,7 +119,7 @@ Item {
 
                                 if (progress >= 100) {
                                     let commandResult = JSON.parse(commandResultJson)
-                                    LK.command.forceRefreshMonitorsOfCommand(root.hostId, commandResult.command_id)
+                                    LK.command.refreshMonitorsOfCommand(root.hostId, commandResult.command_id)
                                     delete groupBox._invocationIdToButton[invocationId]
                                 }
                             }
@@ -136,7 +136,7 @@ Item {
                         icon: Theme.categoryIcon(modelData)
                         color: Theme.categoryColor(modelData)
                         onRefreshClicked: function() {
-                            LK.command.forceRefreshMonitorsOfCategory(root.hostId, modelData)
+                            LK.command.refreshMonitorsOfCategory(root.hostId, modelData)
                             groupBoxLabel.refreshProgress = 0
                             groupBox.blocked = true
                         }
@@ -258,7 +258,7 @@ Item {
                             id: propertyTable
                             category: modelData
                             monitoring_datas: LK.hosts.getCategoryMonitorIds(root.hostId, modelData)
-                                                             .map(monitorId => LK.hosts.get_monitoring_data(root.hostId, monitorId))
+                                                             .map(monitorId => LK.hosts.getMonitoringData(root.hostId, monitorId))
                             command_datas: LK.command.getCategoryCommands(root.hostId, modelData)
 
                             Layout.fillHeight: true

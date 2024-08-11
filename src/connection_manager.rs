@@ -11,10 +11,11 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::error::LkError;
 use crate::module::monitoring::DataPoint;
+use crate::monitor_manager::CERT_MONITOR_HOST_ID;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
-use crate::module::{ModuleSpecification, ModuleFactory, ModuleType};
+use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
 use crate::cache::{Cache, CacheScope};
 
@@ -30,6 +31,7 @@ const MAX_WORKER_THREADS: usize = 4;
 // Default needs to be implemented because of Qt QObject requirements.
 #[derive(Default)]
 pub struct ConnectionManager {
+    /// Key is host name/id.
     stateful_connectors: Option<HashMap<String, ConnectorStates>>,
     module_factory: Arc<ModuleFactory>,
     cache_settings: CacheSettings,
@@ -55,12 +57,20 @@ impl ConnectionManager {
         self.cache_settings = cache_settings.clone();
         let stateful_connectors = self.stateful_connectors.as_mut().unwrap();
 
+        // For certificate monitoring.
+        let cert_monitor_connectors = stateful_connectors.entry(CERT_MONITOR_HOST_ID.to_string()).or_insert(HashMap::new());
+        let mut settings = HashMap::new();
+        settings.insert("verify_certificate".to_string(), "true".to_string());
+        let cert_monitor_connector = Tcp::new_connection_module(&settings);
+        cert_monitor_connectors.insert(cert_monitor_connector.get_module_spec(), cert_monitor_connector);
+
+        // For regular host monitoring.
         for (host_id, host_config) in hosts_config.hosts.iter() {
             stateful_connectors.entry(host_id.clone()).or_insert(HashMap::new());
             let host_connectors = stateful_connectors.get_mut(host_id).unwrap();
 
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
-                let monitor_spec = ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
+                let monitor_spec = ModuleSpecification::monitor(monitor_id.as_str(), monitor_config.version.as_str());
                 let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
 
                 if let Some(mut connector_spec) = monitor.get_connector_spec() {
