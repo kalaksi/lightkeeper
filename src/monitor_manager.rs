@@ -85,7 +85,7 @@ impl MonitorManager {
 
             let mut new_monitors = Vec::<Monitor>::new();
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
-                let monitor_spec = ModuleSpecification::new(monitor_id.as_str(), monitor_config.version.as_str());
+                let monitor_spec = ModuleSpecification::monitor(monitor_id.as_str(), monitor_config.version.as_str());
                 let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
                 new_monitors.push(monitor);
             }

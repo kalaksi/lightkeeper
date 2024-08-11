@@ -34,7 +34,7 @@ impl Module for Snapshot {
 
 impl CommandModule for Snapshot {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new("ssh", "0.0.1"))
+        Some(ModuleSpecification::connector("ssh", "0.0.1"))
     }
 
     fn get_display_options(&self) -> frontend::DisplayOptions {

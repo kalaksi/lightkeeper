@@ -34,7 +34,7 @@ impl Module for ImageUpdates {
 
 impl MonitoringModule for ImageUpdates {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new("http", "0.0.1"))
+        Some(ModuleSpecification::connector("http", "0.0.1"))
     }
 
     fn get_display_options(&self) -> frontend::DisplayOptions {

@@ -26,7 +26,7 @@ impl Module for PlatformInfoSsh {
 
 impl MonitoringModule for PlatformInfoSsh {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new("ssh", "0.0.1"))
+        Some(ModuleSpecification::connector("ssh", "0.0.1"))
     }
 
     fn get_connector_messages(&self, _host: Host, _result: DataPoint) -> Result<Vec<String>, LkError> {

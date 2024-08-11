@@ -89,7 +89,7 @@ impl ConnectionManager {
             }
 
             for (command_id, command_config) in host_config.effective.commands.iter() {
-                let command_spec = ModuleSpecification::new(command_id, &command_config.version);
+                let command_spec = ModuleSpecification::command(command_id, &command_config.version);
                 let command = match self.module_factory.new_command(&command_spec, &command_config.settings) {
                     Some(command) => command,
                     None => continue,

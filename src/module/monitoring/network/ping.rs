@@ -33,7 +33,7 @@ impl Module for Ping {
 
 impl MonitoringModule for Ping {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new("local-command", "0.0.1"))
+        Some(ModuleSpecification::connector("local-command", "0.0.1"))
     }
 
     fn get_display_options(&self) -> frontend::DisplayOptions {

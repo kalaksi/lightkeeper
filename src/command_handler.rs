@@ -17,7 +17,6 @@ use crate::host_manager::HostManager;
 use crate::module::command::UIAction;
 use crate::module::connection::request_response::RequestResponse;
 use crate::module::module_factory::ModuleFactory;
-use crate::module::ModuleType;
 use crate::utils::*;
 use crate::{
     configuration::Preferences,
@@ -85,7 +84,7 @@ impl CommandHandler {
         for (host_id, host_config) in hosts_config.hosts.iter() {
             for (command_id, command_config) in host_config.effective.commands.iter() {
 
-                let command_spec = crate::module::ModuleSpecification::new(command_id, &command_config.version);
+                let command_spec = crate::module::ModuleSpecification::command(command_id, &command_config.version);
                 if let Some(command) = self.module_factory.new_command(&command_spec, &command_config.settings) {
                     self.add_command(host_id, command);
                 }
@@ -269,7 +268,7 @@ impl CommandHandler {
     pub fn verify_host_key(&self, host_id: &String, connector_id: &String, key_id: &String) {
         let host = self.host_manager.borrow().get_host(host_id);
         // Version numbers aren't currently used, so it's hardcoded here.
-        let module_spec = crate::module::ModuleSpecification::new_with_type(&connector_id, "0.0.1", ModuleType::Connector);
+        let module_spec = crate::module::ModuleSpecification::connector(&connector_id, "0.0.1");
 
         self.request_sender.as_ref().unwrap().send(ConnectorRequest {
             connector_spec: Some(module_spec),

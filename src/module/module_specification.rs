@@ -21,6 +21,19 @@ impl ModuleSpecification {
         }
     }
 
+    pub fn connector(id: &str, version: &str) -> Self {
+        ModuleSpecification::new(id, version, ModuleType::Connector)
+    }
+
+    pub fn command(id: &str, version: &str) -> Self {
+        ModuleSpecification::new(id, version, ModuleType::Command)
+    }
+
+    pub fn monitor(id: &str, version: &str) -> Self {
+        ModuleSpecification::new(id, version, ModuleType::Monitor)
+    }
+
+    /// TODO: Deprecated.
     pub fn new_with_type(id: &str, version: &str, module_type: ModuleType) -> Self {
         if id.chars().any(char::is_whitespace) {
             panic!("No whitespace allowed in module ID.");

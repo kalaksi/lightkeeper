@@ -44,7 +44,7 @@ impl MonitoringModule for RebuildGenerations {
     }
 
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new("ssh", "0.0.1"))
+        Some(ModuleSpecification::connector("ssh", "0.0.1"))
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {

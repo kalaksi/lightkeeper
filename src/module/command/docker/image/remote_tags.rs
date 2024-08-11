@@ -36,7 +36,7 @@ impl Module for RemoteTags {
 
 impl CommandModule for RemoteTags {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
-        Some(ModuleSpecification::new("http-jwt", "0.0.1"))
+        Some(ModuleSpecification::connector("http-jwt", "0.0.1"))
     }
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
