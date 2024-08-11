@@ -85,17 +85,17 @@ impl ResponseMessage {
         }
     }
 
-    pub fn new_success(message: String) -> ResponseMessage {
+    pub fn new_success<Stringable: ToString>(message: Stringable) -> ResponseMessage {
         ResponseMessage {
-            message: message,
+            message: message.to_string(),
             ..Default::default()
         }
     }
 
     /// Generic error with return code 1.
-    pub fn new_error(message: String) -> ResponseMessage {
+    pub fn new_error<Stringable: ToString>(message: Stringable) -> ResponseMessage {
         ResponseMessage {
-            message: message,
+            message: message.to_string(),
             return_code: 1,
             ..Default::default()
         }

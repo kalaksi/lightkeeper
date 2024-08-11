@@ -2,6 +2,7 @@ use base64::engine::general_purpose;
 use base64::Engine;
 use rustls::pki_types::{CertificateDer, ServerName};
 use std::collections::HashMap;
+use std::net::TcpStream;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -16,7 +17,6 @@ use crate::module::connection::*;
     cache_scope="Global",
     description="Connects using TCP. Used for testing TCP (and TLS) connections.",
     settings={
-        timeout => "How many seconds to wait for response. Default: 10.",
         verify_certificate => "Assume TLS (e.g. HTTPS) and verify certificate. Default: false.",
         ca_certificates_path => "Path to the CA certificates bundle file. Expects PEM format. Default: (empty).",
     }
@@ -75,31 +75,37 @@ impl ConnectionModule for Tcp {
     /// With `verify_certificate` enabled, returns the certificate chain in PEM format.
     /// With `verify_certificate` disabled, returns an empty string and uses exit code to determine success.
     fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+        if message.contains("/") {
+            return Ok(ResponseMessage::new_error("Invalid address"));
+        }
+
+        let (address, port) = message.split_once(':').unwrap_or_else(|| (message, "443"));
+        let full_address = format!("{}:{}", address, port);
+        let mut tcp_stream = TcpStream::connect(&full_address)?;
+
         // Connect and verify TLS certificate.
         if self.verify_certificate {
-            let rustls_address: ServerName = message.to_string().try_into().map_err(|_| LkError::other_p("Invalid address", message))?;
+            let rustls_address: ServerName = address.to_string().try_into().map_err(|_| LkError::other_p("Invalid address", message))?;
 
             match rustls::ClientConnection::new(self.rustls_client_config.clone().unwrap(), rustls_address) {
-                Ok(client) => {
+                Ok(mut client) => {
+                    // Wait for handshake to complete.
+                    while client.is_handshaking() {
+                        client.complete_io(&mut tcp_stream)?;
+                    }
+
                     let pem_chain = client.peer_certificates().unwrap_or_default().into_iter()
-                                          .map(|cert| der_to_pem(&cert))
-                                          .collect::<Vec<String>>()
-                                          .join("\n");
+                        .map(|cert| der_to_pem(&cert))
+                        .collect::<Vec<String>>()
+                        .join("\n");
 
                     Ok(ResponseMessage::new_success(pem_chain))
                 },
                 Err(error) => Ok(ResponseMessage::new_error(format!("{}", error))),
             }
         }
-        // Only connect.
         else {
-            let socket_addr: std::net::SocketAddr = message.to_string().parse().map_err(|error| LkError::other_p("Invalid address", error))?;
-            let result = std::net::TcpStream::connect_timeout(&socket_addr, std::time::Duration::from_secs(self.timeout as u64));
-
-            match result {
-                Ok(_) => Ok(ResponseMessage::new_success("".to_string())),
-                Err(error) => Ok(ResponseMessage::new_error(format!("{}", error))),
-            }
+            Ok(ResponseMessage::new_success(""))
         }
     }
 }
