@@ -49,7 +49,7 @@ LightkeeperDialog {
                     text: "Add monitor"
                     display: AbstractButton.IconOnly
                     onClicked: {
-                        LK.config.addCertificateMonitor("https://duckduckgo.com")
+                        LK.config.addCertificateMonitor("duckduckgo.com:443")
                         root.refresh()
                     }
                 }
@@ -61,7 +61,7 @@ LightkeeperDialog {
                     display: AbstractButton.IconOnly
                     icon.source: "qrc:/main/images/button/remove"
                     onClicked: {
-                        LK.config.removeCertificateMonitor("https://duckduckgo.com")
+                        LK.config.removeCertificateMonitor("duckduckgo.com:443")
                         root.refresh()
                     }
                 }

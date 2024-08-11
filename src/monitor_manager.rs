@@ -66,13 +66,12 @@ impl MonitorManager {
         self.state_update_sender = Some(state_update_sender);
 
         // Certificate monitors.
-        let config_addresses = hosts_config.certificate_monitors.iter().map(|(address, _)| address.clone()).collect::<Vec<_>>();
-        if config_addresses.len() > 0 {
+        if hosts_config.certificate_monitors.len() > 0 {
             log::debug!("Found configuration for certificate monitors");
         }
 
         let mut settings = HashMap::new();
-        settings.insert("addresses".to_string(), config_addresses.join(","));
+        settings.insert("addresses".to_string(), hosts_config.certificate_monitors.join(","));
         let cert_monitor = internal::CertMonitor::new_monitoring_module(&settings);
         self.add_monitor(CERT_MONITOR_HOST_ID.to_string(), cert_monitor, true);
 

@@ -212,7 +212,7 @@ impl ConfigManagerModel {
 
     fn getCertificateMonitors(&self) -> QVariantList{
         let monitors = self.hosts_config.certificate_monitors.iter()
-            .map(|(domain, _settings)| format!("{}", domain).to_qvariant())
+            .map(|domain| format!("{}", domain).to_qvariant())
             .collect::<Vec<_>>();
 
         QVariantList::from_iter(monitors)
@@ -220,7 +220,11 @@ impl ConfigManagerModel {
 
 
     fn addCertificateMonitor(&mut self, domain: QString) {
-        self.hosts_config.certificate_monitors.insert(domain.to_string(), Default::default());
+        if self.hosts_config.certificate_monitors.iter().any(|monitor_domain| monitor_domain == &domain.to_string()) {
+            return;
+        }
+
+        self.hosts_config.certificate_monitors.push(domain.to_string());
 
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
             self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
@@ -228,7 +232,7 @@ impl ConfigManagerModel {
     }
 
     fn removeCertificateMonitor(&mut self, domain: QString) {
-        self.hosts_config.certificate_monitors.remove(&domain.to_string());
+        self.hosts_config.certificate_monitors.retain(|monitor_domain| monitor_domain != &domain.to_string());
 
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
             self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));

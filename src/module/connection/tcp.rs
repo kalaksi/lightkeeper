@@ -22,7 +22,6 @@ use crate::module::connection::*;
     }
 )]
 pub struct Tcp {
-    timeout: u16,
     verify_certificate: bool,
     rustls_client_config: Option<Arc<rustls::ClientConfig>>,
 }
@@ -64,7 +63,6 @@ impl Module for Tcp {
 
         Tcp {
             verify_certificate: verify_certificate,
-            timeout: settings.get("timeout").map(|value| value.parse().unwrap_or_default()).unwrap_or(10),
             rustls_client_config: client_config
         }
     }

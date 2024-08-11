@@ -48,7 +48,7 @@ pub struct Groups {
 pub struct Hosts {
     pub hosts: HashMap<String, HostSettings>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub certificate_monitors: HashMap<String, MonitorConfig>,
+    pub certificate_monitors: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
