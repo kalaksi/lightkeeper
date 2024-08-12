@@ -4,7 +4,6 @@ use std::{cell::RefCell, rc::Rc, sync::mpsc, thread};
 use qmetaobject::*;
 
 use crate::{
-    configuration,
     connection_manager::{CachePolicy, ConnectionManager},
     frontend::HostDisplayData,
     host_manager
@@ -28,12 +27,14 @@ pub struct LkBackend {
     //
 
     receiveUpdates: qt_method!(fn(&self)),
-    reconfigure: qt_method!(fn(&mut self, config: QVariant, hosts_config: QVariant)),
+    reload: qt_method!(fn(&mut self)),
     stop: qt_method!(fn(&mut self)),
 
     //
     // Signals
     //
+
+    reloaded: qt_signal!(error: QString),
 
     //
     // Private properties
@@ -128,22 +129,30 @@ impl LkBackend {
         self.update_sender_prototype.clone().unwrap()
     }
 
-    fn reconfigure(&mut self, main_config: QVariant, hosts_config: QVariant) {
-        let main_config = configuration::Configuration::from_qvariant(main_config).unwrap();
-        let hosts_config = configuration::Hosts::from_qvariant(hosts_config).unwrap();
+    fn reload(&mut self) {
+        match self.config.borrow_mut().reload_configuration() {
+            Ok((main_config, hosts_config)) => {
+                self.connection_manager.configure(&hosts_config, &main_config.cache_settings);
+                self.host_manager.borrow_mut().configure(&hosts_config);
+                self.command.borrow_mut().configure(
+                    &main_config,
+                    &hosts_config,
+                    self.connection_manager.new_request_sender(),
+                    self.host_manager.borrow().new_state_update_sender()
+                );
 
-        self.connection_manager.configure(&hosts_config, &main_config.cache_settings);
-        self.host_manager.borrow_mut().configure(&hosts_config);
-        self.command.borrow_mut().configure(
-            &main_config,
-            &hosts_config,
-            self.connection_manager.new_request_sender(),
-            self.host_manager.borrow().new_state_update_sender()
-        );
+                self.host_manager.borrow_mut().start_receiving_updates();
+                self.connection_manager.start_processing_requests();
+                self.command.borrow_mut().start_processing_responses();
 
-        self.host_manager.borrow_mut().start_receiving_updates();
-        self.connection_manager.start_processing_requests();
-        self.command.borrow_mut().start_processing_responses();
+                self.reloaded(QString::from(""));
+            },
+            Err(error) => {
+                let error = format!("Failed to reload configuration: {}", error);
+                ::log::error!("{}", error);
+                self.reloaded(QString::from(error));
+            }
+        }
     }
 
     pub fn stop(&mut self) {

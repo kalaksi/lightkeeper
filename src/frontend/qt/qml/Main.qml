@@ -41,10 +41,14 @@ ApplicationWindow {
             hostConfigurationDialog.open()
         }
         onClickedRemove: {
+            let hostId = hostTableModel.getSelectedHostId()
             LK.config.beginHostConfiguration()
-            LK.config.removeHost(hostTableModel.getSelectedHostId())
+            LK.config.removeHost(hostId)
             LK.config.endHostConfiguration()
-            reloadConfiguration()
+            hostTableModel.toggleRow(hostTableModel.selectedRow)
+            // LK.hosts retains host data until explicitly removed.
+            LK.hosts.removeHost(hostId)
+            LK.reload()
         }
         onClickedEdit: {
             LK.config.beginHostConfiguration()
@@ -74,6 +78,19 @@ ApplicationWindow {
         visible: Theme.showStatusBar === true
         errorCount: root.errorCount
         jobsLeft: 0
+    }
+
+    Connections {
+        target: LK
+
+        function onReloaded(error) {
+            hostTableModel.displayData = LK.hosts.getDisplayData()
+
+            if (error !== "") {
+                root.errorCount += 1;
+                snackbarContainer.addSnackbar("Critical", error)
+            }
+        }
     }
 
     Connections {
@@ -325,9 +342,7 @@ ApplicationWindow {
         anchors.centerIn: parent
         bottomMargin: 0.15 * parent.height
 
-        onConfigurationChanged: {
-            reloadConfiguration()
-        }
+        onConfigurationChanged: LK.reload()
     }
 
     CertificateMonitorDialog {
@@ -341,35 +356,33 @@ ApplicationWindow {
         anchors.centerIn: parent
         bottomMargin: 0.15 * parent.height
 
-        onConfigurationChanged: {
-            reloadConfiguration()
-        }
+        onConfigurationChanged: LK.reload()
     }
 
     // TODO: Repeater didn't work, figure out why.
     ConfigHelperDialog {
         groupName: "linux"
-        onConfigurationChanged: reloadConfiguration()
+        onConfigurationChanged: LK.reload()
     }
 
     ConfigHelperDialog {
         groupName: "docker"
-        onConfigurationChanged: reloadConfiguration()
+        onConfigurationChanged: LK.reload()
     }
 
     ConfigHelperDialog {
         groupName: "docker-compose"
-        onConfigurationChanged: reloadConfiguration()
+        onConfigurationChanged: LK.reload()
     }
 
     ConfigHelperDialog {
         groupName: "systemd-service"
-        onConfigurationChanged: reloadConfiguration()
+        onConfigurationChanged: LK.reload()
     }
 
     ConfigHelperDialog {
         groupName: "nixos"
-        onConfigurationChanged: reloadConfiguration()
+        onConfigurationChanged: LK.reload()
     }
 
     CommandOutputDialog {
@@ -411,16 +424,6 @@ ApplicationWindow {
                 root.show()
             }
         }
-    }
-
-
-    function reloadConfiguration() {
-        LK.hosts.reset()
-        hostTableModel.toggleRow(hostTableModel.selectedRow)
-        hostTableModel.displayData = LK.hosts.getDisplayData()
-
-        let configs = LK.config.reloadConfiguration()
-        LK.reconfigure(configs[0], configs[1])
     }
 
     function quit() {

@@ -24,7 +24,6 @@ pub struct ConfigManagerModel {
     //
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
-    reloadConfiguration: qt_method!(fn(&self) -> QVariantList),
     getCurrentWorkDir: qt_method!(fn(&self) -> QString),
 
     //
@@ -113,7 +112,6 @@ pub struct ConfigManagerModel {
     set_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString, setting_value: QString)),
 
 
-
     config_dir: String,
     main_config: Configuration,
     hosts_config: Hosts,
@@ -158,6 +156,20 @@ impl ConfigManagerModel {
             ..Default::default()
         }
     }
+
+    pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts), String> {
+        ::log::info!("Reloading configuration...");
+        match Configuration::read(&self.config_dir) {
+            Ok((main_config, hosts_config, groups_config)) => {
+                self.main_config = main_config.clone();
+                self.hosts_config = hosts_config.clone();
+                self.groups_config = groups_config;
+                Ok((main_config, hosts_config))
+            },
+            Err(error) => Err(error.to_string())
+        }
+    }
+
 
     fn getPreferences(&self) -> QVariantMap {
         let mut preferences = QVariantMap::default();
@@ -245,26 +257,6 @@ impl ConfigManagerModel {
 
     fn isDevBuild(&self) -> bool {
         cfg!(debug_assertions)
-    }
-
-    fn reloadConfiguration(&mut self) -> QVariantList {
-        ::log::info!("Reloading configuration...");
-        match Configuration::read(&self.config_dir) {
-            Ok((main_config, hosts_config, groups_config)) => {
-                self.main_config = main_config;
-                self.hosts_config = hosts_config;
-                self.groups_config = groups_config;
-            },
-            Err(error) => {
-                self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
-            }
-        }
-
-        // How to do in one line?
-        let mut result = QVariantList::default();
-        result.push(self.main_config.clone().to_qvariant());
-        result.push(self.hosts_config.clone().to_qvariant());
-        result
     }
 
     fn getCurrentWorkDir(&self) -> QString {

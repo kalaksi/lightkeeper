@@ -12,7 +12,6 @@ use crate::utils::ErrorMessage;
 #[allow(non_snake_case)]
 pub struct HostDataManagerModel {
     base: qt_base_class!(trait QObject),
-    reset: qt_method!(fn(&mut self)),
 
     //
     // Signals
@@ -35,6 +34,7 @@ pub struct HostDataManagerModel {
     getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     isHostInitialized: qt_method!(fn(&self, host_id: QString) -> bool),
+    removeHost: qt_method!(fn(&self, host_id: QString)),
 
     getPendingMonitorCount: qt_method!(fn(&self, host_id: QString) -> u64),
     getPendingMonitorCountForCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
@@ -52,6 +52,7 @@ pub struct HostDataManagerModel {
     //
 
     // Basically contains the state of hosts and relevant data.
+    // Retains data between reloads.
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
     configuration_preferences: configuration::Preferences,
@@ -144,10 +145,6 @@ impl HostDataManagerModel {
         }
     }
 
-    pub fn reset(&mut self) {
-        self.display_data.hosts.clear();
-    }
-
     // Get monitoring data as a QVariant.
     fn getMonitoringData(&self, host_id: QString, monitor_id: QString) -> QVariant {
         let monitor_id = monitor_id.to_string();
@@ -194,6 +191,10 @@ impl HostDataManagerModel {
         }
     }
 
+    fn removeHost(&mut self, host_id: QString) {
+        self.display_data.hosts.remove(&host_id.to_string());
+    }
+
     fn getPendingMonitorCount(&self, host_id: QString) -> u64 {
         let host_id = host_id.to_string();
 
@@ -205,7 +206,6 @@ impl HostDataManagerModel {
         }
     }
 
-    // Currently will return only 0 or 100.
     fn getPendingMonitorCountForCategory(&self, host_id: QString, category: QString) -> u64 {
         let host_id = host_id.to_string();
         let category = category.to_string();
