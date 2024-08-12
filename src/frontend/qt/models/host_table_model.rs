@@ -54,11 +54,14 @@ impl HostTableModel {
     }
 
     fn update_row_data(&mut self) {
-        let mut filtered_hosts = self.i_display_data.hosts.iter().filter(|(host_id, host_display_data)| {
-            self.search_filter.is_empty() ||
-            host_id.to_lowercase().contains(&self.search_filter) ||
-            host_display_data.host_state.host.fqdn.to_lowercase().contains(&self.search_filter) ||
-            host_display_data.host_state.host.ip_address.to_string().to_lowercase().contains(&self.search_filter)
+        let mut filtered_hosts = self.i_display_data.hosts.iter()
+            // Host IDs starting with underscore are reserved for internal use.
+            .filter(|(host_id, _)| !host_id.starts_with("_"))
+            .filter(|(host_id, host_display_data)| {
+                self.search_filter.is_empty() ||
+                host_id.to_lowercase().contains(&self.search_filter) ||
+                host_display_data.host_state.host.fqdn.to_lowercase().contains(&self.search_filter) ||
+                host_display_data.host_state.host.ip_address.to_string().to_lowercase().contains(&self.search_filter)
         }).collect::<Vec<_>>();
 
         filtered_hosts.sort_by_key(|(key, _)| key.to_lowercase());
