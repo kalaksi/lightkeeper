@@ -19,6 +19,8 @@ LightkeeperDialog {
     standardButtons: Dialog.Close
 
     property int tableRowHeight: 50
+    property int selectedRow: -1
+    property int buttonSize: 32
 
 
     contentItem: ColumnLayout {
@@ -28,56 +30,59 @@ LightkeeperDialog {
         anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
 
-        ToolBar {
-            Layout.fillWidth: true
+        NormalText {
+            text: "Certificate monitor allows you to monitor the validity of certificates of your services."
+            bottomPadding: Theme.spacingLoose
+        }
 
-            background: Rectangle {
-                color: "transparent"
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            Label {
+                text: "Address"
             }
 
-            // background: BorderRectangle {
-            //     backgroundColor: Theme.backgroundColor
-            //     borderColor: Theme.borderColor
-            //     borderBottom: 1
-            // }
-
-            RowLayout {
-                anchors.fill: parent
-
-                ToolButton {
-                    icon.source: "qrc:/main/images/button/add"
-                    text: "Add monitor"
-                    display: AbstractButton.IconOnly
-                    onClicked: {
-                        LK.config.addCertificateMonitor("duckduckgo.com:443")
-                        root.refresh()
-                    }
+            TextField {
+                id: addressField
+                placeholderText: "domain:port"
+                validator: RegularExpressionValidator {
+                    regularExpression: /[a-zA-Z\d\-\.\:]+/
                 }
 
-                ToolButton {
-                    enabled: true
-                    opacity: Theme.opacity(enabled)
-                    text: "Remove monitor"
-                    display: AbstractButton.IconOnly
-                    icon.source: "qrc:/main/images/button/remove"
-                    onClicked: {
-                        LK.config.removeCertificateMonitor("duckduckgo.com:443")
-                        root.refresh()
-                    }
-                }
+                Layout.fillWidth: true
+            }
 
-                // Spacer
-                Item {
-                    Layout.fillWidth: true
+            ImageButton {
+                id: addButton
+                enabled: addressField.text.length > 0
+                imageSource: "qrc:/main/images/button/add"
+                size: root.buttonSize
+                onClicked: {
+                    LK.config.addCertificateMonitor(addressField.text)
+                    addressField.text = ""
+                    root.refresh()
                 }
+            }
 
-                ToolButton {
-                    display: AbstractButton.IconOnly
-                    text: "Refresh"
-                    icon.source: "qrc:/main/images/button/refresh"
-                    onClicked: {
-                        LK.command.refreshCertificateMonitors()
-                    }
+            ImageButton {
+                id: removeButton
+                enabled: root.selectedRow >= 0
+                imageSource: "qrc:/main/images/button/remove"
+                size: root.buttonSize
+                onClicked: {
+                    let address = table.model[root.selectedRow]
+                    LK.config.removeCertificateMonitor(address)
+                    root.refresh()
+                }
+            }
+
+            ImageButton {
+                id: refreshButton
+                imageSource: "qrc:/main/images/button/refresh"
+                size: root.buttonSize
+                onClicked: {
+                    LK.command.refreshCertificateMonitors()
                 }
             }
         }
