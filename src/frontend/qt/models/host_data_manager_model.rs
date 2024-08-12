@@ -42,6 +42,7 @@ pub struct HostDataManagerModel {
     getPendingCommandCountForCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
     getPendingCommandProgress: qt_method!(fn(&self, invocation_id: u64) -> u8),
 
+    getCertificateMonitorHostId: qt_method!(fn(&self) -> QString),
     // These methods are used to get the data in JSON and parsed in QML side.
     // JSON is required since there doesn't seem to be a way to return a self-defined QObject.
     getSummaryMonitorData: qt_method!(fn(&self, host_id: QString) -> QStringList),
@@ -291,6 +292,10 @@ impl HostDataManagerModel {
         }
 
         result
+    }
+
+    fn getCertificateMonitorHostId(&self) -> QString {
+        QString::from(crate::monitor_manager::CERT_MONITOR_HOST_ID)
     }
 
     fn getSummaryMonitorData(&self, host_id: QString) -> QStringList {

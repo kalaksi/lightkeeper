@@ -35,7 +35,7 @@ pub struct ConfigManagerModel {
     //
     // Certificate monitoring
     //
-    getCertificateMonitors: qt_method!(fn(&self) -> QVariantList),
+    getCertificateMonitors: qt_method!(fn(&self) -> QStringList),
     addCertificateMonitor: qt_method!(fn(&self, address: QString)),
     removeCertificateMonitor: qt_method!(fn(&self, address: QString)),
 
@@ -222,14 +222,9 @@ impl ConfigManagerModel {
         self.hosts_config.hosts.remove(&host_name).unwrap();
     }
 
-    fn getCertificateMonitors(&self) -> QVariantList{
-        let monitors = self.hosts_config.certificate_monitors.iter()
-            .map(|domain| format!("{}", domain).to_qvariant())
-            .collect::<Vec<_>>();
-
-        QVariantList::from_iter(monitors)
+    fn getCertificateMonitors(&self) -> QStringList {
+        QStringList::from_iter(self.hosts_config.certificate_monitors.clone())
     }
-
 
     fn addCertificateMonitor(&mut self, domain: QString) {
         if self.hosts_config.certificate_monitors.iter().any(|monitor_domain| monitor_domain == &domain.to_string()) {
