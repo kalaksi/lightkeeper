@@ -23,7 +23,7 @@ pub struct PropertyTableModel {
     // init: qt_method!(fn(&mut self, monitoring_datas: QVariantList, command_datas: QVariantList)),
     update: qt_method!(fn(&mut self, monitoring_data: QVariant)),
     get_separator_label: qt_method!(fn(&mut self, row: QVariant) -> QString),
-    get_row_height: qt_method!(fn(&mut self, row: QVariant) -> u32),
+    getRowHeight: qt_method!(fn(&mut self, row: QVariant) -> u32),
     get_column_width: qt_method!(fn(&self, row: QVariant, column: QVariant) -> f32),
 
     // Internal data structures.
@@ -92,7 +92,7 @@ impl PropertyTableModel {
     }
 
     // Higher row if description is present.
-    fn get_row_height(&mut self, row: QVariant) -> u32 {
+    fn getRowHeight(&mut self, row: QVariant) -> u32 {
         let row = usize::from_qvariant(row).unwrap();
         if let Some(row_data) = self.row_datas.get(row) {
             if row_data.value.value == SEPARATOR_TOKEN {

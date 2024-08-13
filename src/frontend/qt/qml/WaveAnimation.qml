@@ -6,7 +6,7 @@ import QtGraphicalEffects 1.15
 Item {
     id: root
     property string color: "#555555"
-    property real radius: (parent.width < parent.height ? parent.width : parent.height) * 0.5
+    property real radius: Math.min(parent.width, parent.height) * 0.5
     property int duration: 500
 
     Rectangle {

@@ -19,7 +19,7 @@ Item {
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
     property int columnSpacing: Theme.spacingNormal
-    property var _hostDetailsJson: LK.hosts.get_host_data_json(hostId)
+    property var _hostDetailsJson: LK.hosts.getHostDataJson(hostId)
     property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
     property var _categories: {}
     property bool _showEmptyCategories: true
@@ -296,7 +296,7 @@ Item {
 
     function refresh() {
         if (root.hostId !== "") {
-            root._hostDetailsJson = LK.hosts.get_host_data_json(hostId)
+            root._hostDetailsJson = LK.hosts.getHostDataJson(hostId)
             root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
                                                .map(category_qv => category_qv.toString())

@@ -43,10 +43,8 @@ impl HostTableModel {
         self.update_row_data();
         self.end_reset_model();
 
-        self.selectedRow = match self.host_row_map.get(&selected_host_id.to_string()) {
-            Some(row) => *row as i32,
-            None => -1,
-        };
+        self.selectedRow = self.host_row_map.get(&selected_host_id.to_string())
+                                            .map(|row| *row as i32).unwrap_or(-1);
 
         if self.selectedRow >= 0 {
             self.selectionActivated();

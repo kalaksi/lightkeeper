@@ -65,19 +65,18 @@ LightkeeperDialog {
             }
 
             ImageButton {
-                id: addButton
                 enabled: addressField.text.length > 0
                 imageSource: "qrc:/main/images/button/add"
                 size: root.buttonSize
                 onClicked: {
                     LK.config.addCertificateMonitor(addressField.text)
+                    addressField.text = ""
                     LK.reload()
                     root.refresh()
                 }
             }
 
             ImageButton {
-                id: removeButton
                 enabled: monitorList.currentIndex >= 0
                 imageSource: "qrc:/main/images/button/remove"
                 size: root.buttonSize
@@ -90,12 +89,13 @@ LightkeeperDialog {
             }
 
             ImageButton {
-                id: refreshButton
                 imageSource: "qrc:/main/images/button/refresh"
                 size: root.buttonSize
                 onClicked: {
                     LK.command.refreshCertificateMonitors()
                 }
+
+                Layout.leftMargin: Theme.spacingLoose
             }
         }
 
@@ -117,14 +117,13 @@ LightkeeperDialog {
                 model: root.certificateMonitors
 
                 delegate: ItemDelegate {
-                    text: modelData
-                    implicitWidth: monitorList.width
                     implicitHeight: root.tableRowHeight
-                    padding: 20
+                    width: parent.width
                     highlighted: ListView.isCurrentItem
                     onClicked: monitorList.currentIndex = index
 
                     Row {
+                        padding: Theme.spacingNormal
                         spacing: Theme.spacingNormal
                         anchors.fill: parent
 

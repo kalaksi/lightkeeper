@@ -36,7 +36,7 @@ TableView {
     topMargin: Theme.spacingTight
     bottomMargin: Theme.spacingTight
 
-    rowHeightProvider: root.model.get_row_height
+    rowHeightProvider: root.model.getRowHeight
 
     model: PropertyTableModel {
         monitoring_datas: root.monitoring_datas

@@ -67,7 +67,7 @@ impl MonitorManager {
 
         // Certificate monitors.
         if hosts_config.certificate_monitors.len() > 0 {
-            log::debug!("Found configuration for certificate monitors");
+            log::debug!("Found configuration for {} certificate monitors", hosts_config.certificate_monitors.len());
         }
 
         let mut settings = HashMap::new();
