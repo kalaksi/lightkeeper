@@ -26,8 +26,6 @@ pub struct CertMonitor {
 impl Module for CertMonitor {
     fn new(settings: &HashMap<String, String>) -> Self {
         CertMonitor {
-            // port: settings.get("port").map(|value| value.parse().unwrap()).unwrap_or(22),
-            // timeout: settings.get("timeout").map(|value| value.parse().unwrap()).unwrap_or(10),
             threshold_warning: settings.get("threshold_warning").map(|value| value.parse().unwrap_or_default()).unwrap_or(21),
             threshold_error: settings.get("threshold_error").map(|value| value.parse().unwrap_or_default()).unwrap_or(14),
             addresses: settings.get("addresses").map(|value| value.split(',').map(|s| s.to_string()).collect()).unwrap_or_default(),
@@ -60,6 +58,9 @@ impl MonitoringModule for CertMonitor {
                         Ok(pem) => {
                             if let Ok(x509_cert) = pem.parse_x509() {
                                 let days_left = x509_cert.validity().time_to_expiration().unwrap_or_default().whole_days();
+                                let common_name = x509_cert.subject.to_string();
+                                let issuer = x509_cert.issuer.to_string();
+                                let description = format!("{} | Issuer: {}", common_name, issuer);
 
                                 let error_level = if days_left <= self.threshold_error as i64 {
                                     Criticality::Error
@@ -72,6 +73,7 @@ impl MonitoringModule for CertMonitor {
                                 };
 
                                 DataPoint::labeled_value_with_level(address.clone(), format!("{}", days_left), error_level)
+                                          .with_description(description)
                             }
                             else {
                                 DataPoint::labeled_value_with_level(address.clone(), "Failed to parse PEM.".to_string(), Criticality::Error)

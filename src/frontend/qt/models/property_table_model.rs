@@ -12,6 +12,7 @@ use crate::module::monitoring::{DataPoint, MonitoringData};
 const SEPARATOR_TOKEN: &str = "sep";
 
 #[derive(QObject, Default)]
+#[allow(non_snake_case)]
 pub struct PropertyTableModel {
     base: qt_base_class!(trait QAbstractTableModel),
 
@@ -35,6 +36,7 @@ pub struct PropertyTableModel {
     row_datas: Vec<RowData>,
 }
 
+#[allow(non_snake_case)]
 impl PropertyTableModel {
     /// Updates monitoring data. Expects MonitoringData as QVariant.
     pub fn update(&mut self, new_data: QVariant) {

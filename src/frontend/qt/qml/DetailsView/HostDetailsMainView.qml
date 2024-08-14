@@ -143,7 +143,7 @@ Item {
 
                         Connections {
                             target: LK.hosts
-                            function onMonitoringDataReceived(hostId, category, monitoring_data_qv) {
+                            function onMonitoringDataReceived(hostId, category) {
                                 if (hostId === root.hostId && category === modelData) {
                                     groupBoxLabel.refreshProgress = LK.hosts.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
 
@@ -299,7 +299,7 @@ Item {
             root._hostDetailsJson = LK.hosts.getHostDataJson(hostId)
             root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
-                                               .map(category_qv => category_qv.toString())
+                                        .map(category_qv => category_qv.toString())
         }
     }
 

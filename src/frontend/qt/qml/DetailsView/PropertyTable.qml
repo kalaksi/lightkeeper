@@ -138,7 +138,7 @@ TableView {
                 Row {
                     width: parent.width
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
+                    spacing: Theme.spacingTight
                     z: 2
 
                     Row {

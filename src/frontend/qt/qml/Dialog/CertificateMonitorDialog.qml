@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Layouts 1.11
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
+import QtGraphicalEffects 1.15
 
 import "../StyleOverride"
 import "../Button"
@@ -18,17 +19,23 @@ LightkeeperDialog {
     implicitHeight: 650
     standardButtons: Dialog.Close
 
+    property string certMonitorId: LK.hosts.getCertificateMonitorHostId()
+    property var dataPoints: {}
     property var certificateMonitors: LK.config.getCertificateMonitors()
     property int tableRowHeight: 50
     property int buttonSize: 32
     property int refreshProgress: 0
 
+    Component.onCompleted: {
+        root.refresh()
+    }
+
     Connections {
         target: LK.hosts
-        function onMonitoringDataReceived(hostId, category, monitoringDataQv) {
-            let certMonitorId = LK.hosts.getCertificateMonitorHostId()
-            if (hostId === certMonitorId) {
-                root.refreshProgress = LK.hosts.getPendingMonitorCountForCategory(certMonitorId, certMonitorId) > 0 ?  0 : 100
+
+        function onMonitoringDataReceived(hostId, category) {
+            if (hostId === root.certMonitorId) {
+                root.refresh()
             }
         }
     }
@@ -123,15 +130,52 @@ LightkeeperDialog {
                     onClicked: monitorList.currentIndex = index
 
                     Row {
-                        padding: Theme.spacingNormal
-                        spacing: Theme.spacingNormal
                         anchors.fill: parent
+                        anchors.verticalCenter: parent.verticalCenter
+                        padding: Theme.spacingNormal
 
-                        NormalText {
-                            width: Math.max(parent.width * 0.35, implicitWidth)
-                            text: modelData
+                        Column {
+                            width: parent.width * 0.6
                             anchors.verticalCenter: parent.verticalCenter
+
+                            NormalText {
+                                text: root.dataPoints[modelData].label
+                            }
+
+                            SmallerText {
+                                text: root.dataPoints[modelData].description
+                            }
                         }
+
+                        OptionalText {
+                            width: parent.width * 0.3
+                            anchors.verticalCenter: parent.verticalCenter
+                            placeholder: "Waiting for expiration info"
+                            text: root.dataPoints[modelData].value.length > 0 ?  `Expires in ${root.dataPoints[modelData].value} days` : ""
+                        }
+
+                        Image {
+                            id: statusImage
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 0.45 * parent.height
+                            height: 0.45 * parent.height
+                            antialiasing: true
+                            source: "qrc:/main/images/criticality/" + (root.dataPoints[modelData].status || "nodata")
+
+                            ColorOverlay {
+                                anchors.fill: parent
+                                source: statusImage
+                                color: Theme.criticalityColor(root.dataPoints[modelData].status)
+                                antialiasing: true
+                            }
+                        }
+
+
+                        // WaveAnimation {
+                        //     anchors.centerIn: statusImage
+                        //     color: parent.color
+                        //     visible: parent.monitorId in root.highlights && !parent.isFromCache
+                        // }
                     }
                 }
             }
@@ -139,6 +183,27 @@ LightkeeperDialog {
     }
 
     function refresh() {
-        monitorList.model = LK.config.getCertificateMonitors()
+        root.certificateMonitors = LK.config.getCertificateMonitors()
+        root.refreshProgress = LK.hosts.getPendingMonitorCountForCategory(certMonitorId, certMonitorId) > 0 ?  0 : 100
+
+        let monitoringData = JSON.parse(LK.hosts.getMonitoringDataJson(root.certMonitorId, root.certMonitorId))
+        let parentDataPoint = monitoringData.values.slice(-1)[0]
+
+        let newDataPoints = {}
+        for (const address of root.certificateMonitors) {
+            let dataPoint = parentDataPoint.multivalue.find((item) => item.label === address)
+            if (dataPoint) {
+                newDataPoints[address] = dataPoint
+            }
+            else {
+                newDataPoints[address] = {
+                    label: address,
+                    value: "",
+                    status: "nodata",
+                    description: ""
+                }
+            }
+        }
+        root.dataPoints = newDataPoints
     }
 }

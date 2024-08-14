@@ -20,7 +20,7 @@ pub struct HostDataManagerModel {
     updateReceived: qt_signal!(host_id: QString),
     monitorStateChanged: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     commandResultReceived: qt_signal!(command_result: QString, invocation_id: u64),
-    monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data: QVariant, invocation_id: u64),
+    monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data_qv: QVariant, invocation_id: u64),
     errorReceived: qt_signal!(criticality: QString, error: QString),
     verificationRequested: qt_signal!(host_id: QString, connector_id: QString, message: QString, key_id: QString),
 
@@ -29,6 +29,7 @@ pub struct HostDataManagerModel {
     //
 
     getMonitoringData: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
+    getMonitoringDataJson: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
     getDisplayData: qt_method!(fn(&self) -> QVariant),
     getCategories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
     getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
@@ -100,7 +101,6 @@ impl HostDataManagerModel {
                                         new_monitor_data.to_qvariant(),
                                         invocation_id);
 
-
             // Find out any monitor state changes and signal accordingly.
             if let Some(old_data) = maybe_old_data {
                 let new_criticality = new_monitor_data.values.back().unwrap().criticality;
@@ -148,10 +148,24 @@ impl HostDataManagerModel {
 
     // Get monitoring data as a QVariant.
     fn getMonitoringData(&self, host_id: QString, monitor_id: QString) -> QVariant {
+        let host_id = host_id.to_string();
         let monitor_id = monitor_id.to_string();
 
-        let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        let display_data = self.display_data.hosts.get(&host_id).unwrap();
         display_data.host_state.monitor_data.get(&monitor_id).unwrap().to_qvariant()
+    }
+
+    fn getMonitoringDataJson(&self, host_id: QString, monitor_id: QString) -> QString {
+        let host_id = host_id.to_string();
+        let monitor_id = monitor_id.to_string();
+
+        if let Some(display_data) = self.display_data.hosts.get(&host_id) {
+            let monitor_data = display_data.host_state.monitor_data.get(&monitor_id).unwrap();
+            QString::from(serde_json::to_string(&monitor_data).unwrap())
+        }
+        else {
+            QString::from("{}")
+        }
     }
 
     fn getDisplayData(&self) -> QVariant {
@@ -326,18 +340,17 @@ impl HostDataManagerModel {
 
     fn getHostDataJson(&self, host_id: QString) -> QString {
         // Doesn't include monitor and command datas.
-        let mut result = String::new();
         if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
             let mut stripped = display_data.host_state.clone();
             stripped.monitor_data.clear();
             stripped.command_results.clear();
-            result = serde_json::to_string(&stripped).unwrap();
+            QString::from(serde_json::to_string(&stripped).unwrap())
         }
-
-        return QString::from(result);
+        else {
+            QString::from("{}")
+        }
     }
 
-    // TODO: remove
     // Returns list of MonitorData structs in JSON. Empty if host doesn't exist.
     fn get_monitor_data_keys_sorted(&self, monitoring_data: Vec<&MonitoringData>) -> Vec<String> {
         let mut keys_ordered = Vec::<String>::new();
