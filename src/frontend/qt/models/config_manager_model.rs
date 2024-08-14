@@ -219,7 +219,7 @@ impl ConfigManagerModel {
     fn removeHost(&mut self, host_name: QString) {
         let host_name = host_name.to_string();
         ::log::info!("Removing host {}", host_name);
-        self.hosts_config.hosts.remove(&host_name).unwrap();
+        self.hosts_config.hosts.remove(&host_name);
     }
 
     fn getCertificateMonitors(&self) -> QStringList {
@@ -742,11 +742,10 @@ impl ConfigManagerModel {
 
     fn ignoreFromConfigHelper(&mut self, group_name: QString, commands: QStringList, monitors: QStringList, connectors: QStringList) {
         let group_name = group_name.to_string();
-        let group_settings = self.groups_config.groups.get_mut(&group_name).unwrap();
-
-        group_settings.config_helper.ignored_commands = commands.into_iter().map(ToString::to_string).collect();
-        group_settings.config_helper.ignored_monitors = monitors.into_iter().map(ToString::to_string).collect();
-        group_settings.config_helper.ignored_connectors = connectors.into_iter().map(ToString::to_string).collect();
+        if let Some(group_settings) = self.groups_config.groups.get_mut(&group_name) {
+            group_settings.config_helper.ignored_commands = commands.into_iter().map(ToString::to_string).collect();
+            group_settings.config_helper.ignored_monitors = monitors.into_iter().map(ToString::to_string).collect();
+            group_settings.config_helper.ignored_connectors = connectors.into_iter().map(ToString::to_string).collect();
+        }
     }
-
 }

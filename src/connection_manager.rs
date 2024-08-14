@@ -265,7 +265,9 @@ impl ConnectionManager {
                     };
 
                     let response = RequestResponse::new(&request, responses);
-                    request.response_sender.send(response).unwrap();
+                    request.response_sender.send(response).unwrap_or_else(|_response|
+                        log::warn!("[{}][{}] Couldn't process response", request.host.name, request.source_id)
+                    );
                 });
             }
         })
