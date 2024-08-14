@@ -71,7 +71,7 @@ TableView {
                 OptionalText {
                     anchors.verticalCenter: parent.verticalCenter
                     placeholder: "No FQDN defined"
-                    text: value || ""
+                    text: value
                 }
             }
         }
@@ -85,7 +85,7 @@ TableView {
                 OptionalText {
                     anchors.verticalCenter: parent.verticalCenter
                     placeholder: "IP address not available"
-                    text: value || ""
+                    text: value
                 }
             }
         }
