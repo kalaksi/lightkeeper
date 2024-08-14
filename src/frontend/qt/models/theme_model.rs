@@ -44,6 +44,7 @@ pub struct ThemeModel {
     tooltipDelay: qt_property!(i32; CONST),
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
+    criticalityColor: qt_method!(fn(&self, criticality: QString) -> QString),
     categoryIcon: qt_method!(fn(&self, category: QString) -> QString),
     colorForCriticality: qt_method!(fn(&self, criticality: QString) -> QString),
     iconForCriticality: qt_method!(fn(&self, alert_level: QString) -> QString),
@@ -103,6 +104,17 @@ impl ThemeModel {
         }
         else {
             QString::from("#505050")
+        }
+    }
+
+    fn criticalityColor(&self, criticality: QString) -> QString {
+        match criticality.to_string().as_str() {
+            "critical" => QString::from("firebrick"),
+            "error" => QString::from("firebrick"),
+            "warning" => QString::from("orange"),
+            "normal" => QString::from("forestgreen"),
+            "info" => QString::from("forestgreen"),
+            _ => QString::from("orange"),
         }
     }
 

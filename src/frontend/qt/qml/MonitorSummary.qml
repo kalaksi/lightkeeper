@@ -10,19 +10,8 @@ Item {
     required property var model 
     required property var highlights
 
-    property var _colors: {}
-    Component.onCompleted: function() {
-        _colors = {
-            critical: "firebrick",
-            error: "firebrick",
-            warning: "orange",
-            normal: "forestgreen",
-            info: "forestgreen",
-            _: "orange",
-        }
-    }
-
     anchors.fill: parent
+
 
     Row {
         Repeater {
@@ -33,7 +22,7 @@ Item {
                 property string criticality: monitorData.values.slice(-1)[0].criticality.toLowerCase()
                 property bool isFromCache: monitorData.values.slice(-1)[0].is_from_cache
                 property string monitorId: monitorData.display_options.display_text.toLowerCase()
-                property string color: getColor(criticality)
+                property string color: Theme.criticalityColor(criticality)
                 height: root.height
                 width: 0.7 * root.height
 
@@ -95,13 +84,5 @@ Item {
             }
 
         }
-    }
-
-    function getColor(criticality) {
-        let color = _colors[criticality]
-        if (typeof color !== "undefined") {
-            return color
-        }
-        return _colors["_"]
     }
 }
