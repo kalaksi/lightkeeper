@@ -27,6 +27,7 @@ In case you find the GUI insufficient and need to dig deeper, you can always use
 - Status summary in host table for quick status view
 - Log viewer with regex search and hotkeys similar to less/vim.
 - Text file editor for editing remote files (with built-in editor or using CLI over SSH).
+- Certificate monitors for monitoring certificate validity and expiration.
 - Follow console output for longer running commands such as container builds and package updates.
 
 # Installing
