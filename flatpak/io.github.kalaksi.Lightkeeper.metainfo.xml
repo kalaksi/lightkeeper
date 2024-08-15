@@ -28,6 +28,17 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.19.0" date="2024-08-15">
+      <description>
+        <ul>
+          <li>New feature: certificate monitor for monitoring certificate validity and expiration.</li>
+          <li>Improve configuration reloading. Now UI won't reset.</li>
+          <li>Improve error handling and fix some panic situations.</li>
+          <li>Fix log viewer hotkeys (broke in v0.18).</li>
+          <li>Add missing flatpak permissions for tray icon.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.18.1" date="2024-08-08">
       <description>
         <ul>
