@@ -19,20 +19,26 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(name: &str, ip_address: &str, fqdn: &str, settings: &[HostSetting]) -> Result<Self, String> {
+    pub fn new(name: &str, ip_address: &str, fqdn: &str, settings: &[HostSetting]) -> Self {
         let mut new = Host {
             name: name.to_string(),
             fqdn: fqdn.to_string(),
             ip_address: match Ipv4Addr::from_str(ip_address) {
                 Ok(address) => IpAddr::V4(address),
-                Err(error) => return Err(error.to_string()),
+                Err(error) => {
+                    log::error!("Failed to parse IP address {}: {}", ip_address, error);
+                    IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))
+                }
             },
             platform: PlatformInfo::new(),
             settings: settings.to_vec(),
         };
 
-        new.resolve_ip()?;
-        Ok(new)
+        if let Err(error) = new.resolve_ip() {
+            log::error!("{}", error);
+        }
+
+        new
     }
 
     pub fn empty(name: &str, settings: &[HostSetting]) -> Self {
@@ -55,14 +61,14 @@ impl Host {
                 // Resolve FQDN and get the first IP address.
                 let mut addresses = match format!("{}:0", self.fqdn).to_socket_addrs() {
                     Ok(addresses) => addresses,
-                    Err(error) => return Err(format!("Failed to resolve: {}", error)),
+                    Err(error) => return Err(format!("Failed to resolve {}: {}", self.fqdn, error)),
                 };
 
                 if addresses.len() > 0 {
                     self.ip_address = addresses.next().unwrap().ip();
                 }
                 else {
-                    return Err(String::from("Failed to resolve: No addresses found."));
+                    return Err(format!("Failed to resolve {}: No addresses found.", self.fqdn));
                 }
                 return Ok(());
             }

@@ -68,13 +68,7 @@ impl HostManager {
             log::debug!("Found configuration for host {}", host_id);
 
             // TODO: UseSudo is currently always assumed.
-            let host = match Host::new(host_id, &host_config.address, &host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]) {
-                Ok(host) => host,
-                Err(error) => {
-                    log::error!("{}", error);
-                    continue;
-                }
-            };
+            let host = Host::new(host_id, &host_config.address, &host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]);
             if let Err(error) = hosts.add(host, HostStatus::Pending) {
                 log::error!("{}", error.to_string());
                 continue;

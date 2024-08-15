@@ -271,7 +271,12 @@ impl ConnectionModule for Ssh2 {
                    .map_err(|error| LkError::other_p("Failed to read known hosts file", error))?;
 
         // The session probably gets disconnected since receiving host key fails if not reconnecting.
-        let socket_address = format!("{}:{}", self_address, self_port).to_socket_addrs().unwrap().next().unwrap();
+        let mut socket_addresses = format!("{}:{}", self_address, self_port).to_socket_addrs()?;
+        let socket_address = match socket_addresses.next() {
+            Some(address) => address,
+            None => return Err(LkError::other("Failed to resolve address")),
+        };
+
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
         let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
 
@@ -335,7 +340,12 @@ impl Ssh2 {
             return Ok(())
         }
 
-        let socket_address = format!("{}:{}", address, port).to_socket_addrs().unwrap().next().unwrap();
+        let mut socket_addresses = format!("{}:{}", address, port).to_socket_addrs()?;
+        let socket_address = match socket_addresses.next() {
+            Some(address) => address,
+            None => return Err(LkError::other("Failed to resolve address")),
+        };
+
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
         let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
         log::info!("Connected to {}:{}", address, port);

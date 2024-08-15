@@ -3,11 +3,12 @@ use base64::Engine;
 use rustls::pki_types::{CertificateDer, ServerName};
 use std::collections::HashMap;
 use std::net::TcpStream;
+use std::net::ToSocketAddrs;
 use std::path::Path;
 use std::sync::Arc;
 
 use lightkeeper_module::connection_module;
-use crate::error::LkError;
+use crate::error::*;
 use crate::module::*;
 use crate::module::connection::*;
 
@@ -79,7 +80,21 @@ impl ConnectionModule for Tcp {
 
         let (address, port) = message.split_once(':').unwrap_or_else(|| (message, "443"));
         let full_address = format!("{}:{}", address, port);
-        let mut tcp_stream = TcpStream::connect(&full_address)?;
+
+        let mut socket_addresses = match full_address.to_socket_addrs() {
+            Ok(addresses) => addresses,
+            Err(error) => return Ok(ResponseMessage::new_error(format!("Failed to resolve address {}: {}", full_address, error))),
+        };
+
+        let socket_address = match socket_addresses.next() {
+            Some(address) => address,
+            None => return Ok(ResponseMessage::new_error(format!("Failed to resolve address {}", full_address))),
+        };
+
+        let mut tcp_stream = match TcpStream::connect_timeout(&socket_address, std::time::Duration::from_secs(10)) {
+            Ok(tcp_stream) => tcp_stream,
+            Err(error) => return Ok(ResponseMessage::new_error(format!("{}", error))),
+        };
 
         // Connect and verify TLS certificate.
         if self.verify_certificate {
@@ -96,6 +111,9 @@ impl ConnectionModule for Tcp {
                         .map(|cert| der_to_pem(&cert))
                         .collect::<Vec<String>>()
                         .join("\n");
+
+                    client.send_close_notify();
+                    client.complete_io(&mut tcp_stream)?;
 
                     Ok(ResponseMessage::new_success(pem_chain))
                 },
