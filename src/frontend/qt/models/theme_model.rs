@@ -107,8 +107,9 @@ impl ThemeModel {
         }
     }
 
+    // TODO: this is actually a duplicate and maybe merged with colorForCriticality or renamed somehow if keeping separate.
     fn criticalityColor(&self, criticality: QString) -> QString {
-        match criticality.to_string().as_str() {
+        match criticality.to_string().to_lowercase().as_str() {
             "critical" => QString::from("firebrick"),
             "error" => QString::from("firebrick"),
             "warning" => QString::from("orange"),

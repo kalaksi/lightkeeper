@@ -84,7 +84,7 @@ impl MonitoringModule for CertMonitor {
                                     Criticality::Warning
                                 }
                                 else {
-                                    Criticality::Info
+                                    Criticality::Normal
                                 };
 
                                 DataPoint::labeled_value_with_level(address.clone(), message, error_level)

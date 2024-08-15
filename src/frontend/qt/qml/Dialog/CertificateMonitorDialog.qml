@@ -125,13 +125,14 @@ LightkeeperDialog {
                 // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
                 boundsBehavior: Flickable.StopAtBounds
                 onWidthChanged: forceLayout()
+                currentIndex: -1
                 model: root.certificateMonitors
 
                 delegate: ItemDelegate {
                     implicitHeight: root.tableRowHeight
                     width: parent.width
                     highlighted: ListView.isCurrentItem
-                    onClicked: monitorList.currentIndex = index
+                    onClicked: monitorList.currentIndex = monitorList.currentIndex === index ? -1 : index
 
                     Row {
                         anchors.fill: parent
@@ -148,6 +149,7 @@ LightkeeperDialog {
 
                             SmallerText {
                                 text: root.dataPoints[modelData].description
+                                wrapMode: Text.WordWrap
                             }
                         }
 
@@ -164,16 +166,15 @@ LightkeeperDialog {
                             width: 0.45 * parent.height
                             height: 0.45 * parent.height
                             antialiasing: true
-                            source: "qrc:/main/images/criticality/" + (root.dataPoints[modelData].status || "nodata")
+                            source: "qrc:/main/images/criticality/" + (root.dataPoints[modelData].criticality || "nodata").toLowerCase()
 
                             ColorOverlay {
                                 anchors.fill: parent
                                 source: statusImage
-                                color: Theme.criticalityColor(root.dataPoints[modelData].status)
+                                color: Theme.criticalityColor(root.dataPoints[modelData].criticality)
                                 antialiasing: true
                             }
                         }
-
 
                         // WaveAnimation {
                         //     anchors.centerIn: statusImage
@@ -203,7 +204,7 @@ LightkeeperDialog {
                 newDataPoints[address] = {
                     label: address,
                     value: "",
-                    status: "nodata",
+                    criticality: "nodata",
                     description: ""
                 }
             }
