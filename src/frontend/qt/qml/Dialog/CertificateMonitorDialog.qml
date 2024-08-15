@@ -15,7 +15,7 @@ import ".."
 LightkeeperDialog {
     id: root
     title: "Certificate Monitor"
-    implicitWidth: 800
+    implicitWidth: 900
     implicitHeight: 650
     standardButtons: Dialog.Close
 
@@ -150,8 +150,8 @@ LightkeeperDialog {
                         OptionalText {
                             width: parent.width * 0.3
                             anchors.verticalCenter: parent.verticalCenter
-                            placeholder: "Waiting for expiration info"
-                            text: root.dataPoints[modelData].value.length > 0 ?  `Expires in ${root.dataPoints[modelData].value} days` : ""
+                            placeholder: "No expiration info"
+                            text: root.dataPoints[modelData].value
                         }
 
                         Image {

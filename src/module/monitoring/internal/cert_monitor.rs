@@ -49,7 +49,8 @@ impl MonitoringModule for CertMonitor {
 
         for (address, response) in addresses_and_responses {
             let child = if response.is_error() {
-                DataPoint::value_with_level(response.message.clone(), Criticality::Error)
+                let error = format!("Error: {}", response.message);
+                DataPoint::labeled_value_with_level(address.clone(), error, Criticality::Error)
             }
             else {
                 // Fetch only the peer certificate (first one) for inspection.
@@ -59,8 +60,22 @@ impl MonitoringModule for CertMonitor {
                             if let Ok(x509_cert) = pem.parse_x509() {
                                 let days_left = x509_cert.validity().time_to_expiration().unwrap_or_default().whole_days();
                                 let common_name = x509_cert.subject.to_string();
+                                let message = format!("Expires in {} days", days_left);
+                                let mut description = common_name.to_string();
+
+                                if let Ok(Some(san)) = x509_cert.subject_alternative_name() {
+                                    let names = san.value.general_names.iter().map(|name| {
+                                        match name {
+                                            x509_parser::extensions::GeneralName::DNSName(name) => name.to_string(),
+                                            _ => "Unknown".to_string()
+                                        }
+                                    }).collect::<Vec<String>>();
+
+                                    description = format!("{} | SAN: {}", description, names.join(", "));
+                                }
+
                                 let issuer = x509_cert.issuer.to_string();
-                                let description = format!("{} | Issuer: {}", common_name, issuer);
+                                description = format!("{} | Issuer: {}", description, issuer);
 
                                 let error_level = if days_left <= self.threshold_error as i64 {
                                     Criticality::Error
@@ -72,11 +87,11 @@ impl MonitoringModule for CertMonitor {
                                     Criticality::Info
                                 };
 
-                                DataPoint::labeled_value_with_level(address.clone(), format!("{}", days_left), error_level)
+                                DataPoint::labeled_value_with_level(address.clone(), message, error_level)
                                           .with_description(description)
                             }
                             else {
-                                DataPoint::labeled_value_with_level(address.clone(), "Failed to parse PEM.".to_string(), Criticality::Error)
+                                DataPoint::labeled_value_with_level(address.clone(), "Failed to parse certificate.".to_string(), Criticality::Error)
                             }
                         },
                         Err(error) => {
