@@ -24,7 +24,7 @@ LightkeeperDialog {
     property var certificateMonitors: LK.config.getCertificateMonitors()
     property int tableRowHeight: 50
     property int buttonSize: 32
-    property int refreshProgress: 0
+    property int refreshProgress: 100
 
     Component.onCompleted: {
         root.refresh()
@@ -49,7 +49,7 @@ LightkeeperDialog {
         spacing: Theme.spacingLoose
 
         NormalText {
-            text: "Certificate monitor allows you to monitor the validity of certificates of your services."
+            text: "Certificate monitor allows you to monitor the validity and expiration of certificates."
             bottomPadding: Theme.spacingLoose
         }
 
@@ -95,11 +95,15 @@ LightkeeperDialog {
                 }
             }
 
-            ImageButton {
-                imageSource: "qrc:/main/images/button/refresh"
+            RefreshButton {
+                enabled: root.refreshProgress === 100
+                opacity: root.refreshProgress < 100 ? 0.5 : 1.0
+                spinning: root.refreshProgress < 100
                 size: root.buttonSize
+                flatButton: false
                 onClicked: {
                     LK.command.refreshCertificateMonitors()
+                    root.refreshProgress = 0
                 }
 
                 Layout.leftMargin: Theme.spacingLoose
@@ -184,7 +188,7 @@ LightkeeperDialog {
 
     function refresh() {
         root.certificateMonitors = LK.config.getCertificateMonitors()
-        root.refreshProgress = LK.hosts.getPendingMonitorCountForCategory(certMonitorId, certMonitorId) > 0 ?  0 : 100
+        root.refreshProgress = LK.hosts.getPendingMonitorCount(certMonitorId) > 0 ?  0 : 100
 
         let monitoringData = JSON.parse(LK.hosts.getMonitoringDataJson(root.certMonitorId, root.certMonitorId))
         let parentDataPoint = monitoringData.values.slice(-1)[0]
