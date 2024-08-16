@@ -28,7 +28,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.19.0" date="2024-08-15">
+    <release version="0.19.1" date="2024-08-16">
       <description>
         <ul>
           <li>New feature: certificate monitor for monitoring certificate validity and expiration.</li>
