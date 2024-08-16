@@ -12,7 +12,6 @@ finish-args:
   - "--share=network"
   - "--device=dri"
   - "--socket=ssh-auth"
-  - "--talk-name=org.freedesktop.StatusNotifierWatcher"
   - "--talk-name=org.kde.StatusNotifierWatcher"
 modules:
   # Liboping is needed for oping monitoring module.
