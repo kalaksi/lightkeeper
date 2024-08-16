@@ -87,7 +87,7 @@ groups:
     monitors:
       systemd-service:
         settings:
-          included_services: "cron.,collectd.,dbus.,ntp.,chrony.,systemd-journald.,containerd.,docker.,ufw.,rsyslog.,nullmailer.,ssh."
+          included_services: "cron.,collectd.,dbus.,ntp.,chrony.,systemd-journald.,docker.,ufw.,rsyslog.,nullmailer.,ssh."
     commands:
       systemd-service-start: {}
       systemd-service-stop: {}
