@@ -15,14 +15,14 @@ import ".."
 LightkeeperDialog {
     id: root
     title: "Certificate Monitor"
-    implicitWidth: 900
+    implicitWidth: 950
     implicitHeight: 650
     standardButtons: Dialog.Close
 
     property string certMonitorId: LK.hosts.getCertificateMonitorHostId()
     property var dataPoints: {}
     property var certificateMonitors: LK.config.getCertificateMonitors()
-    property int tableRowHeight: 50
+    property int tableRowHeight: 60
     property int buttonSize: 32
     property int refreshProgress: 100
 
@@ -140,7 +140,7 @@ LightkeeperDialog {
                         padding: Theme.spacingNormal
 
                         Column {
-                            width: parent.width * 0.6
+                            width: parent.width * 0.48
                             anchors.verticalCenter: parent.verticalCenter
 
                             NormalText {
@@ -149,12 +149,14 @@ LightkeeperDialog {
 
                             SmallerText {
                                 text: root.dataPoints[modelData].description
+                                visible: text !== ""
                                 wrapMode: Text.WordWrap
+                                width: parent.width
                             }
                         }
 
                         OptionalText {
-                            width: parent.width * 0.3
+                            width: parent.width * 0.43
                             anchors.verticalCenter: parent.verticalCenter
                             placeholder: "No expiration info"
                             text: root.dataPoints[modelData].value

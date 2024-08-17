@@ -98,13 +98,20 @@ impl ConnectionModule for Tcp {
 
         // Connect and verify TLS certificate.
         if self.verify_certificate {
-            let rustls_address: ServerName = address.to_string().try_into().map_err(|_| LkError::other_p("Invalid address", message))?;
+
+            let rustls_address: ServerName = match address.to_string().try_into() {
+                Ok(server_name) => server_name,
+                Err(error) => return Ok(ResponseMessage::new_error(format!("Failed to parse address: {}", error))),
+            };
 
             match rustls::ClientConnection::new(self.rustls_client_config.clone().unwrap(), rustls_address) {
                 Ok(mut client) => {
                     // Wait for handshake to complete.
                     while client.is_handshaking() {
-                        client.complete_io(&mut tcp_stream)?;
+                        match client.complete_io(&mut tcp_stream) {
+                            Ok(_) => (),
+                            Err(error) => return Ok(ResponseMessage::new_error(format!("{}", error))),
+                        }
                     }
 
                     let pem_chain = client.peer_certificates().unwrap_or_default().into_iter()
