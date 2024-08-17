@@ -337,6 +337,7 @@ impl ModuleFactory {
             (command::systemd::service::Mask::get_metadata(), command::systemd::service::Mask::new_command_module),
             (command::systemd::service::Unmask::get_metadata(), command::systemd::service::Unmask::new_command_module),
             (command::systemd::service::Logs::get_metadata(), command::systemd::service::Logs::new_command_module),
+            (command::network::SocketListen::get_metadata(), command::network::SocketListen::new_command_module),
         ];
 
         self.validate_modules();

@@ -6,6 +6,8 @@ import QtQuick.Layouts 1.15
 import "Text"
 import "js/Parse.js" as Parse
 
+/// A component that displays JSON text in a markdown-like format.
+/// If the text doesn't seem to be JSON, it will be displayed as is.
 Item {
     id: root
     required property string jsonText

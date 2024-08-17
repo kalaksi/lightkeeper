@@ -42,6 +42,7 @@ groups:
       storage-lvm-lvresize: {}
       storage-lvm-lvremove: {}
       storage-lvm-lvrefresh: {}
+      network-socket-listen: {}
 
   nixos:
     monitors:

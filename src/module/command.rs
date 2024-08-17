@@ -12,3 +12,4 @@ pub mod os;
 pub mod storage;
 pub mod systemd;
 pub mod nixos;
+pub mod network;
