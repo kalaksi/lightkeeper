@@ -12,10 +12,17 @@ use crate::utils::ErrorMessage;
 #[allow(non_snake_case)]
 pub struct HostDataManagerModel {
     base: qt_base_class!(trait QObject),
+    monitorCriticalCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
+    monitorErrorCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
+    monitorWarningCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
+    monitorNormalCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
+    monitorNoDataCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
 
     //
     // Signals
     //
+
+    monitorCriticalityCountsChanged: qt_signal!(),
 
     updateReceived: qt_signal!(host_id: QString),
     monitorStateChanged: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
@@ -70,14 +77,17 @@ impl HostDataManagerModel {
 
         priorities.sort_by(|left, right| left.1.cmp(&right.1));
 
-        HostDataManagerModel {
+        let mut result = HostDataManagerModel {
             display_data: display_data,
             // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             configuration_preferences: config.preferences,
             configuration_cache_settings: config.cache_settings,
             ..Default::default()
-        }
+        };
+
+        result.update_criticality_counts();
+        result
     }
 
 
@@ -114,6 +124,8 @@ impl HostDataManagerModel {
                             QString::from(new_monitor_data.monitor_id.clone()),
                             QString::from(new_criticality.to_string())
                         );
+
+                        self.update_criticality_counts();
                     }
                 }
             }
@@ -382,5 +394,52 @@ impl HostDataManagerModel {
         multivalue_keys.sort();
 
         [ single_value_keys, multivalue_keys ].concat()
+    }
+
+    fn update_criticality_counts(&mut self) {
+        let (mut criticals, mut errors, mut warnings, mut normals, mut nodatas) = (0, 0, 0, 0, 0);
+
+        for monitor_data in self.display_data.hosts.values().flat_map(|host_data| host_data.host_state.monitor_data.values()) {
+            let criticality = monitor_data.values.back().map(|data_point| data_point.criticality).unwrap_or(Criticality::NoData);
+
+            match criticality {
+                Criticality::Critical => criticals += 1,
+                Criticality::Error => errors += 1,
+                Criticality::Warning => warnings += 1,
+                Criticality::Normal => normals += 1,
+                Criticality::NoData => nodatas += 1,
+                _ => {}
+            }
+        }
+
+        let mut state_changed = false;
+        if criticals != self.monitorCriticalCount {
+            self.monitorCriticalCount = criticals;
+            state_changed = true;
+        }
+
+        if errors != self.monitorErrorCount {
+            self.monitorErrorCount = errors;
+            state_changed = true;
+        }
+
+        if warnings != self.monitorWarningCount {
+            self.monitorWarningCount = warnings;
+            state_changed = true;
+        }
+
+        if normals != self.monitorNormalCount {
+            self.monitorNormalCount = normals;
+            state_changed = true;
+        }
+
+        if nodatas != self.monitorNoDataCount {
+            self.monitorNoDataCount = nodatas;
+            state_changed = true;
+        }
+
+        if state_changed {
+            self.monitorCriticalityCountsChanged();
+        }
     }
 }

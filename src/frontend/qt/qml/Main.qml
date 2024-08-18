@@ -421,6 +421,12 @@ ApplicationWindow {
         id: tray
         onShowClicked: root.toggleShow()
         onQuitClicked: root.quit()
+
+        criticalCount: LK.hosts.monitorCriticalCount
+        errorCount: LK.hosts.monitorErrorCount
+        warningCount: LK.hosts.monitorWarningCount
+        normalCount: LK.hosts.monitorNormalCount
+        nodataCount: LK.hosts.monitorNoDataCount
     }
 
     function toggleShow() {

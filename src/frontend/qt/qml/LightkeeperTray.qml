@@ -7,13 +7,35 @@ import Qt.labs.platform 1.1
 
 SystemTrayIcon {
     id: root
-    property int normals: 0
-    property int warnings: 0
-    property int errors: 0
+    property int criticalCount: 0
+    property int errorCount: 0
+    property int warningCount: 0
+    property int normalCount: 0
+    property int nodataCount: 0
 
     visible: true
     icon.source: "qrc:/main/images/tray-icon"
-    tooltip: "Lightkeeper: " + normals + " normal, " + warnings + " warning, " + errors + " error"
+    tooltip: {
+        let texts = [];
+
+        if (root.criticalCount > 0) {
+            texts.push("Critical: " + root.criticalCount)
+        }
+        if (root.errorCount > 0) {
+            texts.push("Error: " + root.errorCount)
+        }
+        if (root.warningCount > 0) {
+            texts.push("Warning: " + root.warningCount)
+        }
+        if (root.normalCount > 0) {
+            texts.push("Normal: " + root.normalCount)
+        }
+        if (root.nodataCount > 0) {
+            texts.push("No Data: " + root.nodataCount)
+        }
+
+        return "Lightkeeper status:\n" + texts.join(", ")
+    }
 
     signal showClicked()
     signal quitClicked()
@@ -46,17 +68,27 @@ SystemTrayIcon {
 
         MenuItem {
             enabled: false
-            text: "Error: " + root.errors
+            text: "Critical: " + root.criticalCount
         }
 
         MenuItem {
             enabled: false
-            text: "Warning: " + root.warnings
+            text: "Error: " + root.errorCount
         }
 
         MenuItem {
             enabled: false
-            text: "Normal: " + root.normals
+            text: "Warning: " + root.warningCount
+        }
+
+        MenuItem {
+            enabled: false
+            text: "Normal: " + root.normalCount
+        }
+
+        MenuItem {
+            enabled: false
+            text: "No Data: " + root.nodataCount
         }
 
         MenuSeparator { }
