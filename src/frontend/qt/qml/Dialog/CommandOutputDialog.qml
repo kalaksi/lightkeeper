@@ -27,6 +27,15 @@ Dialog {
 
     onClosed: reset()
 
+    onTextChanged: {
+        if (root.text.length > 0) {
+            commandOutput.rows = root.text.split("\n")
+        }
+        else {
+            commandOutput.reset()
+        }
+    }
+
 
     ColumnLayout {
         anchors.fill: parent
@@ -54,7 +63,7 @@ Dialog {
         LogList {
             id: commandOutput
             visible: root.text.length > 0
-            rows: TextTransform.trimNewline(root.text).split("\n")
+            rows: []
             enableShortcuts: root.enableShortcuts
             selectionColor: "transparent"
             appendOnly: true

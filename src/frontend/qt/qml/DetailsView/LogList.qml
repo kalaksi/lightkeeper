@@ -16,7 +16,6 @@ ListView {
     property bool scrollToBottom: !invertRowOrder
     /// If enabled, only appends new rows to the model instead of reprocessing all. Makes processing more performant.
     /// Not compatible with invertRowOrder as new rows are always appended to the end.
-    /// NOTE: may result in partial lines if connector didn't return full lines.
     property bool appendOnly: false
     property string _lastQuery: ""
     property var _matchingRows: []
@@ -38,7 +37,9 @@ ListView {
         color: root.selectionColor
     }
 
-    model: ListModel { }
+    model: ListModel {
+        id: listModel
+    }
 
     onRowsChanged: {
         refresh()
@@ -57,7 +58,7 @@ ListView {
         SmallText {
             id: textContent
             width: parent.width
-            text: modelData
+            text: modelData || ""
             font.family: "monospace"
             textFormat: Text.RichText
             wrapMode: Text.WordWrap
@@ -253,7 +254,16 @@ ListView {
 
     function refresh() {
         if (root.appendOnly) {
-            let newRows = root.rows.slice(root._lastRowCount)
+            let newRows = []
+            if (root._lastRowCount === 0) {
+                newRows = root.rows
+            }
+            else {
+                // Last line may be partial so replace that too.
+                root.model.remove(root.model.count - 1)
+                newRows = root.rows.slice(root._lastRowCount - 1)
+            }
+
             root._lastRowCount = root.rows.length
 
             for (const row of newRows) {
@@ -274,10 +284,10 @@ ListView {
             for (const row of modelRows) {
                 root.model.append({"text": row})
             }
+        }
 
-            if (root.scrollToBottom) {
-                root.positionViewAtEnd()
-            }
+        if (root.scrollToBottom) {
+            root.positionViewAtEnd()
         }
     }
 
@@ -297,5 +307,6 @@ ListView {
         root._lastQuery = ""
         root._matchingRows = []
         root._totalMatches = 0
+        root._lastRowCount = 0
     }
 }
