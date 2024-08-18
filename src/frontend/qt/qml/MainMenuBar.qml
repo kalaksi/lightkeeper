@@ -11,6 +11,8 @@ ToolBar {
     property bool enableShortcuts: false
     property bool enableEditButtons: false
 
+    focus: true
+
 
     signal clickedAdd()
     signal clickedRemove()
@@ -74,7 +76,6 @@ ToolBar {
                     placeholderText: "by name or address..."
                     width: root.width * 0.4
                     onTextChanged: root.filterChanged(searchInput.text)
-                    focus: true
                 }
             }
         }

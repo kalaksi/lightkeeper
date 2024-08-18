@@ -106,6 +106,8 @@ ApplicationWindow {
         }
 
         function onMonitorStateChanged(hostId, monitorId, newCriticality) {
+            // TODO: show tray message for some state changes.
+            // tray.showMessage(hostId, "Monitor " + monitorId + " on host " + hostId + " is now " + newCriticality)
             hostTable.highlightMonitor(hostId, monitorId, newCriticality)
         }
 
@@ -416,13 +418,17 @@ ApplicationWindow {
     }
 
     LightkeeperTray {
-        onActivated: {
-            if (root.visible) {
-                root.hide()
-            }
-            else {
-                root.show()
-            }
+        id: tray
+        onShowClicked: root.toggleShow()
+        onQuitClicked: root.quit()
+    }
+
+    function toggleShow() {
+        if (root.visible) {
+            root.hide()
+        }
+        else {
+            root.show()
         }
     }
 
