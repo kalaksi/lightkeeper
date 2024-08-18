@@ -22,6 +22,7 @@ pub fn init_resources() {
             "StatusBar.qml",
             "TableCell.qml",
             "WorkingSprite.qml",
+            "Button/AutoRefreshButton.qml",
             "Button/CommandButton.qml",
             "Button/ImageButton.qml",
             "Button/RefreshButton.qml",

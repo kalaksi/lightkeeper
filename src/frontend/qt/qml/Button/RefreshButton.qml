@@ -12,6 +12,8 @@ Item {
     property real imageRelativeHeight: 0.8
     property bool flatButton: true
     property real size: 0.8 * parent.height
+    property int iconWidth: Math.floor(imageRelativeWidth * size)
+    property int iconHeight: Math.floor(imageRelativeHeight * size)
 
     width: root.size
     height: root.size
@@ -39,8 +41,8 @@ Item {
             id: image
             anchors.centerIn: parent
             source: root.imageSource
-            width: root.imageRelativeWidth * root.width
-            height: root.imageRelativeHeight * root.height
+            width: root.iconWidth
+            height: root.iconHeight
 
             NumberAnimation on rotation {
                 from: 0
@@ -63,8 +65,8 @@ Item {
             visible: false
             anchors.centerIn: parent
             source: root.imageSource
-            width: root.imageRelativeWidth * root.width
-            height: root.imageRelativeHeight * root.height
+            width: root.iconWidth
+            height: root.iconHeight
             z: 10
         }
 

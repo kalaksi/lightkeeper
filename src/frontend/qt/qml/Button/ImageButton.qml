@@ -110,7 +110,6 @@ Item {
         }
     }
 
-    // TODO: provide this info somehow in qrc or theme file along the icon's path.
     /// Icon padding/margins vary a bit so patching a better sizing here.
     function getIconRelativeSize(resourcePath) {
         let icon_name = resourcePath.split("/").pop()
@@ -127,19 +126,19 @@ Item {
 
     function getIconWidth() {
         if (root.imageRelativeWidth > 0.0) {
-            return root.imageRelativeWidth * root.height
+            return Math.floor(root.imageRelativeWidth * root.height)
         }
         else {
-            return getIconRelativeSize(root.imageSource) * root.height
+            return Math.floor(getIconRelativeSize(root.imageSource) * root.height)
         }
     }
 
     function getIconHeight() {
         if (root.imageRelativeHeight > 0.0) {
-            return root.imageRelativeHeight * root.height
+            return Math.floor(root.imageRelativeHeight * root.height)
         }
         else {
-            return getIconRelativeSize(root.imageSource) * root.height
+            return Math.floor(getIconRelativeSize(root.imageSource) * root.height)
         }
     }
 }

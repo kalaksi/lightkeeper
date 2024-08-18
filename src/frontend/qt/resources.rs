@@ -60,6 +60,7 @@ pub fn init_resources() {
             "images/breeze/dark/help-keyboard-shortcuts.svg" as "images/button/keyboard-shortcuts",
             "images/breeze/dark/edit-undo.svg" as "images/button/undo",
             "images/breeze/dark/view-certificate.svg" as "images/button/certificates",
+            "images/breeze/dark/arrow-down.svg" as "images/button/dropdown-menu",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -146,6 +147,7 @@ pub fn init_resources() {
             "images/breeze/light/help-keyboard-shortcuts.svg" as "images/button/keyboard-shortcuts",
             "images/breeze/light/edit-undo.svg" as "images/button/undo",
             "images/breeze/light/view-certificate.svg" as "images/button/certificates",
+            "images/breeze/light/arrow-down.svg" as "images/button/dropdown-menu",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",

@@ -15,7 +15,6 @@ Dialog {
 
     modal: true
     opacity: 0.0
-    // TODO: more accurate calculation?
     implicitWidth: dialogText.contentWidth + 100
     implicitHeight: dialogText.contentHeight + 100
     standardButtons: Dialog.Close

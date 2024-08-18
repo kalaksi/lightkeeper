@@ -5,9 +5,10 @@ Text {
     color: Theme.textColor
     textFormat: Text.PlainText
 
-    Behavior on opacity {
-        NumberAnimation {
-            duration: Theme.animationDurationFast
-        }
-    }
+    // TODO: remove if not needed?
+    // Behavior on opacity {
+    //     NumberAnimation {
+    //         duration: Theme.animationDurationFast
+    //     }
+    // }
 }
