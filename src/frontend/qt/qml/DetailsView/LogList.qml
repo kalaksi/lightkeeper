@@ -14,10 +14,16 @@ ListView {
     property string selectionColor: Theme.highlightColorLight
     property bool invertRowOrder: true
     property bool scrollToBottom: !invertRowOrder
+    /// If enabled, only appends new rows to the model instead of reprocessing all. Makes processing more performant.
+    /// Not compatible with invertRowOrder as new rows are always appended to the end.
+    /// NOTE: may result in partial lines if connector didn't return full lines.
+    property bool appendOnly: false
     property string _lastQuery: ""
     property var _matchingRows: []
     property int _totalMatches: 0
     property int _listPageSize: 15
+    /// For appendOnly mode: keeps track of received rows so only new rows are appended.
+    property int _lastRowCount: 0
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
@@ -32,15 +38,11 @@ ListView {
         color: root.selectionColor
     }
 
-    model: []
-    onRowsChanged: {
-        if (root.invertRowOrder) {
-            root.rows.reverse()
-        }
+    model: ListModel { }
 
+    onRowsChanged: {
         refresh()
     }
-
 
     ScrollBar.vertical: ScrollBar {
         id: scrollBar
@@ -250,25 +252,39 @@ ListView {
     }
 
     function refresh() {
-        let rowsClone = [...root.rows]
-        let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
-        root._matchingRows = matchingRows
-        root._totalMatches = totalMatches
-        root.model = modelRows
+        if (root.appendOnly) {
+            let newRows = root.rows.slice(root._lastRowCount)
+            root._lastRowCount = root.rows.length
 
-        if (root.scrollToBottom) {
-            root.positionViewAtEnd()
+            for (const row of newRows) {
+                root.model.append({"text": row})
+            }
+        }
+        else {
+            if (root.invertRowOrder) {
+                root.rows.reverse()
+            }
+
+            let rowsClone = [...root.rows]
+            let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
+            root._matchingRows = matchingRows
+            root._totalMatches = totalMatches
+
+            root.model.clear()
+            for (const row of modelRows) {
+                root.model.append({"text": row})
+            }
+
+            if (root.scrollToBottom) {
+                root.positionViewAtEnd()
+            }
         }
     }
 
-    function invertRowOrder() {
+    function toggleInvertRowOrder() {
         root.invertRowOrder = !root.invertRowOrder
         root.rows.reverse()
         refresh()
-    }
-
-    function addRows(newRows) {
-        root.rows = root.rows.concat(newRows)
     }
 
     function getSearchDetails() {
@@ -277,7 +293,7 @@ ListView {
 
     function reset() {
         root.rows = []
-        root.model = []
+        root.model.clear()
         root._lastQuery = ""
         root._matchingRows = []
         root._totalMatches = 0

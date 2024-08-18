@@ -1,4 +1,12 @@
 
+function trimNewline(text) {
+    if (text.endsWith('\n')) {
+        return text.slice(0, -1)
+    }
+    else {
+        return text
+    }
+}
 
 function capitalize(text) {
     if (text.length > 1) {

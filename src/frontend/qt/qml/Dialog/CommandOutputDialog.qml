@@ -6,6 +6,7 @@ import ".."
 import "../DetailsView"
 import "../Text"
 import "../Misc"
+import "../js/TextTransform.js" as TextTransform
 
 
 // This component should be a direct child of main window.
@@ -24,10 +25,8 @@ Dialog {
 
     background: DialogBackground { }
 
-    onClosed: {
-        root.text = ""
-        root.progress = 0
-    }
+    onClosed: reset()
+
 
     ColumnLayout {
         anchors.fill: parent
@@ -55,9 +54,10 @@ Dialog {
         LogList {
             id: commandOutput
             visible: root.text.length > 0
-            rows: root.text.split("\n")
+            rows: TextTransform.trimNewline(root.text).split("\n")
             enableShortcuts: root.enableShortcuts
             selectionColor: "transparent"
+            appendOnly: true
             invertRowOrder: false
 
             Layout.fillWidth: true
@@ -82,5 +82,10 @@ Dialog {
         NumberAnimation {
             duration: Theme.animationDurationFast
         }
+    }
+
+    function reset() {
+        root.text = ""
+        root.progress = 0
     }
 }

@@ -170,7 +170,7 @@ Item {
                         Switch {
                             id: invertRowOrder
                             checked: true
-                            onCheckedChanged: logList.invertRowOrder()
+                            onCheckedChanged: logList.toggleInvertRowOrder()
 
                             Layout.leftMargin: Theme.spacingTight
                             // Make more nicely centered with the label.
