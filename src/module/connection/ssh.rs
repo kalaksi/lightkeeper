@@ -197,7 +197,7 @@ impl ConnectionModule for Ssh2 {
 
         let mut buffer = [0u8; 1024];
         let output = channel.read(&mut buffer)
-            .map(|count| std::str::from_utf8(&buffer[0..count]).unwrap().to_string())
+            .map(|count| std::str::from_utf8(&buffer[0..count]).unwrap_or_default().to_string())
             .map_err(|error| {
                 partial_session.invocation_id = 0;
                 format!("Invalid output received: {}", error)
