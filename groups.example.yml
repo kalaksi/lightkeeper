@@ -43,6 +43,7 @@ groups:
       storage-lvm-lvremove: {}
       storage-lvm-lvrefresh: {}
       network-socket-listen: {}
+      network-socket-tcp: {}
 
   nixos:
     monitors:
