@@ -28,6 +28,17 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.20.0" date="2024-08-19">
+      <description>
+        <ul>
+          <li>Auto-refresh feature for cert monitor.</li>
+          <li>Error handling improvements in cert monitor.</li>
+          <li>Menu for tray icon.</li>
+          <li>Much better performance improvements to command output/progress view.</li>
+          <li>Some new netstat-commands.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.19.1" date="2024-08-16">
       <description>
         <ul>
