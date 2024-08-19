@@ -61,6 +61,8 @@ pub fn init_resources() {
             "images/breeze/dark/edit-undo.svg" as "images/button/undo",
             "images/breeze/dark/view-certificate.svg" as "images/button/certificates",
             "images/breeze/dark/arrow-down.svg" as "images/button/dropdown-menu",
+            "images/breeze/dark/edit-clear.svg" as "images/button/edit-clear",
+            "images/breeze/dark/project-open.svg" as "images/button/project-open",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -148,6 +150,8 @@ pub fn init_resources() {
             "images/breeze/light/edit-undo.svg" as "images/button/undo",
             "images/breeze/light/view-certificate.svg" as "images/button/certificates",
             "images/breeze/light/arrow-down.svg" as "images/button/dropdown-menu",
+            "images/breeze/light/edit-clear.svg" as "images/button/edit-clear",
+            "images/breeze/light/project-open.svg" as "images/button/project-open",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
