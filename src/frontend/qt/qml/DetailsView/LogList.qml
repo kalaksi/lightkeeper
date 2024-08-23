@@ -279,11 +279,7 @@ ListView {
             let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
             root._matchingRows = matchingRows
             root._totalMatches = totalMatches
-
-            root.model.clear()
-            for (const row of modelRows) {
-                root.model.append({"text": row})
-            }
+            root.model = modelRows.map((row) => {text: row})
         }
 
         if (root.scrollToBottom) {
