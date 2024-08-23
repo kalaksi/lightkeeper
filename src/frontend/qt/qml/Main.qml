@@ -439,8 +439,13 @@ ApplicationWindow {
     }
 
     function quit() {
-        LK.stop()
-        DesktopPortal.stop()
-        Qt.quit()
+        if (LK.config.getPreferences().closeToTray) {
+            root.hide()
+        }
+        else {
+            LK.stop()
+            DesktopPortal.stop()
+            Qt.quit()
+        }
     }
 }

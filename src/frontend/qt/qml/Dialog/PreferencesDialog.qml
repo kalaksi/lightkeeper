@@ -37,6 +37,7 @@ LightkeeperDialog {
             terminal: terminalAndArgs.text.split(" ")[0],
             terminalArgs: terminalAndArgs.text.split(" ").slice(1).join(" "),
             showStatusBar: showStatusBar.checkState === Qt.Checked,
+            closeToTray: closeToTray.checkState === Qt.Checked
         }
 
         LK.config.setPreferences(newPreferences)
@@ -64,6 +65,34 @@ LightkeeperDialog {
         anchors.topMargin: Theme.marginDialogTop
         anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            Column {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+
+                Label {
+                    width: parent.width
+                    text: "close to tray"
+                }
+
+                SmallText {
+                    width: parent.width
+                    text: ""
+                    color: Theme.textColorDark
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            CheckBox {
+                id: closeToTray
+                checkState: root._preferences.closeToTray ? Qt.Checked : Qt.Unchecked
+
+                Layout.leftMargin: content.width * 0.30
+            }
+        }
 
         RowLayout {
             Layout.fillWidth: true
@@ -251,6 +280,8 @@ LightkeeperDialog {
 
             CheckBox {
                 id: showStatusBar
+                enabled: false
+                opacity: 0.5
                 checkState: root._preferences.showStatusBar ? Qt.Checked : Qt.Unchecked
 
                 Layout.leftMargin: content.width * 0.30
