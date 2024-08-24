@@ -12,17 +12,17 @@ use crate::utils::ErrorMessage;
 #[allow(non_snake_case)]
 pub struct HostDataManagerModel {
     base: qt_base_class!(trait QObject),
-    monitorCriticalCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
-    monitorErrorCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
-    monitorWarningCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
-    monitorNormalCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
-    monitorNoDataCount: qt_property!(u64; NOTIFY monitorCriticalityCountsChanged),
+    monitorCriticalCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
+    monitorErrorCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
+    monitorWarningCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
+    monitorNormalCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
+    monitorNoDataCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
 
     //
     // Signals
     //
 
-    monitorCriticalityCountsChanged: qt_signal!(),
+    criticalityCountsChanged: qt_signal!(),
 
     updateReceived: qt_signal!(host_id: QString),
     monitorStateChanged: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
@@ -439,7 +439,7 @@ impl HostDataManagerModel {
         }
 
         if state_changed {
-            self.monitorCriticalityCountsChanged();
+            self.criticalityCountsChanged();
         }
     }
 }
