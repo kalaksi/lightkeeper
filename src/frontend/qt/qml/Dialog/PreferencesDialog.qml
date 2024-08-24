@@ -37,7 +37,8 @@ LightkeeperDialog {
             terminal: terminalAndArgs.text.split(" ")[0],
             terminalArgs: terminalAndArgs.text.split(" ").slice(1).join(" "),
             showStatusBar: showStatusBar.checkState === Qt.Checked,
-            closeToTray: closeToTray.checkState === Qt.Checked
+            closeToTray: closeToTray.checkState === Qt.Checked,
+            showMonitorNotifications: showMonitorNotifications.checkState === Qt.Checked,
         }
 
         LK.config.setPreferences(newPreferences)
@@ -75,7 +76,7 @@ LightkeeperDialog {
 
                 Label {
                     width: parent.width
-                    text: "close to tray"
+                    text: "Close to tray"
                 }
 
                 SmallText {
@@ -89,6 +90,34 @@ LightkeeperDialog {
             CheckBox {
                 id: closeToTray
                 checkState: root._preferences.closeToTray ? Qt.Checked : Qt.Unchecked
+
+                Layout.leftMargin: content.width * 0.30
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            Column {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+
+                Label {
+                    width: parent.width
+                    text: "Show monitor notifications"
+                }
+
+                SmallText {
+                    width: parent.width
+                    text: "When monitor state changes to either critical, error, or warning, a notification will be shown in the system tray."
+                    color: Theme.textColorDark
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            CheckBox {
+                id: showMonitorNotifications
+                checkState: root._preferences.showMonitorNotifications ? Qt.Checked : Qt.Unchecked
 
                 Layout.leftMargin: content.width * 0.30
             }

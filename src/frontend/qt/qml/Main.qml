@@ -106,8 +106,12 @@ ApplicationWindow {
         }
 
         function onMonitorStateChanged(hostId, monitorId, newCriticality) {
-            // TODO: show tray message for some state changes.
-            // tray.showMessage(hostId, "Monitor " + monitorId + " on host " + hostId + " is now " + newCriticality)
+            if (LK.config.getPreferences().showMonitorNotifications === true && ["Warning", "Error", "Critical"].includes(newCriticality)) {
+                let title = hostId
+                let message = `Monitor "${monitorId}" is now at level "${newCriticality}"`
+                tray.showMessage(title, message)
+            }
+
             hostTable.highlightMonitor(hostId, monitorId, newCriticality)
         }
 

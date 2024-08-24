@@ -67,8 +67,10 @@ pub struct Preferences {
     /// Command to run when launching a terminal. "internal" is a special value that uses the internal terminal.
     pub terminal: String,
     pub terminal_args: Vec<String>,
-    #[serde(default = "DisplayOptions::default_close_to_tray")]
+    #[serde(default = "DisplayOptions::default_to_true")]
     pub close_to_tray: bool,
+    #[serde(default = "DisplayOptions::default_to_true")]
+    pub show_monitor_notifications: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -81,7 +83,7 @@ pub struct DisplayOptions {
     // Currently not writing everything in the config file since they are not user-configurable.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub categories: HashMap<String, Category>,
-    #[serde(default = "DisplayOptions::default_show_status_bar")]
+    #[serde(default = "DisplayOptions::default_to_true")]
     pub show_status_bar: bool,
 }
 
@@ -93,11 +95,7 @@ impl Default for DisplayOptions {
 }
 
 impl DisplayOptions {
-    pub fn default_show_status_bar() -> bool {
-        true
-    }
-
-    pub fn default_close_to_tray() -> bool {
+    pub fn default_to_true() -> bool {
         true
     }
 }

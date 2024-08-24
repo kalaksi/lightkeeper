@@ -181,6 +181,7 @@ impl ConfigManagerModel {
         preferences.insert("terminal".into(), QString::from(self.main_config.preferences.terminal.clone()).into());
         preferences.insert("terminalArgs".into(), QString::from(self.main_config.preferences.terminal_args.join(" ")).into());
         preferences.insert("closeToTray".into(), self.main_config.preferences.close_to_tray.into());
+        preferences.insert("showMonitorNotifications".into(), self.main_config.preferences.show_monitor_notifications.into());
         preferences.insert("showStatusBar".into(), self.main_config.display_options.show_status_bar.into());
         preferences
     }
@@ -195,6 +196,7 @@ impl ConfigManagerModel {
         self.main_config.preferences.terminal_args = preferences.value("terminalArgs".into(), QString::from("-e").into()).to_qbytearray().to_string()
                                                                 .split(' ').map(|arg| arg.to_string()).collect();
         self.main_config.preferences.close_to_tray = preferences.value("closeToTray".into(), true.into()).to_bool();
+        self.main_config.preferences.show_monitor_notifications = preferences.value("showMonitorNotifications".into(), true.into()).to_bool();
 
         self.main_config.display_options.show_status_bar = preferences.value("showStatusBar".into(), true.into()).to_bool();
 
