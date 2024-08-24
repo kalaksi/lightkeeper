@@ -87,7 +87,7 @@ Item {
                         // A pie that gets smaller clockwise.
                         context.translate(radius, radius)
                         context.rotate(-Math.PI / 2)
-                        context.strokeStyle = "#80FFFFFF"
+                        context.strokeStyle = palette.highlight
                         context.lineWidth = lineWidth
                         context.beginPath()
                         context.arc(0, 0, radius - lineWidth / 2.0, 0, 2 * Math.PI * progressPercent * 0.01 + 0.001, true)
