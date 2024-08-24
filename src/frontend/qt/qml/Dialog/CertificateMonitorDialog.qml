@@ -97,7 +97,6 @@ LightkeeperDialog {
 
             AutoRefreshButton {
                 enabled: root.refreshProgress === 100
-                opacity: root.refreshProgress < 100 ? 0.5 : 1.0
                 spinning: root.refreshProgress < 100
                 size: root.buttonSize
                 flatButton: false

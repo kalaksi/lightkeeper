@@ -4,12 +4,14 @@ import QtQuick.Layouts 1.11
 
 import "Misc"
 import "Text"
+import "Button"
 
 
 ToolBar {
     id: root
     property bool enableShortcuts: false
     property bool enableEditButtons: false
+    property int refreshProgress: 100
 
     focus: true
 
@@ -81,10 +83,23 @@ ToolBar {
         }
 
         ToolButton {
+            id: certMonitorButton
             icon.source: "qrc:/main/images/button/certificates"
             text: "Cert. monitor"
             display: AbstractButton.TextBesideIcon
             onClicked: root.clickedCertificateMonitor()
+        }
+
+        ToolSeparator { }
+
+        AutoRefreshButton {
+            enabled: root.refreshProgress === 100
+            spinning: root.refreshProgress < 100
+            size: certMonitorButton.height
+            flatButton: false
+            onClicked: {
+                LK.command.forceInitializeHosts()
+            }
         }
 
         ToolSeparator { }

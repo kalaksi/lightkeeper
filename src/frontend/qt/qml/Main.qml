@@ -101,7 +101,9 @@ ApplicationWindow {
             hostTableModel.displayData = LK.hosts.getDisplayData()
 
             if (hostId === hostTableModel.getSelectedHostId()) {
-                statusBar.jobsLeft = LK.hosts.getPendingCommandCount(hostId) + LK.hosts.getPendingMonitorCount(hostId)
+                let jobsLeft = LK.hosts.getPendingCommandCount(hostId) + LK.hosts.getPendingMonitorCount(hostId)
+                statusBar.jobsLeft = jobsLeft
+                root.menuBar.refreshProgress = jobsLeft > 0 ? 0 : 100
             }
         }
 

@@ -15,6 +15,8 @@ Item {
     property int iconWidth: Math.floor(imageRelativeWidth * size)
     property int iconHeight: Math.floor(imageRelativeHeight * size)
 
+    enabled: true
+    opacity: enabled ? 1.0 : 0.5
     width: root.size * 2.0
     height: root.size
 
@@ -62,6 +64,7 @@ Item {
         Row {
             anchors.centerIn: parent
             height: parent.height
+            padding: 4
 
             Image {
                 id: image

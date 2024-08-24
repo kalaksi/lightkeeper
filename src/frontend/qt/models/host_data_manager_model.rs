@@ -94,11 +94,7 @@ impl HostDataManagerModel {
     pub fn process_update(&mut self, new_display_data: frontend::HostDisplayData) {
         // HostDataModel cannot be passed between threads so parsing happens here.
         let host_state = &new_display_data.host_state;
-
-        let maybe_old_data = self.display_data.hosts.insert(
-            host_state.host.name.clone(),
-            new_display_data.clone()
-        );
+        let maybe_old_data = self.display_data.hosts.insert(host_state.host.name.clone(), new_display_data.clone());
 
         if let Some((invocation_id, command_result)) = new_display_data.new_command_result {
             let json = QString::from(serde_json::to_string(&command_result).unwrap());
