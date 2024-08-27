@@ -28,6 +28,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.21.0" date="2024-08-27">
+      <description>
+        <ul>
+          <li>Auto-refresh button for host list.</li>
+          <li>Notifications about monitor state changes.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.20.0" date="2024-08-19">
       <description>
         <ul>
