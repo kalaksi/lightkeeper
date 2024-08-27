@@ -1,7 +1,7 @@
 # LightkeeperRM
 
-**LightkeeperRM (Remote Management) is a lightweight and modular drop-in replacement for maintaining servers over SSH with shell commands.**
-No additional daemons or other software is needed on target hosts. LightkeeperRM will only run standard Linux commands already available on the host.
+**LightkeeperRM (Remote Management) is a lightweight and modular drop-in replacement for maintaining servers over SSH.**
+No additional daemons, agents or other software is needed on target hosts. LightkeeperRM will only run standard Linux commands already available on the host.
 You can see executed commands through debug log and on target hosts's logs (depending on setup), so it's easy to audit and debug.
 Lightkeeper simplifies general maintenance tasks such as upgrades, monitoring, debugging and configuration.
   
@@ -26,10 +26,11 @@ In case you find the GUI insufficient and need to dig deeper, you can always use
 <br />
 
 ## Some features
+- Monitor status changes periodically and get alert notifications.
+- Monitor certificate validity and expiration.
 - Status summary in host table for quick status view
 - Log viewer with regex search and hotkeys similar to less/vim.
 - Text file editor for editing remote files (with built-in editor or using CLI over SSH).
-- Certificate monitors for monitoring certificate validity and expiration.
 - Follow console output for longer running commands such as container builds and package updates.
 
 # Installing
@@ -50,16 +51,16 @@ flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.L
 ## Regular
 Dependencies are:
 - Qt 5.15
-- liboping, liboping-dev
+- liboping
 - libdbus
-- libssl-dev
 - qmltermwidget
 
-Corresponding Ubuntu 22.04 packages are:
+Corresponding Ubuntu 22.04 or 24.04 packages are:
 - qtdeclarative5-dev
-- liboping0
+- liboping0, liboping-dev
 - libdbus-1-3, libdbus-1-dev
 - qml-module-qmltermwidget (or qml-module-termwidget)
+- libssl-dev
 
 Building:
 ```
