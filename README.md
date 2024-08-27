@@ -50,15 +50,16 @@ flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.L
 ## Regular
 Dependencies are:
 - Qt 5.15
-- liboping
+- liboping, liboping-dev
 - libdbus
+- libssl-dev
 - qmltermwidget
 
 Corresponding Ubuntu 22.04 packages are:
 - qtdeclarative5-dev
 - liboping0
 - libdbus-1-3, libdbus-1-dev
-- qml-module-qmltermwidget
+- qml-module-qmltermwidget (or qml-module-termwidget)
 
 Building:
 ```
