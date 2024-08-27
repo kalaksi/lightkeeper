@@ -413,12 +413,6 @@ impl Ssh2 {
     fn check_known_hosts(&self, session_data: &MutexGuard<SharedSessionData>, hostname: &str, port: u16) -> Result<(), LkError> {
         let known_hosts_path = self.get_known_hosts_path()?;
 
-        // Create known_hosts if it's missing.
-        if !known_hosts_path.exists() {
-            log::info!("Creating file '{}'", known_hosts_path.display());
-            let _ = std::fs::File::create(&known_hosts_path)?;
-        }
-
         let mut known_hosts = session_data.session.known_hosts().unwrap();
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
                    .map_err(|error| LkError::other(format!("Failed to read known hosts file: {}", error)))?;
@@ -451,11 +445,25 @@ impl Ssh2 {
 
     fn get_known_hosts_path(&self) -> Result<PathBuf, LkError> {
         if self.custom_known_hosts_path.is_some() {
-            Ok(self.custom_known_hosts_path.as_ref().unwrap().clone())
+            let known_hosts_path = self.custom_known_hosts_path.as_ref().unwrap();
+
+            if !known_hosts_path.exists() {
+                return Err(LkError::other_p("No such file for custom_known_hosts_path", known_hosts_path.to_string_lossy()));
+            }
+
+            Ok(known_hosts_path.clone())
         }
         else {
             let config_dir = file_handler::get_config_dir()?;
-            Ok(config_dir.join("known_hosts"))
+            let known_hosts_path = config_dir.join("known_hosts");
+
+            // Create known_hosts if it's missing.
+            if !known_hosts_path.exists() {
+                log::info!("Creating file '{}'", known_hosts_path.display());
+                let _ = std::fs::File::create(&known_hosts_path)?;
+            }
+
+            Ok(known_hosts_path)
         }
     }
 
