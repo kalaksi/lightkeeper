@@ -28,7 +28,7 @@ ApplicationWindow {
         hostTable.forceLayout()
     }
 
-    onClosing: root.quit()
+    onClosing: root.close()
 
     /// For testing.
     function test() {
@@ -444,14 +444,18 @@ ApplicationWindow {
         }
     }
 
-    function quit() {
+    function close() {
         if (LK.config.getPreferences().closeToTray) {
             root.hide()
         }
         else {
-            LK.stop()
-            DesktopPortal.stop()
-            Qt.quit()
+            root.quit()
         }
+    }
+
+    function quit() {
+        LK.stop()
+        DesktopPortal.stop()
+        Qt.quit()
     }
 }
