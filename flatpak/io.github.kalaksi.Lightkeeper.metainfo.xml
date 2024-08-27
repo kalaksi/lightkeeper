@@ -28,6 +28,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.21.1" date="2024-08-27">
+      <description>
+        <ul>
+          <li>Fix quit-menu in tray icon</li>
+          <li>Improve SSH error handling for missing known_hosts file</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.21.0" date="2024-08-27">
       <description>
         <ul>
