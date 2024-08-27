@@ -141,17 +141,6 @@ impl HostDataManagerModel {
         }
 
         self.updateReceived(QString::from(host_state.host.name.clone()));
-
-        // This is the first launch so display a note about the project being in early development.
-        if self.display_data.hosts.len() == 1 && self.display_data.hosts.contains_key("example-host") {
-            let error = ErrorMessage::new(
-                Criticality::Critical,
-                String::from("Looks like this is the first time you have started LightkeeperRM.  
-                            This version is still an early release and may be missing some features and contain bugs.  
-                            See https://github.com/kalaksi/lightkeeper for the issue tracker and some documentation.")
-            );
-            self.errorReceived(QString::from(Criticality::Critical.to_string()), QString::from(error.message));
-        }
     }
 
     // Get monitoring data as a QVariant.
