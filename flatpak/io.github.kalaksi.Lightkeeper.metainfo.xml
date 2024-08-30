@@ -28,6 +28,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.21.2" date="2024-08-30">
+      <description>
+        <ul>
+          <li>Fix log rows not shown in log view</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.21.1" date="2024-08-27">
       <description>
         <ul>
