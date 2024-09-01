@@ -73,7 +73,7 @@ impl QmlFrontend {
 
         let display_data = host_manager.borrow().get_display_data();
         let qt_theme = QObjectBox::new(ThemeModel::new(self.main_config.display_options.clone()));
-        let qt_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
+        let qt_file_chooser = QObjectBox::new(FileChooserModel::new());
         let qt_lkbackend = QObjectBox::new(LkBackend::new(
             self.update_sender_prototype.clone(),
             self.update_receiver.take().unwrap(),
@@ -101,7 +101,7 @@ impl QmlFrontend {
             }
             engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
             engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
-            engine.set_object_property(QString::from("DesktopPortal"), qt_desktop_portal.pinned());
+            engine.set_object_property(QString::from("DesktopPortal"), qt_file_chooser.pinned());
             self.load_qml(&mut engine);
             engine.exec();
         }
@@ -122,7 +122,7 @@ impl QmlFrontend {
 
         let display_data = host_manager.borrow().get_display_data();
         let qt_theme = QObjectBox::new(ThemeModel::new(self.main_config.display_options.clone()));
-        let qt_desktop_portal = QObjectBox::new(DesktopPortalModel::new());
+        let qt_file_chooser = QObjectBox::new(FileChooserModel::new());
         let qt_lkbackend = QObjectBox::new(LkBackend::new(
             self.update_sender_prototype.clone(),
             self.update_receiver.take().unwrap(),
@@ -136,7 +136,7 @@ impl QmlFrontend {
         let mut engine = QmlEngine::new();
         engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
         engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
-        engine.set_object_property(QString::from("DesktopPortal"), qt_desktop_portal.pinned());
+        engine.set_object_property(QString::from("DesktopPortal"), qt_file_chooser.pinned());
         self.load_qml(&mut engine);
         engine
     }

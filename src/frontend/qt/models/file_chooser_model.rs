@@ -1,11 +1,9 @@
 extern crate qmetaobject;
 use qmetaobject::*;
-
-use dbus;
-use dbus::arg;
-use dbus::arg::RefArg;
-
 use rand;
+
+#[cfg(not(target_os = "android"))]
+use dbus::{self, arg, arg::RefArg};
 
 use std::collections::HashMap;
 use std::os::fd::{AsRawFd, RawFd};
@@ -17,19 +15,19 @@ use std::thread;
 /// However, things seem to be improving in Qt so this might be unneeded in the future.
 #[derive(QObject, Default)]
 #[allow(non_snake_case)]
-pub struct DesktopPortalModel {
+pub struct FileChooserModel {
     base: qt_base_class!(trait QObject),
 
-    receiveResponses: qt_method!(fn(&self)),
     error: qt_signal!(error_message: QString),
-    stop: qt_method!(fn(&mut self)),
-
     /// Returns token that can be used to match the response.
-    openFileChooser: qt_method!(fn(&self) -> QString),
     fileChooserResponse: qt_signal!(token: QString, file_path: QString),
-    openFile: qt_method!(fn(&self, file_path: QString) -> QString),
     openFileResponse: qt_signal!(token: QString),
     openedFileClosed: qt_signal!(token: QString),
+
+    receiveResponses: qt_method!(fn(&self)),
+    stop: qt_method!(fn(&mut self)),
+    openFile: qt_method!(fn(&self, file_path: QString) -> QString),
+    openFileChooser: qt_method!(fn(&self) -> QString),
 
     receiver: Option<mpsc::Receiver<PortalRequest>>,
     sender: Option<mpsc::Sender<PortalRequest>>,
@@ -39,11 +37,28 @@ pub struct DesktopPortalModel {
 }
 
 #[allow(non_snake_case)]
-impl DesktopPortalModel {
-    pub fn new() -> DesktopPortalModel {
+impl FileChooserModel {
+    #[cfg(target_os = "android")]
+    pub fn new() -> FileChooserModel {
+        FileChooserModel {
+            receiver: None,
+            sender: None,
+            thread: None,
+            ..Default::default()
+        }
+    }
+
+
+    #[cfg(target_os = "android")]
+    pub fn receiveResponses(&mut self) {
+        // TODO: currently nothing here yet.
+    }
+
+    #[cfg(not(target_os = "android"))]
+    pub fn new() -> FileChooserModel {
         let (sender, receiver) = mpsc::channel::<PortalRequest>();
 
-        DesktopPortalModel {
+        FileChooserModel {
             receiver: Some(receiver),
             sender: Some(sender),
             thread: None,
@@ -51,6 +66,8 @@ impl DesktopPortalModel {
         }
     }
 
+
+    #[cfg(not(target_os = "android"))]
     pub fn receiveResponses(&mut self) {
         if self.thread.is_none() {
             // (Unfortunately) all dbus stuff should be run in one thread.
@@ -195,23 +212,28 @@ impl DesktopPortalModel {
     }
 
     pub fn stop(&mut self) {
-        let request = PortalRequest {
-            stop: true,
-            ..Default::default()
-        };
-        self.sender.as_ref().unwrap().send(request).unwrap();
-        self.thread.take().unwrap().join().unwrap();
+        if let Some(sender) = &self.sender {
+            let request = PortalRequest {
+                stop: true,
+                ..Default::default()
+            };
+            sender.send(request).unwrap();
+            self.thread.take().unwrap().join().unwrap();
+        }
     }
 
     /// Calls org.freedestop.portal.FileChooser.OpenFile to open a file chooser dialog.
     pub fn openFileChooser(&self) -> QString {
         let token = Self::get_token();
-        let request = PortalRequest {
-            request_type: PortalRequestType::OpenFileChooser,
-            token: token.clone(),
-            ..Default::default()
-        };
-        self.sender.as_ref().unwrap().send(request).unwrap();
+        if let Some(sender) = &self.sender {
+            let request = PortalRequest {
+                request_type: PortalRequestType::OpenFileChooser,
+                token: token.clone(),
+                ..Default::default()
+            };
+
+            sender.send(request).unwrap();
+        }
         QString::from(token)
     }
 
@@ -227,7 +249,11 @@ impl DesktopPortalModel {
             file: Some(file),
             ..Default::default()
         };
-        self.sender.as_ref().unwrap().send(request).unwrap();
+
+        if let Some(sender) = &self.sender {
+            sender.send(request).unwrap();
+        }
+
         QString::from(token)
     }
 
@@ -262,6 +288,7 @@ enum PortalRequestType {
     OpenFile,
 }
 
+#[cfg(not(target_os = "android"))]
 #[derive(Default)]
 pub struct PortalResponse {
     file_chooser: Option<FileChooserResponse>,
@@ -269,6 +296,7 @@ pub struct PortalResponse {
     _check_invalid_fds: bool,
 }
 
+#[cfg(not(target_os = "android"))]
 impl PortalResponse {
     pub fn file_chooser(response: FileChooserResponse) -> PortalResponse {
         PortalResponse {
@@ -293,6 +321,7 @@ impl PortalResponse {
 }
 
 
+#[cfg(not(target_os = "android"))]
 #[derive(Debug)]
 pub struct FileChooserResponse {
     pub status: u32,
@@ -300,6 +329,7 @@ pub struct FileChooserResponse {
     pub file_uris: Vec<String>,
 }
 
+#[cfg(not(target_os = "android"))]
 impl arg::ReadAll for FileChooserResponse {
     fn read(iter: &mut arg::Iter) -> Result<Self, arg::TypeMismatchError> {
         // Use this to debug:
@@ -333,6 +363,7 @@ impl arg::ReadAll for FileChooserResponse {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 impl dbus::message::SignalArgs for FileChooserResponse {
     const NAME: &'static str = "Response";
     const INTERFACE: &'static str = "org.freedesktop.portal.Request";
@@ -340,11 +371,13 @@ impl dbus::message::SignalArgs for FileChooserResponse {
 
 
 #[derive(Debug)]
+#[cfg(not(target_os = "android"))]
 pub struct OpenFileResponse {
     pub status: u32,
     pub token: String,
 }
 
+#[cfg(not(target_os = "android"))]
 impl arg::ReadAll for OpenFileResponse {
     fn read(iter: &mut arg::Iter) -> Result<Self, arg::TypeMismatchError> {
         let status: u32 = iter.read()?;
@@ -356,6 +389,7 @@ impl arg::ReadAll for OpenFileResponse {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 impl dbus::message::SignalArgs for OpenFileResponse {
     const NAME: &'static str = "Response";
     const INTERFACE: &'static str = "org.freedesktop.portal.Request";
