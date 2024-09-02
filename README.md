@@ -50,17 +50,24 @@ flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.L
 
 ## Regular
 Dependencies are:
-- Qt 5.15
+- Qt 6.4
 - liboping
 - libdbus
-- qmltermwidget
 
-Corresponding Ubuntu 22.04 or 24.04 packages are:
-- qtdeclarative5-dev
-- liboping0, liboping-dev
-- libdbus-1-3, libdbus-1-dev
-- qml-module-qmltermwidget (or qml-module-termwidget)
+Migration to Qt6 is now done, so now you'll need these packages on Ubuntu 24.04:
 - libssl-dev
+- libdbus-1-3, libdbus-1-dev
+- liboping0, liboping-dev
+- qt6-declarative-dev
+- qml6-module-qt-labs-qmlmodels
+- qml6-module-qt5compat-graphicaleffects
+- qml6-module-qtqml-workerscript
+- qml6-module-qtquick-controls
+- qml6-module-qtquick-layouts
+- qml6-module-qtquick-nativestyle
+- qml6-module-qtquick-shapes
+- qml6-module-qtquick-templates
+- qml6-module-qtquick-window
 
 Building:
 ```

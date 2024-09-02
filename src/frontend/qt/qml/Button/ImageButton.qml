@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
-import QtGraphicalEffects 1.15
+import Qt5Compat.GraphicalEffects
 
 import "../StyleOverride"
 import "../Text"

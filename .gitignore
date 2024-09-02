@@ -3,6 +3,4 @@ build
 /flatpak/build
 .*
 vendor
-android-sdk
-android-ndk
-android-ndk-toolchains
+android

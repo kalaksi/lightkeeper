@@ -2,7 +2,7 @@ import QtQuick 2.15
 import QtQuick.Window 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts
 
 import HostTableModel 1.0
 

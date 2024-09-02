@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import Qt.labs.qmlmodels 1.0
-import QtGraphicalEffects 1.15
 import QtQuick.Layouts 1.15
+import Qt5Compat.GraphicalEffects
 
 import "Text"
 
@@ -51,7 +51,7 @@ Item {
         NormalText {
             text: status.toUpperCase()
             font.family: fontStatus.name
-            color: getColor(root.status)
+            color: Theme.criticalityColor(root.status === "up" ? "normal" : root.status === "down" ? "error" : "_")
 
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter

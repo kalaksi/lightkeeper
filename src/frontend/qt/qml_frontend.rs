@@ -96,6 +96,7 @@ impl QmlFrontend {
             if sandboxed {
                 engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml/"));
             }
+            engine.add_import_path(QString::from("/home/user/git/qmltermwidget/QMLTermWidget"));
             engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
             engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
             engine.set_object_property(QString::from("DesktopPortal"), qt_desktop_portal.pinned());
