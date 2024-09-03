@@ -29,7 +29,8 @@ cache_settings:
 # Control category order, command buttons orders, colors. Defaults should be good.
 # NOTE: Currently, you shouldn't manually edit display_options at all.
 display_options:
-  qtquick_style: "Basic"
+  # Empty means default.
+  qtquick_style: "Fusion"
   hide_info_notifications: false
   show_status_bar: true
   categories:

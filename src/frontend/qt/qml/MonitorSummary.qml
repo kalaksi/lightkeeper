@@ -1,9 +1,9 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
-import Qt5Compat.GraphicalEffects
 
 import "Text"
+import "Misc"
 
 Item {
     id: root
@@ -36,12 +36,13 @@ Item {
                     }
                 }
 
-                Image {
+                OverlayImage {
                     id: statusImage
                     anchors.centerIn: parent
                     width: 0.45 * root.height
                     height: 0.45 * root.height
                     antialiasing: true
+                    color: parent.color
                     source: "qrc:/main/images/criticality/" + parent.criticality
 
                     MouseArea {
@@ -49,13 +50,6 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                     }
-                }
-
-                ColorOverlay {
-                    anchors.fill: statusImage
-                    source: statusImage
-                    color: parent.color
-                    antialiasing: true
                 }
 
                 PixelatedText {

@@ -2,7 +2,7 @@ import QtQuick 2.15
 import QtQuick.Layouts 1.11
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
-import QtGraphicalEffects 1.15
+import Qt5Compat.GraphicalEffects
 
 import "../StyleOverride"
 import "../Button"
@@ -161,20 +161,14 @@ LightkeeperDialog {
                             text: root.dataPoints[modelData].value
                         }
 
-                        Image {
+                        OverlayImage {
                             id: statusImage
                             anchors.verticalCenter: parent.verticalCenter
                             width: 0.45 * parent.height
                             height: 0.45 * parent.height
                             antialiasing: true
+                            color: Theme.criticalityColor(root.dataPoints[modelData].criticality)
                             source: "qrc:/main/images/criticality/" + (root.dataPoints[modelData].criticality || "nodata").toLowerCase()
-
-                            ColorOverlay {
-                                anchors.fill: parent
-                                source: statusImage
-                                color: Theme.criticalityColor(root.dataPoints[modelData].criticality)
-                                antialiasing: true
-                            }
                         }
 
                         // WaveAnimation {

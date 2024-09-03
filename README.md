@@ -58,6 +58,7 @@ Migration to Qt6 is now done, so now you'll need these packages on Ubuntu 24.04:
 - libssl-dev
 - libdbus-1-3, libdbus-1-dev
 - liboping0, liboping-dev
+- libqt6svg6
 - qt6-declarative-dev
 - qml6-module-qt-labs-qmlmodels
 - qml6-module-qt5compat-graphicaleffects
@@ -68,6 +69,7 @@ Migration to Qt6 is now done, so now you'll need these packages on Ubuntu 24.04:
 - qml6-module-qtquick-shapes
 - qml6-module-qtquick-templates
 - qml6-module-qtquick-window
+- qml6-module-qt-labs-platform
 
 Building:
 ```

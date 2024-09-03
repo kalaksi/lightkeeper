@@ -44,14 +44,14 @@ TabButton {
                     source: "qrc:/main/images/button/close"
                     width: root.closeButtonSize * 0.5
                     height: root.closeButtonSize * 0.8
+                }
 
-                    ColorOverlay {
-                        anchors.fill: parent
-                        source: parent
-                        // By default this icon is black, so changing it here.
-                        color: Theme.iconColor
-                        antialiasing: true
-                    }
+                ColorOverlay {
+                    anchors.fill: defaultImage
+                    source: defaultImage
+                    // By default this icon is black, so changing it here.
+                    color: Theme.iconColor
+                    antialiasing: true
                 }
 
                 Image {

@@ -1,10 +1,9 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
-import Qt5Compat.GraphicalEffects
 
-import "../StyleOverride"
 import "../Text"
+import "../Misc"
 
 
 /// Provides more flexible button with icon and text.
@@ -13,7 +12,7 @@ Item {
     property string imageSource: ""
     property real imageRelativeWidth: 0.0
     property real imageRelativeHeight: 0.0
-    property string color: "transparent"
+    property string color: ""
     property string tooltip: ""
     property string text: ""
     property bool roundButton: false
@@ -47,17 +46,12 @@ Item {
             anchors.centerIn: parent
             spacing: Theme.spacingNormal
 
-            Image {
+            OverlayImage {
+                id: buttonImage
                 source: root.imageSource
                 width: getIconWidth()
                 height: getIconHeight()
-
-                ColorOverlay {
-                    anchors.fill: parent
-                    source: parent
-                    color: root.color
-                    antialiasing: true
-                }
+                color: root.color
             }
 
             NormalText {
@@ -89,17 +83,12 @@ Item {
             anchors.centerIn: parent
             spacing: Theme.spacingNormal
 
-            Image {
+            OverlayImage {
+                id: roundButtonImage
                 source: root.imageSource
+                color: root.color
                 width: getIconWidth()
                 height: getIconHeight()
-
-                ColorOverlay {
-                    anchors.fill: parent
-                    source: parent
-                    color: root.color
-                    antialiasing: true
-                }
             }
 
             NormalText {

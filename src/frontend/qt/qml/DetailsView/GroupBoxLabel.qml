@@ -4,6 +4,7 @@ import Qt.labs.qmlmodels 1.0
 import Qt5Compat.GraphicalEffects
 
 import "../Button"
+import "../Misc"
 
 Rectangle {
     id: root
@@ -29,19 +30,15 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacingNormal
 
-        Image {
+        OverlayImage {
+            id: image
             visible: root.icon !== ""
             source: root.icon
+            color: label.color
             sourceSize.width: 32
             sourceSize.height: 32
             height: label.implicitHeight * 0.9
             width: height
-
-            ColorOverlay {
-                anchors.fill: parent
-                source: parent
-                color: label.color
-            }
         }
 
         Label {
