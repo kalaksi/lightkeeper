@@ -61,6 +61,7 @@ pub fn init_resources() {
             "Misc/CloseableTabButton.qml",
             "Misc/CooldownTimer.qml",
             "Misc/SemiCircle.qml",
+            "Misc/OverlayImage.qml",
             "StyleOverride/Button.qml",
             "StyleOverride/Label.qml",
             "StyleOverride/RoundButton.qml",

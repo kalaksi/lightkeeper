@@ -272,12 +272,12 @@ Item {
         terminalSession.clearScreen()
     }
 
-    function focus() {
+    function activate() {
         terminal.forceActiveFocus()
         root.enableShortcuts = true
     }
 
-    function unfocus() {
+    function deactivate() {
         root.enableShortcuts = false
     }
 

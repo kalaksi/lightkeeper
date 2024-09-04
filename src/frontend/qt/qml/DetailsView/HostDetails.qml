@@ -134,11 +134,11 @@ Item {
 
             let oldComponent = root._tabContents[root.hostId][oldIndex]
             if (oldComponent !== undefined) {
-                oldComponent.component.unfocus()
+                oldComponent.component.deactivate()
             }
 
             root._tabStacks[root.hostId].currentIndex = newIndex
-            root._tabContents[root.hostId][newIndex].component.focus()
+            root._tabContents[root.hostId][newIndex].component.activate()
         }
     }
 
@@ -348,7 +348,7 @@ Item {
 
     function close() {
         for (let content of root._tabContents[root.hostId]) {
-            content.component.unfocus()
+            content.component.deactivate()
         }
 
         root.closeClicked()

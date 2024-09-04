@@ -302,11 +302,11 @@ Item {
         }
     }
 
-    function focus() {
+    function activate() {
         // Do nothing.
     }
 
-    function unfocus() {
+    function deactivate() {
         // Do nothing.
     }
 

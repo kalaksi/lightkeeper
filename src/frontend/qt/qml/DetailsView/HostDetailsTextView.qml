@@ -78,11 +78,11 @@ Item {
         visible: root.errorText !== ""
     }
 
-    function focus() {
+    function activate() {
         // Do nothing.
     }
 
-    function unfocus() {
+    function deactivate() {
         // Do nothing.
     }
 

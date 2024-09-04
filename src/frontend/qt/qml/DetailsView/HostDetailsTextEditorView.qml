@@ -32,7 +32,7 @@ Item {
                     root.text = commandResult.message
                 }
 
-                root.focus()
+                root.activate()
             }
         }
     }
@@ -70,7 +70,7 @@ Item {
             text: root.text
             font.family: "monospace"
 
-            onTextChanged: root.focus()
+            onTextChanged: root.activate()
         }
     }
 
@@ -90,7 +90,7 @@ Item {
         root.saved(root.commandId, root.localFilePath, content)
     }
 
-    function focus() {
+    function activate() {
         // If still waiting for data, then content can't have changed yet.
         if (root.pendingInvocation === 0) {
             // Update save-button enabled-status.
@@ -98,7 +98,7 @@ Item {
         }
     }
 
-    function unfocus() {
+    function deactivate() {
         // Do nothing.
     }
 

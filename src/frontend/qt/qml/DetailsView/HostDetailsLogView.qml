@@ -301,12 +301,12 @@ Item {
         }
     }
 
-    function focus() {
+    function activate() {
         searchField.focus = true
         root.enableShortcuts = true
     }
 
-    function unfocus() {
+    function deactivate() {
         searchField.focus = false
         root.enableShortcuts = false
     }
