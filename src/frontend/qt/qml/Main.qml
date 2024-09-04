@@ -1,10 +1,10 @@
-import QtQuick 2.15
-import QtQuick.Window 2.15
-import Qt.labs.qmlmodels 1.0
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Window
+import Qt.labs.qmlmodels
+import QtQuick.Controls
 import QtQuick.Layouts
 
-import HostTableModel 1.0
+import HostTableModel
 
 import "./Dialog"
 import "./Button"
@@ -12,6 +12,7 @@ import "./DetailsView"
 import "./Misc"
 import "js/Utils.js" as Utils
 import "js/Test.js" as Test 
+
 
 ApplicationWindow {
     property var _detailsDialogs: {}

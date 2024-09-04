@@ -1,13 +1,13 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.15
-import Qt.labs.qmlmodels 1.0
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 import ".."
 import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../js/Parse.js" as Parse
 import "../js/ValueUnit.js" as ValueUnit
+
 
 Item {
     id: root
