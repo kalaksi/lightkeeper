@@ -64,6 +64,7 @@ LightkeeperDialog {
             TextField {
                 id: addressField
                 placeholderText: "domain:port"
+                placeholderTextColor: Theme.textColorDark
                 validator: RegularExpressionValidator {
                     regularExpression: /[a-zA-Z\d\-\.\:]+/
                 }

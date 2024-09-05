@@ -77,8 +77,8 @@ Item {
                     visible: root.showTimeControls
                     width: searchBox.width * 0.12
                     placeholderText: "Start date"
+                    placeholderTextColor: Theme.textColorDark
                     text: Utils.getLocalTimezoneISOString(Date.now() - 1 * 60 * 60 * 1000).replace("T", " ")
-                    color: Theme.textColor
                     onAccepted: timeRangeSubmit.clicked(null)
                 }
 
@@ -92,8 +92,8 @@ Item {
                     visible: root.showTimeControls
                     width: searchBox.width * 0.12
                     placeholderText: "End date"
+                    placeholderTextColor: Theme.textColorDark
                     text: "now"
-                    color: Theme.textColor
                     onAccepted: timeRangeSubmit.clicked(null)
                 }
 
@@ -113,6 +113,7 @@ Item {
                     visible: !root.showTimeControls
                     width: searchBox.width * 0.12
                     placeholderText: "Number of lines"
+                    placeholderTextColor: Theme.textColorDark
                     text: "1000"
                     onAccepted: numberOfLinesSubmit.clicked(null)
                 }
@@ -148,7 +149,7 @@ Item {
                         id: searchField
                         width: searchBox.width * 0.55
                         placeholderText: "Regex search..."
-                        color: Theme.textColor
+                        placeholderTextColor: Theme.textColorDark
                         focus: true
 
                         onAccepted: {

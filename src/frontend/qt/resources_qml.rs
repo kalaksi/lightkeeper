@@ -58,7 +58,7 @@ pub fn init_resources() {
             "js/Utils.js",
             "js/ValueUnit.js",
             "Misc/BorderRectangle.qml",
-            "Misc/CloseableTabButton.qml",
+            "Misc/LKTabButton.qml",
             "Misc/CooldownTimer.qml",
             "Misc/SemiCircle.qml",
             "Misc/OverlayImage.qml",

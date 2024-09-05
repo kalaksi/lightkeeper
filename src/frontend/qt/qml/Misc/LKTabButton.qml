@@ -1,31 +1,69 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import Qt.labs.qmlmodels 1.0
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Controls
+import Qt.labs.qmlmodels
+import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 
 import "../Button"
+import "../Text"
 
 
 // TabButton with a close button on tabs.
 TabButton {
     id: root
     property int closeButtonSize: 18
-    property bool showCloseButton: true
+    property bool showCloseButton: false
+    property bool active: false
+    height: 28
 
     signal tabClosed
 
-    contentItem: RowLayout {
+    background: Item {
+        Rectangle {
+            anchors.fill: parent
+            color: Theme.backgroundColor
+        }
+
+        Rectangle {
+            width: parent.width
+            height: root.active ? 2 : 1
+            // color: Theme.borderColor
+            // color: palette.highlight
+            // Change color if active:
+            color: root.active ? palette.highlight : Theme.borderColor
+        }
+
+        Rectangle {
+            width: 1
+            height: parent.height
+            color: Theme.borderColor
+        }
+
+        Rectangle {
+            x: parent.width - 1
+            width: 1
+            height: parent.height
+            color: Theme.borderColor
+        }
+    }
+
+    contentItem: Row {
         id: contentRow
+        spacing: 0
+        height: root.height
+
+        NormalText {
+            id: label
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.text
+            padding: Theme.spacingNormal
+        }
 
         Item {
             visible: root.showCloseButton
             height: root.closeButtonSize
-            width: root.closeButtonSize
-
-            Layout.alignment: Qt.AlignRight
-            Layout.rightMargin: 4
-            Layout.topMargin: 2
+            width: root.closeButtonSize * 2
+            anchors.verticalCenter: parent.verticalCenter
 
             RoundButton {
                 id: closeButton

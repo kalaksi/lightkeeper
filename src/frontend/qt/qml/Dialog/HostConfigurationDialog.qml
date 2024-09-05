@@ -110,6 +110,7 @@ LightkeeperDialog {
                 id: hostIdField
                 width: parent.width
                 placeholderText: "Unique name for host..."
+                placeholderTextColor: Theme.textColorDark
                 text: root.hostId === "new-host-id" ? "" : root.hostId
                 validator: RegularExpressionValidator {
                     regularExpression: /[a-zA-Z\d\-\.]+/
@@ -130,6 +131,7 @@ LightkeeperDialog {
                 id: hostAddressField
                 width: parent.width
                 placeholderText: ""
+                placeholderTextColor: Theme.textColorDark
                 text: root.hostSettings.address === undefined ? root.hostSettings.fqdn : root.hostSettings.address 
                 validator: RegularExpressionValidator {
                     regularExpression: /[\.\:a-zA-Z\d\-]+/
@@ -213,12 +215,14 @@ LightkeeperDialog {
 
                 Layout.fillWidth: true
 
-                TabButton {
+                LKTabButton {
                     text: `Selected (${root._selectedGroups.length})`
+                    active: tabBar.currentIndex === 0
                 }
 
-                TabButton {
+                LKTabButton {
                     text: `Available (${root._availableGroups.length})`
+                    active: tabBar.currentIndex === 1
                 }
             }
 

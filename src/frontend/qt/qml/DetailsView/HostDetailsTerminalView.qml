@@ -156,6 +156,7 @@ Item {
                 id: searchField
                 width: parent.width * 0.5
                 placeholderText: "Search"
+                placeholderTextColor: Theme.textColorDark
                 onAccepted: findNext.trigger()
             }
 

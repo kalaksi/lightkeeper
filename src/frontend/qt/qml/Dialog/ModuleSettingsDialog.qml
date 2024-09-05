@@ -127,6 +127,7 @@ LightkeeperDialog {
                         id: textField
                         enabled: toggleSwitch.checked && !fileChooserButton.visible
                         placeholderText: toggleSwitch.checked ? "" : "unset"
+                        placeholderTextColor: Theme.textColorDark
                         text: toggleSwitch.checked ? modelData.value : ""
 
                         Layout.preferredWidth: {

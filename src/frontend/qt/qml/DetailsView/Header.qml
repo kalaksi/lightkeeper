@@ -62,11 +62,12 @@ Item {
             Repeater {
                 model: root.tabs
 
-                CloseableTabButton {
+                LKTabButton {
                     // First tab can't be closed.
                     showCloseButton: index > 0
                     text: modelData
                     onTabClosed: root.tabClosed(index)
+                    active: index === tabBar.currentIndex
                 }
             }
         }

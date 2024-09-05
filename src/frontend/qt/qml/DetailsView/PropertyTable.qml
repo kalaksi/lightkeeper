@@ -147,6 +147,7 @@ TableView {
                         ProgressBar {
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.parent.width * 0.8
+                            height: parent.parent.height
                             value: parseInt(styledValue.data_point.value, 10) / 100.0
                         }
 
