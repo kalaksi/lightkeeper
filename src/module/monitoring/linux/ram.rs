@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::module::platform_info;
@@ -15,21 +16,35 @@ use crate::module::monitoring::*;
     name="ram",
     version="0.0.1",
     description="Provides RAM usage information.",
+    settings={
+        warning_threshold => "Warning threshold in percent. Default: 70",
+        error_threshold => "Error threshold in percent. Default: 80",
+        critical_threshold => "Critical threshold in percent. Default: 90",
+    }
 )]
-pub struct Ram;
+pub struct Ram {
+    threshold_critical: f32,
+    threshold_error: f32,
+    threshold_warning: f32,
+}
 
 impl Module for Ram {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Ram { }
+    fn new(settings: &HashMap<String, String>) -> Self {
+        Ram {
+            threshold_critical: settings.get("critical_threshold").unwrap_or(&String::from("90")).parse().unwrap(),
+            threshold_error: settings.get("error_threshold").unwrap_or(&String::from("80")).parse().unwrap(),
+            threshold_warning: settings.get("warning_threshold").unwrap_or(&String::from("70")).parse().unwrap(),
+        }
     }
 }
 
 impl MonitoringModule for Ram {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            display_style: frontend::DisplayStyle::Text,
+            display_style: frontend::DisplayStyle::ProgressBar,
             display_text: String::from("RAM usage"),
             category: String::from("host"),
+            unit: String::from("%"),
             ..Default::default()
         }
     }
@@ -51,16 +66,30 @@ impl MonitoringModule for Ram {
         let line = response.message.lines().filter(|line| line.contains("Mem:")).collect::<Vec<&str>>();
         let parts = line[0].split_whitespace().collect::<Vec<&str>>();
 
-        let total = parts[1].parse::<u64>().unwrap();
+        let total = parts[1].parse::<u32>().unwrap();
         // used
         // free
         // shared
         // cache
-        let available = parts[6].parse::<u64>()
+        let available = parts[6].parse::<u32>()
             .map_err(|_| String::from("Unsupported platform"))?;
 
-        let usage_percent = 1.0 - (available as f64 / total as f64);
-        let value = format!("{} / {} M  ({:.0} %)", total - available, total, usage_percent * 100.0);
-        Ok(DataPoint::new(value))
+        let usage_percent = (total - available) as f32 / total as f32 * 100.0;
+
+        let criticality = if usage_percent >= self.threshold_critical {
+            Criticality::Critical
+        }
+        else if usage_percent >= self.threshold_error {
+            Criticality::Error
+        }
+        else if usage_percent >= self.threshold_warning {
+            Criticality::Warning
+        }
+        else {
+            Criticality::Normal
+        };
+
+        let value = format!("{:.0}", usage_percent);
+        Ok(DataPoint::value_with_level(value, criticality))
     }
 }
