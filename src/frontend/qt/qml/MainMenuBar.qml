@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 import "Misc"
 import "Text"
@@ -12,9 +12,10 @@ ToolBar {
     property bool enableShortcuts: false
     property bool enableEditButtons: false
     property int refreshProgress: 100
+    property int iconSize: 24
 
     focus: true
-
+    height: 38
 
     signal clickedAdd()
     signal clickedRemove()
@@ -32,12 +33,16 @@ ToolBar {
 
     RowLayout {
         anchors.fill: parent
+        spacing: Theme.spacingNormal
 
         ToolButton {
             icon.source: "qrc:/main/images/button/add"
             text: "Add host"
             display: AbstractButton.IconOnly
             onClicked: root.clickedAdd()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
         }
 
         ToolButton {
@@ -47,6 +52,9 @@ ToolBar {
             display: AbstractButton.IconOnly
             icon.source: "qrc:/main/images/button/remove"
             onClicked: root.clickedRemove()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
         }
 
         ToolSeparator {
@@ -59,6 +67,9 @@ ToolBar {
             text: "Edit host"
             icon.source: "qrc:/main/images/button/entry-edit"
             onClicked: root.clickedEdit()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
         }
 
         Item {
@@ -75,12 +86,26 @@ ToolBar {
 
                 TextField {
                     id: searchInput
+                    anchors.verticalCenter: parent.verticalCenter
                     placeholderText: "by name or address..."
-                    width: root.width * 0.4
+                    // TODO: color from global theme / palette? by default it's too dark.
+                    placeholderTextColor: Theme.textColorDark
+                    width: root.width * 0.3
                     onTextChanged: root.filterChanged(searchInput.text)
+                }
+
+                AutoRefreshButton {
+                    enabled: root.refreshProgress === 100
+                    spinning: root.refreshProgress < 100
+                    size: certMonitorButton.height
+                    onClicked: {
+                        LK.command.forceInitializeHosts()
+                    }
                 }
             }
         }
+
+        ToolSeparator { }
 
         ToolButton {
             id: certMonitorButton
@@ -88,36 +113,31 @@ ToolBar {
             text: "Cert. monitor"
             display: AbstractButton.TextBesideIcon
             onClicked: root.clickedCertificateMonitor()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
         }
-
-        ToolSeparator { }
-
-        AutoRefreshButton {
-            enabled: root.refreshProgress === 100
-            spinning: root.refreshProgress < 100
-            size: certMonitorButton.height
-            flatButton: false
-            onClicked: {
-                LK.command.forceInitializeHosts()
-            }
-        }
-
-        ToolSeparator { }
 
         ToolButton {
             icon.source: "qrc:/main/images/button/keyboard-shortcuts"
             text: "Keyboard shortcuts"
             display: AbstractButton.IconOnly
             onClicked: root.clickedHotkeyHelp()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
+            topPadding: 2
+            bottomPadding: 6
         }
-
-        ToolSeparator { }
 
         ToolButton {
             icon.source: "qrc:/main/images/button/configure"
             text: "Configuration"
             display: AbstractButton.IconOnly
             onClicked: root.clickedPreferences()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
         }
     }
 

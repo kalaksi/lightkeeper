@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import Qt.labs.qmlmodels 1.0
+import QtQuick
+import QtQuick.Controls
+import Qt.labs.qmlmodels
 
 import "../Text"
 import "../Misc"
@@ -12,7 +12,7 @@ Item {
     property string imageSource: ""
     property real imageRelativeWidth: 0.0
     property real imageRelativeHeight: 0.0
-    property string color: ""
+    property string color: "white"
     property string tooltip: ""
     property string text: ""
     property bool roundButton: false

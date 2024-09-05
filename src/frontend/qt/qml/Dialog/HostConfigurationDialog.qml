@@ -99,6 +99,7 @@ LightkeeperDialog {
         spacing: Theme.spacingLoose
 
         Column {
+            spacing: Theme.spacingTight
             Layout.fillWidth: true
 
             Label {
@@ -118,6 +119,7 @@ LightkeeperDialog {
         }
 
         Column {
+            spacing: Theme.spacingTight
             Layout.fillWidth: true
 
             Label {
@@ -137,6 +139,7 @@ LightkeeperDialog {
         }
 
         Column {
+            spacing: Theme.spacingTight
             Layout.fillWidth: true
 
             Label {
@@ -179,6 +182,7 @@ LightkeeperDialog {
             }
 
             Label {
+                anchors.verticalCenter: parent.verticalCenter
                 text: "Use sudo"
             }
         }
@@ -205,6 +209,7 @@ LightkeeperDialog {
                 id: tabBar
                 currentIndex: 0
                 height: 40
+                rightPadding: root.buttonSize + 4
 
                 Layout.fillWidth: true
 
