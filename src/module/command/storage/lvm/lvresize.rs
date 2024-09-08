@@ -38,7 +38,7 @@ impl CommandModule for LVResize {
             display_icon: String::from("resize-column-2"),
             display_text: String::from("Resize"),
             user_parameters: vec![
-                frontend::UserInputField::decimal_number_with_units("New size", "20G", &[
+                frontend::UserInputField::decimal_number_with_units("New size", "20g", &[
                     "r", "R", "b", "B", "s", "S", "k", "K", "m", "M", "g", "G", "t", "T", "p", "P", "e", "E"
                 ]),
             ],

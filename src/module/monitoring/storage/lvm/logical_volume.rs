@@ -62,7 +62,7 @@ impl MonitoringModule for LogicalVolume {
            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
             command.arguments(vec![
-                "lvs", "--separator", "|", "--options", "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent", "--units", "H"
+                "lvs", "--separator", "|", "--options", "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent", "--units", "h"
             ]);
 
             Ok(command.to_string())
