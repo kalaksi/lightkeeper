@@ -179,8 +179,7 @@ Item {
                             hoverEnabled: !groupBox.blocked
 
                             Layout.alignment: Qt.AlignHCenter
-                            Layout.topMargin: size * 0.20
-                            Layout.bottomMargin: size * 0.30
+                            Layout.bottomMargin: Theme.spacingLoose
 
                             onClicked: function(buttonId, commandId, params) {
                                 LK.command.execute(buttonId, root.hostId, commandId, params)

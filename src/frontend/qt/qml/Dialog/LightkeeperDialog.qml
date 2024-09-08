@@ -26,6 +26,10 @@ Dialog {
         border.width: 1
     }
 
+    Overlay.modal: Rectangle {
+        color: "#60000000"
+    }
+
     header: Rectangle {
         id: customHeader
         width: root.width

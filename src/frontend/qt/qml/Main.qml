@@ -231,8 +231,6 @@ ApplicationWindow {
         // Starts the thread that receives portal responses from D-Bus.
         DesktopPortal.receiveResponses()
 
-        console.log("Current color palette: ", palette)
-
         if (LK.hosts.refresh_hosts_on_start()) {
             LK.command.forceInitializeHosts()
         }

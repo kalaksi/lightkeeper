@@ -304,9 +304,6 @@ Item {
             tabData.title = `${tabData.title} (${similarTabs + 1})`
         }
 
-        // Extra padding for the title text before close button.
-        tabData.title += "  "
-
         root._tabContents[root.hostId].push(tabData)
 
         let lastTabIndex = root._tabContents[root.hostId].length - 1

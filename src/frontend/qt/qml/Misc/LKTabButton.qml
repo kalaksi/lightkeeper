@@ -15,6 +15,8 @@ TabButton {
     property bool showCloseButton: false
     property bool active: false
     height: 28
+    // Automatically sized to tab title contents.
+    width: label.implicitWidth + (showCloseButton ? closeButton.implicitWidth : label.padding)
 
     signal tabClosed
 
@@ -27,8 +29,6 @@ TabButton {
         Rectangle {
             width: parent.width
             height: root.active ? 2 : 1
-            // color: Theme.borderColor
-            // color: palette.highlight
             // Change color if active:
             color: root.active ? palette.highlight : Theme.borderColor
         }
@@ -48,9 +48,8 @@ TabButton {
     }
 
     contentItem: Row {
-        id: contentRow
-        spacing: 0
         height: root.height
+        width: root.width
 
         NormalText {
             id: label
@@ -59,65 +58,59 @@ TabButton {
             padding: Theme.spacingNormal
         }
 
-        Item {
+        RoundButton {
+            id: closeButton
             visible: root.showCloseButton
+            flat: true
+            focusPolicy: Qt.NoFocus
+            // Custom hover effect provided below.
+            hoverEnabled: false
             height: root.closeButtonSize
-            width: root.closeButtonSize * 2
+            width: root.closeButtonSize
             anchors.verticalCenter: parent.verticalCenter
 
-            RoundButton {
-                id: closeButton
-                // anchors.centerIn: parent
-                flat: true
-                focusPolicy: Qt.NoFocus
-                // Custom hover effect provided below.
-                hoverEnabled: false
-                height: root.closeButtonSize
+            Image {
+                id: defaultImage
+                visible: true
+                anchors.centerIn: parent
+                source: "qrc:/main/images/button/close"
+                width: root.closeButtonSize * 0.5
+                height: root.closeButtonSize * 0.8
+            }
+
+            ColorOverlay {
+                anchors.fill: defaultImage
+                source: defaultImage
+                // By default this icon is black, so changing it here.
+                color: Theme.iconColor
+                antialiasing: true
+            }
+
+            Image {
+                id: hoveredImage
+                visible: false
+                opacity: 0.8
+                anchors.centerIn: parent
+                source: "qrc:/main/images/button/tab-close"
                 width: root.closeButtonSize
+                height: root.closeButtonSize
+            }
 
-                Image {
-                    id: defaultImage
-                    visible: true
-                    anchors.centerIn: parent
-                    source: "qrc:/main/images/button/close"
-                    width: root.closeButtonSize * 0.5
-                    height: root.closeButtonSize * 0.8
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+
+                onEntered: {
+                    defaultImage.visible = false
+                    hoveredImage.visible = true
                 }
 
-                ColorOverlay {
-                    anchors.fill: defaultImage
-                    source: defaultImage
-                    // By default this icon is black, so changing it here.
-                    color: Theme.iconColor
-                    antialiasing: true
+                onExited: {
+                    defaultImage.visible = true
+                    hoveredImage.visible = false
                 }
 
-                Image {
-                    id: hoveredImage
-                    visible: false
-                    opacity: 0.8
-                    anchors.centerIn: parent
-                    source: "qrc:/main/images/button/tab-close"
-                    width: root.closeButtonSize
-                    height: root.closeButtonSize
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-
-                    onEntered: {
-                        defaultImage.visible = false
-                        hoveredImage.visible = true
-                    }
-
-                    onExited: {
-                        defaultImage.visible = true
-                        hoveredImage.visible = false
-                    }
-
-                    onClicked: root.tabClosed()
-                }
+                onClicked: root.tabClosed()
             }
         }
     }

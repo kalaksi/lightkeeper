@@ -6,16 +6,16 @@ import "../Text"
 
 
 // This component should be a direct child of main window.
-Dialog {
+LightkeeperDialog {
     id: root
     // See UserInputField from rust-side for input spec format.
     property var inputSpecs: []
     property string _errorText: ""
+    title: "Input"
     modal: true
     implicitWidth: 400
     implicitHeight: rootColumn.implicitHeight + Theme.marginDialogBottom
     standardButtons: Dialog.Ok | Dialog.Cancel
-    background: DialogBackground { }
 
     signal inputValuesGiven(var inputValues)
 
@@ -23,7 +23,10 @@ Dialog {
     contentItem: ColumnLayout {
         id: rootColumn
         anchors.fill: parent
-        anchors.margins: 30
+        anchors.margins: Theme.marginDialog
+        anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
+        spacing: Theme.spacingLoose
 
         Repeater {
             id: inputRepeater
@@ -55,6 +58,7 @@ Dialog {
 
                     ComboBox {
                         id: comboBox
+                        width: parent.width
                         model: [''].concat(modelData.options)
                         currentIndex: 0
                     }

@@ -48,7 +48,7 @@ Item {
 
         TabBar {
             id: tabBar
-            width: Math.floor(parent.width * 0.7)
+            width: parent.width * 0.7
             height: parent.height
 
             onCurrentIndexChanged: {
