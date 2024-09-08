@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "rust-analyzer.cargo.extraEnv": {
+        "QMAKE": "/usr/lib/qt6/bin/qmake"
+    }
+}
