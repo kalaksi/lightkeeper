@@ -32,12 +32,12 @@ LightkeeperDialog {
 
     onAccepted: {
         LK.config.endGroupConfiguration()
-        reset()
+        resetFields()
     }
 
     onRejected: {
         LK.config.cancelGroupConfiguration()
-        reset()
+        resetFields()
     }
 
 
@@ -576,7 +576,7 @@ LightkeeperDialog {
         root._commandList = LK.config.get_group_commands(root.groupName)
     }
 
-    function reset() {
+    function resetFields() {
         root._loading = true
         root._connectorList = []
         root._monitorList = []

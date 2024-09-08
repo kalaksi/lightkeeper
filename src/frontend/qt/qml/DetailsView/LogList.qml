@@ -297,7 +297,7 @@ ListView {
         return [root._matchingRows.length, root._totalMatches]
     }
 
-    function reset() {
+    function resetFields() {
         root.rows = []
         root.model.clear()
         root._lastQuery = ""

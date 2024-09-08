@@ -94,7 +94,7 @@ impl QmlFrontend {
         }
         else {
             if sandboxed {
-                engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml/"));
+                engine.add_import_path(QString::from("/app/qmltermwidget/usr/qml/"));
             }
             else {
                 engine.add_import_path(QString::from("./third_party/qmltermwidget"));

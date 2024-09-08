@@ -25,14 +25,14 @@ Dialog {
 
     background: DialogBackground { }
 
-    onClosed: reset()
+    onClosed: resetFields()
 
     onTextChanged: {
         if (root.text.length > 0) {
             commandOutput.rows = root.text.split("\n")
         }
         else {
-            commandOutput.reset()
+            commandOutput.resetFields()
         }
     }
 
@@ -93,7 +93,7 @@ Dialog {
         }
     }
 
-    function reset() {
+    function resetFields() {
         root.text = ""
         root.progress = 0
     }

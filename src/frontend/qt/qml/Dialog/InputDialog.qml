@@ -112,14 +112,14 @@ Dialog {
         }
 
         root.inputValuesGiven(values)
-        reset()
+        resetFields()
     }
 
     onRejected: {
-        reset()
+        resetFields()
     }
 
-    function reset() {
+    function resetFields() {
         root._errorText = ""
         root.inputSpecs = []
     }
