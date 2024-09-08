@@ -7,24 +7,27 @@ import "../Text"
 
 
 // This component should be a direct child of main window.
-Dialog {
+LightkeeperDialog {
     id: root
     property string text: ""
     property alias textFormat: dialogText.textFormat
     property alias wrapMode: dialogText.wrapMode
 
     modal: true
-    opacity: 0.0
     implicitWidth: dialogText.contentWidth + 100
     implicitHeight: dialogText.contentHeight + 100
     standardButtons: Dialog.Close
-
-    background: DialogBackground { }
 
     onClosed: {
         root.text = ""
     }
 
+    // ScrollView doesn't have boundsBehavior so this is the workaround.
+    Binding {
+        target: scrollView.contentItem
+        property: "boundsBehavior"
+        value: Flickable.StopAtBounds
+    }
 
     WorkingSprite {
         visible: root.text === ""
@@ -51,12 +54,6 @@ Dialog {
     }
 
     Behavior on height {
-        NumberAnimation {
-            duration: Theme.animationDurationFast
-        }
-    }
-
-    Behavior on opacity {
         NumberAnimation {
             duration: Theme.animationDurationFast
         }
