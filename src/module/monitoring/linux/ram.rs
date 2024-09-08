@@ -66,13 +66,12 @@ impl MonitoringModule for Ram {
         let line = response.message.lines().filter(|line| line.contains("Mem:")).collect::<Vec<&str>>();
         let parts = line[0].split_whitespace().collect::<Vec<&str>>();
 
-        let total = parts[1].parse::<u32>().unwrap();
+        let total = parts[1].parse::<u32>().map_err(|_| String::from("Unsupported platform"))?;
         // used
         // free
         // shared
         // cache
-        let available = parts[6].parse::<u32>()
-            .map_err(|_| String::from("Unsupported platform"))?;
+        let available = parts[6].parse::<u32>().map_err(|_| String::from("Unsupported platform"))?;
 
         let usage_percent = (total - available) as f32 / total as f32 * 100.0;
 
