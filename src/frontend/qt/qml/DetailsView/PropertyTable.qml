@@ -1,9 +1,9 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import Qt.labs.qmlmodels 1.0
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Controls
+import Qt.labs.qmlmodels
+import QtQuick.Layouts
 
-import PropertyTableModel 1.0
+import PropertyTableModel
 
 import ".."
 import "../Misc"
@@ -143,15 +143,17 @@ TableView {
                         visible: styledValue.display_options.display_style === "ProgressBar"
                         spacing: Theme.spacingNormal
 
+                        property string pureValue: styledValue.data_point.value.split(" ")[0]
+
                         ProgressBar {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: parent.parent.width * 0.8
+                            width: parent.parent.width * 0.6
                             height: parent.parent.height * 0.5
-                            value: parseInt(styledValue.data_point.value, 10) / 100.0
+                            value: parseInt(parent.pureValue, 10) / 100.0
                         }
 
                         SmallerText {
-                            text: ValueUnit.AsText(styledValue.data_point.value, styledValue.display_options.unit)
+                            text: styledValue.data_point.value === parent.pureValue ? parent.pureValue + " %" : styledValue.data_point.value
                             anchors.verticalCenter: parent.verticalCenter
                             lineHeight: 0.9
                         }

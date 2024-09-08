@@ -88,7 +88,7 @@ impl MonitoringModule for Ram {
             Criticality::Normal
         };
 
-        let value = format!("{:.0}", usage_percent);
+        let value = format!("{:.0} % of {} M", usage_percent, total);
         Ok(DataPoint::value_with_level(value, criticality))
     }
 }
