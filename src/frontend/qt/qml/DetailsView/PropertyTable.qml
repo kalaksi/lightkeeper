@@ -5,7 +5,6 @@ import QtQuick.Layouts 1.15
 
 import PropertyTableModel 1.0
 
-import "../StyleOverride"
 import ".."
 import "../Misc"
 import "../Text"

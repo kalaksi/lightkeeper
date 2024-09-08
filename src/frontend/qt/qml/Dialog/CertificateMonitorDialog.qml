@@ -4,7 +4,6 @@ import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import Qt5Compat.GraphicalEffects
 
-import "../StyleOverride"
 import "../Button"
 import "../Text"
 import "../Misc"
