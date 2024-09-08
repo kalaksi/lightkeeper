@@ -32,7 +32,8 @@ ToolBar {
     }
 
     RowLayout {
-        anchors.fill: parent
+        width: parent.width
+        anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacingNormal
 
         ToolButton {

@@ -24,6 +24,7 @@ ApplicationWindow {
     minimumHeight: 810
     width: minimumWidth + 100
     height: minimumHeight
+    font.pointSize: Theme.fontSize
 
     onWidthChanged: {
         hostTable.forceLayout()

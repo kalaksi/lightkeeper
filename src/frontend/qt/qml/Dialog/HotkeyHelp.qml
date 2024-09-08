@@ -7,19 +7,18 @@ import "../Text"
 
 
 // This component should be a direct child of main window.
-Dialog {
+LightkeeperDialog {
     id: root
     modal: true
-    opacity: 0.0
     implicitWidth: 600
     implicitHeight: 600
     standardButtons: Dialog.Close
 
-    background: DialogBackground { }
-
-
-    ScrollView {
+    contentItem: ScrollView {
         id: scrollView
+        anchors.margins: Theme.marginDialog
+        anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
         anchors.fill: parent
 
         ColumnLayout {
@@ -122,12 +121,6 @@ Dialog {
                 }
             }
 
-        }
-    }
-
-    Behavior on opacity {
-        NumberAnimation {
-            duration: Theme.animationDurationFast
         }
     }
 }

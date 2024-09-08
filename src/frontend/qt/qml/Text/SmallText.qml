@@ -1,5 +1,5 @@
-import QtQuick 2.15
+import QtQuick
 
 BaseText {
-    font.pointSize: 8
+    font.pointSize: Theme.fontSize - 2
 }

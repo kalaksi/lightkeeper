@@ -12,7 +12,7 @@ Item {
     property string imageSource: ""
     property real imageRelativeWidth: 0.0
     property real imageRelativeHeight: 0.0
-    property string color: "white"
+    property string color: "transparent"
     property string tooltip: ""
     property string text: ""
     property bool roundButton: false

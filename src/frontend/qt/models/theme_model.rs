@@ -37,6 +37,7 @@ pub struct ThemeModel {
     groupboxMinWidth: qt_property!(i32; CONST),
     groupboxMaxWidth: qt_property!(i32; CONST),
     commonIndent: qt_property!(i32; CONST),
+    fontSize: qt_property!(i8; CONST),
 
     // Display options
     hideInfoNotifications: qt_property!(bool; CONST),
@@ -89,6 +90,7 @@ impl ThemeModel {
             groupboxMinWidth: 450,
             groupboxMaxWidth: 650,
             commonIndent: 16,
+            fontSize: 11,
             tooltipDelay: 800,
 
             hideInfoNotifications: display_options.hide_info_notifications,

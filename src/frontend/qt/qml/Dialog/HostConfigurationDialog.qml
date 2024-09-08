@@ -234,6 +234,9 @@ LightkeeperDialog {
                 Layout.fillHeight: true
 
                 RowLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
                     BorderRectangle {
                         borderColor: Theme.borderColor
                         backgroundColor: Theme.backgroundColor

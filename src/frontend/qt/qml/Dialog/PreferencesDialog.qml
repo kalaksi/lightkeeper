@@ -61,6 +61,7 @@ LightkeeperDialog {
     contentItem: ColumnLayout {
         id: content
         visible: !root._loading
+        anchors.fill: parent
         anchors.margins: Theme.marginDialog
         anchors.topMargin: Theme.marginDialogTop
         anchors.bottomMargin: Theme.marginDialogBottom

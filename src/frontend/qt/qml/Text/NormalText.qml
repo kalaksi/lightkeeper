@@ -1,7 +1,7 @@
 import QtQuick
 
 BaseText {
-    font.pointSize: 10
+    font.pointSize: Theme.fontSize
 }
 
 // NOTE: There's currently a bug in Qt where Text is not selectable: https://bugreports.qt.io/browse/QTBUG-14077
