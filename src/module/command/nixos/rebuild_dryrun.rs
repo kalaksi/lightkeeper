@@ -37,6 +37,7 @@ impl CommandModule for RebuildDryrun {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("build-file"),
             display_text: String::from("nixos-rebuild dry-run"),
+            tab_title: String::from("nixos-rebuild dry-run"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }

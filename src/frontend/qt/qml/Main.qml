@@ -195,6 +195,7 @@ ApplicationWindow {
 
         function onCommandOutputDialogOpened(title, invocationId) {
             commandOutputDialog.pendingInvocation = invocationId
+            commandOutputDialog.title = title
             commandOutputDialog.open()
         }
 
@@ -348,7 +349,7 @@ ApplicationWindow {
     HostConfigurationDialog {
         id: hostConfigurationDialog
         anchors.centerIn: parent
-        bottomMargin: 0.15 * parent.height
+        bottomMargin: 0.13 * parent.height
 
         onConfigurationChanged: LK.reload()
     }

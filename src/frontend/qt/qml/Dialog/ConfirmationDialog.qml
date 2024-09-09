@@ -1,12 +1,11 @@
-import QtQuick 2.15
-import QtQuick.Dialogs 1.1
+import QtQuick
+import QtQuick.Dialogs
 
 
 MessageDialog {
     id: root
-    icon: StandardIcon.Question
     title: "Confirmation"
-    standardButtons: StandardButton.Yes | StandardButton.No
+    buttons: MessageDialog.Ok | MessageDialog.Cancel
 
     Component.onCompleted: visible = true
 }

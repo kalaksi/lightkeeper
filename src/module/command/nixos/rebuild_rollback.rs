@@ -41,6 +41,7 @@ impl CommandModule for RebuildRollback {
             display_icon: String::from("undo"),
             display_text: String::from("nixos-rebuild --rollback switch"),
             depends_on_tags: vec![String::from("Previous")],
+            tab_title: String::from("nixos-rebuild --rollback switch"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }

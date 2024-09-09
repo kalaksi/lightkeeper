@@ -37,6 +37,7 @@ LightkeeperDialog {
         id: scrollView
         visible: root.text !== ""
         anchors.fill: parent
+        anchors.margins: Theme.marginDialog
 
         NormalText {
             id: dialogText

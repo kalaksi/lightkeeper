@@ -37,6 +37,7 @@ impl CommandModule for RebuildSwitch {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("build"),
             display_text: String::from("nixos-rebuild switch"),
+            tab_title: String::from("nixos-rebuild switch"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }

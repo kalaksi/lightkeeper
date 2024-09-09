@@ -33,6 +33,7 @@ impl CommandModule for ChannelUpdate {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("update"),
             display_text: String::from("Update nix channel"),
+            tab_title: String::from("nix-channel --update"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }

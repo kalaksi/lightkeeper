@@ -37,6 +37,7 @@ impl CommandModule for RebuildBoot {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("build"),
             display_text: String::from("nixos-rebuild boot"),
+            tab_title: String::from("nixos-rebuild boot"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }

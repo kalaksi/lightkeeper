@@ -18,7 +18,7 @@ LightkeeperDialog {
 
     title: `Configuration group: ${root.groupName}`
     implicitWidth: 600
-    implicitHeight: 650
+    implicitHeight: 670
     standardButtons: Dialog.Cancel | Dialog.Ok
 
     onOpened: {

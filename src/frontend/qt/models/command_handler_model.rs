@@ -216,7 +216,10 @@ impl CommandHandlerModel {
             UIAction::FollowOutput => {
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
-                    let title = QString::from(format!("{}: {}", command_id, parameters.first().unwrap_or(&String::new())));
+                    let title = match display_options.tab_title.is_empty() {
+                        true => QString::from(format!("{}: {}", command_id, parameters.first().unwrap_or(&String::new()))),
+                        false => QString::from(display_options.tab_title)
+                    };
                     self.commandOutputDialogOpened(title, invocation_id);
                     self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_id.into());
                 }

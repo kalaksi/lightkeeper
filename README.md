@@ -69,6 +69,7 @@ Migration to Qt6 is now done, so now you'll need these packages on Ubuntu 24.04:
 - qml6-module-qtquick-shapes
 - qml6-module-qtquick-templates
 - qml6-module-qtquick-window
+- qml6-module-qtquick-dialogs
 - qml6-module-qt-labs-platform
 
 Building:

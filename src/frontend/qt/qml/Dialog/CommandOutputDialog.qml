@@ -10,7 +10,7 @@ import "../js/TextTransform.js" as TextTransform
 
 
 // This component should be a direct child of main window.
-Dialog {
+LightkeeperDialog {
     id: root
     property string text: ""
     property bool showProgress: true
@@ -18,12 +18,9 @@ Dialog {
     property bool enableShortcuts: false
 
     modal: true
-    opacity: 0.0
     implicitWidth: commandOutput.width + 100
     implicitHeight: commandOutput.height + 100
     standardButtons: Dialog.Close
-
-    background: DialogBackground { }
 
     onClosed: resetFields()
 
@@ -37,9 +34,13 @@ Dialog {
     }
 
 
-    ColumnLayout {
+    contentItem: ColumnLayout {
+        id: content
         anchors.fill: parent
-        spacing: 10
+        anchors.margins: Theme.marginDialog
+        anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
+        spacing: Theme.spacingLoose
 
         Row {
             visible: root.showProgress
@@ -49,7 +50,9 @@ Dialog {
 
             ProgressBar {
                 id: progressBar
+                anchors.verticalCenter: parent.verticalCenter
                 width: parent.parent.width * 0.95
+                height: parent.height * 0.5
                 value: root.progress / 100.0
             }
 
@@ -82,12 +85,6 @@ Dialog {
     }
 
     Behavior on height {
-        NumberAnimation {
-            duration: Theme.animationDurationFast
-        }
-    }
-
-    Behavior on opacity {
         NumberAnimation {
             duration: Theme.animationDurationFast
         }

@@ -11,6 +11,7 @@ import "../Misc"
 Dialog {
     id: root
     modal: true
+    opacity: visible ? 1.0 : 0.0
     title: ""
 
     property int borderRadius: 6
@@ -48,6 +49,12 @@ Dialog {
         NormalText {
             anchors.centerIn: parent
             text: root.title
+        }
+    }
+
+    Behavior on opacity {
+        NumberAnimation {
+            duration: Theme.animationDurationFast
         }
     }
 }

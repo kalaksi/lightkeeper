@@ -39,6 +39,7 @@ impl CommandModule for CollectGarbage {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("clear"),
             display_text: String::from("Delete old generations and collect garbage"),
+            tab_title: String::from("nix-collect-garbage"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }

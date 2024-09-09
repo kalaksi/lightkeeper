@@ -43,7 +43,8 @@ impl CommandModule for FileSpaceUsage {
             parent_id: String::from("filesystem"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("search"),
-            display_text: String::from("Show file space usage"),
+            display_text: String::from("Find biggest files"),
+            confirmation_text: String::from("Are you sure? This can take a while."),
             action: UIAction::TextDialog,
             ..Default::default()
         }
