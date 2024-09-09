@@ -21,14 +21,14 @@ Item {
     width: root.size
     height: root.size
 
-    signal clicked(string buttonId)
+    signal clicked()
 
     ImageButton {
         id: imageButton
         anchors.fill: parent
         flatButton: false
         roundButton: true
-        onClicked: () => root.clicked(root.buttonId)
+        onClicked: () => root.clicked()
     }
 
     // progress animation that blocks the button until timeout timer is finished or finish() called.

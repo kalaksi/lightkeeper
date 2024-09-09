@@ -73,7 +73,7 @@ Item {
                     tooltip: modelData.display_options.display_text
                     imageSource: "qrc:/main/images/button/" + modelData.display_options.display_icon
                     progressPercent: root._buttonProgressStates[buttonId] !== undefined ? root._buttonProgressStates[buttonId] : 100
-                    onClicked: function(buttonId) {
+                    onClicked: {
                         root.clicked(buttonId, modelData.command_id, modelData.command_params)
                     }
                     hoverEnabled: root.hoverEnabled
@@ -140,7 +140,7 @@ Item {
 
         }
         else {
-            return modelData.command_id + '|'
+            return commandButton.command_id + '|'
         }
     }
 
