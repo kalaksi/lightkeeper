@@ -30,7 +30,16 @@ ApplicationWindow {
         hostTable.forceLayout()
     }
 
-    onClosing: root.close()
+    onClosing: function(close) {
+        if (LK.config.getPreferences().closeToTray) {
+            close.accepted = false
+            root.hide()
+        }
+        else {
+            root.quit()
+        }
+    }
+
 
     /// For testing.
     function test() {
@@ -442,15 +451,6 @@ ApplicationWindow {
         }
         else {
             root.show()
-        }
-    }
-
-    function close() {
-        if (LK.config.getPreferences().closeToTray) {
-            root.hide()
-        }
-        else {
-            root.quit()
         }
     }
 
