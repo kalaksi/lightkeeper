@@ -33,6 +33,12 @@ In case you find the GUI insufficient and need to dig deeper, you can always use
 - Text file editor for editing remote files (with built-in editor or using CLI over SSH).
 - Follow console output for longer running commands such as container builds and package updates.
 
+## Some background
+The idea for Lightkeeper rose from personal needs. Writing the same commands over the years can get tiresome and feel slow, even if utilizing shell's command history.  
+Another pain point was monitoring. Configuring and maintaining a software stack for relatively simple monitoring needs (graphs, alerts) can get needlessly heavy. Specifically, in my case, I aim to replace CollectD, InfluxDB and Grafana (although, an external DB would still be possible with Lightkeeper).  
+  
+So, I started formulating an idea about a more integrated maintenance tool for power users to simplify everything. At the same time, deploying should be as simple as possible since the aim is to streamline. The plain old shell doesn't need additional daemons on the servers so Lightkeeper shouldn't either.  
+
 # Installing
 ## Flatpak
 It is recommended to download the app from Flathub: https://flathub.org/apps/io.github.kalaksi.Lightkeeper  
