@@ -16,6 +16,7 @@ echo -e "\n* Updating Cargo.toml..."
 sed -i 's|^version = ".*|version = "'$version_only'"|' Cargo.toml
 
 # Test build and update cargo.lock
+export QMAKE="/usr/lib/qt6/bin/qmake"
 cargo build --release
 
 # Make sure all QML files are defined in resources
