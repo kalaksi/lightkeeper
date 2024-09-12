@@ -28,6 +28,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.22.0" date="2024-09-12">
+      <description>
+        <ul>
+          <li>Migrated to Qt 6! This may change the UI style a bit.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.21.2" date="2024-08-30">
       <description>
         <ul>
