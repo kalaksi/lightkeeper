@@ -16,7 +16,7 @@ Window {
     visible: true
     color: Theme.backgroundColor
 
-    Dialog {
+    LightkeeperDialog {
         modal: false
         standardButtons: Dialog.Ok
         implicitHeight: root.height

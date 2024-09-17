@@ -106,7 +106,6 @@ ToolBar {
             }
         }
 
-        ToolSeparator { }
 
         ToolButton {
             id: certMonitorButton
@@ -118,6 +117,8 @@ ToolBar {
             icon.width: root.iconSize
             padding: 4
         }
+
+        ToolSeparator { }
 
         ToolButton {
             icon.source: "qrc:/main/images/button/keyboard-shortcuts"

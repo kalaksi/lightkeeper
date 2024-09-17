@@ -225,7 +225,7 @@ impl ConnectionManager {
                         host_connectors.get(&connector_spec).unwrap()
                     };
 
-                    // TODO: not very elegant. No need to set multiple times.
+                    // TODO: not very elegant. No need to set multiple times, in theory, but there's some unknown issue.
                     connector.set_target(&request.host.get_address());
 
                     // Key verifications have to be done before anything else.
