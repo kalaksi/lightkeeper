@@ -25,6 +25,7 @@ ApplicationWindow {
     width: minimumWidth + 100
     height: minimumHeight
     font.pointSize: Theme.fontSize
+    title: "Lightkeeper (beta)"
 
     onWidthChanged: {
         hostTable.forceLayout()

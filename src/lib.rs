@@ -11,6 +11,7 @@ mod connection_manager;
 mod command_handler;
 mod file_handler;
 mod cache;
+mod pro_services;
 
 pub use module::ModuleFactory;
 pub use configuration::Configuration;

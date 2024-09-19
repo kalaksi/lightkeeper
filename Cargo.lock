@@ -715,6 +715,7 @@ dependencies = [
  "rand",
  "rayon",
  "regex",
+ "ring",
  "rustls 0.22.4",
  "rustls-native-certs",
  "rustls-pemfile",
