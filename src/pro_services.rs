@@ -1,12 +1,12 @@
 use std::io::{self, Read, Write};
 use std::sync::Arc;
-use std::{os::unix::net::UnixStream, thread};
+use std::os::unix::net::UnixStream;
 use std::time::Duration;
 use serde_derive::{Deserialize, Serialize};
-use x509_parser::nom::AsBytes;
 use std::collections::HashMap;
 use std::process;
-use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_ASN1};
+use openssl;
+
 
 use crate::file_handler;
 
@@ -21,7 +21,7 @@ const CONNECTION_TIMEOUT : u64 = 20000;
 // The extension is optional and the binary is not installed by default, but downloaded from GitHub on demand.
 // Even though it's closed-source, the communication protocol is open (see this file), so you can verify what kind of requests are sent and received.
 // The Pro Services extension does not use or need network access and can't send malicious input to Lightkeeper (according to bincode).
-// The binary is built using GitHub Actions.
+// The binary is built and signed using GitHub Actions.
 //
 
 
@@ -36,20 +36,19 @@ pub fn start() -> io::Result<process::Child> {
     let signature_path = pro_services_path.with_extension("sig");
 
     if let Err(_) = std::fs::metadata(&pro_services_path) {
+        // TODO: actual paths
         download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md", pro_services_path.to_str().unwrap())?;
         download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md.sig", signature_path.to_str().unwrap())?;
     }
 
-    let signing_cert_pem = include_bytes!("../certs/sign.crt");
-    let signing_cert_bytes = rustls_pemfile::certs(&mut io::Cursor::new(signing_cert_pem)).next().unwrap()?;
-    let signing_cert = UnparsedPublicKey::new(&ECDSA_P256_SHA256_ASN1, &signing_cert_bytes); 
-
     let pro_services_bytes = std::fs::read(&pro_services_path)?;
     let signature = std::fs::read(&signature_path)?;
-    let hash = ring::digest::digest(&ring::digest::SHA256, &pro_services_bytes);
+    let sign_cert = openssl::x509::X509::from_pem(include_bytes!("../certs/sign.crt"))?.public_key()?;
 
-    if signing_cert.verify(&hash.as_ref(), signature.as_bytes()).is_err() {
-        Err(io::Error::new(io::ErrorKind::Other, "Signature verification failed."))
+    let mut verifier = openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), &sign_cert)?;
+    verifier.update(&pro_services_bytes)?;
+    if !verifier.verify(&signature)?  {
+        Err(io::Error::new(io::ErrorKind::Other, "Binary signature verification failed."))
     }
     else {
         // Start Lightkeeper Pro Services process. Failure is not critical, but some features will be unavailable.
@@ -96,21 +95,20 @@ fn download_file(url: &str, output_path: &str) -> io::Result<()> {
 // }
 
 pub fn process_request(request: ServiceRequest) -> io::Result<ServiceResponse> {
-    let mut stream = UnixStream::connect(SOCKET_PATH)?;
+    let mut tls_stream = setup_connection()?;
 
     let serialized = bincode::serialize(&request).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
-    stream.write_all(&serialized)?;
+    tls_stream.write_all(&serialized)?;
 
     let mut buffer = Vec::new();
-    stream.read_to_end(&mut buffer)?;
+    tls_stream.read_to_end(&mut buffer)?;
     let response = bincode::deserialize::<ServiceResponse>(&buffer).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
     Ok(response)
 }
 
 fn setup_connection() -> io::Result<rustls::StreamOwned<rustls::ClientConnection, UnixStream>> {
-    let cache_dir = file_handler::get_cache_dir()?;
-    let socket_path = cache_dir.join(SOCKET_PATH);
+    let socket_path = file_handler::get_cache_dir()?.join(SOCKET_PATH);
     let unix_stream = UnixStream::connect(&socket_path)?;
     unix_stream.set_read_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
     unix_stream.set_write_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;

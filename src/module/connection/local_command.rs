@@ -41,6 +41,5 @@ impl ConnectionModule for LocalCommand {
             let stderr = String::from_utf8(output.stderr).unwrap();
             Ok(ResponseMessage::new(stderr, output.status.code().unwrap_or(1)))
         }
-
     }
 }

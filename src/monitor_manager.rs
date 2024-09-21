@@ -3,9 +3,9 @@ use std::rc::Rc;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
-use std::thread;
+use std::{process, thread};
 
-use crate::error::*;
+use crate::{error::*, pro_services};
 use crate::module::connection::RequestResponse;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
@@ -16,6 +16,8 @@ use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, RequestType, CachePolicy };
 
 pub const CERT_MONITOR_HOST_ID: &str = "_cert-monitor";
+/// In milliseconds.
+const PRO_SERVICES_EXIT_WAIT_TIME: u64 = 10000;
 
 
 // Default needs to be implemented because of Qt QObject requirements.
@@ -35,6 +37,7 @@ pub struct MonitorManager {
     // Shared resources.
     host_manager: Rc<RefCell<HostManager>>,
     module_factory: Arc<ModuleFactory>,
+    pro_service_process: Option<process::Child>,
 
     response_sender_prototype: Option<mpsc::Sender<RequestResponse>>,
     response_receiver: Option<mpsc::Receiver<RequestResponse>>,
@@ -65,6 +68,16 @@ impl MonitorManager {
         self.request_sender = Some(request_sender);
         self.state_update_sender = Some(state_update_sender);
 
+        match pro_services::start() {
+            Ok(process) => {
+                self.pro_service_process = Some(process);
+            },
+            Err(error) => {
+                log::error!("Failed to start Lightkeeper Pro service: {}", error);
+                log::error!("Pro features will not be available.");
+            }
+        }
+
         // Certificate monitors.
         if hosts_config.certificate_monitors.len() > 0 {
             log::debug!("Found configuration for {} certificate monitors", hosts_config.certificate_monitors.len());
@@ -84,7 +97,7 @@ impl MonitorManager {
 
             let mut new_monitors = Vec::<Monitor>::new();
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
-                let monitor_spec = ModuleSpecification::monitor(monitor_id.as_str(), monitor_config.version.as_str());
+                let monitor_spec = ModuleSpecification::monitor(monitor_id, &monitor_config.version);
                 let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
                 new_monitors.push(monitor);
             }
@@ -111,6 +124,15 @@ impl MonitorManager {
                 .unwrap_or_else(|error| log::error!("Couldn't send exit token to command handler: {}", error));
 
             thread.join().unwrap();
+        }
+        if let Some(mut process) = self.pro_service_process.take() {
+            pro_services::process_request(pro_services::ServiceRequest {
+                request_id: 0,
+                request_type: pro_services::RequestType::Exit,
+            }).unwrap();
+
+            thread::sleep(std::time::Duration::from_millis(PRO_SERVICES_EXIT_WAIT_TIME));
+            process.kill().unwrap();
         }
     }
 
