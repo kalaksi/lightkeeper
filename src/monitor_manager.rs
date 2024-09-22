@@ -17,7 +17,7 @@ use crate::connection_manager::{ ConnectorRequest, RequestType, CachePolicy };
 
 pub const CERT_MONITOR_HOST_ID: &str = "_cert-monitor";
 /// In milliseconds.
-const PRO_SERVICES_EXIT_WAIT_TIME: u64 = 10000;
+const PRO_SERVICES_EXIT_WAIT_TIME: u64 = 5000;
 
 
 // Default needs to be implemented because of Qt QObject requirements.
@@ -38,6 +38,7 @@ pub struct MonitorManager {
     host_manager: Rc<RefCell<HostManager>>,
     module_factory: Arc<ModuleFactory>,
     pro_service_process: Option<process::Child>,
+    pro_services_log_thread: Option<thread::JoinHandle<()>>,
 
     response_sender_prototype: Option<mpsc::Sender<RequestResponse>>,
     response_receiver: Option<mpsc::Receiver<RequestResponse>>,
@@ -69,8 +70,9 @@ impl MonitorManager {
         self.state_update_sender = Some(state_update_sender);
 
         match pro_services::start() {
-            Ok(process) => {
+            Ok((process, log_thread)) => {
                 self.pro_service_process = Some(process);
+                self.pro_services_log_thread = Some(log_thread);
             },
             Err(error) => {
                 log::error!("Failed to start Lightkeeper Pro service: {}", error);
@@ -125,14 +127,40 @@ impl MonitorManager {
 
             thread.join().unwrap();
         }
+
         if let Some(mut process) = self.pro_service_process.take() {
-            pro_services::process_request(pro_services::ServiceRequest {
+            let response = pro_services::process_request(pro_services::ServiceRequest {
                 request_id: 0,
                 request_type: pro_services::RequestType::Exit,
-            }).unwrap();
+            });
 
-            thread::sleep(std::time::Duration::from_millis(PRO_SERVICES_EXIT_WAIT_TIME));
-            process.kill().unwrap();
+            let graceful = match response {
+                Ok(response) => {
+                    if response.errors.len() > 0 {
+                        log::error!("Failed to stop Lightkeeper Pro service: {}", response.errors[0]);
+                        false
+                    }
+                    else {
+                        true
+                    }
+                },
+                Err(error) => {
+                    log::error!("{}", error);
+                    false
+                }
+            };
+
+            if !graceful {
+                log::warn!("Waiting before forcing Lightkeeper Pro service to exit...");
+                thread::sleep(std::time::Duration::from_millis(PRO_SERVICES_EXIT_WAIT_TIME));
+                if let Err(error) = process.kill() {
+                    log::error!("Failed to kill process: {}", error);
+                }
+            }
+
+            if let Some(thread) = self.pro_services_log_thread.take() {
+                thread.join().unwrap();
+            }
         }
     }
 

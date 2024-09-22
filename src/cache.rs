@@ -59,11 +59,15 @@ impl <K: Eq + std::hash::Hash + Clone, V: Clone> Cache<K, V> {
 
     pub fn purge(&mut self) where K: serde::Serialize, V: serde::Serialize {
         self.data.clear();
-        self.write_to_disk().unwrap();
+        if let Err(error) = self.write_to_disk() {
+            log::error!("Error while purging cache: {}", error);
+        }
 
         // TODO: recovery handler and dialog if cached text editor files are found on start?
         for cached_file in file_handler::list_cached_files(true).unwrap() {
-            file_handler::remove_file(&cached_file).unwrap();
+            if let Err(error) = file_handler::remove_file(&cached_file) {
+                log::error!("Error while removing cached file {}: {}", cached_file, error);
+            }
         }
     }
 

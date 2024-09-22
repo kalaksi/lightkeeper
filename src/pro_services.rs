@@ -1,19 +1,16 @@
-use std::io::{self, Read, Write};
+use std::io::{self, BufRead, Read, Write};
 use std::sync::Arc;
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::process;
+use std::{process, thread};
 use openssl;
 
 
 use crate::file_handler;
 
 use std::process::Command;
-
-const SOCKET_PATH: &str = "services.sock";
-const CONNECTION_TIMEOUT : u64 = 20000;
 
 //
 // NOTE: This is a module for interfacing with Lightkeeper Pro Services extension.
@@ -26,11 +23,16 @@ const CONNECTION_TIMEOUT : u64 = 20000;
 
 
 
+const SOCKET_PATH: &str = "services.sock";
+const CONNECTION_TIMEOUT : u64 = 10000;
+
+
 /// Downloads (if needed) and verifies Pro Services binary and then spawns a new process for it.
-pub fn start() -> io::Result<process::Child> {
+pub fn start() -> io::Result<(process::Child, thread::JoinHandle<()>)> {
     // TODO: Add license check.
     // The binary is not included by default so download it first.
     // The versions go hand in hand with Lightkeeper and not updated separately.
+    log::info!("Starting Lightkeeper Pro service");
 
     let pro_services_path = file_handler::get_cache_dir()?.join("lightkeeper-pro-services");
     let signature_path = pro_services_path.with_extension("sig");
@@ -41,18 +43,52 @@ pub fn start() -> io::Result<process::Child> {
         download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md.sig", signature_path.to_str().unwrap())?;
     }
 
+    process()
+}
+
+fn process() -> io::Result<(process::Child, thread::JoinHandle<()>)> {
+    let pro_services_path = file_handler::get_cache_dir()?.join("lightkeeper-pro-services");
+    let signature_path = pro_services_path.with_extension("sig");
     let pro_services_bytes = std::fs::read(&pro_services_path)?;
     let signature = std::fs::read(&signature_path)?;
     let sign_cert = openssl::x509::X509::from_pem(include_bytes!("../certs/sign.crt"))?.public_key()?;
 
     let mut verifier = openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), &sign_cert)?;
     verifier.update(&pro_services_bytes)?;
-    if !verifier.verify(&signature)?  {
+
+    // Don't verify when developing.
+    let do_verification = !cfg!(debug_assertions);
+
+    if do_verification && !verifier.verify(&signature)?  {
         Err(io::Error::new(io::ErrorKind::Other, "Binary signature verification failed."))
     }
     else {
         // Start Lightkeeper Pro Services process. Failure is not critical, but some features will be unavailable.
-        Ok(Command::new(pro_services_path).spawn()?)
+        let mut process_handle = Command::new(pro_services_path)
+            // Logs are printed to stderr by default.
+            .stderr(process::Stdio::piped())
+            .spawn()?;
+
+        let log_thread;
+
+        if let Some(stderr) = process_handle.stderr.take() {
+            let stderr_reader = std::io::BufReader::new(stderr);
+            log_thread = thread::spawn(move || {
+                for line in stderr_reader.lines() {
+                    match line {
+                        Ok(line) => log::info!("{}", line),
+                        Err(error) => {
+                            log::error!("Error while reading process output: {}", error);
+                        }
+                    }
+                }
+            });
+        }
+        else {
+            return Err(io::Error::new(io::ErrorKind::Other, "Couldn't capture process output."));
+        }
+
+        Ok((process_handle, log_thread))
     }
 }
 
@@ -95,15 +131,29 @@ fn download_file(url: &str, output_path: &str) -> io::Result<()> {
 // }
 
 pub fn process_request(request: ServiceRequest) -> io::Result<ServiceResponse> {
+    let exit = match request.request_type {
+        RequestType::Exit => true,
+        _ => false,
+    };
+
+
+    // TODO: reuse stream
     let mut tls_stream = setup_connection()?;
 
     let serialized = bincode::serialize(&request).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
     tls_stream.write_all(&serialized)?;
 
-    let mut buffer = Vec::new();
-    tls_stream.read_to_end(&mut buffer)?;
-    let response = bincode::deserialize::<ServiceResponse>(&buffer).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+    tls_stream.flush()?;
 
+    let mut buffer = vec![0; 1024];
+    let read_count = tls_stream.read_to_end(&mut buffer)?;
+
+    if read_count == 0 {
+        return Err(io::Error::new(io::ErrorKind::Other, "No data received."));
+    }
+
+    let response = bincode::deserialize::<ServiceResponse>(&buffer)
+                           .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
     Ok(response)
 }
 
