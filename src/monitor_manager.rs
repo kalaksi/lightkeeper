@@ -557,6 +557,7 @@ impl MonitorManager {
 
                             let _ = pro_service.process_request(pro_services::ServiceRequest {
                                 request_id: response.invocation_id as u32,
+                                time: current_unix_ms as u32,
                                 request_type: pro_services::RequestType::MetricsInsert {
                                     host_id: response.host.name.clone(),
                                     monitor_id: monitor_id.clone(),

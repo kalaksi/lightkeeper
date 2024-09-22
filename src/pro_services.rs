@@ -24,7 +24,8 @@ use std::process::Command;
 
 
 const SOCKET_PATH: &str = "services.sock";
-const CONNECTION_TIMEOUT : u64 = 10000;
+/// In milliseconds.
+const CONNECTION_TIMEOUT: u64 = 10000;
 /// In milliseconds.
 const PRO_SERVICES_EXIT_WAIT_TIME: u64 = 5000;
 
@@ -98,14 +99,22 @@ impl ProService {
         tls_stream.flush()?;
 
         let mut buffer = vec![0; 1024];
-        let read_count = tls_stream.read_to_end(&mut buffer)?;
+        let read_count = match request.request_type {
+            RequestType::Exit => tls_stream.read_to_end(&mut buffer)?,
+            _ => tls_stream.read(&mut buffer)?,
+        };
 
         if read_count == 0 {
             return Err(io::Error::new(io::ErrorKind::Other, "No data received."));
         }
+        else {
+            log::debug!("Received response");
+        }
 
         let response = bincode::deserialize::<ServiceResponse>(&buffer)
                                .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+
+        log::debug!("Request took {} ms", response.lag);
         
         if response.errors.len() > 0 {
             let error = format!("Pro service error: {}", response.errors.join(". "));
@@ -118,7 +127,16 @@ impl ProService {
 
     fn setup_connection() -> io::Result<rustls::StreamOwned<rustls::ClientConnection, UnixStream>> {
         let socket_path = file_handler::get_cache_dir()?.join(SOCKET_PATH);
-        let unix_stream = UnixStream::connect(&socket_path)?;
+
+        let unix_stream = match UnixStream::connect(&socket_path) {
+            Ok(stream) => stream,
+            Err(_) => {
+                // Service may not be ready yet. Retry.
+                thread::sleep(Duration::from_millis(200));
+                UnixStream::connect(&socket_path)?
+            }
+        };
+
         unix_stream.set_read_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
         unix_stream.set_write_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
 
@@ -259,10 +277,11 @@ fn download_file(url: &str, output_path: &str) -> io::Result<()> {
 //     Ok(serialized)
 // }
 
-
 #[derive(Serialize, Deserialize)]
 pub struct ServiceRequest {
     pub request_id: u32,
+    /// Requester sets this to unix time in milliseconds.
+    pub time: u32,
     pub request_type: RequestType,
 }
 
@@ -270,6 +289,7 @@ impl ServiceRequest {
     pub fn exit() -> Self {
         ServiceRequest {
             request_id: 0,
+            time: 0,
             request_type: RequestType::Exit,
         }
     }
@@ -277,10 +297,7 @@ impl ServiceRequest {
 
 #[derive(Serialize, Deserialize)]
 pub enum RequestType {
-    Healthcheck {
-        /// Requester sets this to unix time in milliseconds.
-        time: u64,
-    },
+    Healthcheck,
     Exit,
     MetricsInsert {
         host_id: String,
