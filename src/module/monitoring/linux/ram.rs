@@ -45,6 +45,7 @@ impl MonitoringModule for Ram {
             display_text: String::from("RAM usage"),
             category: String::from("host"),
             unit: String::from("%"),
+            use_with_charts: true,
             ..Default::default()
         }
     }
@@ -89,6 +90,8 @@ impl MonitoringModule for Ram {
         };
 
         let value = format!("{:.0} % of {} M", usage_percent, total);
-        Ok(DataPoint::value_with_level(value, criticality))
+        let mut data_point = DataPoint::value_with_level(value, criticality);
+        data_point.value_int = usage_percent as i64;
+        Ok(data_point)
     }
 }

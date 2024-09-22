@@ -319,7 +319,7 @@ impl HostDataManagerModel {
                 .collect::<Vec<&String>>();
 
             let summary_compatible = display_data.host_state.monitor_data.values()
-                .filter(|data| !data.display_options.ignore_from_summary && !overridden_monitors.contains(&&data.monitor_id))
+                .filter(|data| !data.display_options.use_without_summary && !overridden_monitors.contains(&&data.monitor_id))
                 .collect();
 
             let sorted_keys = self.get_monitor_data_keys_sorted(summary_compatible);

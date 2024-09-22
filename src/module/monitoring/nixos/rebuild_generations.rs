@@ -38,7 +38,7 @@ impl MonitoringModule for RebuildGenerations {
             display_text: String::from("Generations"),
             category: String::from("nixos"),
             use_multivalue: true,
-            ignore_from_summary: true,
+            use_without_summary: true,
             ..Default::default()
         }
     }

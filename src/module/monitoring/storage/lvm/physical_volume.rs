@@ -35,7 +35,7 @@ impl MonitoringModule for PhysicalVolume {
             display_text: String::from("Physical Volumes"),
             category: String::from("storage"),
             use_multivalue: true,
-            ignore_from_summary: true,
+            use_without_summary: true,
             ..Default::default()
         }
     }

@@ -3,8 +3,10 @@ use std::rc::Rc;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
-use std::{process, thread};
+use std::time::SystemTime;
+use std::thread;
 
+use crate::pro_services::ProService;
 use crate::{error::*, pro_services};
 use crate::module::connection::RequestResponse;
 use crate::Host;
@@ -16,8 +18,6 @@ use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, RequestType, CachePolicy };
 
 pub const CERT_MONITOR_HOST_ID: &str = "_cert-monitor";
-/// In milliseconds.
-const PRO_SERVICES_EXIT_WAIT_TIME: u64 = 5000;
 
 
 // Default needs to be implemented because of Qt QObject requirements.
@@ -37,9 +37,9 @@ pub struct MonitorManager {
     // Shared resources.
     host_manager: Rc<RefCell<HostManager>>,
     module_factory: Arc<ModuleFactory>,
-    pro_service_process: Option<process::Child>,
-    pro_services_log_thread: Option<thread::JoinHandle<()>>,
 
+    /// Handles communication with Lightkeeper Pro service.
+    pro_service: Option<pro_services::ProService>,
     response_sender_prototype: Option<mpsc::Sender<RequestResponse>>,
     response_receiver: Option<mpsc::Receiver<RequestResponse>>,
     response_receiver_thread: Option<thread::JoinHandle<()>>,
@@ -65,20 +65,19 @@ impl MonitorManager {
 
         self.stop();
 
-        self.monitors.lock().unwrap().clear();
-        self.request_sender = Some(request_sender);
-        self.state_update_sender = Some(state_update_sender);
-
-        match pro_services::start() {
-            Ok((process, log_thread)) => {
-                self.pro_service_process = Some(process);
-                self.pro_services_log_thread = Some(log_thread);
-            },
+        let mut pro_service = pro_services::ProService::new();
+        self.pro_service = match pro_service.start() {
+            Ok(_) => Some(pro_service),
             Err(error) => {
                 log::error!("Failed to start Lightkeeper Pro service: {}", error);
                 log::error!("Pro features will not be available.");
-            }
-        }
+                None
+            },
+        };
+
+        self.monitors.lock().unwrap().clear();
+        self.request_sender = Some(request_sender);
+        self.state_update_sender = Some(state_update_sender);
 
         // Certificate monitors.
         if hosts_config.certificate_monitors.len() > 0 {
@@ -128,39 +127,8 @@ impl MonitorManager {
             thread.join().unwrap();
         }
 
-        if let Some(mut process) = self.pro_service_process.take() {
-            let response = pro_services::process_request(pro_services::ServiceRequest {
-                request_id: 0,
-                request_type: pro_services::RequestType::Exit,
-            });
-
-            let graceful = match response {
-                Ok(response) => {
-                    if response.errors.len() > 0 {
-                        log::error!("Failed to stop Lightkeeper Pro service: {}", response.errors[0]);
-                        false
-                    }
-                    else {
-                        true
-                    }
-                },
-                Err(error) => {
-                    log::error!("{}", error);
-                    false
-                }
-            };
-
-            if !graceful {
-                log::warn!("Waiting before forcing Lightkeeper Pro service to exit...");
-                thread::sleep(std::time::Duration::from_millis(PRO_SERVICES_EXIT_WAIT_TIME));
-                if let Err(error) = process.kill() {
-                    log::error!("Failed to kill process: {}", error);
-                }
-            }
-
-            if let Some(thread) = self.pro_services_log_thread.take() {
-                thread.join().unwrap();
-            }
+        if let Some(mut pro_service) = self.pro_service.take() {
+            pro_service.stop();
         }
     }
 
@@ -425,6 +393,7 @@ impl MonitorManager {
             self.state_update_sender.as_ref().unwrap().clone(),
             self.response_sender_prototype.as_ref().unwrap().clone(),
             self.response_receiver.take().unwrap(),
+            self.pro_service.take()
         );
 
         self.response_receiver_thread = Some(thread);
@@ -437,6 +406,7 @@ impl MonitorManager {
         state_update_sender: mpsc::Sender<StateUpdateMessage>,
         response_sender: mpsc::Sender<RequestResponse>,
         response_receiver: mpsc::Receiver<RequestResponse>,
+        mut pro_service_maybe: Option<ProService>,
     ) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
@@ -568,6 +538,34 @@ impl MonitorManager {
                     }).unwrap();
                 }
                 else {
+                    if let Some(pro_service) = pro_service_maybe.as_mut() {
+                        if monitor.get_display_options().use_with_charts {
+                            let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as i64;
+                            let mut metrics = vec![pro_services::Metric {
+                                label: new_data_point.label.clone(),
+                                value: new_data_point.value_int,
+                                time: current_unix_ms
+                            }];
+
+                            for child in new_data_point.multivalue.iter() {
+                                metrics.push(pro_services::Metric {
+                                    label: child.label.clone(),
+                                    value: child.value_int,
+                                    time: current_unix_ms
+                                });
+                            }
+
+                            let _ = pro_service.process_request(pro_services::ServiceRequest {
+                                request_id: response.invocation_id as u32,
+                                request_type: pro_services::RequestType::MetricsInsert {
+                                    host_id: response.host.name.clone(),
+                                    monitor_id: monitor_id.clone(),
+                                    metrics: metrics,
+                                },
+                            });
+                        }
+                    }
+
                     state_update_sender.send(StateUpdateMessage {
                         host_name: response.host.name.clone(),
                         display_options: monitor.get_display_options(),

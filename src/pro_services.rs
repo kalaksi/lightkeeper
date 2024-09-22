@@ -4,7 +4,7 @@ use std::os::unix::net::UnixStream;
 use std::time::Duration;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::{process, thread};
+use std::{process, thread, path};
 use openssl;
 
 
@@ -25,36 +25,161 @@ use std::process::Command;
 
 const SOCKET_PATH: &str = "services.sock";
 const CONNECTION_TIMEOUT : u64 = 10000;
+/// In milliseconds.
+const PRO_SERVICES_EXIT_WAIT_TIME: u64 = 5000;
 
-
-/// Downloads (if needed) and verifies Pro Services binary and then spawns a new process for it.
-pub fn start() -> io::Result<(process::Child, thread::JoinHandle<()>)> {
-    // TODO: Add license check.
-    // The binary is not included by default so download it first.
-    // The versions go hand in hand with Lightkeeper and not updated separately.
-    log::info!("Starting Lightkeeper Pro service");
-
-    let pro_services_path = file_handler::get_cache_dir()?.join("lightkeeper-pro-services");
-    let signature_path = pro_services_path.with_extension("sig");
-
-    if let Err(_) = std::fs::metadata(&pro_services_path) {
-        // TODO: actual paths
-        download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md", pro_services_path.to_str().unwrap())?;
-        download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md.sig", signature_path.to_str().unwrap())?;
-    }
-
-    process()
+#[derive(Default)]
+pub struct ProService {
+    tls_stream: Option<rustls::StreamOwned<rustls::ClientConnection, UnixStream>>,
+    process_handle: Option<process::Child>,
+    log_thread: Option<thread::JoinHandle<()>>,
 }
 
-fn process() -> io::Result<(process::Child, thread::JoinHandle<()>)> {
-    let pro_services_path = file_handler::get_cache_dir()?.join("lightkeeper-pro-services");
-    let signature_path = pro_services_path.with_extension("sig");
-    let pro_services_bytes = std::fs::read(&pro_services_path)?;
-    let signature = std::fs::read(&signature_path)?;
+
+impl ProService {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Downloads (if needed) and verifies Pro Services binary and then spawns a new process for it.
+    pub fn start(&mut self) -> io::Result<()> {
+        // TODO: Add license check.
+        // The binary is not included by default so download it first.
+        // The versions go hand in hand with Lightkeeper and not updated separately.
+        log::info!("Starting Lightkeeper Pro service");
+
+        let pro_services_path = file_handler::get_cache_dir()?.join("lightkeeper-pro-services");
+        let signature_path = pro_services_path.with_extension("sig");
+
+        if let Err(_) = std::fs::metadata(&pro_services_path) {
+            // TODO: actual paths
+            download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md", pro_services_path.to_str().unwrap())?;
+            download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md.sig", signature_path.to_str().unwrap())?;
+        }
+
+        verify_signature(&pro_services_path, &signature_path)?;
+        start_service(&pro_services_path).map(|(process_handle, log_thread)| {
+            self.process_handle = Some(process_handle);
+            self.log_thread = Some(log_thread);
+        })?;
+        self.tls_stream = Some(Self::setup_connection()?);
+        Ok(())
+    }
+
+    pub fn stop(&mut self) {
+        if let Some(mut process) = self.process_handle.take() {
+            let response = self.process_request(ServiceRequest::exit());
+
+            if response.is_err() {
+                log::warn!("Waiting before forcing Lightkeeper Pro service to exit...");
+                thread::sleep(std::time::Duration::from_millis(PRO_SERVICES_EXIT_WAIT_TIME));
+                if let Err(error) = process.kill() {
+                    log::error!("Failed to kill process: {}", error);
+                }
+            }
+
+            if let Some(thread) = self.log_thread.take() {
+                if let Err(_) = thread.join() {
+                    log::error!("Error while waiting for log thread");
+                }
+            }
+        }
+    }
+
+    pub fn process_request(&mut self, request: ServiceRequest) -> io::Result<ServiceResponse> {
+        let tls_stream = match &mut self.tls_stream {
+            Some(stream) => stream,
+            None => return Err(io::Error::new(io::ErrorKind::Other, "Service connection is not set up.")),
+        };
+
+        let serialized = bincode::serialize(&request).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+        tls_stream.write_all(&serialized)?;
+
+        tls_stream.flush()?;
+
+        let mut buffer = vec![0; 1024];
+        let read_count = tls_stream.read_to_end(&mut buffer)?;
+
+        if read_count == 0 {
+            return Err(io::Error::new(io::ErrorKind::Other, "No data received."));
+        }
+
+        let response = bincode::deserialize::<ServiceResponse>(&buffer)
+                               .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+        
+        if response.errors.len() > 0 {
+            let error = format!("Pro service error: {}", response.errors.join(". "));
+            Err(io::Error::new(io::ErrorKind::Other, error))
+        }
+        else {
+            Ok(response)
+        }
+    }
+
+    fn setup_connection() -> io::Result<rustls::StreamOwned<rustls::ClientConnection, UnixStream>> {
+        let socket_path = file_handler::get_cache_dir()?.join(SOCKET_PATH);
+        let unix_stream = UnixStream::connect(&socket_path)?;
+        unix_stream.set_read_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
+        unix_stream.set_write_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
+
+        let tls_config = Arc::new(Self::setup_client_tls());
+        let server_name = rustls::pki_types::ServerName::try_from("localhost").unwrap();
+        let tls_connection = rustls::ClientConnection::new(tls_config.clone(), server_name)
+                                                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+
+        Ok(rustls::StreamOwned::new(tls_connection, unix_stream))
+    }
+
+    fn setup_client_tls() -> rustls::ClientConfig {
+        let ca_cert_pem = include_str!("../certs/ca.crt");
+
+        let client_cert_pem = "
+-----BEGIN CERTIFICATE-----
+MIIBrDCCAVGgAwIBAgIUaLPJjErlG+MnFq3yAa+RFcrsZFcwCgYIKoZIzj0EAwIw
+JTEjMCEGA1UEAwwaTGlnaHRrZWVwZXIgUHJvIExpY2Vuc2UgQ0EwHhcNMjQwOTE0
+MjAyMzQwWhcNMzkwOTExMjAyMzQwWjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwWTAT
+BgcqhkjOPQIBBggqhkjOPQMBBwNCAASO74MZwT54t+osf4GGmSZ6F28U8xIm57CG
+IHePgfgzqvbfi3e/SOihr7Q5ViSuHOz54PqOEk3LTuPoCb2VqEPOo3AwbjAfBgNV
+HSMEGDAWgBQwQ00JHMba+aeyu/uqMrxcmcpsHDAJBgNVHRMEAjAAMAsGA1UdDwQE
+AwIE8DAUBgNVHREEDTALgglsb2NhbGhvc3QwHQYDVR0OBBYEFFOox6MT9F2MB+XC
+C9MptUr89G8pMAoGCCqGSM49BAMCA0kAMEYCIQC2CLIoSp+xB3d3QH5Xu2Rwq9Tf
+YUdOMEGbF+uJUJBJ1AIhAJG14OnE4e9iT/OgeNTYWJt57MCuiiLEUWk9ESBHF60S
+-----END CERTIFICATE-----";
+
+        // NOTE: not really private, as you can probably see.
+        // Client auth doesn't really currently offer much benefit, but it was part of the original design and was left be for now.
+        let client_key_pem = "
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIGKn2QiNNyVpe4rwfndGbNU4VvgkCuupLLDN+3pD4aTcoAoGCCqGSM49
+AwEHoUQDQgAEju+DGcE+eLfqLH+BhpkmehdvFPMSJuewhiB3j4H4M6r234t3v0jo
+oa+0OVYkrhzs+eD6jhJNy07j6Am9lahDzg==
+-----END EC PRIVATE KEY-----";
+
+        let client_key = rustls_pemfile::ec_private_keys(&mut io::Cursor::new(client_key_pem)).next().unwrap().unwrap();
+        let client_cert = rustls_pemfile::certs(&mut io::Cursor::new(client_cert_pem)).next().unwrap().unwrap();
+        let mut store = rustls::RootCertStore::empty();
+
+        for result in rustls_pemfile::certs(&mut io::Cursor::new(ca_cert_pem)) {
+            if let Ok(cert) = result {
+                store.add(cert.clone()).unwrap();
+            }
+        }
+
+        let tls_config = rustls::ClientConfig::builder()
+            .with_root_certificates(store)
+            .with_client_auth_cert(vec![client_cert], client_key.into()).unwrap();
+
+        tls_config
+    }
+}
+
+fn verify_signature(file_path: &path::Path, signature_path: &path::Path) -> io::Result<()> {
+    let file_bytes = std::fs::read(file_path)?;
+    let signature = std::fs::read(signature_path)?;
     let sign_cert = openssl::x509::X509::from_pem(include_bytes!("../certs/sign.crt"))?.public_key()?;
 
     let mut verifier = openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), &sign_cert)?;
-    verifier.update(&pro_services_bytes)?;
+    verifier.update(&file_bytes)?;
 
     // Don't verify when developing.
     let do_verification = !cfg!(debug_assertions);
@@ -63,33 +188,37 @@ fn process() -> io::Result<(process::Child, thread::JoinHandle<()>)> {
         Err(io::Error::new(io::ErrorKind::Other, "Binary signature verification failed."))
     }
     else {
-        // Start Lightkeeper Pro Services process. Failure is not critical, but some features will be unavailable.
-        let mut process_handle = Command::new(pro_services_path)
-            // Logs are printed to stderr by default.
-            .stderr(process::Stdio::piped())
-            .spawn()?;
+        Ok(())
+    }
+}
 
-        let log_thread;
+fn start_service(service_path: &path::Path) -> io::Result<(process::Child, thread::JoinHandle<()>)> {
+    // Start Lightkeeper Pro Services process. Failure is not critical, but some features will be unavailable.
+    let mut process_handle = Command::new(service_path)
+        // Logs are printed to stderr by default.
+        .stderr(process::Stdio::piped())
+        .spawn()?;
 
-        if let Some(stderr) = process_handle.stderr.take() {
-            let stderr_reader = std::io::BufReader::new(stderr);
-            log_thread = thread::spawn(move || {
-                for line in stderr_reader.lines() {
-                    match line {
-                        Ok(line) => log::info!("{}", line),
-                        Err(error) => {
-                            log::error!("Error while reading process output: {}", error);
-                        }
+    let log_thread;
+
+    if let Some(stderr) = process_handle.stderr.take() {
+        let stderr_reader = std::io::BufReader::new(stderr);
+        log_thread = thread::spawn(move || {
+            for line in stderr_reader.lines() {
+                match line {
+                    Ok(line) => log::info!("{}", line),
+                    Err(error) => {
+                        log::error!("Error while reading process output: {}", error);
                     }
                 }
-            });
-        }
-        else {
-            return Err(io::Error::new(io::ErrorKind::Other, "Couldn't capture process output."));
-        }
-
-        Ok((process_handle, log_thread))
+            }
+        });
     }
+    else {
+        return Err(io::Error::new(io::ErrorKind::Other, "Couldn't capture process output."));
+    }
+
+    Ok((process_handle, log_thread))
 }
 
 // Function to download a file using ureq
@@ -130,92 +259,20 @@ fn download_file(url: &str, output_path: &str) -> io::Result<()> {
 //     Ok(serialized)
 // }
 
-pub fn process_request(request: ServiceRequest) -> io::Result<ServiceResponse> {
-    let exit = match request.request_type {
-        RequestType::Exit => true,
-        _ => false,
-    };
-
-
-    // TODO: reuse stream
-    let mut tls_stream = setup_connection()?;
-
-    let serialized = bincode::serialize(&request).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
-    tls_stream.write_all(&serialized)?;
-
-    tls_stream.flush()?;
-
-    let mut buffer = vec![0; 1024];
-    let read_count = tls_stream.read_to_end(&mut buffer)?;
-
-    if read_count == 0 {
-        return Err(io::Error::new(io::ErrorKind::Other, "No data received."));
-    }
-
-    let response = bincode::deserialize::<ServiceResponse>(&buffer)
-                           .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
-    Ok(response)
-}
-
-fn setup_connection() -> io::Result<rustls::StreamOwned<rustls::ClientConnection, UnixStream>> {
-    let socket_path = file_handler::get_cache_dir()?.join(SOCKET_PATH);
-    let unix_stream = UnixStream::connect(&socket_path)?;
-    unix_stream.set_read_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
-    unix_stream.set_write_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
-
-    let tls_config = Arc::new(setup_client_tls());
-    let server_name = rustls::pki_types::ServerName::try_from("localhost").unwrap();
-    let tls_connection = rustls::ClientConnection::new(tls_config.clone(), server_name)
-                                                  .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
-
-    Ok(rustls::StreamOwned::new(tls_connection, unix_stream))
-}
-
-fn setup_client_tls() -> rustls::ClientConfig {
-    let ca_cert_pem = include_str!("../certs/ca.crt");
-    let client_cert_pem = "
------BEGIN CERTIFICATE-----
-MIIBrDCCAVGgAwIBAgIUaLPJjErlG+MnFq3yAa+RFcrsZFcwCgYIKoZIzj0EAwIw
-JTEjMCEGA1UEAwwaTGlnaHRrZWVwZXIgUHJvIExpY2Vuc2UgQ0EwHhcNMjQwOTE0
-MjAyMzQwWhcNMzkwOTExMjAyMzQwWjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwWTAT
-BgcqhkjOPQIBBggqhkjOPQMBBwNCAASO74MZwT54t+osf4GGmSZ6F28U8xIm57CG
-IHePgfgzqvbfi3e/SOihr7Q5ViSuHOz54PqOEk3LTuPoCb2VqEPOo3AwbjAfBgNV
-HSMEGDAWgBQwQ00JHMba+aeyu/uqMrxcmcpsHDAJBgNVHRMEAjAAMAsGA1UdDwQE
-AwIE8DAUBgNVHREEDTALgglsb2NhbGhvc3QwHQYDVR0OBBYEFFOox6MT9F2MB+XC
-C9MptUr89G8pMAoGCCqGSM49BAMCA0kAMEYCIQC2CLIoSp+xB3d3QH5Xu2Rwq9Tf
-YUdOMEGbF+uJUJBJ1AIhAJG14OnE4e9iT/OgeNTYWJt57MCuiiLEUWk9ESBHF60S
------END CERTIFICATE-----";
-
-    // NOTE: not really private, as you can probably see.
-    // Client auth doesn't really currently offer much benefit, but it was part of the original design and was left be for now.
-    let client_key_pem = "
------BEGIN EC PRIVATE KEY-----
-MHcCAQEEIGKn2QiNNyVpe4rwfndGbNU4VvgkCuupLLDN+3pD4aTcoAoGCCqGSM49
-AwEHoUQDQgAEju+DGcE+eLfqLH+BhpkmehdvFPMSJuewhiB3j4H4M6r234t3v0jo
-oa+0OVYkrhzs+eD6jhJNy07j6Am9lahDzg==
------END EC PRIVATE KEY-----";
-
-    let client_key = rustls_pemfile::ec_private_keys(&mut io::Cursor::new(client_key_pem)).next().unwrap().unwrap();
-    let client_cert = rustls_pemfile::certs(&mut io::Cursor::new(client_cert_pem)).next().unwrap().unwrap();
-    let mut store = rustls::RootCertStore::empty();
-
-    for result in rustls_pemfile::certs(&mut io::Cursor::new(ca_cert_pem)) {
-        if let Ok(cert) = result {
-            store.add(cert.clone()).unwrap();
-        }
-    }
-
-    let tls_config = rustls::ClientConfig::builder()
-        .with_root_certificates(store)
-        .with_client_auth_cert(vec![client_cert], client_key.into()).unwrap();
-
-    tls_config
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct ServiceRequest {
     pub request_id: u32,
     pub request_type: RequestType,
+}
+
+impl ServiceRequest {
+    pub fn exit() -> Self {
+        ServiceRequest {
+            request_id: 0,
+            request_type: RequestType::Exit,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]

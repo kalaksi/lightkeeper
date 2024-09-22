@@ -9,6 +9,11 @@ use crate::{
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct DisplayOptions {
+    /// Action to be executed by the frontend after sending the command.
+    pub action: UIAction,
+    /// For multi-level multivalues. Limits this command to specific level (i.e. specific rows) so it's not displayed on every line.
+    /// Default is 0 which means that this limit is disabled.
+    pub multivalue_level: u8,
     pub display_style: DisplayStyle,
     /// For monitors: text to display in the left column. For multi-values this gets
     ///               displayed (not always displayed) as a header above the list of values.
@@ -25,8 +30,10 @@ pub struct DisplayOptions {
     /// For monitors that produce a group of values.
     pub use_multivalue: bool,
     /// Don't include in the host table status summary.
-    pub ignore_from_summary: bool,
-    /// Mainly for extension modules. If set, will hide defined monitor id from summary.
+    pub use_without_summary: bool,
+    /// Use DataPoint values in graphical charts.
+    pub use_with_charts: bool,
+    /// extension modules. If set, will hide defined monitor id from summary.
     pub override_summary_monitor_id: String,
 
     /// Display confirmation dialog with this text.
@@ -49,13 +56,6 @@ pub struct DisplayOptions {
     /// Show only if related monitor's tags contain one of these.
     pub depends_on_tags: Vec<String>,
     pub depends_on_no_tags: Vec<String>,
-
-    /// For multi-level multivalues. Limits this command to specific level (i.e. specific rows) so it's not displayed on every line.
-    /// Default is 0 which means that this limit is disabled.
-    pub multivalue_level: u8,
-
-    /// Action to be executed by the frontend after sending the command.
-    pub action: UIAction,
 }
 
 impl DisplayOptions {

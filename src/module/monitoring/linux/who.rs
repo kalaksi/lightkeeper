@@ -31,7 +31,7 @@ impl MonitoringModule for Who {
             display_text: String::from("Login sessions"),
             category: String::from("host"),
             use_multivalue: true,
-            ignore_from_summary: true,
+            use_without_summary: true,
             ..Default::default()
         }
     }

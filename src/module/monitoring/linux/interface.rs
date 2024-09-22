@@ -43,7 +43,7 @@ impl MonitoringModule for Interface {
             display_text: String::from("Interfaces"),
             category: String::from("network"),
             use_multivalue: true,
-            ignore_from_summary: true,
+            use_without_summary: true,
             ..Default::default()
         }
     }
