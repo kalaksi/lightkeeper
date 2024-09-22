@@ -80,12 +80,18 @@ Migration to Qt6 is now done, so now you'll need these packages on Ubuntu 24.04:
 
 Building:
 ```
-cargo build
+./build.sh
 ```
 
 Running:
 ```
-./target/debug/lightkeeper
+./run.sh
+```
+
+If you're getting error about missing qmake, you'll have to point cargo to correct qmake with .cargo/config.toml:
+```
+[env]
+QMAKE = "/usr/lib/qt6/bin/qmake"
 ```
 
 ### Post-install
