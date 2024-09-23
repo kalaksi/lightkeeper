@@ -7,6 +7,7 @@ use serde_derive::{Serialize, Deserialize};
 #[derive(Serialize, Default, Deserialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum HostStatus {
+    Unknown,
     #[default]
     Pending,
     Up,
@@ -18,6 +19,7 @@ impl FromStr for HostStatus {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match String::from(s).to_lowercase().as_str() {
+            "unknown" => Ok(HostStatus::Unknown),
             "pending" => Ok(HostStatus::Pending),
             "up" => Ok(HostStatus::Up),
             "down" => Ok(HostStatus::Down),
@@ -29,6 +31,7 @@ impl FromStr for HostStatus {
 impl Display for HostStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            HostStatus::Unknown => write!(f, "unknown"),
             HostStatus::Pending => write!(f, "pending"),
             HostStatus::Up => write!(f, "up"),
             HostStatus::Down => write!(f, "down"),

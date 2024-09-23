@@ -61,7 +61,7 @@ impl HostManager {
 
         // For certificate monitoring.
         let cert_monitor_host = Host::empty(crate::monitor_manager::CERT_MONITOR_HOST_ID, &vec![]);
-        hosts.add(cert_monitor_host, HostStatus::Pending).unwrap();
+        hosts.add(cert_monitor_host, HostStatus::Unknown).unwrap();
 
         // For regular host monitoring.
         for (host_id, host_config) in config.hosts.iter() {
@@ -69,7 +69,7 @@ impl HostManager {
 
             // TODO: UseSudo is currently always assumed.
             let host = Host::new(host_id, &host_config.address, &host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]);
-            if let Err(error) = hosts.add(host, HostStatus::Pending) {
+            if let Err(error) = hosts.add(host, HostStatus::Unknown) {
                 log::error!("{}", error.to_string());
                 continue;
             };
@@ -390,8 +390,9 @@ pub struct HostState {
     pub is_initialized: bool,
     pub monitor_data: HashMap<String, MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
-    // Invocations in progress. Keeps track of monitor or command progress. Empty when all is done.
+    /// Invocations in progress. Keeps track of monitor progress. Empty when all is done.
     pub monitor_invocations: HashMap<u64, InvocationDetails>,
+    /// Invocations in progress. Keeps track of command progress. Empty when all is done.
     pub command_invocations: HashMap<u64, InvocationDetails>,
 }
 
