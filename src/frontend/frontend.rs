@@ -33,6 +33,7 @@ pub struct HostDisplayData {
     pub host_state: HostState,
     pub new_monitoring_data: Option<(u64, MonitoringData)>,
     pub new_command_result: Option<(u64, CommandResult)>,
+    pub new_chart_data: Option<(u64, HashMap<String, Vec<crate::pro_services::Metric>>)>,
     pub new_errors: Vec<ErrorMessage>,
     /// Verification requests from connectors. Usually for key verification.
     /// Commands can already request (more diverse) user input so they don't use this.
@@ -65,6 +66,7 @@ impl Default for HostDisplayData {
             },
             new_monitoring_data: None,
             new_command_result: None,
+            new_chart_data: None,
             new_errors: Vec::new(),
             verification_requests: Vec::new(),
             stop: false,

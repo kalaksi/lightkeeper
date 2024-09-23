@@ -469,9 +469,6 @@ pub enum RequestType {
     KeyVerification {
         key_id: String,
     },
-    ProServiceRequest {
-        encoded_request: Vec<u8>,
-    },
     /// Causes the receiver thread to exit.
     #[default]
     Exit,

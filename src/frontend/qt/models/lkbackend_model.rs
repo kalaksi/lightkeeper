@@ -9,7 +9,12 @@ use crate::{
     host_manager
 };
 
-use super::{CommandHandlerModel, ConfigManagerModel, HostDataManagerModel};
+use super::{
+    CommandHandlerModel,
+    ConfigManagerModel,
+    HostDataManagerModel,
+    ChartManagerModel
+};
 
 
 // This should probably be renamed to something like RequestHandlerModel.
@@ -21,6 +26,7 @@ pub struct LkBackend {
     pub command: qt_property!(RefCell<CommandHandlerModel>; CONST),
     pub hosts: qt_property!(RefCell<HostDataManagerModel>; CONST),
     pub config: qt_property!(RefCell<ConfigManagerModel>; CONST),
+    pub charts: qt_property!(RefCell<ChartManagerModel>; CONST),
 
     //
     // Slots
@@ -64,6 +70,7 @@ impl LkBackend {
             hosts: RefCell::new(host_data_model),
             command: RefCell::new(command_model),
             config: RefCell::new(config_model),
+            charts: RefCell::new(ChartManagerModel::default()),
             update_sender_prototype: Some(update_sender_prototype),
             update_receiver: Some(update_receiver),
             update_receiver_thread: None,

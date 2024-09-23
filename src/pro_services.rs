@@ -9,6 +9,7 @@ use openssl;
 
 
 use crate::file_handler;
+use crate::module::monitoring::DataPoint;
 
 use std::process::Command;
 
@@ -63,8 +64,14 @@ impl ProService {
             self.process_handle = Some(process_handle);
             self.log_thread = Some(log_thread);
         })?;
+        // Wait a little bit for server to start.
+        thread::sleep(Duration::from_millis(100));
         self.tls_stream = Some(Self::setup_connection()?);
         Ok(())
+    }
+
+    pub fn is_available(&self) -> bool {
+        self.tls_stream.is_some()
     }
 
     pub fn stop(&mut self) {
@@ -73,18 +80,20 @@ impl ProService {
 
             if response.is_err() {
                 log::warn!("Waiting before forcing Lightkeeper Pro service to exit...");
-                thread::sleep(std::time::Duration::from_millis(PRO_SERVICES_EXIT_WAIT_TIME));
+                thread::sleep(Duration::from_millis(PRO_SERVICES_EXIT_WAIT_TIME));
                 if let Err(error) = process.kill() {
                     log::error!("Failed to kill process: {}", error);
                 }
             }
+        }
 
-            if let Some(thread) = self.log_thread.take() {
-                if let Err(_) = thread.join() {
-                    log::error!("Error while waiting for log thread");
-                }
+        if let Some(thread) = self.log_thread.take() {
+            if let Err(_) = thread.join() {
+                log::error!("Error while waiting for log thread");
             }
         }
+
+        self.tls_stream = None;
     }
 
     pub fn process_request(&mut self, request: ServiceRequest) -> io::Result<ServiceResponse> {
@@ -107,9 +116,6 @@ impl ProService {
         if read_count == 0 {
             return Err(io::Error::new(io::ErrorKind::Other, "No data received."));
         }
-        else {
-            log::debug!("Received response");
-        }
 
         let response = bincode::deserialize::<ServiceResponse>(&buffer)
                                .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
@@ -131,8 +137,8 @@ impl ProService {
         let unix_stream = match UnixStream::connect(&socket_path) {
             Ok(stream) => stream,
             Err(_) => {
-                // Service may not be ready yet. Retry.
-                thread::sleep(Duration::from_millis(200));
+                // Wait some more and try one more time.
+                thread::sleep(Duration::from_millis(500));
                 UnixStream::connect(&socket_path)?
             }
         };
@@ -277,6 +283,7 @@ fn download_file(url: &str, output_path: &str) -> io::Result<()> {
 //     Ok(serialized)
 // }
 
+/// Do not change without updating the Pro Services extension.
 #[derive(Serialize, Deserialize)]
 pub struct ServiceRequest {
     pub request_id: u32,
@@ -295,6 +302,7 @@ impl ServiceRequest {
     }
 }
 
+/// Do not change without updating the Pro Services extension.
 #[derive(Serialize, Deserialize)]
 pub enum RequestType {
     Healthcheck,
@@ -313,6 +321,7 @@ pub enum RequestType {
     },
 }
 
+/// Do not change without updating the Pro Services extension.
 #[derive(Default, Serialize, Deserialize)]
 pub struct ServiceResponse {
     pub request_id: u32,
@@ -322,7 +331,8 @@ pub struct ServiceResponse {
     pub errors: Vec<String>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+/// Do not change without updating the Pro Services extension.
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Metric {
     pub time: i64,
     pub label: String,

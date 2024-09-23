@@ -27,6 +27,7 @@ pub struct HostDataManagerModel {
     monitorStateChanged: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     commandResultReceived: qt_signal!(command_result: QString, invocation_id: u64),
     monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data_qv: QVariant, invocation_id: u64),
+    chartDataReceived: qt_signal!(invocation_id: u64, host_id: QString, chart_data: QString),
     errorReceived: qt_signal!(criticality: QString, error: QString),
     verificationRequested: qt_signal!(host_id: QString, connector_id: QString, message: QString, key_id: QString),
 
@@ -124,6 +125,13 @@ impl HostDataManagerModel {
                     }
                 }
             }
+        }
+
+        if let Some((invocation_id, chart_data)) = new_display_data.new_chart_data {
+            let host_name = QString::from(host_state.host.name.clone());
+            let chart_data = serde_json::to_string(&chart_data).unwrap();
+            ::log::error!("**************** TODO");
+            self.chartDataReceived(invocation_id, host_name, QString::from(chart_data));
         }
 
         for error in new_display_data.new_errors {

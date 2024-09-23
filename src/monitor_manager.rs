@@ -6,7 +6,6 @@ use std::sync::mpsc;
 use std::time::SystemTime;
 use std::thread;
 
-use crate::pro_services::ProService;
 use crate::{error::*, pro_services};
 use crate::module::connection::RequestResponse;
 use crate::Host;
@@ -38,8 +37,6 @@ pub struct MonitorManager {
     host_manager: Rc<RefCell<HostManager>>,
     module_factory: Arc<ModuleFactory>,
 
-    /// Handles communication with Lightkeeper Pro service.
-    pro_service: Option<pro_services::ProService>,
     response_sender_prototype: Option<mpsc::Sender<RequestResponse>>,
     response_receiver: Option<mpsc::Receiver<RequestResponse>>,
     response_receiver_thread: Option<thread::JoinHandle<()>>,
@@ -64,16 +61,6 @@ impl MonitorManager {
                      state_update_sender: mpsc::Sender<StateUpdateMessage>) {
 
         self.stop();
-
-        let mut pro_service = pro_services::ProService::new();
-        self.pro_service = match pro_service.start() {
-            Ok(_) => Some(pro_service),
-            Err(error) => {
-                log::error!("Failed to start Lightkeeper Pro service: {}", error);
-                log::error!("Pro features will not be available.");
-                None
-            },
-        };
 
         self.monitors.lock().unwrap().clear();
         self.request_sender = Some(request_sender);
@@ -125,10 +112,6 @@ impl MonitorManager {
                 .unwrap_or_else(|error| log::error!("Couldn't send exit token to command handler: {}", error));
 
             thread.join().unwrap();
-        }
-
-        if let Some(mut pro_service) = self.pro_service.take() {
-            pro_service.stop();
         }
     }
 
@@ -393,7 +376,6 @@ impl MonitorManager {
             self.state_update_sender.as_ref().unwrap().clone(),
             self.response_sender_prototype.as_ref().unwrap().clone(),
             self.response_receiver.take().unwrap(),
-            self.pro_service.take()
         );
 
         self.response_receiver_thread = Some(thread);
@@ -406,7 +388,6 @@ impl MonitorManager {
         state_update_sender: mpsc::Sender<StateUpdateMessage>,
         response_sender: mpsc::Sender<RequestResponse>,
         response_receiver: mpsc::Receiver<RequestResponse>,
-        mut pro_service_maybe: Option<ProService>,
     ) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
@@ -538,35 +519,6 @@ impl MonitorManager {
                     }).unwrap();
                 }
                 else {
-                    if let Some(pro_service) = pro_service_maybe.as_mut() {
-                        if monitor.get_display_options().use_with_charts {
-                            let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as i64;
-                            let mut metrics = vec![pro_services::Metric {
-                                label: new_data_point.label.clone(),
-                                value: new_data_point.value_int,
-                                time: current_unix_ms
-                            }];
-
-                            for child in new_data_point.multivalue.iter() {
-                                metrics.push(pro_services::Metric {
-                                    label: child.label.clone(),
-                                    value: child.value_int,
-                                    time: current_unix_ms
-                                });
-                            }
-
-                            let _ = pro_service.process_request(pro_services::ServiceRequest {
-                                request_id: response.invocation_id as u32,
-                                time: current_unix_ms as u32,
-                                request_type: pro_services::RequestType::MetricsInsert {
-                                    host_id: response.host.name.clone(),
-                                    monitor_id: monitor_id.clone(),
-                                    metrics: metrics,
-                                },
-                            });
-                        }
-                    }
-
                     state_update_sender.send(StateUpdateMessage {
                         host_name: response.host.name.clone(),
                         display_options: monitor.get_display_options(),

@@ -17,6 +17,7 @@ use crate::module::{
     command::CommandResult,
 };
 
+use crate::pro_services::Metric;
 use crate::{
     enums::HostStatus,
     enums::Criticality,
@@ -337,6 +338,7 @@ pub struct StateUpdateMessage {
     pub data_point: Option<DataPoint>,
     /// Only used with commands.
     pub command_result: Option<CommandResult>,
+    pub chart_data: HashMap<String, Vec<Metric>>,
     pub errors: Vec<LkError>,
     /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
     pub invocation_id: u64,
