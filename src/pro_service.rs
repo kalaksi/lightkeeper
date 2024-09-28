@@ -303,11 +303,17 @@ oa+0OVYkrhzs+eD6jhJNy07j6Am9lahDzg==
                 log::error!("Service error: {}", response.errors.join(". "));
             }
 
+            match service_request.request_type {
+                RequestType::Exit => break,
+                _ => (),
+            };
+
             if let Err(error) = update_sender.send(UIUpdate::Chart(response)) {
                 log::error!("Failed to send update: {}", error);
             }
         }
 
+        Ok(())
     }
 }
 

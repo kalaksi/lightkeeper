@@ -15,9 +15,20 @@ use crate::{
 #[derive(QObject, Default)]
 pub struct ChartManagerModel {
     base: qt_base_class!(trait QObject),
+    //
+    // Slots
+    //
+    refreshCharts: qt_method!(fn(&self, host_id: QString) -> u64),
 
+
+    //
+    // Signals
+    //
     dataReceived: qt_signal!(invocation_id: u64, chart_data: QString),
 
+    //
+    // Private properties
+    //
     pro_service: Option<pro_service::ProService>,
 }
 
@@ -69,20 +80,20 @@ impl ChartManagerModel {
         }
     }
 
-    pub fn refresh_chart_data(&mut self, host_id: &String) -> Result<u64, LkError> {
+    fn refreshCharts(&mut self, host_id: QString) -> u64 {
         if let Some(pro_service) = self.pro_service.as_mut() {
             let current_unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
             let invocation_id = pro_service.send_request(pro_service::RequestType::MetricsQuery {
-                    host_id: host_id.clone(),
+                    host_id: host_id.to_string(),
                     start_time: current_unix_time.as_secs() as i64 - 60 * 60 * 24,
                     end_time: current_unix_time.as_secs() as i64,
             });
 
-            Ok(invocation_id)
+            invocation_id
         }
         else {
-            Err(LkError::other("Pro Service is not available."))
+            0
         }
     }
 
