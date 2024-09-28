@@ -11,7 +11,7 @@ mod connection_manager;
 mod command_handler;
 mod file_handler;
 mod cache;
-mod pro_services;
+mod pro_service;
 
 pub use module::ModuleFactory;
 pub use configuration::Configuration;
@@ -40,12 +40,29 @@ pub fn run(
     test: bool) -> ExitReason {
 
     let module_factory = Arc::<ModuleFactory>::new(ModuleFactory::new());
+    let module_metadatas = module_factory.get_module_metadatas();
+    let mut frontend = frontend::qt::QmlFrontend::new(
+        config_dir,
+        main_config,
+        hosts_config,
+        group_config,
+        module_metadatas,
+    );
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
     host_manager.borrow_mut().configure(&hosts_config);
 
     let mut connection_manager = ConnectionManager::new(module_factory.clone());
     connection_manager.configure(&hosts_config, &main_config.cache_settings);
+
+    let pro_service = match pro_service::ProService::new(frontend.new_update_sender()) {
+        Ok(pro_service) => Some(pro_service),
+        Err(error) => {
+            log::error!("Failed to start Lightkeeper Pro service: {}", error);
+            log::error!("Pro features will not be available.");
+            None
+        }
+    };
 
     let mut monitor_manager = MonitorManager::new(main_config.cache_settings.clone(), host_manager.clone(), module_factory.clone());
     monitor_manager.configure(
@@ -73,22 +90,13 @@ pub fn run(
     // Otherwise, initial status summary icons are randomly not shown.
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    let module_metadatas = module_factory.get_module_metadatas();
-    let mut frontend = frontend::qt::QmlFrontend::new(
-        config_dir,
-        main_config,
-        hosts_config,
-        group_config,
-        module_metadatas,
-    );
-
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
-    if test {
-        #[cfg(debug_assertions)]
-        let _engine = frontend.start_testing(command_handler, monitor_manager, connection_manager, host_manager);
-        ExitReason::Quit
+    if !test {
+        frontend.start(command_handler, monitor_manager, connection_manager, host_manager, pro_service)
     }
     else {
-        frontend.start(command_handler, monitor_manager, connection_manager, host_manager)
+        #[cfg(debug_assertions)]
+        let _engine = frontend.start_testing(command_handler, monitor_manager, connection_manager, host_manager, pro_service);
+        ExitReason::Quit
     }
 }

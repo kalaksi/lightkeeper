@@ -6,19 +6,20 @@ use crate::host::Host;
 use crate::host_manager::HostState;
 use crate::module::command::CommandResult;
 use crate::module::monitoring::MonitoringData;
-use crate::pro_service::Metric;
+use crate::pro_service;
 use crate::utils::ErrorMessage;
 
 
 #[derive(Clone)]
 pub enum UIUpdate {
-    Host(DisplayData),
-    Chart(Vec<Metric>),
+    Host(HostDisplayData),
+    Chart(pro_service::ServiceResponse),
+    Stop(),
 }
 
 impl Default for UIUpdate {
     fn default() -> Self {
-        UIUpdate::Host(DisplayData::new())
+        UIUpdate::Stop()
     }
 }
 
@@ -50,16 +51,6 @@ pub struct HostDisplayData {
     /// Verification requests from connectors. Usually for key verification.
     /// Commands can already request (more diverse) user input so they don't use this.
     pub verification_requests: Vec<VerificationRequest>,
-    pub stop: bool,
-}
-
-impl HostDisplayData {
-    pub fn stop() -> Self {
-        HostDisplayData {
-            stop: true,
-            ..Default::default()
-        }
-    }
 }
 
 impl Default for HostDisplayData {
@@ -80,7 +71,6 @@ impl Default for HostDisplayData {
             new_command_result: None,
             new_errors: Vec::new(),
             verification_requests: Vec::new(),
-            stop: false,
         }
     }
 }

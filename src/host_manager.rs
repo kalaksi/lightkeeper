@@ -17,7 +17,6 @@ use crate::module::{
     command::CommandResult,
 };
 
-use crate::pro_services::Metric;
 use crate::{
     enums::HostStatus,
     enums::Criticality,
@@ -37,7 +36,7 @@ pub struct HostManager {
     data_sender_prototype: Option<mpsc::Sender<StateUpdateMessage>>,
     data_receiver: Option<mpsc::Receiver<StateUpdateMessage>>,
     receiver_thread: Option<thread::JoinHandle<()>>,
-    frontend_state_sender: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>,
+    frontend_state_sender: Arc<Mutex<Vec<mpsc::Sender<frontend::UIUpdate>>>>,
 }
 
 impl HostManager {
@@ -103,7 +102,7 @@ impl HostManager {
         self.data_sender_prototype.as_ref().unwrap().clone()
     }
 
-    pub fn add_observer(&mut self, sender: mpsc::Sender<frontend::HostDisplayData>) {
+    pub fn add_observer(&mut self, sender: mpsc::Sender<frontend::UIUpdate>) {
         self.frontend_state_sender.lock().unwrap().push(sender);
     }
 
@@ -120,7 +119,7 @@ impl HostManager {
     fn _start_receiving_updates(
         hosts: Arc<Mutex<HostStateCollection>>,
         receiver: mpsc::Receiver<StateUpdateMessage>,
-        observers: Arc<Mutex<Vec<mpsc::Sender<frontend::HostDisplayData>>>>) -> thread::JoinHandle<()> {
+        observers: Arc<Mutex<Vec<mpsc::Sender<frontend::UIUpdate>>>>) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
             log::debug!("Started receiving updates");
@@ -258,14 +257,16 @@ impl HostManager {
 
                 // Send the state update to the front end.
                 for observer in observers.lock().unwrap().iter() {
-                    observer.send(frontend::HostDisplayData {
-                        host_state: host_state.clone(),
-                        new_monitoring_data: new_monitoring_data.clone(),
-                        new_command_result: new_command_results.clone(),
-                        new_errors: unhandled_errors.iter().cloned().map(ErrorMessage::from).collect(),
-                        verification_requests: verification_requests.clone(),
-                        ..Default::default()
-                    }).unwrap();
+                    observer.send(frontend::UIUpdate::Host(
+                        frontend::HostDisplayData {
+                            host_state: host_state.clone(),
+                            new_monitoring_data: new_monitoring_data.clone(),
+                            new_command_result: new_command_results.clone(),
+                            new_errors: unhandled_errors.iter().cloned().map(ErrorMessage::from).collect(),
+                            verification_requests: verification_requests.clone(),
+                            ..Default::default()
+                        })
+                    ).unwrap();
                 }
             }
         })
@@ -338,7 +339,6 @@ pub struct StateUpdateMessage {
     pub data_point: Option<DataPoint>,
     /// Only used with commands.
     pub command_result: Option<CommandResult>,
-    pub chart_data: HashMap<String, Vec<Metric>>,
     pub errors: Vec<LkError>,
     /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
     pub invocation_id: u64,

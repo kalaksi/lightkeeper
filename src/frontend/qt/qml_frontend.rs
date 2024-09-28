@@ -7,6 +7,7 @@ use super::resources;
 #[allow(unused_imports)]
 use super::resources_qml;
 use super::models::*;
+use crate::pro_service::ProService;
 use crate::{
     frontend,
     command_handler::CommandHandler,
@@ -24,8 +25,8 @@ pub struct QmlFrontend {
     hosts_config: configuration::Hosts,
     group_config: configuration::Groups,
     module_metadatas: Vec<Metadata>,
-    update_receiver: Option<mpsc::Receiver<frontend::HostDisplayData>>,
-    update_sender_prototype: mpsc::Sender<frontend::HostDisplayData>,
+    update_receiver: Option<mpsc::Receiver<frontend::UIUpdate>>,
+    update_sender_prototype: mpsc::Sender<frontend::UIUpdate>,
 }
 
 impl QmlFrontend {
@@ -34,8 +35,7 @@ impl QmlFrontend {
                main_config: &configuration::Configuration,
                hosts_config: &configuration::Hosts,
                group_config: &configuration::Groups,
-               module_metadatas: Vec<Metadata>
-            ) -> QmlFrontend {
+               module_metadatas: Vec<Metadata>) -> QmlFrontend {
 
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
@@ -48,7 +48,7 @@ impl QmlFrontend {
             std::env::set_var("QT_STYLE_OVERRIDE", style);
         }
 
-        let (sender, receiver) = mpsc::channel::<frontend::HostDisplayData>();
+        let (sender, receiver) = mpsc::channel::<frontend::UIUpdate>();
 
         QmlFrontend {
             main_config: main_config.clone(),
@@ -66,7 +66,8 @@ impl QmlFrontend {
         command_handler: CommandHandler,
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
-        host_manager: Rc<RefCell<host_manager::HostManager>>) -> ExitReason {
+        host_manager: Rc<RefCell<host_manager::HostManager>>,
+        pro_service: Option<ProService>) -> ExitReason {
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
@@ -81,6 +82,7 @@ impl QmlFrontend {
             connection_manager,
             HostDataManagerModel::new(display_data, self.main_config.clone()),
             CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
+            ChartManagerModel::new(pro_service),
             ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
         ));
 
@@ -115,7 +117,8 @@ impl QmlFrontend {
         command_handler: CommandHandler,
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
-        host_manager: Rc<RefCell<host_manager::HostManager>>) -> QmlEngine {
+        host_manager: Rc<RefCell<host_manager::HostManager>>,
+        pro_service: Option<ProService>) -> QmlEngine {
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
@@ -130,6 +133,7 @@ impl QmlFrontend {
             connection_manager,
             HostDataManagerModel::new(display_data, self.main_config.clone()),
             CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
+            ChartManagerModel::new(pro_service),
             ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
         ));
 
@@ -141,7 +145,7 @@ impl QmlFrontend {
         engine
     }
 
-    pub fn new_update_sender(&self) -> mpsc::Sender<frontend::HostDisplayData> {
+    pub fn new_update_sender(&self) -> mpsc::Sender<frontend::UIUpdate> {
         self.update_sender_prototype.clone()
     }
 

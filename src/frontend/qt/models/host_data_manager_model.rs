@@ -127,13 +127,6 @@ impl HostDataManagerModel {
             }
         }
 
-        if let Some((invocation_id, chart_data)) = new_display_data.new_chart_data {
-            let host_name = QString::from(host_state.host.name.clone());
-            let chart_data = serde_json::to_string(&chart_data).unwrap();
-            ::log::error!("**************** TODO");
-            self.chartDataReceived(invocation_id, host_name, QString::from(chart_data));
-        }
-
         for error in new_display_data.new_errors {
             self.errorReceived(QString::from(error.criticality.to_string()), QString::from(error.message));
         }

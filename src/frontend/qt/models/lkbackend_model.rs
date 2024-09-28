@@ -5,8 +5,9 @@ use qmetaobject::*;
 
 use crate::{
     connection_manager::{CachePolicy, ConnectionManager},
-    frontend::HostDisplayData,
-    host_manager
+    frontend::{HostDisplayData, UIUpdate},
+    host_manager,
+    pro_service,
 };
 
 use super::{
@@ -46,8 +47,8 @@ pub struct LkBackend {
     // Private properties
     //
 
-    update_sender_prototype: Option<mpsc::Sender<HostDisplayData>>,
-    update_receiver: Option<mpsc::Receiver<HostDisplayData>>,
+    update_sender_prototype: Option<mpsc::Sender<UIUpdate>>,
+    update_receiver: Option<mpsc::Receiver<UIUpdate>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 
     connection_manager: ConnectionManager,
@@ -57,20 +58,21 @@ pub struct LkBackend {
 #[allow(non_snake_case)]
 impl LkBackend {
     pub fn new(
-        update_sender_prototype: mpsc::Sender<HostDisplayData>,
-        update_receiver: mpsc::Receiver<HostDisplayData>,
+        update_sender_prototype: mpsc::Sender<UIUpdate>,
+        update_receiver: mpsc::Receiver<UIUpdate>,
         host_manager: Rc<RefCell<host_manager::HostManager>>,
         connection_manager: ConnectionManager,
         host_data_model: HostDataManagerModel,
         // host_manager: Rc<RefCell<host_manager::HostManager>>,
         command_model: CommandHandlerModel,
+        chart_model: ChartManagerModel,
         config_model: ConfigManagerModel) -> LkBackend {
 
         LkBackend {
             hosts: RefCell::new(host_data_model),
             command: RefCell::new(command_model),
             config: RefCell::new(config_model),
-            charts: RefCell::new(ChartManagerModel::default()),
+            charts: RefCell::new(chart_model),
             update_sender_prototype: Some(update_sender_prototype),
             update_receiver: Some(update_receiver),
             update_receiver_thread: None,
@@ -89,8 +91,7 @@ impl LkBackend {
         };
 
         let self_ptr = QPointer::from(&*self);
-
-        let process_update = qmetaobject::queued_callback(move |new_data: HostDisplayData| {
+        let process_host_update = qmetaobject::queued_callback(move |new_data: HostDisplayData| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
 
                 // Special case for host initialization. Proper monitor processing is started after initialization step.
@@ -109,17 +110,25 @@ impl LkBackend {
             }
         });
 
+        let self_ptr = QPointer::from(&*self);
+        let process_chart_update = qmetaobject::queued_callback(move |response: pro_service::ServiceResponse| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned.borrow().charts.borrow_mut().process_response(response);
+            }
+        });
+
         let thread = std::thread::spawn(move || {
             loop {
                 match update_receiver.recv() {
                     Ok(received_data) => {
-                        if received_data.stop {
-                            ::log::debug!("Gracefully exiting UI state receiver thread");
-                            return;
-                        }
-                        else {
-                            process_update(received_data);
-                        }
+                        match received_data {
+                            UIUpdate::Host(display_data) => process_host_update(display_data),
+                            UIUpdate::Chart(metrics) => process_chart_update(metrics),
+                            UIUpdate::Stop() => {
+                                ::log::debug!("Gracefully exiting UI state receiver thread");
+                                return;
+                            }
+                        };
                     },
                     Err(error) => {
                         ::log::error!("Stopped UI state receiver thread: {}", error);
@@ -132,7 +141,7 @@ impl LkBackend {
         self.update_receiver_thread = Some(thread);
     }
 
-    pub fn new_update_sender(&self) -> mpsc::Sender<HostDisplayData> {
+    pub fn new_update_sender(&self) -> mpsc::Sender<UIUpdate> {
         self.update_sender_prototype.clone().unwrap()
     }
 
@@ -147,6 +156,8 @@ impl LkBackend {
                     self.connection_manager.new_request_sender(),
                     self.host_manager.borrow().new_state_update_sender()
                 );
+
+                // `self.charts` doesn't have to be reconfigured.
 
                 self.host_manager.borrow_mut().start_receiving_updates();
                 self.connection_manager.start_processing_requests();
@@ -164,13 +175,16 @@ impl LkBackend {
 
     pub fn stop(&mut self) {
         if let Some(thread) = self.update_receiver_thread.take() {
-            self.new_update_sender()
-                .send(HostDisplayData::stop()).unwrap();
+            if let Err(error) = self.new_update_sender().send(UIUpdate::Stop()) {
+                ::log::error!("Failed to send stop signal to UI state receiver: {}", error);
+            }
+
             thread.join().unwrap();
         }
 
         self.command.borrow_mut().stop();
         self.host_manager.borrow_mut().stop();
         self.connection_manager.stop();
+        self.charts.borrow_mut().stop();
     }
 }

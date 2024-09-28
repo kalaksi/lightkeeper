@@ -3,10 +3,9 @@ use std::rc::Rc;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
-use std::time::SystemTime;
 use std::thread;
 
-use crate::{error::*, pro_services};
+use crate::error::*;
 use crate::module::connection::RequestResponse;
 use crate::Host;
 use crate::configuration::{CacheSettings, Hosts};
@@ -33,7 +32,7 @@ pub struct MonitorManager {
     invocation_id_counter: u64,
     cache_settings: CacheSettings,
 
-    // Shared resources.
+    // Shared resources. Only used for fetching up-to-date data.
     host_manager: Rc<RefCell<HostManager>>,
     module_factory: Arc<ModuleFactory>,
 

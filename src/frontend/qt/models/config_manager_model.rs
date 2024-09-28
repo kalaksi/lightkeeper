@@ -509,7 +509,8 @@ impl ConfigManagerModel {
         let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
 
         let all_connectors = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.module_type == ModuleType::Connector)
+            .filter(|metadata| metadata.module_spec.module_type == ModuleType::Connector && 
+                               !metadata.module_spec.id.starts_with("_"))
             .map(|metadata| metadata.module_spec.id.clone())
             .collect::<Vec<String>>();
 
