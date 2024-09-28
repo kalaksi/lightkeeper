@@ -16,12 +16,12 @@ pub trait ConnectionModule : MetadataSupport + Module {
     fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError>;
 
     fn send_message_partial(&self, _message: &str, _invocation_id: u64) -> Result<ResponseMessage, LkError> {
-        panic!("Not implemented");
+        Err(LkError::not_implemented())
     }
 
     /// For partial responses. Should be called until the response is complete.
     fn receive_partial_response(&self, _invocation_id: u64) -> Result<ResponseMessage, LkError> {
-        panic!("Not implemented");
+        Err(LkError::not_implemented())
     }
 
     fn download_file(&self, _source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {

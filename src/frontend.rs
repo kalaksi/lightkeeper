@@ -1,6 +1,7 @@
 pub mod frontend;
 pub use frontend::DisplayData;
 pub use frontend::HostDisplayData;
+pub use frontend::UIUpdate;
 
 pub mod display_options;
 pub use display_options::DisplayOptions;

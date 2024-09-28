@@ -6,8 +6,21 @@ use crate::host::Host;
 use crate::host_manager::HostState;
 use crate::module::command::CommandResult;
 use crate::module::monitoring::MonitoringData;
+use crate::pro_service::Metric;
 use crate::utils::ErrorMessage;
 
+
+#[derive(Clone)]
+pub enum UIUpdate {
+    Host(DisplayData),
+    Chart(Vec<Metric>),
+}
+
+impl Default for UIUpdate {
+    fn default() -> Self {
+        UIUpdate::Host(DisplayData::new())
+    }
+}
 
 #[derive(Default, Clone)]
 pub struct DisplayData {
@@ -27,13 +40,12 @@ impl DisplayData {
         }
     }
 }
- 
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HostDisplayData {
     pub host_state: HostState,
     pub new_monitoring_data: Option<(u64, MonitoringData)>,
     pub new_command_result: Option<(u64, CommandResult)>,
-    pub new_chart_data: Option<(u64, HashMap<String, Vec<crate::pro_services::Metric>>)>,
     pub new_errors: Vec<ErrorMessage>,
     /// Verification requests from connectors. Usually for key verification.
     /// Commands can already request (more diverse) user input so they don't use this.
@@ -54,7 +66,7 @@ impl Default for HostDisplayData {
     fn default() -> Self {
         HostDisplayData {
             host_state: HostState {
-                host: Host::new("", &String::from("127.0.0.1"), &String::new(), &Vec::new()),
+                host: Host::new("", "127.0.0.1", "", &Vec::new()),
                 status: HostStatus::default(),
                 just_initialized: false,
                 just_initialized_from_cache: false,
@@ -66,7 +78,6 @@ impl Default for HostDisplayData {
             },
             new_monitoring_data: None,
             new_command_result: None,
-            new_chart_data: None,
             new_errors: Vec::new(),
             verification_requests: Vec::new(),
             stop: false,
