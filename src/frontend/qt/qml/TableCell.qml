@@ -45,13 +45,13 @@ Item {
     // TODO: use the native support when it's available.
     function getBackgroundColor(selected) {
         if (selected === true) {
-            return Qt.darker(Theme.highlightColor)
+            return Qt.darker(palette.highlight)
         }
         else if (model.row % 2 == 0) {
-            return palette.alternateBase
+            return Theme.rowBackgroundColor
         }
         else {
-            return palette.base
+            return Theme.rowBackgroundColorAlternate
         }
     }
 }
