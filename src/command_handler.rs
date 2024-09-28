@@ -9,6 +9,7 @@ use serde_derive::{Serialize, Deserialize};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::utils::sha256;
 use crate::configuration::Hosts;
 use crate::error::*;
 use crate::file_handler;
@@ -221,7 +222,7 @@ impl CommandHandler {
 
         match file_handler::read_file(local_file_path) {
             Ok((mut metadata, contents)) => {
-                let local_file_hash = sha256::digest(contents.as_slice());
+                let local_file_hash = sha256::hash(&contents);
 
                 if local_file_hash == metadata.remote_file_hash {
                     state_update_sender.send(StateUpdateMessage {
@@ -634,10 +635,10 @@ impl CommandHandler {
         }
     }
 
-    pub fn has_file_changed(&self, local_file_path: &String, new_contents: Vec<u8>) -> bool {
+    pub fn has_file_changed(&self, local_file_path: &String, new_contents: &[u8]) -> bool {
         match file_handler::read_file_metadata(local_file_path) {
             Ok(metadata) => {
-                let content_hash = sha256::digest(new_contents.as_slice());
+                let content_hash = sha256::hash(new_contents);
                 content_hash != metadata.remote_file_hash
             },
             Err(error) => {

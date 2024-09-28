@@ -319,7 +319,7 @@ impl CommandHandlerModel {
     fn hasFileChanged(&self, local_file_path: QString, contents: QString) -> bool {
         let local_file_path = local_file_path.to_string();
         let contents = contents.to_string().into_bytes();
-        self.command_handler.has_file_changed(&local_file_path, contents)
+        self.command_handler.has_file_changed(&local_file_path, &contents)
     }
 
     fn verifyHostKey(&self, host_id: QString, connector_id: QString, key_id: QString) {

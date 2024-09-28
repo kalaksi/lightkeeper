@@ -8,15 +8,6 @@ pub struct ErrorMessage {
     pub criticality: Criticality,
 }
 
-impl ErrorMessage {
-    pub fn new(criticality: Criticality, message: String) -> Self {
-        ErrorMessage {
-            message,
-            criticality,
-        }
-    }
-}
-
 impl From<LkError> for ErrorMessage {
     fn from(error: LkError) -> Self {
         ErrorMessage {

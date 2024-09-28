@@ -27,7 +27,6 @@ pub struct HostDataManagerModel {
     monitorStateChanged: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     commandResultReceived: qt_signal!(command_result: QString, invocation_id: u64),
     monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data_qv: QVariant, invocation_id: u64),
-    chartDataReceived: qt_signal!(invocation_id: u64, host_id: QString, chart_data: QString),
     errorReceived: qt_signal!(criticality: QString, error: QString),
     verificationRequested: qt_signal!(host_id: QString, connector_id: QString, message: QString, key_id: QString),
 

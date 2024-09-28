@@ -11,3 +11,5 @@ pub use shell_command::ShellCommand;
 
 pub mod error_message;
 pub use error_message::ErrorMessage;
+
+pub mod sha256;

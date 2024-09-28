@@ -17,7 +17,7 @@ use chrono::Utc;
 use ssh2;
 use crate::{error::*, file_handler};
 use crate::file_handler::FileMetadata;
-use crate::utils::strip_newline;
+use crate::utils::{sha256, strip_newline};
 use lightkeeper_module::connection_module;
 use crate::module::*;
 use crate::module::connection::*;
@@ -230,7 +230,7 @@ impl ConnectionModule for Ssh2 {
             download_time: Utc::now(),
             local_path: None,
             remote_path: source.to_string(),
-            remote_file_hash: sha256::digest(contents.as_slice()),
+            remote_file_hash: sha256::hash(&contents),
             owner_uid: stat.uid.unwrap(),
             owner_gid: stat.gid.unwrap(),
             permissions: stat.perm.unwrap(),
@@ -468,7 +468,7 @@ impl Ssh2 {
     }
 
     fn get_host_key_id(key_type: ssh2::HostKeyType, key: &[u8]) -> String {
-        let fp_hex = sha256::digest(key);
+        let fp_hex = sha256::hash(key);
         let fp_bytes = Vec::<u8>::from_hex(fp_hex.clone()).unwrap();
         let fp_base64 = base64::engine::general_purpose::STANDARD_NO_PAD.encode(fp_bytes);
 
