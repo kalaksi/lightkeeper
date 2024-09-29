@@ -25,7 +25,7 @@ Item {
 
     Component.onCompleted: {
         root._categories = []
-        refresh()
+        root.refresh()
     }
 
     Connections {
@@ -297,6 +297,12 @@ Item {
             root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
                                         .map(category_qv => category_qv.toString())
+        }
+    }
+
+    function refreshContent() {
+        if (root.hostId !== "") {
+            LK.command.forceInitializeHost(hostId)
         }
     }
 

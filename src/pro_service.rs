@@ -355,6 +355,7 @@ pub enum RequestType {
     },
     MetricsQuery {
         host_id: String,
+        monitor_id: String,
         /// Unix timestamp in seconds.
         start_time: i64,
         /// Unix timestamp in seconds.

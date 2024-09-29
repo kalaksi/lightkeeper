@@ -18,7 +18,7 @@ pub struct ChartManagerModel {
     //
     // Slots
     //
-    refreshCharts: qt_method!(fn(&self, host_id: QString) -> u64),
+    refreshCharts: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> u64),
 
 
     //
@@ -80,12 +80,13 @@ impl ChartManagerModel {
         }
     }
 
-    fn refreshCharts(&mut self, host_id: QString) -> u64 {
+    fn refreshCharts(&mut self, host_id: QString, monitor_id: QString) -> u64 {
         if let Some(pro_service) = self.pro_service.as_mut() {
             let current_unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
             let invocation_id = pro_service.send_request(pro_service::RequestType::MetricsQuery {
                     host_id: host_id.to_string(),
+                    monitor_id: monitor_id.to_string(),
                     start_time: current_unix_time.as_secs() as i64 - 60 * 60 * 24,
                     end_time: current_unix_time.as_secs() as i64,
             });

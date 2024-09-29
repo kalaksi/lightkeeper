@@ -4,7 +4,7 @@ import QtQuick.Layouts
 
 import ".."
 import "../Text"
-import "../ChartView"
+import "../ChartsView"
 import "../js/TextTransform.js" as TextTransform
 import "../js/Parse.js" as Parse
 import "../js/ValueUnit.js" as ValueUnit
@@ -33,7 +33,7 @@ Item {
             // Create default tabs for host.
             createNewTab({
                 "title": "qrc:/main/images/button/charts",
-                "component": chartView.createObject(root._tabStacks[root.hostId], {
+                "component": chartsView.createObject(root._tabStacks[root.hostId], {
                     hostId: hostId,
                 })
             })
@@ -120,11 +120,11 @@ Item {
         showMinimizeButton: true
         showMaximizeButton: true
         showCloseButton: true
-        showRefreshButton: getCurrentTabContent() instanceof HostDetailsMainView
-        showSaveButton: getCurrentTabContent() instanceof HostDetailsTextEditorView
+        showRefreshButton: getCurrentTabContent() !== undefined && getCurrentTabContent().refreshContent !== undefined
+        showSaveButton: getCurrentTabContent() !== undefined && getCurrentTabContent().save !== undefined
         disableSaveButton: true
 
-        onRefreshClicked: LK.command.forceInitializeHost(hostId)
+        onRefreshClicked: getCurrentTabContent().refreshContent()
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.close()
@@ -214,9 +214,9 @@ Item {
     }
 
     Component {
-        id: chartView
+        id: chartsView
 
-        ChartView {
+        ChartsView {
         }
     }
 
