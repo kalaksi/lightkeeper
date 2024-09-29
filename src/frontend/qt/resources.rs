@@ -63,6 +63,7 @@ pub fn init_resources() {
             "images/breeze/dark/arrow-down.svg" as "images/button/dropdown-menu",
             "images/breeze/dark/edit-clear.svg" as "images/button/edit-clear",
             "images/breeze/dark/project-open.svg" as "images/button/project-open",
+            "images/breeze/dark/office-chart-bar-stacked.svg" as "images/button/charts",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -80,6 +81,7 @@ pub fn init_resources() {
             "images/breeze/dark/update-low.svg" as "images/button/update-low",
             "images/breeze/dark/update-high.svg" as "images/button/update-high",
 
+            // Control buttons
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/dark/tab-close.svg" as "images/button/tab-close",
             "images/breeze/dark/arrow-up.svg" as "images/button/maximize",
@@ -152,6 +154,7 @@ pub fn init_resources() {
             "images/breeze/light/arrow-down.svg" as "images/button/dropdown-menu",
             "images/breeze/light/edit-clear.svg" as "images/button/edit-clear",
             "images/breeze/light/project-open.svg" as "images/button/project-open",
+            "images/breeze/light/office-chart-bar-stacked.svg" as "images/button/charts",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -169,6 +172,7 @@ pub fn init_resources() {
             "images/breeze/light/update-low.svg" as "images/button/update-low",
             "images/breeze/light/update-high.svg" as "images/button/update-high",
 
+            // Control buttons
             "images/fontawesome/xmark.svg" as "images/button/close",
             "images/breeze/light/tab-close.svg" as "images/button/tab-close",
             "images/breeze/light/arrow-up.svg" as "images/button/maximize",
