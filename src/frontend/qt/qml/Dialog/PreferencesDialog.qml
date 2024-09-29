@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Layouts 1.11
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
 
 import "../Button"
 import "../Text"
@@ -242,7 +242,7 @@ LightkeeperDialog {
 
                 SmallText {
                     width: parent.width
-                    text: "The text editor to use when editing files locally. Integrated editor is always used in flatpak sandbox."
+                    text: "The text editor to use when editing files locally. Integrated editor is always used with flatpak."
                     color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
@@ -271,7 +271,7 @@ LightkeeperDialog {
 
                 SmallText {
                     width: parent.width
-                    text: "Terminal to use when launching a remote shell. Integrated editor is always used in flatpak sandbox."
+                    text: "Terminal to use when launching a remote shell. Integrated editor is always used with flatpak."
                     color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
