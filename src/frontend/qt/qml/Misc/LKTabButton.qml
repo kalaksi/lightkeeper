@@ -12,15 +12,14 @@ import "../Text"
 TabButton {
     id: root
     property int closeButtonSize: 18
-    property int iconSize: 20
+    property int iconSize: 22
     property string iconSource: ""
     property bool showCloseButton: false
     property bool active: false
-    height: 28
     // Automatically sized to tab title contents.
     width: {
         if (label.text === "") {
-            return icon.implicitWidth + (showCloseButton ? closeButton.implicitWidth : label.padding)
+            return icon.implicitWidth + (showCloseButton ? closeButton.implicitWidth : 16)
         }
         else {
             return label.implicitWidth + icon.implicitWidth + (showCloseButton ? closeButton.implicitWidth : label.padding)
@@ -29,6 +28,7 @@ TabButton {
 
     signal tabClosed
 
+    // Background and borders.
     background: Item {
         Rectangle {
             anchors.fill: parent

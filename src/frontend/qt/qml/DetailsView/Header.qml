@@ -49,7 +49,7 @@ Item {
         TabBar {
             id: tabBar
             width: parent.width * 0.7
-            height: parent.height
+            contentHeight: parent.height * 0.8
 
             onCurrentIndexChanged: {
                 root.tabChanged(root._oldTabIndex, currentIndex)

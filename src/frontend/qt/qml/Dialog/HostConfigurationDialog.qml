@@ -209,7 +209,7 @@ LightkeeperDialog {
             TabBar {
                 id: tabBar
                 currentIndex: 0
-                height: 40
+                contentHeight: 36
                 rightPadding: root.buttonSize + 4
 
                 Layout.fillWidth: true
