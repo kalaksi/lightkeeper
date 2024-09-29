@@ -139,21 +139,22 @@ impl ConnectionManager {
     }
 
     fn initialize_cache(cache_settings: CacheSettings) -> Cache<String, ResponseMessage> {
-        let mut new_command_cache = Cache::<String, ResponseMessage>::new(cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
+        let new_command_cache = Cache::<String, ResponseMessage>::new(cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
 
-        if cache_settings.enable_cache {
-            match new_command_cache.read_from_disk() {
-                Ok(count) => log::debug!("Added {} entries from cache file", count),
-                // Failing to read cache file is not critical.
-                Err(error) => log::error!("{}", error),
-            }
-            log::debug!("Initialized cache with TTL of {} ({}) seconds", cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
-        }
-        else {
-            log::debug!("Cache is disabled. Clearing existing cache files.");
-            // Clear any existing cache entries from cache file.
-            new_command_cache.purge();
-        }
+        // TODO: This cache functionality is now obsolete. Remove later when sure.
+        // if cache_settings.enable_cache {
+        //     match new_command_cache.read_from_disk() {
+        //         Ok(count) => log::debug!("Added {} entries from cache file", count),
+        //         // Failing to read cache file is not critical.
+        //         Err(error) => log::error!("{}", error),
+        //     }
+        //     log::debug!("Initialized cache with TTL of {} ({}) seconds", cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
+        // }
+        // else {
+        //     log::debug!("Cache is disabled. Clearing existing cache files.");
+        //     // Clear any existing cache entries from cache file.
+        //     new_command_cache.purge();
+        // }
 
         new_command_cache
     }
