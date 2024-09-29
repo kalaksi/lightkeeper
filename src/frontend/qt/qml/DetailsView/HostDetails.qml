@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 import ".."
 import "../Text"
+import "../ChartView"
 import "../js/TextTransform.js" as TextTransform
 import "../js/Parse.js" as Parse
 import "../js/ValueUnit.js" as ValueUnit
@@ -29,14 +30,20 @@ Item {
                 parentStackIndex: Object.keys(root._tabStacks).length,
             })
 
-            let tabData = {
+            // Create default tabs for host.
+            createNewTab({
+                "title": "qrc:/main/images/button/charts",
+                "component": chartView.createObject(root._tabStacks[root.hostId], {
+                    hostId: hostId,
+                })
+            })
+
+            createNewTab({
                 "title": hostId,
                 "component": detailsMainView.createObject(root._tabStacks[root.hostId], {
                     hostId: hostId,
                 })
-            }
-
-            createNewTab(tabData)
+            })
         }
 
         root.refresh()
@@ -206,6 +213,13 @@ Item {
         }
     }
 
+    Component {
+        id: chartView
+
+        ChartView {
+        }
+    }
+
     Shortcut {
         enabled: !(getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
         sequence: StandardKey.Cancel
@@ -292,7 +306,8 @@ Item {
 
 
     function refresh() {
-        root._tabContents[root.hostId][0].component.refresh()
+        // Refresh host details tab.
+        root._tabContents[root.hostId][1].component.refresh()
 
         mainViewHeader.tabs = getTabTitles()
         tabStackContainer.currentIndex = root._tabStacks[root.hostId].parentStackIndex
@@ -305,14 +320,14 @@ Item {
         }
 
         root._tabContents[root.hostId].push(tabData)
-
         let lastTabIndex = root._tabContents[root.hostId].length - 1
         mainViewHeader.tabs = getTabTitles()
         mainViewHeader.selectTab(lastTabIndex)
     }
 
     function closeTab(tabIndex) {
-        if (tabIndex === 0) {
+        // Prevent closing of chart and main tabs.
+        if (tabIndex === 0 || tabIndex === 1) {
             return
         }
 

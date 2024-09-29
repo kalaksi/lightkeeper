@@ -63,9 +63,13 @@ Item {
                 model: root.tabs
 
                 LKTabButton {
-                    // First tab can't be closed.
-                    showCloseButton: index > 0
-                    text: modelData
+                    property bool _hasIcon: modelData.startsWith("qrc:")
+
+                    // Chart and host details tabs can't be closed, so skip first 2 tabs.
+                    showCloseButton: index > 1
+                    // Handle strings starting with "qrc:" as icons.
+                    text: _hasIcon ? "" : modelData
+                    iconSource: _hasIcon ? modelData : ""
                     onTabClosed: root.tabClosed(index)
                     active: index === tabBar.currentIndex
                 }

@@ -12,11 +12,20 @@ import "../Text"
 TabButton {
     id: root
     property int closeButtonSize: 18
+    property int iconSize: 20
+    property string iconSource: ""
     property bool showCloseButton: false
     property bool active: false
     height: 28
     // Automatically sized to tab title contents.
-    width: label.implicitWidth + (showCloseButton ? closeButton.implicitWidth : label.padding)
+    width: {
+        if (label.text === "") {
+            return icon.implicitWidth + (showCloseButton ? closeButton.implicitWidth : label.padding)
+        }
+        else {
+            return label.implicitWidth + icon.implicitWidth + (showCloseButton ? closeButton.implicitWidth : label.padding)
+        }
+    }
 
     signal tabClosed
 
@@ -53,9 +62,21 @@ TabButton {
 
         NormalText {
             id: label
+            visible: label.text !== ""
             anchors.verticalCenter: parent.verticalCenter
             text: root.text
             padding: Theme.spacingNormal
+        }
+
+        Image {
+            id: icon
+            visible: root.iconSource !== ""
+            source: root.iconSource
+            sourceSize.width: 22
+            sourceSize.height: 22
+            width: root.iconSize
+            height: root.iconSize
+            anchors.verticalCenter: parent.verticalCenter
         }
 
         RoundButton {
