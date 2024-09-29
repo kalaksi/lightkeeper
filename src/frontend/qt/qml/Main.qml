@@ -177,7 +177,11 @@ ApplicationWindow {
 
         function onVerificationRequested(hostId, connectorId, message, keyId) {
             let text = message + "\n\n" + keyId
-            confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text, }) 
+            confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", {
+                text: text,
+                implicitWidth: 750,
+                implicitHeight: 350,
+            })
             confirmationDialogLoader.item.onAccepted.connect(function() {
                 LK.command.verifyHostKey(hostId, connectorId, keyId)
                 LK.command.initializeHost(hostId)
@@ -330,6 +334,7 @@ ApplicationWindow {
     // Dynamic component loaders
     Loader {
         id: confirmationDialogLoader
+        anchors.centerIn: parent
     }
 
     DynamicObjectManager {
