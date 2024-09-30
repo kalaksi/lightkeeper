@@ -48,7 +48,7 @@ impl ProService {
         let (request_sender, request_receiver) = mpsc::channel();
 
         let request_thread = thread::spawn(move || {
-            Self::process_requests(request_receiver, update_sender.clone()).unwrap();
+            Self::process_requests(request_receiver, update_sender.clone());
         });
 
         Ok(ProService {
@@ -261,27 +261,59 @@ oa+0OVYkrhzs+eD6jhJNy07j6Am9lahDzg==
         invocation_id
     }
 
-    fn process_requests(request_receiver: mpsc::Receiver<ServiceRequest>, update_sender: mpsc::Sender<UIUpdate>) -> Result<(), LkError> {
+    fn process_requests(request_receiver: mpsc::Receiver<ServiceRequest>, update_sender: mpsc::Sender<UIUpdate>) {
         let mut tls_stream = match Self::setup_connection() {
             Ok(stream) => stream,
-            Err(error) => return Err(LkError::other_p("Failed to connect to Pro service", &error)),
+            Err(error) => {
+                log::error!("Failed to connect to Pro Services: {}", error);
+                return;
+            }
         };
 
         loop {
+            // These should never fail.
             let service_request = request_receiver.recv().unwrap();
-            let serialized = bincode::serialize(&service_request).map_err(|error| LkError::other(error))?;
+            let serialized = bincode::serialize(&service_request).unwrap();
 
-            tls_stream.write_all(&serialized)?;
-            tls_stream.flush()?;
+            // TODO: send errors to UI?
+            if let Err(error) = tls_stream.write_all(&serialized) {
+                log::error!("Failed to send request: {}", error);
+
+                match service_request.request_type {
+                    RequestType::Exit => break,
+                    _ => continue,
+                };
+            }
+
+            if let Err(error) = tls_stream.flush() {
+                log::error!("Failed to send request: {}", error);
+
+                match service_request.request_type {
+                    RequestType::Exit => break,
+                    _ => continue,
+                };
+            }
 
             let mut buffer = vec![0; 1024];
 
             let read_count = match service_request.request_type {
                 RequestType::Exit => {
-                    tls_stream.read_to_end(&mut buffer)?
+                    match tls_stream.read_to_end(&mut buffer) {
+                        Ok(count) => count,
+                        Err(error) => {
+                            log::error!("Failed to read response: {}", error);
+                            break;
+                        }
+                    }
                 },
                 _ => {
-                    tls_stream.read(&mut buffer)?
+                    match tls_stream.read(&mut buffer) {
+                        Ok(count) => count,
+                        Err(error) => {
+                            log::error!("Failed to read response: {}", error);
+                            continue;
+                        }
+                    }
                 }
             };
 
@@ -312,8 +344,6 @@ oa+0OVYkrhzs+eD6jhJNy07j6Am9lahDzg==
                 log::error!("Failed to send update: {}", error);
             }
         }
-
-        Ok(())
     }
 }
 
