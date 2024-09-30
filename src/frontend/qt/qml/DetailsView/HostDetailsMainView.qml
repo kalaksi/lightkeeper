@@ -255,7 +255,7 @@ Item {
                             id: propertyTable
                             category: modelData
                             monitoring_datas: LK.hosts.getCategoryMonitorIds(root.hostId, modelData)
-                                                             .map(monitorId => LK.hosts.getMonitoringData(root.hostId, monitorId))
+                                                      .map(monitorId => LK.hosts.getMonitoringData(root.hostId, monitorId))
                             command_datas: LK.command.getCategoryCommands(root.hostId, modelData)
 
                             Layout.fillHeight: true

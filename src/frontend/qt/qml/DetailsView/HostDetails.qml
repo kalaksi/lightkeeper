@@ -306,7 +306,7 @@ Item {
 
 
     function refresh() {
-        // Refresh host details tab.
+        // Refresh host details tab. (needed?)
         root._tabContents[root.hostId][1].component.refresh()
 
         mainViewHeader.tabs = getTabTitles()

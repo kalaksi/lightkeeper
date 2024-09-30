@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 import ".."
 import "../Text"
+import "../js/TextTransform.js" as TextTransform
 import "../DetailsView"
 
 
@@ -17,6 +18,7 @@ Item {
     property int columnSpacing: Theme.spacingNormal
     property bool enableShortcuts: false
     property var _categories: {}
+    property bool _showEmptyCategories: true
 
     Component.onCompleted: {
         root._categories = []
@@ -102,11 +104,16 @@ Item {
         if (root.hostId !== "") {
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
                                         .map(category_qv => category_qv.toString())
+
         }
     }
 
     function refreshContent() {
-        LK.charts.refreshCharts(hostId)
+        for (const category of root._categories) {
+            for (const monitorId of LK.hosts.getCategoryMonitorIds(root.hostId, category)) {
+                LK.charts.refreshCharts(hostId, monitorId)
+            }
+        }
     }
 
     function activate() {
