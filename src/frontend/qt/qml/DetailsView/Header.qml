@@ -23,7 +23,7 @@ Item {
     property int _oldTabIndex: -1
 
     implicitWidth: parent.width
-    implicitHeight: 32
+    implicitHeight: 34
 
     signal refreshClicked()
     signal openInWindowClicked()
@@ -49,7 +49,7 @@ Item {
         TabBar {
             id: tabBar
             width: parent.width * 0.7
-            contentHeight: parent.height * 0.8
+            contentHeight: parent.height * 0.85
 
             onCurrentIndexChanged: {
                 root.tabChanged(root._oldTabIndex, currentIndex)
