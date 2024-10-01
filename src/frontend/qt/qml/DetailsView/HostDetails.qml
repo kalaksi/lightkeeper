@@ -31,12 +31,14 @@ Item {
             })
 
             // Create default tabs for host.
-            createNewTab({
-                "title": "qrc:/main/images/button/charts",
-                "component": chartsView.createObject(root._tabStacks[root.hostId], {
-                    hostId: hostId,
+            if (Theme.showCharts) {
+                createNewTab({
+                    "title": "qrc:/main/images/button/charts",
+                    "component": chartsView.createObject(root._tabStacks[root.hostId], {
+                        hostId: hostId,
+                    })
                 })
-            })
+            }
 
             createNewTab({
                 "title": hostId,
@@ -119,7 +121,7 @@ Item {
         tabs: getTabTitles()
         showMinimizeButton: true
         showMaximizeButton: true
-        showCloseButton: true
+        showCloseButton: getCurrentTabContent() !== undefined && getCurrentTabContent().close !== undefined
         showRefreshButton: getCurrentTabContent() !== undefined && getCurrentTabContent().refreshContent !== undefined
         showSaveButton: getCurrentTabContent() !== undefined && getCurrentTabContent().save !== undefined
         disableSaveButton: true
@@ -307,7 +309,8 @@ Item {
 
     function refresh() {
         // Refresh host details tab. (needed?)
-        root._tabContents[root.hostId][1].component.refresh()
+        let hostTabIndex = Theme.showCharts ? 1 : 0
+        root._tabContents[root.hostId][hostTabIndex].component.refresh()
 
         mainViewHeader.tabs = getTabTitles()
         tabStackContainer.currentIndex = root._tabStacks[root.hostId].parentStackIndex
@@ -328,6 +331,10 @@ Item {
     function closeTab(tabIndex) {
         // Prevent closing of chart and main tabs.
         if (tabIndex === 0 || tabIndex === 1) {
+            return
+        }
+
+        if (root._tabContents[root.hostId][tabIndex].close === undefined) {
             return
         }
 

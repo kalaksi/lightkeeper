@@ -65,8 +65,6 @@ Item {
                 LKTabButton {
                     property bool _hasIcon: modelData.startsWith("qrc:")
 
-                    // Chart and host details tabs can't be closed, so skip first 2 tabs.
-                    showCloseButton: index > 1
                     // Handle strings starting with "qrc:" as icons.
                     text: _hasIcon ? "" : modelData
                     iconSource: _hasIcon ? modelData : ""

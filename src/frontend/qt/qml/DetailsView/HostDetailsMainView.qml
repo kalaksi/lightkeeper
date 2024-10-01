@@ -313,8 +313,4 @@ Item {
     function deactivate() {
         // Do nothing.
     }
-
-    function close() {
-        // Do nothing.
-    }
 }

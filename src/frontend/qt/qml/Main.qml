@@ -278,8 +278,7 @@ ApplicationWindow {
 
                         if (detailsView.hostId !== "") {
                             if (!LK.hosts.isHostInitialized(detailsView.hostId)) {
-                                // TODO: uncomment
-                                // LK.command.initializeHost(detailsView.hostId)
+                                LK.command.initializeHost(detailsView.hostId)
                             }
                             statusBar.jobsLeft = LK.hosts.getPendingCommandCount(detailsView.hostId) +
                                                  LK.hosts.getPendingMonitorCount(detailsView.hostId)

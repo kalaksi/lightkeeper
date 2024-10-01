@@ -123,8 +123,4 @@ Item {
     function deactivate() {
         root.enableShortcuts = false
     }
-
-    function close() {
-        // Do nothing.
-    }
 }

@@ -34,6 +34,7 @@ display_options:
   qtquick_style: ""
   hide_info_notifications: false
   show_status_bar: true
+  show_charts: false
   categories:
     host:
       # Priority controls the order of the category tiles. Host should be first.

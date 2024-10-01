@@ -85,6 +85,8 @@ pub struct DisplayOptions {
     pub categories: HashMap<String, Category>,
     #[serde(default = "DisplayOptions::default_to_true")]
     pub show_status_bar: bool,
+    #[serde(default)]
+    pub show_charts: bool,
 }
 
 impl Default for DisplayOptions {

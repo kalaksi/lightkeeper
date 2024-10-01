@@ -55,13 +55,19 @@ pub fn run(
     let mut connection_manager = ConnectionManager::new(module_factory.clone());
     connection_manager.configure(&hosts_config, &main_config.cache_settings);
 
-    let pro_service = match pro_service::ProService::new(frontend.new_update_sender()) {
-        Ok(pro_service) => Some(pro_service),
-        Err(error) => {
-            log::error!("Failed to start Lightkeeper Pro service: {}", error);
-            log::error!("Pro features will not be available.");
-            None
+    let pro_service = if main_config.display_options.show_charts {
+        match pro_service::ProService::new(frontend.new_update_sender()) {
+            Ok(pro_service) => Some(pro_service),
+            Err(error) => {
+                log::error!("Failed to start Lightkeeper Pro service: {}", error);
+                log::error!("Pro features will not be available.");
+                None
+            }
         }
+    }
+    else {
+        log::info!("Charts are disabled.");
+        None
     };
 
     let mut monitor_manager = MonitorManager::new(main_config.cache_settings.clone(), host_manager.clone(), module_factory.clone());

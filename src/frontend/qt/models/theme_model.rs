@@ -44,6 +44,7 @@ pub struct ThemeModel {
     // Display options
     hideInfoNotifications: qt_property!(bool; CONST),
     showStatusBar: qt_property!(bool; CONST),
+    showCharts: qt_property!(bool; CONST),
     tooltipDelay: qt_property!(i32; CONST),
 
     categoryColor: qt_method!(fn(&self, category: QString) -> QString),
@@ -99,6 +100,7 @@ impl ThemeModel {
 
             hideInfoNotifications: display_options.hide_info_notifications,
             showStatusBar: display_options.show_status_bar,
+            showCharts: display_options.show_charts,
             i_display_options: display_options,
             ..Default::default()
         }
