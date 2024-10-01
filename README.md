@@ -96,7 +96,7 @@ QMAKE = "/usr/lib/qt6/bin/qmake"
 
 ### Post-install
 
-If you're using the ping monitor, you need to give Lightkeeper binary more networking privileges:
+If you're using the ping monitor (not used by default), you need to give Lightkeeper binary more networking privileges:
 ```
 $ setcap cap_net_raw+ep $MY_BINARY
 ```
