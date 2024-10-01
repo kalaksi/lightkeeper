@@ -121,7 +121,6 @@ Item {
         tabs: getTabTitles()
         showMinimizeButton: true
         showMaximizeButton: true
-        showCloseButton: getCurrentTabContent() !== undefined && getCurrentTabContent().close !== undefined
         showRefreshButton: getCurrentTabContent() !== undefined && getCurrentTabContent().refreshContent !== undefined
         showSaveButton: getCurrentTabContent() !== undefined && getCurrentTabContent().save !== undefined
         disableSaveButton: true
@@ -329,16 +328,12 @@ Item {
     }
 
     function closeTab(tabIndex) {
-        // Prevent closing of chart and main tabs.
-        if (tabIndex === 0 || tabIndex === 1) {
-            return
-        }
-
-        if (root._tabContents[root.hostId][tabIndex].close === undefined) {
-            return
-        }
-
         let tabData = root._tabContents[root.hostId][tabIndex]
+
+        if (tabData.component.close === undefined) {
+            return
+        }
+
         tabData.component.close()
         tabData.component.destroy()
         root._tabContents[root.hostId].splice(tabIndex, 1)

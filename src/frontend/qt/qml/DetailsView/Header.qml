@@ -13,7 +13,6 @@ Item {
     property bool showRefreshButton: false
     property bool showMinimizeButton: false
     property bool showMaximizeButton: false
-    property bool showCloseButton: false
     property bool showOpenInWindowButton: false
     property bool showSaveButton: false
     property bool disableSaveButton: false
@@ -65,6 +64,8 @@ Item {
                 LKTabButton {
                     property bool _hasIcon: modelData.startsWith("qrc:")
 
+                    // Chart and host details tabs can't be closed.
+                    showCloseButton: Theme.showCharts ? index > 1 : index > 0
                     // Handle strings starting with "qrc:" as icons.
                     text: _hasIcon ? "" : modelData
                     iconSource: _hasIcon ? modelData : ""
@@ -145,7 +146,6 @@ Item {
             flatButton: true
             tooltip: "Close"
             onClicked: root.closeClicked()
-            visible: root.showCloseButton
         }
     }
 
