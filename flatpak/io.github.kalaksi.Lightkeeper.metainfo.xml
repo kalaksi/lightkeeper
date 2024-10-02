@@ -28,6 +28,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.23.2" date="2024-10-02">
+      <description>
+        <ul>
+          <li>More UI fixes after Qt6 migration</li>
+          <li>Tabs can now be closed with middle-click</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.23.1" date="2024-10-01">
       <description>
         <ul>
