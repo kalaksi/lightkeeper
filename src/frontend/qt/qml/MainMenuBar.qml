@@ -15,7 +15,7 @@ ToolBar {
     property int iconSize: 24
 
     focus: true
-    height: 38
+    height: 42
 
     signal clickedAdd()
     signal clickedRemove()
