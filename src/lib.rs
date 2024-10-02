@@ -66,7 +66,7 @@ pub fn run(
         }
     }
     else {
-        log::info!("Charts are disabled.");
+        log::debug!("Charts are disabled.");
         None
     };
 
