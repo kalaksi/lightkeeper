@@ -32,6 +32,7 @@ pub struct ChartManagerModel {
     pro_service: Option<pro_service::ProService>,
 }
 
+#[allow(non_snake_case)]
 impl ChartManagerModel {
     pub fn new(pro_service: Option<pro_service::ProService>) -> ChartManagerModel {
         ChartManagerModel {

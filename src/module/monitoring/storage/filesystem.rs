@@ -94,7 +94,7 @@ impl MonitoringModule for Filesystem {
                 continue;
             }
 
-            let mut data_point = DataPoint::labeled_value(mountpoint.clone(), used_percent);
+            let mut data_point = DataPoint::labeled_value(mountpoint.clone(), format!("{} %", used_percent));
             data_point.value_int = used_percent_float as i64;
             data_point.criticality = if used_percent_float >= self.threshold_critical {
                 Criticality::Critical

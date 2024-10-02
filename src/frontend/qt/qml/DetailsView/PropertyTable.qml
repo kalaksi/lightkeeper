@@ -143,17 +143,32 @@ TableView {
                         visible: styledValue.display_options.display_style === "ProgressBar"
                         spacing: Theme.spacingNormal
 
-                        property string pureValue: styledValue.data_point.value.split(" ")[0]
-
                         ProgressBar {
+                            id: progressBar
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.parent.width * 0.6
-                            height: parent.parent.height * 0.5
-                            value: parseInt(parent.pureValue, 10) / 100.0
+                            height: 6
+                            value: styledValue.data_point.value_int / 100.0
+
+                            // The color can be wrong on some platforms and progress bar invisible, so force color.
+                            // This can also later be used to set color according to criticality level.
+                            contentItem: Rectangle {
+                                implicitHeight: progressBar.height
+                                implicitWidth: progressBar.width
+                                color: "#202020"
+                                radius: 4
+
+                                Rectangle {
+                                    height: parent.height
+                                    width: progressBar.visualPosition * parent.width
+                                    color: palette.highlight
+                                    radius: parent.radius
+                                }
+                            }
                         }
 
                         SmallerText {
-                            text: styledValue.data_point.value === parent.pureValue ? parent.pureValue + " %" : styledValue.data_point.value
+                            text: styledValue.data_point.value
                             anchors.verticalCenter: parent.verticalCenter
                             lineHeight: 0.9
                         }
