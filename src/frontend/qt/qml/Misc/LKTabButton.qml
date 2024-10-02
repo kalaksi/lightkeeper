@@ -56,82 +56,99 @@ TabButton {
         }
     }
 
-    contentItem: Row {
+    contentItem: Item {
         height: root.height
         width: root.width
 
-        NormalText {
-            id: label
-            visible: label.text !== ""
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.text
-            padding: Theme.spacingNormal
-        }
-
-        Image {
-            id: icon
-            visible: root.iconSource !== ""
-            source: root.iconSource
-            sourceSize.width: 22
-            sourceSize.height: 22
-            width: root.iconSize
-            height: root.iconSize
-            anchors.verticalCenter: parent.verticalCenter
-        }
-
-        RoundButton {
-            id: closeButton
-            visible: root.showCloseButton
-            flat: true
-            focusPolicy: Qt.NoFocus
-            // Custom hover effect provided below.
-            hoverEnabled: false
-            height: root.closeButtonSize
-            width: root.closeButtonSize
-            anchors.verticalCenter: parent.verticalCenter
-
-            Image {
-                id: defaultImage
-                visible: true
-                anchors.centerIn: parent
-                source: "qrc:/main/images/button/close"
-                width: root.closeButtonSize * 0.5
-                height: root.closeButtonSize * 0.8
+        // Close with middle-click.
+        MouseArea {
+            anchors.fill: parent 
+            acceptedButtons: Qt.MiddleButton
+            onClicked: function(mouse) {
+                if (mouse.button === Qt.MiddleButton) {
+                    root.tabClosed()
+                }
             }
+        }
 
-            ColorOverlay {
-                anchors.fill: defaultImage
-                source: defaultImage
-                // By default this icon is black, so changing it here.
-                color: Theme.iconColor
-                antialiasing: true
+        Row {
+            id: contentRow
+            anchors.fill: parent
+
+            NormalText {
+                id: label
+                visible: label.text !== ""
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.text
+                padding: Theme.spacingNormal
             }
 
             Image {
-                id: hoveredImage
-                visible: false
-                opacity: 0.8
-                anchors.centerIn: parent
-                source: "qrc:/main/images/button/tab-close"
-                width: root.closeButtonSize
+                id: icon
+                visible: root.iconSource !== ""
+                source: root.iconSource
+                sourceSize.width: 22
+                sourceSize.height: 22
+                width: root.iconSize
+                height: root.iconSize
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            RoundButton {
+                id: closeButton
+                visible: root.showCloseButton
+                flat: true
+                focusPolicy: Qt.NoFocus
+                // Custom hover effect provided below.
+                hoverEnabled: false
                 height: root.closeButtonSize
-            }
+                width: root.closeButtonSize
+                anchors.verticalCenter: parent.verticalCenter
 
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-
-                onEntered: {
-                    defaultImage.visible = false
-                    hoveredImage.visible = true
+                Image {
+                    id: defaultImage
+                    visible: true
+                    anchors.centerIn: parent
+                    source: "qrc:/main/images/button/close"
+                    width: root.closeButtonSize * 0.5
+                    height: root.closeButtonSize * 0.8
                 }
 
-                onExited: {
-                    defaultImage.visible = true
-                    hoveredImage.visible = false
+                ColorOverlay {
+                    anchors.fill: defaultImage
+                    source: defaultImage
+                    // By default this icon is black, so changing it here.
+                    color: Theme.iconColor
+                    antialiasing: true
                 }
 
-                onClicked: root.tabClosed()
+                Image {
+                    id: hoveredImage
+                    visible: false
+                    opacity: 0.8
+                    anchors.centerIn: parent
+                    source: "qrc:/main/images/button/tab-close"
+                    width: root.closeButtonSize
+                    height: root.closeButtonSize
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    preventStealing: true
+
+                    onEntered: {
+                        defaultImage.visible = false
+                        hoveredImage.visible = true
+                    }
+
+                    onExited: {
+                        defaultImage.visible = true
+                        hoveredImage.visible = false
+                    }
+
+                    onClicked: root.tabClosed()
+                }
             }
         }
     }
