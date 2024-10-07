@@ -7,7 +7,8 @@ use crate::{
     connection_manager::{CachePolicy, ConnectionManager},
     frontend::{HostDisplayData, UIUpdate},
     host_manager,
-    pro_service,
+    module::monitoring::MonitoringData,
+    pro_service
 };
 
 use super::{
@@ -117,12 +118,28 @@ impl LkBackend {
             }
         });
 
+        let self_ptr = QPointer::from(&*self);
+        let process_chart_insert = qmetaobject::queued_callback(move |(host_id, new_monitoring_data): (String, MonitoringData)| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                for data_point in new_monitoring_data.values {
+                    self_pinned.borrow().charts.borrow_mut().insert_data_point(&host_id, &new_monitoring_data.monitor_id, data_point);
+                }
+            }
+        });
+
         let thread = std::thread::spawn(move || {
             loop {
                 match update_receiver.recv() {
                     Ok(received_data) => {
                         match received_data {
-                            UIUpdate::Host(display_data) => process_host_update(display_data),
+                            UIUpdate::Host(display_data) => {
+                                if let Some(new_monitoring_data) = &display_data.new_monitoring_data {
+                                    if new_monitoring_data.1.display_options.use_with_charts {
+                                        process_chart_insert((display_data.host_state.host.name.clone(), new_monitoring_data.1.clone()));
+                                    }
+                                }
+                                process_host_update(display_data);
+                            }
                             UIUpdate::Chart(metrics) => process_chart_update(metrics),
                             UIUpdate::Stop() => {
                                 ::log::debug!("Gracefully exiting UI state receiver thread");

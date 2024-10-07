@@ -245,7 +245,7 @@ oa+0OVYkrhzs+eD6jhJNy07j6Am9lahDzg==
         tls_config
     }
 
-    pub fn send_request(&mut self, request_type: RequestType) -> u64 {
+    pub fn send_request(&mut self, request_type: RequestType) -> Result<u64, LkError> {
         let invocation_id = self.invocation_id_counter;
         self.invocation_id_counter += 1;
 
@@ -257,8 +257,9 @@ oa+0OVYkrhzs+eD6jhJNy07j6Am9lahDzg==
             request_type: request_type,
         };
 
-        self.request_sender.clone().send(service_request).unwrap();
-        invocation_id
+        self.request_sender.clone().send(service_request)
+                                   .map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
+        Ok(invocation_id)
     }
 
     fn process_requests(request_receiver: mpsc::Receiver<ServiceRequest>, update_sender: mpsc::Sender<UIUpdate>) {

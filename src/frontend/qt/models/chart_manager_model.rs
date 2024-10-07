@@ -5,7 +5,6 @@ use std::time::SystemTime;
 use qmetaobject::*;
 
 use crate::{
-    error::LkError,
     module::monitoring::DataPoint,
     pro_service,
 };
@@ -50,7 +49,7 @@ impl ChartManagerModel {
         }
     }
 
-    pub fn insert_data_point(&mut self, host_id: &str, monitor_id: &str, data_point: DataPoint) -> Result<u64, LkError> {
+    pub fn insert_data_point(&mut self, host_id: &str, monitor_id: &str, data_point: DataPoint) {
         if let Some(pro_service) = self.pro_service.as_mut() {
             let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as i64;
 
@@ -68,16 +67,11 @@ impl ChartManagerModel {
                 });
             }
 
-            let invocation_id = pro_service.send_request(pro_service::RequestType::MetricsInsert {
+            let _invocation_result = pro_service.send_request(pro_service::RequestType::MetricsInsert {
                     host_id: host_id.to_string(),
                     monitor_id: monitor_id.to_string(),
                     metrics: metrics,
             });
-
-            Ok(invocation_id)
-        }
-        else {
-            Err(LkError::other("Pro Service is not available."))
         }
     }
 
@@ -85,14 +79,20 @@ impl ChartManagerModel {
         if let Some(pro_service) = self.pro_service.as_mut() {
             let current_unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
-            let invocation_id = pro_service.send_request(pro_service::RequestType::MetricsQuery {
+            let invocation_result = pro_service.send_request(pro_service::RequestType::MetricsQuery {
                     host_id: host_id.to_string(),
                     monitor_id: monitor_id.to_string(),
                     start_time: current_unix_time.as_secs() as i64 - 60 * 60 * 24,
                     end_time: current_unix_time.as_secs() as i64,
             });
 
-            invocation_id
+            match invocation_result {
+                Ok(invocation_id) => invocation_id,
+                Err(error) => {
+                    ::log::error!("Error refreshing charts: {:?}", error);
+                    0
+                }
+            }
         }
         else {
             0
