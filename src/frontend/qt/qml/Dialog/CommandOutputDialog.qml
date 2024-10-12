@@ -54,6 +54,22 @@ LightkeeperDialog {
                 width: parent.parent.width * 0.95
                 height: parent.height * 0.5
                 value: root.progress / 100.0
+
+                // The color can be wrong on some platforms and progress bar invisible, so force color.
+                // This can also later be used to set color according to criticality level.
+                contentItem: Rectangle {
+                    implicitHeight: progressBar.height
+                    implicitWidth: progressBar.width
+                    color: "#202020"
+                    radius: 4
+
+                    Rectangle {
+                        height: parent.height
+                        width: progressBar.visualPosition * parent.width
+                        color: palette.highlight
+                        radius: parent.radius
+                    }
+                }
             }
 
             NormalText {
@@ -65,7 +81,6 @@ LightkeeperDialog {
 
         LogList {
             id: commandOutput
-            visible: root.text.length > 0
             rows: []
             enableShortcuts: root.enableShortcuts
             selectionColor: "transparent"
