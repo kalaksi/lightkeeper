@@ -15,8 +15,13 @@ use crate::frontend::UIUpdate;
 use std::process::Command;
 
 //
-// NOTE: This is a module for interfacing with Lightkeeper Pro Services extension.
-// It is a closed-source binary that provides additional features to Lightkeeper to make an open-core model possible (free in beta).
+// NOTE: This is a module for interfacing with Lightkeeper Pro Services extension. The extension is not enabled by default.
+// It is a closed-source binary (otherwise, it would be easy to get for free) that provides additional features for Lightkeeper and
+// makes an open-core model possible.
+// This separation is done early in the development for transparency and to better prepare for possible future monetization to support the project.
+// My dream is to dedicate more time to open source software, but the reality is that without any financial support,
+// it's hard since I'll also have to work full-time.
+//
 // The extension is optional and the binary is not installed by default, but downloaded from GitHub on demand.
 // Even though it's closed-source, the communication protocol is open (see this file), so you can verify what kind of requests are sent and received.
 // The Pro Services extension does not use or need network access and can't send malicious input to Lightkeeper (according to bincode).
