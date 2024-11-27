@@ -14,7 +14,7 @@ In case you find the GUI insufficient and need to dig deeper, you can always use
 
 **Extensive keyboard shortcuts**.
   
-*NOTE: this is currently a pre-release and still has bugs and is missing some features. Documentation is also not yet complete.*
+*NOTE: Lightkeeper is currently in beta and still has bugs and is missing some features. Documentation is also not yet complete.*
 
 <br />
 <br />
@@ -38,6 +38,25 @@ The idea for Lightkeeper rose from personal needs. Writing the same commands ove
 Another pain point was monitoring. Configuring and maintaining a software stack for relatively simple monitoring needs (graphs, alerts) can get needlessly heavy. Specifically, in my case, I aim to replace CollectD, InfluxDB and Grafana (although, an external DB would still be possible with Lightkeeper).  
   
 So, I started formulating an idea about a more integrated maintenance tool for power users to simplify everything. At the same time, deploying should be as simple as possible since the aim is to streamline. The plain old shell doesn't need additional daemons on the servers so Lightkeeper shouldn't either.  
+
+# Table of contents
+
+- [Installing](#installing)
+   - [Flatpak](#flatpak)
+- [Building from source](#building-from-source)
+   - [Flatpak](#flatpak-1)
+   - [Regular](#regular)
+      - [Post-install](#post-install)
+- [Server OS support](#server-os-support)
+- [Configuration](#configuration)
+   - [Configuration files](#configuration-files)
+- [Debug logging](#debug-logging)
+- [Testing](#testing)
+- [License](#license)
+   - [Lightkeeper](#lightkeeper)
+   - [Crate dependencies](#crate-dependencies)
+   - [Liboping](#liboping)
+
 
 # Installing
 ## Flatpak
@@ -77,6 +96,7 @@ Migration to Qt6 is now done, so now you'll need these packages on Ubuntu 24.04:
 - qml6-module-qtquick-window
 - qml6-module-qtquick-dialogs
 - qml6-module-qt-labs-platform
+- qml6-module-qtcharts
 
 Building:
 ```
@@ -130,7 +150,8 @@ Log levels are controlled with environment variable `RUST_LOG`, so use `RUST_LOG
 # Testing
 `test-env`-directory contains Vagrantfiles for virtual machines and also matching configurations for testing.  
 You can use `--config-dir` to load the test configuration for manual testing. For example, `./target/debug/lightkeeper --config-dir test` if building from source.  
-For automatic testing, run `cargo test`.
+Automatic testing (`cargo test`) is currently not usable.
+
 
 # License
 ## Lightkeeper
