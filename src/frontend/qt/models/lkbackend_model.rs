@@ -114,7 +114,7 @@ impl LkBackend {
         let self_ptr = QPointer::from(&*self);
         let process_chart_update = qmetaobject::queued_callback(move |response: pro_service::ServiceResponse| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
-                self_pinned.borrow().charts.borrow_mut().process_response(response);
+                self_pinned.borrow().charts.borrow_mut().process_update(response);
             }
         });
 

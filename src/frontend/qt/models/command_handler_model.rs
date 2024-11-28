@@ -115,8 +115,7 @@ impl CommandHandlerModel {
         let category_string = category.to_string();
 
         let mut category_commands = self.command_handler.get_commands_for_host(host_id.to_string())
-                                                        .into_iter().filter(|(_, data)| data.display_options.category == category_string)
-                                                        .map(|(_, data)| data)
+                                                        .into_values().filter(|data| data.display_options.category == category_string)
                                                         .collect::<Vec<CommandData>>();
 
         let command_order = match self.configuration.display_options.categories.get(&category_string) {
