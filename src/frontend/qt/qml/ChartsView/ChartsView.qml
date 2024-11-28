@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtCharts
 
 import ".."
 import "../Text"
@@ -30,6 +31,7 @@ Item {
 
         function onDataReceived(invocationId, chartDataJson) {
             if (hostId === root.hostId) {
+                console.log("ChartsView.onDataReceived", invocationId, chartDataJson)
                 root.refresh()
             }
         }
@@ -94,6 +96,12 @@ Item {
                         onRefreshClicked: function() {
                             // TODO
                         }
+                    }
+
+                    ColumnLayout {
+                        id: column
+                        anchors.fill: parent
+                        spacing: 0
                     }
                 }
             }
