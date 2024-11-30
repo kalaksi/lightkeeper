@@ -97,9 +97,11 @@ impl QmlFrontend {
         else {
             if sandboxed {
                 engine.add_import_path(QString::from("/app/qmltermwidget/usr/qml/"));
+                engine.add_import_path(QString::from("/app/ChartJs2QML"));
             }
             else {
                 engine.add_import_path(QString::from("./third_party/qmltermwidget"));
+                engine.add_import_path(QString::from("./third_party/ChartJs2QML"));
             }
             engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
             engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
