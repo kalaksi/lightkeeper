@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtCharts
+
+import ChartJs 1.0
 
 import ".."
 import "../Text"
@@ -102,6 +103,95 @@ Item {
                         id: column
                         anchors.fill: parent
                         spacing: 0
+
+		Chart {
+            width: 400
+            height: 300
+			chartType: 'line'
+
+			chartData: { return {
+					labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+					datasets: [{
+						label: 'Filled',
+						fill: true,
+						backgroundColor: 'rgba(192,222,255,0.3)',
+						borderColor: 'rgba(128,192,255,255)',
+						data: [
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1)
+						],
+					}, {
+						label: 'Dashed',
+						fill: false,
+						backgroundColor: 'rgba(0,0,0,0)',
+						borderColor: '#009900',
+						borderDash: [5, 5],
+						data: [
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1)
+						],
+					}, {
+						label: 'Filled',
+						backgroundColor: 'rgba(0,0,0,0)',
+						borderColor: '#990000',
+						data: [
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1),
+							Math.random().toFixed(1)
+						],
+						fill: false,
+					}]
+				}
+			}
+
+			chartOptions: {return {
+					maintainAspectRatio: false,
+					responsive: true,
+					title: {
+						display: true,
+						text: 'Chart.js Line Chart'
+					},
+					tooltips: {
+						mode: 'index',
+						intersect: false,
+					},
+					hover: {
+						mode: 'nearest',
+						intersect: true
+					},
+					scales: {
+						xAxes: [{
+							display: true,
+							scaleLabel: {
+								display: true,
+								labelString: 'Month'
+							}
+						}],
+						yAxes: [{
+							display: true,
+							scaleLabel: {
+								display: true,
+								labelString: 'Value'
+							}
+						}]
+					}
+				}
+			}
+		}
                     }
                 }
             }
@@ -110,6 +200,7 @@ Item {
 
     function refresh() {
         if (root.hostId !== "") {
+            // TODO: effect on performance if checking categories every time?
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
                                         .map(category_qv => category_qv.toString())
 

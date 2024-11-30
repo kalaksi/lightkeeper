@@ -295,6 +295,7 @@ Item {
         if (root.hostId !== "") {
             root._hostDetailsJson = LK.hosts.getHostDataJson(hostId)
             root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
+            // TODO: effect on performance if checking categories every time?
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
                                         .map(category_qv => category_qv.toString())
         }
