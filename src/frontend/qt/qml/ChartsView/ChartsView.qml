@@ -27,17 +27,6 @@ Item {
         root.refresh()
     }
 
-    Connections {
-        target: LK.charts
-
-        function onDataReceived(invocationId, chartDataJson) {
-            if (hostId === root.hostId) {
-                console.log("ChartsView.onDataReceived", invocationId, chartDataJson)
-                root.refresh()
-            }
-        }
-    }
-
     // ScrollView doesn't have boundsBehavior so this is the workaround.
     Binding {
         target: rootScrollView.contentItem
@@ -104,94 +93,86 @@ Item {
                         anchors.fill: parent
                         spacing: 0
 
-		Chart {
-            width: 400
-            height: 300
-			chartType: 'line'
+                        Chart {
+                            id: chart
+                            width: 450
+                            height: 200
+                            chartType: "line"
 
-			chartData: { return {
-					labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-					datasets: [{
-						label: 'Filled',
-						fill: true,
-						backgroundColor: 'rgba(192,222,255,0.3)',
-						borderColor: 'rgba(128,192,255,255)',
-						data: [
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1)
-						],
-					}, {
-						label: 'Dashed',
-						fill: false,
-						backgroundColor: 'rgba(0,0,0,0)',
-						borderColor: '#009900',
-						borderDash: [5, 5],
-						data: [
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1)
-						],
-					}, {
-						label: 'Filled',
-						backgroundColor: 'rgba(0,0,0,0)',
-						borderColor: '#990000',
-						data: [
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1),
-							Math.random().toFixed(1)
-						],
-						fill: false,
-					}]
-				}
-			}
+                            chartData: {
+                                return {
+                                    datasets: [{
+                                        label: "Filled",
+                                        fill: true,
+                                        backgroundColor: "rgba(192,222,255,0.3)",
+                                        borderColor: "rgba(128,192,255,255)",
+                                        borderWidth: 2,
+                                        // pointRadius: 2,
+                                        data: [],
+                                    }]
+                                }
+                            }
 
-			chartOptions: {return {
-					maintainAspectRatio: false,
-					responsive: true,
-					title: {
-						display: true,
-						text: 'Chart.js Line Chart'
-					},
-					tooltips: {
-						mode: 'index',
-						intersect: false,
-					},
-					hover: {
-						mode: 'nearest',
-						intersect: true
-					},
-					scales: {
-						xAxes: [{
-							display: true,
-							scaleLabel: {
-								display: true,
-								labelString: 'Month'
-							}
-						}],
-						yAxes: [{
-							display: true,
-							scaleLabel: {
-								display: true,
-								labelString: 'Value'
-							}
-						}]
-					}
-				}
-			}
-		}
+                            chartOptions: {
+                                return {
+                                    maintainAspectRatio: false,
+                                    responsive: true,
+                                    title: {
+                                        display: true,
+                                        text: "Line Chart"
+                                    },
+                                    tooltips: {
+                                        mode: "index",
+                                        intersect: false,
+                                    },
+                                    hover: {
+                                        mode: "nearest",
+                                        intersect: true
+                                    },
+                                    scales: {
+                                        xAxes: [{
+                                            display: true,
+                                            type: "time",
+                                            time: {
+                                                // Unix timestamp in ms.
+                                                parser: "x"
+                                            },
+                                            scaleLabel: {
+                                                display: true,
+                                                labelString: "Time"
+                                            }
+                                        }],
+                                        yAxes: [{
+                                            display: true,
+                                            scaleLabel: {
+                                                display: true,
+                                                labelString: "Value"
+                                            }
+                                        }]
+                                    }
+                                }
+                            }
+
+                            Connections {
+                                target: LK.charts
+
+                                function onDataReceived(invocationId, chartDataJson) {
+                                    if (hostId === root.hostId) {
+                                        let chartDatas = JSON.parse(chartDataJson)
+                                        console.log("ChartsView.onDataReceived", invocationId, chartDataJson)
+                                        for (const monitorId in chartDatas) {
+                                            if (monitorId === "ram") {
+                                                let newValues = chartDatas[monitorId].map(item => { return {"t": item.time * 1000, "y": item.value}})
+                                                chart.chartData.datasets[0].data = newValues
+                                                chart.animateToNewData()
+                                            }
+
+                                        }
+                                        root.refresh()
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

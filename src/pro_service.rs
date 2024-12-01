@@ -405,6 +405,7 @@ pub struct ServiceResponse {
     pub request_id: u64,
     // In milliseconds. 0 if not set.
     pub lag: u32,
+    /// Key is monitor ID.
     pub metrics: HashMap<String, Vec<Metric>>,
     pub errors: Vec<String>,
 }
