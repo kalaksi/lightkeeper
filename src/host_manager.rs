@@ -68,11 +68,16 @@ impl HostManager {
             log::debug!("Found configuration for host {}", host_id);
 
             // TODO: UseSudo is currently always assumed.
-            let host = Host::new(host_id, &host_config.address, &host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]);
-            if let Err(error) = hosts.add(host, HostStatus::Unknown) {
-                log::error!("{}", error.to_string());
+            if let Ok(host) = Host::new(host_id, &host_config.address, &host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]) {
+                if let Err(error) = hosts.add(host, HostStatus::Unknown) {
+                    log::error!("{}", error.to_string());
+                    continue;
+                }
+            }
+            else {
+                log::error!("Failed to create host {}", host_id);
                 continue;
-            };
+            }
         }
 
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();

@@ -7,7 +7,11 @@ use std::{
     str::FromStr,
 };
 
-use crate::module::PlatformInfo;
+use crate::{
+    error::*,
+    module::PlatformInfo,
+    utils
+};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Host {
@@ -19,7 +23,13 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(name: &str, ip_address: &str, fqdn: &str, settings: &[HostSetting]) -> Self {
+    pub fn new(name: &str, ip_address: &str, fqdn: &str, settings: &[HostSetting]) -> Result<Self, LkError> {
+        // TODO: enforce host name with type?
+        if !utils::string_validation::is_alphanumeric_with(name, "-") {
+            log::error!("Host name {} contains invalid characters and is ignored", name);
+            return Err(LkError::new(ErrorKind::InvalidConfig, "Invalid host name"));
+        }
+
         let mut new = Host {
             name: name.to_string(),
             fqdn: fqdn.to_string(),
@@ -38,7 +48,7 @@ impl Host {
             log::error!("{}", error);
         }
 
-        new
+        Ok(new)
     }
 
     pub fn empty(name: &str, settings: &[HostSetting]) -> Self {

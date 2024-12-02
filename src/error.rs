@@ -49,10 +49,6 @@ impl LkError {
         }
     }
 
-    pub fn config<Stringable: ToString>(message: Stringable) -> LkError {
-        LkError::new(ErrorKind::InvalidConfig, message)
-    }
-
     pub fn other<Stringable: ToString>(message: Stringable) -> LkError {
         LkError::new(ErrorKind::Other, message)
     }
@@ -106,10 +102,10 @@ pub enum ErrorKind {
     ConnectionFailed,
     /// Encountered an unknown host key.
     HostKeyNotVerified,
-    /// Not implemented.
-    NotImplemented,
     /// Error in configuration files.
     InvalidConfig,
+    /// Not implemented.
+    NotImplemented,
     #[default]
     /// Other unspecified error.
     Other,

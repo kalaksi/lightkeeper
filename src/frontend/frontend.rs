@@ -57,7 +57,7 @@ impl Default for HostDisplayData {
     fn default() -> Self {
         HostDisplayData {
             host_state: HostState {
-                host: Host::new("", "127.0.0.1", "", &Vec::new()),
+                host: Host::default(),
                 status: HostStatus::default(),
                 just_initialized: false,
                 just_initialized_from_cache: false,
