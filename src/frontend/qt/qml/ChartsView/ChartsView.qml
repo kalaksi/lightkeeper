@@ -17,6 +17,7 @@ Item {
     property int columnMaximumWidth: Theme.groupboxMaxWidth
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
+    property int chartHeight: 100
     property int columnSpacing: Theme.spacingNormal
     property bool enableShortcuts: false
     property var _categories: {}
@@ -56,7 +57,6 @@ Item {
 
                 GroupBox {
                     id: groupBox
-                    property bool blocked: true
                     property var _invocationIdToButton: {}
 
                     leftPadding: Theme.spacingTight
@@ -95,8 +95,8 @@ Item {
 
                         Chart {
                             id: chart
-                            width: 450
-                            height: 200
+                            width: root.columnMaximumWidth
+                            height: root.chartHeight
                             chartType: "line"
 
                             chartData: {
@@ -105,7 +105,7 @@ Item {
                                         label: "Filled",
                                         fill: true,
                                         backgroundColor: "rgba(192,222,255,0.3)",
-                                        borderColor: "rgba(128,192,255,255)",
+                                        borderColor: "rgba(255,255,255,1.0)",
                                         borderWidth: 2,
                                         // pointRadius: 2,
                                         data: [],
@@ -119,7 +119,10 @@ Item {
                                     responsive: true,
                                     title: {
                                         display: true,
-                                        text: "Line Chart"
+                                        text: modelData,
+                                        fontColor: Theme.textColor,
+                                        padding: 5,
+                                        lineHeight: 1.0
                                     },
                                     tooltips: {
                                         mode: "index",
@@ -129,9 +132,15 @@ Item {
                                         mode: "nearest",
                                         intersect: true
                                     },
+                                    legend: {
+                                        display: false,
+                                        labels: {
+                                            fontColor: Theme.textColor
+                                        }
+                                    },
                                     scales: {
                                         xAxes: [{
-                                            display: true,
+                                            display: false,
                                             type: "time",
                                             time: {
                                                 // Unix timestamp in ms.
@@ -139,14 +148,38 @@ Item {
                                             },
                                             scaleLabel: {
                                                 display: true,
-                                                labelString: "Time"
+                                                // labelString: "Time"
+                                            },
+                                            gridLines: {
+                                                display: false,
+                                            },
+                                            ticks: {
+                                                maxTicksLimit: 12,
+                                                fontColor: Theme.textColor,
+                                                // Performance optimization:
+                                                maxRotation: 0,
+                                                minRotation: 0,
                                             }
                                         }],
                                         yAxes: [{
                                             display: true,
                                             scaleLabel: {
                                                 display: true,
-                                                labelString: "Value"
+                                                labelString: "%",
+                                                fontColor: Theme.textColor
+                                            },
+                                            gridLines: {
+                                                display: true,
+                                                color: "rgba(255,255,255,0.1)"
+                                            },
+                                            ticks: {
+                                                min: 0.0,
+                                                max: 100.0,
+                                                maxTicksLimit: 8,
+                                                fontColor: Theme.textColor,
+                                                // Performance optimization:
+                                                maxRotation: 0,
+                                                minRotation: 0,
                                             }
                                         }]
                                     }
