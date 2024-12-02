@@ -90,12 +90,13 @@ Item {
 
                     ColumnLayout {
                         id: column
-                        anchors.fill: parent
+                        width: parent.width
                         spacing: 0
 
                         Chart {
                             id: chart
-                            width: root.columnMaximumWidth
+                            visible: false
+                            width: root.columnMinimumWidth
                             height: root.chartHeight
                             chartType: "line"
 
@@ -197,6 +198,7 @@ Item {
                                             if (monitorId === "ram") {
                                                 let newValues = chartDatas[monitorId].map(item => { return {"t": item.time * 1000, "y": item.value}})
                                                 chart.chartData.datasets[0].data = newValues
+                                                chart.visible = true
                                                 chart.animateToNewData()
                                             }
 
