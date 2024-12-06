@@ -67,11 +67,15 @@ impl ChartManagerModel {
                 });
             }
 
-            let _invocation_result = pro_service.send_request(pro_service::RequestType::MetricsInsert {
+            let invocation_result = pro_service.send_request(pro_service::RequestType::MetricsInsert {
                     host_id: host_id.to_string(),
                     monitor_id: monitor_id.to_string(),
                     metrics: metrics,
             });
+
+            if let Err(error) = invocation_result {
+                ::log::error!("Error inserting data point: {:?}", error);
+            }
         }
     }
 
