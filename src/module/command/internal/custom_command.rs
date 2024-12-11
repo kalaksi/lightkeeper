@@ -45,16 +45,22 @@ impl CommandModule for CustomCommand {
             Ok(shell_command.to_string())
         }
         else {
-            return Err(LkError::unsupported_platform());
+            Err(LkError::unsupported_platform())
         }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        if response.message.len() > 0 {
-            Ok(CommandResult::new_warning(response.message.clone()))
+        if response.is_partial {
+            Ok(CommandResult::new_partial(response.message.clone(), 1))
         }
         else {
-            Ok(CommandResult::new_info(response.message.clone()))
+            if response.return_code == 0 {
+                Ok(CommandResult::new_hidden(response.message.clone()))
+            }
+            else {
+                Ok(CommandResult::new_hidden(response.message.clone())
+                                 .with_criticality(crate::enums::Criticality::Error))
+            }
         }
     }
 }

@@ -19,6 +19,11 @@ pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
 
     //
+    // Properties
+    //
+    customCommands: qt_property!(QStringList; NOTIFY customCommandsChanged),
+
+    //
     // Slots
     //
     getAllHostCategories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
@@ -46,6 +51,8 @@ pub struct CommandHandlerModel {
     // Signals
     //
 
+    customCommandsChanged: qt_signal!(),
+
     // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     detailsDialogOpened: qt_signal!(invocation_id: u64),
     inputDialogOpened: qt_signal!(input_specs: QString, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList),
@@ -70,12 +77,10 @@ pub struct CommandHandlerModel {
 
 #[allow(non_snake_case)]
 impl CommandHandlerModel {
-    pub fn new(
-        command_handler: CommandHandler,
-        monitor_manager: MonitorManager,
-        configuration: configuration::Configuration) -> Self {
-
+    pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, configuration: configuration::Configuration) -> Self {
         CommandHandlerModel { 
+            // TODO: customcommands
+            customCommands: QStringList::default(),
             command_handler: command_handler,
             monitor_manager: monitor_manager,
             configuration: configuration,

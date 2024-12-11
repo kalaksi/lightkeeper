@@ -172,10 +172,13 @@ pub struct HostSettings {
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct ConfigGroup {
+    // Hashmap keys are always names/ids.
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub monitors: HashMap<String, MonitorConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub commands: HashMap<String, CommandConfig>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub custom_commands: Vec<CustomCommandConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub connectors: HashMap<String, ConnectorConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
@@ -262,6 +265,14 @@ impl Default for CommandConfig {
             settings: HashMap::new(),
         }
     }
+}
+
+#[derive(Default, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct CustomCommandConfig {
+    pub name: String,
+    pub description: String,
+    pub command: String,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -353,6 +364,7 @@ impl Configuration {
                 commands: host_config.commands.clone(),
                 monitors: host_config.monitors.clone(),
                 connectors: host_config.connectors.clone(),
+                custom_commands: Vec::new(),
                 host_settings: host_config.settings.clone(),
                 config_helper: Default::default(),
             };

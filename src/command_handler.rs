@@ -9,6 +9,7 @@ use serde_derive::{Serialize, Deserialize};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::configuration::CustomCommandConfig;
 use crate::utils::sha256;
 use crate::configuration::Hosts;
 use crate::error::*;
@@ -37,6 +38,8 @@ use crate::module::{
 pub struct CommandHandler {
     /// Host name is the first key, command id is the second key.
     commands: Arc<Mutex<HashMap<String, HashMap<String, Command>>>>,
+    /// Host name is the first key, custom command name/id is the second key.
+    custom_commands: HashMap<String, HashMap<String, CustomCommandConfig>>,
     /// For communication to ConnectionManager.
     request_sender: Option<mpsc::Sender<ConnectorRequest>>,
     /// Channel to send state updates to HostManager.
@@ -602,6 +605,13 @@ impl CommandHandler {
     //
     // HELPER FUNCTIONS
     //
+
+    pub fn get_custom_commands_for_host(&self, host_id: &String) -> HashMap<String, CustomCommandConfig> {
+        match self.custom_commands.get(host_id) {
+            Some(commands) => commands.clone(),
+            None => HashMap::new()
+        }
+    }
 
     // Return value contains host's commands. `parameters` is not set since provided by data point later on.
     pub fn get_commands_for_host(&self, host_id: String) -> HashMap<String, CommandData> {
