@@ -20,10 +20,13 @@ LightkeeperDialog {
         id: content
         anchors.fill: parent
         anchors.margins: Theme.marginDialog
+        anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
 
         NormalText {
             text: root.text
-            anchors.centerIn: parent
+            width: parent.width
+            wrapMode: Text.Wrap
         }
     }
 
