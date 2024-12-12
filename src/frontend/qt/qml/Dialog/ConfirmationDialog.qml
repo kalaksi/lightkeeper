@@ -9,6 +9,8 @@ LightkeeperDialog {
     id: root
 
     property string text: ""
+    // Center short text automatically.
+    property bool centerText: text.length < 30
 
     title: "Confirmation"
     standardButtons: Dialog.Yes | Dialog.No
@@ -27,6 +29,7 @@ LightkeeperDialog {
             text: root.text
             width: parent.width
             wrapMode: Text.Wrap
+            horizontalAlignment: root.centerText ? Text.AlignHCenter : Text.AlignLeft
         }
     }
 
