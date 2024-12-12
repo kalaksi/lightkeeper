@@ -13,7 +13,6 @@ ListView {
     property bool enableShortcuts: true
     property string selectionColor: Theme.highlightColorLight
     property bool invertRowOrder: true
-    property bool scrollToBottom: !invertRowOrder
     /// If enabled, only appends new rows to the model instead of reprocessing all. Makes processing more performant.
     /// Not compatible with invertRowOrder as new rows are always appended to the end.
     property bool appendOnly: false
@@ -66,12 +65,13 @@ ListView {
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
-                onClicked: {
-                    root.currentIndex = index
-
+                onClicked: function(mouse) {
                     // Right-click opens context menu.
                     if (mouse.button === Qt.RightButton) {
                         contextMenu.popup()
+                    }
+                    else if (mouse.button === Qt.LeftButton) {
+                        root.currentIndex = index
                     }
                 }
 
@@ -80,7 +80,7 @@ ListView {
                     MenuItem {
                         text: "Copy"
                         onTriggered: {
-                            let text = root.rows[index]
+                            let text = root.modelRows[index]
                             root._copyToClipboard(text)
                         }
                     }
@@ -271,26 +271,30 @@ ListView {
             }
         }
         else {
+            let rowsClone = [...root.rows]
             if (root.invertRowOrder) {
-                root.rows.reverse()
+                rowsClone.reverse()
             }
 
-            let rowsClone = [...root.rows]
             let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
             root._matchingRows = matchingRows
             root._totalMatches = totalMatches
             root.model = modelRows
         }
-
-        if (root.scrollToBottom) {
-            root.positionViewAtEnd()
-        }
     }
 
     function toggleInvertRowOrder() {
         root.invertRowOrder = !root.invertRowOrder
-        root.rows.reverse()
         refresh()
+
+        if (root.rows.length > 0) {
+            if (root.invertRowOrder) {
+                root.currentIndex = 0
+            }
+            else {
+                root.currentIndex = root.rows.length - 1
+            }
+        }
     }
 
     function getSearchDetails() {

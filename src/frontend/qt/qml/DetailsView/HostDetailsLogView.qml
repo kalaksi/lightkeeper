@@ -202,6 +202,8 @@ Item {
                 Button {
                     anchors.leftMargin: 30
                     flat: true
+                    width: 32
+                    height: width
 
                     ToolTip.visible: hovered
                     ToolTip.text: "Search up"
@@ -211,7 +213,6 @@ Item {
                     Image {
                         width: 0.80 * parent.width
                         height: width
-                        anchors.fill: parent
                         anchors.centerIn: parent
                         source: "qrc:/main/images/button/search-up"
                     }
@@ -219,6 +220,8 @@ Item {
 
                 Button {
                     flat: true
+                    width: 32
+                    height: width
 
                     ToolTip.visible: hovered
                     ToolTip.text: "Search down"
@@ -228,7 +231,6 @@ Item {
                     Image {
                         width: 0.80 * parent.width
                         height: width
-                        anchors.fill: parent
                         anchors.centerIn: parent
                         source: "qrc:/main/images/button/search-down"
                     }
