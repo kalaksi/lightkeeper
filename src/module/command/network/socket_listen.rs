@@ -43,12 +43,7 @@ impl CommandModule for SocketListen {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
-
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["netstat", "-tulnp"]);
             Ok(command.to_string())
         }

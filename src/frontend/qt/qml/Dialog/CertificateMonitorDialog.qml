@@ -144,6 +144,7 @@ LightkeeperDialog {
                             anchors.verticalCenter: parent.verticalCenter
 
                             NormalText {
+                                // TODO: produces warnings about undefined value when adding new entries.
                                 text: root.dataPoints[modelData].label
                             }
 
