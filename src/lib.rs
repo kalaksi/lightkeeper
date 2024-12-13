@@ -101,6 +101,7 @@ pub fn run(
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if !test {
+        log::debug!("Temporary log entry 7");
         frontend.start(command_handler, monitor_manager, connection_manager, host_manager, pro_service)
     }
     else {
