@@ -111,7 +111,7 @@ impl ModuleFactory {
     }
 
     pub fn validate_modules(&self) {
-        log::info!("Validating modules");
+        log::debug!("Validating modules");
 
         // Validate monitoring modules.
         for (metadata, constructor) in self.monitor_modules.iter() {

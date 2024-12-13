@@ -370,7 +370,7 @@ impl Ssh2 {
                 .map_err(|error| LkError::other(format!("Failed to authenticate with private key: {}", error)))?;
         }
         else {
-            log::info!("Password or key is not set, using SSH agent for authentication.");
+            log::debug!("Password or key is not set, using SSH agent for authentication.");
             let mut agent = session_data.session.agent()
                 .map_err(|error| LkError::other(format!("Failed to connect to SSH agent: {}", error)))?;
 
