@@ -106,7 +106,9 @@ impl QmlFrontend {
             engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
             engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
             engine.set_object_property(QString::from("DesktopPortal"), qt_file_chooser.pinned());
+            ::log::debug!("Temporary log entry 8");
             self.load_qml(&mut engine);
+            ::log::debug!("Temporary log entry 9");
             engine.exec();
         }
 

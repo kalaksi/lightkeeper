@@ -60,7 +60,7 @@ ListView {
             text: modelData || ""
             font.family: "monospace"
             textFormat: Text.RichText
-            wrapMode: Text.WordWrap
+            wrapMode: Text.Wrap
 
             MouseArea {
                 anchors.fill: parent
@@ -79,10 +79,7 @@ ListView {
                     id: contextMenu
                     MenuItem {
                         text: "Copy"
-                        onTriggered: {
-                            let text = root.modelRows[index]
-                            root._copyToClipboard(text)
-                        }
+                        onTriggered: root.copyRowToClipboard(index)
                     }
                 }
             }
@@ -92,7 +89,7 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequences: [StandardKey.Copy]
-        onActivated: root.copySelectionToClipboard()
+        onActivated: root.copyRowToClipboard(root.currentIndex)
     }
 
     // Vim-like shortcut.
@@ -114,7 +111,7 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "Y"
-        onActivated: logList.copySelectionToClipboard()
+        onActivated: logList.copyRowToClipboard(root.currentIndex)
     }
 
     // Vim-like shortcut.
@@ -172,9 +169,10 @@ ListView {
         text: ""
     }
 
-    function copySelectionToClipboard() {
-        if (root.currentIndex >= 0) {
-            let text = root.rows[root.currentIndex]
+    function copyRowToClipboard(modelIndex) {
+        if (modelIndex >= 0) {
+            let index = root.invertRowOrder ? root.rows.length - 1 - modelIndex : modelIndex
+            let text = root.rows[index]
             root._copyToClipboard(text)
         }
     }
@@ -224,17 +222,18 @@ ListView {
         for (let i = 0; i < rows.length; i++) {
             let text = rows[i]
             let lastIndex = 0
-            let match = regexp.exec(text)
-
             let rowMatches = false
             let resultRow = ""
+
+            let match = regexp.exec(text)
             while (match !== null) {
                 rowMatches = true
                 totalMatches += 1
 
                 let word = match[0]
+                // There are no security risks here but escaping is done to display text correctly since it's interpreted as rich text.
                 resultRow += TextTransform.escapeHtml(text.substring(lastIndex, match.index))
-                resultRow += "<span style='background-color: " + Theme.highlightColorBright + "'>" + word + "</span>"
+                resultRow += "<span style='background-color: " + Theme.highlightColorBright + "'>" + TextTransform.escapeHtml(word) + "</span>"
                 lastIndex = match.index + word.length
 
                 match = regexp.exec(text)

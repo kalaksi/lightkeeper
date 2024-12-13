@@ -265,7 +265,10 @@ Item {
     Shortcut {
         enabled: root.enableShortcuts
         sequences: [StandardKey.Find, "/"]
-        onActivated: searchField.focus = true
+        onActivated: {
+            searchField.focus = true
+            searchField.selectAll()
+        }
     }
 
     Shortcut {
