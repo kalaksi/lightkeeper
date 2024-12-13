@@ -13,6 +13,6 @@ pub trait MetadataSupport {
 
     /// IDs prefixed with _ are reserved for internal use.
     fn is_internal(&self) -> bool {
-        self.get_module_spec().id.starts_with("_")
+        self.get_module_spec().is_internal()
     }
 }

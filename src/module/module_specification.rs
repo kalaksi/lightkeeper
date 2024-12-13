@@ -49,6 +49,11 @@ impl ModuleSpecification {
     pub fn latest_version(&self) -> bool {
         self.version == "latest"
     }
+
+    /// IDs prefixed with _ are reserved for internal use.
+    pub fn is_internal(&self) -> bool {
+        self.id.starts_with("_")
+    }
 }
 
 impl Display for ModuleSpecification {

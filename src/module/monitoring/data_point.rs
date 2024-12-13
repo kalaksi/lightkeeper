@@ -104,6 +104,7 @@ impl DataPoint {
     pub fn is_internal(&self) -> bool {
         self.value.starts_with("_")
     }
+
     pub fn update_criticality_from_children(&mut self) {
         if let Some(most_critical) = self.multivalue.iter().max_by_key(|datapoint| datapoint.criticality) {
             self.criticality = std::cmp::max(self.criticality, most_critical.criticality);
