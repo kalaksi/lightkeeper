@@ -17,7 +17,7 @@ pub const INTERNAL: &str = "internal";
 pub const CURRENT_SCHEMA_VERSION: u16 = 2;
 
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
     #[serde(default)]
@@ -51,7 +51,7 @@ pub struct Hosts {
     pub certificate_monitors: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Preferences {
     #[serde(default)]
@@ -73,7 +73,7 @@ pub struct Preferences {
     pub show_monitor_notifications: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DisplayOptions {
     #[serde(default)]
@@ -102,7 +102,7 @@ impl DisplayOptions {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CacheSettings {
     /// Enable cache. Set false to disable completely and make sure cache file is empty.
@@ -125,7 +125,7 @@ impl Default for CacheSettings {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Category {
     pub priority: u16,
