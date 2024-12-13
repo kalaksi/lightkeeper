@@ -47,11 +47,12 @@ modules:
       - "INSTALL_ROOT=/app/qmltermwidget"
   - name: ChartJs2QML
     buildsystem: simple
+    build-commands: []
     sources:
       - type: git
         url: https://github.com/kalaksi/ChartJs2QML
         commit: 2a7720e51f42ed96d48be1f24632e76e2a2889ab
-        dest: '/app/ChartJs2QML'
+        dest: 'ChartJs2QML'
   - name: lightkeeper
     buildsystem: simple
     sources:
