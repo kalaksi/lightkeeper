@@ -28,6 +28,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.24.0" date="2024-12-13">
+      <description>
+        <ul>
+          <li>Fixes to confirmation dialog text layout</li>
+          <li>Fixes and improvements to log view</li>
+          <li>Update dependencies</li>
+          <li>Pave way for some new features</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.23.2" date="2024-10-02">
       <description>
         <ul>
