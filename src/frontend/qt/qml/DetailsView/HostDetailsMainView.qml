@@ -68,7 +68,7 @@ Item {
 
                 GroupBox {
                     id: groupBox
-                    property bool blocked: true
+                    property bool blocked: false
                     property var _invocationIdToButton: {}
 
                     leftPadding: Theme.spacingTight

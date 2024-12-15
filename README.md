@@ -159,8 +159,6 @@ Copyright © 2023 kalaksi@users.noreply.github.com.
 
 This software is licensed under GNU General Public License 3.
 
-**NOTE: If you need a non-GPL license, get in contact.**
-
 ## Crate dependencies
 All crate dependencies contain permissive licenses (mostly MIT license).  
 You can check the licenses with:
