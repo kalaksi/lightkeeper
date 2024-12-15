@@ -4,16 +4,16 @@ use serde_derive::{ Serialize, Deserialize };
 use crate::enums::HostStatus;
 use crate::host::Host;
 use crate::host_manager::HostState;
+use crate::metrics::tmserver;
 use crate::module::command::CommandResult;
 use crate::module::monitoring::MonitoringData;
-use crate::pro_service;
 use crate::utils::ErrorMessage;
 
 
 #[derive(Clone)]
 pub enum UIUpdate {
     Host(HostDisplayData),
-    Chart(pro_service::ServiceResponse),
+    Chart(tmserver::TMSResponse),
     Stop(),
 }
 

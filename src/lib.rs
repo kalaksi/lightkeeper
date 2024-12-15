@@ -11,7 +11,7 @@ mod connection_manager;
 mod command_handler;
 mod file_handler;
 mod cache;
-mod pro_service;
+mod metrics;
 
 pub use module::ModuleFactory;
 pub use configuration::Configuration;
@@ -56,7 +56,7 @@ pub fn run(
     connection_manager.configure(&hosts_config, &main_config.cache_settings);
 
     let pro_service = if main_config.display_options.show_charts {
-        match pro_service::ProService::new(frontend.new_update_sender()) {
+        match metrics::MetricsManager::new(frontend.new_update_sender()) {
             Ok(pro_service) => Some(pro_service),
             Err(error) => {
                 log::error!("Failed to start Lightkeeper Pro service: {}", error);
@@ -106,7 +106,7 @@ pub fn run(
     }
     else {
         #[cfg(debug_assertions)]
-        let _engine = frontend.start_testing(command_handler, monitor_manager, connection_manager, host_manager, pro_service);
+        // TODO
         ExitReason::Quit
     }
 }

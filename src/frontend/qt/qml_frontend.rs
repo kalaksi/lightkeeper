@@ -7,7 +7,7 @@ use super::resources;
 #[allow(unused_imports)]
 use super::resources_qml;
 use super::models::*;
-use crate::pro_service::ProService;
+use crate::metrics::MetricsManager;
 use crate::{
     frontend,
     command_handler::CommandHandler,
@@ -67,7 +67,7 @@ impl QmlFrontend {
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
         host_manager: Rc<RefCell<host_manager::HostManager>>,
-        pro_service: Option<ProService>) -> ExitReason {
+        metrics_manager: Option<MetricsManager>) -> ExitReason {
 
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
@@ -82,7 +82,7 @@ impl QmlFrontend {
             connection_manager,
             HostDataManagerModel::new(display_data, self.main_config.clone()),
             CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
-            ChartManagerModel::new(pro_service),
+            ChartManagerModel::new(metrics_manager),
             ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
         ));
 
@@ -113,40 +113,6 @@ impl QmlFrontend {
         }
 
         ExitReason::Quit
-    }
-
-    #[cfg(debug_assertions)]
-    /// Only available in dev build.
-    pub fn start_testing(&mut self,
-        command_handler: CommandHandler,
-        monitor_manager: MonitorManager,
-        connection_manager: ConnectionManager,
-        host_manager: Rc<RefCell<host_manager::HostManager>>,
-        pro_service: Option<ProService>) -> QmlEngine {
-
-        qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
-        qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
-
-        let display_data = host_manager.borrow().get_display_data();
-        let qt_theme = QObjectBox::new(ThemeModel::new(self.main_config.display_options.clone()));
-        let qt_file_chooser = QObjectBox::new(FileChooserModel::new());
-        let qt_lkbackend = QObjectBox::new(LkBackend::new(
-            self.update_sender_prototype.clone(),
-            self.update_receiver.take().unwrap(),
-            host_manager,
-            connection_manager,
-            HostDataManagerModel::new(display_data, self.main_config.clone()),
-            CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
-            ChartManagerModel::new(pro_service),
-            ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
-        ));
-
-        let mut engine = QmlEngine::new();
-        engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
-        engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
-        engine.set_object_property(QString::from("DesktopPortal"), qt_file_chooser.pinned());
-        self.load_qml(&mut engine);
-        engine
     }
 
     pub fn new_update_sender(&self) -> mpsc::Sender<frontend::UIUpdate> {

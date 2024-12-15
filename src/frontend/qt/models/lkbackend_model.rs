@@ -8,7 +8,7 @@ use crate::{
     frontend::{HostDisplayData, UIUpdate},
     host_manager,
     module::monitoring::MonitoringData,
-    pro_service
+    metrics,
 };
 
 use super::{
@@ -112,7 +112,7 @@ impl LkBackend {
         });
 
         let self_ptr = QPointer::from(&*self);
-        let process_chart_update = qmetaobject::queued_callback(move |response: pro_service::ServiceResponse| {
+        let process_chart_update = qmetaobject::queued_callback(move |response: metrics::tmserver::TMSResponse| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
                 self_pinned.borrow().charts.borrow_mut().process_update(response);
             }

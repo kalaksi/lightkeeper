@@ -5,8 +5,9 @@ use std::time::SystemTime;
 use qmetaobject::*;
 
 use crate::{
+    metrics::Metric,
     module::monitoring::DataPoint,
-    pro_service,
+    metrics,
 };
 
 
@@ -28,20 +29,20 @@ pub struct ChartManagerModel {
     //
     // Private properties
     //
-    pro_service: Option<pro_service::ProService>,
+    metrics_manager: Option<metrics::MetricsManager>,
 }
 
 #[allow(non_snake_case)]
 impl ChartManagerModel {
-    pub fn new(pro_service: Option<pro_service::ProService>) -> ChartManagerModel {
+    pub fn new(pro_service: Option<metrics::MetricsManager>) -> ChartManagerModel {
         ChartManagerModel {
-            pro_service: pro_service,
+            metrics_manager: pro_service,
             ..Default::default()
         }
     }
 
     pub fn stop(&mut self) {
-        if let Some(pro_service) = self.pro_service.as_mut() {
+        if let Some(pro_service) = self.metrics_manager.as_mut() {
             // TODO: notify UI?
             if let Err(error) = pro_service.stop() {
                 ::log::error!("Error stopping Pro Service: {:?}", error);
@@ -50,51 +51,46 @@ impl ChartManagerModel {
     }
 
     pub fn insert_data_point(&mut self, host_id: &str, monitor_id: &str, data_point: DataPoint) {
-        if let Some(pro_service) = self.pro_service.as_mut() {
+        if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as i64;
 
-            let mut metrics = vec![pro_service::Metric {
+            let mut metrics = vec![Metric {
                 label: data_point.label.clone(),
                 value: data_point.value_int,
                 time: current_unix_ms
             }];
 
             for child in data_point.multivalue.iter() {
-                metrics.push(pro_service::Metric {
+                metrics.push(Metric {
                     label: child.label.clone(),
                     value: child.value_int,
                     time: current_unix_ms
                 });
             }
 
-            let invocation_result = pro_service.send_request(pro_service::RequestType::MetricsInsert {
-                    host_id: host_id.to_string(),
-                    monitor_id: monitor_id.to_string(),
-                    metrics: metrics,
-            });
-
+            let invocation_result = metrics_manager.insert_metrics(host_id, monitor_id, &metrics);
             if let Err(error) = invocation_result {
                 ::log::error!("Error inserting data point: {:?}", error);
             }
         }
     }
 
-    pub fn process_update(&mut self, response: pro_service::ServiceResponse) {
+    pub fn process_update(&mut self, response: metrics::tmserver::TMSResponse) {
         let chart_data = serde_json::to_string(&response.metrics).unwrap();
         self.dataReceived(response.request_id.into(), chart_data.into());
     }
 
     fn refreshCharts(&mut self, host_id: QString, monitor_id: QString) -> u64 {
-        if let Some(pro_service) = self.pro_service.as_mut() {
+        if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             let current_unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
-            let invocation_result = pro_service.send_request(pro_service::RequestType::MetricsQuery {
-                    host_id: host_id.to_string(),
-                    monitor_id: monitor_id.to_string(),
-                    // 1 day back.
-                    start_time: current_unix_time.as_secs() as i64 - 60 * 60 * 24,
-                    end_time: current_unix_time.as_secs() as i64,
-            });
+            let invocation_result = metrics_manager.get_metrics(
+                &host_id.to_string(),
+                &monitor_id.to_string(),
+                // 1 day back.
+                current_unix_time.as_secs() as i64 - 60 * 60 * 24,
+                current_unix_time.as_secs() as i64,
+            );
 
             match invocation_result {
                 Ok(invocation_id) => invocation_id,
