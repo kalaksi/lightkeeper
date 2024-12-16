@@ -15,7 +15,7 @@ use super::{
     CommandHandlerModel,
     ConfigManagerModel,
     HostDataManagerModel,
-    ChartManagerModel
+    MetricsManagerModel
 };
 
 
@@ -28,7 +28,7 @@ pub struct LkBackend {
     pub command: qt_property!(RefCell<CommandHandlerModel>; CONST),
     pub hosts: qt_property!(RefCell<HostDataManagerModel>; CONST),
     pub config: qt_property!(RefCell<ConfigManagerModel>; CONST),
-    pub charts: qt_property!(RefCell<ChartManagerModel>; CONST),
+    pub metrics: qt_property!(RefCell<MetricsManagerModel>; CONST),
 
     //
     // Slots
@@ -66,14 +66,14 @@ impl LkBackend {
         host_data_model: HostDataManagerModel,
         // host_manager: Rc<RefCell<host_manager::HostManager>>,
         command_model: CommandHandlerModel,
-        chart_model: ChartManagerModel,
+        metrics_model: MetricsManagerModel,
         config_model: ConfigManagerModel) -> LkBackend {
 
         LkBackend {
             hosts: RefCell::new(host_data_model),
             command: RefCell::new(command_model),
             config: RefCell::new(config_model),
-            charts: RefCell::new(chart_model),
+            metrics: RefCell::new(metrics_model),
             update_sender_prototype: Some(update_sender_prototype),
             update_receiver: Some(update_receiver),
             update_receiver_thread: None,
@@ -114,7 +114,7 @@ impl LkBackend {
         let self_ptr = QPointer::from(&*self);
         let process_chart_update = qmetaobject::queued_callback(move |response: metrics::tmserver::TMSResponse| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
-                self_pinned.borrow().charts.borrow_mut().process_update(response);
+                self_pinned.borrow().metrics.borrow_mut().process_update(response);
             }
         });
 
@@ -122,7 +122,7 @@ impl LkBackend {
         let process_chart_insert = qmetaobject::queued_callback(move |(host_id, new_monitoring_data): (String, MonitoringData)| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
                 for data_point in new_monitoring_data.values {
-                    self_pinned.borrow().charts.borrow_mut().insert_data_point(&host_id, &new_monitoring_data.monitor_id, data_point);
+                    self_pinned.borrow().metrics.borrow_mut().insert_data_point(&host_id, &new_monitoring_data.monitor_id, data_point);
                 }
             }
         });
@@ -174,7 +174,7 @@ impl LkBackend {
                     self.host_manager.borrow().new_state_update_sender()
                 );
 
-                // `self.charts` doesn't have to be reconfigured.
+                // `self.metrics` doesn't have to be reconfigured.
 
                 self.host_manager.borrow_mut().start_receiving_updates();
                 self.connection_manager.start_processing_requests();
@@ -202,6 +202,6 @@ impl LkBackend {
         self.command.borrow_mut().stop();
         self.host_manager.borrow_mut().stop();
         self.connection_manager.stop();
-        self.charts.borrow_mut().stop();
+        self.metrics.borrow_mut().stop();
     }
 }

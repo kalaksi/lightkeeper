@@ -16,7 +16,6 @@ use crate::metrics::tmserver::{self, RequestType, TMSRequest, TMSResponse};
 // It is tailored for the needs of Lightkeeper, but is independent and can be used with any software.
 //
 // TMServer is a closed-source binary and requires a license (trial licenses are available) to make an open-core model possible.
-// My dream is to dedicate more time to open source software, but it's hard without any financial support, since I'll also have to work full-time.
 //
 // Using TMServer and metrics is optional and the binary is not installed by default. It is downloaded from GitHub on demand and verified.
 // Even though it's closed-source, the communication protocol is open (see tmserver/tmsrequest.rs).
@@ -60,15 +59,15 @@ impl MetricsManager {
 
     /// Downloads (if needed) and verifies Pro Services binary and then spawns a new process for it.
     fn start_service() -> io::Result<(process::Child, thread::JoinHandle<()>)> {
-        log::info!("Starting Lightkeeper Pro service");
-        let pro_services_path = file_handler::get_cache_dir()?.join("lightkeeper-pro-services");
-        let signature_path = pro_services_path.with_extension("sig");
+        log::info!("Starting metrics server");
+        let tmserver_path = file_handler::get_cache_dir()?.join("tmserver");
+        let signature_path = tmserver_path.with_extension("sig");
 
         // TODO: Add license check.
         // The binary is not included by default so download it first.
-        if let Err(_) = std::fs::metadata(&pro_services_path) {
+        if let Err(_) = std::fs::metadata(&tmserver_path) {
             // TODO: actual paths
-            utils::download::download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md", pro_services_path.to_str().unwrap())?;
+            utils::download::download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md", tmserver_path.to_str().unwrap())?;
             utils::download::download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md.sig", signature_path.to_str().unwrap())?;
         }
 
@@ -76,11 +75,11 @@ impl MetricsManager {
         let do_verification = !cfg!(debug_assertions);
         if do_verification {
             let sign_cert = include_bytes!("../../certs/sign.crt");
-            utils::download::verify_signature(&pro_services_path, &signature_path, sign_cert)?;
+            utils::download::verify_signature(&tmserver_path, &signature_path, sign_cert)?;
         }
 
         // Start Lightkeeper Pro Services process. Failure is not critical, but some features will be unavailable.
-        let mut process_handle = Command::new(pro_services_path)
+        let mut process_handle = Command::new(tmserver_path)
             // Logs are printed to stderr by default.
             .stderr(process::Stdio::piped())
             .spawn()?;

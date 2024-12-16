@@ -82,7 +82,7 @@ impl QmlFrontend {
             connection_manager,
             HostDataManagerModel::new(display_data, self.main_config.clone()),
             CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
-            ChartManagerModel::new(metrics_manager),
+            MetricsManagerModel::new(metrics_manager),
             ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
         ));
 

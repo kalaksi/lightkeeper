@@ -13,7 +13,7 @@ use crate::{
 
 #[allow(non_snake_case)]
 #[derive(QObject, Default)]
-pub struct ChartManagerModel {
+pub struct MetricsManagerModel {
     base: qt_base_class!(trait QObject),
     //
     // Slots
@@ -33,10 +33,10 @@ pub struct ChartManagerModel {
 }
 
 #[allow(non_snake_case)]
-impl ChartManagerModel {
-    pub fn new(pro_service: Option<metrics::MetricsManager>) -> ChartManagerModel {
-        ChartManagerModel {
-            metrics_manager: pro_service,
+impl MetricsManagerModel {
+    pub fn new(metrics_manager: Option<metrics::MetricsManager>) -> MetricsManagerModel {
+        MetricsManagerModel {
+            metrics_manager,
             ..Default::default()
         }
     }

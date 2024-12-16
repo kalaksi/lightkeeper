@@ -28,7 +28,7 @@ pub use property_table_model::PropertyTableModel;
 pub mod file_chooser_model;
 pub use file_chooser_model::FileChooserModel;
 
-pub mod chart_manager_model;
-pub use chart_manager_model::ChartManagerModel;
+pub mod metrics_manager_model;
+pub use metrics_manager_model::MetricsManagerModel;
 
 pub mod qmetatypes;

@@ -55,9 +55,9 @@ pub fn run(
     let mut connection_manager = ConnectionManager::new(module_factory.clone());
     connection_manager.configure(&hosts_config, &main_config.cache_settings);
 
-    let pro_service = if main_config.display_options.show_charts {
+    let metrics_manager = if main_config.display_options.show_charts {
         match metrics::MetricsManager::new(frontend.new_update_sender()) {
-            Ok(pro_service) => Some(pro_service),
+            Ok(metrics_manager) => Some(metrics_manager),
             Err(error) => {
                 log::error!("Failed to start Lightkeeper Pro service: {}", error);
                 log::error!("Pro features will not be available.");
@@ -102,7 +102,7 @@ pub fn run(
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if !test {
         log::debug!("Temporary log entry 7");
-        frontend.start(command_handler, monitor_manager, connection_manager, host_manager, pro_service)
+        frontend.start(command_handler, monitor_manager, connection_manager, host_manager, metrics_manager)
     }
     else {
         #[cfg(debug_assertions)]

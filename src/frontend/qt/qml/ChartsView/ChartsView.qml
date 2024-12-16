@@ -189,7 +189,7 @@ Item {
                             }
 
                             Connections {
-                                target: LK.charts
+                                target: LK.metrics
 
                                 function onDataReceived(invocationId, chartDataJson) {
                                     if (hostId === root.hostId) {
@@ -228,7 +228,7 @@ Item {
     function refreshContent() {
         for (const category of root._categories) {
             for (const monitorId of LK.hosts.getCategoryMonitorIds(root.hostId, category)) {
-                LK.charts.refreshCharts(hostId, monitorId)
+                LK.metrics.refreshCharts(hostId, monitorId)
             }
         }
     }
