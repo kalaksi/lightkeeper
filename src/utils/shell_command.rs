@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 use std::process;
 
-
 /// For building command line commands correctly.
 pub struct ShellCommand {
     arguments: VecDeque<String>,
@@ -20,25 +19,37 @@ impl ShellCommand {
         }
     }
 
-    pub fn new_from<IntoString>(arguments: Vec<IntoString>) -> ShellCommand where IntoString: Into<String> {
+    pub fn new_from<IntoString>(arguments: Vec<IntoString>) -> ShellCommand
+    where
+        IntoString: Into<String>,
+    {
         let mut new_command = Self::new();
         new_command.arguments(arguments);
         new_command
     }
 
-    pub fn argument<IntoString>(&mut self, argument: IntoString) -> &mut Self where IntoString: Into<String> {
+    pub fn argument<IntoString>(&mut self, argument: IntoString) -> &mut Self
+    where
+        IntoString: Into<String>,
+    {
         self.arguments.push_back(argument.into());
         self
     }
 
-    pub fn arguments<IntoString>(&mut self, arguments: Vec<IntoString>) -> &mut Self where IntoString: Into<String> {
+    pub fn arguments<IntoString>(&mut self, arguments: Vec<IntoString>) -> &mut Self
+    where
+        IntoString: Into<String>,
+    {
         for argument in arguments {
             self.arguments.push_back(argument.into());
         }
         self
     }
 
-    pub fn pipe_to<IntoString>(&mut self, arguments: Vec<IntoString>) -> &mut Self where IntoString: Into<String> {
+    pub fn pipe_to<IntoString>(&mut self, arguments: Vec<IntoString>) -> &mut Self
+    where
+        IntoString: Into<String>,
+    {
         let piped_with = arguments.into_iter().map(|argument| argument.into()).collect::<Vec<String>>();
         self.piped_to.push_back(piped_with);
         self
@@ -63,7 +74,6 @@ impl ShellCommand {
     pub fn to_vec(&self) -> Vec<String> {
         self.arguments.iter().cloned().collect::<_>()
     }
-
 }
 
 impl ToString for ShellCommand {

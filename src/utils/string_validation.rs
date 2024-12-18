@@ -19,12 +19,18 @@ pub fn is_numeric(string: &str) -> bool {
 
 // Numeric value with unit (e.g. 100M, 1.5GB, 5 m). May contain a space between number and unit.
 pub fn is_numeric_with_unit(string: &str, valid_units: &[String]) -> bool {
-    let value_chars = string.chars().take_while(|char| char.is_numeric() || *char == DECIMAL_SEPARATOR).collect::<String>();
+    let value_chars = string
+        .chars()
+        .take_while(|char| char.is_numeric() || *char == DECIMAL_SEPARATOR)
+        .collect::<String>();
     if !is_numeric(&value_chars) {
         return false;
     }
 
-    let unit_chars = string.chars().skip_while(|char| char.is_numeric() || *char == DECIMAL_SEPARATOR).collect::<String>();
+    let unit_chars = string
+        .chars()
+        .skip_while(|char| char.is_numeric() || *char == DECIMAL_SEPARATOR)
+        .collect::<String>();
     let unit_string = unit_chars.trim().to_string();
     !unit_string.is_empty() && valid_units.contains(&unit_string)
 }

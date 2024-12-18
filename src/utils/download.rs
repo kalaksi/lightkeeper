@@ -10,7 +10,8 @@ pub fn download_file(url: &str, output_path: &str) -> io::Result<()> {
         io::copy(&mut reader, &mut file)?;
 
         log::info!("Downloaded file: {}", output_path);
-    } else {
+    }
+    else {
         log::error!("Failed to download file ({}): {}", response.status(), url);
     }
     Ok(())
@@ -27,7 +28,7 @@ pub fn verify_signature(file_path: &path::Path, signature_path: &path::Path, sig
     // Don't verify when developing.
     let do_verification = !cfg!(debug_assertions);
 
-    if do_verification && !verifier.verify(&signature)?  {
+    if do_verification && !verifier.verify(&signature)? {
         Err(io::Error::new(io::ErrorKind::Other, "Signature verification failed."))
     }
     else {

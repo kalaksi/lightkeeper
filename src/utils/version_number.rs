@@ -1,8 +1,8 @@
-use std::str::FromStr;
 use std::default::Default;
 use std::fmt::Display;
+use std::str::FromStr;
 
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Default, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Clone, Copy)]
 pub struct VersionNumber {
@@ -20,8 +20,7 @@ impl VersionNumber {
         // Drop everything after dashes.
         parts = parts.iter().map(|part| part.split('-').next().unwrap_or("0")).collect();
 
-        let major = parts.first().unwrap_or(&"0")
-                         .parse::<u16>().unwrap_or_default();
+        let major = parts.first().unwrap_or(&"0").parse::<u16>().unwrap_or_default();
 
         let minor = match parts.get(1) {
             Some(minor) => minor.parse::<u16>().ok(),

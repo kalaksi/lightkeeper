@@ -1,6 +1,6 @@
-use crate::{enums::Criticality, error::LkError};
-use serde_derive::{ Serialize, Deserialize };
+use serde_derive::{Deserialize, Serialize};
 
+use crate::{enums::Criticality, error::LkError};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ErrorMessage {
