@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::ModuleSpecification;
-use crate::cache::CacheScope as CacheScope;
+use crate::cache::CacheScope;
 
 #[derive(Clone, Debug)]
 pub struct Metadata {

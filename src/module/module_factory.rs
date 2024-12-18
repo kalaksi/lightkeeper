@@ -1,19 +1,17 @@
-
 use std::collections::HashMap;
 
 use super::{
+    command,
+    command::CommandModule,
+    connection,
+    connection::ConnectionModule,
     module::MetadataSupport,
+    monitoring,
+    monitoring::MonitoringModule,
     Metadata,
     ModuleSpecification,
     ModuleType,
-    connection,
-    connection::ConnectionModule,
-    monitoring,
-    monitoring::MonitoringModule,
-    command,
-    command::CommandModule,
 };
-
 
 #[derive(Default)]
 pub struct ModuleFactory {
@@ -23,6 +21,8 @@ pub struct ModuleFactory {
 }
 
 impl ModuleFactory {
+    #![cfg_attr(any(), rustfmt::skip)]
+
     pub fn new() -> Self {
         let mut manager = ModuleFactory {
             connector_modules: Vec::new(),

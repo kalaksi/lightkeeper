@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use strum_macros::{ EnumString, Display };
-use serde_derive::{ Serialize, Deserialize };
+use serde_derive::{Deserialize, Serialize};
+use strum_macros::{Display, EnumString};
 
 use crate::utils::VersionNumber;
 

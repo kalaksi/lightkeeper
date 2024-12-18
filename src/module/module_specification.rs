@@ -1,4 +1,5 @@
 use std::fmt::Display;
+
 use strum_macros::{Display, EnumString};
 
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]

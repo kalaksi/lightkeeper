@@ -283,7 +283,7 @@ pub struct ConnectorConfig {
 }
 
 impl Configuration {
-    #[rustfmt::skip]
+    #![cfg_attr(any(), rustfmt::skip)]
     pub fn read(config_dir: &str) -> io::Result<(Configuration, Hosts, Groups)> {
         let config_dir = if config_dir.is_empty() {
             file_handler::get_config_dir().unwrap()
