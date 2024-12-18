@@ -1,8 +1,8 @@
-use std::str::FromStr;
 use std::default::Default;
 use std::fmt::Display;
+use std::str::FromStr;
 
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Default, Deserialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
@@ -23,7 +23,7 @@ impl FromStr for HostStatus {
             "pending" => Ok(HostStatus::Pending),
             "up" => Ok(HostStatus::Up),
             "down" => Ok(HostStatus::Down),
-            _ => panic!("Invalid HostStatus '{}'", s)
+            _ => panic!("Invalid HostStatus '{}'", s),
         }
     }
 }

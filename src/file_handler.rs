@@ -1,21 +1,15 @@
-use std::{
-    path::Path,
-    path::PathBuf,
-    fs,
-    io,
-    env,
-};
-use serde_derive::{ Serialize, Deserialize };
+use std::{env, fs, io, path::Path, path::PathBuf};
+
 use chrono::{DateTime, Utc};
-use crate::Host;
+use serde_derive::{Deserialize, Serialize};
+
 use crate::file_handler;
 use crate::utils::sha256;
-
+use crate::Host;
 
 const MAX_PATH_COMPONENTS: u8 = 2;
 const APP_DIR_NAME: &str = "lightkeeper";
-const METADATA_SUFFIX : &str = ".metadata.yml";
-
+const METADATA_SUFFIX: &str = ".metadata.yml";
 
 pub fn get_config_dir() -> io::Result<PathBuf> {
     let config_dir;
@@ -28,7 +22,7 @@ pub fn get_config_dir() -> io::Result<PathBuf> {
     else {
         return Err(io::Error::new(
             io::ErrorKind::Other,
-            "Cannot find configuration directory. $XDG_CONFIG_HOME or $HOME is not set."
+            "Cannot find configuration directory. $XDG_CONFIG_HOME or $HOME is not set.",
         ));
     }
 
@@ -52,7 +46,7 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
     else {
         return Err(io::Error::new(
             io::ErrorKind::Other,
-            "Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set."
+            "Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set.",
         ));
     }
 
@@ -77,10 +71,8 @@ pub fn create_file(host: &Host, remote_file_path: &str, mut metadata: FileMetada
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
     let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_file_path)?;
 
-
     fs::write(&file_path, contents)?;
-    serde_yaml::to_writer(metadata_file, &metadata)
-               .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+    serde_yaml::to_writer(metadata_file, &metadata).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
     Ok(file_path)
 }
@@ -89,13 +81,11 @@ pub fn list_cached_files(only_metadata_files: bool) -> io::Result<Vec<String>> {
     let cache_dir = file_handler::get_cache_dir()?;
     let mut files = Vec::new();
 
-
     // Nice drifting...
     for subdirectory in fs::read_dir(cache_dir)? {
         match subdirectory {
             Ok(subdirectory) => {
                 if subdirectory.path().is_dir() && subdirectory.file_name() != "qmlcachedir" {
-
                     for entry in fs::read_dir(subdirectory.path())? {
                         match entry {
                             Ok(entry) => {
@@ -118,7 +108,6 @@ pub fn list_cached_files(only_metadata_files: bool) -> io::Result<Vec<String>> {
                             }
                         }
                     }
-
                 }
             }
             Err(error) => {
@@ -146,8 +135,7 @@ pub fn write_file_metadata(metadata: FileMetadata) -> io::Result<()> {
     let local_file_path = metadata.local_path.clone().unwrap();
     let metadata_path = get_metadata_path(&local_file_path);
     let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_path)?;
-    serde_yaml::to_writer(metadata_file, &metadata)
-               .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+    serde_yaml::to_writer(metadata_file, &metadata).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
     Ok(())
 }
@@ -180,8 +168,7 @@ pub fn read_file(local_file_path: &str) -> io::Result<(FileMetadata, Vec<u8>)> {
 
     let metadata_path = get_metadata_path(local_file_path);
     let metadata_string = fs::read_to_string(metadata_path)?;
-    let metadata: FileMetadata = serde_yaml::from_str(&metadata_string)
-                                            .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+    let metadata: FileMetadata = serde_yaml::from_str(&metadata_string).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
     Ok((metadata, contents))
 }
@@ -189,8 +176,7 @@ pub fn read_file(local_file_path: &str) -> io::Result<(FileMetadata, Vec<u8>)> {
 pub fn read_file_metadata(local_file_path: &String) -> io::Result<FileMetadata> {
     let metadata_path = get_metadata_path(local_file_path);
     let metadata_string = fs::read_to_string(metadata_path)?;
-    let metadata: FileMetadata = serde_yaml::from_str(&metadata_string)
-                                            .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+    let metadata: FileMetadata = serde_yaml::from_str(&metadata_string).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
     Ok(metadata)
 }
@@ -238,10 +224,9 @@ pub fn convert_to_local_paths(host: &Host, remote_file_path: &str) -> (String, S
 
     (
         Path::new(&file_dir).to_string_lossy().to_string(),
-        Path::new(&file_dir).join(file_name).to_string_lossy().to_string()
+        Path::new(&file_dir).join(file_name).to_string_lossy().to_string(),
     )
 }
-
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -1,8 +1,7 @@
-use strum_macros::Display;
-
 use std::error;
 use std::fmt;
 
+use strum_macros::Display;
 
 #[derive(Clone, Debug)]
 pub struct LkError {
@@ -45,7 +44,7 @@ impl LkError {
             source_id: source_id.to_string(),
             kind: ErrorKind::HostKeyNotVerified,
             message: message.to_string(),
-            parameter: Some(key_id.to_string())
+            parameter: Some(key_id.to_string()),
         }
     }
 
@@ -58,7 +57,7 @@ impl LkError {
             kind: ErrorKind::Other,
             source_id: String::new(),
             message: format!("{}: {}", message, parameter.to_string()),
-            parameter: Some(parameter.to_string())
+            parameter: Some(parameter.to_string()),
         }
     }
 
@@ -79,8 +78,7 @@ impl fmt::Display for LkError {
     }
 }
 
-impl error::Error for LkError {
-}
+impl error::Error for LkError {}
 
 impl From<std::io::Error> for LkError {
     fn from(error: std::io::Error) -> Self {

@@ -1,11 +1,13 @@
-use serde_derive::{ Serialize, Deserialize };
-use serde_yaml;
 use std::io::Write;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::{ fs, io, collections::HashMap };
-use crate::host::HostSetting;
+use std::{collections::HashMap, fs, io};
+
+use serde_derive::{Deserialize, Serialize};
+use serde_yaml;
+
 use crate::file_handler;
+use crate::host::HostSetting;
 
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
@@ -15,7 +17,6 @@ const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const CURRENT_SCHEMA_VERSION: u16 = 2;
-
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -194,7 +195,6 @@ pub struct ConfigHelperData {
     pub ignored_connectors: Vec<String>,
 }
 
-
 impl HostSettings {
     pub fn default_address() -> String {
         String::from("0.0.0.0")
@@ -283,6 +283,7 @@ pub struct ConnectorConfig {
 }
 
 impl Configuration {
+    #[rustfmt::skip]
     pub fn read(config_dir: &str) -> io::Result<(Configuration, Hosts, Groups)> {
         let config_dir = if config_dir.is_empty() {
             file_handler::get_config_dir().unwrap()
@@ -320,7 +321,7 @@ impl Configuration {
         let config_contents = fs::read_to_string(main_config_file_path)?;
 
         let mut main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
-                                     .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+                                         .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
         // Display options are currently defined in the app's defaults and not really user-configurable.
         let mut actual_display_options = get_default_main_config().display_options;
@@ -431,15 +432,23 @@ impl Configuration {
         match main_config_file {
             Ok(mut file) => {
                 if let Err(error) = file.write_all(DEFAULT_MAIN_CONFIG.as_bytes()) {
-                    let message = format!("Failed to write main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
+                    let message = format!(
+                        "Failed to write main configuration file {}: {}",
+                        main_config_file_path.to_string_lossy(),
+                        error
+                    );
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
                 else {
                     log::info!("Created new main configuration file {}", main_config_file_path.to_string_lossy());
                 }
-            },
+            }
             Err(error) => {
-                let message = format!("Failed to create main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
+                let message = format!(
+                    "Failed to create main configuration file {}: {}",
+                    main_config_file_path.to_string_lossy(),
+                    error
+                );
                 return Err(io::Error::new(io::ErrorKind::Other, message));
             }
         }
@@ -454,9 +463,13 @@ impl Configuration {
                 else {
                     log::info!("Created new host configuration file {}", hosts_file_path.to_string_lossy());
                 }
-            },
+            }
             Err(error) => {
-                let message = format!("Failed to create host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
+                let message = format!(
+                    "Failed to create host configuration file {}: {}",
+                    hosts_file_path.to_string_lossy(),
+                    error
+                );
                 return Err(io::Error::new(io::ErrorKind::Other, message));
             }
         }
@@ -465,15 +478,23 @@ impl Configuration {
         match groups_config_file {
             Ok(mut file) => {
                 if let Err(error) = file.write_all(DEFAULT_GROUPS_CONFIG.as_bytes()) {
-                    let message = format!("Failed to write group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
+                    let message = format!(
+                        "Failed to write group configuration file {}: {}",
+                        groups_file_path.to_string_lossy(),
+                        error
+                    );
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
                 else {
                     log::info!("Created new group configuration file {}", groups_file_path.to_string_lossy());
                 }
-            },
+            }
             Err(error) => {
-                let message = format!("Failed to create group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
+                let message = format!(
+                    "Failed to create group configuration file {}: {}",
+                    groups_file_path.to_string_lossy(),
+                    error
+                );
                 return Err(io::Error::new(io::ErrorKind::Other, message));
             }
         }
@@ -495,7 +516,10 @@ impl Configuration {
         match hosts_config_file {
             Ok(mut file) => {
                 let mut sanitized_hosts = hosts.clone();
-                sanitized_hosts.hosts.values_mut().for_each(|host| host.effective = ConfigGroup::default());
+                sanitized_hosts
+                    .hosts
+                    .values_mut()
+                    .for_each(|host| host.effective = ConfigGroup::default());
 
                 let hosts_config = serde_yaml::to_string(&sanitized_hosts).unwrap();
 
@@ -506,7 +530,7 @@ impl Configuration {
                 else {
                     log::info!("Updated host configuration file {}", hosts_file_path.to_string_lossy());
                 }
-            },
+            }
             Err(error) => {
                 let message = format!("Failed to open host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
                 return Err(io::Error::new(io::ErrorKind::Other, message));
@@ -531,15 +555,23 @@ impl Configuration {
             Ok(mut file) => {
                 let groups_config = serde_yaml::to_string(groups).unwrap();
                 if let Err(error) = file.write_all(groups_config.as_bytes()) {
-                    let message = format!("Failed to write group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
+                    let message = format!(
+                        "Failed to write group configuration file {}: {}",
+                        groups_file_path.to_string_lossy(),
+                        error
+                    );
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
                 else {
                     log::info!("Updated group configuration file {}", groups_file_path.to_string_lossy());
                 }
-            },
+            }
             Err(error) => {
-                let message = format!("Failed to open group configuration file {}: {}", groups_file_path.to_string_lossy(), error);
+                let message = format!(
+                    "Failed to open group configuration file {}: {}",
+                    groups_file_path.to_string_lossy(),
+                    error
+                );
                 return Err(io::Error::new(io::ErrorKind::Other, message));
             }
         }
@@ -574,15 +606,23 @@ impl Configuration {
 
                 let main_config = serde_yaml::to_string(&config_without_display_options).unwrap();
                 if let Err(error) = file.write_all(main_config.as_bytes()) {
-                    let message = format!("Failed to write main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
+                    let message = format!(
+                        "Failed to write main configuration file {}: {}",
+                        main_config_file_path.to_string_lossy(),
+                        error
+                    );
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
                 else {
                     log::info!("Updated main configuration file {}", main_config_file_path.to_string_lossy());
                 }
-            },
+            }
             Err(error) => {
-                let message = format!("Failed to open main configuration file {}: {}", main_config_file_path.to_string_lossy(), error);
+                let message = format!(
+                    "Failed to open main configuration file {}: {}",
+                    main_config_file_path.to_string_lossy(),
+                    error
+                );
                 return Err(io::Error::new(io::ErrorKind::Other, message));
             }
         }
@@ -603,8 +643,11 @@ impl Configuration {
             // NOTE: Default config groups should rarely be removed since they are used in older schema upgrades.
             match main_config.schema_version.unwrap() {
                 1 => {
-                    groups_config.groups.entry(String::from("nixos")).or_insert(default_groups.groups["nixos"].to_owned());
-                },
+                    groups_config
+                        .groups
+                        .entry(String::from("nixos"))
+                        .or_insert(default_groups.groups["nixos"].to_owned());
+                }
                 _ => {}
             }
 
@@ -612,7 +655,11 @@ impl Configuration {
         }
 
         if old_version < main_config.schema_version.unwrap() {
-            log::info!("Upgraded configuration schema from version {} to {}", old_version, main_config.schema_version.unwrap());
+            log::info!(
+                "Upgraded configuration schema from version {} to {}",
+                old_version,
+                main_config.schema_version.unwrap()
+            );
         }
     }
 
