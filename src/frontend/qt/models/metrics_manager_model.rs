@@ -15,6 +15,7 @@ use crate::{
 #[derive(QObject, Default)]
 pub struct MetricsManagerModel {
     base: qt_base_class!(trait QObject),
+
     //
     // Slots
     //
@@ -42,10 +43,10 @@ impl MetricsManagerModel {
     }
 
     pub fn stop(&mut self) {
-        if let Some(pro_service) = self.metrics_manager.as_mut() {
+        if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             // TODO: notify UI?
-            if let Err(error) = pro_service.stop() {
-                ::log::error!("Error stopping Pro Service: {:?}", error);
+            if let Err(error) = metrics_manager.stop() {
+                ::log::error!("Error stopping metrics server: {:?}", error);
             }
         }
     }

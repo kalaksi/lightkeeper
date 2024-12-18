@@ -250,6 +250,69 @@ Item {
                             }
                         }
 
+                        // Custom commands need some special handling too.
+                        Item {
+                            id: customCommands
+                            width: parent.width
+                            height: 90
+
+                            // Background.
+                            Rectangle {
+                                x: -(groupBox.width - column.width) / 2
+                                width: groupBox.width
+                                height: parent.height
+                                color: "#50808080"
+                            }
+
+                            Row {
+                                anchors.fill: parent
+                                spacing: 20
+                                leftPadding: 20
+
+                                Image {
+                                    id: hostIcon
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    source: "qrc:/main/images/host/linux"
+                                    sourceSize.width: 64
+                                    sourceSize.height: 64
+                                }
+
+                                Column {
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Repeater {
+                                        width: 0.7 * parent.width
+                                        model: root._hostDetails !== null ?
+                                            [
+                                                [ "Name", root._hostDetails.host.name ],
+                                                [ "Status", root._hostDetails.status ],
+                                                [ "FQDN", root._hostDetails.host.fqdn ],
+                                                [ "IP Address", root._hostDetails.host.ip_address ],
+                                            ] : []
+
+                                        Row {
+                                            visible: modelData[1] !== ""
+                                            width: column.width
+                                            rightPadding: 0.1 * column.width
+                                            spacing: 0.075 * column.width
+
+                                            Label {
+                                                width: 0.25 * parent.width
+                                                verticalAlignment: Text.AlignVCenter
+                                                lineHeight: 0.6
+                                                text: modelData[0]
+                                            }
+
+                                            SmallText {
+                                                width: 0.35 * parent.width
+                                                text: modelData[1]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
 
                         PropertyTable {
                             id: propertyTable
