@@ -172,14 +172,11 @@ impl ConnectionManager {
             let original_command_cache = Arc::new(Mutex::new(Self::initialize_cache(cache_settings.clone())));
             let stateful_connectors_arc = Arc::new(stateful_connectors);
 
-            log::debug!("Temporary log entry 1");
-
             loop {
                 let command_cache = original_command_cache.clone();
                 let module_factory = module_factory.clone();
                 let stateful_connectors = stateful_connectors_arc.clone();
 
-                log::debug!("Temporary log entry 2");
                 let request = match receiver.recv() {
                     Ok(data) => data,
                     Err(error) => {
@@ -187,8 +184,6 @@ impl ConnectionManager {
                         return;
                     }
                 };
-
-                log::debug!("Temporary log entry 3");
 
                 if let RequestType::Exit = request.request_type {
                     log::debug!("Gracefully stopping connection manager thread");

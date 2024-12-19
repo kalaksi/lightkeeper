@@ -16,4 +16,9 @@ if [ ! -e third_party/qmltermwidget/QMLTermWidget/libqmltermwidget.so ]; then
     popd
 fi
 
+if [ ! -z "$(git status -s)" ]; then
+    # Expand use later. Currently, rustfmt in some cases makes readability worse.
+    rustfmt +nightly src/utils.rs
+fi
+
 cargo build

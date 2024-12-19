@@ -6,24 +6,27 @@ import Qt.labs.qmlmodels 1.0
 import ".."
 import "../Misc"
 import "../Text"
-import "../js/TextTransform.js" as TextTransform
 import "../js/Parse.js" as Parse
 
 Item {
     id: root
     property string hostId: ""
+    property var _hostDetails: Parse.TryParseJson(LK.hosts.getHostDataJson(hostId))
+    property var _categories: []
+    property bool _showEmptyCategories: true
+
     property int columnMinimumWidth: Theme.groupboxMinWidth
     property int columnMaximumWidth: Theme.groupboxMaxWidth
     property int columnMinimumHeight: 450
     property int columnMaximumHeight: 450
     property int columnSpacing: Theme.spacingNormal
-    property var _hostDetailsJson: LK.hosts.getHostDataJson(hostId)
-    property var _hostDetails: Parse.TryParseJson(_hostDetailsJson)
-    property var _categories: {}
-    property bool _showEmptyCategories: true
 
+    // Link between invocation and command button has to be stored and handled on higher level and not in
+    // e.g. CommandButton or CommandButtonRow since those are not persistent.
+    property var _invocationIdToButton: {}
 
     Component.onCompleted: {
+        root._invocationIdToButton = {}
         root._categories = []
         root.refresh()
     }
@@ -63,54 +66,78 @@ Item {
             columns: Math.floor(parent.width / root.columnMinimumWidth)
             columnSpacing: root.columnSpacing
 
+            HostGroupBox {
+                id: hostGroupBox
+                visible: root._categories.includes("host")
+                categoryName: "host"
+                hostId: root._hostDetails.host.name
+                status: root._hostDetails.status
+                fqdn: root._hostDetails.host.fqdn
+                ipAddress: root._hostDetails.host.ip_address
+
+                Layout.minimumWidth: root.columnMinimumWidth
+                Layout.maximumWidth: root.columnMaximumWidth
+                Layout.preferredWidth: root.columnMinimumWidth +
+                                        (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns) - root.columnSpacing
+                Layout.minimumHeight: root.columnMinimumHeight
+                Layout.maximumHeight: root.columnMaximumHeight
+                Layout.alignment: Qt.AlignTop
+
+                onRefreshClicked: {
+                    LK.command.refreshMonitorsOfCategory(root.hostId, hostGroupBox.categoryName)
+                    hostGroupBox.refreshProgress = 0
+                }
+
+            }
+
+            CustomCommandGroupBox {
+                Layout.minimumWidth: root.columnMinimumWidth
+                Layout.maximumWidth: root.columnMaximumWidth
+                Layout.preferredWidth: root.columnMinimumWidth +
+                                        (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns) - root.columnSpacing
+                Layout.minimumHeight: root.columnMinimumHeight
+                Layout.maximumHeight: root.columnMaximumHeight
+                Layout.alignment: Qt.AlignTop
+            }
+
             Repeater {
-                model: root._categories
+                model: root._categories.filter(category => category !== "host")
 
-                GroupBox {
+                CategoryGroupBox {
                     id: groupBox
-                    property bool blocked: false
-                    property var _invocationIdToButton: {}
+                    categoryName: modelData
 
-                    leftPadding: Theme.spacingTight
-                    rightPadding: Theme.spacingTight
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.preferredWidth: root.columnMinimumWidth +
-                                           (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns) -
-                                           root.columnSpacing
+                                            (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns) - root.columnSpacing
                     Layout.minimumHeight: root.columnMinimumHeight
                     Layout.maximumHeight: root.columnMaximumHeight
                     Layout.alignment: Qt.AlignTop
 
-                    background: Rectangle {
-                        color: Theme.categoryBackgroundColor
-                    }
-
-                    Component.onCompleted: {
-                        groupBox._invocationIdToButton = {}
-                    }
-
-                    Connections {
-                        target: LK.command
-
-                        function onCommandExecuted(invocationId, hostId, commandId, category, buttonId) {
-                            if (hostId === root.hostId && category === modelData) {
-                                // State has to be stored and handled on higher level and not in e.g.
-                                // CommandButton or CommandButtonRow since those are not persistent.
-                                groupBox._invocationIdToButton[invocationId] = buttonId
-
-                                categoryCommands.updateProgress(buttonId, 0)
-                                propertyTable.updateProgress(buttonId, 0)
-                            }
-                        }
+                    onRefreshClicked: {
+                        LK.command.refreshMonitorsOfCategory(root.hostId, groupBox.categoryName)
+                        groupBox.refreshProgress = 0
                     }
 
                     Connections {
                         target: LK.hosts
 
+                        // Update group box monitor refresh progress and remove block/mask if finished.
+                        function onMonitoringDataReceived(hostId, category, monitoringDataQv) {
+                            if (hostId === root.hostId && category === groupBox.categoryName) {
+                                groupBox.refreshProgress = LK.hosts.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
+
+                                if (monitoringDataQv !== undefined) {
+                                    propertyTable.model.update(monitoringDataQv)
+                                }
+                            }
+                        }
+
+                        // Update command progress. Starts automatic refresh of relevant monitors if finished.
                         function onCommandResultReceived(commandResultJson, invocationId) {
-                            if (groupBox._invocationIdToButton[invocationId] !== undefined) {
-                                let buttonId = groupBox._invocationIdToButton[invocationId]
+                            if (root._invocationIdToButton[invocationId] !== undefined) {
+                                let buttonId = root._invocationIdToButton[invocationId]
                                 let progress = LK.hosts.getPendingCommandProgress(invocationId)
                                 categoryCommands.updateProgress(buttonId, progress)
                                 propertyTable.updateProgress(buttonId, progress)
@@ -118,47 +145,27 @@ Item {
                                 if (progress >= 100) {
                                     let commandResult = JSON.parse(commandResultJson)
                                     LK.command.refreshMonitorsOfCommand(root.hostId, commandResult.command_id)
-                                    delete groupBox._invocationIdToButton[invocationId]
+                                    delete root._invocationIdToButton[invocationId]
                                 }
                             }
                         }
                     }
 
-                    // Custom label provides more flexibility.
-                    label: GroupBoxLabel {
-                        id: groupBoxLabel
-                        anchors.left: groupBox.left
-                        anchors.right: groupBox.right
+                    Connections {
+                        target: LK.command
 
-                        text: TextTransform.capitalize(modelData)
-                        icon: Theme.categoryIcon(modelData)
-                        color: Theme.categoryColor(modelData)
-                        onRefreshClicked: function() {
-                            LK.command.refreshMonitorsOfCategory(root.hostId, modelData)
-                            groupBoxLabel.refreshProgress = 0
-                            groupBox.blocked = true
-                        }
-
-                        Connections {
-                            target: LK.hosts
-                            function onMonitoringDataReceived(hostId, category) {
-                                if (hostId === root.hostId && category === modelData) {
-                                    groupBoxLabel.refreshProgress = LK.hosts.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
-
-                                    if (groupBoxLabel.refreshProgress >= 100) {
-                                        groupBox.blocked = false
-                                    }
-                                }
+                        function onHostInitializing(hostId) {
+                            if (hostId === root.hostId) {
+                                groupBox.refreshProgress = 0
                             }
                         }
+                        // Reset command progress to 0.
+                        function onCommandExecuted(invocationId, hostId, commandId, category, buttonId) {
+                            if (hostId === root.hostId && category === groupBox.categoryName) {
+                                root._invocationIdToButton[invocationId] = buttonId
 
-                        Connections {
-                            target: LK.command
-                            function onHostInitializing(hostId) {
-                                if (hostId === root.hostId) {
-                                    groupBoxLabel.refreshProgress = 0
-                                    groupBox.blocked = true
-                                }
+                                categoryCommands.updateProgress(buttonId, 0)
+                                propertyTable.updateProgress(buttonId, 0)
                             }
                         }
                     }
@@ -186,134 +193,6 @@ Item {
                             }
                         }
 
-                        // Host details are a bit different from other monitor data, so handling it separately here.
-                        Item {
-                            id: hostDetails
-                            visible: modelData === "host"
-                            width: parent.width
-                            height: 90
-
-                            // Background.
-                            Rectangle {
-                                x: -(groupBox.width - column.width) / 2
-                                width: groupBox.width
-                                height: parent.height
-                                color: "#50808080"
-                            }
-
-                            Row {
-                                anchors.fill: parent
-                                spacing: 20
-                                leftPadding: 20
-
-                                Image {
-                                    id: hostIcon
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    source: "qrc:/main/images/host/linux"
-                                    sourceSize.width: 64
-                                    sourceSize.height: 64
-                                }
-
-                                Column {
-                                    anchors.verticalCenter: parent.verticalCenter
-
-                                    Repeater {
-                                        width: 0.7 * parent.width
-                                        model: root._hostDetails !== null ?
-                                            [
-                                                [ "Name", root._hostDetails.host.name ],
-                                                [ "Status", root._hostDetails.status ],
-                                                [ "FQDN", root._hostDetails.host.fqdn ],
-                                                [ "IP Address", root._hostDetails.host.ip_address ],
-                                            ] : []
-
-                                        Row {
-                                            visible: modelData[1] !== ""
-                                            width: column.width
-                                            rightPadding: 0.1 * column.width
-                                            spacing: 0.075 * column.width
-
-                                            Label {
-                                                width: 0.25 * parent.width
-                                                verticalAlignment: Text.AlignVCenter
-                                                lineHeight: 0.6
-                                                text: modelData[0]
-                                            }
-
-                                            SmallText {
-                                                width: 0.35 * parent.width
-                                                text: modelData[1]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Custom commands need some special handling too.
-                        Item {
-                            id: customCommands
-                            width: parent.width
-                            height: 90
-
-                            // Background.
-                            Rectangle {
-                                x: -(groupBox.width - column.width) / 2
-                                width: groupBox.width
-                                height: parent.height
-                                color: "#50808080"
-                            }
-
-                            Row {
-                                anchors.fill: parent
-                                spacing: 20
-                                leftPadding: 20
-
-                                Image {
-                                    id: hostIcon
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    source: "qrc:/main/images/host/linux"
-                                    sourceSize.width: 64
-                                    sourceSize.height: 64
-                                }
-
-                                Column {
-                                    anchors.verticalCenter: parent.verticalCenter
-
-                                    Repeater {
-                                        width: 0.7 * parent.width
-                                        model: root._hostDetails !== null ?
-                                            [
-                                                [ "Name", root._hostDetails.host.name ],
-                                                [ "Status", root._hostDetails.status ],
-                                                [ "FQDN", root._hostDetails.host.fqdn ],
-                                                [ "IP Address", root._hostDetails.host.ip_address ],
-                                            ] : []
-
-                                        Row {
-                                            visible: modelData[1] !== ""
-                                            width: column.width
-                                            rightPadding: 0.1 * column.width
-                                            spacing: 0.075 * column.width
-
-                                            Label {
-                                                width: 0.25 * parent.width
-                                                verticalAlignment: Text.AlignVCenter
-                                                lineHeight: 0.6
-                                                text: modelData[0]
-                                            }
-
-                                            SmallText {
-                                                width: 0.35 * parent.width
-                                                text: modelData[1]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-
                         PropertyTable {
                             id: propertyTable
                             category: modelData
@@ -327,26 +206,6 @@ Item {
                             onButtonClicked: function(buttonId, commandId, params) {
                                 LK.command.execute(buttonId, root.hostId, commandId, params)
                             }
-
-                            Connections {
-                                target: LK.hosts
-                                function onMonitoringDataReceived(hostId, category, monitoringDataQv) {
-                                    if (hostId === root.hostId && category === modelData) {
-                                        propertyTable.model.update(monitoringDataQv)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        color: Theme.categoryRefreshMask
-                        visible: groupBox.blocked
-
-                        MouseArea {
-                            anchors.fill: parent
-                            preventStealing: true
                         }
                     }
                 }
@@ -356,8 +215,7 @@ Item {
 
     function refresh() {
         if (root.hostId !== "") {
-            root._hostDetailsJson = LK.hosts.getHostDataJson(hostId)
-            root._hostDetails = Parse.TryParseJson(_hostDetailsJson)
+            root._hostDetails = Parse.TryParseJson(LK.hosts.getHostDataJson(hostId))
             // TODO: effect on performance if checking categories every time?
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
                                         .map(category_qv => category_qv.toString())

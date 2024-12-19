@@ -267,7 +267,7 @@ impl HostDataManagerModel {
             )
     }
 
-    /// Returns a readily sorted list of unique categories for a host. Gathered from the monitoring data.
+    /// Returns a readily sorted list of unique categories for a host. Gathered from monitoring data.
     fn getCategories(&self, host_id: QString, ignore_empty: bool) -> QStringList {
         let host_id = host_id.to_string();
         let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
