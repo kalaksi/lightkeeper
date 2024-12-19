@@ -88,11 +88,8 @@ pub fn run(
     // Start backend threads.
     host_manager.borrow_mut().start_receiving_updates();
     connection_manager.start_processing_requests();
-    log::debug!("Temporary log entry 4");
     command_handler.start_processing_responses();
-    log::debug!("Temporary log entry 5");
     monitor_manager.start_processing_responses();
-    log::debug!("Temporary log entry 6");
 
     // TODO: Needs a proper fix for a race.
     // Wait a small amount as a workaround so initial data points have time to get sent to host manager.
@@ -101,7 +98,6 @@ pub fn run(
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if !test {
-        log::debug!("Temporary log entry 7");
         frontend.start(command_handler, monitor_manager, connection_manager, host_manager, metrics_manager)
     }
     else {

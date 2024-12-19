@@ -110,6 +110,7 @@ impl QmlFrontend {
             self.load_qml(&mut engine);
             ::log::debug!("Temporary log entry 9");
             engine.exec();
+            ::log::debug!("Temporary log entry 10");
         }
 
         ExitReason::Quit
