@@ -48,16 +48,17 @@ display_options:
     nixos:
       priority: 2
       icon: "qrc:///main/images/nixos"
-      color: "#80b3825d"
+      color: "#804d70b8"
       command_order: ["nixos-collectgarbage", "nixos-channel-update", "nixos-rebuild-dryrun", "nixos-rebuild-switch"]
     storage:
       priority: 3
-      color: "#80b3825d"
+      icon: "qrc:///main/images/harddisk"
+      color: "#80adacb0"
       command_order: ["storage-lvm-lvrefresh", "storage-lvm-snapshot", "storage-lvm-lvresize", "storage-lvm-lvremove"]
       monitor_order: ["filesystem", "storage-lvm-logical-volume", "storage-lvm-volume-group", "storage-lvm-physical-volume"]
     network:
       priority: 4
-      color: "#80b3825d"
+      color: "#80adacb0"
       monitor_order: ["oping", "ping", "tcp-connect", "ssh", "network-dns", "interface", "network-routes"]
     systemd:
       priority: 5

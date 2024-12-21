@@ -75,6 +75,7 @@ pub fn init_resources() {
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
             "images/nixos.svg" as "images/nixos",
+            "images/breeze/dark/drive-harddisk.svg" as "images/harddisk",
 
             "images/breeze/dark/media-playback-start.svg" as "images/button/start",
             "images/breeze/dark/media-playback-stop.svg" as "images/button/stop",
@@ -167,6 +168,7 @@ pub fn init_resources() {
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
             "images/nixos.svg" as "images/nixos",
+            "images/breeze/light/drive-harddisk.svg" as "images/harddisk",
 
             "images/breeze/light/media-playback-start.svg" as "images/button/start",
             "images/breeze/light/media-playback-stop.svg" as "images/button/stop",
