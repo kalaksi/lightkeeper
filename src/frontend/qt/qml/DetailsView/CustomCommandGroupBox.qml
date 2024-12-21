@@ -76,12 +76,27 @@ CategoryGroupBox {
                     collapsible: false
                     commands: [
                         {
-
+                            command_id: "view",
+                            command_params: [],
+                            display_options: {
+                                display_icon: "search",
+                                display_text: "View",
+                                display_style: "button"
+                            }
+                        },
+                        {
+                            command_id: "stop",
+                            command_params: [],
+                            display_options: {
+                                display_icon: "stop",
+                                display_text: "Stop",
+                                display_style: "button"
+                            }
                         }
-
                     ]
 
                     Layout.alignment: Qt.AlignHCenter
+                    Layout.rightMargin: Theme.spacingNormal
 
                     onClicked: function(buttonId, commandId, params) {
                         LK.command.execute(buttonId, root.hostId, commandId, params)

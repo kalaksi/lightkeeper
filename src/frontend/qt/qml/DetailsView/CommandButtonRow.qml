@@ -7,6 +7,7 @@ import "../Button"
 
 Item {
     id: root
+    /// List of CommandButtonData objects.
     property var commands: []
     property int size: 24
     property int buttonSize: size * 0.95

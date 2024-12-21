@@ -10,6 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::configuration::CustomCommandConfig;
+use crate::module::ModuleSpecification;
 use crate::utils::sha256;
 use crate::configuration::Hosts;
 use crate::error::*;
@@ -38,7 +39,7 @@ use crate::module::{
 pub struct CommandHandler {
     /// Host name is the first key, command id is the second key.
     commands: Arc<Mutex<HashMap<String, HashMap<String, Command>>>>,
-    /// Host name is the first key, custom command name/id is the second key.
+    /// Host name is the first key, custom command id is the second key.
     custom_commands: HashMap<String, HashMap<String, CustomCommandConfig>>,
     /// For communication to ConnectionManager.
     request_sender: Option<mpsc::Sender<ConnectorRequest>>,
@@ -78,6 +79,7 @@ impl CommandHandler {
 
         self.stop();
         self.commands.lock().unwrap().clear();
+        self.custom_commands.clear();
 
         self.request_sender = Some(request_sender);
         self.state_update_sender = Some(state_update_sender);
@@ -87,11 +89,17 @@ impl CommandHandler {
 
         for (host_id, host_config) in hosts_config.hosts.iter() {
             for (command_id, command_config) in host_config.effective.commands.iter() {
-
                 let command_spec = crate::module::ModuleSpecification::command(command_id, &command_config.version);
                 if let Some(command) = self.module_factory.new_command(&command_spec, &command_config.settings) {
                     self.add_command(host_id, command);
                 }
+            }
+
+            for command_config in host_config.effective.custom_commands.iter() {
+                let command_collection = self.custom_commands.entry(host_id.clone()).or_insert(HashMap::new());
+
+                // Only add if missing.
+                command_collection.entry(command_config.name.clone()).or_insert(command_config.clone());
             }
         }
 
@@ -178,6 +186,39 @@ impl CommandHandler {
             host: host.clone(),
             invocation_id: self.invocation_id_counter,
             request_type: request_type,
+            response_sender: self.new_response_sender(),
+        }).unwrap();
+
+        self.invocation_id_counter
+    }
+
+    /// Returns invocation ID or 0 on error.
+    pub fn executeCustom(&mut self, host_id: &String, custom_command_id: &String) -> u64 {
+        let host = self.host_manager.borrow().get_host(host_id);
+        let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
+        let internal_command_module = &self.commands.lock().unwrap()[host_id]["_custom-command"];
+
+        let custom_command = &self.custom_commands[host_id][custom_command_id].command.clone();
+        let message = internal_command_module.get_connector_message(host.clone(), vec![custom_command.clone()]).unwrap();
+
+        self.invocation_id_counter += 1;
+
+        // Notify host state manager about new command, so it can keep track of pending invocations.
+        state_update_sender.send(StateUpdateMessage {
+            host_name: host.name.clone(),
+            display_options: DisplayOptions::default(),
+            module_spec: internal_command_module.get_module_spec(),
+            command_result: Some(CommandResult::pending()),
+            invocation_id: self.invocation_id_counter,
+            ..Default::default()
+        }).unwrap();
+
+        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+            connector_spec: Some(ModuleSpecification::connector("ssh", "0.0.1")),
+            source_id: internal_command_module.get_module_spec().id,
+            host: host.clone(),
+            invocation_id: self.invocation_id_counter,
+            request_type: RequestType::CommandFollowOutput { commands: vec![message] },
             response_sender: self.new_response_sender(),
         }).unwrap();
 

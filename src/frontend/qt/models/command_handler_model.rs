@@ -28,10 +28,13 @@ pub struct CommandHandlerModel {
     //
     getAllHostCategories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     getCategoryCommands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
+    // TODO:
+    // getCustomCommands: qt_method!(fn(&self, host_id: QString) -> QStringList),
     getCommandsOnLevel: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     execute: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executeConfirmed: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
+    executeCustom: qt_method!(fn(&self, host_id: QString, custom_command_id: QString) -> u64),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
     hasFileChanged: qt_method!(fn(&self, local_file_path: QString, contents: QString) -> bool),
@@ -79,8 +82,6 @@ pub struct CommandHandlerModel {
 impl CommandHandlerModel {
     pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, configuration: configuration::Configuration) -> Self {
         CommandHandlerModel { 
-            // TODO: customcommands
-            customCommands: QStringList::default(),
             command_handler: command_handler,
             monitor_manager: monitor_manager,
             configuration: configuration,
@@ -144,6 +145,11 @@ impl CommandHandlerModel {
         }
         result
     }
+
+    // fn getCustomCommands(&self, host_id: QString) -> QStringList {
+    //     let custom_commands = self.command_handler.get_custom_commands_for_host(&host_id.to_string());
+    //     QStringList::from_iter(custom_commands.into_iter())
+    // }
 
     // `parent_id` is either command ID or category ID (for category-level commands).
     // Returns CommandData as JSON strings.
@@ -302,6 +308,12 @@ impl CommandHandlerModel {
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
         self.command_handler.execute(&host_id, &command_id, &parameters)
+    }
+
+    fn executeCustom(&mut self, host_id: QString, custom_command_id: QString) -> u64 {
+        let host_id = host_id.to_string();
+        let custom_command_id = custom_command_id.to_string();
+        self.command_handler.executeCustom(&host_id, &custom_command_id)
     }
 
     fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64 {
