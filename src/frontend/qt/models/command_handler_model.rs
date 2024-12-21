@@ -4,7 +4,7 @@ use std::sync::mpsc;
 
 use qmetaobject::*;
 
-use crate::command_handler::{CommandHandler, CommandData};
+use crate::command_handler::{CommandHandler, CommandButtonData};
 use crate::configuration;
 use crate::connection_manager::{CachePolicy, ConnectorRequest};
 use crate::host_manager::StateUpdateMessage;
@@ -121,7 +121,7 @@ impl CommandHandlerModel {
 
         let mut category_commands = self.command_handler.get_commands_for_host(host_id.to_string())
                                                         .into_values().filter(|data| data.display_options.category == category_string)
-                                                        .collect::<Vec<CommandData>>();
+                                                        .collect::<Vec<CommandButtonData>>();
 
         let command_order = match self.configuration.display_options.categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
@@ -157,9 +157,9 @@ impl CommandHandlerModel {
                                         data.display_options.parent_id == parent_id_string &&
                                         data.display_options.category == category_string &&
                                         (data.display_options.multivalue_level == 0 || data.display_options.multivalue_level == multivalue_level))
-                                   .collect::<HashMap<String, CommandData>>();
+                                   .collect::<HashMap<String, CommandButtonData>>();
 
-        let mut valid_commands_sorted = Vec::<CommandData>::new();
+        let mut valid_commands_sorted = Vec::<CommandButtonData>::new();
 
         let command_order = match self.configuration.display_options.categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
@@ -173,7 +173,7 @@ impl CommandHandlerModel {
         }
 
         // Append the rest of the commands in alphabetical order.
-        let mut rest_of_commands: Vec<CommandData> = all_commands.into_values().collect();
+        let mut rest_of_commands: Vec<CommandButtonData> = all_commands.into_values().collect();
         rest_of_commands.sort_by(|left, right| left.command_id.cmp(&right.command_id));
         valid_commands_sorted.append(&mut rest_of_commands);
 

@@ -614,10 +614,10 @@ impl CommandHandler {
     }
 
     // Return value contains host's commands. `parameters` is not set since provided by data point later on.
-    pub fn get_commands_for_host(&self, host_id: String) -> HashMap<String, CommandData> {
+    pub fn get_commands_for_host(&self, host_id: String) -> HashMap<String, CommandButtonData> {
         if let Some(command_collection) = self.commands.lock().unwrap().get(&host_id) {
             command_collection.iter().map(|(command_id, command)| {
-                (command_id.clone(), CommandData::new(command_id.clone(), command.get_display_options()))
+                (command_id.clone(), CommandButtonData::new(command_id.clone(), command.get_display_options()))
             }).collect()
         }
         else {
@@ -625,11 +625,11 @@ impl CommandHandler {
         }
     }
 
-    pub fn get_command_for_host(&self, host_id: &String, command_id: &String) -> Option<CommandData> {
+    pub fn get_command_for_host(&self, host_id: &String, command_id: &String) -> Option<CommandButtonData> {
         let commands = self.commands.lock().unwrap();
         let command = commands.get(host_id).unwrap()
                               .get(command_id).unwrap();
-        Some(CommandData::new(command_id.clone(), command.get_display_options()))
+        Some(CommandButtonData::new(command_id.clone(), command.get_display_options()))
     }
 
     pub fn write_file(&mut self, local_file_path: &String, new_contents: Vec<u8>) {
@@ -715,15 +715,15 @@ fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[
 
 
 #[derive(Default, Clone, Serialize, Deserialize)]
-pub struct CommandData {
+pub struct CommandButtonData {
     pub command_id: String,
     pub command_params: Vec<String>,
     pub display_options: DisplayOptions,
 }
 
-impl CommandData {
+impl CommandButtonData {
     pub fn new(command_id: String, display_options: DisplayOptions) -> Self {
-        CommandData {
+        CommandButtonData {
             command_id: command_id,
             command_params: Vec::new(),
             display_options: display_options,

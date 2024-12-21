@@ -3,7 +3,7 @@ extern crate qmetaobject;
 use qmetaobject::*;
 use serde_derive::Serialize;
 
-use crate::command_handler::CommandData;
+use crate::command_handler::CommandButtonData;
 use crate::enums::Criticality;
 use crate::{frontend, configuration};
 use crate::module::monitoring::{DataPoint, MonitoringData};
@@ -29,7 +29,7 @@ pub struct PropertyTableModel {
 
     // Internal data structures.
     i_monitoring_datas: Vec<MonitoringData>,
-    i_command_datas: Vec<CommandData>,
+    i_command_datas: Vec<CommandButtonData>,
     i_display_options: configuration::DisplayOptions,
 
     /// Holds preprocessed data more fitting for table rows.
@@ -63,7 +63,7 @@ impl PropertyTableModel {
 
     fn set_command_datas(&mut self, command_datas: QVariantList) {
         self.begin_reset_model();
-        self.i_command_datas = command_datas.into_iter().map(|qv| CommandData::from_qvariant(qv.clone()).unwrap()).collect();
+        self.i_command_datas = command_datas.into_iter().map(|qv| CommandButtonData::from_qvariant(qv.clone()).unwrap()).collect();
         self.update_row_datas();
         self.end_reset_model();
     }
@@ -148,7 +148,7 @@ impl PropertyTableModel {
     }
 
     // Practically flattens multivalue data and does some filtering.
-    fn convert_to_row_data(monitoring_data: &MonitoringData, command_datas: &[CommandData]) -> Vec<RowData> {
+    fn convert_to_row_data(monitoring_data: &MonitoringData, command_datas: &[CommandButtonData]) -> Vec<RowData> {
         let mut row_datas = Vec::<RowData>::new();
         let last_data_point = monitoring_data.values.iter().last().unwrap();
 
@@ -198,7 +198,7 @@ impl PropertyTableModel {
     }
 
     fn create_single_row_data(monitoring_data: &MonitoringData, mut data_point: DataPoint, multivalue_level: u8,
-                              command_datas: &[CommandData]) -> Option<RowData> {
+                              command_datas: &[CommandButtonData]) -> Option<RowData> {
         if data_point.criticality == Criticality::Ignore {
             return None;
         }
@@ -214,7 +214,7 @@ impl PropertyTableModel {
                 full_command.command_params = data_point.command_params.clone();
                 full_command
             })
-            .collect::<Vec<CommandData>>();
+            .collect::<Vec<CommandButtonData>>();
 
         if multivalue_level > 1 {
             // TODO: proper padding with QML instead of spaces.
@@ -315,7 +315,7 @@ impl QAbstractTableModel for PropertyTableModel {
                                       command.display_options.depends_on_value.contains(&row_data.value.value))
                     .filter(|command| command.display_options.depends_on_tags.iter().all(|tag| row_data.value.tags.contains(tag)))
                     .filter(|command| command.display_options.depends_on_no_tags.iter().all(|tag| !row_data.value.tags.contains(tag)))
-                    .collect::<Vec<CommandData>>();
+                    .collect::<Vec<CommandButtonData>>();
 
                 serde_json::to_string(&command_datas).unwrap().to_qvariant()
             },
@@ -334,7 +334,7 @@ struct RowData {
     monitor_id: String,
     value: DataPoint,
     display_options: frontend::DisplayOptions,
-    command_datas: Vec<CommandData>,
+    command_datas: Vec<CommandButtonData>,
 }
 
 #[derive(Default, Clone, Serialize)]

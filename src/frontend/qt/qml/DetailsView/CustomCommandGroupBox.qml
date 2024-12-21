@@ -74,7 +74,12 @@ CategoryGroupBox {
 
                     size: Math.min(parent.height, 28)
                     collapsible: false
-                    commands: Parse.ListOfJsons(LK.command.customCommands)
+                    commands: [
+                        {
+
+                        }
+
+                    ]
 
                     Layout.alignment: Qt.AlignHCenter
 
