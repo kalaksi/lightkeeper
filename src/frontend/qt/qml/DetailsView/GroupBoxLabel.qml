@@ -6,13 +6,15 @@ import Qt5Compat.GraphicalEffects
 import "../Button"
 import "../Misc"
 
-Rectangle {
+BorderRectangle {
     id: root
     property string text: ""
     property string icon: ""
     property real refreshProgress: 100
+    property alias color: root.backgroundColor
+    property bool showRefreshButton: false
+    property bool showConfigButton: false
 
-    color: "#00000000"
     implicitWidth: label.implicitWidth
     implicitHeight: label.implicitHeight + 10
     layer.enabled: true
@@ -24,6 +26,7 @@ Rectangle {
     }
 
     signal refreshClicked()
+    signal configClicked()
 
     Row {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -51,7 +54,20 @@ Rectangle {
         }
     }
 
+    ImageButton {
+        visible: root.showConfigButton
+        size: 0.8 * parent.height
+        imageRelativeWidth: 0.8
+        imageRelativeHeight: 0.8
+        anchors.rightMargin: Theme.spacingNormal
+        imageSource: "qrc:/main/images/button/configure"
+        flatButton: true
+        tooltip: "Configure"
+        onClicked: root.configClicked()
+    }
+
     RefreshButton {
+        visible: root.showRefreshButton
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
         anchors.rightMargin: Theme.spacingTight

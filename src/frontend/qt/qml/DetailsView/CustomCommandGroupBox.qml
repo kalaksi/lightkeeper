@@ -6,6 +6,19 @@ import QtQuick.Layouts
 CategoryGroupBox {
     id: root
 
+    label: GroupBoxLabel {
+        id: groupBoxLabel
+        anchors.left: root.left
+        anchors.right: root.right
+
+        text: "Custom commands"
+        icon: "qrc:///main/images/button/terminal"
+        color: "#252525"
+        border: 1
+        borderColor: "#656565"
+        showConfigButton: true
+    }
+
     ColumnLayout {
         id: column
         anchors.fill: parent

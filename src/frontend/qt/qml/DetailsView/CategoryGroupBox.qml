@@ -32,6 +32,7 @@ GroupBox {
         icon: Theme.categoryIcon(categoryName)
         color: Theme.categoryColor(categoryName)
 
+        showRefreshButton: true
         onRefreshClicked: refreshClicked()
     }
 
