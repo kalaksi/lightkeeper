@@ -22,7 +22,11 @@ CategoryGroupBox {
         border: 1
         borderColor: "#656565"
         showConfigButton: true
+
+        onConfigClicked: configClicked()
     }
+
+    signal configClicked()
 
     ListView {
         id: commandList
@@ -35,7 +39,7 @@ CategoryGroupBox {
         highlight: Rectangle {
             color: root.selectionColor
         }
-        model: ["command1", "command2", "command3"]
+        model: LK.command.customCommands
 
         delegate: ItemDelegate {
             implicitHeight: root.rowHeight
@@ -99,7 +103,7 @@ CategoryGroupBox {
                     Layout.rightMargin: Theme.spacingNormal
 
                     onClicked: function(buttonId, commandId, params) {
-                        LK.command.execute(buttonId, root.hostId, commandId, params)
+                        LK.command.executeCustom(buttonId, root.hostId, commandId)
                     }
                 }
             }

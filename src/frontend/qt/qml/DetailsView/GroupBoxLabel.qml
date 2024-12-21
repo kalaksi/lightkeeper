@@ -54,25 +54,29 @@ BorderRectangle {
         }
     }
 
-    ImageButton {
-        visible: root.showConfigButton
-        size: 0.8 * parent.height
-        imageRelativeWidth: 0.8
-        imageRelativeHeight: 0.8
-        anchors.rightMargin: Theme.spacingNormal
-        imageSource: "qrc:/main/images/button/configure"
-        flatButton: true
-        tooltip: "Configure"
-        onClicked: root.configClicked()
-    }
-
-    RefreshButton {
-        visible: root.showRefreshButton
-        anchors.verticalCenter: parent.verticalCenter
+    Row {
         anchors.right: parent.right
         anchors.rightMargin: Theme.spacingTight
-        onClicked: root.refreshClicked()
-        spinning: root.refreshProgress < 100
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Theme.spacingNormal
+
+        ImageButton {
+            visible: root.showConfigButton
+            size: 0.8 * root.height
+            imageRelativeWidth: 0.8
+            imageRelativeHeight: 0.8
+            imageSource: "qrc:/main/images/button/configure"
+            flatButton: true
+            tooltip: "Configure"
+            onClicked: root.configClicked()
+        }
+
+        RefreshButton {
+            visible: root.showRefreshButton
+            size: 0.8 * root.height
+            onClicked: root.refreshClicked()
+            spinning: root.refreshProgress < 100
+        }
     }
 
     function cleanupLabel(text) {
