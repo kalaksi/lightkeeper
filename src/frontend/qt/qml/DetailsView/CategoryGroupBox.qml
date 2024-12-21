@@ -25,8 +25,7 @@ GroupBox {
     // Custom label provides more flexibility.
     label: GroupBoxLabel {
         id: groupBoxLabel
-        anchors.left: root.left
-        anchors.right: root.right
+        width: root.width
 
         text: TextTransform.capitalize(categoryName)
         icon: Theme.categoryIcon(categoryName)

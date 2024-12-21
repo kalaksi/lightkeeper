@@ -132,7 +132,9 @@ LightkeeperDialog {
                     implicitHeight: root.tableRowHeight
                     width: parent.width
                     highlighted: ListView.isCurrentItem
-                    onClicked: monitorList.currentIndex = monitorList.currentIndex === index ? -1 : index
+                    onClicked: {
+                        monitorList.currentIndex = monitorList.currentIndex === index ? -1 : index
+                    }
 
                     Row {
                         anchors.fill: parent
