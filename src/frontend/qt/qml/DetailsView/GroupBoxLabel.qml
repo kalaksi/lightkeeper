@@ -13,6 +13,7 @@ Rectangle {
     property real refreshProgress: 100
     property bool showRefreshButton: false
     property bool showConfigButton: false
+    property string accentColor: "#20ffffff"
 
     implicitWidth: label.implicitWidth
     implicitHeight: label.implicitHeight + 10
@@ -28,6 +29,13 @@ Rectangle {
     signal configClicked()
 
 
+    Trapezoid {
+        // Quick hack to add some detail to some groupboxes.
+        visible: root.text === "Network" || root.text === "Storage"
+        height: root.height
+        width: 50
+        color: root.accentColor
+    }
 
     Row {
         anchors.horizontalCenter: parent.horizontalCenter

@@ -53,12 +53,12 @@ display_options:
     storage:
       priority: 3
       icon: "qrc:///main/images/harddisk"
-      color: "#80adacb0"
+      color: "#606060"
       command_order: ["storage-lvm-lvrefresh", "storage-lvm-snapshot", "storage-lvm-lvresize", "storage-lvm-lvremove"]
       monitor_order: ["filesystem", "storage-lvm-logical-volume", "storage-lvm-volume-group", "storage-lvm-physical-volume"]
     network:
       priority: 4
-      color: "#80adacb0"
+      color: "#606060"
       monitor_order: ["oping", "ping", "tcp-connect", "ssh", "network-dns", "interface", "network-routes"]
     systemd:
       priority: 5
