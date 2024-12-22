@@ -6,12 +6,11 @@ import Qt5Compat.GraphicalEffects
 import "../Button"
 import "../Misc"
 
-BorderRectangle {
+Rectangle {
     id: root
     property string text: ""
     property string icon: ""
     property real refreshProgress: 100
-    property alias color: root.backgroundColor
     property bool showRefreshButton: false
     property bool showConfigButton: false
 
@@ -27,6 +26,8 @@ BorderRectangle {
 
     signal refreshClicked()
     signal configClicked()
+
+
 
     Row {
         anchors.horizontalCenter: parent.horizontalCenter

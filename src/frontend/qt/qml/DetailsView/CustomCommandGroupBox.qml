@@ -19,8 +19,8 @@ CategoryGroupBox {
         text: "Custom commands"
         icon: "qrc:///main/images/button/terminal"
         color: "#252525"
-        border: 1
-        borderColor: "#656565"
+        border.width: 1
+        border.color: "#656565"
         showConfigButton: true
 
         onConfigClicked: configClicked()

@@ -10,10 +10,10 @@ Item {
     id: root
     anchors.fill: parent
 
-    BorderRectangle {
-        borderColor: Theme.borderColor
-        backgroundColor: Theme.backgroundColor
-        border: 1
+    Rectangle {
+        color: Theme.backgroundColor
+        border.color: Theme.borderColor
+        border.width: 1
 
         Layout.fillWidth: true
         Layout.fillHeight: true

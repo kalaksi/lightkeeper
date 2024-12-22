@@ -236,10 +236,10 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    BorderRectangle {
-                        borderColor: Theme.borderColor
-                        backgroundColor: Theme.backgroundColor
-                        border: 1
+                    Rectangle {
+                        color: Theme.backgroundColor
+                        border.color: Theme.borderColor
+                        border.width: 1
 
                         Layout.fillHeight: true
                         Layout.fillWidth: true
@@ -304,10 +304,10 @@ LightkeeperDialog {
                 }
 
                 RowLayout {
-                    BorderRectangle {
-                        borderColor: Theme.borderColor
-                        backgroundColor: Theme.backgroundColor
-                        border: 1
+                    Rectangle {
+                        color: Theme.backgroundColor
+                        border.color: Theme.borderColor
+                        border.width: 1
 
                         Layout.fillHeight: true
                         Layout.fillWidth: true

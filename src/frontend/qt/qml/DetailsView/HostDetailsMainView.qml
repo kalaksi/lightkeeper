@@ -98,6 +98,9 @@ Item {
                 Layout.minimumHeight: root.columnMinimumHeight
                 Layout.maximumHeight: root.columnMaximumHeight
                 Layout.alignment: Qt.AlignTop
+
+                onConfigClicked: {
+                }
             }
 
             Repeater {

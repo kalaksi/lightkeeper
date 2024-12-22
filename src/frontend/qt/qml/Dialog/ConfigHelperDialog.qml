@@ -74,10 +74,10 @@ LightkeeperDialog {
             text: `It seems that you are missing these modules from the '${root.groupName}' configuration group:`
         }
 
-        BorderRectangle {
-            borderColor: Theme.borderColor
-            backgroundColor: Theme.backgroundColor
-            border: 1
+        Rectangle {
+            color: Theme.backgroundColor
+            border.color: Theme.borderColor
+            border.width: 1
 
             Layout.fillWidth: true
             Layout.fillHeight: true
