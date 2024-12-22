@@ -36,5 +36,11 @@ base64 = "0.22.1"
 hex = "0.4.3"
 bincode = "1.3.3"
 openssl = { version = "0.10.66", features = ["vendored"] }
+# Only for hot reload.
+notify = { version = "7.0.0" }
 
 lightkeeper_module = { path = "macros/lightkeeper_module" }
+
+# [dev-dependencies]
+# notify = { version = "7.0.0" }
+

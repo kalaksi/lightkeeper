@@ -11,3 +11,5 @@ pub use display_options::UserInputField;
 // TODO: Not sure if going to implement this. Remove later.
 // pub mod cli;
 pub mod qt;
+
+pub mod hot_reload;

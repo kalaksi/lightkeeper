@@ -7,6 +7,7 @@ use super::resources;
 #[allow(unused_imports)]
 use super::resources_qml;
 use super::models::*;
+use crate::frontend::hot_reload;
 use crate::metrics::MetricsManager;
 use crate::{
     frontend,
@@ -28,6 +29,7 @@ pub struct QmlFrontend {
     update_receiver: Option<mpsc::Receiver<frontend::UIUpdate>>,
     update_sender_prototype: mpsc::Sender<frontend::UIUpdate>,
 }
+
 
 impl QmlFrontend {
     /// Parameters provide the initial data and configuration for the frontend.
@@ -109,7 +111,10 @@ impl QmlFrontend {
             ::log::debug!("Temporary log entry 8");
             self.load_qml(&mut engine);
             ::log::debug!("Temporary log entry 9");
-            engine.exec();
+
+            let arc_engine = std::sync::Arc::new(engine);
+            hot_reload::watch(std::path::PathBuf::from("./src/frontend/qt/qml"), arc_engine.clone());
+            arc_engine.exec();
             ::log::debug!("Temporary log entry 10");
         }
 
