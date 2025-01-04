@@ -6,7 +6,6 @@ import "../Button"
 import "../Text"
 import ".."
 
-// This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
     required property string groupName 

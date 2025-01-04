@@ -24,6 +24,7 @@ ToolBar {
     signal clickedHotkeyHelp()
     signal clickedCertificateMonitor()
     signal filterChanged(string search)
+    signal hotReload()
 
     background: BorderRectangle {
         backgroundColor: Theme.backgroundColor
@@ -119,6 +120,18 @@ ToolBar {
         }
 
         ToolSeparator { }
+
+        ToolButton {
+            icon.source: "qrc:/main/images/button/refresh"
+            text: "Hot reload"
+            display: AbstractButton.IconOnly
+            onClicked: root.hotReload()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
+            topPadding: 2
+            bottomPadding: 6
+        }
 
         ToolButton {
             icon.source: "qrc:/main/images/button/keyboard-shortcuts"

@@ -5,7 +5,6 @@ import QtQuick.Layouts 1.11
 import "../Text"
 
 
-// This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
     // See UserInputField from rust-side for input spec format.

@@ -10,7 +10,6 @@ import "../Misc"
 
 /// ConfigHelper notifies user about any new modules that are available for the configuration group,
 /// and makes it easy to add those to configuration.
-/// This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
     required property string groupName

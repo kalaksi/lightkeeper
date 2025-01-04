@@ -7,7 +7,6 @@ import "../Text"
 import "../js/Utils.js" as Utils
 import ".."
 
-// This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
     property var _preferences: LK.config.getPreferences()

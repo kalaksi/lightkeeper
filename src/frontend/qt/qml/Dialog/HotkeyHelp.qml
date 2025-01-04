@@ -6,7 +6,6 @@ import ".."
 import "../Text"
 
 
-// This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
     modal: true

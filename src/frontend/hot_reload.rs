@@ -1,6 +1,7 @@
-
 use std::{
-    path::PathBuf, thread, time::{Duration, Instant}
+    path::PathBuf,
+    thread,
+    time::Instant
 };
 use qmetaobject;
 use std::sync::Arc;

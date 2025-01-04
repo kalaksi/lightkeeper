@@ -7,12 +7,12 @@ import "../Text"
 import "../Misc"
 
 
-// This component should be a direct child of main window.
 Dialog {
     id: root
     modal: true
     opacity: visible ? 1.0 : 0.0
     title: ""
+    anchors.centerIn: parent
 
     property int borderRadius: 6
     property color headerBackground: Theme.titleBarColor

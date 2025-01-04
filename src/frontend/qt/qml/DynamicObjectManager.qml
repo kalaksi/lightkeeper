@@ -1,4 +1,4 @@
-import QtQuick 2.15
+import QtQuick
 
 
 Item {
@@ -39,25 +39,6 @@ Item {
             instance.destroy()
             delete _instances[instanceId]
         }
-    }
-
-    // Create Components from files instead of providing the Component using QML.
-    // NOTE: currently not used and use is discouraged.
-    function createComponent(parent, qmlPath, properties = {}, signalHandlers = {}) {
-        console.log(`Creating new component for ${qmlPath}`)
-
-        let component = Qt.createComponent(qmlPath)
-        let instanceId = _currentInstanceId
-        _currentInstanceId += 1
-
-        if (component.status === Component.Ready) {
-            _finishCreation(parent, component, properties, signalHandlers, instanceId)
-        }
-        else {
-            component.statusChanged.connect(() => _finishCreation(parent, component, properties, signalHandlers, instanceId))
-        }
-
-        return instanceId
     }
 
     function _finishCreation(parent, component, properties, signalHandlers, instanceId) {

@@ -9,7 +9,6 @@ import "../Misc"
 import "../js/TextTransform.js" as TextTransform
 
 
-// This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
     property string text: ""

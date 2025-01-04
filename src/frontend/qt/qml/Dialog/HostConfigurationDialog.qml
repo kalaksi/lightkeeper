@@ -8,7 +8,6 @@ import "../Misc"
 import "../js/Utils.js" as Utils
 import ".."
 
-// This component should be a direct child of main window.
 LightkeeperDialog {
     id: root
     property string hostId: ""

@@ -49,8 +49,7 @@ ApplicationWindow {
 
     menuBar: MainMenuBar {
         onClickedAdd: {
-            hostConfigurationDialog.hostId = ""
-            hostConfigurationDialog.open()
+            dialogHandler.openHostConfig()
         }
         onClickedRemove: {
             let hostId = hostTableModel.getSelectedHostId()
@@ -68,7 +67,7 @@ ApplicationWindow {
             hostConfigurationDialog.open()
         }
         onClickedCertificateMonitor: {
-            certificateMonitorDialog.open()
+            dialogHandler.openCertificateMonitor()
         }
         onClickedPreferences: {
             preferencesDialog.open()
@@ -79,6 +78,10 @@ ApplicationWindow {
         onFilterChanged: function(searchText) {
             hostTableModel.filter(searchText)
         }
+        // TODO
+        // onHotReload: function() {
+        //     LK.reload()
+        // }
 
         // Shortcuts are enabled if no host is selected.
         enableShortcuts: hostTableModel.selectedRow === -1
@@ -251,6 +254,17 @@ ApplicationWindow {
         }
     }
 
+    // TODO: loader for dialogs for hot reload
+    // Loader {
+    //     anchors.fill: parent
+    //     sourceComponent: DialogHandler {
+
+    //     }
+    // }
+
+    DialogHandler {
+        id: dialogHandler
+    }
 
     Item {
         id: body
@@ -331,102 +345,12 @@ ApplicationWindow {
         }
     }
 
-    // Dynamic component loaders
-    Loader {
-        id: confirmationDialogLoader
-        anchors.centerIn: parent
-    }
-
-    DynamicObjectManager {
-        id: detailsDialogManager
-
-        DetailsDialog {
-            y: root.y + 50
-            x: root.x + 50
-            width: root.width
-            height: root.height
-        }
-    }
-
     SnackbarContainer {
         id: snackbarContainer
         anchors.fill: parent
         anchors.margins: 20
     }
 
-
-    // Modal dialogs
-    InputDialog {
-        id: inputDialog
-        anchors.centerIn: parent
-    }
-
-    HostConfigurationDialog {
-        id: hostConfigurationDialog
-        anchors.centerIn: parent
-        bottomMargin: 0.13 * parent.height
-
-        onConfigurationChanged: LK.reload()
-    }
-
-    CertificateMonitorDialog {
-        id: certificateMonitorDialog
-        anchors.centerIn: parent
-        bottomMargin: 0.15 * parent.height
-    }
-
-    PreferencesDialog {
-        id: preferencesDialog
-        anchors.centerIn: parent
-        bottomMargin: 0.15 * parent.height
-
-        onConfigurationChanged: LK.reload()
-    }
-
-    // TODO: Repeater didn't work, figure out why.
-    ConfigHelperDialog {
-        groupName: "linux"
-        onConfigurationChanged: LK.reload()
-    }
-
-    ConfigHelperDialog {
-        groupName: "docker"
-        onConfigurationChanged: LK.reload()
-    }
-
-    ConfigHelperDialog {
-        groupName: "docker-compose"
-        onConfigurationChanged: LK.reload()
-    }
-
-    ConfigHelperDialog {
-        groupName: "systemd-service"
-        onConfigurationChanged: LK.reload()
-    }
-
-    ConfigHelperDialog {
-        groupName: "nixos"
-        onConfigurationChanged: LK.reload()
-    }
-
-    CommandOutputDialog {
-        id: commandOutputDialog
-        property int pendingInvocation: 0
-
-        enableShortcuts: visible
-        anchors.centerIn: parent
-        width: root.width * 0.6
-        height: root.height * 0.8
-    }
-
-    TextDialog {
-        id: textDialog
-        property int pendingInvocation: 0
-
-        anchors.centerIn: parent
-        width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
-        height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
-    }
 
     HotkeyHelp {
         id: hotkeyHelp
@@ -464,5 +388,9 @@ ApplicationWindow {
         LK.stop()
         DesktopPortal.stop()
         Qt.quit()
+    }
+
+    function reload() {
+        // todo
     }
 }
