@@ -67,6 +67,14 @@ LightkeeperDialog {
                 validator: RegularExpressionValidator {
                     regularExpression: /[a-zA-Z\d\-\.\:]+/
                 }
+                onAccepted: {
+                    if (addressField.text.length > 0) {
+                        LK.config.addCertificateMonitor(addressField.text)
+                        addressField.text = ""
+                        LK.reload()
+                        root.refresh()
+                    }
+                }
 
                 Layout.fillWidth: true
             }
@@ -150,6 +158,7 @@ LightkeeperDialog {
                             }
 
                             SmallerText {
+                                // TODO: produces warnings about undefined value when adding new entries.
                                 text: root.dataPoints[modelData].description
                                 visible: text !== ""
                                 wrapMode: Text.WordWrap
