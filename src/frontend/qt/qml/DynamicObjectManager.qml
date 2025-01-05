@@ -5,28 +5,29 @@ Item {
     id: root
     default required property Component component
 
-    // TODO: clean up destroyed objects?
     property var _instances: []
     property int _currentInstanceId: 1
 
-    function create(properties = {}) {
+    function create(properties = {}, signalHandlers = {}) {
         let instanceId = _currentInstanceId
         _currentInstanceId += 1
 
         let instance = component.createObject(root, properties)
         if (instance !== null) {
             _instances[instanceId] = instance
-            console.log("New object created successfully")
+            for (const [name, handler] of Object.entries(signalHandlers)) {
+                instance[name].connect(handler)
+            }
         }
         else {
             console.log("Error creating object")
         }
 
-        return instanceId
+        return [instanceId, instance]
     }
 
     function get(instanceId) {
-        let instance = _instances[instanceId]
+        let instance = root._instances[instanceId]
         if (typeof instance === "undefined") {
             console.log(`Object ${instanceId} does not exist or is not ready yet`)
         }
@@ -37,26 +38,15 @@ Item {
         let instance = root.get(instanceId)
         if (typeof instance !== "undefined") {
             instance.destroy()
-            delete _instances[instanceId]
+            delete root._instances[instanceId]
         }
     }
 
-    function _finishCreation(parent, component, properties, signalHandlers, instanceId) {
-        if (component.status === Component.Ready) {
-            let instance = component.createObject(parent, properties)
-            if (instance !== null) {
-                _instances[instanceId] = instance
-                for (const [name, handler] of Object.entries(signalHandlers)) {
-                    instance[name].connect(handler)
-                }
-                console.log("New object created successfully")
-            }
-            else {
-                console.log("Error creating object")
-            }
+    function clear() {
+        for (let instance of root._instances) {
+            instance.destroy()
         }
-        else if (component.status === Component.Error) {
-            console.log(`Error creating component: ${component.errorString()}`)
-        }
+        root._instances = []
+        root._currentInstanceId = 1
     }
 }

@@ -10,7 +10,7 @@ LightkeeperDialog {
 
     property string text: ""
     // Center short text automatically.
-    property bool centerText: text.length < 30
+    property bool centerText: text.length < 40
 
     title: "Confirmation"
     standardButtons: Dialog.Yes | Dialog.No

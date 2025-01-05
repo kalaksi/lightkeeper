@@ -10,7 +10,7 @@ LightkeeperDialog {
     id: root
     modal: true
     implicitWidth: 600
-    implicitHeight: 600
+    implicitHeight: 700
     standardButtons: Dialog.Close
 
     contentItem: ScrollView {

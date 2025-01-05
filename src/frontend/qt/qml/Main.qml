@@ -6,7 +6,6 @@ import QtQuick.Layouts
 
 import HostTableModel
 
-import "./Dialog"
 import "./Button"
 import "./DetailsView"
 import "./Misc"
@@ -15,7 +14,6 @@ import "js/Test.js" as Test
 
 
 ApplicationWindow {
-    property var _detailsDialogs: {}
     property int errorCount: 0
 
     id: root
@@ -49,7 +47,7 @@ ApplicationWindow {
 
     menuBar: MainMenuBar {
         onClickedAdd: {
-            dialogHandler.openHostConfig()
+            dialogHandler.openNewHostConfig()
         }
         onClickedRemove: {
             let hostId = hostTableModel.getSelectedHostId()
@@ -63,17 +61,17 @@ ApplicationWindow {
         }
         onClickedEdit: {
             LK.config.beginHostConfiguration()
-            hostConfigurationDialog.hostId = hostTableModel.getSelectedHostId()
-            hostConfigurationDialog.open()
+            let hostId = hostTableModel.getSelectedHostId()
+            dialogHandler.openHostConfig(hostId)
         }
         onClickedCertificateMonitor: {
             dialogHandler.openCertificateMonitor()
         }
         onClickedPreferences: {
-            preferencesDialog.open()
+            dialogHandler.openPreferences()
         }
         onClickedHotkeyHelp: {
-            hotkeyHelp.open()
+            dialogHandler.openHotkeyHelp()
         }
         onFilterChanged: function(searchText) {
             hostTableModel.filter(searchText)
@@ -150,28 +148,16 @@ ApplicationWindow {
                 }
             }
 
-            let dialogInstanceId = _detailsDialogs[invocationId]
-            if (typeof dialogInstanceId !== "undefined") {
-                let dialog = detailsDialogManager.get(dialogInstanceId)
-                dialog.text = commandResult.message
-                dialog.errorText = commandResult.error
-                dialog.criticality = commandResult.criticality
-            }
-            else if (textDialog.pendingInvocation === invocationId) {
-                textDialog.text = commandResult.message
-            }
-            else if (commandOutputDialog.pendingInvocation === invocationId) {
-                commandOutputDialog.text = commandResult.message
-                commandOutputDialog.progress = commandResult.progress
-            }
+            // No need to check if invocation is relevant to specific dialogs. DialogHandler takes care of that.
+            dialogHandler.updateDetailsDialog(invocationId, commandResult.message, commandResult.error, commandResult.criticality)
+            dialogHandler.updateTextDialog(invocationId, commandResult.message)
+            dialogHandler.updateCommandOutputDialog(invocationId, commandResult.message, commandResult.progress)
         }
 
         function onErrorReceived(criticality, message) {
             root.errorCount += 1;
             if (criticality === "Critical") {
-                // TODO: something better. This is not really an alert dialog.
-                textDialog.text = message
-                textDialog.open()
+                dialogHandler.openErrorDialog(message)
             }
             else {
                 snackbarContainer.addSnackbar(criticality, message)
@@ -180,15 +166,14 @@ ApplicationWindow {
 
         function onVerificationRequested(hostId, connectorId, message, keyId) {
             let text = message + "\n\n" + keyId
-            confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", {
-                text: text,
-                implicitWidth: 750,
-                implicitHeight: 350,
-            })
-            confirmationDialogLoader.item.onAccepted.connect(function() {
-                LK.command.verifyHostKey(hostId, connectorId, keyId)
-                LK.command.initializeHost(hostId)
-            })
+
+            dialogHandler.openConfirmationDialog(
+                text,
+                () => {
+                    LK.command.verifyHostKey(hostId, connectorId, keyId)
+                    LK.command.initializeHost(hostId)
+                }
+            )
         }
     }
 
@@ -196,35 +181,26 @@ ApplicationWindow {
         target: LK.command
 
         function onConfirmationDialogOpened(text, buttonId, hostId, commandId, commandParams) {
-            confirmationDialogLoader.setSource("./Dialog/ConfirmationDialog.qml", { text: text }) 
-            confirmationDialogLoader.item.onAccepted.connect(() => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams))
+            dialogHandler.openConfirmationDialog(text, () => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams))
         }
 
         function onDetailsDialogOpened(invocationId) {
-            let instanceId = detailsDialogManager.create()
-            _detailsDialogs[invocationId] = instanceId
+            dialogHandler.openDetailsDialog(invocationId)
         }
 
         function onTextDialogOpened(invocationId) {
-            textDialog.pendingInvocation = invocationId
-            textDialog.open()
+            dialogHandler.openTextDialog(invocationId)
         }
 
         function onCommandOutputDialogOpened(title, invocationId) {
-            commandOutputDialog.pendingInvocation = invocationId
-            commandOutputDialog.title = title
-            commandOutputDialog.open()
+            dialogHandler.openCommandOutputDialog(invocationId, title)
         }
 
         function onInputDialogOpened(inputSpecsJson, buttonId, hostId, commandId, commandParams) {
             let inputSpecs = JSON.parse(inputSpecsJson)
-
-            inputDialog.inputSpecs = inputSpecs
-            // TODO: need to clear previous connections?
-            inputDialog.onInputValuesGiven.connect((inputValues) => {
+            dialogHandler.openInput(inputSpecs, (inputValues) => {
                 LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams.concat(inputValues))
             })
-            inputDialog.open()
         }
     }
 
@@ -242,8 +218,6 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
-        _detailsDialogs = {}
-
         // Starts the thread that receives host state updates in the backend.
         LK.receiveUpdates()
         // Starts the thread that receives portal responses from D-Bus.
@@ -349,13 +323,6 @@ ApplicationWindow {
         id: snackbarContainer
         anchors.fill: parent
         anchors.margins: 20
-    }
-
-
-    HotkeyHelp {
-        id: hotkeyHelp
-        anchors.centerIn: parent
-        height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
 
     Shortcut {

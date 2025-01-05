@@ -3,13 +3,13 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 import "./Dialog"
+import "js/Utils.js" as Utils
 
 
 Item {
     id: root
     anchors.fill: parent
 
-    // Modal dialogs
     InputDialog {
         id: inputDialog
     }
@@ -33,82 +33,151 @@ Item {
         onConfigurationChanged: LK.reload()
     }
 
-    Item {
-        id: confirmationDialogsContainer
-        anchors.fill: parent
+    HotkeyHelp {
+        id: hotkeyHelp
+        height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
+    }
 
-        Repeater {
-            id: confirmationDialogRepeater
-            model: ListModel {}
+    DynamicObjectManager {
+        id: confirmationDialogManager
 
-            Dialog {
-                id: confirmationDialog
-                title: "Confirmation"
-                modal: true
-                visible: true
-
-                property string message: model.message
-                property string confirmText: model.confirmText
-                property string cancelText: model.cancelText
-                property var onConfirm: model.onConfirm
-
-                contentItem: ColumnLayout {
-                    spacing: 16
-
-                    Text {
-                        text: message
-                        wrapMode: Text.WordWrap
-                    }
-
-                    RowLayout {
-                        spacing: 8
-                        anchors.horizontalCenter: parent.horizontalCenter
-
-                        Button {
-                            text: confirmText
-                            onClicked: {
-                                if (onConfirm) {
-                                    onConfirm()
-                                }
-                                confirmationDialog.visible = false
-                                confirmationDialogRepeater.model.remove(index)
-                            }
-                        }
-
-                        Button {
-                            text: cancelText
-                            onClicked: {
-                                confirmationDialog.visible = false
-                                confirmationDialogRepeater.model.remove(index)
-                            }
-                        }
-                    }
-                }
-            }
+        ConfirmationDialog {
+            parent: root
         }
+    }
+
+    DynamicObjectManager {
+        id: detailsDialogManager
+
+        property var invocationIdToDialogId: {}
+
+        Component.onCompleted: {
+            invocationIdToDialogId = {}
+        }
+
+        DetailsDialog {
+            parent: root
+        }
+    }
+
+    // linux, docker, docker-compose, systemd-service, nixos
+    ConfigHelperDialog {
+        groupName: "linux"
+        onConfigurationChanged: LK.reload()
+    }
+
+    CommandOutputDialog {
+        id: commandOutputDialog
+        property int pendingInvocation: 0
+
+        enableShortcuts: visible
+        width: root.width * 0.6
+        height: root.height * 0.8
+    }
+
+    TextDialog {
+        id: textDialog
+        property int pendingInvocation: 0
+
+        width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
+        height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
+    }
+
+    // TODO: something better? This is not really an alert dialog.
+    TextDialog {
+        id: errorDialog
+
+        width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
+        height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
 
     function openInput(inputSpecs, onInputValuesGiven) {
         inputDialog.inputSpecs = inputSpecs
-        inputDialog.inputValuesGiven.connect(onInputValuesGiven)
-        inputDialog.visible = true
+
+        // Removes connection after triggering once.
+        inputDialog.inputValuesGiven.connect((inputValues) => {
+            inputDialog.inputValuesGiven.disconnect()
+            onInputValuesGiven(inputValues)
+        })
+
+        inputDialog.open()
+    }
+
+    function openNewHostConfig(hostId) {
+        hostConfigDialog.hostId = ""
+        hostConfigDialog.open()
     }
 
     function openHostConfig(hostId) {
         hostConfigDialog.hostId = hostId
-        hostConfigDialog.visible = true
+        hostConfigDialog.open()
     }
 
     function openCertificateMonitor() {
-        certificateMonitorDialog.visible = true
+        certificateMonitorDialog.open()
     }
 
-    function openConfirmation(message, confirmText, cancelText, onConfirm) {
-        confirmationDialogRepeater.model.append({
-            message: message,
-            confirmText: confirmText,
-            cancelText: cancelText,
-            onConfirm: onConfirm
-        })
+    function openPreferences() {
+        preferencesDialog.open()
+    }
+
+    function openHotkeyHelp() {
+        hotkeyHelp.open()
+    }
+
+    function openTextDialog(invocationId) {
+        textDialog.pendingInvocation = invocationId
+        textDialog.open()
+    }
+
+    function updateTextDialog(invocationId, text) {
+        if (textDialog.visible === false || textDialog.pendingInvocation !== invocationId) {
+            return
+        }
+
+        textDialog.text = text
+    }
+
+    function openErrorDialog(text) {
+        errorDialog.text = text
+        errorDialog.open()
+    }
+
+    function openCommandOutputDialog(invocationId, title) {
+        commandOutputDialog.title = title
+        commandOutputDialog.pendingInvocation = invocationId
+        commandOutputDialog.open()
+    }
+
+    function updateCommandOutputDialog(invocationId, text, progress) {
+        if (commandOutputDialog.visible === false || commandOutputDialog.pendingInvocation !== invocationId) {
+            return
+        }
+
+        commandOutputDialog.text = commandResult.message
+        commandOutputDialog.progress = commandResult.progress
+    }
+
+    function openConfirmationDialog(text, onAccepted) {
+        let [instanceId, instance] = confirmationDialogManager.create(
+            { text: text },
+            { onAccepted: onAccepted }
+        )
+    }
+
+    function openDetailsDialog(invocationId) {
+        let [instanceId, instance] = detailsDialogManager.create()
+        detailsDialogManager.invocationIdToDialogId[invocationId] = instanceId
+    }
+
+    function updateDetailsDialog(invocationId, text, error, criticality) {
+        let dialogId = detailsDialogManager.invocationIdToDialogId[invocationId]
+
+        if (typeof dialogId !== "undefined") {
+            let dialog = detailsDialogManager.get(dialogId)
+            dialog.text = text
+            dialog.errorText = error
+            dialog.criticality = criticality
+        }
     }
 }
