@@ -34,9 +34,10 @@ Item {
         return instance
     }
 
-    function destroy(instanceId) {
+    function destroyInstance(instanceId) {
         let instance = root.get(instanceId)
         if (typeof instance !== "undefined") {
+            // console.log("Destroying instance " + instanceId)
             instance.destroy()
             delete root._instances[instanceId]
         }

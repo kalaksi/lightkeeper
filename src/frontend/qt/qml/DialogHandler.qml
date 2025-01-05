@@ -106,11 +106,13 @@ Item {
         inputDialog.inputSpecs = inputSpecs
 
         // Removes connection after triggering once.
-        inputDialog.inputValuesGiven.connect((inputValues) => {
-            inputDialog.inputValuesGiven.disconnect()
+        // TODO: destroy when rejected.
+        var acceptOnce = function(inputValues) {
+            inputDialog.inputValuesGiven.disconnect(acceptOnce)
             onInputValuesGiven(inputValues)
-        })
+        }
 
+        inputDialog.inputValuesGiven.connect(acceptOnce)
         inputDialog.open()
     }
 
@@ -172,7 +174,16 @@ Item {
     function openConfirmationDialog(text, onAccepted) {
         let [instanceId, instance] = confirmationDialogManager.create(
             { text: text },
-            { onAccepted: onAccepted }
+            // Removes connection after triggering once.
+            {
+                onAccepted: () => {
+                    confirmationDialogManager.destroyInstance(instanceId)
+                    onAccepted()
+                },
+                onRejected: () => {
+                    confirmationDialogManager.destroyInstance(instanceId)
+                }
+            }
         )
     }
 }
