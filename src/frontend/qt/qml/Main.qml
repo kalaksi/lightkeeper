@@ -149,7 +149,6 @@ ApplicationWindow {
             }
 
             // No need to check if invocation is relevant to specific dialogs. DialogHandler takes care of that.
-            dialogHandler.updateDetailsDialog(invocationId, commandResult.message, commandResult.error, commandResult.criticality)
             dialogHandler.updateTextDialog(invocationId, commandResult.message)
             dialogHandler.updateCommandOutputDialog(invocationId, commandResult.message, commandResult.progress)
         }
@@ -184,10 +183,6 @@ ApplicationWindow {
             dialogHandler.openConfirmationDialog(text, () => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams))
         }
 
-        function onDetailsDialogOpened(invocationId) {
-            dialogHandler.openDetailsDialog(invocationId)
-        }
-
         function onTextDialogOpened(invocationId) {
             dialogHandler.openTextDialog(invocationId)
         }
@@ -198,9 +193,10 @@ ApplicationWindow {
 
         function onInputDialogOpened(inputSpecsJson, buttonId, hostId, commandId, commandParams) {
             let inputSpecs = JSON.parse(inputSpecsJson)
-            dialogHandler.openInput(inputSpecs, (inputValues) => {
-                LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams.concat(inputValues))
-            })
+            dialogHandler.openInput(
+                inputSpecs,
+                (inputValues) => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams.concat(inputValues))
+            )
         }
     }
 

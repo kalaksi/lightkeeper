@@ -46,26 +46,6 @@ Item {
         }
     }
 
-    DynamicObjectManager {
-        id: detailsDialogManager
-
-        property var invocationIdToDialogId: {}
-
-        Component.onCompleted: {
-            invocationIdToDialogId = {}
-        }
-
-        DetailsDialog {
-            parent: root
-        }
-    }
-
-    // linux, docker, docker-compose, systemd-service, nixos
-    ConfigHelperDialog {
-        groupName: "linux"
-        onConfigurationChanged: LK.reload()
-    }
-
     CommandOutputDialog {
         id: commandOutputDialog
         property int pendingInvocation: 0
@@ -90,6 +70,37 @@ Item {
         width: Utils.clamp(implicitWidth, root.width * 0.5, root.width * 0.8)
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
+
+    ConfigHelperDialog {
+        parent: root
+        groupName: "linux"
+        onConfigurationChanged: LK.reload()
+    }
+
+    ConfigHelperDialog {
+        parent: root
+        groupName: "docker"
+        onConfigurationChanged: LK.reload()
+    }
+
+    ConfigHelperDialog {
+        parent: root
+        groupName: "docker-compose"
+        onConfigurationChanged: LK.reload()
+    }
+
+    ConfigHelperDialog {
+        parent: root
+        groupName: "systemd-service"
+        onConfigurationChanged: LK.reload()
+    }
+
+    ConfigHelperDialog {
+        parent: root
+        groupName: "nixos"
+        onConfigurationChanged: LK.reload()
+    }
+
 
     function openInput(inputSpecs, onInputValuesGiven) {
         inputDialog.inputSpecs = inputSpecs
@@ -163,21 +174,5 @@ Item {
             { text: text },
             { onAccepted: onAccepted }
         )
-    }
-
-    function openDetailsDialog(invocationId) {
-        let [instanceId, instance] = detailsDialogManager.create()
-        detailsDialogManager.invocationIdToDialogId[invocationId] = instanceId
-    }
-
-    function updateDetailsDialog(invocationId, text, error, criticality) {
-        let dialogId = detailsDialogManager.invocationIdToDialogId[invocationId]
-
-        if (typeof dialogId !== "undefined") {
-            let dialog = detailsDialogManager.get(dialogId)
-            dialog.text = text
-            dialog.errorText = error
-            dialog.criticality = criticality
-        }
     }
 }

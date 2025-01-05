@@ -56,8 +56,7 @@ pub struct CommandHandlerModel {
 
     customCommandsChanged: qt_signal!(),
 
-    // Signal to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
-    detailsDialogOpened: qt_signal!(invocation_id: u64),
+    // Signals to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     inputDialogOpened: qt_signal!(input_specs: QString, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList),
     textDialogOpened: qt_signal!(invocation_id: u64),
     confirmationDialogOpened: qt_signal!(text: QString, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList),
@@ -232,12 +231,6 @@ impl CommandHandlerModel {
                     };
                     self.commandOutputDialogOpened(title, invocation_id);
                     self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_id.into());
-                }
-            },
-            UIAction::DetailsDialog => {
-                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
-                if invocation_id > 0 {
-                    self.detailsDialogOpened(invocation_id)
                 }
             },
             UIAction::TextView => {

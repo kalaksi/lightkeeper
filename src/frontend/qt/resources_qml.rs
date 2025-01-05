@@ -46,7 +46,6 @@ pub fn init_resources() {
             "Dialog/CommandOutputDialog.qml",
             "Dialog/ConfigHelperDialog.qml",
             "Dialog/ConfirmationDialog.qml",
-            "Dialog/DetailsDialog.qml",
             "Dialog/DialogBackground.qml",
             "Dialog/GroupConfigurationDialog.qml",
             "Dialog/HostConfigurationDialog.qml",

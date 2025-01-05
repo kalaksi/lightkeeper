@@ -446,7 +446,6 @@ impl CommandHandler {
                 match command.get_display_options().action {
                     UIAction::None |
                     UIAction::FollowOutput |
-                    UIAction::DetailsDialog |
                     UIAction::TextView |
                     UIAction::TextDialog |
                     UIAction::LogView |

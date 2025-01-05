@@ -155,7 +155,6 @@ impl Default for CommandResult {
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum UIAction {
     None,
-    DetailsDialog,
     TextView,
     TextDialog,
     LogView,
