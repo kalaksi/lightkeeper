@@ -170,14 +170,16 @@ impl HostDataManagerModel {
 
     // Get list of monitors for category.
     fn getCategoryMonitorIds(&self, host_id: QString, category: QString) -> QStringList {
-        let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        let host_id = host_id.to_string();
         let category = category.to_string();
 
         let mut result = QStringList::default();
 
-        for (monitor_id, monitor_data) in display_data.host_state.monitor_data.iter() {
-            if monitor_data.display_options.category == category {
-                result.push(QString::from(monitor_id.clone()));
+        if let Some(display_data) = self.display_data.hosts.get(&host_id) {
+            for (monitor_id, monitor_data) in display_data.host_state.monitor_data.iter() {
+                if monitor_data.display_options.category == category {
+                    result.push(QString::from(monitor_id.clone()));
+                }
             }
         }
 

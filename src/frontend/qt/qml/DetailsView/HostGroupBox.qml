@@ -191,7 +191,7 @@ CategoryGroupBox {
             id: propertyTable
             category: root._categoryName
             monitoring_datas: LK.hosts.getCategoryMonitorIds(root.hostId, root._categoryName)
-                                    .map(monitorId => LK.hosts.getMonitoringData(root.hostId, monitorId))
+                                      .map(monitorId => LK.hosts.getMonitoringData(root.hostId, monitorId))
             command_datas: LK.command.getCategoryCommands(root.hostId, root._categoryName)
 
             Layout.fillHeight: true
