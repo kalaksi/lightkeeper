@@ -15,6 +15,7 @@ import "js/Test.js" as Test
 
 ApplicationWindow {
     property int errorCount: 0
+    property alias dialogHandler: dialogHandlerLoader.item
 
     id: root
     visible: true
@@ -76,10 +77,13 @@ ApplicationWindow {
         onFilterChanged: function(searchText) {
             hostTableModel.filter(searchText)
         }
-        // TODO
-        // onHotReload: function() {
-        //     LK.reload()
-        // }
+
+        onHotReload: function() {
+            dialogHandlerLoader.source = ""
+            dialogHandlerLoader.active = false
+            dialogHandlerLoader.source = "DialogHandler.qml"
+            dialogHandlerLoader.active = true
+        }
 
         // Shortcuts are enabled if no host is selected.
         enableShortcuts: hostTableModel.selectedRow === -1
@@ -224,16 +228,10 @@ ApplicationWindow {
         }
     }
 
-    // TODO: loader for dialogs for hot reload
-    // Loader {
-    //     anchors.fill: parent
-    //     sourceComponent: DialogHandler {
-
-    //     }
-    // }
-
-    DialogHandler {
-        id: dialogHandler
+    Loader {
+        id: dialogHandlerLoader
+        anchors.fill: parent
+        source: "DialogHandler.qml"
     }
 
     Item {
