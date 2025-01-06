@@ -37,11 +37,13 @@ Dialog {
         height: 30
         radius: root.borderRadius
         color: root.headerBackground
+        border.color: Theme.borderColor
+        border.width: 1
 
-        // Cover the rounding on bottom corners.
+        // Cover the border and rounding on bottom corners.
         Rectangle {
             anchors.bottom: parent.bottom
-            width: root.width
+            width: root.width - border.width
             height: root.borderRadius
             color: root.headerBackground
         }
