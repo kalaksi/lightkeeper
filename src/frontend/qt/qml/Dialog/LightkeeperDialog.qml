@@ -42,11 +42,14 @@ Dialog {
         border.width: 1
 
         // Cover the border and rounding on bottom corners.
-        Rectangle {
+        BorderRectangle {
             anchors.bottom: parent.bottom
-            width: root.width - border.width
+            width: root.width
             height: root.borderRadius
-            color: root.headerBackground
+            backgroundColor: root.headerBackground
+            borderColor: customHeader.border.color
+            borderLeft: customHeader.border.width
+            borderRight: borderLeft
         }
 
         NormalText {
