@@ -80,17 +80,13 @@ LightkeeperDialog {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
                         let connectors = LK.config.getUnselectedConnectors(root.groupName)
-                        moduleAddDialog.inputSpecs = [{
+                        connectorModuleAddDialog.inputSpecs = [{
                             label: "Connector module",
                             field_type: "Option",
                             options: connectors,
                             option_descriptions: connectors.map((connector) => LK.config.get_connector_description(connector))
                         }]
-                        moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
-                            LK.config.addGroupConnector(root.groupName, inputValues[0])
-                            refreshConnectorList()
-                        })
-                        moduleAddDialog.open()
+                        connectorModuleAddDialog.open()
                     }
                     flatButton: true
                     roundButton: false
@@ -227,18 +223,13 @@ LightkeeperDialog {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
                         let monitors = LK.config.getUnselectedMonitors(root.groupName)
-                        moduleAddDialog.inputSpecs = []
-                        moduleAddDialog.inputSpecs = [{
+                        monitoringModuleAddDialog.inputSpecs = [{
                             label: "Monitoring module",
                             field_type: "Option",
                             options: monitors,
                             option_descriptions: monitors.map((monitor) => LK.config.get_monitor_description(monitor))
                         }]
-                        moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
-                            LK.config.addGroupMonitor(root.groupName, inputValues[0])
-                            refreshMonitorList()
-                        })
-                        moduleAddDialog.open()
+                        monitoringModuleAddDialog.open()
                     }
                     flatButton: true
                     roundButton: false
@@ -400,18 +391,13 @@ LightkeeperDialog {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
                         let commands = LK.config.getUnselectedCommands(root.groupName)
-                        moduleAddDialog.inputSpecs = []
-                        moduleAddDialog.inputSpecs = [{
+                        commandModuleAddDialog.inputSpecs = [{
                             label: "Command module",
                             field_type: "Option",
                             options: commands,
                             option_descriptions: commands.map((command) => LK.config.get_command_description(command))
                         }]
-                        moduleAddDialog.onInputValuesGiven.connect((inputValues) => {
-                            LK.config.addGroupCommand(root.groupName, inputValues[0])
-                            refreshCommandList()
-                        })
-                        moduleAddDialog.open()
+                        commandModuleAddDialog.open()
                     }
                     flatButton: true
                     roundButton: false
@@ -553,10 +539,51 @@ LightkeeperDialog {
     }
 
     InputDialog {
-        id: moduleAddDialog
-        visible: false
+        id: connectorModuleAddDialog
         width: parent.width
         height: 200
+        inputSpecs: {
+            label: "Connector module"
+            field_type: "Option"
+            options: {}
+            option_descriptions: {}
+        }
+        onInputValuesGiven: function(inputValues) {
+            LK.config.addGroupConnector(root.groupName, inputValues[0])
+            refreshConnectorList()
+        }
+    }
+
+    InputDialog {
+        id: monitorModuleAddDialog
+        width: parent.width
+        height: 200
+        inputSpecs: {
+            label: "Monitoring module"
+            field_type: "Option"
+            options: {}
+            option_descriptions: {}
+        }
+        onInputValuesGiven: function(inputValues) {
+            LK.config.addGroupMonitor(root.groupName, inputValues[0])
+            refreshMonitorList()
+        }
+    }
+
+    InputDialog {
+        id: commandModuleAddDialog
+        width: parent.width
+        height: 200
+        inputSpecs: {
+            label: "Command module"
+            field_type: "Option"
+            options: {}
+            option_descriptions: {}
+        }
+        onInputValuesGiven: function(inputValues) {
+            LK.config.addGroupCommand(root.groupName, inputValues[0])
+            refreshCommandList()
+        }
     }
 
     function refreshConnectorList() {

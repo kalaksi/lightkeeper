@@ -110,14 +110,12 @@ Item {
         // Removes connection after triggering once.
         var connectOnce = function(inputValues) {
             inputDialog.inputValuesGiven.disconnect(connectOnce)
-            inputDialog.resetFields()
             onInputValuesGiven(inputValues)
         }
 
         inputDialog.inputValuesGiven.connect(connectOnce)
         inputDialog.rejected.connect(() => {
             inputDialog.inputValuesGiven.disconnect(connectOnce)
-            inputDialog.resetFields()
         })
         inputDialog.open()
     }

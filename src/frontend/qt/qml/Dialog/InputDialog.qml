@@ -87,11 +87,16 @@ LightkeeperDialog {
         let [values, error] = getInputValues()
         if (error === "") {
             root.inputValuesGiven(values)
+            resetFields()
         }
         else {
             root._errorText = error
             root.open()
         }
+    }
+
+    onRejected: {
+        resetFields()
     }
 
     function getInputValues() {
