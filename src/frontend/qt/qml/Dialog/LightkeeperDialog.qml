@@ -12,6 +12,7 @@ Dialog {
     modal: true
     opacity: visible ? 1.0 : 0.0
     title: ""
+    // Use `anchors.centerIn: undefined` to avoid automatic centering.
     anchors.centerIn: parent
 
     property int borderRadius: 6

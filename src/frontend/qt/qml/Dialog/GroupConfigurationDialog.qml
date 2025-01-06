@@ -527,6 +527,7 @@ LightkeeperDialog {
         id: moduleSettingsDialog
         visible: false
         groupName: root.groupName
+        anchors.centerIn: undefined
 
         onConfigSaved: function(moduleType, groupName, moduleId) {
             if (moduleType === "connector") {

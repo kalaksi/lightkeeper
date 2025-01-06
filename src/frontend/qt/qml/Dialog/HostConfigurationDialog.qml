@@ -397,15 +397,14 @@ LightkeeperDialog {
 
     GroupConfigurationDialog {
         id: groupConfigDialog
-        visible: false
         // contentItem's margin seems to affect this dialog's position, so compensating for it here.
         x: -100 + Theme.marginDialog
+        anchors.centerIn: undefined
         groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex]
     }
 
     InputDialog {
         id: groupAddDialog
-        visible: false
         width: parent.width
         height: 150
 
