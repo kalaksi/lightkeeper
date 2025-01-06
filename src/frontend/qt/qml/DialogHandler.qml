@@ -71,6 +71,8 @@ Item {
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
 
+    // NOTE: ConfigHelperDialogs are curretly displayed automatically when needed. See ConfigHelperDialog.qml.
+    // Currently has some code duplication here which could be improved.
     ConfigHelperDialog {
         parent: root
         groupName: "linux"
@@ -106,13 +108,17 @@ Item {
         inputDialog.inputSpecs = inputSpecs
 
         // Removes connection after triggering once.
-        // TODO: destroy when rejected.
-        var acceptOnce = function(inputValues) {
-            inputDialog.inputValuesGiven.disconnect(acceptOnce)
+        var connectOnce = function(inputValues) {
+            inputDialog.inputValuesGiven.disconnect(connectOnce)
+            inputDialog.resetFields()
             onInputValuesGiven(inputValues)
         }
 
-        inputDialog.inputValuesGiven.connect(acceptOnce)
+        inputDialog.inputValuesGiven.connect(connectOnce)
+        inputDialog.rejected.connect(() => {
+            inputDialog.inputValuesGiven.disconnect(connectOnce)
+            inputDialog.resetFields()
+        })
         inputDialog.open()
     }
 

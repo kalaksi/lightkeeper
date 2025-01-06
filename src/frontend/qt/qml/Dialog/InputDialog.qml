@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 import "../Text"
 
@@ -13,15 +13,19 @@ LightkeeperDialog {
     title: "Input"
     modal: true
     implicitWidth: 400
-    implicitHeight: rootColumn.implicitHeight + Theme.marginDialogBottom
+    implicitHeight: rootColumn.implicitHeight + Theme.marginDialogTop + Theme.marginDialogBottom
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     signal inputValuesGiven(var inputValues)
 
 
-    contentItem: ColumnLayout {
+    // XXX: there's some kind of bug where using ColumnLayout (instead of Column) and Repeater inside
+    // causes a segfault when re-using this dialog.
+    contentItem: Column {
         id: rootColumn
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
         anchors.margins: Theme.marginDialog
         anchors.topMargin: Theme.marginDialogTop
         anchors.bottomMargin: Theme.marginDialogBottom
@@ -32,7 +36,7 @@ LightkeeperDialog {
             model: root.inputSpecs
 
             RowLayout {
-                Layout.fillWidth: true
+                width: rootColumn.width
 
                 Label {
                     text: modelData.label
@@ -72,19 +76,28 @@ LightkeeperDialog {
             }
         }
 
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-        }
-
         Label {
+            height: 50
             text: root._errorText
             color: "red"
         }
     }
 
     onAccepted: {
+        let [values, error] = getInputValues()
+        if (error === "") {
+            root.inputValuesGiven(values)
+        }
+        else {
+            root._errorText = error
+            root.open()
+        }
+    }
+
+    function getInputValues() {
         let values = []
+        let error = ""
+
         for (let i = 0; i < root.inputSpecs.length; i++) {
             // Handle options differently.
             let nextValue = ""
@@ -107,18 +120,11 @@ LightkeeperDialog {
                 (root.inputSpecs[i].additional_validator_regexp !== "" && !additionalValidator.test(nextValue))) {
 
                 console.log(`Invalid value for "${root.inputSpecs[i].label}": ${nextValue}`)
-                root._errorText = "Invalid value"
-                root.open()
-                return
+                error = "Invalid value"
             }
         }
 
-        root.inputValuesGiven(values)
-        resetFields()
-    }
-
-    onRejected: {
-        resetFields()
+        return [values, error]
     }
 
     function resetFields() {
