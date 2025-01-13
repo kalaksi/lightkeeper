@@ -8,6 +8,7 @@ pub fn init_resources() {
         "src/frontend/qt/qml" as "qml" {
             "Main.qml",
             "DebugRectangle.qml",
+            "DialogHandler.qml",
             "DynamicObjectManager.qml",
             "HostStatus.qml",
             "HostTable.qml",
@@ -65,6 +66,7 @@ pub fn init_resources() {
             "Misc/LKTabButton.qml",
             "Misc/CooldownTimer.qml",
             "Misc/SemiCircle.qml",
+            "Misc/Trapezoid.qml",
             "Misc/OverlayImage.qml",
             "Tests/Test.qml",
             "Text/AlertText.qml",

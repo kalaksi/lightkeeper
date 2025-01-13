@@ -41,6 +41,6 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
 }
 
 #[cfg(not(debug_assertions))]
-pub fn watch(_path: PathBuf, _engine: &qmetaobject::QmlEngine) {
+pub fn watch(_path: PathBuf, _engine: Arc<qmetaobject::QmlEngine>) {
     // No hot reload in release mode.
 }

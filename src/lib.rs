@@ -101,7 +101,6 @@ pub fn run(
         frontend.start(command_handler, monitor_manager, connection_manager, host_manager, metrics_manager)
     }
     else {
-        #[cfg(debug_assertions)]
         // TODO
         ExitReason::Quit
     }
