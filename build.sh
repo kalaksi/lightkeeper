@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eu
 # qmake path can be overridden with this (for cargo and qmetaobject-rs too):
-export QMAKE="/usr/lib/qt6/bin/qmake"
+# export QMAKE="/usr/lib/qt6/bin/qmake"
 
 if [ ! -e third_party/qmltermwidget ] || \
    [ ! -e third_party/ChartJs2QML ]; then
