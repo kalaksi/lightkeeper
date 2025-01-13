@@ -68,7 +68,13 @@ The alternative is building from source.
 # Building from source
 ## Flatpak
 ```
+# If you're missing the runtime and rust extension:
+flatpak install runtime/org.kde.Sdk/x86_64/6.7
+flatpak install runtime/org.freedesktop.Sdk.Extension.rust-stable/x86_64/23.08
+
+# Test building: 
 flatpak-builder build --user --force-clean flatpak/io.github.kalaksi.Lightkeeper-local.yml
+
 # If you want to install also:
 flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.Lightkeeper-local.yml
 ```
