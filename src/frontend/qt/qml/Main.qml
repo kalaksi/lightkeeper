@@ -297,6 +297,9 @@ ApplicationWindow {
                 onCloseClicked: {
                     hostTableModel.toggleRow(hostTableModel.selectedRow)
                 }
+                onCustomCommandsDialogOpened: {
+                    dialogHandler.openCustomCommandsDialog(detailsView.hostId)
+                }
             }
         }
 

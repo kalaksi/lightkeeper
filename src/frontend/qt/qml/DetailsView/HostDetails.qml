@@ -21,6 +21,7 @@ Item {
     signal closeClicked()
     signal maximizeClicked()
     signal minimizeClicked()
+    signal customCommandsDialogOpened()
 
 
     onHostIdChanged: {
@@ -174,6 +175,9 @@ Item {
         id: detailsMainView
 
         HostDetailsMainView {
+            onCustomCommandsDialogOpened: {
+                root.customCommandsDialogOpened()
+            }
         }
     }
 

@@ -122,6 +122,7 @@ ToolBar {
         ToolSeparator { }
 
         ToolButton {
+            visible: LK.config.isDevBuild()
             icon.source: "qrc:/main/images/button/refresh"
             text: "Hot reload"
             display: AbstractButton.IconOnly

@@ -57,6 +57,13 @@ pub struct ConfigManagerModel {
     removeHostFromGroup: qt_method!(fn(&self, host_name: QString, group_name: QString)),
 
     //
+    // Custom commands
+    //
+    getCustomCommands: qt_method!(fn(&self, host_name: QString) -> QStringList),
+    addCustomCommand: qt_method!(fn(&self, host_name: QString, command_name: QString, description: QString, command: QString)),
+    removeCustomCommand: qt_method!(fn(&self, host_name: QString, command_name: QString)),
+
+    //
     // Group configuration
     //
     beginGroupConfiguration: qt_method!(fn(&self)),
@@ -393,6 +400,39 @@ impl ConfigManagerModel {
         let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
 
         host_settings.groups.retain(|group| group != &group_name);
+    }
+
+    /// Returns list of JSON strings representing CustomCommandConfig.
+    fn getCustomCommands(&self, host_name: QString) -> QStringList {
+        let host_name = host_name.to_string();
+        let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
+
+        let custom_commands_json = host_settings.effective.custom_commands.iter()
+            .map(|command| serde_json::to_string(command).unwrap());
+
+        QStringList::from_iter(custom_commands_json)
+    }
+
+    fn addCustomCommand(&mut self, host_name: QString, command_name: QString, description: QString, command: QString) {
+        let host_name = host_name.to_string();
+        let command_name = command_name.to_string();
+        let description = description.to_string();
+        let command = command.to_string();
+
+        let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
+        host_settings.overrides.custom_commands.push(configuration::CustomCommandConfig {
+            name: command_name,
+            description,
+            command,
+        });
+    }
+
+    fn removeCustomCommand(&mut self, host_name: QString, command_name: QString) {
+        let host_name = host_name.to_string();
+        let command_name = command_name.to_string();
+
+        let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
+        host_settings.overrides.custom_commands.retain(|command| command.name != command_name);
     }
 
     fn getUnselectedMonitors(&self, group_name: QString) -> QStringList {

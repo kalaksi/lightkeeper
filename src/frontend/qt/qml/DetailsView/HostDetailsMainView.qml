@@ -25,6 +25,8 @@ Item {
     // e.g. CommandButton or CommandButtonRow since those are not persistent.
     property var _invocationIdToButton: {}
 
+    signal customCommandsDialogOpened()
+
     Component.onCompleted: {
         root._invocationIdToButton = {}
         root._categories = []
@@ -101,6 +103,7 @@ Item {
                 Layout.alignment: Qt.AlignTop
 
                 onConfigClicked: {
+                    root.customCommandsDialogOpened()
                 }
             }
 

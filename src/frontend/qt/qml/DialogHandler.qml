@@ -38,6 +38,11 @@ Item {
         height: Utils.clamp(implicitHeight, root.height * 0.5, root.height * 0.8)
     }
 
+    CustomCommandsDialog {
+        id: customCommandsDialog
+        bottomMargin: 0.15 * parent.height
+    }
+
     DynamicObjectManager {
         id: confirmationDialogManager
 
@@ -189,5 +194,10 @@ Item {
                 }
             }
         )
+    }
+
+    function openCustomCommandsDialog(hostId) {
+        customCommandsDialog.hostId = hostId
+        customCommandsDialog.open()
     }
 }

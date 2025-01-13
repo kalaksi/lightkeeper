@@ -23,7 +23,9 @@ CategoryGroupBox {
         border.color: "#656565"
         showConfigButton: true
 
-        onConfigClicked: configClicked()
+        onConfigClicked: {
+            root.configClicked()
+        }
     }
 
     signal configClicked()
