@@ -41,6 +41,7 @@ So, I started formulating an idea about a more integrated maintenance tool for p
 
 # Table of contents
 
+- [Known issues](#known-issues)
 - [Installing](#installing)
    - [Flatpak](#flatpak)
 - [Building from source](#building-from-source)
@@ -57,6 +58,17 @@ So, I started formulating an idea about a more integrated maintenance tool for p
    - [Crate dependencies](#crate-dependencies)
    - [Liboping](#liboping)
 
+
+# Known issues
+### Error: "Unable to exchange encryption keys":
+With NixOS, most likely server and client couldn't agree on MAC algorithm.  
+This is caused by `ssh2`-crate dependency, which hasn't published a release in a while and has limited algorithm support. Consider including hmac-sha2-512 and hmac-sha2-256 in server's `services.openssh.settings.Macs` if you're missing those.  
+  
+With other distros, this can be caused by `libssh2` trying to use a deprecated algorithm. New ssh2-crate release would probably solve some of the issues.
+For more information, see:  
+https://github.com/alexcrichton/ssh2-rs/issues/254
+https://github.com/libssh2/libssh2/issues/659
+https://github.com/libssh2/libssh2/issues?q=is%253Aissue+key+exchange+failed
 
 # Installing
 ## Flatpak
