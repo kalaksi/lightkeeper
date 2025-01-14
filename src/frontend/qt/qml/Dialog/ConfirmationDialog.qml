@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 import "../Text"
+import "../js/Utils.js" as Utils
 
 
 LightkeeperDialog {
@@ -14,8 +15,8 @@ LightkeeperDialog {
 
     title: "Confirmation"
     standardButtons: Dialog.Yes | Dialog.No
-    implicitWidth: 350
-    implicitHeight: 200
+    implicitWidth: Utils.clamp(dialogText.implicitWidth, 300, 800)
+    implicitHeight: Utils.clamp(dialogText.implicitHeight, 200, 600)
     anchors.centerIn: parent
 
     contentItem: Item {
@@ -26,6 +27,7 @@ LightkeeperDialog {
         anchors.bottomMargin: Theme.marginDialogBottom
 
         NormalText {
+            id: dialogText
             text: root.text
             width: parent.width
             wrapMode: Text.Wrap
