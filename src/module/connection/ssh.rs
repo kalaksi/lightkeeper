@@ -352,7 +352,13 @@ impl Ssh2 {
 
         session_data.session = ssh2::Session::new().unwrap();
         session_data.session.set_tcp_stream(stream);
-        session_data.session.handshake()?;
+        if let Err(error) = session_data.session.handshake() {
+            log::debug!("Supported Kex algs: {:?}", session_data.session.supported_algs(ssh2::MethodType::Kex));
+            log::debug!("Supported MacCs algs: {:?}", session_data.session.supported_algs(ssh2::MethodType::MacCs));
+            log::debug!("Supported HostKey algs: {:?}", session_data.session.supported_algs(ssh2::MethodType::HostKey));
+            log::debug!("Supported CryptCs algs: {:?}", session_data.session.supported_algs(ssh2::MethodType::CryptCs));
+            return Err(LkError::from(error))
+        }
 
         if self.verify_host_key {
             self.check_known_hosts(&session_data, &address, port)?;
