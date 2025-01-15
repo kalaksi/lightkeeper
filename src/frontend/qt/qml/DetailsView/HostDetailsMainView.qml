@@ -94,6 +94,7 @@ Item {
             }
 
             CustomCommandGroupBox {
+                visible: false
                 Layout.minimumWidth: root.columnMinimumWidth
                 Layout.maximumWidth: root.columnMaximumWidth
                 Layout.preferredWidth: root.columnMinimumWidth +
