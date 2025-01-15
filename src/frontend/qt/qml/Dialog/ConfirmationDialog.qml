@@ -15,8 +15,8 @@ LightkeeperDialog {
 
     title: "Confirmation"
     standardButtons: Dialog.Yes | Dialog.No
-    implicitWidth: Utils.clamp(dialogText.implicitWidth, 300, 800)
-    implicitHeight: Utils.clamp(dialogText.implicitHeight, 200, 600)
+    implicitWidth: Utils.clamp(dialogText.implicitWidth, 300, 1000) + 100
+    implicitHeight: Utils.clamp(dialogText.implicitHeight, 200, 600) + 50
     anchors.centerIn: parent
 
     contentItem: Item {
