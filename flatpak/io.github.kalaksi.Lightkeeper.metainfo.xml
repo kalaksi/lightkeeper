@@ -28,7 +28,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.25.0" date="2025-01-16">
+    <release version="0.25.1" date="2025-01-16">
       <description>
         <ul>
           <li>Partial QML hot reload for easier development</li>
