@@ -12,7 +12,7 @@ fi
 
 if [ ! -e third_party/qmltermwidget/QMLTermWidget/libqmltermwidget.so ]; then
     pushd third_party/qmltermwidget
-    $QMAKE && make
+    qmake && make
     popd
 fi
 
