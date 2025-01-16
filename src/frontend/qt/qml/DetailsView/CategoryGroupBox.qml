@@ -32,7 +32,7 @@ GroupBox {
         color: Theme.categoryColor(categoryName)
 
         showRefreshButton: true
-        onRefreshClicked: refreshClicked()
+        onRefreshClicked: root.refreshClicked()
     }
 
     signal refreshClicked()
