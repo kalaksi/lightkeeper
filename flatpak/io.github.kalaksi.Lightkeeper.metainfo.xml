@@ -28,6 +28,15 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.25.0" date="2025-01-16">
+      <description>
+        <ul>
+          <li>Partial QML hot reload for easier development</li>
+          <li>Fix crash when reusing input dialog</li>
+          <li>Fix crash when pressing esc in details view</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.24.0" date="2024-12-13">
       <description>
         <ul>
