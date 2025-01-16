@@ -21,14 +21,9 @@ Item {
     property int columnMaximumHeight: 450
     property int columnSpacing: Theme.spacingNormal
 
-    // Link between invocation and command button has to be stored and handled on higher level and not in
-    // e.g. CommandButton or CommandButtonRow since those are not persistent.
-    property var _invocationIdToButton: {}
-
     signal customCommandsDialogOpened()
 
     Component.onCompleted: {
-        root._invocationIdToButton = {}
         root._categories = []
         root.refresh()
     }
@@ -115,6 +110,10 @@ Item {
                     id: groupBox
                     categoryName: modelData
 
+                    // Link between invocation and command button has to be stored and handled on higher level and not in
+                    // e.g. CommandButton or CommandButtonRow since those are not persistent.
+                    property var _invocationIdToButton: {}
+
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.preferredWidth: root.columnMinimumWidth +
@@ -126,6 +125,10 @@ Item {
                     onRefreshClicked: {
                         LK.command.refreshMonitorsOfCategory(root.hostId, groupBox.categoryName)
                         groupBox.refreshProgress = 0
+                    }
+
+                    Component.onCompleted: {
+                        groupBox._invocationIdToButton = {}
                     }
 
                     Connections {
@@ -144,8 +147,8 @@ Item {
 
                         // Update command progress. Starts automatic refresh of relevant monitors if finished.
                         function onCommandResultReceived(commandResultJson, invocationId) {
-                            if (root._invocationIdToButton[invocationId] !== undefined) {
-                                let buttonId = root._invocationIdToButton[invocationId]
+                            if (groupBox._invocationIdToButton[invocationId] !== undefined) {
+                                let buttonId = groupBox._invocationIdToButton[invocationId]
                                 let progress = LK.hosts.getPendingCommandProgress(invocationId)
                                 categoryCommands.updateProgress(buttonId, progress)
                                 propertyTable.updateProgress(buttonId, progress)
@@ -153,7 +156,7 @@ Item {
                                 if (progress >= 100) {
                                     let commandResult = JSON.parse(commandResultJson)
                                     LK.command.refreshMonitorsOfCommand(root.hostId, commandResult.command_id)
-                                    delete root._invocationIdToButton[invocationId]
+                                    delete groupBox._invocationIdToButton[invocationId]
                                 }
                             }
                         }
@@ -170,8 +173,7 @@ Item {
                         // Reset command progress to 0.
                         function onCommandExecuted(invocationId, hostId, commandId, category, buttonId) {
                             if (hostId === root.hostId && category === groupBox.categoryName) {
-                                root._invocationIdToButton[invocationId] = buttonId
-
+                                groupBox._invocationIdToButton[invocationId] = buttonId
                                 categoryCommands.updateProgress(buttonId, 0)
                                 propertyTable.updateProgress(buttonId, 0)
                             }
