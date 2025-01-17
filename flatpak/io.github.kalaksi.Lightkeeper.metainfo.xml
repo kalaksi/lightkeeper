@@ -29,7 +29,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.25.3" date="2025-01-17">
+    <release version="0.25.4" date="2025-01-17">
       <description>
         <ul>
           <li>Patches theme color issues on KDE</li>
