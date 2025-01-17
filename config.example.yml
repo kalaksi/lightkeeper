@@ -30,7 +30,7 @@ cache_settings:
 # NOTE: Currently, you shouldn't manually edit display_options at all.
 display_options:
   # Empty means default. 
-  # Theme and color palette should normally be set in src/frontend/qt/qtquickcontrols2.conf
+  # Theme and color palette should be set in Main.qml
   qtquick_style: ""
   hide_info_notifications: false
   show_status_bar: true

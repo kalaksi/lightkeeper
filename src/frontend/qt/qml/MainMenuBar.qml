@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import "Misc"
 import "Text"
 import "Button"
+import "StyleOverrides"
 
 
 ToolBar {
@@ -44,7 +45,6 @@ ToolBar {
             onClicked: root.clickedAdd()
             icon.height: root.iconSize
             icon.width: root.iconSize
-            padding: 4
         }
 
         ToolButton {
