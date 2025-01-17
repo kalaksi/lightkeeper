@@ -7,6 +7,7 @@ import ".."
 import "../Misc"
 import "../Text"
 import "../js/Parse.js" as Parse
+import "../StyleOverride"
 
 Item {
     id: root

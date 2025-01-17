@@ -4,6 +4,7 @@ import Qt.labs.qmlmodels
 import QtQuick.Layouts
 
 import "Text"
+import "StyleOverride"
 
 
 TableView {
@@ -28,7 +29,6 @@ TableView {
 
     ScrollBar.vertical: ScrollBar {
         id: scrollBar
-        policy:ScrollBar.AlwaysOn
     }
 
     delegate: DelegateChooser {

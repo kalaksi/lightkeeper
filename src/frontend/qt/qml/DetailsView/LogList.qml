@@ -5,6 +5,7 @@ import "../Text"
 import "../Button"
 import "../js/TextTransform.js" as TextTransform
 import "../js/Utils.js" as Utils
+import "../StyleOverride"
 
 
 ListView {

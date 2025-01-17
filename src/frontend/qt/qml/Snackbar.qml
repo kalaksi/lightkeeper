@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.11
 
 import "Text"
 import "js/Utils.js" as Utils
+import "StyleOverride"
 
 
 Rectangle {

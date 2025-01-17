@@ -10,6 +10,7 @@ import "../Misc"
 import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../js/ValueUnit.js" as ValueUnit
+import "../StyleOverride"
 
 
 // Table for displaying monitoring data and command buttons.
