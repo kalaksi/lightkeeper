@@ -5,6 +5,7 @@ import QtQuick.Layouts 1.11
 import "../Text"
 import "../Button"
 import ".."
+import "../StyleOverride"
 
 
 LightkeeperDialog {

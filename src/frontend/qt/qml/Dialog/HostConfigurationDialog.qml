@@ -7,6 +7,7 @@ import "../Text"
 import "../Misc"
 import "../js/Utils.js" as Utils
 import ".."
+import "../StyleOverride"
 
 LightkeeperDialog {
     id: root

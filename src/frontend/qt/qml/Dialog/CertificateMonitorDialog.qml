@@ -1,7 +1,7 @@
-import QtQuick 2.15
-import QtQuick.Layouts 1.11
-import QtQuick.Controls 2.15
-import Qt.labs.qmlmodels 1.0
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
+import Qt.labs.qmlmodels
 import Qt5Compat.GraphicalEffects
 
 import "../Button"
@@ -9,6 +9,7 @@ import "../Text"
 import "../Misc"
 import "../js/Utils.js" as Utils
 import ".."
+import "../StyleOverride"
 
 LightkeeperDialog {
     id: root

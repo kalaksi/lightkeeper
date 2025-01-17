@@ -4,6 +4,7 @@ import Qt.labs.qmlmodels
 
 import "../Text"
 import "../Misc"
+import "../StyleOverride"
 
 
 /// Provides more flexible button with icon and text.

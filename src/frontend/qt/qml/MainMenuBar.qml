@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import "Misc"
 import "Text"
 import "Button"
-import "StyleOverrides"
+import "StyleOverride"
 
 
 ToolBar {
