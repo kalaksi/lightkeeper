@@ -20,6 +20,7 @@
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/LightkeeperRM-overview.png</image>
+      <caption>Overview of LightkeeperRM.</caption>
     </screenshot>
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper-local.desktop</launchable>
