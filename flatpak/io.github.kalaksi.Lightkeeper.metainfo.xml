@@ -31,7 +31,9 @@
   <releases>
     <release version="0.25.3" date="2025-01-17">
       <description>
-        <li>Patches theme color issues on KDE</li>
+        <ul>
+          <li>Patches theme color issues on KDE</li>
+        </ul>
       </description>
     </release>
     <release version="0.25.1" date="2025-01-16">

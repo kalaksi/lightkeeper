@@ -32,7 +32,7 @@ pushd flatpak &>/dev/null
 
 echo -e "\n* Updating flatpak cargo-source and metainfo files..."
 python3 ./flatpak-cargo-generator/flatpak-cargo-generator.py ../Cargo.lock -o cargo-sources.json
-sed -i '/<releases>$/a \    <release version="'$version_only'" date="'$new_date'">'"\n      <description>\n      </description>\n    </release>" io.github.kalaksi.Lightkeeper.metainfo.xml
+sed -i '/<releases>$/a \    <release version="'$version_only'" date="'$new_date'">'"\n      <description>\n        <ul>\n        </ul>\n      </description>\n    </release>" io.github.kalaksi.Lightkeeper.metainfo.xml
 
 read -p "Edit metainfo now by pressing enter" _temp
 $EDITOR io.github.kalaksi.Lightkeeper.metainfo.xml
