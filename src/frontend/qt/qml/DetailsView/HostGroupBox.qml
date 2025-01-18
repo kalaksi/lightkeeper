@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 import "../Text"
 import "../js/Parse.js" as Parse
+import "../StyleOverride"
 
 
 CategoryGroupBox {

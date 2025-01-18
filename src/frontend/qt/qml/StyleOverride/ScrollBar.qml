@@ -11,7 +11,7 @@ ScrollBar {
         implicitHeight: control.interactive ? 6 : 2
 
         radius: width / 2
-        color: control.pressed ? "#441618" : "#24282b"
+        color: control.pressed ? "#3a4045" : "#474d54"
         opacity: 0.0
 
         states: State {

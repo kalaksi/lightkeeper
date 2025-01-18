@@ -31,7 +31,7 @@ ApplicationWindow {
     palette.brightText: "#ffffff"
     palette.button: "#31363b"
     palette.buttonText: Theme.textColor
-    palette.dark: "#441618"
+    palette.dark: "#141618"
     palette.highlight: "#3daee9"
     palette.highlightedText: "#fcfcfc"
     palette.light: "#474d54"
