@@ -55,12 +55,7 @@ impl MonitoringModule for Cryptsetup {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
-
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             if self.only_crypttab {
                 Ok(String::from("grep -v '^#' /etc/crypttab"))
             }
@@ -77,16 +72,23 @@ impl MonitoringModule for Cryptsetup {
         if response.message.is_empty() && response.return_code == 0 {
             return Ok(DataPoint::empty());
         }
+        else if response.command_not_found() {
+            return Ok(DataPoint::value_with_level("Cryptsetup not available".to_string(), crate::enums::Criticality::Info));
+        }
 
         let mut result = DataPoint::empty();
 
         if self.only_crypttab {
             result.multivalue = response.message.lines().map(|line| {
-                let mut parts = line.split_whitespace();
-                let name = parts.next().unwrap().to_string();
-                let device = parts.next().unwrap().to_string();
-                let _keyfile = parts.next().unwrap().to_string();
-                let _options = parts.next().unwrap().to_string();
+                let parts = line.split_whitespace().collect::<Vec<&str>>();
+                if parts.len() < 4 {
+                    DataPoint::invalid_response();
+                }
+
+                let name = parts[0].to_string();
+                let device = parts[1].to_string();
+                // let _keyfile = parts[2].to_string();
+                // let _options = parts[3].to_string();
 
                 DataPoint::labeled_value_with_level(name, device, Criticality::Normal)
             }).collect();

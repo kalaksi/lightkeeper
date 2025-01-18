@@ -84,6 +84,14 @@ impl DataPoint {
         }
     }
 
+    pub fn invalid_response() -> Self {
+        DataPoint {
+            value: "Invalid response".to_string(),
+            criticality: Criticality::Error,
+            ..Default::default()
+        }
+    }
+
     pub fn empty_and_critical() -> Self {
         DataPoint {
             criticality: Criticality::Critical,

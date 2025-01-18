@@ -48,11 +48,7 @@ impl MonitoringModule for VolumeGroup {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec![ "vgs", "--separator", "|", "--options", "vg_name,vg_attr,vg_size,vg_free", "--units", "h" ]);
             Ok(command.to_string())
         }
@@ -64,6 +60,9 @@ impl MonitoringModule for VolumeGroup {
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if response.message.is_empty() && response.return_code == 0 {
             return Ok(DataPoint::empty());
+        }
+        else if response.command_not_found() {
+            return Ok(DataPoint::value_with_level("LVM not available".to_string(), crate::enums::Criticality::Info));
         }
 
         let mut result = DataPoint::empty();

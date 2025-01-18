@@ -84,6 +84,12 @@ impl MonitoringModule for Service {
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.command_not_found() {
+            return Err("busctl not available".to_string());
+        }
+        if response.is_error() {
+            return Err(response.message);
+        }
 
         let mut result = DataPoint::empty();
 

@@ -71,24 +71,32 @@ impl MonitoringModule for Filesystem {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
+        }
+
         let mut result = DataPoint::empty();
 
         // First line contains headers
         let lines = response.message.lines().skip(1);
         for line in lines {
-            let mut parts = line.split_whitespace();
-            let _source = parts.next().unwrap().to_string();
-            let fs_type = parts.next().unwrap().to_string();
-            let size_h = parts.next().unwrap().to_string();
-            let used_h = parts.next().unwrap().to_string();
-            let _available_h = parts.next().unwrap().to_string();
+            let parts = line.split_whitespace().collect::<Vec<&str>>();
+            if parts.len() < 7 {
+                return Ok(DataPoint::value_with_level("Invalid response".to_string(), Criticality::Error))
+            }
 
-            let mut used_percent = parts.next().unwrap().to_string();
+            // let _source = parts[0].to_string();
+            let fs_type = parts[1].to_string();
+            let size_h = parts[2].to_string();
+            let used_h = parts[3].to_string();
+            // let _available_h = parts[4].to_string();
+
+            let mut used_percent = parts[5].to_string();
             // Remove percent symbol from the end.
             used_percent.pop();
             let used_percent_float = used_percent.parse::<f64>().unwrap();
 
-            let mountpoint = parts.next().unwrap().to_string();
+            let mountpoint = parts[6].to_string();
 
             if self.ignored_filesystems.iter().any(|item| mountpoint.starts_with(item)) {
                 continue;

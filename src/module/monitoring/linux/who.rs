@@ -52,16 +52,16 @@ impl MonitoringModule for Who {
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
         if response.is_error() {
-            return Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
+            return Ok(DataPoint::invalid_response());
         }
 
         let mut result = DataPoint::empty();
 
         let lines = response.message.lines().filter(|line| !line.is_empty());
         for line in lines {
-            let mut parts = line.split_whitespace().collect::<Vec<&str>>();
+            let parts = line.split_whitespace().collect::<Vec<&str>>();
             if parts.len() < 4 {
-                return Ok(DataPoint::value_with_level("Invalid response".to_string(), Criticality::Error))
+                return Ok(DataPoint::invalid_response());
             }
 
             let user = parts[0].to_string();

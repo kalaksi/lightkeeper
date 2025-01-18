@@ -56,11 +56,7 @@ impl MonitoringModule for LogicalVolume {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec![
                 "lvs", "--separator", "|", "--options", "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent", "--units", "h"
             ]);
@@ -76,25 +72,27 @@ impl MonitoringModule for LogicalVolume {
         if response.message.is_empty() && response.return_code == 0 {
             return Ok(DataPoint::empty());
         }
-        // Command does not exist.
-        else if response.message.is_empty() && response.return_code == 127 {
-            return Ok(DataPoint::empty());
+        else if response.command_not_found() {
+            return Ok(DataPoint::value_with_level("LVM not available".to_string(), crate::enums::Criticality::Info));
         }
 
         let mut result = DataPoint::empty();
 
         let lines = response.message.lines().skip(1);
         for line in lines {
-            let mut parts = line.split("|");
-            let lv_path = parts.next().unwrap().trim().to_string();
-            let lv_name = parts.next().unwrap().to_string();
-            let vg_name = parts.next().unwrap().to_string();
-            let lv_size = parts.next().unwrap().to_string();
-            let lv_attr = parts.next().unwrap().to_string();
-            let sync_percent = parts.next().unwrap().to_string();
-            let raid_mismatch_count = parts.next().unwrap().to_string();
-            let snapshot_full_percent = parts.next().unwrap().to_string();
+            let parts = line.split("|").collect::<Vec<&str>>();
+            if parts.len() < 8 {
+                return Ok(DataPoint::invalid_response());
+            }
 
+            let lv_path = parts[0].trim().to_string();
+            let lv_name = parts[1].to_string();
+            let vg_name = parts[2].to_string();
+            let lv_size = parts[3].to_string();
+            let lv_attr = parts[4].to_string();
+            let sync_percent = parts[5].to_string();
+            let raid_mismatch_count = parts[6].to_string();
+            let snapshot_full_percent = parts[7].to_string();
 
             let mut data_point = DataPoint::labeled_value(lv_name.clone(), String::from("OK"));
             data_point.description = format!("{} | size: {}", vg_name, lv_size);

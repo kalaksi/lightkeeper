@@ -129,4 +129,8 @@ impl ResponseMessage {
     pub fn is_not_found(&self) -> bool {
         self.not_found
     }
+
+    pub fn command_not_found(&self) -> bool {
+        self.message.is_empty() && self.return_code == 127
+    }
 }
