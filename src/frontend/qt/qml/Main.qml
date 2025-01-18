@@ -116,6 +116,7 @@ ApplicationWindow {
         visible: Theme.showStatusBar === true
         errorCount: root.errorCount
         jobsLeft: 0
+        hostCount: hostTableModel.rowCount
     }
 
     Connections {

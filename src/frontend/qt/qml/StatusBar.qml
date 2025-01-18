@@ -10,6 +10,7 @@ ToolBar {
     id: root
     required property int errorCount
     required property int jobsLeft
+    required property int hostCount
     padding: 0
 
     background: BorderRectangle {
@@ -26,6 +27,12 @@ ToolBar {
         // Spacer
         Item {
             Layout.fillWidth: true
+        }
+
+        NormalText {
+            id: hostCountText
+            text: root.hostCount + " hosts"
+            color: Theme.textColorDark
         }
 
         ToolSeparator {

@@ -14,6 +14,7 @@ pub struct HostTableModel {
     displayData: qt_property!(QVariant; WRITE set_display_data),
     // toggleRow is preferred for setting selected row.
     selectedRow: qt_property!(i32; NOTIFY selectedRowChanged),
+    rowCount: qt_property!(i32; READ row_count),
 
     selectedRowChanged: qt_signal!(),
     selectionActivated: qt_signal!(),
@@ -131,6 +132,10 @@ impl HostTableModel {
         self.begin_reset_model();
         self.update_row_data();
         self.end_reset_model();
+    }
+
+    fn row_count(&self) -> i32 {
+        self.row_data.len() as i32
     }
 }
 
