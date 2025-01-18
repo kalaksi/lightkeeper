@@ -26,7 +26,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.25.5" date="2025-01-18">
+    <release version="0.25.6" date="2025-01-18">
       <description>
         <ul>
           <li>More patches for theme color issues on KDE</li>
