@@ -1,16 +1,19 @@
 preferences:
-  use_sandbox_mode: false
+  use_sandbox_mode: true
   refresh_hosts_on_start: false
   use_remote_editor: true
   sudo_remote_editor: true
   remote_text_editor: nano
   text_editor: internal
   terminal: internal
-  terminal_args:
-  - ''
+  terminal_args: []
+  close_to_tray: true
+  show_monitor_notifications: true
 display_options:
   qtquick_style: ''
   hide_info_notifications: false
+  show_status_bar: true
+  show_charts: false
 cache_settings:
   enable_cache: false
   provide_initial_value: true

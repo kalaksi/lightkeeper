@@ -1,95 +1,93 @@
 groups:
-  linux:
-    monitors:
-      ram: {}
-      who: {}
-      storage-lvm-logical-volume: {}
-      storage-cryptsetup: {}
-      filesystem: {}
-      storage-lvm-physical-volume: {}
-      storage-lvm-volume-group: {}
-      kernel: {}
-      package: {}
-      network-dns: {}
-      network-routes: {}
-      uptime: {}
-      load: {}
-      os: {}
-      interface:
-        settings:
-          ignored_interfaces: br-,docker,lo,veth
-    commands:
-      linux-packages-refresh: {}
-      storage-file-space-usage: {}
-      linux-packages-update: {}
-      logs: {}
-      storage-lvm-lvrefresh: {}
-      linux-packages-clean: {}
-      storage-lvm-snapshot: {}
-      storage-lvm-lvresize: {}
-      linux-shell: {}
-      network-socket-tcp: {}
-      network-socket-listen: {}
-      storage-lvm-lvremove: {}
-      linux-packages-logs: {}
-      shutdown: {}
-      reboot: {}
-      linux-packages-update-all: {}
-  defaults:
-    monitors:
-      docker-compose:
-        settings:
-          working_dir: /mnt/containers
-      ping:
-        is_critical: true
-      tcp-connect:
-        is_critical: false
-    connectors:
-      ssh:
-        settings:
-          username: vagrant
   docker-compose:
     monitors:
       docker-compose: {}
     commands:
-      docker-compose-edit: {}
-      docker-compose-pull: {}
-      docker-compose-start: {}
-      docker-compose-build: {}
+      docker-compose-logs: {}
       docker-compose-shell: {}
       docker-compose-up: {}
-      docker-compose-logs: {}
+      docker-compose-pull: {}
+      docker-compose-edit: {}
+      docker-compose-start: {}
       docker-compose-stop: {}
-  docker:
-    monitors:
-      docker-images: {}
-      docker-containers: {}
-      docker-image-updates: {}
-    commands:
-      docker-image-prune: {}
-      docker-image-remove: {}
-      docker-shell: {}
-      docker-image-remote-tags: {}
-      docker-inspect: {}
-      docker-restart: {}
+      docker-compose-build: {}
   nixos:
     monitors:
       nixos-rebuild-generations: {}
     commands:
-      nixos-rebuild-boot: {}
+      nixos-rebuild-rollback: {}
       nixos-rebuild-dryrun: {}
       nixos-collectgarbage: {}
+      nixos-rebuild-boot: {}
       nixos-rebuild-switch: {}
       nixos-channel-update: {}
-      nixos-rebuild-rollback: {}
+  linux:
+    monitors:
+      storage-lvm-volume-group: {}
+      uptime: {}
+      storage-cryptsetup: {}
+      network-routes: {}
+      load: {}
+      storage-lvm-logical-volume: {}
+      os: {}
+      interface:
+        settings:
+          ignored_interfaces: br-,docker,lo,veth
+      filesystem: {}
+      ram: {}
+      kernel: {}
+      storage-lvm-physical-volume: {}
+      who: {}
+      package: {}
+      network-dns: {}
+    commands:
+      storage-lvm-lvresize: {}
+      linux-packages-refresh: {}
+      storage-file-space-usage: {}
+      reboot: {}
+      storage-lvm-snapshot: {}
+      storage-lvm-lvremove: {}
+      linux-packages-clean: {}
+      logs: {}
+      linux-packages-update: {}
+      storage-lvm-lvrefresh: {}
+      shutdown: {}
+      network-socket-listen: {}
+      network-socket-tcp: {}
+      linux-packages-update-all: {}
+      linux-packages-logs: {}
+      linux-shell: {}
+  defaults:
+    monitors:
+      tcp-connect:
+        is_critical: false
+      docker-compose:
+        settings:
+          working_dir: /mnt/containers
+    connectors:
+      ssh:
+        settings:
+          username: vagrant
   systemd-service:
     monitors:
       systemd-service:
         settings:
           included_services: acpid.,cron.,collectd.,dbus.,ntp.,chrony.,systemd-journald.,containerd.,docker.,ufw.,rsyslog.,nullmailer.,ssh.
     commands:
-      systemd-service-start: {}
-      systemd-service-mask: {}
       systemd-service-logs: {}
-      systemd-service-stop: {}
       systemd-service-unmask: {}
+      systemd-service-mask: {}
+      systemd-service-stop: {}
+      systemd-service-start: {}
+  docker:
+    monitors:
+      docker-images: {}
+      docker-image-updates: {}
+      docker-containers: {}
+    commands:
+      docker-shell: {}
+      docker-restart: {}
+      docker-image-remove: {}
+      docker-image-remote-tags: {}
+      docker-image-prune: {}
+      docker-inspect: {}
