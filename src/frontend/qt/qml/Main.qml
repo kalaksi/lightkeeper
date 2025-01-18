@@ -44,7 +44,7 @@ ApplicationWindow {
     palette.toolTipBase: "#31363b"
     palette.toolTipText: "#fcfcfc"
     palette.window: "#2a2e32"
-    palette.windowText: "#fcfcfc"
+    palette.windowText: Theme.textColor
 
 
     onWidthChanged: {
