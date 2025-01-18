@@ -26,11 +26,11 @@ ApplicationWindow {
     font.pointSize: Theme.fontSize
     title: "Lightkeeper (beta)"
 
-    palette.alternateBase: "#232629"
-    palette.base: "#1b1e20"
+    palette.alternateBase: Theme.alternateBaseColor
+    palette.base: Theme.baseColor
     palette.brightText: "#ffffff"
     palette.button: "#31363b"
-    palette.buttonText: "#fcfcfc"
+    palette.buttonText: Theme.textColor
     palette.dark: "#441618"
     palette.highlight: "#3daee9"
     palette.highlightedText: "#fcfcfc"

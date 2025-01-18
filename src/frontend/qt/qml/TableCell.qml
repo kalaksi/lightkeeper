@@ -48,10 +48,10 @@ Item {
             return Qt.darker(palette.highlight)
         }
         else if (model.row % 2 == 0) {
-            return Theme.rowBackgroundColor
+            return Theme.alternateBaseColor
         }
         else {
-            return Theme.rowBackgroundColorAlternate
+            return Theme.baseColor
         }
     }
 }
