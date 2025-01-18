@@ -7,6 +7,7 @@ import ".."
 import "../Text"
 import "../Button"
 import "../js/Utils.js" as Utils
+import "../StyleOverride"
 
 
 Item {
