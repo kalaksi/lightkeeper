@@ -49,6 +49,9 @@ impl MonitoringModule for Routes {
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") {
             Ok(String::from("/sbin/ip route ls"))
         }
+        else if host.platform.os_flavor == platform_info::Flavor::Alpine {
+            Ok(String::from("ip route"))
+        }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             Ok(String::from("ip route ls"))
         }
