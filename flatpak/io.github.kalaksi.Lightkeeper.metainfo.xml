@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>io.github.kalaksi.Lightkeeper</id>
   <name>LightkeeperRM</name>
-  <summary>Standalone, customizable server management tool</summary>
+  <summary>Linux server management tool</summary>
   <metadata_license>CC-BY-SA-4.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <developer id="io.github.kalaksi">
@@ -10,13 +10,10 @@
   </developer>
   <description>
     <p>
-      LightkeeperRM is a standalone, customizable, modular, server management tool.
+      LightkeeperRM is a standalone and customizable server management tool.
       It works as a drop-in replacement for maintaining servers over SSH with shell commands.
 
-
-      This is still an early release. There will be some bugs and features missing.
-
-      See project website for more information.
+      Beta version. There will be some bugs and features missing.
     </p>
   </description>
   <url type="homepage">https://github.com/kalaksi/lightkeeper</url>
