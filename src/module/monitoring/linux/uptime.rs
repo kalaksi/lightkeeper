@@ -50,6 +50,10 @@ impl MonitoringModule for Uptime {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Err(response.message);
+        }
+
         if let Some((_, tail)) = response.message.split_once("up ") {
             if let Some((uptime, _)) = tail.split_once(",") {
                 if let Some((days, _)) = uptime.split_once(" day") {

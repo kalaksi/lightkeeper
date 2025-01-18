@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
 
+use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::host::HostSetting;
 use crate::module::connection::ResponseMessage;
@@ -64,6 +65,10 @@ impl MonitoringModule for Package {
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
+        }
+
         let mut result = DataPoint::empty();
 
         if host.platform.is_same_or_greater(Flavor::Debian, "9") ||
@@ -75,7 +80,7 @@ impl MonitoringModule for Package {
                 let package = full_package.split(',').nth(0).map(|s| s.to_string())
                                             .unwrap_or(full_package.clone());
                 let package_name = full_package.split('/').next().unwrap().to_string();
-                let new_version = parts.next().unwrap().to_string();
+                let new_version = parts.next().unwrap_or_default().to_string();
                 // let arch = parts.next().unwrap().to_string();
 
                 let old_version = string_manipulation::get_string_between(&line, "[upgradable from: ", "]");
@@ -90,9 +95,9 @@ impl MonitoringModule for Package {
             for line in lines {
                 let mut parts = line.split_whitespace();
 
-                let package_name = parts.next().unwrap().to_string();
-                let new_version = parts.next().unwrap().to_string();
-                let repository = parts.next().unwrap().to_string();
+                let package_name = parts.next().unwrap_or_default().to_string();
+                let new_version = parts.next().unwrap_or_default().to_string();
+                let repository = parts.next().unwrap_or_default().to_string();
 
                 let mut data_point = DataPoint::labeled_value(package_name.clone(), new_version);
                 data_point.description = repository;

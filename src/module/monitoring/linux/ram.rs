@@ -64,6 +64,10 @@ impl MonitoringModule for Ram {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Err(response.message);
+        }
+
         let line = response.message.lines().filter(|line| line.contains("Mem:")).collect::<Vec<&str>>();
         let parts = line[0].split_whitespace().collect::<Vec<&str>>();
 

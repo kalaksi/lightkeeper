@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::module::platform_info;
@@ -48,6 +49,10 @@ impl MonitoringModule for Load {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
+        }
+
         let parts = response.message.split("load average: ").collect::<Vec<&str>>();
         Ok(DataPoint::new(parts[1].to_string()))
     }

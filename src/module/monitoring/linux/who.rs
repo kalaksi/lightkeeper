@@ -7,6 +7,7 @@ use crate::{
     utils::string_manipulation,
 };
 use lightkeeper_module::monitoring_module;
+use crate::enums::Criticality;
 use crate::module::*;
 use crate::module::monitoring::*;
 
@@ -50,20 +51,34 @@ impl MonitoringModule for Who {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
+        }
+
         let mut result = DataPoint::empty();
 
         let lines = response.message.lines().filter(|line| !line.is_empty());
         for line in lines {
-            let mut parts = line.split_whitespace();
-            let user = parts.next().unwrap().to_string();
-            let _pts = parts.next().unwrap().to_string();
+            let mut parts = line.split_whitespace().collect::<Vec<&str>>();
+            if parts.len() < 4 {
+                return Ok(DataPoint::value_with_level("Invalid response".to_string(), Criticality::Error))
+            }
+
+            let user = parts[0].to_string();
+            // let _pts = parts[1].to_string();
             // TODO: format according to locales.
-            let login_date = parts.next().unwrap().to_string();
-            let login_time = parts.next().unwrap().to_string();
-            // Removes parentheses.
-            let ip_address = string_manipulation::get_string_between(&parts.next().unwrap(), "(", ")");
+            let login_date = parts[2].to_string();
+            let login_time = parts[3].to_string();
+
+            let value_text = if parts.len() > 4 {
+                // Removes parentheses.
+                let ip_address = string_manipulation::get_string_between(&parts[4], "(", ")");
+                format!("{} {} (from {})", login_date, login_time, ip_address)
+            }
+            else {
+                format!("{} {}", login_date, login_time)
+            };
             
-            let value_text = format!("{} {} (from {})", login_date, login_time, ip_address);
             let data_point = DataPoint::labeled_value(user, value_text);
             result.multivalue.push(data_point);
         }

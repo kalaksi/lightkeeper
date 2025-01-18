@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 
 use lightkeeper_module::monitoring_module;
+use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{
@@ -49,6 +50,10 @@ impl MonitoringModule for Kernel {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
+        }
+
         Ok(DataPoint::new(response.message.replace(" ", " (") + ")"))
     }
 }
