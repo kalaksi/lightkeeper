@@ -57,6 +57,9 @@ impl MonitoringModule for Interface {
            host.platform.os_flavor == platform_info::Flavor::RedHat {
             Ok(String::from("/sbin/ip -j addr show"))
         }
+        else if host.platform.os_flavor == platform_info::Flavor::Alpine {
+            Err(LkError::unsupported_platform())
+        }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             Ok(String::from("ip -j addr show"))
         }
@@ -66,6 +69,10 @@ impl MonitoringModule for Interface {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Err(response.message);
+        }
+
         let mut result = DataPoint::empty();
 
         let mut interfaces: Vec<InterfaceDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;

@@ -7,7 +7,6 @@ use crate::{
     utils::string_manipulation,
 };
 use lightkeeper_module::monitoring_module;
-use crate::enums::Criticality;
 use crate::module::*;
 use crate::module::monitoring::*;
 
@@ -52,7 +51,7 @@ impl MonitoringModule for Who {
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
         if response.is_error() {
-            return Ok(DataPoint::invalid_response());
+            return Err(response.message);
         }
 
         let mut result = DataPoint::empty();

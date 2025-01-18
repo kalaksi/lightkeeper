@@ -71,10 +71,7 @@ impl MonitoringModule for Filesystem {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if response.is_error() {
-            return Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
-        }
-
+        // NOTE: Non-zero exit code means that at least SOME errors were encountered, but might still have valid data.
         let mut result = DataPoint::empty();
 
         // First line contains headers
@@ -82,7 +79,8 @@ impl MonitoringModule for Filesystem {
         for line in lines {
             let parts = line.split_whitespace().collect::<Vec<&str>>();
             if parts.len() < 7 {
-                return Ok(DataPoint::value_with_level("Invalid response".to_string(), Criticality::Error))
+                ::log::debug!("Invalid line in response: {}", line);
+                continue;
             }
 
             // let _source = parts[0].to_string();
