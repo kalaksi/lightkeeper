@@ -69,6 +69,14 @@ impl DataPoint {
         }
     }
 
+    pub fn not_available(message: &str) -> Self {
+        DataPoint {
+            label: message.to_string(),
+            criticality: Criticality::NotAvailable,
+            ..Default::default()
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.value.is_empty() && self.multivalue.is_empty()
     }

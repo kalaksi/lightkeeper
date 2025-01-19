@@ -176,6 +176,7 @@ impl ThemeModel {
             Criticality::Warning => QString::from("#60ffcc00"),
             Criticality::Error => QString::from("#60ff3300"),
             Criticality::Critical => QString::from("#60ff3300"),
+            Criticality::NotAvailable => QString::from("#60ffffff"),
         }
     }
 
@@ -198,6 +199,7 @@ impl ThemeModel {
             Criticality::Warning => QString::from("qrc:/main/images/alert/warning"),
             Criticality::Error => QString::from("qrc:/main/images/alert/error"),
             Criticality::Critical => QString::from("qrc:/main/images/alert/error"),
+            Criticality::NotAvailable => QString::from("qrc:/main/images/alert/info"),
         }
     }
 }

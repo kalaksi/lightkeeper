@@ -69,14 +69,16 @@ impl MonitoringModule for LogicalVolume {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        let mut result = DataPoint::empty();
+
         if response.message.is_empty() && response.return_code == 0 {
             return Ok(DataPoint::empty());
         }
-        else if response.command_not_found() {
-            return Ok(DataPoint::value_with_level("LVM not available".to_string(), crate::enums::Criticality::Info));
+        else if response.is_command_not_found() {
+            result.multivalue.push(DataPoint::value_with_level("LVM not available".to_string(), crate::enums::Criticality::NotAvailable));
+            return Ok(result);
         }
 
-        let mut result = DataPoint::empty();
 
         let lines = response.message.lines().skip(1);
         for line in lines {

@@ -94,6 +94,14 @@ TableView {
                     }
                 }
 
+                // TODO
+                // Label {
+                //     id: notAvailableError
+                //     // visible: styledValue.data_point.criticality === "NotAvailable"
+                //     visible: true
+                //     text: "test " + parent.parent.labelAndDescription.label
+                // }
+
                 Column {
                     visible: !parent.isSeparator
                     anchors.verticalCenter: parent.verticalCenter

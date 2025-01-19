@@ -61,8 +61,8 @@ impl MonitoringModule for PhysicalVolume {
         if response.message.is_empty() && response.return_code == 0 {
             return Ok(DataPoint::empty());
         }
-        else if response.command_not_found() {
-            return Ok(DataPoint::value_with_level("LVM not available".to_string(), crate::enums::Criticality::Info));
+        else if response.is_command_not_found() {
+            return Ok(DataPoint::value_with_level("LVM not available".to_string(), crate::enums::Criticality::NotAvailable));
         }
 
         let mut result = DataPoint::empty();
