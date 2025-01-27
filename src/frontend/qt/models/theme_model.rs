@@ -63,9 +63,6 @@ pub struct ThemeModel {
 #[allow(non_snake_case)]
 impl ThemeModel {
     pub fn new(display_options: configuration::DisplayOptions) -> ThemeModel {
-        // TODO: Utilize Kirigami.Theme and Kirigami.Units? Won't have everything to be sufficient, but
-        // could be used to set values to this model. Or maybe use Kirigami's models and leave anything extra here?
-        // OTOH, this model could be easier to use and more flexible.
         ThemeModel {
             disabledTextColor: QString::from("#50fcfcfc"),
             iconColor: QString::from("#a0a0a0"),
@@ -91,7 +88,7 @@ impl ThemeModel {
             marginDialogTop: 45,
             marginDialogBottom: 80,
             animationDuration: 175,
-            animationDurationFast: 80,
+            animationDurationFast: 60,
             groupboxMinWidth: 450,
             groupboxMaxWidth: 650,
             commonIndent: 16,
