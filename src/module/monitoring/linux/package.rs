@@ -50,8 +50,13 @@ impl MonitoringModule for Package {
             command.arguments(vec!["apt", "list", "--upgradable"]);
             Ok(command.to_string())
         }
-        else if host.platform.is_same_or_greater(Flavor::CentOS, "8") {
+        else if host.platform.is_same_or_greater(Flavor::CentOS, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec!["dnf", "check-update", "--quiet", "--color=never", "--assumeno"]);
+            Ok(command.to_string())
+        }
+        else if host.platform.os_flavor == platform_info::Flavor::Fedora {
+            command.arguments(vec!["dnf", "check-update", "--quiet", "--assumeno"]);
             Ok(command.to_string())
         }
         else if host.platform.is_same_or_greater(Flavor::NixOS, "20") {
@@ -90,7 +95,10 @@ impl MonitoringModule for Package {
                 result.multivalue.push(data_point);
             }
         }
-        else if host.platform.is_same_or_greater(Flavor::CentOS, "8") {
+        else if host.platform.is_same_or_greater(Flavor::CentOS, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                host.platform.os_flavor == platform_info::Flavor::Fedora {
+
             let lines = response.message.lines().filter(|line| !line.is_empty());
             for line in lines {
                 let mut parts = line.split_whitespace();

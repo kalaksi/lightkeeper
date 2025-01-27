@@ -48,7 +48,8 @@ impl CommandModule for Refresh {
             command.arguments(vec!["apt", "update"]); 
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                host.platform.os_flavor == platform_info::Flavor::Fedora {
             command.arguments(vec!["dnf", "check-update"]);
         }
         else {
@@ -65,10 +66,10 @@ impl CommandModule for Refresh {
             }
             else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
                     host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
-                1
+                10
             }
             else {
-                return Err(LkError::unsupported_platform().message);
+                10
             };
 
             Ok(CommandResult::new_partial(response.message.clone(), progress))
@@ -101,6 +102,6 @@ impl Refresh {
             }
         }
 
-        0
+        10
     }
 }

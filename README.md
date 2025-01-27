@@ -146,6 +146,8 @@ The (current) goal is to support:
 - RHEL
 - CentOS
 - NixOS
+- Fedora
+- Alpine
 - Linux in general (basic functionality for most distributions)
 
 
