@@ -1,6 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
 
-
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Metric {
     pub time: i64,

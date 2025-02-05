@@ -1,17 +1,8 @@
+use std::{net::IpAddr, net::Ipv4Addr, net::ToSocketAddrs, str::FromStr};
 
-use serde_derive::{ Serialize, Deserialize };
-use std::{
-    net::IpAddr,
-    net::Ipv4Addr,
-    net::ToSocketAddrs,
-    str::FromStr,
-};
+use serde_derive::{Deserialize, Serialize};
 
-use crate::{
-    error::*,
-    module::PlatformInfo,
-    utils
-};
+use crate::{error::*, module::PlatformInfo, utils};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Host {

@@ -1,14 +1,13 @@
-use std::sync::mpsc;
 use std::io::{self, BufRead, Read, Write};
+use std::process::Command;
+use std::sync::mpsc;
 use std::time::{Duration, SystemTime};
 use std::{process, thread};
 
-
 use crate::error::LkError;
-use crate::{file_handler, utils};
 use crate::frontend::UIUpdate;
-use std::process::Command;
 use crate::metrics::tmserver::{self, RequestType, TMSRequest, TMSResponse};
+use crate::{file_handler, utils};
 
 //
 // NOTE: This is MetrcisManager that handles connections to metrics database for keeping record of host metrics for graphs.
@@ -21,8 +20,6 @@ use crate::metrics::tmserver::{self, RequestType, TMSRequest, TMSResponse};
 // Even though it's closed-source, the communication protocol is open (see tmserver/tmsrequest.rs).
 // The metrics server does not use or need network access (it uses unix sockets) and can't send malicious input to Lightkeeper.
 //
-
-
 
 /// In milliseconds.
 const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
@@ -37,7 +34,6 @@ pub struct MetricsManager {
     // TODO: support remote database backends in the future.
     request_sender: mpsc::Sender<TMSRequest>,
 }
-
 
 impl MetricsManager {
     pub fn new(update_sender: mpsc::Sender<UIUpdate>) -> Result<Self, LkError> {
@@ -67,8 +63,14 @@ impl MetricsManager {
         // The binary is not included by default so download it first.
         if let Err(_) = std::fs::metadata(&tmserver_path) {
             // TODO: actual paths
-            utils::download::download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md", tmserver_path.to_str().unwrap())?;
-            utils::download::download_file("https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md.sig", signature_path.to_str().unwrap())?;
+            utils::download::download_file(
+                "https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md",
+                tmserver_path.to_str().unwrap(),
+            )?;
+            utils::download::download_file(
+                "https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md.sig",
+                signature_path.to_str().unwrap(),
+            )?;
         }
 
         // Don't verify when developing.
@@ -108,7 +110,6 @@ impl MetricsManager {
 
         Ok((process_handle, log_thread))
     }
-
 
     pub fn stop(&mut self) -> Result<(), LkError> {
         let service_request = TMSRequest::exit();
@@ -169,7 +170,6 @@ impl MetricsManager {
         Ok(invocation_id)
     }
 
-
     fn send_request(&mut self, request_type: RequestType) -> Result<u64, LkError> {
         let invocation_id = self.invocation_id_counter;
         self.invocation_id_counter += 1;
@@ -182,8 +182,10 @@ impl MetricsManager {
             request_type: request_type,
         };
 
-        self.request_sender.clone().send(service_request)
-                                   .map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
+        self.request_sender
+            .clone()
+            .send(service_request)
+            .map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
         Ok(invocation_id)
     }
 
@@ -224,24 +226,20 @@ impl MetricsManager {
             let mut buffer = vec![0; 1024];
 
             let read_count = match service_request.request_type {
-                RequestType::Exit => {
-                    match tls_stream.read_to_end(&mut buffer) {
-                        Ok(count) => count,
-                        Err(error) => {
-                            log::error!("Failed to read response: {}", error);
-                            break;
-                        }
+                RequestType::Exit => match tls_stream.read_to_end(&mut buffer) {
+                    Ok(count) => count,
+                    Err(error) => {
+                        log::error!("Failed to read response: {}", error);
+                        break;
                     }
                 },
-                _ => {
-                    match tls_stream.read(&mut buffer) {
-                        Ok(count) => count,
-                        Err(error) => {
-                            log::error!("Failed to read response: {}", error);
-                            continue;
-                        }
+                _ => match tls_stream.read(&mut buffer) {
+                    Ok(count) => count,
+                    Err(error) => {
+                        log::error!("Failed to read response: {}", error);
+                        continue;
                     }
-                }
+                },
             };
 
             if read_count == 0 {
