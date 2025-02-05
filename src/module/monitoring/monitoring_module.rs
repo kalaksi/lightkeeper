@@ -1,26 +1,30 @@
 use std::collections::{HashMap, VecDeque};
-use serde_derive::{Serialize, Deserialize};
-use super::DataPoint;
 
+use serde_derive::{Deserialize, Serialize};
+
+use super::DataPoint;
 use crate::{
-    Host,
-    module::module::Module,
-    module::ModuleSpecification,
-    module::MetadataSupport,
-    module::connection::ResponseMessage,
+    error::LkError,
     frontend::DisplayOptions,
     frontend::DisplayStyle,
-    error::LkError,
+    module::connection::ResponseMessage,
+    module::module::Module,
+    module::MetadataSupport,
+    module::ModuleSpecification,
+    Host,
 };
 
 pub type Monitor = Box<dyn MonitoringModule + Send + Sync>;
 
-pub trait MonitoringModule : BoxCloneableMonitor + MetadataSupport + Module {
+pub trait MonitoringModule: BoxCloneableMonitor + MetadataSupport + Module {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         None
     }
 
-    fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor where Self: Sized + 'static + Send + Sync {
+    fn new_monitoring_module(settings: &HashMap<String, String>) -> Monitor
+    where
+        Self: Sized + 'static + Send + Sync,
+    {
         Box::new(Self::new(settings))
     }
 

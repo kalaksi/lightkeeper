@@ -1,16 +1,23 @@
-
 use std::collections::HashMap;
-use serde_derive::{Serialize, Deserialize};
+
 use chrono::{DateTime, Utc};
+use serde_derive::{Deserialize, Serialize};
 
 use crate::{
-    enums::Criticality, error::LkError, frontend, host::Host, module::{connection::ResponseMessage, MetadataSupport, Module, ModuleSpecification}
+    enums::Criticality,
+    error::LkError,
+    frontend,
+    host::Host,
+    module::{connection::ResponseMessage, MetadataSupport, Module, ModuleSpecification},
 };
 
 pub type Command = Box<dyn CommandModule + Send + Sync>;
 
-pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
-    fn new_command_module(settings: &HashMap<String, String>) -> Command where Self: Sized + 'static + Send + Sync {
+pub trait CommandModule: BoxCloneableCommand + MetadataSupport + Module {
+    fn new_command_module(settings: &HashMap<String, String>) -> Command
+    where
+        Self: Sized + 'static + Send + Sync,
+    {
         Box::new(Self::new(settings))
     }
 
@@ -47,7 +54,6 @@ pub trait CommandModule : BoxCloneableCommand + MetadataSupport + Module {
 pub trait BoxCloneableCommand {
     fn box_clone(&self) -> Command;
 }
-
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CommandResult {

@@ -1,16 +1,15 @@
-
 use std::collections::HashMap;
+
 use crate::error::LkError;
-use crate::module::MetadataSupport;
-use crate::module::module::Module;
-use crate::module::connection::ResponseMessage;
 use crate::file_handler::FileMetadata;
+use crate::module::connection::ResponseMessage;
+use crate::module::module::Module;
+use crate::module::MetadataSupport;
 
 pub type Connector = Box<dyn ConnectionModule + Send + Sync>;
 
-pub trait ConnectionModule : MetadataSupport + Module {
-    fn set_target(&self, _address: &str) {
-    }
+pub trait ConnectionModule: MetadataSupport + Module {
+    fn set_target(&self, _address: &str) {}
 
     /// Sends a request / message and waits for response. Response can be complete or partial.
     fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError>;
@@ -36,7 +35,10 @@ pub trait ConnectionModule : MetadataSupport + Module {
         Err(LkError::not_implemented())
     }
 
-    fn new_connection_module(settings: &HashMap<String, String>) -> Connector where Self: Sized + 'static + Send + Sync {
+    fn new_connection_module(settings: &HashMap<String, String>) -> Connector
+    where
+        Self: Sized + 'static + Send + Sync,
+    {
         Box::new(Self::new(settings))
     }
 }
