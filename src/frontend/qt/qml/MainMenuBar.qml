@@ -122,19 +122,6 @@ ToolBar {
         ToolSeparator { }
 
         ToolButton {
-            visible: LK.config.isDevBuild()
-            icon.source: "qrc:/main/images/button/refresh"
-            text: "Hot reload"
-            display: AbstractButton.IconOnly
-            onClicked: root.hotReload()
-            icon.height: root.iconSize
-            icon.width: root.iconSize
-            padding: 4
-            topPadding: 2
-            bottomPadding: 6
-        }
-
-        ToolButton {
             icon.source: "qrc:/main/images/button/keyboard-shortcuts"
             text: "Keyboard shortcuts"
             display: AbstractButton.IconOnly

@@ -99,13 +99,6 @@ ApplicationWindow {
             hostTableModel.filter(searchText)
         }
 
-        onHotReload: function() {
-            dialogHandlerLoader.source = ""
-            dialogHandlerLoader.active = false
-            dialogHandlerLoader.source = "DialogHandler.qml"
-            dialogHandlerLoader.active = true
-        }
-
         // Shortcuts are enabled if no host is selected.
         enableShortcuts: hostTableModel.selectedRow === -1
         enableEditButtons: hostTableModel.selectedRow !== -1
@@ -344,6 +337,21 @@ ApplicationWindow {
         anchors.margins: 20
     }
 
+    ImageButton {
+        visible: LK.config.isDevBuild()
+        imageSource: "qrc:/main/images/button/refresh"
+        tooltip: "Hot reload"
+        roundButton: true
+        onClicked: root.hotReload()
+        height: 52
+        width: 52
+        z: 100
+        // Bottom right corner
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        anchors.margins: 20
+    }
+
     Shortcut {
         sequence: StandardKey.Quit
         onActivated: root.quit()
@@ -378,5 +386,12 @@ ApplicationWindow {
 
     function reload() {
         // todo
+    }
+
+    function hotReload() {
+        dialogHandlerLoader.source = ""
+        dialogHandlerLoader.active = false
+        dialogHandlerLoader.source = "DialogHandler.qml"
+        dialogHandlerLoader.active = true
     }
 }
