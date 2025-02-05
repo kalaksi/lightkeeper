@@ -419,6 +419,8 @@ impl ConfigManagerModel {
         let description = description.to_string();
         let command = command.to_string();
 
+        ::log::info!("Adding custom command {} to host {}", command_name, host_name);
+
         let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
         host_settings.overrides.custom_commands.push(configuration::CustomCommandConfig {
             name: command_name,

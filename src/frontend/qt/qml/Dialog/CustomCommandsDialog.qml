@@ -1,14 +1,16 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 import "../Button"
 import "../Text"
+import "../Misc"
 import ".."
 
 LightkeeperDialog {
     id: root
     property string hostId: ""
+    property int buttonSize: 38
     property bool _loading: hostId === ""
 
     modal: true
@@ -19,89 +21,97 @@ LightkeeperDialog {
 
     signal configSaved(string hostId)
 
-    // ScrollView doesn't have boundsBehavior so this is the workaround.
-    Binding {
-        target: scrollView.contentItem
-        property: "boundsBehavior"
-        value: Flickable.StopAtBounds
+    onOpened: {
+        LK.config.beginHostConfiguration()
+    }
+
+    onAccepted: {
+        LK.config.endHostConfiguration()
+    }
+
+    onRejected: {
+        LK.config.cancelHostConfiguration()
     }
 
     WorkingSprite {
         visible: root._loading
     }
 
-    contentItem: ScrollView {
-        id: scrollView
-        anchors.fill: parent
+    contentItem: Column {
+        id: rootColumn
+        visible: !root._loading
+        spacing: Theme.spacingNormal
+        anchors.right: parent.right
+        anchors.left: parent.left
         anchors.margins: Theme.marginDialog
-        anchors.topMargin: Theme.marginDialogTop
-        anchors.bottomMargin: Theme.marginDialogBottom
-        contentWidth: availableWidth
-        clip: true
 
-        Column {
-            id: rootColumn
-            visible: !root._loading
-            anchors.fill: parent
-            anchors.rightMargin: Theme.marginScrollbar
-            spacing: Theme.spacingNormal
+        RowLayout {
+            width: parent.width
+            height: parent.height * 0.95
 
-            Repeater {
-                id: repeater
-                model: []
+            LKListView {
+                id: commandList
+                model: LK.config.getCustomCommands(root.hostId).map(JSON.parse)
 
-                RowLayout {
-                    id: rowLayout
-                    width: parent.width
-                    height: textContainer.implicitHeight
-                    spacing: Theme.spacingNormal
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+            }
 
-                    Column {
-                        id: textContainer
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
+            // Add, remove and configure buttons.
+            ColumnLayout {
+                width: root.buttonSize
+                spacing: Theme.spacingNormal
+                layoutDirection: Qt.LeftToRight
 
-                        Label {
-                            width: parent.width
-                            text: modelData.key
-                        }
+                Layout.fillHeight: true
 
-                        SmallText {
-                            width: parent.width
-                            text: modelData.description
-                            color: Theme.textColorDark
-                            wrapMode: Text.WordWrap
-                        }
-
-                        TextField {
-                            id: textField
-                            enabled: toggleSwitch.checked && !fileChooserButton.visible
-                            placeholderText: toggleSwitch.checked ? "" : "unset"
-                            placeholderTextColor: Theme.textColorDark
-                            text: toggleSwitch.checked ? modelData.value : ""
-
-                            Layout.preferredWidth: {
-                                if (fileChooserButton.visible) {
-                                    scrollView.width * 0.35 - fileChooserButton.width - rowLayout.spacing
-                                }
-                                else {
-                                    scrollView.width * 0.35
-                                }
-                            }
-                            Layout.alignment: Qt.AlignVCenter
-
-                            Connections {
-                                target: DesktopPortal
-                                function onFileChooserResponse(token, filePath) {
-                                    if (fileChooserButton.visible && token === fileChooserButton._fileChooserToken) {
-                                        textField.text = filePath
-                                    }
-                                }
-                            }
-                        }
+                ImageButton {
+                    imageSource: "qrc:/main/images/button/add"
+                    size: root.buttonSize
+                    onClicked: {
+                        commandAddDialog.inputSpecs = [
+                            { label: "Command name", field_type: "Text" },
+                            { label: "Description", field_type: "Text" },
+                            { label: "Shell command", field_type: "Text" }
+                        ]
+                        commandAddDialog.open()
                     }
                 }
+
+                ImageButton {
+                    imageSource: "qrc:/main/images/button/entry-edit"
+                    size: root.buttonSize
+                    onClicked: {
+                        groupConfigDialog.groupName = root._selectedGroups[commandList.currentIndex]
+                        groupConfigDialog.open()
+                    }
+                }
+
+                ImageButton {
+                    id: removeButton
+                    imageSource: "qrc:/main/images/button/delete"
+                    size: root.buttonSize
+                    onClicked: {
+                        let selectedGroup = root._selectedGroups[commandList.currentIndex]
+                        LK.config.removeHostFromGroup(root.hostId, selectedGroup)
+                        root.refreshGroups();
+                    }
+                }
+
+                // Spacer
+                Item {
+                    Layout.fillHeight: true
+                }
             }
+        }
+    }
+
+    InputDialog {
+        id: commandAddDialog
+        width: parent.width
+        height: 200
+        onInputValuesGiven: function(inputValues) {
+            LK.config.addCustomCommand(root.hostId, inputValues[0], inputValues[1], inputValues[2])
         }
     }
 }
