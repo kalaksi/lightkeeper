@@ -544,12 +544,12 @@ LightkeeperDialog {
         id: connectorModuleAddDialog
         width: parent.width
         height: 200
-        inputSpecs: {
-            label: "Connector module"
-            field_type: "Option"
-            options: {}
+        inputSpecs: [{
+            label: "Connector module",
+            field_type: "Option",
+            options: {},
             option_descriptions: {}
-        }
+        }]
         onInputValuesGiven: function(inputValues) {
             LK.config.addGroupConnector(root.groupName, inputValues[0])
             refreshConnectorList()
@@ -560,12 +560,12 @@ LightkeeperDialog {
         id: monitorModuleAddDialog
         width: parent.width
         height: 200
-        inputSpecs: {
-            label: "Monitoring module"
-            field_type: "Option"
-            options: {}
+        inputSpecs: [{
+            label: "Monitoring module",
+            field_type: "Option",
+            options: {},
             option_descriptions: {}
-        }
+        }]
         onInputValuesGiven: function(inputValues) {
             LK.config.addGroupMonitor(root.groupName, inputValues[0])
             refreshMonitorList()
@@ -576,12 +576,12 @@ LightkeeperDialog {
         id: commandModuleAddDialog
         width: parent.width
         height: 200
-        inputSpecs: {
-            label: "Command module"
-            field_type: "Option"
-            options: {}
+        inputSpecs: [{
+            label: "Command module",
+            field_type: "Option",
+            options: {},
             option_descriptions: {}
-        }
+        }]
         onInputValuesGiven: function(inputValues) {
             LK.config.addGroupCommand(root.groupName, inputValues[0])
             refreshCommandList()
