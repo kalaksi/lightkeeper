@@ -65,7 +65,8 @@ impl CommandModule for Refresh {
                 self.parse_progress_for_apt(response)
             }
             else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-                    host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+                    host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                    host.platform.os_flavor == platform_info::Flavor::Fedora {
                 10
             }
             else {
