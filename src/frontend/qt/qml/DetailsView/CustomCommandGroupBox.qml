@@ -8,8 +8,10 @@ import "../Text"
 CategoryGroupBox {
     id: root
 
+    required property string hostId
     property int rowHeight: 60
     property string selectionColor: Theme.highlightColorLight
+    property var customCommands: LK.command.getCustomCommands(root.hostId).map(JSON.parse)
 
     label: GroupBoxLabel {
         id: groupBoxLabel
@@ -41,7 +43,7 @@ CategoryGroupBox {
         highlight: Rectangle {
             color: root.selectionColor
         }
-        model: LK.command.customCommands
+        model: root.customCommands
 
         delegate: ItemDelegate {
             implicitHeight: root.rowHeight
@@ -64,11 +66,11 @@ CategoryGroupBox {
                     Layout.fillWidth: true
 
                     NormalText {
-                        text: modelData
+                        text: modelData.name
                     }
 
                     SmallerText {
-                        text: modelData
+                        text: modelData.description
                         wrapMode: Text.WordWrap
                         width: parent.width
                     }
@@ -91,7 +93,17 @@ CategoryGroupBox {
                             }
                         },
                         {
-                            command_id: "stop",
+                            command_id: "_custom-command",
+                            command_params: [modelData.command],
+                            display_options: {
+                                display_icon: "start",
+                                display_text: "run",
+                                display_style: "button"
+                            }
+                        }
+                        /* TODO?
+                        {
+                            command_id: "_custom_command",
                             command_params: [],
                             display_options: {
                                 display_icon: "stop",
@@ -99,13 +111,14 @@ CategoryGroupBox {
                                 display_style: "button"
                             }
                         }
+                        */
                     ]
 
                     Layout.alignment: Qt.AlignHCenter
                     Layout.rightMargin: Theme.spacingNormal
 
                     onClicked: function(buttonId, commandId, params) {
-                        LK.command.executeCustom(buttonId, root.hostId, commandId)
+                        LK.command.executeConfirmed(buttonId, root.hostId, commandId, params)
                     }
                 }
             }

@@ -19,22 +19,16 @@ pub struct CommandHandlerModel {
     base: qt_base_class!(trait QObject),
 
     //
-    // Properties
-    //
-    customCommands: qt_property!(QStringList; NOTIFY customCommandsChanged),
-
-    //
     // Slots
     //
     getAllHostCategories: qt_method!(fn(&self, host_id: QString) -> QVariantList),
     getCategoryCommands: qt_method!(fn(&self, host_id: QString, category: QString) -> QVariantList),
-    // TODO:
-    // getCustomCommands: qt_method!(fn(&self, host_id: QString) -> QStringList),
+    getCustomCommands: qt_method!(fn(&self, host_id: QString) -> QStringList),
     getCommandsOnLevel: qt_method!(fn(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList),
     execute: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executeConfirmed: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
-    executeCustom: qt_method!(fn(&self, host_id: QString, custom_command_id: QString) -> u64),
+    executeCustom: qt_method!(fn(&self, button_id: QString, host_id: QString, custom_command_id: QString)),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
     hasFileChanged: qt_method!(fn(&self, local_file_path: QString, contents: QString) -> bool),
@@ -145,10 +139,10 @@ impl CommandHandlerModel {
         result
     }
 
-    // fn getCustomCommands(&self, host_id: QString) -> QStringList {
-    //     let custom_commands = self.command_handler.get_custom_commands_for_host(&host_id.to_string());
-    //     QStringList::from_iter(custom_commands.into_iter())
-    // }
+    fn getCustomCommands(&self, host_id: QString) -> QStringList {
+        let custom_commands = self.command_handler.get_custom_commands_for_host(&host_id.to_string());
+        custom_commands.values().map(|item| QString::from(serde_json::to_string(&item).unwrap())).collect()
+    }
 
     // `parent_id` is either command ID or category ID (for category-level commands).
     // Returns CommandData as JSON strings.
@@ -303,10 +297,15 @@ impl CommandHandlerModel {
         self.command_handler.execute(&host_id, &command_id, &parameters)
     }
 
-    fn executeCustom(&mut self, host_id: QString, custom_command_id: QString) -> u64 {
+    // TODO: remove
+    fn executeCustom(&mut self, button_id: QString, host_id: QString, custom_command_id: QString) {
         let host_id = host_id.to_string();
         let custom_command_id = custom_command_id.to_string();
-        self.command_handler.executeCustom(&host_id, &custom_command_id)
+        let invocation_id = self.command_handler.execute_custom(&host_id, &custom_command_id);
+
+        if invocation_id > 0 {
+            self.commandExecuted(invocation_id, host_id.into(), custom_command_id.into(), "_custom-command".into(), button_id.into());
+        }
     }
 
     fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64 {

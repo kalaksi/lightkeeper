@@ -10,6 +10,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::configuration::CustomCommandConfig;
+use crate::module::command::CommandModule;
+use crate::module::Module;
 use crate::module::ModuleSpecification;
 use crate::utils::sha256;
 use crate::configuration::Hosts;
@@ -101,6 +103,9 @@ impl CommandHandler {
                 // Only add if missing.
                 command_collection.entry(command_config.name.clone()).or_insert(command_config.clone());
             }
+
+            let custom_command_module = crate::module::command::internal::custom_command::CustomCommand::new_command_module(&HashMap::new());
+            self.add_command(host_id, custom_command_module);
         }
 
         let (sender, receiver) = mpsc::channel::<RequestResponse>();
@@ -193,7 +198,8 @@ impl CommandHandler {
     }
 
     /// Returns invocation ID or 0 on error.
-    pub fn executeCustom(&mut self, host_id: &String, custom_command_id: &String) -> u64 {
+    /// TODO: remove?
+    pub fn execute_custom(&mut self, host_id: &String, custom_command_id: &String) -> u64 {
         let host = self.host_manager.borrow().get_host(host_id);
         let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
         let internal_command_module = &self.commands.lock().unwrap()[host_id]["_custom-command"];

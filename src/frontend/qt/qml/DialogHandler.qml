@@ -41,6 +41,8 @@ Item {
     CustomCommandsDialog {
         id: customCommandsDialog
         bottomMargin: 0.15 * parent.height
+
+        onConfigurationChanged: LK.reload()
     }
 
     DynamicObjectManager {

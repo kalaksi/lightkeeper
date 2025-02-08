@@ -2,8 +2,12 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+
+// Basic ListView with common properties.
 Rectangle {
+    id: root
     property alias model: customCommandsList.model
+    property string modelPropertyName: ""
 
     color: Theme.backgroundColor
     border.color: Theme.borderColor
@@ -21,8 +25,7 @@ Rectangle {
 
         delegate: ItemDelegate {
             width: customCommandsList.width
-            // TODO
-            text: modelData.name
+            text: root.modelPropertyName !== "" ? modelData[root.modelPropertyName] : modelData
             highlighted: ListView.isCurrentItem
             onClicked: customCommandsList.currentIndex = index
         }

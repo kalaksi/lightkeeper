@@ -12,6 +12,7 @@ LightkeeperDialog {
     property string hostId: ""
     property int buttonSize: 38
     property bool _loading: hostId === ""
+    property var customCommands: LK.command.getCustomCommands(root.hostId).map(JSON.parse)
 
     modal: true
     implicitWidth: 600
@@ -19,19 +20,12 @@ LightkeeperDialog {
     title: `Custom commands`
     standardButtons: Dialog.Ok | Dialog.Cancel
 
-    signal configSaved(string hostId)
-
-    onOpened: {
-        LK.config.beginHostConfiguration()
-    }
+    signal configurationChanged(string hostId)
 
     onAccepted: {
-        LK.config.endHostConfiguration()
+        root.configurationChanged(root.hostId)
     }
 
-    onRejected: {
-        LK.config.cancelHostConfiguration()
-    }
 
     WorkingSprite {
         visible: root._loading
@@ -51,7 +45,8 @@ LightkeeperDialog {
 
             LKListView {
                 id: commandList
-                model: LK.config.getCustomCommands(root.hostId).map(JSON.parse)
+                model: root.customCommands
+                modelPropertyName: "name"
 
                 Layout.fillHeight: true
                 Layout.fillWidth: true

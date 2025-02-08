@@ -414,6 +414,10 @@ impl Configuration {
             result.connectors.insert(connector_id.clone(), merged_config);
         });
 
+        second_config.custom_commands.iter().for_each(|new_config| {
+            result.custom_commands.push(new_config.clone());
+        });
+
         if second_config.host_settings.len() > 0 {
             result.host_settings = second_config.host_settings.clone();
         }

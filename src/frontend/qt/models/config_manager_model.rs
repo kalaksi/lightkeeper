@@ -419,14 +419,21 @@ impl ConfigManagerModel {
         let description = description.to_string();
         let command = command.to_string();
 
-        ::log::info!("Adding custom command {} to host {}", command_name, host_name);
-
         let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
         host_settings.overrides.custom_commands.push(configuration::CustomCommandConfig {
-            name: command_name,
-            description,
-            command,
+            name: command_name.clone(),
+            description: description.clone(),
+            command: command.clone(),
         });
+        host_settings.effective.custom_commands.push(configuration::CustomCommandConfig {
+            name: command_name,
+            description: description,
+            command: command,
+        });
+
+        if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
+            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+        }
     }
 
     fn removeCustomCommand(&mut self, host_name: QString, command_name: QString) {

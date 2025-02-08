@@ -90,7 +90,7 @@ Item {
             }
 
             CustomCommandGroupBox {
-                // visible: false
+                hostId: root.hostId
                 Layout.minimumWidth: root.columnMinimumWidth
                 Layout.maximumWidth: root.columnMaximumWidth
                 Layout.preferredWidth: root.columnMinimumWidth +
