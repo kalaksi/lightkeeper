@@ -15,6 +15,8 @@ CategoryGroupBox {
     property string fqdn: ""
     property string ipAddress: ""
     property string _categoryName: "host"
+    property int refreshProgress: 100
+    property bool blocked: refreshProgress < 100
 
     Connections {
         target: LK.hosts
@@ -24,22 +26,6 @@ CategoryGroupBox {
             if (hostId === root.hostId && category === root.categoryName) {
                 root.refreshProgress = LK.hosts.getPendingMonitorCountForCategory(root.hostId, category) > 0 ?  0 : 100
                 propertyTable.model.update(monitoringDataQv)
-            }
-        }
-
-        // Update command progress. Starts automatic refresh of relevant monitors if finished.
-        function onCommandResultReceived(commandResultJson, invocationId) {
-            if (root._invocationIdToButton[invocationId] !== undefined) {
-                let buttonId = root._invocationIdToButton[invocationId]
-                let progress = LK.hosts.getPendingCommandProgress(invocationId)
-                categoryCommands.updateProgress(buttonId, progress)
-                propertyTable.updateProgress(buttonId, progress)
-
-                if (progress >= 100) {
-                    let commandResult = JSON.parse(commandResultJson)
-                    LK.command.refreshMonitorsOfCommand(root.hostId, commandResult.command_id)
-                    delete root._invocationIdToButton[invocationId]
-                }
             }
         }
     }
@@ -55,8 +41,6 @@ CategoryGroupBox {
         // Reset command progress to 0.
         function onCommandExecuted(invocationId, hostId, commandId, category, buttonId) {
             if (hostId === root.hostId && category === root.categoryName) {
-                root._invocationIdToButton[invocationId] = buttonId
-
                 categoryCommands.updateProgress(buttonId, 0)
                 propertyTable.updateProgress(buttonId, 0)
             }
