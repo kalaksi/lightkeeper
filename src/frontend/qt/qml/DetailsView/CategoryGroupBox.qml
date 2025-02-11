@@ -12,7 +12,7 @@ GroupBox {
     default property alias content: contentItem.data
     property string categoryName: ""
     property alias refreshProgress: groupBoxLabel.refreshProgress
-    property bool blocked: refreshProgress < 100
+    property bool isBlocked: refreshProgress < 100
 
     leftPadding: Theme.spacingTight
     rightPadding: Theme.spacingTight
@@ -47,7 +47,7 @@ GroupBox {
     Rectangle {
         anchors.fill: parent
         color: Theme.categoryRefreshMask
-        visible: root.blocked
+        visible: root.isBlocked
 
         MouseArea {
             anchors.fill: parent
