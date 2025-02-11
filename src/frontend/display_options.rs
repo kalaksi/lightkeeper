@@ -103,6 +103,7 @@ pub enum UserInputFieldType {
     Integer,
     DecimalNumber,
     Option,
+    ReadOnlyText,
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]

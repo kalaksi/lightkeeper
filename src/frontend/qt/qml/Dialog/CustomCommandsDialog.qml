@@ -54,7 +54,8 @@ LightkeeperDialog {
             LKListView {
                 id: commandList
                 model: root.customCommands
-                modelPropertyName: "name"
+                labelPropertyName: "name"
+                descriptionPropertyName: "description"
 
                 Layout.fillHeight: true
                 Layout.fillWidth: true
@@ -88,7 +89,7 @@ LightkeeperDialog {
                     size: root.buttonSize
                     onClicked: {
                         commandEditDialog.inputSpecs = [
-                            { label: "Command name", field_type: "Text", default_value: currentCommand.name },
+                            { label: "Command name", field_type: "ReadOnlyText", default_value: currentCommand.name },
                             { label: "Description", field_type: "Text", default_value: currentCommand.description },
                             { label: "Shell command", field_type: "Text", default_value: currentCommand.command }
                         ]

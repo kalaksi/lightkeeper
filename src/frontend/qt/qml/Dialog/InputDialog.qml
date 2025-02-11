@@ -48,6 +48,7 @@ LightkeeperDialog {
                 TextField {
                     visible: modelData.field_type !== "Option"
                     text: modelData.default_value || ""
+                    enabled: modelData.field_type !== "ReadOnlyText"
                     validator: RegularExpressionValidator {
                         regularExpression: modelData.validator_regexp === "" ? /.*/ : RegExp(modelData.validator_regexp)
                     }
