@@ -12,6 +12,7 @@ CategoryGroupBox {
     property int rowHeight: 60
     property string selectionColor: Theme.highlightColorLight
     property var customCommands: LK.command.getCustomCommands(root.hostId).map(JSON.parse)
+    property bool isBlocked: !LK.hosts.isHostInitialized(root.hostId)
 
     label: GroupBoxLabel {
         id: groupBoxLabel
@@ -31,6 +32,14 @@ CategoryGroupBox {
     }
 
     signal configClicked()
+
+    Connections {
+        target: LK.hosts
+
+        function onMonitoringDataReceived(hostId, category, monitoringDataQv) {
+            root.isBlocked = !LK.hosts.isHostInitialized(root.hostId)
+        }
+    }
 
     ListView {
         id: commandList
@@ -122,6 +131,17 @@ CategoryGroupBox {
                     }
                 }
             }
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: Theme.categoryRefreshMask
+        visible: root.isBlocked
+
+        MouseArea {
+            anchors.fill: parent
+            preventStealing: true
         }
     }
 }
