@@ -192,7 +192,8 @@ impl HostDataManagerModel {
 
     fn isHostInitialized(&self, host_id: QString) -> bool {
         if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
-            if self.configuration_cache_settings.prefer_cache {
+            // When reading host status from cache, existing platform info is enough for making it initialized.
+            if self.configuration_cache_settings.enable_cache && self.configuration_cache_settings.prefer_cache {
                 display_data.host_state.host.platform.is_set()
             }
             else {

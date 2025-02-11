@@ -24,12 +24,7 @@ LightkeeperDialog {
     onClosed: resetFields()
 
     onTextChanged: {
-        if (root.text.length > 0) {
-            commandOutput.rows = root.text.split("\n")
-        }
-        else {
-            commandOutput.resetFields()
-        }
+        commandOutput.rows = root.text.split("\n")
     }
 
 
