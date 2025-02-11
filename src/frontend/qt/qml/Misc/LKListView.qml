@@ -8,6 +8,8 @@ Rectangle {
     id: root
     property alias model: customCommandsList.model
     property string modelPropertyName: ""
+    property alias currentItem: customCommandsList.currentItem
+    property alias currentIndex: customCommandsList.currentIndex
 
     color: Theme.backgroundColor
     border.color: Theme.borderColor

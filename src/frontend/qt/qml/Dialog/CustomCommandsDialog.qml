@@ -22,10 +22,18 @@ LightkeeperDialog {
 
     signal configurationChanged(string hostId)
 
+    onOpened: {
+        LK.config.beginHostConfiguration()
+    }
+
     onAccepted: {
+        LK.config.endHostConfiguration()
         root.configurationChanged(root.hostId)
     }
 
+    onRejected: {
+        LK.config.cancelHostConfiguration()
+    }
 
     WorkingSprite {
         visible: root._loading
@@ -74,11 +82,17 @@ LightkeeperDialog {
                 }
 
                 ImageButton {
+                    property var currentCommand: root.customCommands[commandList.currentIndex]
+
                     imageSource: "qrc:/main/images/button/entry-edit"
                     size: root.buttonSize
                     onClicked: {
-                        groupConfigDialog.groupName = root._selectedGroups[commandList.currentIndex]
-                        groupConfigDialog.open()
+                        commandEditDialog.inputSpecs = [
+                            { label: "Command name", field_type: "Text", default_value: currentCommand.name },
+                            { label: "Description", field_type: "Text", default_value: currentCommand.description },
+                            { label: "Shell command", field_type: "Text", default_value: currentCommand.command }
+                        ]
+                        commandEditDialog.open()
                     }
                 }
 
@@ -87,9 +101,7 @@ LightkeeperDialog {
                     imageSource: "qrc:/main/images/button/delete"
                     size: root.buttonSize
                     onClicked: {
-                        let selectedGroup = root._selectedGroups[commandList.currentIndex]
-                        LK.config.removeHostFromGroup(root.hostId, selectedGroup)
-                        root.refreshGroups();
+                        // TODO
                     }
                 }
 
@@ -103,10 +115,21 @@ LightkeeperDialog {
 
     InputDialog {
         id: commandAddDialog
+        title: "Add command"
         width: parent.width
         height: 200
         onInputValuesGiven: function(inputValues) {
             LK.config.addCustomCommand(root.hostId, inputValues[0], inputValues[1], inputValues[2])
+        }
+    }
+
+    InputDialog {
+        id: commandEditDialog
+        title: "Edit command"
+        width: parent.width
+        height: 200
+        onInputValuesGiven: function(inputValues) {
+            LK.config.updateCustomCommand(root.hostId, inputValues[0], inputValues[1], inputValues[2])
         }
     }
 }
