@@ -11,7 +11,7 @@ LightkeeperDialog {
     // See UserInputField from rust-side for input spec format.
     property var inputSpecs: []
     property string _errorText: ""
-    title: "Input"
+    title: ""
     modal: true
     implicitWidth: 400
     implicitHeight: rootColumn.implicitHeight + Theme.marginDialogTop + Theme.marginDialogBottom
