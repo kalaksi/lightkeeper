@@ -23,7 +23,7 @@ LightkeeperDialog {
 
     onOpened: {
         LK.config.beginGroupConfiguration()
-        root._connectorList = LK.config.get_group_connectors(root.groupName) 
+        root._connectorList = LK.config.getGroupConnectors(root.groupName) 
         root._monitorList = LK.config.get_group_monitors(root.groupName)
         root._commandList = LK.config.get_group_commands(root.groupName)
         root._loading = false
@@ -165,7 +165,7 @@ LightkeeperDialog {
                                     imageSource: "qrc:/main/images/button/delete"
                                     onClicked: {
                                         LK.config.remove_group_connector(root.groupName, modelData)
-                                        root._connectorList = LK.config.get_group_connectors(root.groupName)
+                                        root._connectorList = LK.config.getGroupConnectors(root.groupName)
                                     }
                                     flatButton: true
                                     roundButton: false
@@ -533,7 +533,7 @@ LightkeeperDialog {
         onConfigSaved: function(moduleType, groupName, moduleId) {
             if (moduleType === "connector") {
                 root._connectorList = []
-                root._connectorList = LK.config.get_group_connectors(groupName)
+                root._connectorList = LK.config.getGroupConnectors(groupName)
             } else if (moduleType === "monitor") {
                 refreshMonitorList()
             }
@@ -590,7 +590,7 @@ LightkeeperDialog {
 
     function refreshConnectorList() {
         root._connectorList = []
-        root._connectorList = LK.config.get_group_connectors(root.groupName)
+        root._connectorList = LK.config.getGroupConnectors(root.groupName)
     }
 
     function refreshMonitorList() {

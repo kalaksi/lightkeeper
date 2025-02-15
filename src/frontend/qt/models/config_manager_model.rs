@@ -84,7 +84,7 @@ pub struct ConfigManagerModel {
     //
     getUnselectedConnectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     get_connector_description: qt_method!(fn(&self, connector_name: QString) -> QString),
-    get_group_connectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    getGroupConnectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
     addGroupConnector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
     get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
     get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
@@ -598,7 +598,7 @@ impl ConfigManagerModel {
         QString::from(module_description)
     }
 
-    fn get_group_connectors(&self, group_name: QString) -> QStringList {
+    fn getGroupConnectors(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
 
