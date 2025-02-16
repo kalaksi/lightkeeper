@@ -31,7 +31,6 @@ pub fn init_resources() {
             "DetailsView/CategoryGroupBox.qml",
             "DetailsView/CommandButtonRow.qml",
             "DetailsView/CustomCommandGroupBox.qml",
-            "DetailsView/CustomCommandList.qml",
             "DetailsView/GroupBoxLabel.qml",
             "DetailsView/Header.qml",
             "DetailsView/HostDetailsLogView.qml",

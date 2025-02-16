@@ -35,6 +35,7 @@ Item {
         function onMonitoringDataReceived(hostId, category, monitoringDataQv, invocationId) {
             if (hostId === root.hostId) {
                 root.refresh()
+                customCommandsGroupBox.isBlocked = !LK.hosts.isHostInitialized(root.hostId)
             }
         }
     }

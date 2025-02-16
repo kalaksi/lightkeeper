@@ -11,7 +11,7 @@ CategoryGroupBox {
     required property string hostId
     property int rowHeight: 60
     property string selectionColor: Theme.highlightColorLight
-    property bool isBlocked: !LK.hosts.isHostInitialized(root.hostId)
+    property bool isBlocked: true
 
     label: GroupBoxLabel {
         id: groupBoxLabel
@@ -31,14 +31,6 @@ CategoryGroupBox {
     }
 
     signal configClicked()
-
-    Connections {
-        target: LK.hosts
-
-        function onMonitoringDataReceived(hostId, category, monitoringDataQv) {
-            root.isBlocked = !LK.hosts.isHostInitialized(root.hostId)
-        }
-    }
 
     ListView {
         id: commandList

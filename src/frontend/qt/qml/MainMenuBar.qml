@@ -24,6 +24,7 @@ ToolBar {
     signal clickedPreferences()
     signal clickedHotkeyHelp()
     signal clickedCertificateMonitor()
+    signal clickedAutoRefresh()
     signal filterChanged(string search)
     signal hotReload()
 
@@ -100,9 +101,7 @@ ToolBar {
                     enabled: root.refreshProgress === 100
                     spinning: root.refreshProgress < 100
                     size: certMonitorButton.height
-                    onClicked: {
-                        LK.command.forceInitializeHosts()
-                    }
+                    onClicked: root.clickedAutoRefresh()
                 }
             }
         }

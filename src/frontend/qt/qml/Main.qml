@@ -95,6 +95,9 @@ ApplicationWindow {
         onClickedHotkeyHelp: {
             dialogHandler.openHotkeyHelp()
         }
+        onClickedAutoRefresh: {
+            LK.command.forceInitializeHosts()
+        }
         onFilterChanged: function(searchText) {
             hostTableModel.filter(searchText)
         }
