@@ -48,8 +48,6 @@ pub struct CommandHandlerModel {
     // Signals
     //
 
-    customCommandsChanged: qt_signal!(),
-
     // Signals to open a dialog. Since execution is async, invocation_id is used to retrieve the matching result.
     inputDialogOpened: qt_signal!(input_specs: QString, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList),
     textDialogOpened: qt_signal!(invocation_id: u64),

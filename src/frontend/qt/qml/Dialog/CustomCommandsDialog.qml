@@ -12,7 +12,7 @@ LightkeeperDialog {
     property string hostId: ""
     property int buttonSize: 38
     property bool _loading: hostId === ""
-    property var customCommands: LK.command.getCustomCommands(root.hostId).map(JSON.parse)
+    property alias customCommands: commandList.model
 
     modal: true
     implicitWidth: 600
@@ -23,16 +23,21 @@ LightkeeperDialog {
     signal configurationChanged(string hostId)
 
     onOpened: {
+        root.refreshModel()
         LK.config.beginHostConfiguration()
     }
 
     onAccepted: {
+        let customCommandsJson = root.customCommands.map(JSON.stringify)
+        LK.config.updateCustomCommands(root.hostId, customCommandsJson)
         LK.config.endHostConfiguration()
         root.configurationChanged(root.hostId)
+        root.resetModel()
     }
 
     onRejected: {
         LK.config.cancelHostConfiguration()
+        root.resetModel()
     }
 
     WorkingSprite {
@@ -53,9 +58,10 @@ LightkeeperDialog {
 
             LKListView {
                 id: commandList
-                model: root.customCommands
+                model: []
                 labelPropertyName: "name"
                 descriptionPropertyName: "description"
+                property var selectedCommand: model[currentIndex]
 
                 Layout.fillHeight: true
                 Layout.fillWidth: true
@@ -83,15 +89,14 @@ LightkeeperDialog {
                 }
 
                 ImageButton {
-                    property var currentCommand: root.customCommands[commandList.currentIndex]
 
                     imageSource: "qrc:/main/images/button/entry-edit"
                     size: root.buttonSize
                     onClicked: {
                         commandEditDialog.inputSpecs = [
-                            { label: "Command name", field_type: "ReadOnlyText", default_value: currentCommand.name },
-                            { label: "Description", field_type: "Text", default_value: currentCommand.description },
-                            { label: "Shell command", field_type: "Text", default_value: currentCommand.command }
+                            { label: "Command name", field_type: "ReadOnlyText", default_value: commandList.selectedCommand.name },
+                            { label: "Description", field_type: "Text", default_value: commandList.selectedCommand.description },
+                            { label: "Shell command", field_type: "Text", default_value: commandList.selectedCommand.command }
                         ]
                         commandEditDialog.open()
                     }
@@ -102,8 +107,8 @@ LightkeeperDialog {
                     imageSource: "qrc:/main/images/button/delete"
                     size: root.buttonSize
                     onClicked: {
-                        // TODO
-                    }
+                        root.removeCustomCommand(commandList.selectedCommand.name)
+                    }  
                 }
 
                 // Spacer
@@ -120,7 +125,7 @@ LightkeeperDialog {
         width: parent.width
         height: 200
         onInputValuesGiven: function(inputValues) {
-            LK.config.addCustomCommand(root.hostId, inputValues[0], inputValues[1], inputValues[2])
+            root.addCustomCommand(inputValues[0], inputValues[1], inputValues[2])
         }
     }
 
@@ -130,7 +135,36 @@ LightkeeperDialog {
         width: parent.width
         height: 200
         onInputValuesGiven: function(inputValues) {
-            LK.config.updateCustomCommand(root.hostId, inputValues[0], inputValues[1], inputValues[2])
+            root.editCustomCommand(inputValues[0], inputValues[1], inputValues[2])
+        }
+    }
+
+    function addCustomCommand(name, description, command) {
+        root.customCommands.push({ name: name, description: description, command: command })
+    }
+
+    function editCustomCommand(name, newDescription, newCommand) {
+        root.customCommands = root.customCommands.map(function(command) {
+            if (command.name === name) {
+                return { name: name, description: newDescription, command: newCommand }
+            }
+            return command
+        })
+    }
+
+    function removeCustomCommand(name) {
+        root.customCommands = root.customCommands.filter(function(command) {
+            return command.name !== name
+        })
+    }
+
+    function resetModel() {
+        commandList.model = []
+    }
+
+    function refreshModel() {
+        if (root.hostId !== "") {
+            commandList.model = LK.config.getCustomCommands(root.hostId).map(JSON.parse)
         }
     }
 }

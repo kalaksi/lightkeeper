@@ -220,7 +220,6 @@ Item {
         if (root.hostId !== "") {
             // TODO: effect on performance if checking categories every time?
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
-                                        .map(category_qv => category_qv.toString())
 
         }
     }

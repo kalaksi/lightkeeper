@@ -232,6 +232,14 @@ ApplicationWindow {
         }
     }
 
+    Connections {
+        target: LK.config
+
+        function onHostConfigurationChanged() {
+            detailsView.refresh()
+        }
+    }
+
     Component.onCompleted: {
         // Starts the thread that receives host state updates in the backend.
         LK.receiveUpdates()

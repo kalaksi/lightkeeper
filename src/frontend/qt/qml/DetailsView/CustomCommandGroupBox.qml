@@ -11,7 +11,6 @@ CategoryGroupBox {
     required property string hostId
     property int rowHeight: 60
     property string selectionColor: Theme.highlightColorLight
-    property var customCommands: LK.command.getCustomCommands(root.hostId).map(JSON.parse)
     property bool isBlocked: !LK.hosts.isHostInitialized(root.hostId)
 
     label: GroupBoxLabel {
@@ -52,7 +51,7 @@ CategoryGroupBox {
         highlight: Rectangle {
             color: root.selectionColor
         }
-        model: root.customCommands
+        model: LK.config.getCustomCommands(root.hostId).map(JSON.parse)
 
         delegate: ItemDelegate {
             implicitHeight: root.rowHeight
@@ -143,5 +142,9 @@ CategoryGroupBox {
             anchors.fill: parent
             preventStealing: true
         }
+    }
+
+    function refresh() {
+        commandList.model = LK.config.getCustomCommands(root.hostId).map(JSON.parse)
     }
 }

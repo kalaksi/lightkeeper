@@ -18,6 +18,7 @@ pub struct ConfigManagerModel {
     //
     // TODO: use this? implement in some other way?
     fileError: qt_signal!(config_dir: QString, error_message: QString),
+    hostConfigurationChanged: qt_signal!(),
 
     //
     // Common
@@ -60,9 +61,7 @@ pub struct ConfigManagerModel {
     // Custom commands
     //
     getCustomCommands: qt_method!(fn(&self, host_name: QString) -> QStringList),
-    addCustomCommand: qt_method!(fn(&self, host_name: QString, command_name: QString, description: QString, command: QString)),
-    updateCustomCommand: qt_method!(fn(&self, host_name: QString, command_name: QString, description: QString, command: QString)),
-    removeCustomCommand: qt_method!(fn(&self, host_name: QString, command_name: QString)),
+    updateCustomCommands: qt_method!(fn(&self, host_name: QString, custom_commands_json: QStringList)),
 
     //
     // Group configuration
@@ -297,23 +296,25 @@ impl ConfigManagerModel {
         self.hosts_config_backup = Some(self.hosts_config.clone());
     }
 
-    // TODO: This is wrong way around, host_config_backup should be host_new_config. Change it.
     fn cancelHostConfiguration(&mut self) {
         self.hosts_config = self.hosts_config_backup.take().unwrap();
     }
 
+    // TODO: this is wrong way around, shouldn't modify config directly. 
+    // Maybe ditch the state in here and update everything in batch from UI like it's done like with updateCustomCommands()?
+    // OTOH, doing less in JS is better...
     fn endHostConfiguration(&mut self) {
         self.hosts_config_backup = None;
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
             self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
         }
+        self.hostConfigurationChanged();
     }
 
     fn beginGroupConfiguration(&mut self) {
         self.groups_config_backup = Some(self.groups_config.clone());
     }
 
-    // TODO: This is wrong way around, groups_config_backup should be groups_new_config. Change it.
     fn cancelGroupConfiguration(&mut self) {
         self.groups_config = self.groups_config_backup.take().unwrap();
     }
@@ -416,49 +417,15 @@ impl ConfigManagerModel {
         QStringList::from_iter(custom_commands_json)
     }
 
-    fn addCustomCommand(&mut self, host_name: QString, command_name: QString, description: QString, command: QString) {
+    fn updateCustomCommands(&mut self, host_name: QString, custom_commands_json: QStringList) {
         let host_name = host_name.to_string();
-        let command_name = command_name.to_string();
-        let description = description.to_string();
-        let command = command.to_string();
+        let custom_commands = custom_commands_json.into_iter()
+            .map(|json| serde_json::from_str::<configuration::CustomCommandConfig>(&json.to_string()).unwrap())
+            .collect::<Vec<configuration::CustomCommandConfig>>();
 
         let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
-        host_settings.overrides.custom_commands.push(configuration::CustomCommandConfig {
-            name: command_name.clone(),
-            description: description.clone(),
-            command: command.clone(),
-        });
-        host_settings.effective.custom_commands.push(configuration::CustomCommandConfig {
-            name: command_name,
-            description: description,
-            command: command,
-        });
-    }
-
-    fn updateCustomCommand(&mut self, host_name: QString, command_name: QString, description: QString, command: QString) {
-        let host_name = host_name.to_string();
-        let command_name = command_name.to_string();
-        let description = description.to_string();
-        let command = command.to_string();
-
-        let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
-        let custom_command = host_settings.overrides.custom_commands.iter_mut()
-            .find(|command| command.name == command_name).unwrap();
-        custom_command.description = description.clone();
-        custom_command.command = command.clone();
-
-        let custom_command = host_settings.effective.custom_commands.iter_mut()
-            .find(|command| command.name == command_name).unwrap();
-        custom_command.description = description;
-        custom_command.command = command;
-    }
-
-    fn removeCustomCommand(&mut self, host_name: QString, command_name: QString) {
-        let host_name = host_name.to_string();
-        let command_name = command_name.to_string();
-
-        let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
-        host_settings.overrides.custom_commands.retain(|command| command.name != command_name);
+        host_settings.overrides.custom_commands = custom_commands.clone();
+        host_settings.effective.custom_commands = custom_commands;
     }
 
     fn getUnselectedMonitors(&self, group_name: QString) -> QStringList {

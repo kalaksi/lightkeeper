@@ -59,7 +59,7 @@ CategoryGroupBox {
             size: 34
             flatButtons: false
             roundButtons: false
-            commands: Parse.ListOfJsons(LK.command.getCommandsOnLevel(root.hostId, root._categoryName, "", 0))
+            commands: LK.command.getCommandsOnLevel(root.hostId, root._categoryName, "", 0).map(JSON.parse)
             hoverEnabled: !root.blocked
 
             Layout.alignment: Qt.AlignHCenter

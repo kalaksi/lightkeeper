@@ -39,7 +39,6 @@ Item {
         }
     }
 
-
     // ScrollView doesn't have boundsBehavior so this is the workaround.
     Binding {
         target: rootScrollView.contentItem
@@ -90,7 +89,9 @@ Item {
             }
 
             CustomCommandGroupBox {
+                id: customCommandsGroupBox
                 hostId: root.hostId
+
                 Layout.minimumWidth: root.columnMinimumWidth
                 Layout.maximumWidth: root.columnMaximumWidth
                 Layout.preferredWidth: root.columnMinimumWidth +
@@ -193,7 +194,7 @@ Item {
                             size: 34
                             flatButtons: false
                             roundButtons: false
-                            commands: Parse.ListOfJsons(LK.command.getCommandsOnLevel(root.hostId, modelData, "", 0))
+                            commands: LK.command.getCommandsOnLevel(root.hostId, modelData, "", 0).map(JSON.parse)
                             hoverEnabled: !groupBox.blocked
 
                             Layout.alignment: Qt.AlignHCenter
@@ -229,7 +230,7 @@ Item {
             root._hostDetails = Parse.TryParseJson(LK.hosts.getHostDataJson(hostId))
             // TODO: effect on performance if checking categories every time?
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
-                                        .map(category_qv => category_qv.toString())
+            customCommandsGroupBox.refresh()
         }
     }
 
