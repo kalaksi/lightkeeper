@@ -193,7 +193,11 @@ impl MonitorManager {
         };
 
         for (host_name, monitor_collection) in monitors_for_host {
-            let host = self.host_manager.borrow().get_host(host_name);
+            let mut host = self.host_manager.borrow().get_host(host_name);
+
+            if let Err(error) = host.resolve_ip() {
+                log::error!("Failed to resolve IP address for host {}: {}", host_name, error);
+            }
 
             for info_provider in platform_info_providers.values() {
                 // Executed only if required connector is used on the host.

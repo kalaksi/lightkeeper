@@ -35,10 +35,6 @@ impl Host {
             settings: settings.to_vec(),
         };
 
-        if let Err(error) = new.resolve_ip() {
-            log::error!("{}", error);
-        }
-
         Ok(new)
     }
 

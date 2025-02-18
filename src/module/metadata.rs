@@ -7,6 +7,7 @@ use crate::cache::CacheScope;
 pub struct Metadata {
     pub module_spec: ModuleSpecification,
     pub description: String,
+    /// Setting key and description.
     pub settings: HashMap<String, String>,
     /// Used with extension modules.
     /// Extension modules enrich or modify the original data and are processed after parent module.
