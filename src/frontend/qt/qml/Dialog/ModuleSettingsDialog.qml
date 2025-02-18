@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 import "../Text"
 import "../Button"
@@ -10,54 +10,38 @@ import "../StyleOverride"
 
 LightkeeperDialog {
     id: root
-    property string groupName: ""
     property string moduleId: ""
-    property string moduleType: ""
-    property bool _loading: groupName === "" || moduleId === "" || moduleType === ""
-
+    property alias moduleSettings: repeater.model
+    property bool _loading: moduleId === ""
 
     title: `Module settings: ${root.moduleId}`
     implicitWidth: 600
     implicitHeight: 650
     standardButtons: Dialog.Ok | Dialog.Cancel
 
-    signal configSaved(string moduleType, string groupName, string moduleId)
-
-    onOpened: {
-        repeater.model = []
-        repeater.model = getModuleSettingsModel()
-    }
+    signal settingsUpdated(string moduleId, var settings)
 
     onAccepted: {
+        let moduleSettings = []
         for (let i = 0; i < repeater.model.length; i++) {
             let nextItem = repeater.itemAt(i)
-            let key = nextItem.children[0].children[0].text
-            let enabled = nextItem.children[1].checked
-            let value = nextItem.children[2].text
-            let previousEnabled = repeater.model.filter((item) => item.key === key)[0].enabled
-            let previousValue = repeater.model.filter((item) => item.key === key)[0].value
-
-            if (value === previousValue && enabled === previousEnabled) {
-                continue
+            // See `ModuleSetting` in ConfigManagerModel for the model.
+            let moduleSetting = {
+                "key": nextItem.children[0].children[0].text,
+                "value": nextItem.children[2].text,
+                "enabled": nextItem.children[1].checked,
+                // Not used.
+                "description": "",
             }
-
-            // "unset" is currently used as a special value to act as a null value.
-            if (enabled === false) {
-                value = "unset"
-            }
-
-            if (root.moduleType === "connector") {
-                LK.config.set_group_connector_setting(root.groupName, root.moduleId, key, value)
-            }
-            else if (root.moduleType === "monitor") {
-                LK.config.set_group_monitor_setting(root.groupName, root.moduleId, key, value)
-            }
-            else if (root.moduleType === "command") {
-                LK.config.set_group_command_setting(root.groupName, root.moduleId, key, value)
-            }
+            moduleSettings.push(moduleSetting)
         }
 
-        root.configSaved(root.moduleType, root.groupName, root.moduleId)
+        root.settingsUpdated(root.moduleId, moduleSettings)
+        root.resetModel()
+    }
+
+    onRejected: {
+        root.resetModel()
     }
 
     // ScrollView doesn't have boundsBehavior so this is the workaround.
@@ -171,35 +155,7 @@ LightkeeperDialog {
         }
     }
 
-    // TODO: implement model in rust?
-    function getModuleSettingsModel() {
-        let settings = LK.config.get_all_module_settings(root.moduleType, root.moduleId)
-        let settingsArray = []
-        for (let key in settings) {
-            let value = ""
-            let enabled = true
-            if (root.moduleType === "connector") {
-                value = LK.config.get_group_connector_setting(root.groupName, root.moduleId, key)
-            }
-            else if (root.moduleType === "monitor") {
-                value = LK.config.get_group_monitor_setting(root.groupName, root.moduleId, key)
-            }
-            else if (root.moduleType === "command") {
-                value = LK.config.get_group_command_setting(root.groupName, root.moduleId, key)
-            }
-
-            if (value === "unset") {
-                value = ""
-                enabled = false
-            }
-            
-            settingsArray.push({
-                "key": key,
-                "description": settings[key],
-                "value": value,
-                "enabled": enabled
-            })
-        }
-        return settingsArray
+    function resetModel() {
+        root.moduleSettings = []
     }
 }

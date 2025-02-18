@@ -11,7 +11,6 @@ use std::rc::Rc;
 
 use crate::configuration::CustomCommandConfig;
 use crate::module::command::CommandModule;
-use crate::module::Module;
 use crate::module::ModuleSpecification;
 use crate::utils::sha256;
 use crate::configuration::Hosts;

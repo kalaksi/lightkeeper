@@ -21,7 +21,7 @@ impl Host {
             return Err(LkError::new(ErrorKind::InvalidConfig, "Invalid host name"));
         }
 
-        let mut new = Host {
+        let new = Host {
             name: name.to_string(),
             fqdn: fqdn.to_string(),
             ip_address: match Ipv4Addr::from_str(ip_address) {

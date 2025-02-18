@@ -1,7 +1,8 @@
 extern crate qmetaobject;
 
 use qmetaobject::*;
-use std::str::FromStr;
+use serde_derive::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::{
     configuration::{self, Configuration, Groups, HostSettings, Hosts}, module::{Metadata, ModuleType}
@@ -66,57 +67,47 @@ pub struct ConfigManagerModel {
     //
     // Group configuration
     //
-    beginGroupConfiguration: qt_method!(fn(&self)),
-    cancelGroupConfiguration: qt_method!(fn(&self)),
-    endGroupConfiguration: qt_method!(fn(&self)),
+    updateGroupModules: qt_method!(fn(&self,
+        group_id: QString,
+        connector_settings: QString,
+        monitor_settings: QString,
+        command_settings: QString
+    )),
+    writeGroupConfiguration: qt_method!(fn(&self)),
 
     get_all_groups: qt_method!(fn(&self) -> QStringList),
-    addGroup: qt_method!(fn(&self, group_name: QString)),
-    remove_group: qt_method!(fn(&self, group_name: QString)),
-    get_all_module_settings: qt_method!(fn(&self, module_type: QString, module_id: QString) -> QVariantMap),
-
+    addGroup: qt_method!(fn(&self, group_id: QString)),
+    remove_group: qt_method!(fn(&self, group_id: QString)),
     compareToDefault: qt_method!(fn(&self, group_name: QString) -> QStringList),
     ignoreFromConfigHelper: qt_method!(fn(&self, group_name: QString, commands: QStringList, monitors: QStringList, connectors: QStringList)),
 
     //
     // Group configuration: connectors
     //
-    getUnselectedConnectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
-    get_connector_description: qt_method!(fn(&self, connector_name: QString) -> QString),
-    getGroupConnectors: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    getUnselectedConnectorIds: qt_method!(fn(&self, selected_groups: QStringList) -> QStringList),
+    getGroupConnectorIds: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    getConnectorDescription: qt_method!(fn(&self, connector_name: QString) -> QString),
     addGroupConnector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
-    get_group_connector_settings_keys: qt_method!(fn(&self, group_name: QString, connector_name: QString) -> QStringList),
-    get_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString),
-    set_group_connector_setting: qt_method!(fn(&self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString)),
-    remove_group_connector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
+    getGroupConnectorSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
 
     //
     // Group configuration: monitors
     //
     // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
-    getUnselectedMonitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
-    get_monitor_description: qt_method!(fn(&self, monitor_name: QString) -> QString),
-    get_group_monitors: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    getUnselectedMonitorIds: qt_method!(fn(&self, selected_groups: QStringList) -> QStringList),
+    getMonitorDescription: qt_method!(fn(&self, monitor_name: QString) -> QString),
+    getGroupMonitorIds: qt_method!(fn(&self, group_name: QString) -> QStringList),
     addGroupMonitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
-    remove_group_monitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
-    // These 2 are currently not really used.
-    get_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QString),
-    toggle_group_monitor_enabled: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
-    get_group_monitor_settings_keys: qt_method!(fn(&self, group_name: QString, monitor_name: QString) -> QStringList),
-    get_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString),
-    set_group_monitor_setting: qt_method!(fn(&self, group_name: QString, monitor_name: QString, setting_key: QString, setting_value: QString)),
+    getGroupMonitorSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
 
     //
     // Group configuration: commands
     //
-    getUnselectedCommands: qt_method!(fn(&self, group_name: QString) -> QStringList),
-    get_command_description: qt_method!(fn(&self, command_name: QString) -> QString),
-    get_group_commands: qt_method!(fn(&self, group_name: QString) -> QStringList),
+    getUnselectedCommandIds: qt_method!(fn(&self, selected_groups: QStringList) -> QStringList),
+    getCommandDescription: qt_method!(fn(&self, command_name: QString) -> QString),
+    getGroupCommandIds: qt_method!(fn(&self, group_name: QString) -> QStringList),
     addGroupCommand: qt_method!(fn(&self, group_name: QString, command_name: QString)),
-    remove_group_command: qt_method!(fn(&self, group_name: QString, command_name: QString)),
-    get_group_command_settings_keys: qt_method!(fn(&self, group_name: QString, command_name: QString) -> QStringList),
-    get_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString),
-    set_group_command_setting: qt_method!(fn(&self, group_name: QString, command_name: QString, setting_key: QString, setting_value: QString)),
+    getGroupCommandSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
 
 
     config_dir: String,
@@ -124,7 +115,6 @@ pub struct ConfigManagerModel {
     hosts_config: Hosts,
     hosts_config_backup: Option<Hosts>,
     groups_config: Groups,
-    groups_config_backup: Option<Groups>,
     module_metadatas: Vec<Metadata>,
 }
 
@@ -311,16 +301,7 @@ impl ConfigManagerModel {
         self.hostConfigurationChanged();
     }
 
-    fn beginGroupConfiguration(&mut self) {
-        self.groups_config_backup = Some(self.groups_config.clone());
-    }
-
-    fn cancelGroupConfiguration(&mut self) {
-        self.groups_config = self.groups_config_backup.take().unwrap();
-    }
-
-    fn endGroupConfiguration(&mut self) {
-        self.groups_config_backup = None;
+    fn writeGroupConfiguration(&mut self) {
         if let Err(error) = Configuration::write_groups_config(&self.config_dir, &self.groups_config) {
             self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
         }
@@ -428,25 +409,24 @@ impl ConfigManagerModel {
         host_settings.effective.custom_commands = custom_commands;
     }
 
-    fn getUnselectedMonitors(&self, group_name: QString) -> QStringList {
-        let group_name = group_name.to_string();
-        let group_monitors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().monitors;
+    /// Modules that don't already belong to the group.
+    fn getUnselectedMonitorIds(&self, selected_groups: QStringList) -> QStringList {
+        let selected_groups = selected_groups.into_iter().map(|group| group.to_string()).collect::<Vec<String>>();
 
         let all_monitors = self.module_metadatas.iter()
             .filter(|metadata| metadata.module_spec.module_type == ModuleType::Monitor)
             .map(|metadata| metadata.module_spec.id.clone())
             .collect::<Vec<String>>();
 
-        let mut unselected_monitors = all_monitors.iter()
-            .filter(|monitor| !group_monitors.contains_key(*monitor))
-            .cloned()
+        let mut unselected_monitors = all_monitors.into_iter()
+            .filter(|monitor| !selected_groups.contains(monitor))
             .collect::<Vec<String>>();
 
         unselected_monitors.sort();
-        unselected_monitors.into_iter().map(QString::from).collect()
+        QStringList::from_iter(unselected_monitors)
     }
 
-    fn get_monitor_description(&self, module_name: QString) -> QString {
+    fn getMonitorDescription(&self, module_name: QString) -> QString {
         let module_name = module_name.to_string();
         let module_description = self.module_metadatas.iter()
             .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == ModuleType::Monitor)
@@ -456,13 +436,13 @@ impl ConfigManagerModel {
         QString::from(module_description)
     }
 
-    fn get_group_monitors(&self, group_name: QString) -> QStringList {
+    fn getGroupMonitorIds(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_monitors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().monitors;
 
         let mut group_monitors_keys = group_monitors.into_keys().collect::<Vec<String>>();
         group_monitors_keys.sort_by_key(|key| key.to_lowercase());
-        group_monitors_keys.into_iter().map(QString::from).collect()
+        QStringList::from_iter(group_monitors_keys)
     }
 
     fn addGroupMonitor(&mut self, group_name: QString, monitor_name: QString) {
@@ -471,91 +451,54 @@ impl ConfigManagerModel {
         self.groups_config.groups.get_mut(&group_name).unwrap().monitors.insert(monitor_name, Default::default());
     }
 
-    fn remove_group_monitor(&mut self, group_name: QString, monitor_name: QString) {
-        let group_name = group_name.to_string();
-        let monitor_name = monitor_name.to_string();
-        self.groups_config.groups.get_mut(&group_name).unwrap().monitors.remove(&monitor_name);
+    /// Returns a list of JSON serialized `ModuleSetting`. Includes all setting keys.
+    fn getGroupMonitorSettings(&self, group_id: QString, module_id: QString) -> QStringList {
+        let group_id = group_id.to_string();
+        let module_id = module_id.to_string();
+
+        let settings_descriptions = &self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Monitor)
+            .next().unwrap()
+            .settings;
+
+        let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
+        settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
+
+        let group_monitor_settings = self.groups_config
+            .groups.get(&group_id).cloned().unwrap_or_default()
+            .monitors.get(&module_id).cloned().unwrap_or_default()
+            .settings;
+
+        let module_settings = settings_keys.into_iter().map(|setting_key| {
+            ModuleSetting {
+                key: setting_key.clone(),
+                value: group_monitor_settings.get(setting_key).cloned().unwrap_or_default(),
+                description: settings_descriptions.get(setting_key).cloned().unwrap_or_default(),
+                enabled: group_monitor_settings.get(setting_key).is_some(),
+            }
+        });
+
+        QStringList::from_iter(module_settings.map(|setting| serde_json::to_string(&setting).unwrap()))
     }
 
-    fn get_group_monitor_enabled(&self, group_name: QString, monitor_name: QString) -> QString {
-        let group_name = group_name.to_string();
-        let monitor_name = monitor_name.to_string();
-
-        self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                          .monitors.get(&monitor_name).cloned().unwrap_or_default()
-                          .enabled.unwrap_or(true).to_string().into()
-    }
-
-    fn toggle_group_monitor_enabled(&mut self, group_name: QString, monitor_name: QString) {
-        let group_name = group_name.to_string();
-        let monitor_name = monitor_name.to_string();
-
-        let group_monitor_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
-                                                       .monitors.get_mut(&monitor_name).unwrap();
-
-        if let Some(enabled) = group_monitor_settings.enabled {
-            group_monitor_settings.enabled = Some(!enabled);
-        } else {
-            group_monitor_settings.enabled = Some(false);
-        }
-    }
-
-    fn get_group_monitor_settings_keys(&self, group_name: QString, monitor_name: QString) -> QStringList {
-        let group_name = group_name.to_string();
-        let monitor_name = monitor_name.to_string();
-        let group_monitor_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                                                       .monitors.get(&monitor_name).cloned().unwrap_or_default().settings;
-
-        let mut group_monitor_settings_keys = group_monitor_settings.into_keys().collect::<Vec<String>>();
-        group_monitor_settings_keys.sort_by_key(|key| key.to_lowercase());
-        group_monitor_settings_keys.into_iter().map(QString::from).collect()
-    }
-
-    fn get_group_monitor_setting(&self, group_name: QString, monitor_name: QString, setting_key: QString) -> QString {
-        let group_name = group_name.to_string();
-        let monitor_name = monitor_name.to_string();
-        let setting_key = setting_key.to_string();
-        let group_monitor_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                                                       .monitors.get(&monitor_name).cloned().unwrap_or_default().settings;
-
-        QString::from(group_monitor_settings.get(&setting_key).cloned().unwrap_or(String::from("unset")))
-    }
-
-    fn set_group_monitor_setting(&mut self, group_name: QString, monitor_name: QString, setting_key: QString, setting_value: QString) {
-        let group_name = group_name.to_string();
-        let monitor_name = monitor_name.to_string();
-        let setting_key = setting_key.to_string();
-        let setting_value = setting_value.to_string();
-
-        let group_monitor_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
-                                                       .monitors.get_mut(&monitor_name).unwrap();
-        if setting_value == "unset" {
-            group_monitor_settings.settings.remove(&setting_key);
-        }
-        else {
-            group_monitor_settings.settings.insert(setting_key, setting_value);
-        }
-    }
-
-    fn getUnselectedConnectors(&self, group_name: QString) -> QStringList {
-        let group_name = group_name.to_string();
-        let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
+    /// Modules that don't already belong to the group.
+    fn getUnselectedConnectorIds(&self, selected_groups: QStringList) -> QStringList {
+        let selected_groups = selected_groups.into_iter().map(|group| group.to_string()).collect::<Vec<String>>();
 
         let all_connectors = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.module_type == ModuleType::Connector && !metadata.module_spec.is_internal())
+            .filter(|metadata| metadata.module_spec.module_type == ModuleType::Connector)
             .map(|metadata| metadata.module_spec.id.clone())
             .collect::<Vec<String>>();
 
-        let mut unselected_connectors = all_connectors.iter()
-            .filter(|connector| !group_connectors.contains_key(*connector))
-            .cloned()
+        let mut unselected_connectors = all_connectors.into_iter()
+            .filter(|module_id| !selected_groups.contains(module_id))
             .collect::<Vec<String>>();
 
         unselected_connectors.sort();
-        unselected_connectors.into_iter().map(QString::from).collect()
+        QStringList::from_iter(unselected_connectors)
     }
 
-    fn get_connector_description(&self, module_name: QString) -> QString {
+    fn getConnectorDescription(&self, module_name: QString) -> QString {
         let module_name = module_name.to_string();
         let module_description = self.module_metadatas.iter()
             .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == ModuleType::Connector)
@@ -565,13 +508,14 @@ impl ConfigManagerModel {
         QString::from(module_description)
     }
 
-    fn getGroupConnectors(&self, group_name: QString) -> QStringList {
+    fn getGroupConnectorIds(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_connectors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().connectors;
 
         let mut group_connectors_keys = group_connectors.into_keys().collect::<Vec<String>>();
         group_connectors_keys.sort_by_key(|key| key.to_lowercase());
-        group_connectors_keys.into_iter().map(QString::from).collect()
+
+        QStringList::from_iter(group_connectors_keys)
     }
 
     fn addGroupConnector(&mut self, group_name: QString, connector_name: QString) {
@@ -580,69 +524,99 @@ impl ConfigManagerModel {
         self.groups_config.groups.get_mut(&group_name).unwrap().connectors.insert(connector_name, Default::default());
     }
 
-    fn get_group_connector_settings_keys(&self, group_name: QString, connector_name: QString) -> QStringList {
-        let group_name = group_name.to_string();
-        let connector_name = connector_name.to_string();
-        let group_connector_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                                                         .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
+    /// Returns a list of JSON serialized `ModuleSetting`. Includes all setting keys.
+    fn getGroupConnectorSettings(&self, group_id: QString, module_id: QString) -> QStringList {
+        let group_id = group_id.to_string();
+        let module_id = module_id.to_string();
 
-        let mut group_connector_settings_keys = group_connector_settings.into_keys().collect::<Vec<String>>();
-        group_connector_settings_keys.sort_by_key(|key| key.to_lowercase());
-        group_connector_settings_keys.into_iter().map(QString::from).collect()
+        let settings_descriptions = &self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Connector)
+            .next().unwrap()
+            .settings;
+
+        let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
+        settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
+
+        let group_connector_settings = self.groups_config
+            .groups.get(&group_id).cloned().unwrap_or_default()
+            .connectors.get(&module_id).cloned().unwrap_or_default()
+            .settings;
+
+        let module_settings = settings_keys.into_iter().map(|setting_key| {
+            ModuleSetting {
+                key: setting_key.clone(),
+                value: group_connector_settings.get(setting_key).cloned().unwrap_or_default(),
+                description: settings_descriptions.get(setting_key).cloned().unwrap_or_default(),
+                enabled: group_connector_settings.get(setting_key).is_some(),
+            }
+        });
+
+        QStringList::from_iter(module_settings.map(|setting| serde_json::to_string(&setting).unwrap()))
     }
 
-    fn get_group_connector_setting(&self, group_name: QString, connector_name: QString, setting_key: QString) -> QString {
-        let group_name = group_name.to_string();
-        let connector_name = connector_name.to_string();
-        let setting_key = setting_key.to_string();
-        let group_connector_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                                                         .connectors.get(&connector_name).cloned().unwrap_or_default().settings;
+    /// Settings should contain JSON serialized hashmaps. Module ID as key and list of ModuleSetting as value.
+    fn updateGroupModules(&mut self,
+        group_id: QString,
+        connector_settings_json: QString,
+        monitor_settings_json: QString,
+        command_settings_json: QString,
+    ) {
+        let group_id = group_id.to_string();
+        let connector_settings = serde_json::from_str::<HashMap<String, Vec<ModuleSetting>>>(&connector_settings_json.to_string()).unwrap();
+        let monitor_settings = serde_json::from_str::<HashMap<String, Vec<ModuleSetting>>>(&monitor_settings_json.to_string()).unwrap();
+        let command_settings = serde_json::from_str::<HashMap<String, Vec<ModuleSetting>>>(&command_settings_json.to_string()).unwrap();
 
-        QString::from(group_connector_settings.get(&setting_key).cloned().unwrap_or(String::from("unset")))
-    }
+        let group = self.groups_config.groups.get_mut(&group_id).unwrap();
 
-    fn set_group_connector_setting(&mut self, group_name: QString, connector_name: QString, setting_key: QString, setting_value: QString) {
-        let group_name = group_name.to_string();
-        let connector_name = connector_name.to_string();
-        let setting_key = setting_key.to_string();
-        let setting_value = setting_value.to_string();
+        group.connectors.clear();
+        for (module_id, settings) in connector_settings {
+            let settings = settings.into_iter()
+                .filter(|setting| setting.enabled)
+                .map(|setting| (setting.key, setting.value))
+                .collect::<HashMap<String, String>>();
 
-        let group_connector_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
-                                                         .connectors.get_mut(&connector_name).unwrap();
-
-        if setting_value == "unset" {
-            group_connector_settings.settings.remove(&setting_key);
+            group.connectors.entry(module_id).or_insert(Default::default()).settings = settings;
         }
-        else {
-            group_connector_settings.settings.insert(setting_key, setting_value);
+
+        group.monitors.clear();
+        for (module_id, settings) in monitor_settings {
+            let settings = settings.into_iter()
+                .filter(|setting| setting.enabled)
+                .map(|setting| (setting.key, setting.value))
+                .collect::<HashMap<String, String>>();
+
+            group.monitors.entry(module_id).or_insert(Default::default()).settings = settings;
+        }
+
+        group.commands.clear();
+        for (module_id, settings) in command_settings {
+            let settings = settings.into_iter()
+                .filter(|setting| setting.enabled)
+                .map(|setting| (setting.key, setting.value))
+                .collect::<HashMap<String, String>>();
+
+            group.commands.entry(module_id).or_insert(Default::default()).settings = settings;
         }
     }
 
-    fn remove_group_connector(&mut self, group_name: QString, connector_name: QString) {
-        let group_name = group_name.to_string();
-        let connector_name = connector_name.to_string();
-        self.groups_config.groups.get_mut(&group_name).unwrap().connectors.remove(&connector_name);
-    }
-
-    fn getUnselectedCommands(&self, group_name: QString) -> QStringList {
-        let group_name = group_name.to_string();
-        let group_commands = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().commands;
+    /// Modules that don't already belong to the group.
+    fn getUnselectedCommandIds(&self, selected_groups: QStringList) -> QStringList {
+        let selected_groups = selected_groups.into_iter().map(|group| group.to_string()).collect::<Vec<String>>();
 
         let all_commands = self.module_metadatas.iter()
             .filter(|metadata| metadata.module_spec.module_type == ModuleType::Command)
             .map(|metadata| metadata.module_spec.id.clone())
             .collect::<Vec<String>>();
 
-        let mut unselected_commands = all_commands.iter()
-            .filter(|command| !group_commands.contains_key(*command))
-            .cloned()
+        let mut unselected_commands = all_commands.into_iter()
+            .filter(|module_id| !selected_groups.contains(module_id))
             .collect::<Vec<String>>();
 
         unselected_commands.sort();
-        unselected_commands.into_iter().map(QString::from).collect()
+        QStringList::from_iter(unselected_commands)
     }
 
-    fn get_command_description(&self, module_name: QString) -> QString {
+    fn getCommandDescription(&self, module_name: QString) -> QString {
         let module_name = module_name.to_string();
         let module_description = self.module_metadatas.iter()
             .filter(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == ModuleType::Command)
@@ -652,14 +626,14 @@ impl ConfigManagerModel {
         QString::from(module_description)
     }
 
-    fn get_group_commands(&self, group_name: QString) -> QStringList {
+    fn getGroupCommandIds(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_commands = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().commands;
 
         let mut group_commands_keys = group_commands.into_keys().collect::<Vec<String>>();
         group_commands_keys.sort_by_key(|key| key.to_lowercase());
 
-        group_commands_keys.into_iter().map(QString::from).collect()
+        QStringList::from_iter(group_commands_keys)
     }
 
     fn addGroupCommand(&mut self, group_name: QString, command_name: QString) {
@@ -668,67 +642,34 @@ impl ConfigManagerModel {
         self.groups_config.groups.get_mut(&group_name).unwrap().commands.insert(command_name, Default::default());
     }
 
-    fn remove_group_command(&mut self, group_name: QString, command_name: QString) {
-        let group_name = group_name.to_string();
-        let command_name = command_name.to_string();
-        self.groups_config.groups.get_mut(&group_name).unwrap().commands.remove(&command_name);
-    }
-
-    fn get_group_command_settings_keys(&self, group_name: QString, command_name: QString) -> QStringList {
-        let group_name = group_name.to_string();
-        let command_name = command_name.to_string();
-        let group_command_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                                                       .commands.get(&command_name).cloned().unwrap_or_default().settings;
-
-        let mut group_command_settings_keys = group_command_settings.into_keys().collect::<Vec<String>>();
-        group_command_settings_keys.sort_by_key(|key| key.to_lowercase());
-        group_command_settings_keys.into_iter().map(QString::from).collect()
-    }
-
-    fn get_group_command_setting(&self, group_name: QString, command_name: QString, setting_key: QString) -> QString {
-        let group_name = group_name.to_string();
-        let command_name = command_name.to_string();
-        let setting_key = setting_key.to_string();
-        let group_command_settings = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default()
-                                                         .commands.get(&command_name).cloned().unwrap_or_default().settings;
-
-        QString::from(group_command_settings.get(&setting_key).cloned().unwrap_or(String::from("unset")))
-    }
-
-    fn set_group_command_setting(&mut self, group_name: QString, command_name: QString, setting_key: QString, setting_value: QString) {
-        let group_name = group_name.to_string();
-        let command_name = command_name.to_string();
-        let setting_key = setting_key.to_string();
-        let setting_value = setting_value.to_string();
-
-        let group_command_settings = self.groups_config.groups.get_mut(&group_name).unwrap()
-                                                         .commands.get_mut(&command_name).unwrap();
-
-        if setting_value == "unset" {
-            group_command_settings.settings.remove(&setting_key);
-        }
-        else {
-            group_command_settings.settings.insert(setting_key, setting_value);
-        }
-    }
-
-    fn get_all_module_settings(&self, module_type: QString, module_id: QString) -> QVariantMap {
+    /// Returns a list of JSON serialized `ModuleSetting`. Includes all setting keys.
+    fn getGroupCommandSettings(&self, group_id: QString, module_id: QString) -> QStringList {
+        let group_id = group_id.to_string();
         let module_id = module_id.to_string();
-        let module_type = ModuleType::from_str(module_type.to_string().as_str()).unwrap();
-        let module_settings = self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == module_type)
-            .map(|metadata| metadata.settings.clone())
-            .next().unwrap_or_default();
 
-        let mut module_settings_keys = module_settings.keys().collect::<Vec<&String>>();
-        module_settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
+        let settings_descriptions = &self.module_metadatas.iter()
+            .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Command)
+            .next().unwrap()
+            .settings;
 
-        let mut result = QVariantMap::default();
-        for setting_key in module_settings_keys {
-            let qvariant = module_settings.get(setting_key).map(|key| QString::from(key.clone())).unwrap_or_default();
-            result.insert(setting_key.clone().into(), qvariant.into());
-        }
-        result
+        let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
+        settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
+
+        let group_command_settings = self.groups_config
+            .groups.get(&group_id).cloned().unwrap_or_default()
+            .commands.get(&module_id).cloned().unwrap_or_default()
+            .settings;
+
+        let module_settings = settings_keys.into_iter().map(|setting_key| {
+            ModuleSetting {
+                key: setting_key.clone(),
+                value: group_command_settings.get(setting_key).cloned().unwrap_or_default(),
+                description: settings_descriptions.get(setting_key).cloned().unwrap_or_default(),
+                enabled: group_command_settings.get(setting_key).is_some(),
+            }
+        });
+
+        QStringList::from_iter(module_settings.map(|setting| serde_json::to_string(&setting).unwrap()))
     }
 
     fn compareToDefault(&self, group_name: QString) -> QStringList {
@@ -747,21 +688,21 @@ impl ConfigManagerModel {
         let new_commands = default_settings.commands.keys()
             .filter(|id| !group_settings.commands.contains_key(*id) && !config_helper_data.ignored_commands.contains(*id))
             // Will return empty description if not found.
-            .map(|id| (id, self.get_command_description(QString::from(id.clone()))))
+            .map(|id| (id, self.getCommandDescription(QString::from(id.clone()))))
             .filter(|(_, description)| !description.is_empty())
             .collect::<Vec<_>>();
 
         let new_monitors = default_settings.monitors.keys()
             .filter(|id| !group_settings.monitors.contains_key(*id) && !config_helper_data.ignored_monitors.contains(*id))
             // Will return empty description if not found.
-            .map(|id| (id, self.get_monitor_description(QString::from(id.clone()))))
+            .map(|id| (id, self.getMonitorDescription(QString::from(id.clone()))))
             .filter(|(_, description)| !description.is_empty())
             .collect::<Vec<_>>();
 
         let new_connectors = default_settings.connectors.keys()
             .filter(|id| !group_settings.connectors.contains_key(*id) && !config_helper_data.ignored_connectors.contains(*id))
             // Will return empty description if not found.
-            .map(|id| (id, self.get_connector_description(QString::from(id.clone()))))
+            .map(|id| (id, self.getConnectorDescription(QString::from(id.clone()))))
             .filter(|(_, description)| !description.is_empty())
             .collect::<Vec<_>>();
 
@@ -785,4 +726,13 @@ impl ConfigManagerModel {
             group_settings.config_helper.ignored_connectors = connectors.into_iter().map(ToString::to_string).collect();
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+#[allow(non_snake_case)]
+struct ModuleSetting {
+    pub key: String,
+    pub value: String,
+    pub description: String,
+    pub enabled: bool,
 }

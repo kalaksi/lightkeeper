@@ -11,8 +11,11 @@ LightkeeperDialog {
     id: root
     required property string groupName 
     property var _connectorList: []
+    property var _groupConnectorSettings: {}
     property var _monitorList: []
+    property var _groupMonitorSettings: {}
     property var _commandList: []
+    property var _groupCommandSettings: {}
     property bool _loading: true
     property int _buttonSize: 26
 
@@ -21,22 +24,27 @@ LightkeeperDialog {
     implicitHeight: 670
     standardButtons: Dialog.Cancel | Dialog.Ok
 
+    Component.onCompleted: {
+        resetModel()
+    }
+
     onOpened: {
-        LK.config.beginGroupConfiguration()
-        root._connectorList = LK.config.getGroupConnectors(root.groupName) 
-        root._monitorList = LK.config.get_group_monitors(root.groupName)
-        root._commandList = LK.config.get_group_commands(root.groupName)
+        root.refreshModel()
         root._loading = false
     }
 
     onAccepted: {
-        LK.config.endGroupConfiguration()
-        resetFields()
+        let connectorSettingsJson = JSON.stringify(root._groupConnectorSettings)
+        let monitorSettingsJson = JSON.stringify(root._groupMonitorSettings)
+        let commandSettingsJson = JSON.stringify(root._groupCommandSettings)
+
+        LK.config.updateGroupModules(root.groupName, connectorSettingsJson, monitorSettingsJson, commandSettingsJson)
+        LK.config.writeGroupConfiguration()
+        resetModel()
     }
 
     onRejected: {
-        LK.config.cancelGroupConfiguration()
-        resetFields()
+        resetModel()
     }
 
 
@@ -80,14 +88,14 @@ LightkeeperDialog {
                 ImageButton {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let connectors = LK.config.getUnselectedConnectors(root.groupName)
-                        connectorModuleAddDialog.inputSpecs = [{
+                        let connectors = LK.config.getUnselectedConnectorIds(root._connectorList)
+                        connectorAddDialog.inputSpecs = [{
                             label: "Connector module",
                             field_type: "Option",
                             options: connectors,
-                            option_descriptions: connectors.map((connector) => LK.config.get_connector_description(connector))
+                            option_descriptions: connectors.map((connector) => LK.config.getConnectorDescription(connector))
                         }]
-                        connectorModuleAddDialog.open()
+                        connectorAddDialog.open()
                     }
                     flatButton: true
                     roundButton: false
@@ -121,7 +129,7 @@ LightkeeperDialog {
                         height: connectorModuleRow.height
 
                         onClicked: {
-                            connectorDescriptionText.text = connectorDescriptionText.text !== "" ? "" : LK.config.get_connector_description(modelData)
+                            connectorDescriptionText.text = connectorDescriptionText.text !== "" ? "" : LK.config.getConnectorDescription(modelData)
                         }
 
                         Column {
@@ -144,14 +152,13 @@ LightkeeperDialog {
 
                                 ImageButton {
                                     enabled: {
-                                        let settings = LK.config.get_all_module_settings("connector", modelData)
-                                        return Object.keys(settings).length > 0
+                                        root._groupConnectorSettings[modelData].length > 0
                                     }
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
-                                        moduleSettingsDialog.moduleId = modelData
-                                        moduleSettingsDialog.moduleType = "connector"
-                                        moduleSettingsDialog.visible = true
+                                        connectorEditDialog.moduleId = modelData
+                                        connectorEditDialog.moduleSettings = root._groupConnectorSettings[modelData]
+                                        connectorEditDialog.open()
                                     }
                                     flatButton: true
                                     roundButton: false
@@ -164,8 +171,7 @@ LightkeeperDialog {
                                 ImageButton {
                                     imageSource: "qrc:/main/images/button/delete"
                                     onClicked: {
-                                        LK.config.remove_group_connector(root.groupName, modelData)
-                                        root._connectorList = LK.config.getGroupConnectors(root.groupName)
+                                        root.removeConnector(modelData)
                                     }
                                     flatButton: true
                                     roundButton: false
@@ -187,20 +193,18 @@ LightkeeperDialog {
                     }
 
                     Repeater {
-                        id: connectorSettingsRepeater
-                        property string connectorName: modelData
-                        model: LK.config.get_group_connector_settings_keys(root.groupName, connectorName)
+                        model: root._groupConnectorSettings[modelData].filter((setting) => setting.enabled === true)
 
                         RowLayout {
                             SmallText {
-                                text: modelData + ": "
+                                text: modelData.key + ": "
                                 color: Theme.textColorDark
 
                                 Layout.leftMargin: Theme.commonIndent
                             }
 
                             SmallText {
-                                text: LK.config.get_group_connector_setting(root.groupName, connectorSettingsRepeater.connectorName, modelData)
+                                text: modelData.value
                                 color: Theme.textColorDark
 
                                 Layout.fillWidth: true
@@ -223,14 +227,14 @@ LightkeeperDialog {
                 ImageButton {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let monitors = LK.config.getUnselectedMonitors(root.groupName)
-                        monitoringModuleAddDialog.inputSpecs = [{
+                        let monitors = LK.config.getUnselectedMonitorIds(root._monitorList)
+                        monitorAddDialog.inputSpecs = [{
                             label: "Monitoring module",
                             field_type: "Option",
                             options: monitors,
-                            option_descriptions: monitors.map((monitor) => LK.config.get_monitor_description(monitor))
+                            option_descriptions: monitors.map((monitor) => LK.config.getMonitorDescription(monitor))
                         }]
-                        monitoringModuleAddDialog.open()
+                        monitorAddDialog.open()
                     }
                     flatButton: true
                     roundButton: false
@@ -263,7 +267,7 @@ LightkeeperDialog {
                         height: monitoringModuleRow.height
 
                         onClicked: {
-                            monitorDescriptionText.text = monitorDescriptionText.text !== "" ? "" : LK.config.get_monitor_description(modelData)
+                            monitorDescriptionText.text = monitorDescriptionText.text !== "" ? "" : LK.config.getMonitorDescription(modelData)
                         }
 
                         Column {
@@ -279,47 +283,20 @@ LightkeeperDialog {
                                     Layout.alignment: Qt.AlignVCenter
                                 }
 
-                                /* 
-                                See comment below
-                                PixelatedText {
-                                    id: monitorStatusText
-                                    text: LK.config.get_group_monitor_enabled(root.groupName, modelData) === "true" ? "Enabled" : "Disabled"
-                                    color: text === "Enabled" ? Theme.color_green() : Theme.color_red()
-                                }
-                                */
-
                                 // Spacer
                                 Item {
                                     Layout.fillWidth: true
                                 }
 
-                                /*
-                                Control if module will be enabled or disabled (previous enable overridden).
-                                Could be useful but currently it might just confuse the user more than help,
-                                since the module settings have a similar switch that works a bit differently.
-
-                                Switch {
-                                    checked: LK.config.get_group_monitor_enabled(root.groupName, modelData) === "true"
-                                    onClicked: {
-                                        LK.config.toggle_group_monitor_enabled(root.groupName, modelData)
-                                        refreshMonitorList()
-                                    }
-
-                                    Layout.alignment: Qt.AlignVCenter
-                                    Layout.rightMargin: Theme.spacingLoose
-                                }
-                                */
-
                                 ImageButton {
                                     enabled: {
-                                        let settings = LK.config.get_all_module_settings("monitor", modelData)
-                                        return Object.keys(settings).length > 0
+                                        root._groupMonitorSettings[modelData].length > 0
                                     }
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
-                                        moduleSettingsDialog.moduleId = modelData
-                                        moduleSettingsDialog.moduleType = "monitor"
-                                        moduleSettingsDialog.visible = true
+                                        monitorEditDialog.moduleId = modelData
+                                        monitorEditDialog.moduleSettings = root._groupMonitorSettings[modelData]
+                                        monitorEditDialog.open()
                                     }
                                     flatButton: true
                                     roundButton: false
@@ -332,8 +309,7 @@ LightkeeperDialog {
                                 ImageButton {
                                     imageSource: "qrc:/main/images/button/delete"
                                     onClicked: {
-                                        LK.config.remove_group_monitor(root.groupName, modelData)
-                                        refreshMonitorList()
+                                        root.removeMonitor(modelData)
                                     }
                                     flatButton: true
                                     roundButton: false
@@ -354,21 +330,18 @@ LightkeeperDialog {
                     }
 
                     Repeater {
-                        id: monitorSettingsRepeater
-                        property string monitorName: modelData
-                        model: LK.config.get_group_monitor_settings_keys(root.groupName, monitorName)
+                        model: root._groupMonitorSettings[modelData].filter((setting) => setting.enabled === true)
 
                         RowLayout {
                             SmallText {
-                                text: modelData + ": "
+                                text: modelData.key + ": "
                                 color: Theme.textColorDark
 
-                                Layout.fillWidth: true
                                 Layout.leftMargin: Theme.commonIndent
                             }
 
                             SmallText {
-                                text: LK.config.get_group_monitor_setting(root.groupName, monitorSettingsRepeater.monitorName, modelData)
+                                text: modelData.value
                                 color: Theme.textColorDark
 
                                 Layout.fillWidth: true
@@ -391,14 +364,14 @@ LightkeeperDialog {
                 ImageButton {
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let commands = LK.config.getUnselectedCommands(root.groupName)
-                        commandModuleAddDialog.inputSpecs = [{
+                        let commands = LK.config.getUnselectedCommandIds(root._commandList)
+                        commandAddDialog.inputSpecs = [{
                             label: "Command module",
                             field_type: "Option",
                             options: commands,
-                            option_descriptions: commands.map((command) => LK.config.get_command_description(command))
+                            option_descriptions: commands.map((command) => LK.config.getCommandDescription(command))
                         }]
-                        commandModuleAddDialog.open()
+                        commandAddDialog.open()
                     }
                     flatButton: true
                     roundButton: false
@@ -431,7 +404,7 @@ LightkeeperDialog {
                         height: commandModuleRow.height
 
                         onClicked: {
-                            commandDescriptionText.text = commandDescriptionText.text !== "" ? "" : LK.config.get_command_description(modelData)
+                            commandDescriptionText.text = commandDescriptionText.text !== "" ? "" : LK.config.getCommandDescription(modelData)
                         }
 
                         Column {
@@ -456,14 +429,13 @@ LightkeeperDialog {
 
                                 ImageButton {
                                     enabled: {
-                                        let settings = LK.config.get_all_module_settings("command", modelData)
-                                        return Object.keys(settings).length > 0
+                                        root._groupCommandSettings[modelData].length > 0
                                     }
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
-                                        moduleSettingsDialog.moduleId = modelData
-                                        moduleSettingsDialog.moduleType = "command"
-                                        moduleSettingsDialog.visible = true
+                                        commandEditDialog.moduleId = modelData
+                                        commandEditDialog.moduleSettings = root._groupCommandSettings[modelData]
+                                        commandEditDialog.open()
                                     }
                                     flatButton: true
                                     roundButton: false
@@ -476,8 +448,7 @@ LightkeeperDialog {
                                 ImageButton {
                                     imageSource: "qrc:/main/images/button/delete"
                                     onClicked: {
-                                        LK.config.remove_group_command(root.groupName, modelData)
-                                        root._commandList = LK.config.get_group_commands(root.groupName)
+                                        root.removeCommand(modelData)
                                     }
                                     flatButton: true
                                     roundButton: false
@@ -498,21 +469,18 @@ LightkeeperDialog {
                     }
 
                     Repeater {
-                        id: commandSettingsRepeater
-                        property string commandName: modelData
-                        model: LK.config.get_group_command_settings_keys(root.groupName, commandName)
+                        model: root._groupCommandSettings[modelData].filter((setting) => setting.enabled === true)
 
                         RowLayout {
                             SmallText {
-                                text: modelData + ": "
+                                text: modelData.key + ": "
                                 color: Theme.textColorDark
 
-                                Layout.fillWidth: true
                                 Layout.leftMargin: Theme.commonIndent
                             }
 
                             SmallText {
-                                text: LK.config.get_group_command_setting(root.groupName, commandSettingsRepeater.commandName, modelData)
+                                text: modelData.value
                                 color: Theme.textColorDark
 
                                 Layout.fillWidth: true
@@ -524,24 +492,8 @@ LightkeeperDialog {
         }
     }
 
-    ModuleSettingsDialog {
-        id: moduleSettingsDialog
-        visible: false
-        groupName: root.groupName
-        anchors.centerIn: undefined
-
-        onConfigSaved: function(moduleType, groupName, moduleId) {
-            if (moduleType === "connector") {
-                root._connectorList = []
-                root._connectorList = LK.config.getGroupConnectors(groupName)
-            } else if (moduleType === "monitor") {
-                refreshMonitorList()
-            }
-        }
-    }
-
     InputDialog {
-        id: connectorModuleAddDialog
+        id: connectorAddDialog
         width: parent.width
         height: 200
         inputSpecs: [{
@@ -551,13 +503,26 @@ LightkeeperDialog {
             option_descriptions: {}
         }]
         onInputValuesGiven: function(inputValues) {
-            LK.config.addGroupConnector(root.groupName, inputValues[0])
-            refreshConnectorList()
+            root._groupConnectorSettings[inputValues[0]] = LK.config.getGroupConnectorSettings(root.groupName, inputValues[0]).map(JSON.parse)
+            let newConnectors = root._connectorList.concat(inputValues[0])
+            newConnectors.sort()
+            root._connectorList = newConnectors
+        }
+    }
+
+    ModuleSettingsDialog {
+        id: connectorEditDialog
+        anchors.centerIn: undefined
+
+        onSettingsUpdated: function(moduleId, moduleSettings) {
+            root._groupConnectorSettings[moduleId] = moduleSettings
+            // Re-render the list.
+            root._connectorList = root._connectorList.slice()
         }
     }
 
     InputDialog {
-        id: monitorModuleAddDialog
+        id: monitorAddDialog
         width: parent.width
         height: 200
         inputSpecs: [{
@@ -567,13 +532,26 @@ LightkeeperDialog {
             option_descriptions: {}
         }]
         onInputValuesGiven: function(inputValues) {
-            LK.config.addGroupMonitor(root.groupName, inputValues[0])
-            refreshMonitorList()
+            root._groupMonitorSettings[inputValues[0]] = LK.config.getGroupMonitorSettings(root.groupName, inputValues[0]).map(JSON.parse)
+            let newMonitors = root._monitorList.concat(inputValues[0])
+            newMonitors.sort()
+            root._monitorList = newMonitors
+        }
+    }
+
+    ModuleSettingsDialog {
+        id: monitorEditDialog
+        anchors.centerIn: undefined
+
+        onSettingsUpdated: function(moduleId, moduleSettings) {
+            root._groupMonitorSettings[moduleId] = moduleSettings
+            // Re-render the list.
+            root._monitorList = root._monitorList.slice()
         }
     }
 
     InputDialog {
-        id: commandModuleAddDialog
+        id: commandAddDialog
         width: parent.width
         height: 200
         inputSpecs: [{
@@ -583,30 +561,91 @@ LightkeeperDialog {
             option_descriptions: {}
         }]
         onInputValuesGiven: function(inputValues) {
-            LK.config.addGroupCommand(root.groupName, inputValues[0])
-            refreshCommandList()
+            root._groupCommandSettings[inputValues[0]] = LK.config.getGroupCommandSettings(root.groupName, inputValues[0]).map(JSON.parse)
+            let newCommands = root._commandList.concat(inputValues[0])
+            newCommands.sort()
+            root._commandList = newCommands
         }
+    }
+
+    ModuleSettingsDialog {
+        id: commandEditDialog
+        anchors.centerIn: undefined
+
+        onSettingsUpdated: function(moduleId, moduleSettings) {
+            root._groupCommandSettings[moduleId] = moduleSettings
+            // Re-render the list.
+            root._commandList = root._commandList.slice()
+        }
+    }
+
+    function refreshModel() {
+        refreshConnectorList()
+        refreshMonitorList()
+        refreshCommandList()
     }
 
     function refreshConnectorList() {
         root._connectorList = []
-        root._connectorList = LK.config.getGroupConnectors(root.groupName)
+        root._groupConnectorSettings = {}
+
+        let connectorIds = LK.config.getGroupConnectorIds(root.groupName)
+        for (let connectorId of connectorIds) {
+            root._groupConnectorSettings[connectorId] = LK.config.getGroupConnectorSettings(root.groupName, connectorId).map(JSON.parse)
+        }
+
+        // Set last since this controls when list is re-rendered.
+        root._connectorList = connectorIds
     }
 
     function refreshMonitorList() {
         root._monitorList = []
-        root._monitorList = LK.config.get_group_monitors(root.groupName)
+        root._groupMonitorSettings = {}
+
+        let monitorIds = LK.config.getGroupMonitorIds(root.groupName)
+        for (let monitorId of monitorIds) {
+            root._groupMonitorSettings[monitorId] = LK.config.getGroupMonitorSettings(root.groupName, monitorId).map(JSON.parse)
+        }
+
+        // Set last since this controls when list is re-rendered.
+        root._monitorList = monitorIds
     }
 
     function refreshCommandList() {
         root._commandList = []
-        root._commandList = LK.config.get_group_commands(root.groupName)
+        root._groupCommandSettings = {}
+
+        let commandIds = LK.config.getGroupCommandIds(root.groupName)
+        for (let commandId of commandIds) {
+            root._groupCommandSettings[commandId] = LK.config.getGroupCommandSettings(root.groupName, commandId).map(JSON.parse)
+        }
+
+        // Set last since this controls when list is re-rendered.
+        root._commandList = commandIds
     }
 
-    function resetFields() {
+    function removeConnector(moduleId) {
+        delete root._groupConnectorSettings[moduleId]
+        root._connectorList = root._connectorList.filter((connector) => connector !== moduleId)
+    }
+
+    function removeMonitor(moduleId) {
+        delete root._groupMonitorSettings[moduleId]
+        root._monitorList = root._monitorList.filter((monitor) => monitor !== moduleId)
+    }
+
+    function removeCommand(moduleId) {
+        delete root._groupCommandSettings[moduleId]
+        root._commandList = root._commandList.filter((command) => command !== moduleId)
+    }
+
+    function resetModel() {
         root._loading = true
         root._connectorList = []
+        root._groupConnectorSettings = {}
         root._monitorList = []
+        root._groupMonitorSettings = {}
         root._commandList = []
+        root._groupCommandSettings = {}
     }
 }
