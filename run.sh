@@ -11,4 +11,6 @@ set -eu
 # For debugging imports:
 # export QML_IMPORT_TRACE=1
 
+# Some OSes may disable QML debug logging so console.log() doesn't work.
+QT_LOGGING_RULES="*.debug=true; qt.*.debug=false" \
 RUST_LOG=debug ./target/debug/lightkeeper
