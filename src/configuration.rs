@@ -278,7 +278,7 @@ pub struct CustomCommandConfig {
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct ConnectorConfig {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub settings: HashMap<String, String>,
 }
 
