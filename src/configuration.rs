@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -41,7 +42,7 @@ impl Default for Preferences {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Groups {
-    pub groups: HashMap<String, ConfigGroup>,
+    pub groups: BTreeMap<String, ConfigGroup>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -159,13 +160,13 @@ pub struct HostSettings {
 
     /// Deprecated.
     #[serde(default, skip_serializing_if = "Configuration::always")]
-    pub monitors: HashMap<String, MonitorConfig>,
+    pub monitors: BTreeMap<String, MonitorConfig>,
     /// Deprecated.
     #[serde(default, skip_serializing_if = "Configuration::always")]
-    pub commands: HashMap<String, CommandConfig>,
+    pub commands: BTreeMap<String, CommandConfig>,
     /// Deprecated.
     #[serde(default, skip_serializing_if = "Configuration::always")]
-    pub connectors: HashMap<String, ConnectorConfig>,
+    pub connectors: BTreeMap<String, ConnectorConfig>,
     /// Deprecated.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub settings: Vec<HostSetting>,
@@ -175,13 +176,13 @@ pub struct HostSettings {
 pub struct ConfigGroup {
     // Hashmap keys are always names/ids.
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub monitors: HashMap<String, MonitorConfig>,
+    pub monitors: BTreeMap<String, MonitorConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub commands: HashMap<String, CommandConfig>,
+    pub commands: BTreeMap<String, CommandConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub custom_commands: Vec<CustomCommandConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub connectors: HashMap<String, ConnectorConfig>,
+    pub connectors: BTreeMap<String, ConnectorConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub host_settings: Vec<HostSetting>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
@@ -376,9 +377,9 @@ impl Configuration {
             host_config.overrides = all_overrides;
 
             // Clear old, deprecated settings.
-            host_config.commands = HashMap::new();
-            host_config.monitors = HashMap::new();
-            host_config.connectors = HashMap::new();
+            host_config.commands = BTreeMap::new();
+            host_config.monitors = BTreeMap::new();
+            host_config.connectors = BTreeMap::new();
             host_config.settings = Vec::new();
         }
 
