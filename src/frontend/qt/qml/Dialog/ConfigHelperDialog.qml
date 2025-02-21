@@ -43,7 +43,7 @@ LightkeeperDialog {
             }
 
         }
-        LK.config.endGroupConfiguration()
+        LK.config.writeGroupConfiguration()
         root.configurationChanged()
     }
 
@@ -53,7 +53,7 @@ LightkeeperDialog {
         let monitorModules = table.model.filter((row) => row[0].startsWith("Monitor: ")).map((row) => row[0].split(": ")[1])
         let connectorModules = table.model.filter((row) => row[0].startsWith("Connector: ")).map((row) => row[0].split(": ")[1])
         LK.config.ignoreFromConfigHelper(root.groupName, commandModules, monitorModules, connectorModules)
-        LK.config.endGroupConfiguration()
+        LK.config.writeGroupConfiguration()
     }
 
     contentItem: ColumnLayout {

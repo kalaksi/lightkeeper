@@ -77,7 +77,7 @@ pub struct ConfigManagerModel {
 
     get_all_groups: qt_method!(fn(&self) -> QStringList),
     addGroup: qt_method!(fn(&self, group_id: QString)),
-    remove_group: qt_method!(fn(&self, group_id: QString)),
+    removeGroup: qt_method!(fn(&self, group_id: QString)),
     compareToDefault: qt_method!(fn(&self, group_name: QString) -> QStringList),
     ignoreFromConfigHelper: qt_method!(fn(&self, group_name: QString, commands: QStringList, monitors: QStringList, connectors: QStringList)),
 
@@ -341,7 +341,7 @@ impl ConfigManagerModel {
         self.groups_config.groups.insert(group_name, Default::default());
     }
 
-    fn remove_group(&mut self, group_name: QString) {
+    fn removeGroup(&mut self, group_name: QString) {
         let group_name = group_name.to_string();
         self.groups_config.groups.remove(&group_name);
     }

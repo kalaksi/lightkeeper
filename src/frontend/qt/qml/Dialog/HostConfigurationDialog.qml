@@ -384,9 +384,8 @@ LightkeeperDialog {
 
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                LK.config.beginGroupConfiguration()
-                                LK.config.remove_group(selectedGroup)
-                                LK.config.endGroupConfiguration()
+                                LK.config.removeGroup(selectedGroup)
+                                LK.config.writeGroupConfiguration()
                                 refreshGroups()
                             }
                         }
@@ -417,16 +416,8 @@ LightkeeperDialog {
 
         onInputValuesGiven: function(inputValues) {
             LK.config.addGroup(inputValues[0])
-            LK.config.endGroupConfiguration()
+            LK.config.writeGroupConfiguration()
             refreshGroups()
-        }
-
-        onOpened: {
-            LK.config.beginGroupConfiguration()
-        }
-
-        onRejected: {
-            LK.config.cancelGroupConfiguration()
         }
     }
 

@@ -517,7 +517,9 @@ LightkeeperDialog {
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root._groupConnectorSettings[moduleId] = moduleSettings
             // Re-render the list.
-            root._connectorList = root._connectorList.slice()
+            let temp = root._connectorList
+            root._connectorList = []
+            root._connectorList = temp
         }
     }
 
@@ -546,7 +548,9 @@ LightkeeperDialog {
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root._groupMonitorSettings[moduleId] = moduleSettings
             // Re-render the list.
-            root._monitorList = root._monitorList.slice()
+            let temp = root._monitorList
+            root._monitorList = []
+            root._monitorList = temp
         }
     }
 
@@ -575,7 +579,9 @@ LightkeeperDialog {
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root._groupCommandSettings[moduleId] = moduleSettings
             // Re-render the list.
-            root._commandList = root._commandList.slice()
+            let temp = root._commandList
+            root._commandList = []
+            root._commandList = temp
         }
     }
 
