@@ -160,11 +160,12 @@ impl HostManager {
 
                 if let Some(message_data_point) = state_update.data_point {
                     // Specially structured data point for passing platform info here.
-                    if message_data_point.is_internal() {
+                    if message_data_point.is_platform_info() {
                         host_state.monitor_invocations.remove(&state_update.invocation_id);
 
-                        if let Ok(platform) = Self::read_platform_info(&message_data_point) {
+                        if let Ok((platform, ip_address)) = Self::read_platform_info(&message_data_point) {
                             host_state.host.platform = platform;
+                            host_state.host.ip_address = ip_address;
                             log::debug!("[{}] Platform info updated", host_state.host.name);
 
                             // TODO: handle multiple platform info's.
@@ -306,7 +307,8 @@ impl HostManager {
         display_data
     }
 
-    fn read_platform_info(data_point: &DataPoint) -> Result<platform_info::PlatformInfo, String> {
+    fn read_platform_info(data_point: &DataPoint) -> Result<(platform_info::PlatformInfo, std::net::IpAddr), String> {
+        let mut ip_address = std::net::IpAddr::V4(std::net::Ipv4Addr::new(0, 0, 0, 0));
         let mut platform = platform_info::PlatformInfo::default();
         for data in data_point.multivalue.iter() {
             match data.label.as_str() {
@@ -322,10 +324,14 @@ impl HostManager {
                 "architecture" => {
                     platform.architecture = platform_info::Architecture::from(&data.value)
                 },
+                "ip_address" => {
+                    ip_address = std::net::IpAddr::from_str(data.value.as_str()).map_err(|error| error.to_string())?
+                },
                 _ => return Err(String::from("Invalid platform info data"))
             }
         }
-        Ok(platform)
+
+        Ok((platform, ip_address))
     }
 }
 

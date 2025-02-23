@@ -117,8 +117,8 @@ impl DataPoint {
         self
     }
 
-    pub fn is_internal(&self) -> bool {
-        self.value.starts_with("_")
+    pub fn is_platform_info(&self) -> bool {
+        self.value == "_platform_info"
     }
 
     pub fn update_criticality_from_children(&mut self) {

@@ -36,7 +36,7 @@ impl MonitoringModule for PlatformInfoSsh {
         ])
     }
 
-    fn process_responses(&self, _host: Host, response: Vec<ResponseMessage>, _result: DataPoint) -> Result<DataPoint, String> {
+    fn process_responses(&self, host: Host, response: Vec<ResponseMessage>, _result: DataPoint) -> Result<DataPoint, String> {
         let mut platform = PlatformInfo::default();
         platform.os = platform_info::OperatingSystem::Linux;
 
@@ -60,6 +60,7 @@ impl MonitoringModule for PlatformInfoSsh {
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_version"), platform.os_version.to_string()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_flavor"), platform.os_flavor.to_string()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("architecture"), platform.architecture.to_string()));
+        datapoint.multivalue.push(DataPoint::labeled_value(String::from("ip_address"), host.ip_address.to_string()));
         Ok(datapoint)
     }
 }
