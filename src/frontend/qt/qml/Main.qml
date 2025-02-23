@@ -172,7 +172,7 @@ ApplicationWindow {
 
             // No need to check if invocation is relevant to specific dialogs. DialogHandler takes care of that.
             dialogHandler.updateTextDialog(invocationId, commandResult.message)
-            dialogHandler.updateCommandOutputDialog(invocationId, commandResult.message, commandResult.progress)
+            dialogHandler.updateCommandOutputDialog(invocationId, commandResult.message, commandResult.error, commandResult.progress)
         }
 
         function onErrorReceived(criticality, message) {

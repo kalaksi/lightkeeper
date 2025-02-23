@@ -34,6 +34,7 @@ impl CommandModule for CustomCommand {
             display_icon: String::from("refresh"),
             display_text: String::from("Custom command"),
             action: UIAction::FollowOutput,
+            tab_title: String::from("Custom command"),
             ..Default::default()
         }
     }

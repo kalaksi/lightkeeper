@@ -173,13 +173,14 @@ Item {
         commandOutputDialog.open()
     }
 
-    function updateCommandOutputDialog(invocationId, text, progress) {
+    function updateCommandOutputDialog(invocationId, text, errorText, progress) {
         if (commandOutputDialog.visible === false || commandOutputDialog.pendingInvocation !== invocationId) {
             return
         }
 
-        commandOutputDialog.text = commandResult.message
-        commandOutputDialog.progress = commandResult.progress
+        commandOutputDialog.text = text
+        commandOutputDialog.errorText = errorText
+        commandOutputDialog.progress = progress
     }
 
     function openConfirmationDialog(text, onAccepted) {

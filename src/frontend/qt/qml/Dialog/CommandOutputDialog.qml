@@ -12,6 +12,8 @@ import "../js/TextTransform.js" as TextTransform
 LightkeeperDialog {
     id: root
     property string text: ""
+    property string errorText: ""
+    property string commandText: ""
     property bool showProgress: true
     property int progress: 0
     property bool enableShortcuts: false
@@ -73,6 +75,14 @@ LightkeeperDialog {
             }
         }
 
+        NormalText {
+            id: commandText
+            // TODO
+            visible: false
+            text: root.commandText
+            height: root.commandText.length > 0 ? implicitHeight : 0
+        }
+
         LogList {
             id: commandOutput
             rows: []
@@ -84,6 +94,16 @@ LightkeeperDialog {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.rightMargin: Theme.marginScrollbar
+        }
+
+        NormalText {
+            id: errorCode
+            visible: false
+            // TODO:
+            // visible: root.errorText.length > 0
+            height: root.errorText.length > 0 ? implicitHeight : 0
+            text: root.errorText
+            color: Theme.colorForCriticality("Error")
         }
     }
 
