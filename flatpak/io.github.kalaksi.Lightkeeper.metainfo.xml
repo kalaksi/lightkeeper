@@ -26,6 +26,17 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.26.0" date="2025-02-24">
+      <description>
+        <ul>
+          <li>Add "Custom commands" for user-defined commands.</li>
+          <li>Fix startup stalling by resolving domains later.</li>
+          <li>Sort config file lines for easier diffs.</li>
+          <li>Restore more of host state for more fluent config reloads.</li>
+          <li>Improve error handling and distro support.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.25.8" date="2025-01-18">
       <description>
         <ul>
