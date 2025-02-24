@@ -57,11 +57,13 @@ impl HostManager {
         self.stop();
 
         let mut hosts = self.hosts.lock().unwrap();
+        let old_states = hosts.hosts.clone();
         hosts.clear();
 
         // For certificate monitoring.
         let cert_monitor_host = Host::empty(crate::monitor_manager::CERT_MONITOR_HOST_ID, &vec![]);
-        hosts.add(cert_monitor_host, HostStatus::Unknown).unwrap();
+        let cert_monitor_state = HostState::from_host(cert_monitor_host, HostStatus::Unknown);
+        hosts.hosts.insert(cert_monitor_state.host.name.clone(), cert_monitor_state);
 
         // For regular host monitoring.
         for (host_id, host_config) in config.hosts.iter() {
@@ -69,10 +71,21 @@ impl HostManager {
 
             // TODO: UseSudo is currently always assumed.
             if let Ok(host) = Host::new(host_id, &host_config.address, &host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]) {
-                if let Err(error) = hosts.add(host, HostStatus::Unknown) {
-                    log::error!("{}", error.to_string());
+                if hosts.hosts.contains_key(&host.name) {
+                    log::error!("Host '{}' already exists", host.name);
                     continue;
                 }
+
+                let mut host_state = HostState::from_host(host.clone(), HostStatus::Unknown);
+
+                // If this is a reload and there's some old state available, restore some of it.
+                if let Some(old_state) = old_states.get(host_id) {
+                    host_state.host.platform = old_state.host.platform.clone();
+                    host_state.status = old_state.status;
+                    host_state.is_initialized = old_state.is_initialized;
+                }
+
+                hosts.hosts.insert(host.name.clone(), host_state);
             }
             else {
                 log::error!("Failed to create host {}", host_id);
@@ -376,15 +389,6 @@ impl HostStateCollection {
         HostStateCollection {
             hosts: HashMap::new(),
         }
-    }
-
-    fn add(&mut self, host: Host, default_status: HostStatus) -> Result<(), String> {
-        if self.hosts.contains_key(&host.name) {
-            return Err(String::from("Host already exists"));
-        }
-
-        self.hosts.insert(host.name.clone(), HostState::from_host(host, default_status));
-        Ok(())
     }
 
     fn clear(&mut self) {
