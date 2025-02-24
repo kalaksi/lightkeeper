@@ -10,7 +10,7 @@ CategoryGroupBox {
 
     required property string hostId
     property int rowHeight: 60
-    property string selectionColor: Theme.highlightColorLight
+    property string selectionColor: "transparent"
     property bool isBlocked: true
 
     label: GroupBoxLabel {
