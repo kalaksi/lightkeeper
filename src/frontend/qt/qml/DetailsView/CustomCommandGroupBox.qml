@@ -83,6 +83,7 @@ CategoryGroupBox {
                     size: Math.min(parent.height, 28)
                     collapsible: false
                     commands: [
+                        /* TODO: implement viewing of log from last run
                         {
                             command_id: "view",
                             command_params: [],
@@ -92,6 +93,7 @@ CategoryGroupBox {
                                 display_style: "button"
                             }
                         },
+                        */
                         {
                             command_id: "_custom-command",
                             command_params: [modelData.command],
