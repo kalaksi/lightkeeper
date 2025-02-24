@@ -27,6 +27,9 @@ LightkeeperDialog {
 
     onTextChanged: {
         commandOutput.rows = root.text.split("\n")
+
+        // Scroll to bottom.
+        commandOutput.positionViewAtEnd()
     }
 
 

@@ -186,8 +186,7 @@ ListView {
         console.log("Copied to clipboard: " + text)
     }
 
-    // TODO: Use rust model instead?
-    // Could be done with rust too.
+    // TODO: Use Rust model instead?
     function search(direction, query) {
         if (query !== root._lastQuery) {
             root._lastQuery = query
