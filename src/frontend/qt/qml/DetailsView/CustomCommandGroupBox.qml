@@ -9,7 +9,7 @@ CategoryGroupBox {
     id: root
 
     required property string hostId
-    property int rowHeight: 60
+    property int rowHeight: 40
     property string selectionColor: "transparent"
     property bool isBlocked: true
 
