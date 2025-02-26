@@ -23,7 +23,9 @@ LightkeeperDialog {
     implicitHeight: commandOutput.height + 100
     standardButtons: Dialog.Close
 
-    onClosed: resetFields()
+    onClosed: {
+        resetFields()
+    }
 
     onTextChanged: {
         commandOutput.rows = root.text.split("\n")
@@ -124,6 +126,9 @@ LightkeeperDialog {
 
     function resetFields() {
         root.text = ""
+        root.errorText = ""
+        root.commandText = ""
+        commandOutput.rows = []
         root.progress = 0
     }
 }
