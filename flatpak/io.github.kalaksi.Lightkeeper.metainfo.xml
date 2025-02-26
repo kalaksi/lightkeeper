@@ -20,8 +20,20 @@
   <url type="bugtracker">https://github.com/kalaksi/lightkeeper</url>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/LightkeeperRM-overview.png</image>
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-overview.png</image>
       <caption>Overview of LightkeeperRM.</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-cert-monitor.png</image>
+      <caption>Certificate monitoring tool.</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-log-viewer.png</image>
+      <caption>Integrated log viewer.</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-terminal.png</image>
+      <caption>Integrated terminal.</caption>
     </screenshot>
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>

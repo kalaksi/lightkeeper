@@ -19,9 +19,27 @@ In case you find the GUI insufficient and need to dig deeper, you can always use
 <br />
 <br />
 <p align="center">
-    <img src="doc/images/LightkeeperRM-overview.png" width="75%" />
+    <img src="doc/images/lightkeeper-overview.png" width="90%" />
     <br />
     <i>Overview of LightkeeperRM's GUI.</i>
+</p>
+<br />
+<p align="center">
+    <img src="doc/images/lightkeeper-cert-monitor.png" width="90%" />
+    <br />
+    <i>Certificate monitoring tool.</i>
+</p>
+<br />
+<p align="center">
+    <img src="doc/images/lightkeeper-log-viewer.png" width="90%" />
+    <br />
+    <i>Integrated log viewer.</i>
+</p>
+<br />
+<p align="center">
+    <img src="doc/images/lightkeeper-terminal.png" width="90%" />
+    <br />
+    <i>Integrated terminal.</i>
 </p>
 <br />
 
