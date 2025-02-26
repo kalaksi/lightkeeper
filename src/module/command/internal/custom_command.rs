@@ -40,7 +40,14 @@ impl CommandModule for CustomCommand {
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
-        let command = parameters.get(0).ok_or(LkError::other("No command specified"))?;
+        let mut command = parameters.get(0).ok_or(LkError::other("No command specified"))?.clone();
+
+        if command.ends_with("\n") {
+            command.pop();
+        }
+        if command.ends_with("\r") {
+            command.pop();
+        }
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let shell_command = ShellCommand::new_from(vec!["sh", "-c", &command]);
