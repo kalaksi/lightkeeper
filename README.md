@@ -19,26 +19,22 @@ In case you find the GUI insufficient and need to dig deeper, you can always use
 <br />
 <br />
 <p align="center">
-    <img src="doc/images/lightkeeper-overview.png" width="90%" />
-    <br />
+    <img src="doc/images/lightkeeper-overview.png" width="100%" />
     <i>Overview of LightkeeperRM's GUI.</i>
 </p>
 <br />
 <p align="center">
-    <img src="doc/images/lightkeeper-cert-monitor.png" width="90%" />
-    <br />
+    <img src="doc/images/lightkeeper-cert-monitor.png" width="100%" />
     <i>Certificate monitoring tool.</i>
 </p>
 <br />
 <p align="center">
-    <img src="doc/images/lightkeeper-log-viewer.png" width="90%" />
-    <br />
+    <img src="doc/images/lightkeeper-log-viewer.png" width="100%" />
     <i>Integrated log viewer.</i>
 </p>
 <br />
 <p align="center">
-    <img src="doc/images/lightkeeper-terminal.png" width="90%" />
-    <br />
+    <img src="doc/images/lightkeeper-terminal.png" width="100%" />
     <i>Integrated terminal.</i>
 </p>
 <br />
@@ -87,6 +83,10 @@ For more information, see:
 https://github.com/alexcrichton/ssh2-rs/issues/254
 https://github.com/libssh2/libssh2/issues/659
 https://github.com/libssh2/libssh2/issues?q=is%253Aissue+key+exchange+failed
+
+### Font in integrated terminal is off a little
+Lightkeeper has now migrated to Qt6, but the qmltermwidget component doesn't have proper support upstream.  
+The font issue is because of a less-than-perfect community-made migration and I'm trying to help out with the remaining problems.  
 
 # Installing
 ## Flatpak
