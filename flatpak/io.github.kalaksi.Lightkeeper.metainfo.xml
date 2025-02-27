@@ -38,7 +38,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.27.0" date="2025-02-27">
+    <release version="0.27.1" date="2025-02-27">
       <description>
         <ul>
           <li>Update dependencies.</li>
