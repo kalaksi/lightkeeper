@@ -100,7 +100,7 @@ impl QmlFrontend {
         }
         else {
             if sandboxed {
-                engine.add_import_path(QString::from("/app/qmltermwidget/usr/qml/"));
+                engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml"));
                 engine.add_import_path(QString::from("/app/ChartJs2QML"));
             }
             else {
