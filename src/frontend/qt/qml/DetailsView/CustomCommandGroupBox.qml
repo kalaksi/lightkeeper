@@ -9,7 +9,7 @@ CategoryGroupBox {
     id: root
 
     required property string hostId
-    property int rowHeight: 40
+    property int rowHeight: 45
     property string selectionColor: "transparent"
     property bool isBlocked: true
 
@@ -70,8 +70,15 @@ CategoryGroupBox {
                     }
 
                     SmallerText {
+                        visible: modelData.description.length > 0
                         text: modelData.description
-                        wrapMode: Text.WordWrap
+                        wrapMode: Text.Wrap
+                        width: parent.width
+                    }
+
+                    SmallerText {
+                        text: "Executes: " + modelData.command
+                        wrapMode: Text.Wrap
                         width: parent.width
                     }
                 }
