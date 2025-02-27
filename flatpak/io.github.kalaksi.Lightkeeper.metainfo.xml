@@ -38,6 +38,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.26.1" date="2025-02-27">
+      <description>
+        <ul>
+          <li>Fix custom command dialog contents not being cleared properly.</li>
+          <li>Automatically trim extra newlines from custom commands.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.26.0" date="2025-02-24">
       <description>
         <ul>
