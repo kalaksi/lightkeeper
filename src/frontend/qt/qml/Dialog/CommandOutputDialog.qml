@@ -24,7 +24,7 @@ LightkeeperDialog {
     standardButtons: Dialog.Close
 
     onClosed: {
-        resetFields()
+        root.resetFields()
     }
 
     onTextChanged: {
@@ -128,7 +128,8 @@ LightkeeperDialog {
         root.text = ""
         root.errorText = ""
         root.commandText = ""
-        commandOutput.rows = []
         root.progress = 0
+        // In append-only mode, only resetting text is not enough.
+        commandOutput.resetFields()
     }
 }
