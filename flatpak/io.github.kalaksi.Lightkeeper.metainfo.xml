@@ -38,6 +38,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.27.2" date="2025-03-01">
+      <description>
+        <ul>
+          <li>Fix clearing custom command output dialog (previous fix incomplete).</li>
+          <li>Add log viewer loading and empty result indicators.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.27.1" date="2025-02-27">
       <description>
         <ul>
