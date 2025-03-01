@@ -11,8 +11,6 @@ import "../StyleOverride"
 
 
 Item {
-    // TODO: loading indicator and indicator (translucent text maybe) for empty results 
-    // TODO: indicator for no search results
     id: root
     required property string hostId
     property bool showTimeControls: false
@@ -21,8 +19,9 @@ Item {
     property var commandParams: []
     property string text: ""
     property string errorText: ""
-    property string _unitId: ""
     property var pendingInvocation: 0
+    property string _unitId: ""
+    property bool _loading: pendingInvocation > 0
 
 
     Connections {
@@ -38,8 +37,7 @@ Item {
                     root.errorText = commandResult.error
                 }
 
-                let rows = commandResult.message.split("\n")
-                logList.rows = rows
+                logList.rows = commandResult.message === "" ? [] : commandResult.message.split("\n")
 
                 let [rowsMatched, totalMatches] = logList.getSearchDetails()
                 searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
@@ -186,11 +184,11 @@ Item {
                         }
 
                         SmallText {
-                            Layout.rightMargin: Theme.spacingLoose
-
                             id: searchDetails
                             text: ""
                             color: Theme.textColorDark
+
+                            Layout.rightMargin: Theme.spacingLoose
                         }
 
                         SmallText {
@@ -241,25 +239,37 @@ Item {
 
         LogList {
             id: logList
+            rows: []
             visible: rows.length > 0
-            rows: root.text.split("\n")
             enableShortcuts: root.enableShortcuts
 
             Layout.fillWidth: true
             Layout.fillHeight: true
         }
 
-        // Loading animation
         Item {
-            visible: logList.rows.length === 0
-
-            WorkingSprite {
-                visible: root.pendingInvocation > 0
-                id: workingSprite
-            }
-
+            visible: !root._loading && logList.rows.length === 0
             Layout.fillWidth: true
             Layout.fillHeight: true
+
+            NormalText {
+                text: "No logs available"
+                color: Theme.textColorDark
+
+                // Centered vertically and horizontally
+                anchors.centerIn: parent
+                anchors.verticalCenterOffset: -0.2 * parent.height
+            }
+        }
+
+        // Loading animation
+        Item {
+            visible: root._loading
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            WorkingSprite {
+            }
         }
     }
 
