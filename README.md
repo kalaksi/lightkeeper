@@ -1,20 +1,21 @@
 # LightkeeperRM
 
-**LightkeeperRM (Remote Management) is a lightweight and modular drop-in replacement for maintaining servers over SSH.**
+**LightkeeperRM (Remote Management) is a lightweight and modular drop-in replacement for maintaining servers over SSH.**  
+Lightkeeper provides efficient view over server's resources and reduces repetitive typing.
+It simplifies general maintenance tasks such as upgrades, monitoring, debugging and configuration.
+
+**Extensive keyboard shortcuts**.  
+Lightkeeper uses hotkeys extensively and gets out of the way in case you need to use terminal.  
+Just press Ctrl-T to open a terminal in a new tab.
+  
+**Agentless monitoring of hosts and certificates.**  
 No additional daemons, agents or other software is needed on target hosts. LightkeeperRM will only run standard Linux commands already available on the host.
 You can see executed commands through debug log and on target hosts's logs (depending on setup), so it's easy to audit and debug.
-Lightkeeper simplifies general maintenance tasks such as upgrades, monitoring, debugging and configuration.
   
-**Agentless monitoring.** Monitors hosts and certificates.
+**LightkeeperRM is customizable**, modular and easily extendable, so that it can be modified for different needs.  
   
-**LightkeeperRM aims to be customizable**, modular and easily extendable, so that it can be modified for different needs.  
   
-**User-interface is compact** and aims to keep only the most essential information visible. Clicking and navigating between different views is kept to a minimum.  
-In case you find the GUI insufficient and need to dig deeper, you can always use a button, or hotkey, for launching a terminal that logs you in through SSH.
-
-**Extensive keyboard shortcuts**.
-  
-*NOTE: Lightkeeper is currently in beta and still has bugs and is missing some features. Documentation is also not yet complete.*
+*NOTE: Lightkeeper is currently in beta and is missing some features. Documentation is also not yet complete.*
 
 <br />
 <br />
@@ -121,6 +122,7 @@ Migration to Qt6 is now done, so now you'll need these packages on Ubuntu 24.04:
 - liboping0, liboping-dev
 - libqt6svg6
 - qt6-declarative-dev
+- qt6-qt5compat-devel
 - qml6-module-qt-labs-qmlmodels
 - qml6-module-qt5compat-graphicaleffects
 - qml6-module-qtqml-workerscript
