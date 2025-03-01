@@ -53,7 +53,9 @@ impl CommandModule for Logs {
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "15") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::OpenSUSE, "12") {
 
             command.arguments(vec!["journalctl", "-q"]);
 
@@ -89,7 +91,7 @@ impl CommandModule for Logs {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_error() {
-            return Err(response.message.clone());
+            return Err((&response.message).trim_end().to_owned())
         }
         Ok(CommandResult::new_hidden(response.message.clone()))
     }
