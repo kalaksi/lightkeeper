@@ -85,10 +85,6 @@ https://github.com/alexcrichton/ssh2-rs/issues/254
 https://github.com/libssh2/libssh2/issues/659
 https://github.com/libssh2/libssh2/issues?q=is%253Aissue+key+exchange+failed
 
-### Font in integrated terminal is off a little
-Lightkeeper has now migrated to Qt6, but the qmltermwidget component doesn't have proper support upstream.  
-The font issue is because of a less-than-perfect community-made migration and I'm trying to help out with the remaining problems.  
-
 # Installing
 ## Flatpak
 It is recommended to download the app from Flathub: https://flathub.org/apps/io.github.kalaksi.Lightkeeper  

@@ -42,7 +42,7 @@ modules:
       - type: git
         # Fork from repo https://github.com/Swordfish90/qmltermwidget.git to add Qt 6 support.
         url: https://github.com/kalaksi/qmltermwidget.git
-        commit: 79db981422a81a197d1700855fe6a08a076f7828
+        commit: ac84d444b278d5682413f7200dd324ee6c564a01
     make-install-args:
       - "INSTALL_ROOT=/app/qmltermwidget"
   - name: ChartJs2QML

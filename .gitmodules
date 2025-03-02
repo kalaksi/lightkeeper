@@ -2,6 +2,7 @@
 [submodule "third_party/qmltermwidget"]
 	path = third_party/qmltermwidget
 	url = https://github.com/kalaksi/qmltermwidget.git
+	branch = lightkeeper
 [submodule "third_party/ChartJs2QML"]
 	path = third_party/ChartJs2QML
 	url = https://github.com/kalaksi/ChartJs2QML.git

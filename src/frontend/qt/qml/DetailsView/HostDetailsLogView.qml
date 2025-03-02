@@ -20,7 +20,6 @@ Item {
     property string text: ""
     property string errorText: ""
     property var pendingInvocation: 0
-    property string _unitId: ""
     property bool _loading: pendingInvocation > 0
 
 
