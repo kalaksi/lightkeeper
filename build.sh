@@ -6,13 +6,12 @@ set -eu
 if [ ! -e third_party/qmltermwidget ] || \
    [ ! -e third_party/ChartJs2QML ]; then
 
-    git submodule update --init --recursive
-    # git submodule update --init --recursive --remote
+    git submodule update --init --recursive --remote
 fi
 
 if [ ! -e third_party/qmltermwidget/QMLTermWidget/libqmltermwidget.so ]; then
     pushd third_party/qmltermwidget
-    qmake && make
+    qmake && make -j 4
     popd
 fi
 
