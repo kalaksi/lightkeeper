@@ -38,6 +38,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.27.3" date="2025-03-02">
+      <description>
+        <ul>
+          <li>Fix terminal font width issue.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.27.2" date="2025-03-01">
       <description>
         <ul>
