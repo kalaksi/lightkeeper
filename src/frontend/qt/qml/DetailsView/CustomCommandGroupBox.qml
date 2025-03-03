@@ -11,7 +11,7 @@ CategoryGroupBox {
     required property string hostId
     property int rowHeight: 45
     property string selectionColor: "transparent"
-    property bool isBlocked: true
+    property bool isBlocked: !LK.hosts.isHostInitialized(root.hostId)
 
     label: GroupBoxLabel {
         id: groupBoxLabel

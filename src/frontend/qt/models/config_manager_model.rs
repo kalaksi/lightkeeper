@@ -55,8 +55,7 @@ pub struct ConfigManagerModel {
 
     getSelectedGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     getAvailableGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
-    addHostToGroup: qt_method!(fn(&self, host_name: QString, group_name: QString)),
-    removeHostFromGroup: qt_method!(fn(&self, host_name: QString, group_name: QString)),
+    updateHostGroups: qt_method!(fn(&self, host_name: QString, groups: QStringList)),
 
     //
     // Custom commands
@@ -126,12 +125,6 @@ impl ConfigManagerModel {
                mut groups_config: Groups,
                module_metadatas: Vec<Metadata>) -> Self {
         
-        let mut hosts_config = hosts_config;
-        // Sort host groups alphabetically.
-        for host in hosts_config.hosts.values_mut() {
-            host.groups.sort_by_key(|key| key.to_lowercase());
-        }
-
         if Configuration::is_schema_outdated(main_config.schema_version) {
             Configuration::upgrade_schema(&mut main_config, &mut groups_config);
 
@@ -349,13 +342,8 @@ impl ConfigManagerModel {
     fn getSelectedGroups(&self, host_name: QString) -> QStringList {
         let host_name = host_name.to_string();
         let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
-        let groups_sorted = {
-            let mut groups = host_settings.groups.clone();
-            groups.sort_by_key(|key| key.to_lowercase());
-            groups
-        };
 
-        groups_sorted.into_iter().map(QString::from).collect()
+        host_settings.groups.into_iter().map(QString::from).collect()
     }
 
     fn getAvailableGroups(&self, host_name: QString) -> QStringList {
@@ -363,28 +351,21 @@ impl ConfigManagerModel {
         let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
 
         let all_groups = self.groups_config.groups.keys().collect::<Vec<&String>>();
-        let available_groups = all_groups.iter()
+        let mut available_groups = all_groups.iter()
             .filter(|group| !host_settings.groups.contains(group))
             .map(|group| group.to_string())
             .collect::<Vec<String>>();
 
+        available_groups.sort();
         available_groups.into_iter().map(QString::from).collect()
     }
 
-    fn addHostToGroup(&mut self, host_name: QString, group_name: QString) {
-        let host_name = host_name.to_string();
-        let group_name = group_name.to_string();
-        let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
+    fn updateHostGroups(&mut self, host_id: QString, groups: QStringList) {
+        let host_id = host_id.to_string();
+        let groups = groups.into_iter().map(|group| group.to_string()).collect::<Vec<String>>();
 
-        host_settings.groups.push(group_name);
-    }
-
-    fn removeHostFromGroup(&mut self, host_name: QString, group_name: QString) {
-        let host_name = host_name.to_string();
-        let group_name = group_name.to_string();
-        let host_settings = self.hosts_config.hosts.get_mut(&host_name).unwrap();
-
-        host_settings.groups.retain(|group| group != &group_name);
+        let host_settings = self.hosts_config.hosts.get_mut(&host_id).unwrap();
+        host_settings.groups = groups;
     }
 
     /// Returns list of JSON strings representing CustomCommandConfig.

@@ -32,9 +32,10 @@ LightkeeperDialog {
             LK.config.addHost("new-host-id")
             root.hostId = "new-host-id"
         }
-        refreshGroups()
-        updateOkButton()
+        root._selectedGroups = LK.config.getSelectedGroups(root.hostId)
+        root._availableGroups = LK.config.getAvailableGroups(root.hostId)
         root._loading = false
+        updateOkButton()
     }
 
     onAccepted: {
@@ -68,6 +69,7 @@ LightkeeperDialog {
         }
 
         LK.config.setHostSettings(root.hostId, hostIdField.text, JSON.stringify(newSettings))
+        LK.config.updateHostGroups(root.hostId, root._selectedGroups)
         LK.config.endHostConfiguration()
         root._loading = true
         
@@ -200,6 +202,11 @@ LightkeeperDialog {
             Layout.alignment: Qt.AlignHCenter
         }
 
+        SmallText {
+            text: "Group order is significant. Later groups override earlier ones."
+            color: Theme.textColorDark
+        }
+
         ColumnLayout {
             spacing: 0
 
@@ -266,7 +273,7 @@ LightkeeperDialog {
                         }
                     }
 
-                    // Add, remove and configure buttons.
+                    // Remove, configure and reordering buttons.
                     ColumnLayout {
                         width: root.buttonSize
                         spacing: Theme.spacingNormal
@@ -281,8 +288,8 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._selectedGroups[selectedGroupsList.currentIndex]
-                                LK.config.removeHostFromGroup(root.hostId, selectedGroup)
-                                root.refreshGroups();
+                                root._selectedGroups = root._selectedGroups.filter(group => group !== selectedGroup)
+                                root._availableGroups = root._availableGroups.concat(selectedGroup).sort()
                             }
                         }
 
@@ -299,6 +306,44 @@ LightkeeperDialog {
                         // Spacer
                         Item {
                             Layout.fillHeight: true
+                        }
+
+                        ImageButton {
+                            id: moveUpButton
+                            enabled: selectedGroupsList.currentIndex > 0
+                            imageSource: "qrc:/main/images/button/arrow-up"
+                            size: root.buttonSize
+                            onClicked: {
+                                // Use a copy to trigger re-rendering.
+                                let result = root._selectedGroups.slice()
+                                let previousIndex = selectedGroupsList.currentIndex
+                                let selectedGroup = result[selectedGroupsList.currentIndex]
+
+                                result.splice(selectedGroupsList.currentIndex, 1)
+                                result.splice(selectedGroupsList.currentIndex - 1, 0, selectedGroup)
+                                root._selectedGroups = result
+
+                                selectedGroupsList.currentIndex = previousIndex - 1
+                            }
+                        }
+
+                        ImageButton {
+                            id: moveDownButton
+                            enabled: selectedGroupsList.currentIndex < root._selectedGroups.length - 1
+                            imageSource: "qrc:/main/images/button/arrow-down"
+                            size: root.buttonSize
+                            onClicked: {
+                                // Use a copy to trigger re-rendering.
+                                let result = root._selectedGroups.slice()
+                                let previousIndex = selectedGroupsList.currentIndex
+                                let selectedGroup = result[selectedGroupsList.currentIndex]
+
+                                result.splice(selectedGroupsList.currentIndex, 1)
+                                result.splice(selectedGroupsList.currentIndex + 1, 0, selectedGroup)
+                                root._selectedGroups = result
+
+                                selectedGroupsList.currentIndex = previousIndex + 1
+                            }
                         }
                     }
                 }
@@ -346,8 +391,8 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                LK.config.addHostToGroup(root.hostId, selectedGroup)
-                                refreshGroups()
+                                root._selectedGroups = root._selectedGroups.concat(selectedGroup).sort()
+                                root._availableGroups = root._availableGroups.filter(group => group !== selectedGroup)
                             }
                         }
 
@@ -373,7 +418,9 @@ LightkeeperDialog {
                             tooltip: "Create new group"
                             size: root.buttonSize
 
-                            onClicked: groupAddDialog.open()
+                            onClicked: {
+                                groupAddDialog.open()
+                            }
                         }
 
                         ImageButton {
@@ -386,7 +433,7 @@ LightkeeperDialog {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
                                 LK.config.removeGroup(selectedGroup)
                                 LK.config.writeGroupConfiguration()
-                                refreshGroups()
+                                root._availableGroups = root._availableGroups.filter(group => group !== selectedGroup)
                             }
                         }
                     }
@@ -417,14 +464,8 @@ LightkeeperDialog {
         onInputValuesGiven: function(inputValues) {
             LK.config.addGroup(inputValues[0])
             LK.config.writeGroupConfiguration()
-            refreshGroups()
+            root._availableGroups = root._availableGroups.concat(inputValues[0]).sort()
         }
-    }
-
-    // Forces re-evaluation of lists.
-    function refreshGroups() {
-        root._selectedGroups = LK.config.getSelectedGroups(root.hostId)
-        root._availableGroups = LK.config.getAvailableGroups(root.hostId)
     }
 
     function fieldsAreValid() {

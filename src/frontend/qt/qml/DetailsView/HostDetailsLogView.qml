@@ -212,7 +212,7 @@ Item {
                         width: 0.80 * parent.width
                         height: width
                         anchors.centerIn: parent
-                        source: "qrc:/main/images/button/search-up"
+                        source: "qrc:/main/images/button/arrow-up"
                     }
                 }
 
@@ -230,7 +230,7 @@ Item {
                         width: 0.80 * parent.width
                         height: width
                         anchors.centerIn: parent
-                        source: "qrc:/main/images/button/search-down"
+                        source: "qrc:/main/images/button/arrow-down"
                     }
                 }
             }
