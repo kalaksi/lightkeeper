@@ -74,7 +74,6 @@ pub fn init_resources() {
             "StyleOverride/RoundButton.qml",
             "StyleOverride/TextField.qml",
             "StyleOverride/ToolButton.qml",
-            "StyleOverride/ItemDelegate.qml",
             "StyleOverride/ScrollView.qml",
             "StyleOverride/ScrollBar.qml",
             "Tests/Test.qml",
