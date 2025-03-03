@@ -48,7 +48,7 @@ pub struct Groups {
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Hosts {
-    pub hosts: HashMap<String, HostSettings>,
+    pub hosts: BTreeMap<String, HostSettings>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub certificate_monitors: Vec<String>,
 }
