@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 import "../Text"
+import "../StyleOverride"
 
 
 // Basic ListView with common properties.
