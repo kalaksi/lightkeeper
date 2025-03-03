@@ -243,34 +243,13 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    Rectangle {
-                        color: Theme.backgroundColor
-                        border.color: Theme.borderColor
-                        border.width: 1
+
+                    LKListView {
+                        id: selectedGroupsList
+                        model: root._selectedGroups
 
                         Layout.fillHeight: true
                         Layout.fillWidth: true
-
-                        ListView {
-                            id: selectedGroupsList
-                            anchors.fill: parent
-                            clip: true
-                            // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
-                            boundsBehavior: Flickable.StopAtBounds
-
-
-                            ScrollBar.vertical: ScrollBar {
-                                active: true
-                            }
-
-                            model: root._selectedGroups
-                            delegate: ItemDelegate {
-                                width: selectedGroupsList.width
-                                text: modelData
-                                highlighted: ListView.isCurrentItem
-                                onClicked: selectedGroupsList.currentIndex = index
-                            }
-                        }
                     }
 
                     // Remove, configure and reordering buttons.
@@ -349,34 +328,12 @@ LightkeeperDialog {
                 }
 
                 RowLayout {
-                    Rectangle {
-                        color: Theme.backgroundColor
-                        border.color: Theme.borderColor
-                        border.width: 1
+                    LKListView {
+                        id: availableGroupsList
+                        model: root._availableGroups
 
                         Layout.fillHeight: true
                         Layout.fillWidth: true
-
-                        ListView {
-                            id: availableGroupsList
-                            anchors.fill: parent
-                            clip: true
-                            // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
-                            boundsBehavior: Flickable.StopAtBounds
-
-                            ScrollBar.vertical: ScrollBar {
-                                active: true
-                            }
-
-                            model: root._availableGroups
-
-                            delegate: ItemDelegate {
-                                width: availableGroupsList.width
-                                text: modelData
-                                highlighted: ListView.isCurrentItem
-                                onClicked: availableGroupsList.currentIndex = index
-                            }
-                        }
                     }
 
                     ColumnLayout {
