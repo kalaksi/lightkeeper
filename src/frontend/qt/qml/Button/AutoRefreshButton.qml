@@ -132,7 +132,9 @@ Item {
                     height: Math.floor(0.8 * root.iconHeight)
 
                     MouseArea {
-                        anchors.fill: parent
+                        width: dropdownBackground.width
+                        height: dropdownBackground.height
+                        anchors.centerIn: parent
                         // Don't allow clickthrough.
                         preventStealing: true
                         hoverEnabled: true
@@ -175,8 +177,6 @@ Item {
                             refreshMenu.close()
                         }
 
-                        // MenuItem doesn't work well with Repeater in older Qt?
-                        // TODO: Refactor after upgrading to Qt 6?
                         MenuItem {
                             text: "Auto-refresh off"
                             onClicked: refreshMenu.setTimerInterval(0)
@@ -199,6 +199,11 @@ Item {
                         MenuItem {
                             text: "Every 3 h"
                             onClicked: refreshMenu.setTimerInterval(10800)
+                        }
+
+                        MenuItem {
+                            text: "Every 6 h"
+                            onClicked: refreshMenu.setTimerInterval(21600)
                         }
 
                         MenuItem {
