@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 import "../Button"
 import "../Text"
@@ -202,9 +202,29 @@ LightkeeperDialog {
             Layout.alignment: Qt.AlignHCenter
         }
 
-        SmallText {
-            text: "Group order is significant. Later groups override earlier ones."
-            color: Theme.textColorDark
+        RowLayout {
+            SmallText {
+                text: "Group order is significant.\nLater groups may override settings from earlier ones."
+                color: Theme.textColorDark
+
+                Layout.fillWidth: true
+            }
+
+            // Show effective configuration. Dimmed if mouse is not hovering.
+            ImageButton {
+                imageSource: "qrc:/main/images/button/search"
+                size: root.buttonSize
+                tooltip: "Show effective configuration"
+                onClicked: {
+                    let connectorsAndSettings = JSON.parse(LK.config.getEffectiveConnectorSettings(root.hostId, root._selectedGroups))
+                    let monitorsAndSettings = JSON.parse(LK.config.getEffectiveMonitorSettings(root.hostId, root._selectedGroups))
+                    let commandsAndSettings = JSON.parse(LK.config.getEffectiveCommandSettings(root.hostId, root._selectedGroups))
+                    effectiveConfigDialog.groupConnectorSettings = connectorsAndSettings
+                    effectiveConfigDialog.groupMonitorSettings = monitorsAndSettings
+                    effectiveConfigDialog.groupCommandSettings = commandsAndSettings
+                    effectiveConfigDialog.open()
+                }
+            }
         }
 
         ColumnLayout {
@@ -401,10 +421,22 @@ LightkeeperDialog {
 
     GroupConfigurationDialog {
         id: groupConfigDialog
+        groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex]
+
         // contentItem's margin seems to affect this dialog's position, so compensating for it here.
         x: -100 + Theme.marginDialog
         anchors.centerIn: undefined
-        groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex]
+    }
+
+    GroupConfigurationDialog {
+        id: effectiveConfigDialog
+        readOnly: true
+        groupName: ""
+        title: "Effective configuration"
+
+        // contentItem's margin seems to affect this dialog's position, so compensating for it here.
+        x: -100 + Theme.marginDialog
+        anchors.centerIn: undefined
     }
 
     InputDialog {
@@ -424,6 +456,7 @@ LightkeeperDialog {
             root._availableGroups = root._availableGroups.concat(inputValues[0]).sort()
         }
     }
+
 
     function fieldsAreValid() {
         return hostIdField.acceptableInput &&

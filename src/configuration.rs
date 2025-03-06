@@ -354,12 +354,7 @@ impl Configuration {
 
         // Merge config groups to form the final, effective config.
         for (_, host_config) in hosts.hosts.iter_mut() {
-            host_config.effective = ConfigGroup::default();
-
-            for group_id in host_config.groups.iter() {
-                let group_config = all_groups.groups.get(group_id).unwrap();
-                host_config.effective = Self::merge_group_config(&host_config.effective, group_config);
-            }
+            host_config.effective = Self::get_effective_group_config(host_config, &all_groups.groups);
 
             // Old, deprecated host overrides.
             let old_overrides = ConfigGroup {
@@ -370,11 +365,9 @@ impl Configuration {
                 host_settings: host_config.settings.clone(),
                 config_helper: Default::default(),
             };
-            let all_overrides = Self::merge_group_config(&old_overrides, &host_config.overrides);
 
             // New host overrides.
-            host_config.effective = Self::merge_group_config(&host_config.effective, &all_overrides);
-            host_config.overrides = all_overrides;
+            host_config.overrides = Self::merge_group_config(&old_overrides, &host_config.overrides);
 
             // Clear old, deprecated settings.
             host_config.commands = BTreeMap::new();
@@ -386,6 +379,31 @@ impl Configuration {
         Ok((main_config, hosts, all_groups))
     }
 
+    /// Merge config groups to form the final, effective config.
+    pub fn get_effective_group_config(host_config: &HostSettings, all_groups: &BTreeMap<String, ConfigGroup>) -> ConfigGroup {
+        let mut effective_config = ConfigGroup::default();
+
+        for group_id in host_config.groups.iter() {
+            let group_config = all_groups.get(group_id).unwrap();
+            effective_config = Self::merge_group_config(&effective_config, group_config);
+        }
+
+        // Old, deprecated host overrides.
+        let old_overrides = ConfigGroup {
+            commands: host_config.commands.clone(),
+            monitors: host_config.monitors.clone(),
+            connectors: host_config.connectors.clone(),
+            custom_commands: Vec::new(),
+            host_settings: host_config.settings.clone(),
+            config_helper: Default::default(),
+        };
+
+        let all_overrides = Self::merge_group_config(&old_overrides, &host_config.overrides);
+
+        effective_config = Self::merge_group_config(&effective_config, &all_overrides);
+        effective_config
+    }
+
     /// Merges configuration groups, second parameter will overwrite conflicting contents from first.
     pub fn merge_group_config(first_config: &ConfigGroup, second_config: &ConfigGroup) -> ConfigGroup {
         let mut result = first_config.clone();
@@ -393,11 +411,7 @@ impl Configuration {
         second_config.monitors.iter().for_each(|(monitor_id, new_config)| {
             let mut merged_config = first_config.monitors.get(monitor_id).cloned().unwrap_or_default();
             merged_config.settings.extend(new_config.settings.clone());
-
-            if let Some(enabled) = new_config.enabled {
-                merged_config.enabled = Some(enabled);
-            }
-
+            merged_config.enabled = new_config.enabled.clone();
             merged_config.is_critical = new_config.is_critical;
             result.monitors.insert(monitor_id.clone(), merged_config);
         });

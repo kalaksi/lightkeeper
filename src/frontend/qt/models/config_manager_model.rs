@@ -88,16 +88,17 @@ pub struct ConfigManagerModel {
     getConnectorDescription: qt_method!(fn(&self, connector_name: QString) -> QString),
     addGroupConnector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
     getGroupConnectorSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
+    getEffectiveConnectorSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList) -> QString),
 
     //
     // Group configuration: monitors
     //
-    // NOTE: currently "unset" acts as a special value for indicating if a setting is unset.
     getUnselectedMonitorIds: qt_method!(fn(&self, selected_groups: QStringList) -> QStringList),
     getMonitorDescription: qt_method!(fn(&self, monitor_name: QString) -> QString),
     getGroupMonitorIds: qt_method!(fn(&self, group_name: QString) -> QStringList),
     addGroupMonitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     getGroupMonitorSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
+    getEffectiveMonitorSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList) -> QString),
 
     //
     // Group configuration: commands
@@ -107,6 +108,7 @@ pub struct ConfigManagerModel {
     getGroupCommandIds: qt_method!(fn(&self, group_name: QString) -> QStringList),
     addGroupCommand: qt_method!(fn(&self, group_name: QString, command_name: QString)),
     getGroupCommandSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
+    getEffectiveCommandSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList) -> QString),
 
 
     config_dir: String,
@@ -462,6 +464,29 @@ impl ConfigManagerModel {
         QStringList::from_iter(module_settings.map(|setting| serde_json::to_string(&setting).unwrap()))
     }
 
+    // Returns a map with module IDs as keys and array of ModuleSettings as values.
+    fn getEffectiveMonitorSettings(&self, host_id: QString, grouplist: QStringList) -> QString {
+        let host_id = host_id.to_string();
+        let grouplist = grouplist.into_iter().map(|group| group.to_string()).collect::<Vec<String>>();
+
+        let mut new_host_config = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
+        new_host_config.groups = grouplist;
+        let effective_config = Configuration::get_effective_group_config(&new_host_config, &self.groups_config.groups);
+
+        let modules_settings = effective_config.monitors.iter().map(|(module_id, module_config)| {
+            (module_id.clone(), module_config.settings.iter().map(|(key, value)| {
+                ModuleSetting {
+                    key: key.clone(),
+                    value: value.clone(),
+                    description: "".into(),
+                    enabled: true,
+                }
+            }).collect::<Vec<ModuleSetting>>())
+        }).collect::<HashMap<String, Vec<ModuleSetting>>>();
+
+        QString::from(serde_json::to_string(&modules_settings).unwrap())
+    }
+
     /// Modules that don't already belong to the group.
     fn getUnselectedConnectorIds(&self, selected_groups: QStringList) -> QStringList {
         let selected_groups = selected_groups.into_iter().map(|group| group.to_string()).collect::<Vec<String>>();
@@ -533,6 +558,29 @@ impl ConfigManagerModel {
         });
 
         QStringList::from_iter(module_settings.map(|setting| serde_json::to_string(&setting).unwrap()))
+    }
+
+    /// Returns a map with module IDs as keys and array of ModuleSettings as values.
+    fn getEffectiveConnectorSettings(&self, host_id: QString, grouplist: QStringList) -> QString {
+        let host_id = host_id.to_string();
+        let grouplist = grouplist.into_iter().map(|group| group.to_string()).collect::<Vec<String>>();
+
+        let mut new_host_config = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
+        new_host_config.groups = grouplist;
+        let effective_config = Configuration::get_effective_group_config(&new_host_config, &self.groups_config.groups);
+
+        let modules_settings = effective_config.connectors.iter().map(|(module_id, module_config)| {
+            (module_id.clone(), module_config.settings.iter().map(|(key, value)| {
+                ModuleSetting {
+                    key: key.clone(),
+                    value: value.clone(),
+                    description: "".into(),
+                    enabled: true,
+                }
+            }).collect::<Vec<ModuleSetting>>())
+        }).collect::<HashMap<String, Vec<ModuleSetting>>>();
+
+        QString::from(serde_json::to_string(&modules_settings).unwrap())
     }
 
     /// Settings should contain JSON serialized hashmaps. Module ID as key and list of ModuleSetting as value.
@@ -651,6 +699,29 @@ impl ConfigManagerModel {
         });
 
         QStringList::from_iter(module_settings.map(|setting| serde_json::to_string(&setting).unwrap()))
+    }
+
+    /// Returns a map with module IDs as keys and array of ModuleSettings as values.
+    fn getEffectiveCommandSettings(&self, host_id: QString, grouplist: QStringList) -> QString {
+        let host_id = host_id.to_string();
+        let grouplist = grouplist.into_iter().map(|group| group.to_string()).collect::<Vec<String>>();
+
+        let mut new_host_config = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
+        new_host_config.groups = grouplist;
+        let effective_config = Configuration::get_effective_group_config(&new_host_config, &self.groups_config.groups);
+
+        let modules_settings = effective_config.commands.iter().map(|(module_id, module_config)| {
+            (module_id.clone(), module_config.settings.iter().map(|(key, value)| {
+                ModuleSetting {
+                    key: key.clone(),
+                    value: value.clone(),
+                    description: "".into(),
+                    enabled: true,
+                }
+            }).collect::<Vec<ModuleSetting>>())
+        }).collect::<HashMap<String, Vec<ModuleSetting>>>();
+
+        QString::from(serde_json::to_string(&modules_settings).unwrap())
     }
 
     fn compareToDefault(&self, group_name: QString) -> QStringList {
