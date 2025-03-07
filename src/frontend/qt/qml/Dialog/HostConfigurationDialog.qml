@@ -368,7 +368,7 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                root._selectedGroups = root._selectedGroups.concat(selectedGroup).sort()
+                                root._selectedGroups = root._selectedGroups.concat(selectedGroup)
                                 root._availableGroups = root._availableGroups.filter(group => group !== selectedGroup)
                             }
                         }
