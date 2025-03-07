@@ -38,6 +38,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.28.0" date="2025-03-07">
+      <description>
+        <ul>
+          <li>Added ordering of host config groups.</li>
+          <li>Added viewer for effective / full config (final config from config groups).</li>
+          <li>Increased autorefresh menu area and add "6h" as an item.</li>
+          <li>Improved config group list UI style.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.27.3" date="2025-03-02">
       <description>
         <ul>
