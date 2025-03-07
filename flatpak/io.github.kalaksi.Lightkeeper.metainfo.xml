@@ -38,7 +38,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.28.0" date="2025-03-07">
+    <release version="0.28.1" date="2025-03-07">
       <description>
         <ul>
           <li>Added ordering of host config groups.</li>
