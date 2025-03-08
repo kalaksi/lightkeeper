@@ -24,6 +24,8 @@ pub struct ConfigManagerModel {
     //
     // Common
     //
+    showStatusBar: qt_property!(bool; READ showStatusBar),
+    showCharts: qt_property!(bool; READ showCharts),
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
     getCurrentWorkDir: qt_method!(fn(&self) -> QString),
@@ -240,6 +242,14 @@ impl ConfigManagerModel {
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
             self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
         }
+    }
+
+    fn showStatusBar(&self) -> bool {
+        self.main_config.display_options.show_status_bar
+    }
+
+    fn showCharts(&self) -> bool {
+        self.main_config.display_options.show_charts
     }
 
     fn isSandboxed(&self) -> bool {

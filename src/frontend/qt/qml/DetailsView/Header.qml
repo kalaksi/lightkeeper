@@ -1,10 +1,8 @@
 import QtQuick
 import QtQuick.Controls
-import Qt.labs.qmlmodels
 import QtQuick.Layouts
 
 import "../Button"
-import "../Text"
 import "../Misc"
 
 Item {
@@ -16,6 +14,7 @@ Item {
     property bool showOpenInWindowButton: false
     property bool showSaveButton: false
     property bool disableSaveButton: false
+    property bool showCharts: LK.config.showCharts
     property var tabs: []
     property alias tabIndex: tabBar.currentIndex
     property bool _maximized: false
@@ -65,7 +64,7 @@ Item {
                     property bool _hasIcon: modelData.startsWith("qrc:")
 
                     // Chart and host details tabs can't be closed.
-                    showCloseButton: Theme.showCharts ? index > 1 : index > 0
+                    showCloseButton: root.showCharts ? index > 1 : index > 0
                     // Handle strings starting with "qrc:" as icons.
                     text: _hasIcon ? "" : modelData
                     iconSource: _hasIcon ? modelData : ""
