@@ -1,6 +1,4 @@
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
 
 import "./Dialog"
 import "js/Utils.js" as Utils

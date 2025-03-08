@@ -1,15 +1,12 @@
 import QtQuick
 import QtQuick.Window
-import Qt.labs.qmlmodels
 import QtQuick.Controls
-import QtQuick.Layouts
 
+import Theme
 import HostTableModel
 
 import "./Button"
 import "./DetailsView"
-import "./Misc"
-import "js/Utils.js" as Utils
 import "js/Test.js" as Test 
 
 

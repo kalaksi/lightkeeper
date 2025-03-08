@@ -1,6 +1,7 @@
-import QtQuick 2.15
-import Qt.labs.qmlmodels 1.0
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Layouts
+
+import Theme
 
 import "Text"
 import "Misc"
@@ -32,18 +33,18 @@ Item {
             id: image
             antialiasing: true
             source: "qrc:/main/images/status/" + root.status
-            color: getColor(root.status)
-            visible: showIcon
+            color: root.getColor(root.status)
+            visible: root.showIcon
 
-            Layout.leftMargin: showIcon ? 0.4 * parent.height : 0
-            Layout.rightMargin: showIcon ? 0.4 * parent.height : 0
-            Layout.preferredWidth: showIcon ? 0.7 * parent.height : 0
-            Layout.preferredHeight: showIcon ? 0.7 * parent.height : 0
+            Layout.leftMargin: root.showIcon ? 0.4 * parent.height : 0
+            Layout.rightMargin: root.showIcon ? 0.4 * parent.height : 0
+            Layout.preferredWidth: root.showIcon ? 0.7 * parent.height : 0
+            Layout.preferredHeight: root.showIcon ? 0.7 * parent.height : 0
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
         }
 
         NormalText {
-            text: status.toUpperCase()
+            text: root.status.toUpperCase()
             font.family: fontStatus.name
             color: Theme.criticalityColor(root.status === "up" ? "normal" : root.status === "down" ? "error" : "_")
 

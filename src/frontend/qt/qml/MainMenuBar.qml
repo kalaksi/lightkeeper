@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+import Theme
+
 import "Misc"
-import "Text"
 import "Button"
 import "StyleOverride"
 

@@ -1,6 +1,6 @@
-import QtQuick 2.15
+import QtQuick
 
-import "js/Utils.js" as Utils
+import Theme
 
 
 /// Provides a space for multiple snackbars.
@@ -8,7 +8,6 @@ Item {
     id: root
     property int spacing: 10
     property int showDuration: 5000
-    property int animationDuration: Theme.animationDuration
     property int snackbarHeight: 80
     property int snackbarMaximumWidth: 600
     property var _instances: []
@@ -19,7 +18,7 @@ Item {
         Snackbar {
             Behavior on y {
                 NumberAnimation {
-                    duration: root.animationDuration
+                    duration: Theme.animationDuration
                 }
             }
         }
