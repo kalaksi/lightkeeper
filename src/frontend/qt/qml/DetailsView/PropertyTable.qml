@@ -1,14 +1,11 @@
 import QtQuick
 import QtQuick.Controls
 import Qt.labs.qmlmodels
-import QtQuick.Layouts
 
 import PropertyTableModel
+import Theme
 
-import ".."
-import "../Misc"
 import "../Text"
-import "../js/TextTransform.js" as TextTransform
 import "../js/ValueUnit.js" as ValueUnit
 import "../StyleOverride"
 

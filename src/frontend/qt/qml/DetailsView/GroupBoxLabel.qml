@@ -1,7 +1,8 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import Qt.labs.qmlmodels 1.0
+import QtQuick
+import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
+
+import Theme
 
 import "../Button"
 import "../Misc"
@@ -57,7 +58,7 @@ Rectangle {
             id: label
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            text: cleanupLabel(root.text)
+            text: root.cleanupLabel(root.text)
             color: Theme.textColor
             bottomPadding: 4
         }

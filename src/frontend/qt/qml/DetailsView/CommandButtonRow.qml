@@ -1,7 +1,6 @@
 import QtQuick
-import QtQuick.Controls
-import Qt.labs.qmlmodels
-import QtQuick.Layouts
+
+import Theme
 
 import "../Button"
 
@@ -101,7 +100,7 @@ Item {
         id: expandAnimation
         target: root 
         property: "width"
-        to: calculateWidth(true)
+        to: root.calculateWidth(true)
         duration: root.animationDuration
         easing.type: Easing.OutQuad
         onStopped: {
@@ -113,7 +112,7 @@ Item {
         id: collapseAnimation
         target: root 
         property: "width"
-        to: calculateWidth(false)
+        to: root.calculateWidth(false)
         duration: root.animationDuration
         easing.type: Easing.OutQuad
         onStopped: {
@@ -128,7 +127,7 @@ Item {
             StateChangeScript {
                 script: {
                     if (root.forceCollapse) {
-                        collapse()
+                        root.collapse()
                     }
                 }
             }
@@ -148,7 +147,7 @@ Item {
     function getButtonIdentifiers() {
         let result = []
         for (let i = 0; i < commandRepeater.count; i++) {
-            let button = commandRepeater.itemAt(i)
+            let button = commandRepeater.itemAt(i) as CommandButton
             result.push(button.buttonId)
         }
         return result
@@ -157,7 +156,7 @@ Item {
     // Allows updating one button at a time.
     // State has to be stored and handled on higher level and not in e.g. CommandButton or CommandButtonRow since those are not persistent.
     function updateProgress(buttonId, progressPercent) {
-        let button = commandRepeater.itemAt(getButtonIdentifiers().indexOf(buttonId))
+        let button = commandRepeater.itemAt(getButtonIdentifiers().indexOf(buttonId)) as CommandButton
 
         // Assign new value only if necessary.
         if (button !== null && button.progressPercent !== progressPercent) {

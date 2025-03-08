@@ -1,8 +1,9 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
+
+import Theme
 
 import "../Text"
-import "../Button"
 import "../js/TextTransform.js" as TextTransform
 import "../js/Utils.js" as Utils
 import "../StyleOverride"
@@ -12,7 +13,7 @@ ListView {
     id: root 
     property var rows: []
     property bool enableShortcuts: true
-    property string selectionColor: Theme.highlightColorLight
+    property string selectionColor: Theme.highlightColorLight.toString()
     property bool invertRowOrder: true
     /// If enabled, only appends new rows to the model instead of reprocessing all. Makes processing more performant.
     /// Not compatible with invertRowOrder as new rows are always appended to the end.
@@ -98,14 +99,14 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "N"
-        onActivated: logList.search("down", searchField.text)
+        onActivated: root.search("down", searchField.text)
     }
 
     // Vim-like shortcut.
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "Shift+N"
-        onActivated: logList.search("up", searchField.text)
+        onActivated: root.search("up", searchField.text)
     }
 
     // TODO: some UI indicator when copying happened.
@@ -113,7 +114,7 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "Y"
-        onActivated: logList.copyRowToClipboard(root.currentIndex)
+        onActivated: root.copyRowToClipboard(root.currentIndex)
     }
 
     // Vim-like shortcut.
@@ -139,13 +140,13 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequences: [StandardKey.MoveToPreviousLine, "K"]
-        onActivated: decrementCurrentIndex()
+        onActivated: root.decrementCurrentIndex()
     }
 
     Shortcut {
         enabled: root.enableShortcuts
         sequences: [StandardKey.MoveToNextLine, "J"]
-        onActivated: incrementCurrentIndex()
+        onActivated: root.incrementCurrentIndex()
     }
 
     Shortcut {

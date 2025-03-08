@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+import Theme
+
 import "../Text"
-import "../js/Parse.js" as Parse
 import "../StyleOverride"
 
 
@@ -72,8 +73,9 @@ CategoryGroupBox {
 
         Item {
             id: hostDetails
-            width: parent.width
-            height: 90
+
+            Layout.preferredHeight: 90
+            Layout.preferredWidth: parent.width
 
             // Background.
             Rectangle {

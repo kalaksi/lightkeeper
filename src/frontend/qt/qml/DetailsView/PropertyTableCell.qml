@@ -1,5 +1,6 @@
-import QtQuick 2.15
-import Qt.labs.qmlmodels 1.0
+import QtQuick
+
+import Theme
 
 import "../Misc"
 
@@ -20,7 +21,7 @@ Item {
         visible: root.firstItem && root.selected
         height: leftRounding.height
         width: leftRounding.width / 2
-        color: getBackgroundColor(false)
+        color: root.getBackgroundColor(false)
         z: 11
     }
 
@@ -28,7 +29,7 @@ Item {
         id: leftRounding
         visible: root.firstItem && root.selected
         radius: root.radius
-        color: getBackgroundColor(root.selected)
+        color: root.getBackgroundColor(root.selected)
         // Force on top so that scrolling text is cut neatly.
         z: 12
     }
@@ -37,7 +38,7 @@ Item {
         id: background
         visible: root.gradient === false
         anchors.fill: parent
-        color: getBackgroundColor(root.selected)
+        color: root.getBackgroundColor(root.selected)
 
         MouseArea {
             anchors.fill: parent
@@ -62,8 +63,8 @@ Item {
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0.0; color: "#00000000" }
-            GradientStop { position: 0.15; color: getBackgroundColor(root.selected) }
-            GradientStop { position: 1.0; color: getBackgroundColor(root.selected) }
+            GradientStop { position: 0.15; color: root.getBackgroundColor(root.selected) }
+            GradientStop { position: 1.0; color: root.getBackgroundColor(root.selected) }
         }
     }
 

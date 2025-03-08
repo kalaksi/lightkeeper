@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 
-import "../Text"
+import Theme
+
 import "../js/TextTransform.js" as TextTransform
 
 
@@ -27,9 +27,9 @@ GroupBox {
         id: groupBoxLabel
         width: root.width
 
-        text: TextTransform.capitalize(categoryName)
-        icon: Theme.categoryIcon(categoryName)
-        color: Theme.categoryColor(categoryName)
+        text: TextTransform.capitalize(root.categoryName)
+        icon: Theme.categoryIcon(root.categoryName)
+        color: Theme.categoryColor(root.categoryName)
 
         showRefreshButton: true
         onRefreshClicked: root.refreshClicked()

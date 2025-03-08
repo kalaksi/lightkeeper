@@ -109,8 +109,8 @@ Item {
 
         // Spacer
         Item {
-            width: Theme.spacingLoose
-            height: parent.height
+            Layout.preferredWidth: Theme.spacingLoose
+            Layout.preferredHeight: parent.height
         }
 
         ImageButton {
@@ -141,7 +141,7 @@ Item {
             size: 0.9 * parent.height
             imageSource: "qrc:/main/images/button/close"
             // By default this icon is black, so changing it here.
-            color: Theme.iconColor
+            color: Theme.iconColor.toString()
             imageRelativeWidth: 0.5
             imageRelativeHeight: 0.8
             flatButton: true
