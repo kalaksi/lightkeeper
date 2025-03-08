@@ -77,7 +77,6 @@ impl QmlFrontend {
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
 
         let display_data = host_manager.borrow().get_display_data();
-        let qt_theme = QObjectBox::new(ThemeModel::new(self.main_config.display_options.clone()));
         let qt_file_chooser = QObjectBox::new(FileChooserModel::new());
         let qt_lkbackend = QObjectBox::new(LkBackend::new(
             self.update_sender_prototype.clone(),
@@ -108,7 +107,6 @@ impl QmlFrontend {
                 engine.add_import_path(QString::from("./third_party/ChartJs2QML"));
             }
             engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
-            engine.set_object_property(QString::from("Theme"), qt_theme.pinned());
             engine.set_object_property(QString::from("DesktopPortal"), qt_file_chooser.pinned());
 
             let qt_theme = ThemeModel::new(self.main_config.display_options.clone());

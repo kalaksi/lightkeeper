@@ -1,6 +1,8 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+import Theme
 
 import "Text"
 import "js/Utils.js" as Utils
@@ -37,7 +39,7 @@ Rectangle {
         width: image.width + root.contentPadding * 2 + iconBackgroundCutoff.width - root.border.width * 2
         height: row.height - root.border.width * 2
         anchors.verticalCenter: parent.verticalCenter
-        color: getColor()
+        color: root.getColor()
         radius: 5
     }
 
@@ -61,9 +63,9 @@ Rectangle {
             id: image
             antialiasing: true
             source: Theme.iconForCriticality(root.criticality)
-            width: 32
-            height: 32
 
+            Layout.preferredWidth: 32
+            Layout.preferredHeight: 32
             Layout.leftMargin: iconBackground.width / 2 - width / 2
             Layout.alignment: Qt.AlignCenter
         }
