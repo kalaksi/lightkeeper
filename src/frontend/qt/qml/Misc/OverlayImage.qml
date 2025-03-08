@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 
 
@@ -13,7 +12,7 @@ Item {
     Image {
         id: image
         anchors.fill: parent
-        source: root.imageSource
+        source: root.source
         antialiasing: root.antialiasing
     }
 
