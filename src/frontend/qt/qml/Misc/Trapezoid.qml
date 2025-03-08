@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Shapes 1.8
+import QtQuick.Shapes
 
 Shape {
     id: root
