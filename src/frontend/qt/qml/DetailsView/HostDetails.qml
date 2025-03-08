@@ -14,6 +14,7 @@ Item {
     id: root
     required property string hostId
     property bool enableShortcuts: root.visible
+    property bool showCharts: LK.config.showCharts
     property var _tabContents: {}
     property var _tabStacks: {}
 
@@ -32,7 +33,7 @@ Item {
             })
 
             // Create default tabs for host.
-            if (Theme.showCharts) {
+            if (root.showCharts) {
                 createNewTab({
                     "title": "qrc:/main/images/button/charts",
                     "component": chartsView.createObject(root._tabStacks[root.hostId], {
@@ -312,7 +313,7 @@ Item {
 
     function refresh() {
         // Refresh host details tab. (needed?)
-        let hostTabIndex = Theme.showCharts ? 1 : 0
+        let hostTabIndex = root.showCharts ? 1 : 0
         root._tabContents[root.hostId][hostTabIndex].component.refresh()
 
         mainViewHeader.tabs = getTabTitles()
