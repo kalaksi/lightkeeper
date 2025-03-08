@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import Qt.labs.qmlmodels
-import QtQuick.Layouts
 
 import "Text"
 import "StyleOverride"
@@ -23,7 +22,7 @@ TableView {
         target: root.model
 
         function onSelectedRowChanged() {
-            centerRow()
+            root.centerRow()
         }
     }
 

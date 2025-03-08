@@ -1,5 +1,7 @@
 import QtQuick
 
+import Theme
+
 
 Item {
     id: root
@@ -17,8 +19,8 @@ Item {
     Rectangle {
         id: rounded
         anchors.fill: parent
-        radius: root.useRounding && parent.firstItem ? 9 : 0
-        color: getBackgroundColor(root.selected)
+        radius: root.useRounding && root.firstItem ? 9 : 0
+        color: root.getBackgroundColor(root.selected)
 
         MouseArea {
             anchors.fill: parent
@@ -27,7 +29,7 @@ Item {
     }
 
     Rectangle {
-        color: getBackgroundColor(root.selected)
+        color: root.getBackgroundColor(root.selected)
         width: rounded.radius
         anchors.top: rounded.top
         anchors.bottom: rounded.bottom
@@ -37,7 +39,7 @@ Item {
     Item {
         id: contentItem
         height: parent.height
-        width: parent.width - padding
+        width: parent.width - root.padding
         anchors.centerIn: parent
     }
 

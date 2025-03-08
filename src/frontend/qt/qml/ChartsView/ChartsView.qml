@@ -4,8 +4,9 @@ import QtQuick.Layouts
 
 // import ChartJs 1.0
 
+import Theme
+
 import ".."
-import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../DetailsView"
 
