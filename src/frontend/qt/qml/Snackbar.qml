@@ -18,18 +18,27 @@ Rectangle {
     property int fadeDuration: 200
     property int showDuration: 5000
     property int maximumWidth: 600
-    property int maximumHeight: 120
 
     visible: getText() !== ""
     width: Utils.clamp(textContent.implicitWidth + iconBackground.width + root.contentPadding * 3, root.maximumWidth / 3, root.maximumWidth)
-    implicitHeight: Math.min(textContent.implicitHeight + root.contentPadding * 2, root.maximumHeight)
+    height: 120
     radius: 5
-    opacity: 0.0
     color: Theme.backgroundColor
     border.width: 1
     border.color: "#50FFFFFF"
     // Alternative way to get some matching color to border:
     // border.color: Qt.darker(Qt.lighter(getColor(), 1.5), 2.0)
+
+    Component.onCompleted: {
+        opacity = 0.0
+    }
+
+    // ScrollView doesn't have boundsBehavior so this is the workaround.
+    Binding {
+        target: scrollView.contentItem
+        property: "boundsBehavior"
+        value: Flickable.StopAtBounds
+    }
 
     Rectangle {
         id: iconBackground
@@ -56,7 +65,7 @@ Rectangle {
 
     RowLayout {
         id: row
-        spacing: iconBackgroundCutoff.width + root.contentPadding * 2
+        spacing: iconBackgroundCutoff.width + root.contentPadding
         anchors.fill: parent
 
         Image {
@@ -71,16 +80,15 @@ Rectangle {
         }
 
         ScrollView {
-            width: row.width - iconBackground.width - root.contentPadding * 2
+            id: scrollView
             contentWidth: availableWidth
-            height: row.height - root.contentPadding * 2
-
-            Layout.alignment: Qt.AlignCenter
             Layout.fillWidth: true
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            Layout.fillHeight: true
+            Layout.margins: root.contentPadding
 
             NormalText {
                 id: textContent
+                width: root.maximumWidth - iconBackground.width - root.contentPadding * 3
                 text: root.text
                 wrapMode: Text.Wrap
             }
