@@ -1,8 +1,9 @@
-import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.impl
 import QtQuick.Controls.Fusion
 import QtQuick.Controls.Fusion.impl
+
+import Theme
 
 Button {
     id: control
