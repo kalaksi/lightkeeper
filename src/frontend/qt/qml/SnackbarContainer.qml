@@ -8,7 +8,7 @@ Item {
     id: root
     property int spacing: 10
     property int showDuration: 5000
-    property int snackbarHeight: 80
+    property int snackbarHeight: 100
     property int snackbarMaximumWidth: 600
     property var _instances: []
 
@@ -51,7 +51,6 @@ Item {
             creationTime: Date.now() + extraDisplayMs,
             criticality: criticality,
             text: text,
-            fadeDuration: root.animationDuration,
             showDuration: root.showDuration + extraDisplayMs,
             maximumWidth: root.snackbarMaximumWidth,
             height: root.snackbarHeight,
