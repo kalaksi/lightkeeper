@@ -1,4 +1,6 @@
-import QtQuick 2.15
+import QtQuick
+
+import Theme
 
 
 Item {
@@ -34,7 +36,7 @@ Item {
         id: animation 
         target: text
         property: "x"
-        to: _animationTarget
+        to: root._animationTarget
         velocity: 80
         maximumEasingTime: 500
 

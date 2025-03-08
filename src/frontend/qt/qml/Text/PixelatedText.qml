@@ -1,4 +1,6 @@
-import QtQuick 2.15
+import QtQuick
+
+import Theme
 
 Text {
     color: Theme.textColorDark

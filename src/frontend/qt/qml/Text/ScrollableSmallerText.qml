@@ -1,4 +1,6 @@
-import QtQuick 2.15
+import QtQuick
+
+import Theme
 
 
 // TODO: A more generic ScrollAnimation component for Texts.
@@ -35,7 +37,7 @@ Item {
         id: animation 
         target: text
         property: "x"
-        to: _animationTarget
+        to: root._animationTarget
         velocity: 50
         maximumEasingTime: 500
 
