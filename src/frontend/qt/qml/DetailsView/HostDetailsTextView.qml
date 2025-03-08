@@ -1,10 +1,9 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import Qt.labs.qmlmodels 1.0
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Controls
+
+import Theme
 
 import ".."
-import "../js/Parse.js" as Parse
 import "../Text"
 
 Item {
@@ -19,7 +18,7 @@ Item {
     Connections {
         target: LK.hosts
 
-        function onCommandResultReceived(commandResultJson) {
+        function onCommandResultReceived(commandResultJson, invocationId) {
             let commandResult = JSON.parse(commandResultJson)
 
             if (root.pendingInvocation === invocationId) {

@@ -1,13 +1,9 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 
-import ".."
-import "../Text"
+import Theme
+
 import "../ChartsView"
-import "../js/TextTransform.js" as TextTransform
-import "../js/Parse.js" as Parse
-import "../js/ValueUnit.js" as ValueUnit
 
 
 Item {
@@ -69,7 +65,7 @@ Item {
                 })
             }
 
-            createNewTab(tabData)
+            root.createNewTab(tabData)
         }
 
         function onLogsViewOpened(showTimeControls, title, commandId, commandParams, invocationId) {
@@ -84,7 +80,7 @@ Item {
                 })
             }
 
-            createNewTab(tabData)
+            root.createNewTab(tabData)
         }
 
         // For integrated text editor (not external).
@@ -98,7 +94,7 @@ Item {
                 })
             }
 
-            createNewTab(tabData)
+            root.createNewTab(tabData)
         }
 
         // For integrated terminal.
@@ -108,7 +104,7 @@ Item {
                 "component": terminalView.createObject(root._tabStacks[root.hostId], {})
             }
 
-            createNewTab(tabData)
+            root.createNewTab(tabData)
             tabData.component.open(command)
         }
     }
@@ -120,18 +116,18 @@ Item {
 
     Header {
         id: mainViewHeader
-        tabs: getTabTitles()
+        tabs: root.getTabTitles()
         showMinimizeButton: true
         showMaximizeButton: true
-        showRefreshButton: getCurrentTabContent() !== undefined && getCurrentTabContent().refreshContent !== undefined
-        showSaveButton: getCurrentTabContent() !== undefined && getCurrentTabContent().save !== undefined
+        showRefreshButton: root.getCurrentTabContent() !== undefined && root.getCurrentTabContent().refreshContent !== undefined
+        showSaveButton: root.getCurrentTabContent() !== undefined && root.getCurrentTabContent().save !== undefined
         disableSaveButton: true
 
-        onRefreshClicked: getCurrentTabContent().refreshContent()
+        onRefreshClicked: root.getCurrentTabContent().refreshContent()
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.close()
-        onSaveClicked: getCurrentTabContent().save()
+        onSaveClicked: root.getCurrentTabContent().save()
 
         onTabClosed: function(tabIndex) {
             root.closeTab(tabIndex)
@@ -297,7 +293,7 @@ Item {
         enabled: root.enableShortcuts
         sequences: [StandardKey.Refresh]
         onActivated: {
-            let content = getCurrentTabContent()
+            let content = root.getCurrentTabContent()
             if (content !== undefined) {
                 content.refresh()
             }
