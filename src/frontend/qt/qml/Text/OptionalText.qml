@@ -1,7 +1,7 @@
-import QtQuick 2.15
-import Qt.labs.qmlmodels 1.0
+import QtQuick
 
 Item {
+    id: root
     // NOTE: Required properties can cause issues if used with modelData, like errors such as:
     // "ReferenceError: modelData is not defined"
     // That's why these are not required properties anymore:
@@ -14,7 +14,7 @@ Item {
     NormalText {
         id: textComponent
         anchors.verticalCenter: parent.verticalCenter
-        text: parent.text.length === 0 ? placeholder : parent.text
+        text: parent.text.length === 0 ? root.placeholder : parent.text
         font.italic: parent.text.length === 0
         opacity: parent.text.length === 0 ? 0.3 : 1
     }
