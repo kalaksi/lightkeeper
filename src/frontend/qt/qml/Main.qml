@@ -109,7 +109,7 @@ ApplicationWindow {
 
     footer: StatusBar {
         id: statusBar
-        visible: Theme.showStatusBar === true
+        visible: LK.config.showStatusBar === true
         errorCount: root.errorCount
         jobsLeft: 0
         hostCount: hostTableModel.rowCount
