@@ -1,7 +1,5 @@
 import QtQuick
-import QtQuick.Controls.impl
 import QtQuick.Controls.Fusion
-import QtQuick.Controls.Fusion.impl
 
 ScrollBar {
     id: control
