@@ -1,10 +1,9 @@
 import QtQuick
 import QtQuick.Controls
-import Qt.labs.qmlmodels
-import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 
-import "../Button"
+import Theme
+
 import "../Text"
 
 
