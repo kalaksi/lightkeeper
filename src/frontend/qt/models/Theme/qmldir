@@ -1,0 +1,5 @@
+module Theme
+plugin Theme
+typeinfo plugins.qmltypes
+# classname Theme
+# singleton Theme
