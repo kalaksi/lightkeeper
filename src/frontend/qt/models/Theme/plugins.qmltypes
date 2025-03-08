@@ -1,0 +1,49 @@
+import QtQuick.tooling 1.2
+
+Module {
+    Component {
+        name: "Theme"
+        prototype: "QObject"
+        exports: ["Theme 1.0"]
+        isSingleton: true
+
+        Property { name: "disabledTextColor"; type: "string"; isReadonly: true; }
+        Property { name: "iconColor"; type: "string"; isReadonly: true; }
+        Property { name: "textColor"; type: "string"; isReadonly: true; }
+        Property { name: "textColorDark"; type: "string"; isReadonly: true; }
+        Property { name: "borderColor"; type: "string"; isReadonly: true; }
+        Property { name: "titleBarColor"; type: "string"; isReadonly: true; }
+        Property { name: "highlightColor"; type: "string"; isReadonly: true; }
+        Property { name: "highlightColorLight"; type: "string"; isReadonly: true; }
+        Property { name: "highlightColorBright"; type: "string"; isReadonly: true; }
+        Property { name: "backgroundColorDark"; type: "string"; isReadonly: true; }
+        Property { name: "backgroundColor"; type: "string"; isReadonly: true; }
+        Property { name: "backgroundColorLight"; type: "string"; isReadonly: true; }
+        Property { name: "alternateBaseColor"; type: "string"; isReadonly: true; }
+        Property { name: "baseColor"; type: "string"; isReadonly: true; }
+        Property { name: "categoryBackgroundColor"; type: "string"; isReadonly: true; }
+        Property { name: "categoryRefreshMask"; type: "string"; isReadonly: true; }
+        Property { name: "spacingLoose"; type: "int"; isReadonly: true; }
+        Property { name: "spacingNormal"; type: "int"; isReadonly: true; }
+        Property { name: "spacingTight"; type: "int"; isReadonly: true; }
+        Property { name: "marginScrollbar"; type: "int"; isReadonly: true; }
+        Property { name: "marginDialog"; type: "int"; isReadonly: true; }
+        Property { name: "marginDialogTop"; type: "int"; isReadonly: true; }
+        Property { name: "marginDialogBottom"; type: "int"; isReadonly: true; }
+        Property { name: "animationDuration"; type: "int"; isReadonly: true; }
+        Property { name: "animationDurationFast"; type: "int"; isReadonly: true; }
+        Property { name: "groupboxMinWidth"; type: "int"; isReadonly: true; }
+        Property { name: "groupboxMaxWidth"; type: "int"; isReadonly: true; }
+        Property { name: "commonIndent"; type: "int"; isReadonly: true; }
+        Property { name: "fontSize"; type: "int"; isReadonly: true; }
+        Property { name: "tooltipDelay"; type: "int"; isReadonly: true; }
+        Method { name: "categoryColor"; Parameter { name: "category"; type: "string" } }
+        Method { name: "criticalityColor"; Parameter { name: "criticality"; type: "string" } }
+        Method { name: "categoryIcon"; Parameter { name: "category"; type: "string" } }
+        Method { name: "colorForCriticality"; Parameter { name: "criticality"; type: "string" } }
+        Method { name: "iconForCriticality"; Parameter { name: "alert_level"; type: "string" } }
+        Method { name: "opacity"; Parameter { name: "is_enabled"; type: "bool" } }
+        Method { name: "getDisplayOptions" }
+        Method { name: "allowCollapsingCommand"; Parameter { name: "command_id"; type: "string" } }
+    }
+}
