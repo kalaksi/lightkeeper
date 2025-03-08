@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+import Theme
+
 import "../Button"
-import "../Text"
 import "../Misc"
 import ".."
 
