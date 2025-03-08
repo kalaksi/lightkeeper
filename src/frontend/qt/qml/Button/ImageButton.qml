@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
-import Qt.labs.qmlmodels
+
+import Theme
 
 import "../Text"
 import "../Misc"
@@ -24,14 +25,14 @@ Item {
     property real size: 0.8 * parent.height
 
     height: root.size
-    width: root.size + (buttonText.text !== "" ? buttonText.implicitWidth + Theme.spacing_normal() * 3 : 0)
+    width: root.size + (buttonText.text !== "" ? buttonText.implicitWidth + Theme.spacingNormal * 3 : 0)
 
     signal clicked()
 
     Button {
         flat: root.flatButton
         anchors.fill: parent
-        visible: roundButton === false
+        visible: root.roundButton === false
         enabled: root.enabled
         opacity: Theme.opacity(enabled)
         onClicked: root.clicked()
@@ -50,8 +51,8 @@ Item {
             OverlayImage {
                 id: buttonImage
                 source: root.imageSource
-                width: getIconWidth()
-                height: getIconHeight()
+                width: root.getIconWidth()
+                height: root.getIconHeight()
                 color: root.color
             }
 
@@ -68,7 +69,7 @@ Item {
 
         flat: root.flatButton
         anchors.fill: parent
-        visible: roundButton === true
+        visible: root.roundButton === true
         enabled: root.enabled
         opacity: root.enabled ? 1.0 : 0.5
         onClicked: root.clicked()
@@ -88,8 +89,8 @@ Item {
                 id: roundButtonImage
                 source: root.imageSource
                 color: root.color
-                width: getIconWidth()
-                height: getIconHeight()
+                width: root.getIconWidth()
+                height: root.getIconHeight()
             }
 
             NormalText {
