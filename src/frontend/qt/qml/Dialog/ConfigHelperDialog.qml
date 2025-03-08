@@ -1,11 +1,11 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
-import Qt.labs.qmlmodels 1.0
+
+import Theme
 
 import ".."
 import "../Text"
-import "../Misc"
 
 
 /// ConfigHelper notifies user about any new modules that are available for the configuration group,
@@ -117,9 +117,9 @@ LightkeeperDialog {
         }
 
         NormalText {
-            text: "
+            text: `
 To add these modules to the configuration group, select 'yes' (recommended).
-To use a more customized configuration, select 'no', and add preferred modules manually."
+To use a more customized configuration, select 'no', and add preferred modules manually.`
         }
     }
 }

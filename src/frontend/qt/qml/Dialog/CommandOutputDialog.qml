@@ -1,12 +1,11 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
-import ".."
+import Theme
+
 import "../DetailsView"
 import "../Text"
-import "../Misc"
-import "../js/TextTransform.js" as TextTransform
 
 
 LightkeeperDialog {
@@ -85,7 +84,8 @@ LightkeeperDialog {
             // TODO
             visible: false
             text: root.commandText
-            height: root.commandText.length > 0 ? implicitHeight : 0
+
+            Layout.preferredHeight: root.commandText.length > 0 ? implicitHeight : 0
         }
 
         LogList {
@@ -106,9 +106,10 @@ LightkeeperDialog {
             visible: false
             // TODO:
             // visible: root.errorText.length > 0
-            height: root.errorText.length > 0 ? implicitHeight : 0
             text: root.errorText
             color: Theme.colorForCriticality("Error")
+
+            Layout.preferredHeight: root.errorText.length > 0 ? implicitHeight : 0
         }
     }
 

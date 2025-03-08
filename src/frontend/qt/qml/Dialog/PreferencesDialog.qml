@@ -2,9 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 
-import "../Button"
+import Theme
+
 import "../Text"
-import "../js/Utils.js" as Utils
 import ".."
 import "../StyleOverride"
 

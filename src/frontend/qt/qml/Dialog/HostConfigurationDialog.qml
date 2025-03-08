@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+import Theme
+
 import "../Button"
 import "../Text"
 import "../Misc"
@@ -116,7 +118,7 @@ LightkeeperDialog {
                 validator: RegularExpressionValidator {
                     regularExpression: /[a-zA-Z\d\-\.]+/
                 }
-                onTextChanged: updateOkButton()
+                onTextChanged: root.updateOkButton()
             }
         }
 
@@ -137,7 +139,7 @@ LightkeeperDialog {
                 validator: RegularExpressionValidator {
                     regularExpression: /[\.\:a-zA-Z\d\-]+/
                 }
-                onTextChanged: updateOkButton()
+                onTextChanged: root.updateOkButton()
             }
         }
 
@@ -170,7 +172,7 @@ LightkeeperDialog {
                 validator: RegularExpressionValidator {
                     regularExpression: /[1-9][0-9]{0,4}/
                 }
-                onTextChanged: updateOkButton()
+                onTextChanged: root.updateOkButton()
             }
         }
 
@@ -181,7 +183,7 @@ LightkeeperDialog {
                 id: useSudoCheckbox
                 enabled: false
                 checked: true
-                onCheckedChanged: updateOkButton()
+                onCheckedChanged: root.updateOkButton()
             }
 
             Label {
@@ -193,7 +195,7 @@ LightkeeperDialog {
         // Just for extra spacing
         Item {
             Layout.fillWidth: true
-            height: Theme.spacingNormal
+            Layout.fillHeight: true
         }
 
         BigText {
@@ -274,10 +276,10 @@ LightkeeperDialog {
 
                     // Remove, configure and reordering buttons.
                     ColumnLayout {
-                        width: root.buttonSize
                         spacing: Theme.spacingNormal
                         layoutDirection: Qt.LeftToRight
 
+                        Layout.preferredWidth: root.buttonSize
                         Layout.fillHeight: true
 
                         ImageButton {
@@ -357,9 +359,10 @@ LightkeeperDialog {
                     }
 
                     ColumnLayout {
-                        width: root.buttonSize
-                        height: tabStackLayout.height
                         spacing: Theme.spacingNormal
+
+                        Layout.preferredWidth: root.buttonSize
+                        Layout.fillHeight: true
 
                         ImageButton {
                             id: addButton

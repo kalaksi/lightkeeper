@@ -1,6 +1,7 @@
 import QtQuick
-import QtQuick.Layouts
 import QtQuick.Controls
+
+import Theme
 
 import "../Text"
 import "../js/Utils.js" as Utils
