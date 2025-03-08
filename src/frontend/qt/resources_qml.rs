@@ -65,7 +65,6 @@ pub fn init_resources() {
             "Misc/BorderRectangle.qml",
             "Misc/LKListView.qml",
             "Misc/LKTabButton.qml",
-            "Misc/CooldownTimer.qml",
             "Misc/SemiCircle.qml",
             "Misc/Trapezoid.qml",
             "Misc/OverlayImage.qml",
