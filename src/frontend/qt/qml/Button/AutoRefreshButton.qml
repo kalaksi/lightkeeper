@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
-import Qt.labs.qmlmodels
+
+import Theme
 
 import "../StyleOverride"
 
