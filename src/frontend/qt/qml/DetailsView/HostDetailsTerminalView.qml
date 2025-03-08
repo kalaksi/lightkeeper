@@ -1,13 +1,11 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import Qt.labs.qmlmodels 1.0
-import QtQuick.Layouts 1.15
-import QMLTermWidget 1.0
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
-import ".."
+import QMLTermWidget
+import Theme
+
 import "../Button"
-import "../js/Parse.js" as Parse
-import "../Text"
 
 Item {
     id: root
