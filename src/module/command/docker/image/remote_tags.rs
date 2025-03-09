@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use std::str::FromStr;
 use chrono::NaiveDateTime;
 use serde_derive::Deserialize;
 use serde_json;
@@ -105,30 +106,47 @@ impl CommandModule for RemoteTags {
                         .collect::<Vec<_>>();
 
                     if images_for_arch.len() > 1 {
-                        result_rows.push(format!("- **{}**: (Error, too many images for arch {} found)", tag_details.name, host.platform.architecture));
+                        result_rows.push(format!("- **{}**: *Error, too many images for arch {} found*", tag_details.name, host.platform.architecture));
                     }
                     else if images_for_arch.len() == 1 {
-                        let image_details = images_for_arch.first().unwrap();
-                        let last_pushed_formatted = if let Some(last_pushed_str) = &image_details.last_pushed {
-                            let datetime = NaiveDateTime::parse_from_str(last_pushed_str.as_str(), "%Y-%m-%dT%H:%M:%S.%fZ").unwrap().and_utc();
-                            // TODO: format according to locale.
-                            datetime.format("%d.%m.%Y %H:%M:%S").to_string()
+                        let image_details = match images_for_arch.first() {
+                            Some(image_details) => image_details,
+                            None => {
+                                result_rows.push(format!("- **{}**: *Error parsing image details*", tag_details.name));
+                                continue;
+                            }
+                        };
+
+                        let last_pushed_string = if let Some(last_pushed_str) = &image_details.last_pushed {
+                            let mut last_pushed = last_pushed_str.to_string();
+                            for date_format in vec!["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"].iter() {
+                                if let Ok(datetime) = NaiveDateTime::parse_from_str(last_pushed_str.as_str(), date_format) {
+                                    let full_locale_string = std::env::var("LC_TIME").unwrap_or_else(|_| String::from("en_US.UTF-8"));
+                                    let locale_string = full_locale_string.split(".").next().unwrap_or(&full_locale_string);
+                                    let locale = chrono::Locale::from_str(&locale_string).unwrap_or_else(|_| chrono::Locale::en_US);
+                                    last_pushed = datetime.and_utc().format_localized("last pushed %x %X UTC", locale).to_string();
+                                }
+                            }
+
+                            last_pushed
                         }
                         else {
                             String::from("(Unknown)")
                         };
 
-                        let image_size_in_mb = image_details.size / 1024 / 1024;
-                        result_rows.push(format!("- **{}**, last pushed {} UTC ({} MB)", tag_details.name, last_pushed_formatted, image_size_in_mb));
+                        let image_size_in_mb = image_details.size / 1000 / 1000;
+                        let image_size_string = format!("{} MB", image_size_in_mb);
+
+                        result_rows.push(format!("- **{}**, {} ({})", tag_details.name, last_pushed_string, image_size_string));
                     }
                     else {
-                        result_rows.push(format!("- **{}**: (No suitable images for arch \"{}\")", tag_details.name, host.platform.architecture));
+                        result_rows.push(format!("- **{}**: *No images for arch \"{}\"*", tag_details.name, host.platform.architecture));
                     }
                 }
             }
             // Unknown.
             else {
-                result_rows.push(format!("- (Error: unknown response format)"));
+                result_rows.push(format!("*Error: unknown response format*"));
             }
         }
 

@@ -18,7 +18,7 @@ serde = "1.0.200"
 serde_derive = "1.0.200"
 serde_yaml = "0.9.33"
 serde_json = "1.0.116"
-chrono = { version = "0.4.38", features = ["serde"]}
+chrono = { version = "0.4.38", features = ["serde", "unstable-locales"]}
 qmetaobject = "0.2.10"
 cstr = "0.2.12"
 sha2 = "0.10.8"
