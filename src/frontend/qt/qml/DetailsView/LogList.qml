@@ -285,7 +285,11 @@ ListView {
             let [modelRows, matchingRows, totalMatches] = _newSearch(root._lastQuery, rowsClone)
             root._matchingRows = matchingRows
             root._totalMatches = totalMatches
-            root.model = modelRows
+
+            root.model.clear()
+            for (const row of modelRows ) {
+                root.model.append({"text": row})
+            }
         }
     }
 
@@ -308,8 +312,8 @@ ListView {
     }
 
     function resetFields() {
-        root.rows = []
         root.model.clear()
+        root.rows = []
         root._lastQuery = ""
         root._matchingRows = []
         root._totalMatches = 0

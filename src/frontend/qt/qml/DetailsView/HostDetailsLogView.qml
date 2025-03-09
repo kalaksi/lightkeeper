@@ -297,6 +297,8 @@ Item {
 
     // Executes search again.
     function refresh() {
+        logList.resetFields()
+
         if (root.showTimeControls) {
             // TODO: implement checkbox for "Use UTC timezone"
             // let fullStartTime = `${startTime.text} ${timezone.text}`
