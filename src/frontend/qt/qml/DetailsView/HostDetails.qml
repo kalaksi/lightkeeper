@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 
@@ -223,13 +224,13 @@ Item {
     }
 
     Shortcut {
-        enabled: !(getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
+        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
         sequence: StandardKey.Cancel
         onActivated: root.close()
     }
 
     Shortcut {
-        enabled: !(getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
+        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
         sequences: [StandardKey.Close]
         // Close current tab.
         onActivated: root.closeTab(mainViewHeader.tabIndex)

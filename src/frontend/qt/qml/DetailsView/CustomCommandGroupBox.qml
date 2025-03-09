@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -48,6 +49,10 @@ CategoryGroupBox {
         model: LK.config.getCustomCommands(root.hostId).map(JSON.parse)
 
         delegate: ItemDelegate {
+            id: item
+            required property int index
+            required property var modelData
+
             implicitHeight: root.rowHeight
             width: parent.width
             highlighted: ListView.isCurrentItem
@@ -68,18 +73,18 @@ CategoryGroupBox {
                     Layout.fillWidth: true
 
                     NormalText {
-                        text: modelData.name
+                        text: item.modelData.name
                     }
 
                     SmallerText {
-                        visible: modelData.description.length > 0
-                        text: modelData.description
+                        visible: item.modelData.description.length > 0
+                        text: item.modelData.description
                         wrapMode: Text.Wrap
                         width: parent.width
                     }
 
                     SmallerText {
-                        text: "Executes: " + modelData.command
+                        text: "Executes: " + item.modelData.command
                         wrapMode: Text.Wrap
                         width: parent.width
                     }
@@ -105,7 +110,7 @@ CategoryGroupBox {
                         */
                         {
                             command_id: "_custom-command",
-                            command_params: [modelData.command],
+                            command_params: [item.modelData.command],
                             display_options: {
                                 display_icon: "start",
                                 display_text: "run",
