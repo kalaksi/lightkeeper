@@ -360,7 +360,7 @@ impl ConnectionManager {
 
         loop {
             // Wait for some time. No sense in processing too fast.
-            thread::sleep(std::time::Duration::from_millis(250));
+            thread::sleep(std::time::Duration::from_millis(100));
 
             if let Ok(mut response_message) = response_message_result {
                 full_partial_message.push_str(&response_message.message);
