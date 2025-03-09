@@ -38,6 +38,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.28.2" date="2025-03-09">
+      <description>
+        <ul>
+          <li>Greatly improved log viewer and command output dialog performance.</li>
+          <li>Fixed carbage characters shown in command output dialog.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.28.1" date="2025-03-07">
       <description>
         <ul>
