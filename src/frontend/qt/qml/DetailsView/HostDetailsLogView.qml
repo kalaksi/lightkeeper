@@ -242,6 +242,7 @@ Item {
             rows: []
             visible: rows.length > 0
             enableShortcuts: root.enableShortcuts
+            searchText: searchField.text
 
             Layout.fillWidth: true
             Layout.fillHeight: true

@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -109,6 +110,8 @@ Item {
                 model: root._categories.filter(category => category !== "host")
 
                 CategoryGroupBox {
+                    required property string modelData
+
                     id: groupBox
                     categoryName: modelData
 
@@ -195,7 +198,7 @@ Item {
                             flatButtons: false
                             roundButtons: false
                             commands: LK.command.getCommandsOnLevel(root.hostId, modelData, "", 0).map(JSON.parse)
-                            hoverEnabled: !groupBox.blocked
+                            hoverEnabled: !groupBox.isBlocked
 
                             Layout.alignment: Qt.AlignHCenter
                             Layout.bottomMargin: Theme.spacingLoose

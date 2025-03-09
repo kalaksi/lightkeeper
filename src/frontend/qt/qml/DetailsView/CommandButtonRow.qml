@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 
 import Theme
@@ -66,6 +67,8 @@ Item {
                 model: root.commands
                 
                 CommandButton {
+                    required property var modelData
+
                     visible: !root.collapsible || root._showCommands || root._alwaysShownCommandIds.includes(modelData.command_id)
                     buttonId: root.createButtonId(modelData)
                     size: root.buttonSize
