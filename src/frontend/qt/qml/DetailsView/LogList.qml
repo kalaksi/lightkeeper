@@ -31,6 +31,7 @@ ListView {
     spacing: 2
     clip: true
     focus: true
+    reuseItems: true
     highlightFollowsCurrentItem: true
     highlightMoveDuration: 0
     highlight: Rectangle {
