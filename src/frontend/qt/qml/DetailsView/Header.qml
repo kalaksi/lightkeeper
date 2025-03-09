@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -48,7 +49,6 @@ Item {
 
         TabBar {
             id: tabBar
-            width: parent.width * 0.7
             contentHeight: parent.height * 0.85
 
             onCurrentIndexChanged: {
@@ -58,11 +58,15 @@ Item {
 
             Layout.leftMargin: Theme.spacingTight
             Layout.alignment: Qt.AlignBottom
+            Layout.preferredWidth: parent.width * 0.7
 
             Repeater {
                 model: root.tabs
 
                 LKTabButton {
+                    required property string modelData
+                    required property int index
+
                     property bool _hasIcon: modelData.startsWith("qrc:")
 
                     // Chart and host details tabs can't be closed.
@@ -89,12 +93,13 @@ Item {
 
         ImageButton {
             size: 0.9 * parent.height
-            anchors.rightMargin: Theme.spacingNormal
             imageSource: "qrc:/main/images/button/window-new"
             flatButton: true
             tooltip: "Open in new window"
             onClicked: root.openInWindowClicked()
             visible: root.showOpenInWindowButton
+
+            Layout.rightMargin: Theme.spacingNormal
         }
 
         ImageButton {

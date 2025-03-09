@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
@@ -14,6 +15,7 @@ ListView {
     property var rows: []
     property bool enableShortcuts: true
     property string selectionColor: Theme.highlightColorLight.toString()
+    property string searchText: ""
     property bool invertRowOrder: true
     /// If enabled, only appends new rows to the model instead of reprocessing all. Makes processing more performant.
     /// Not compatible with invertRowOrder as new rows are always appended to the end.
@@ -53,6 +55,9 @@ ListView {
     }
 
     delegate: Item {
+        required property int index
+        required property var modelData
+
         id: rowItem
         width: root.width - scrollBar.width
         height: textContent.implicitHeight
@@ -60,7 +65,7 @@ ListView {
         SmallText {
             id: textContent
             width: parent.width
-            text: modelData || ""
+            text: rowItem.modelData || ""
             font.family: "monospace"
             textFormat: Text.RichText
             wrapMode: Text.Wrap
@@ -74,7 +79,7 @@ ListView {
                         contextMenu.popup()
                     }
                     else if (mouse.button === Qt.LeftButton) {
-                        root.currentIndex = index
+                        root.currentIndex = rowItem.index
                     }
                 }
 
@@ -82,7 +87,7 @@ ListView {
                     id: contextMenu
                     MenuItem {
                         text: "Copy"
-                        onTriggered: root.copyRowToClipboard(index)
+                        onTriggered: root.copyRowToClipboard(rowItem.index)
                     }
                 }
             }
@@ -99,14 +104,14 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "N"
-        onActivated: root.search("down", searchField.text)
+        onActivated: root.search("down", root.searchText)
     }
 
     // Vim-like shortcut.
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "Shift+N"
-        onActivated: root.search("up", searchField.text)
+        onActivated: root.search("up", root.searchText)
     }
 
     // TODO: some UI indicator when copying happened.
