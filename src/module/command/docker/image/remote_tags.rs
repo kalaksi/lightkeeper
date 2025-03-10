@@ -125,6 +125,7 @@ impl CommandModule for RemoteTags {
                                     let locale_string = full_locale_string.split(".").next().unwrap_or(&full_locale_string);
                                     let locale = chrono::Locale::from_str(&locale_string).unwrap_or_else(|_| chrono::Locale::en_US);
                                     last_pushed = datetime.and_utc().format_localized("last pushed %x %X UTC", locale).to_string();
+                                    break;
                                 }
                             }
 
@@ -146,7 +147,7 @@ impl CommandModule for RemoteTags {
             }
             // Unknown.
             else {
-                result_rows.push(format!("*Error: unknown response format*"));
+                result_rows.push(format!("Error: unsupported registry API"));
             }
         }
 
