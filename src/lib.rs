@@ -1,3 +1,5 @@
+extern crate openssl;
+
 pub mod error;
 pub mod module;
 pub mod configuration;
@@ -38,6 +40,10 @@ pub fn run(
     hosts_config: &configuration::Hosts,
     group_config: &configuration::Groups,
     test: bool) -> ExitReason {
+
+    // Due to some weirdness between ssh2, openssl and qmetaobject crates, openssl initialization needs to be forced here.
+    // Otherwise, there might be a problem in ssh2 handshake with error "Unable to exchange encryption keys" for no apparent reason.
+    let _ = openssl::ssl::SslConnector::builder(openssl::ssl::SslMethod::tls()).unwrap();
 
     let module_factory = Arc::<ModuleFactory>::new(ModuleFactory::new());
     let module_metadatas = module_factory.get_module_metadatas();
