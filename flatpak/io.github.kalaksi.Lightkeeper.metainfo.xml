@@ -38,6 +38,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.28.3" date="2025-03-12">
+      <description>
+        <ul>
+          <li>Solve weird SSH handshake error in some situations.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.28.2" date="2025-03-09">
       <description>
         <ul>
