@@ -256,12 +256,8 @@ impl ConnectionModule for Ssh2 {
     }
 
     fn verify_host_key(&self, hostname: &str, key_id: &str) -> Result<(), LkError> {
-        // TODO: something's not right. self.address is unset when this function is visited even though connect()
-        // (and setting of self.address) should happen before key verification. Setting self.address again as a workaround.
-        // Check if this is still the case?
         let mut session_data = self.wait_for_session(0, false)?;
-        let mut self_address = self.address.lock().unwrap();
-        *self_address = hostname.to_string();
+        let self_address = self.address.lock().unwrap().to_string();
         let self_port = *self.port.lock().unwrap();
 
         let known_hosts_path = self.get_known_hosts_path()?;
