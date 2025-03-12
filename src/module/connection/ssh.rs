@@ -260,6 +260,11 @@ impl ConnectionModule for Ssh2 {
         let self_address = self.address.lock().unwrap().to_string();
         let self_port = *self.port.lock().unwrap();
 
+        // One last check to avoid writing duplicates. Can otherwise happen with parallel SSH sessions.
+        if self.check_known_hosts(&session_data, hostname, self_port).is_ok() {
+            return Ok(());
+        }
+
         let known_hosts_path = self.get_known_hosts_path()?;
 
         let mut known_hosts = session_data.session.known_hosts().unwrap();
@@ -427,8 +432,6 @@ impl Ssh2 {
                 ssh2::CheckResult::NotFound => {
                     let message = format!("Host key for '{}' was not found in known hosts.\nDo you want to trust this key:", hostname);
                     Err(LkError::host_key_unverified(MODULE_NAME, &message, &key_string))
-                    // known_hosts.add(host, key, host, key_type.into()).unwrap();
-                    // known_hosts.write_file(&file, KnownHostFileKind::OpenSSH).unwrap();
                 },
                 ssh2::CheckResult::Mismatch => {
                     let message = format!("Host key for '{}' HAS CHANGED! Do you trust this NEW key:", hostname);
