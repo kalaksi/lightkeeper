@@ -138,6 +138,7 @@ impl ConnectionManager {
         }
     }
 
+    /// Deprecated.
     fn initialize_cache(cache_settings: CacheSettings) -> Cache<String, ResponseMessage> {
         let new_command_cache = Cache::<String, ResponseMessage>::new(cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
 
@@ -173,6 +174,7 @@ impl ConnectionManager {
             let stateful_connectors_arc = Arc::new(stateful_connectors);
 
             loop {
+                // NOTE: cache is actually not used currently for anything and may be removed later.
                 let command_cache = original_command_cache.clone();
                 let module_factory = module_factory.clone();
                 let stateful_connectors = stateful_connectors_arc.clone();
@@ -187,7 +189,6 @@ impl ConnectionManager {
 
                 if let RequestType::Exit = request.request_type {
                     log::debug!("Gracefully stopping connection manager thread");
-                    
 
                     if cache_settings.enable_cache {
                         match &command_cache.lock().unwrap().write_to_disk() {
@@ -215,10 +216,8 @@ impl ConnectionManager {
                     let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
 
                     // Stateless connectors.
-                    let mut stateless_connector;
                     let connector = if connector_metadata.is_stateless {
-                        stateless_connector = Box::new(module_factory.new_connector(&connector_spec, &HashMap::new()));
-                        &mut stateless_connector
+                        &mut Box::new(module_factory.new_connector(&connector_spec, &HashMap::new()))
                     }
                     // Stateful connectors.
                     else {
@@ -226,7 +225,6 @@ impl ConnectionManager {
                         host_connectors.get(&connector_spec).unwrap()
                     };
 
-                    // TODO: not very elegant. No need to set multiple times, in theory, but there's some unknown issue.
                     connector.set_target(&request.host.get_address());
 
                     // Key verifications have to be done before anything else.
