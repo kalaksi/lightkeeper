@@ -12,43 +12,40 @@ const APP_DIR_NAME: &str = "lightkeeper";
 const METADATA_SUFFIX: &str = ".metadata.yml";
 
 pub fn get_config_dir() -> io::Result<PathBuf> {
-    let config_dir;
-    if let Some(path) = env::var_os("XDG_CONFIG_HOME") {
-        config_dir = PathBuf::from(path);
+    let mut config_dir = if let Some(path) = env::var_os("XDG_CONFIG_HOME") {
+        PathBuf::from(path)
     }
     else if let Some(path) = env::var_os("HOME") {
-        config_dir = PathBuf::from(path).join(".config");
+        PathBuf::from(path).join(".config")
     }
     else {
         return Err(io::Error::new(
             io::ErrorKind::Other,
             "Cannot find configuration directory. $XDG_CONFIG_HOME or $HOME is not set.",
         ));
+    };
+
+    // If not running inside flatpak, we need to add a separate subdir for the app.
+    if env::var("FLATPAK_ID").is_ok() {
+        config_dir = config_dir.join(APP_DIR_NAME);
     }
 
-    // If running inside flatpak, there's no need to add a separate subdir for the app.
-    if env::var("FLATPAK_ID").is_ok() {
-        Ok(config_dir)
-    }
-    else {
-        Ok(config_dir.join(APP_DIR_NAME))
-    }
+    Ok(config_dir)
 }
 
 pub fn get_cache_dir() -> io::Result<PathBuf> {
-    let mut cache_dir;
-    if let Some(path) = env::var_os("XDG_CACHE_HOME") {
-        cache_dir = PathBuf::from(path);
+    let mut cache_dir = if let Some(path) = env::var_os("XDG_CACHE_HOME") {
+        PathBuf::from(path)
     }
     else if let Some(home_path) = env::var_os("HOME") {
-        cache_dir = PathBuf::from(home_path).join(".cache");
+        PathBuf::from(home_path).join(".cache")
     }
     else {
         return Err(io::Error::new(
             io::ErrorKind::Other,
             "Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set.",
         ));
-    }
+    };
 
     // If not running inside flatpak, we need to add a separate subdir for the app.
     if env::var("FLATPAK_ID").is_err() {
@@ -56,6 +53,28 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
     }
 
     Ok(cache_dir)
+}
+
+pub fn get_data_dir() -> io::Result<PathBuf> {
+    let mut data_dir = if let Some(path) = env::var_os("XDG_DATA_HOME") {
+        PathBuf::from(path)
+    }
+    else if let Some(home_path) = env::var_os("HOME") {
+        PathBuf::from(home_path).join(".local").join("share")
+    }
+    else {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Cannot find data directory. $XDG_DATA_HOME or $HOME is not set.",
+        ));
+    };
+
+    // If not running inside flatpak, we need to add a separate subdir for the app.
+    if env::var("FLATPAK_ID").is_err() {
+        data_dir = data_dir.join(APP_DIR_NAME)
+    }
+
+    Ok(data_dir)
 }
 
 /// Create a local file. Local path is based on remote host name and remote file path.
