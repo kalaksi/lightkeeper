@@ -4,7 +4,7 @@ use serde_derive::{ Serialize, Deserialize };
 use crate::enums::HostStatus;
 use crate::host::Host;
 use crate::host_manager::HostState;
-use crate::metrics::tmserver;
+use crate::metrics::lmserver;
 use crate::module::command::CommandResult;
 use crate::module::monitoring::MonitoringData;
 use crate::utils::ErrorMessage;
@@ -13,7 +13,7 @@ use crate::utils::ErrorMessage;
 #[derive(Clone)]
 pub enum UIUpdate {
     Host(HostDisplayData),
-    Chart(tmserver::TMSResponse),
+    Chart(lmserver::LMSResponse),
     Stop(),
 }
 

@@ -65,8 +65,8 @@ pub fn run(
         match metrics::MetricsManager::new(frontend.new_update_sender()) {
             Ok(metrics_manager) => Some(metrics_manager),
             Err(error) => {
-                log::error!("Failed to start Lightkeeper Pro service: {}", error);
-                log::error!("Pro features will not be available.");
+                log::error!("Failed to start metrics server: {}", error);
+                log::error!("Charts will not be available.");
                 None
             }
         }

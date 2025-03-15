@@ -1,5 +1,5 @@
 ///
-/// This module contains the client-server communication protocol of the locally run TMServer metrics server.
+/// This module contains the client-server communication protocol of the locally run LMServer metrics server.
 /// Protocol version 1.0
 ///
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ pub struct Metric {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct TMSRequest {
+pub struct LMSRequest {
     pub request_id: u64,
     /// Requester sets this to unix time in milliseconds.
     pub time: u32,
@@ -41,9 +41,9 @@ pub enum RequestType {
     },
 }
 
-impl TMSRequest {
+impl LMSRequest {
     pub fn exit() -> Self {
-        TMSRequest {
+        LMSRequest {
             request_id: 0,
             time: 0,
             request_type: RequestType::Exit,
@@ -51,14 +51,14 @@ impl TMSRequest {
     }
 }
 
-impl Debug for TMSRequest {
+impl Debug for LMSRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "ServiceRequest({})", self.request_id)
     }
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-pub struct TMSResponse {
+pub struct LMSResponse {
     pub request_id: u64,
     /// In milliseconds. 0 if not set.
     pub lag: u32,

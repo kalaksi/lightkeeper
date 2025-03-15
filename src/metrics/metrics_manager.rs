@@ -6,18 +6,18 @@ use std::{process, thread};
 
 use crate::error::LkError;
 use crate::frontend::UIUpdate;
-use crate::metrics::tmserver::{self, RequestType, TMSRequest, TMSResponse};
+use crate::metrics::lmserver::{self, RequestType, LMSRequest, LMSResponse};
 use crate::{file_handler, utils};
 
 //
-// NOTE: This is MetrcisManager that handles connections to metrics database for keeping record of host metrics for graphs.
-// Only TMServer is currently supported. It is a simple, lightweight, locally run, closed-source metrics database server and is developed by the Lightkeeper project.
-// It is tailored for the needs of Lightkeeper, but is independent and can be used with any software.
+// NOTE: This is MetricsManager that handles connections to metrics server that stores host metrics for charts.
+// Only LMServer (LightMetricsServer) is currently supported. It is a simple, lightweight, locally run, closed-source metrics database server and is developed by the Lightkeeper project.
+// It is tailored for the needs of Lightkeeper, but is independent and could be used with any software.
 //
-// TMServer is a closed-source binary and requires a license (trial licenses are available) to make an open-core model possible.
+// LMServer is closed-source to help make an open-core model possible.
 //
-// Using TMServer and metrics is optional and the binary is not installed by default. It is downloaded from GitHub on demand and verified.
-// Even though it's closed-source, the communication protocol is open (see tmserver/tmsrequest.rs).
+// Using LMServer and metrics is optional. The binary is not installed by default but is downloaded automatically from GitHub and verified.
+// The communication protocol is open, see lmserver/lmsrequest.rs.
 // The metrics server does not use or need network access (it uses unix sockets) and can't send malicious input to Lightkeeper.
 //
 
@@ -32,7 +32,7 @@ pub struct MetricsManager {
     /// Every request gets an invocation ID. Valid numbers begin from 1.
     invocation_id_counter: u64,
     // TODO: support remote database backends in the future.
-    request_sender: mpsc::Sender<TMSRequest>,
+    request_sender: mpsc::Sender<LMSRequest>,
 }
 
 impl MetricsManager {
@@ -53,19 +53,27 @@ impl MetricsManager {
         })
     }
 
-    /// Downloads (if needed) and verifies Pro Services binary and then spawns a new process for it.
+    /// Downloads (if needed) and verifies metrics server binary and then spawns a new process for it.
     fn start_service() -> io::Result<(process::Child, thread::JoinHandle<()>)> {
         log::info!("Starting metrics server");
-        let tmserver_path = file_handler::get_cache_dir()?.join("tmserver");
-        let signature_path = tmserver_path.with_extension("sig");
+        let data_dir = file_handler::get_data_dir()?;
+        let lmserver_path = data_dir.join("lmserver");
+        log::debug!("Metrics server binary path: {}", lmserver_path.display());
+
+        // If data directory is missing, this is probably the first run, so create data directory.
+        if !data_dir.exists() {
+            fs::create_dir_all(&data_dir)?;
+        }
+
+        let signature_path = lmserver_path.with_extension("sig");
 
         // TODO: Add license check.
         // The binary is not included by default so download it first.
-        if let Err(_) = std::fs::metadata(&tmserver_path) {
+        if let Err(_) = std::fs::metadata(&lmserver_path) {
             // TODO: actual paths
             utils::download::download_file(
                 "https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md",
-                tmserver_path.to_str().unwrap(),
+                lmserver_path.to_str().unwrap(),
             )?;
             utils::download::download_file(
                 "https://raw.githubusercontent.com/kalaksi/lightkeeper/develop/README.md.sig",
@@ -77,11 +85,11 @@ impl MetricsManager {
         let do_verification = !cfg!(debug_assertions);
         if do_verification {
             let sign_cert = include_bytes!("../../certs/sign.crt");
-            utils::download::verify_signature(&tmserver_path, &signature_path, sign_cert)?;
+            utils::download::verify_signature(&lmserver_path, &signature_path, sign_cert)?;
         }
 
         // Start Lightkeeper Pro Services process. Failure is not critical, but some features will be unavailable.
-        let mut process_handle = Command::new(tmserver_path)
+        let mut process_handle = Command::new(lmserver_path)
             // Logs are printed to stderr by default.
             .stderr(process::Stdio::piped())
             .spawn()?;
@@ -112,7 +120,7 @@ impl MetricsManager {
     }
 
     pub fn stop(&mut self) -> Result<(), LkError> {
-        let service_request = TMSRequest::exit();
+        let service_request = LMSRequest::exit();
         let _ignored = self.request_sender.clone().send(service_request);
 
         let mut waited = 0;
@@ -153,7 +161,7 @@ impl MetricsManager {
         let invocation_id = self.send_request(RequestType::MetricsInsert {
             host_id: host_id.to_string(),
             metric_id: monitor_id.to_string(),
-            metrics: metrics.iter().map(|metric| tmserver::Metric::from(metric.clone())).collect(),
+            metrics: metrics.iter().map(|metric| lmserver::Metric::from(metric.clone())).collect(),
         })?;
 
         Ok(invocation_id)
@@ -176,7 +184,7 @@ impl MetricsManager {
 
         let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u32;
 
-        let service_request = TMSRequest {
+        let service_request = LMSRequest {
             request_id: invocation_id,
             time: current_unix_ms,
             request_type: request_type,
@@ -189,9 +197,9 @@ impl MetricsManager {
         Ok(invocation_id)
     }
 
-    fn process_requests(request_receiver: mpsc::Receiver<TMSRequest>, update_sender: mpsc::Sender<UIUpdate>) {
+    fn process_requests(request_receiver: mpsc::Receiver<LMSRequest>, update_sender: mpsc::Sender<UIUpdate>) {
         let data_dir = file_handler::get_cache_dir().unwrap();
-        let mut tls_stream = match tmserver::setup_connection(&data_dir) {
+        let mut tls_stream = match lmserver::setup_connection(&data_dir) {
             Ok(stream) => stream,
             Err(error) => {
                 log::error!("Failed to connect to Pro Services: {}", error);
@@ -246,7 +254,7 @@ impl MetricsManager {
                 log::error!("No data received.");
             }
 
-            let response = match bincode::deserialize::<TMSResponse>(&buffer) {
+            let response = match bincode::deserialize::<LMSResponse>(&buffer) {
                 Ok(response) => response,
                 Err(error) => {
                     log::error!("Failed to deserialize response: {}", error);

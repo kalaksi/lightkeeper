@@ -76,7 +76,7 @@ impl MetricsManagerModel {
         }
     }
 
-    pub fn process_update(&mut self, response: metrics::tmserver::TMSResponse) {
+    pub fn process_update(&mut self, response: metrics::lmserver::LMSResponse) {
         let chart_data = serde_json::to_string(&response.metrics).unwrap();
         self.dataReceived(response.request_id.into(), chart_data.into());
     }
