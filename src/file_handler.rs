@@ -26,7 +26,7 @@ pub fn get_config_dir() -> io::Result<PathBuf> {
     };
 
     // If not running inside flatpak, we need to add a separate subdir for the app.
-    if env::var("FLATPAK_ID").is_ok() {
+    if env::var("FLATPAK_ID").is_err() {
         config_dir = config_dir.join(APP_DIR_NAME);
     }
 
