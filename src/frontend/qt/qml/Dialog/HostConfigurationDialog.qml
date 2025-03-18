@@ -399,6 +399,11 @@ LightkeeperDialog {
                             size: root.buttonSize
 
                             onClicked: {
+                                groupAddDialog.inputSpecs = [{
+                                    label: "Configuration group name",
+                                    field_type: "Text",
+                                    validator_regexp: "[a-zA-Z\d\-]+",
+                                }]
                                 groupAddDialog.open()
                             }
                         }
