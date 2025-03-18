@@ -38,6 +38,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.28.4" date="2025-03-18">
+      <description>
+        <ul>
+          <li>Fix error when adding new host.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.28.3" date="2025-03-12">
       <description>
         <ul>
