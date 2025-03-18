@@ -65,8 +65,8 @@ pub fn run(
         match metrics::MetricsManager::new(frontend.new_update_sender()) {
             Ok(metrics_manager) => Some(metrics_manager),
             Err(error) => {
-                log::error!("Failed to start metrics server: {}", error);
-                log::error!("Charts will not be available.");
+                log::debug!("Error: {}", error);
+                log::error!("Failed to start metrics server. Charts will not be available.");
                 None
             }
         }

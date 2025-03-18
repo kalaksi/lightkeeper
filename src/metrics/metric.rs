@@ -7,9 +7,9 @@ pub struct Metric {
     pub value: i64,
 }
 
-impl From<Metric> for crate::metrics::tmserver::Metric {
+impl From<Metric> for crate::metrics::lmserver::Metric {
     fn from(metric: Metric) -> Self {
-        crate::metrics::tmserver::Metric {
+        crate::metrics::lmserver::Metric {
             time: metric.time,
             label: metric.label,
             value: metric.value,
