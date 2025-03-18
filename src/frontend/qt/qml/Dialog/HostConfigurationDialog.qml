@@ -69,7 +69,7 @@ LightkeeperDialog {
         }
 
         LK.config.setHostSettings(root.hostId, hostIdField.text, JSON.stringify(newSettings))
-        LK.config.updateHostGroups(root.hostId, root._selectedGroups)
+        LK.config.updateHostGroups(hostIdField.text, root._selectedGroups)
         LK.config.endHostConfiguration()
         root._loading = true
         
