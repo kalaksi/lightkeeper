@@ -1,6 +1,9 @@
 use std::io::{self, BufRead, Read, Write};
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::net::UnixStream;
+use std::path::Path;
 use std::process::Command;
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
 use std::time::{Duration, SystemTime};
 use std::{process, thread};
@@ -12,12 +15,13 @@ use crate::file_handler;
 
 //
 // NOTE: This is MetricsManager that handles connections to metrics server that stores host metrics for charts.
-// Only LMServer (LightMetricsServer) is currently supported. It is a simple, lightweight, locally run, closed-source metrics database server and is developed by the Lightkeeper project.
+// Only LMServer (Light Metrics Server) is currently supported. It is a simple, lightweight, locally run, closed-source metrics database server and is developed by the Lightkeeper project.
 // It is tailored for the needs of Lightkeeper, but is independent and could be used with any software.
 //
-// LMServer is closed-source to help make an open-core model possible.
+// LMServer is closed-source to help make open-core model possible.
 //
-// Using LMServer and metrics is optional. The binary is not installed by default but is downloaded automatically from GitLab (where it's built and signed) and verified.
+// Using LMServer and metrics is optional. The binary is not installed by default, but it's downloaded automatically if charts are enabled.
+// Download is sourced from GitLab (where it's built and signed) and verified.
 // The communication protocol is open, see lmserver/lmsrequest.rs.
 // The metrics server does not use or need network access (it uses unix sockets) and can't send malicious input to Lightkeeper.
 //
@@ -26,48 +30,119 @@ use crate::file_handler;
 const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
 
 pub struct MetricsManager {
-    process_handle: process::Child,
+    process_handle: Option<process::Child>,
     log_thread: Option<thread::JoinHandle<()>>,
     request_thread: Option<thread::JoinHandle<()>>,
+    request_sender: Option<mpsc::Sender<LMSRequest>>,
 
     /// Every request gets an invocation ID. Valid numbers begin from 1.
     invocation_id_counter: u64,
     // TODO: support remote database backends in the future.
-    request_sender: mpsc::Sender<LMSRequest>,
+    update_sender: mpsc::Sender<UIUpdate>,
 }
 
 impl MetricsManager {
-    pub fn new(update_sender: mpsc::Sender<UIUpdate>) -> Result<Self, LkError> {
-        let (process_handle, log_thread) = Self::start_service()?;
-        let (request_sender, request_receiver) = mpsc::channel();
-
-        let request_thread = thread::spawn(move || {
-            if Self::process_requests(request_receiver, update_sender.clone()).is_err() {
-
-            }
-        });
-
-        Ok(MetricsManager {
-            process_handle: process_handle,
-            log_thread: Some(log_thread),
-            request_thread: Some(request_thread),
+    pub fn new(update_sender: mpsc::Sender<UIUpdate>) -> Self {
+        MetricsManager {
+            process_handle: None,
+            log_thread: None,
+            request_thread: None,
+            request_sender: None,
             invocation_id_counter: 1,
-            request_sender: request_sender,
-        })
+            update_sender: update_sender,
+        }
     }
 
     /// Downloads (if needed) and verifies metrics server binary and then spawns a new process for it.
-    fn start_service() -> io::Result<(process::Child, thread::JoinHandle<()>)> {
+    pub fn start_service(&mut self) -> Result<(), LkError> {
         log::info!("Starting metrics server");
         let data_dir = file_handler::get_data_dir()?;
         let lmserver_path = data_dir.join("lmserver");
+        let signature_path = lmserver_path.with_extension("sig");
+        let socket_path = lmserver_path.with_extension("sock");
 
-        // If data directory is missing, this is probably the first run, so create data directory.
-        if !data_dir.exists() {
-            std::fs::create_dir_all(&data_dir)?;
+        // There exists obvious classic race conditions regarding file handling.
+        if socket_path.exists() {
+            log::warn!("Found existing socket file. Trying to stop existing process.");
+            let (request_sender, request_receiver) = mpsc::channel();
+            let new_update_sender = self.update_sender.clone();
+            self.request_sender = Some(request_sender);
+            
+            match lmserver::setup_connection(&socket_path) {
+                Err(_error) => {
+                    log::info!("Failed to connect to metrics server, removing socket file");
+                    std::fs::remove_file(&socket_path)?;
+                },
+                Ok(tls_stream) => {
+                    Self::process_requests(tls_stream, request_receiver, new_update_sender);
+                    // It's enough to only set self.request_sender before trying to stop.
+                    self.stop();
+                }
+            }
         }
 
-        let signature_path = lmserver_path.with_extension("sig");
+        // If data directory is missing, this is probably the first run, so create data directory.
+        std::fs::create_dir_all(&data_dir)?;
+
+        Self::download_lmserver(&lmserver_path, &signature_path)?;
+
+        let sign_cert = include_bytes!("../../certs/sign.crt");
+        verify_signature(&lmserver_path, &signature_path, sign_cert)?;
+
+        // Start Light Metrics Server process. Failure is not critical, but charts will be unavailable.
+        let mut process_handle = Command::new(lmserver_path)
+            .arg("-d")
+            .arg(data_dir)
+            // Logs are printed to stderr by default.
+            .stderr(process::Stdio::piped())
+            .spawn()?;
+
+        let log_thread;
+        if let Some(stderr) = process_handle.stderr.take() {
+            let stderr_reader = std::io::BufReader::new(stderr);
+            log_thread = thread::spawn(move || {
+                for line in stderr_reader.lines() {
+                    match line {
+                        Ok(line) => log::info!("{}", line),
+                        Err(error) => {
+                            log::error!("Error while reading process output: {}", error);
+                        }
+                    }
+                }
+            });
+        }
+        else {
+            return Err(LkError::other("Couldn't capture process output."));
+        }
+
+        self.process_handle = Some(process_handle);
+        self.log_thread = Some(log_thread);
+
+        // Wait a little bit for server to start.
+        // TODO: replace with some kind of signalling.
+        thread::sleep(Duration::from_millis(100));
+
+        let (request_sender, request_receiver) = mpsc::channel();
+        self.request_sender = Some(request_sender);
+
+        let new_update_sender = self.update_sender.clone();
+
+        self.request_thread = Some(thread::spawn(move || {
+            match lmserver::setup_connection(&socket_path) {
+                Err(error) => {
+                    log::error!("Failed to connect to metrics server: {}", error);
+                    // TODO: send error to UI?
+                },
+                Ok(tls_stream) => {
+                    Self::process_requests(tls_stream, request_receiver, new_update_sender);
+                }
+            }
+        }));
+
+        Ok(())
+    }
+
+    fn download_lmserver(lmserver_path: &Path, signature_path: &Path) -> io::Result<()> {
         // Check and store version info for detecting updates.
         let current_lmserver_version = "v0.1.9";
         let version_file_path = lmserver_path.with_extension("version");
@@ -121,66 +196,56 @@ impl MetricsManager {
             std::fs::set_permissions(&lmserver_path, std::fs::Permissions::from_mode(0o755))?;
         }
 
-        let sign_cert = include_bytes!("../../certs/sign.crt");
-        verify_signature(&lmserver_path, &signature_path, sign_cert)?;
-
-        // Start Light Metrics Server process. Failure is not critical, but some features will be unavailable.
-        let mut process_handle = Command::new(lmserver_path)
-            // Logs are printed to stderr by default.
-            .stderr(process::Stdio::piped())
-            .spawn()?;
-
-        let log_thread;
-
-        if let Some(stderr) = process_handle.stderr.take() {
-            let stderr_reader = std::io::BufReader::new(stderr);
-            log_thread = thread::spawn(move || {
-                for line in stderr_reader.lines() {
-                    match line {
-                        Ok(line) => log::info!("{}", line),
-                        Err(error) => {
-                            log::error!("Error while reading process output: {}", error);
-                        }
-                    }
-                }
-            });
-        }
-        else {
-            return Err(io::Error::new(io::ErrorKind::Other, "Couldn't capture process output."));
-        }
-
-        // Wait a little bit for server to start.
-        // TODO: replace with some kind of signalling.
-        thread::sleep(Duration::from_millis(100));
-
-        Ok((process_handle, log_thread))
+        Ok(())
     }
 
     pub fn stop(&mut self) -> Result<(), LkError> {
-        let service_request = LMSRequest::exit();
-        if self.request_sender.clone().send(service_request).is_err() {
-            if let Err(error) = self.process_handle.kill() {
-                log::error!("Failed to kill process: {}", error);
+        let mut stop_success = false;
+
+        if let Some(request_sender) = self.request_sender.take() {
+            let exit_request = LMSRequest::exit();
+            if request_sender.send(exit_request).is_ok() {
+                stop_success = true;
             }
         }
 
-        let mut waited = 0;
-        loop {
-            if let Ok(_) = self.process_handle.try_wait() {
-                break;
+        if let Some(mut process_handle) = self.process_handle.take() {
+            if !stop_success {
+                match process_handle.kill() {
+                    Ok(_) => stop_success = true,
+                    Err(error) => log::error!("Failed to kill process: {}", error),
+                }
             }
 
-            if waited >= SERVICE_EXIT_WAIT_TIME {
-                log::warn!("Forcing metrics server to stop.");
-                if let Err(error) = self.process_handle.kill() {
-                    log::error!("Failed to kill process: {}", error);
+            let mut waited = 0;
+            loop {
+                if let Ok(_) = process_handle.try_wait() {
+                    stop_success = true;
+                    break;
                 }
 
-                break;
-            }
+                if waited >= SERVICE_EXIT_WAIT_TIME {
+                    log::warn!("Forcing metrics server to stop.");
+                    match process_handle.kill() {
+                        Ok(_) => stop_success = true,
+                        Err(error) => log::error!("Failed to kill process: {}", error),
+                    }
 
-            thread::sleep(Duration::from_millis(100));
-            waited += 100;
+                    break;
+                }
+
+                thread::sleep(Duration::from_millis(100));
+                waited += 100;
+            }
+        }
+
+        // Remove socket file.
+        if stop_success {
+            let data_dir = file_handler::get_data_dir()?;
+            let socket_path = data_dir.join("lmserver.sock");
+            if socket_path.exists() {
+                std::fs::remove_file(&socket_path)?;
+            }
         }
 
         if let Some(request_thread) = self.request_thread.take() {
@@ -220,34 +285,27 @@ impl MetricsManager {
     }
 
     fn send_request(&mut self, request_type: RequestType) -> Result<u64, LkError> {
-        let invocation_id = self.invocation_id_counter;
-        self.invocation_id_counter += 1;
+        if let Some(request_sender) = self.request_sender.as_ref() {
+            let invocation_id = self.invocation_id_counter;
+            self.invocation_id_counter += 1;
 
-        let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u32;
+            let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u32;
 
-        let service_request = LMSRequest {
-            request_id: invocation_id,
-            time: current_unix_ms,
-            request_type: request_type,
-        };
+            let service_request = LMSRequest {
+                request_id: invocation_id,
+                time: current_unix_ms,
+                request_type: request_type,
+            };
 
-        self.request_sender
-            .clone()
-            .send(service_request)
-            .map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
-        Ok(invocation_id)
+            request_sender.send(service_request).map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
+            Ok(invocation_id)
+        }
+        else {
+            return Err(LkError::other("Metrics are not available."));
+        }
     }
 
-    fn process_requests(request_receiver: mpsc::Receiver<LMSRequest>, update_sender: mpsc::Sender<UIUpdate>) -> Result<(), ()> {
-        let data_dir = file_handler::get_data_dir().unwrap();
-        let mut tls_stream = match lmserver::setup_connection(&data_dir) {
-            Ok(stream) => stream,
-            Err(error) => {
-                log::error!("Failed to connect to metrics server: {}", error);
-                return Err(());
-            }
-        };
-
+    fn process_requests(mut tls_stream: rustls::StreamOwned<rustls::ClientConnection, UnixStream>, request_receiver: mpsc::Receiver<LMSRequest>, update_sender: mpsc::Sender<UIUpdate>) {
         loop {
             // These should never fail.
             let service_request = request_receiver.recv().unwrap();
@@ -318,8 +376,6 @@ impl MetricsManager {
                 log::error!("Failed to send update: {}", error);
             }
         }
-
-        Ok(())
     }
 }
 /// Function to download a file using ureq.

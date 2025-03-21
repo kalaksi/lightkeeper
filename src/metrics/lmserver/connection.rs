@@ -5,11 +5,9 @@ use std::time::Duration;
 use std::{io, path};
 
 /// In milliseconds.
-const CONNECTION_TIMEOUT: u64 = 10000;
+const CONNECTION_TIMEOUT: u64 = 5000;
 
-pub fn setup_connection(data_dir: &path::Path) -> io::Result<rustls::StreamOwned<rustls::ClientConnection, UnixStream>> {
-    let socket_path = data_dir.join("lmserver.sock");
-
+pub fn setup_connection(socket_path: &path::Path) -> io::Result<rustls::StreamOwned<rustls::ClientConnection, UnixStream>> {
     let unix_stream = match UnixStream::connect(&socket_path) {
         Ok(stream) => stream,
         Err(_) => {
@@ -26,8 +24,8 @@ pub fn setup_connection(data_dir: &path::Path) -> io::Result<rustls::StreamOwned
     let tls_config = Arc::new(setup_client_tls(ca_cert_pem, None, None));
 
     let server_name = rustls::pki_types::ServerName::try_from("tms").unwrap();
-    let tls_connection =
-        rustls::ClientConnection::new(tls_config.clone(), server_name).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+    let tls_connection = rustls::ClientConnection::new(tls_config.clone(), server_name)
+        .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
     Ok(rustls::StreamOwned::new(tls_connection, unix_stream))
 }

@@ -62,14 +62,7 @@ pub fn run(
     connection_manager.configure(&hosts_config, &main_config.cache_settings);
 
     let metrics_manager = if main_config.display_options.show_charts {
-        match metrics::MetricsManager::new(frontend.new_update_sender()) {
-            Ok(metrics_manager) => Some(metrics_manager),
-            Err(error) => {
-                log::debug!("Error: {}", error);
-                log::error!("Failed to start metrics server. Charts will not be available.");
-                None
-            }
-        }
+        Some(metrics::MetricsManager::new(frontend.new_update_sender()))
     }
     else {
         log::debug!("Charts are disabled.");

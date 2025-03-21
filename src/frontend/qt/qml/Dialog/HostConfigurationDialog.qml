@@ -424,8 +424,7 @@ LightkeeperDialog {
                     }
                 }
             }
-        }
-    }
+        }    }
 
     GroupConfigurationDialog {
         id: groupConfigDialog

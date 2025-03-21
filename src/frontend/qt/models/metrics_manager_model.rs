@@ -19,6 +19,7 @@ pub struct MetricsManagerModel {
     //
     // Slots
     //
+    startService: qt_method!(fn(&self) -> ()),
     refreshCharts: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> u64),
 
 
@@ -46,7 +47,7 @@ impl MetricsManagerModel {
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             // TODO: notify UI?
             if let Err(error) = metrics_manager.stop() {
-                ::log::error!("Error stopping metrics server: {:?}", error);
+                ::log::error!("Error stopping metrics server: {}", error);
             }
         }
     }
@@ -69,9 +70,8 @@ impl MetricsManagerModel {
                 });
             }
 
-            let invocation_result = metrics_manager.insert_metrics(host_id, monitor_id, &metrics);
-            if let Err(error) = invocation_result {
-                ::log::error!("Error inserting data point: {:?}", error);
+            if let Err(error) = metrics_manager.insert_metrics(host_id, monitor_id, &metrics) {
+                ::log::error!("Error inserting data point: {}", error);
             }
         }
     }
@@ -79,6 +79,16 @@ impl MetricsManagerModel {
     pub fn process_update(&mut self, response: metrics::lmserver::LMSResponse) {
         let chart_data = serde_json::to_string(&response.metrics).unwrap();
         self.dataReceived(response.request_id.into(), chart_data.into());
+    }
+
+    fn startService(&mut self) {
+        if let Some(metrics_manager) = self.metrics_manager.as_mut() {
+            if let Err(error) = metrics_manager.start_service() {
+                // TODO: show in UI
+                ::log::error!("Error: {}", error);
+                ::log::error!("Failed to start metrics server. Charts will not be available.");
+            }
+        }
     }
 
     fn refreshCharts(&mut self, host_id: QString, monitor_id: QString) -> u64 {

@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// import ChartJs 1.0
+import ChartJs 1.0
 
 import Theme
 
@@ -26,6 +26,7 @@ Item {
 
     Component.onCompleted: {
         root._categories = []
+        LK.metrics.startService()
         root.refresh()
     }
 
@@ -94,7 +95,6 @@ Item {
                         width: parent.width
                         spacing: 0
 
-                        /* Chart.js implementation, disabled for now 
                         Chart {
                             id: chart
                             visible: false
@@ -210,7 +210,6 @@ Item {
                                 }
                             }
                         }
-                        */
                     }
                 }
             }
