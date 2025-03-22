@@ -106,7 +106,7 @@ impl MetricsManagerModel {
             match invocation_result {
                 Ok(invocation_id) => invocation_id,
                 Err(error) => {
-                    ::log::error!("Error refreshing charts: {:?}", error);
+                    ::log::error!("Error refreshing charts: {}", error);
                     0
                 }
             }

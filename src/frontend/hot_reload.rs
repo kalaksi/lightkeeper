@@ -16,7 +16,7 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
         let mut watcher = notify::RecommendedWatcher::new(notify_sender, notify::Config::default()).unwrap();
 
         if let Err(error) = watcher.watch(&path, notify::RecursiveMode::Recursive) {
-            log::error!("Hot reload failed to initialize: {:?}", error);
+            log::error!("Hot reload failed to initialize: {}", error);
             return;
         }
 
@@ -31,7 +31,7 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
                     continue;
                 }
 
-                log::debug!("Reload triggered by file {:?}", event.paths[0].display());
+                log::debug!("Reload triggered by file {}", event.paths[0].display());
                 engine.trim_component_cache();
                 engine.clear_component_cache();
                 last_reload = Instant::now();
