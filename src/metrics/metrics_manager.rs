@@ -21,8 +21,8 @@ use crate::file_handler;
 //
 // Using LMServer and metrics is optional. The binary is not installed by default, but it's downloaded automatically if charts are enabled.
 // Download is sourced from GitLab (where it's built and signed) and verified.
-// The communication protocol is open, see lmserver/lmsrequest.rs.
-// The metrics server does not use or need network access (it uses unix sockets) and can't send malicious input to Lightkeeper.
+// The communication protocol is open, see lmserver/lmsrequest.rs. The protocol can not be used to send malicious input to Lightkeeper.
+// The metrics server does not require network access (it uses unix sockets) and if using flatpak, this is enforced.
 //
 
 /// In milliseconds.
@@ -100,12 +100,25 @@ impl MetricsManager {
         }
 
         // Start Light Metrics Server process. Failure is not critical, but charts will be unavailable.
-        let mut process_handle = Command::new(lmserver_path)
-            .arg("-d")
-            .arg(data_dir)
-            // Logs are printed to stderr by default.
-            .stderr(process::Stdio::piped())
-            .spawn()?;
+        // Logs are printed to stderr by default. With flatpak, access is further restricted.
+        let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+        let mut process_handle = if is_flatpak {
+            Command::new("flatpak-spawn")
+                .arg("--no-network")
+                .arg(lmserver_path)
+                .arg("-d")
+                .arg(data_dir)
+                .stderr(process::Stdio::piped())
+                .spawn()?
+        }
+        else {
+            Command::new(lmserver_path)
+                .arg("-d")
+                .arg(data_dir)
+                .stderr(process::Stdio::piped())
+                .spawn()?
+        };
+
 
         let log_thread;
         if let Some(stderr) = process_handle.stderr.take() {
