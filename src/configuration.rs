@@ -89,6 +89,8 @@ pub struct DisplayOptions {
     pub show_status_bar: bool,
     #[serde(default)]
     pub show_charts: bool,
+    #[serde(default, skip_serializing_if = "Configuration::always")]
+    pub chart_categories: HashMap<String, ChartCategory>,
 }
 
 impl Default for DisplayOptions {
@@ -141,6 +143,14 @@ pub struct Category {
     pub monitor_order: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub collapsible_commands: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Debug, Deserialize, Default, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ChartCategory {
+    pub priority: u16,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub monitors: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]

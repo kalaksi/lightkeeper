@@ -44,7 +44,7 @@ display_options:
       # Order of command buttons.
       command_order: ["shell", "reboot", "shutdown", "logs"]
       # Order of monitors.
-      monitor_order: ["uptime", "load", "ram", "os", "kernel", "filesystem"]
+      monitor_order: ["uptime", "load", "ram", "os", "kernel"]
     nixos:
       priority: 2
       icon: "qrc:///main/images/nixos"
@@ -64,6 +64,7 @@ display_options:
       priority: 5
       color: "#8030d475"
       command_order: ["systemd-service-logs", "systemd-service-stop", "systemd-service-start", "systemd-service-mask", "systemd-service-unmask"]
+      monitor_order: ["systemd-service"]
     package:
       priority: 6
       command_order: ["linux-packages-logs", "linux-packages-clean", "linux-packages-refresh", "linux-packages-update-all"]
@@ -73,6 +74,7 @@ display_options:
       color: "#8010a0ee"
       command_order: ["docker-compose-edit", "docker-compose-start", "docker-compose-stop", "docker-compose-build", "docker-compose-pull", "docker-compose-up", "docker-compose-shell", "docker-compose-logs"]
       collapsible_commands: ["docker-compose-start", "docker-compose-stop", "docker-compose-edit", "docker-compose-build", "docker-compose-pull", "docker-compose-up"]
+      monitor_order: ["docker-compose"]
     docker-containers:
       priority: 8
       icon: "qrc:///main/images/docker"
@@ -82,3 +84,22 @@ display_options:
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
+  chart_categories:
+    host:
+      priority: 1
+      monitors: ["load", "ram"]
+    storage:
+      priority: 2
+      monitors: ["filesystem"]
+    network:
+      priority: 3
+      monitors: ["tcp-connect"]
+    systemd:
+      priority: 4
+      monitors: ["systemd-service"]
+    docker-compose:
+      priority: 5
+      monitors: ["docker-compose"]
+    docker-containers:
+      priority: 6
+      monitors: ["docker-containers"]
