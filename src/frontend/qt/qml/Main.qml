@@ -12,7 +12,7 @@ import "js/Test.js" as Test
 
 ApplicationWindow {
     property int errorCount: 0
-    property alias dialogHandler: dialogHandlerLoader.item
+    property DialogHandler dialogHandler: dialogHandlerLoader.item as DialogHandler
 
     id: root
     visible: true
@@ -66,7 +66,7 @@ ApplicationWindow {
 
     menuBar: MainMenuBar {
         onClickedAdd: {
-            dialogHandler.openNewHostConfig()
+            root.dialogHandler.openNewHostConfig()
         }
         onClickedRemove: {
             let hostId = hostTableModel.getSelectedHostId()
@@ -175,7 +175,7 @@ ApplicationWindow {
         function onErrorReceived(criticality, message) {
             root.errorCount += 1;
             if (criticality === "Critical") {
-                dialogHandler.openErrorDialog(message)
+                root.dialogHandler.openErrorDialog(message)
             }
             else {
                 snackbarContainer.addSnackbar(criticality, message)
@@ -185,7 +185,7 @@ ApplicationWindow {
         function onVerificationRequested(hostId, connectorId, message, keyId) {
             let text = message + "\n\n" + keyId
 
-            dialogHandler.openConfirmationDialog(
+            root.dialogHandler.openConfirmationDialog(
                 text,
                 () => {
                     LK.command.verifyHostKey(hostId, connectorId, keyId)
@@ -199,20 +199,20 @@ ApplicationWindow {
         target: LK.command
 
         function onConfirmationDialogOpened(text, buttonId, hostId, commandId, commandParams) {
-            dialogHandler.openConfirmationDialog(text, () => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams))
+            root.dialogHandler.openConfirmationDialog(text, () => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams))
         }
 
         function onTextDialogOpened(invocationId) {
-            dialogHandler.openTextDialog(invocationId)
+            root.dialogHandler.openTextDialog(invocationId)
         }
 
         function onCommandOutputDialogOpened(title, invocationId) {
-            dialogHandler.openCommandOutputDialog(invocationId, title)
+            root.dialogHandler.openCommandOutputDialog(invocationId, title)
         }
 
         function onInputDialogOpened(inputSpecsJson, buttonId, hostId, commandId, commandParams) {
             let inputSpecs = JSON.parse(inputSpecsJson)
-            dialogHandler.openInput(
+            root.dialogHandler.openInput(
                 inputSpecs,
                 (inputValues) => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams.concat(inputValues))
             )
@@ -321,7 +321,7 @@ ApplicationWindow {
                     hostTableModel.toggleRow(hostTableModel.selectedRow)
                 }
                 onCustomCommandsDialogOpened: {
-                    dialogHandler.openCustomCommandsDialog(detailsView.hostId)
+                    root.dialogHandler.openCustomCommandsDialog(detailsView.hostId)
                 }
             }
         }
