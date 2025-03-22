@@ -68,7 +68,7 @@ Item {
                 id: hostGroupBox
                 visible: root._categories.includes("host")
                 categoryName: "host"
-                // TODO: fix warnings when using esc to close details view.
+                // TODO: fix warnings when closing details view.
                 hostId: root._hostDetails.host.name
                 status: root._hostDetails.status
                 fqdn: root._hostDetails.host.fqdn

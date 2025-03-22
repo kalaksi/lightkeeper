@@ -54,6 +54,10 @@ impl MetricsManager {
 
     /// Downloads (if needed) and verifies metrics server binary and then spawns a new process for it.
     pub fn start_service(&mut self) -> Result<(), LkError> {
+        if self.is_running() {
+            return Ok(())
+        }
+
         log::info!("Starting metrics server");
         let data_dir = file_handler::get_data_dir()?;
         let lmserver_path = data_dir.join("lmserver");
@@ -203,6 +207,10 @@ impl MetricsManager {
         }
 
         Ok(())
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.request_sender.is_some()
     }
 
     pub fn stop(&mut self) -> Result<(), LkError> {
