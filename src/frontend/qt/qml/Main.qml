@@ -12,7 +12,10 @@ import "js/Test.js" as Test
 
 ApplicationWindow {
     property int errorCount: 0
+
+    // For convenience.
     property DialogHandler dialogHandler: dialogHandlerLoader.item as DialogHandler
+    property HostDetails hostDetails: hostDetailsLoader.item as HostDetails
 
     id: root
     visible: true
@@ -58,11 +61,6 @@ ApplicationWindow {
         }
     }
 
-
-    /// For testing.
-    function test() {
-        return Test.test(root)
-    }
 
     menuBar: MainMenuBar {
         onClickedAdd: {
@@ -236,11 +234,14 @@ ApplicationWindow {
         target: LK.config
 
         function onHostConfigurationChanged() {
-            detailsView.refresh()
+            root.hostDetails.refresh()
         }
     }
 
     Component.onCompleted: {
+        // Initialize loader components.
+        root.hotReload()
+
         // Starts the thread that receives host state updates in the backend.
         LK.receiveUpdates()
         // Starts the thread that receives portal responses from D-Bus.
@@ -254,7 +255,6 @@ ApplicationWindow {
     Loader {
         id: dialogHandlerLoader
         anchors.fill: parent
-        source: "DialogHandler.qml"
     }
 
     Item {
@@ -279,14 +279,14 @@ ApplicationWindow {
                     displayData: LK.hosts.getDisplayData()
 
                     onSelectedRowChanged: {
-                        detailsView.hostId = hostTableModel.getSelectedHostId()
+                        root.hostDetails.hostId = hostTableModel.getSelectedHostId()
 
-                        if (detailsView.hostId !== "") {
-                            if (!LK.hosts.isHostInitialized(detailsView.hostId)) {
-                                LK.command.initializeHost(detailsView.hostId)
+                        if (root.hostDetails.hostId !== "") {
+                            if (!LK.hosts.isHostInitialized(root.hostDetails.hostId)) {
+                                LK.command.initializeHost(root.hostDetails.hostId)
                             }
-                            statusBar.jobsLeft = LK.hosts.getPendingCommandCount(detailsView.hostId) +
-                                                 LK.hosts.getPendingMonitorCount(detailsView.hostId)
+                            statusBar.jobsLeft = LK.hosts.getPendingCommandCount(root.hostDetails.hostId) +
+                                                 LK.hosts.getPendingMonitorCount(root.hostDetails.hostId)
                         }
                     }
 
@@ -300,28 +300,33 @@ ApplicationWindow {
                 }
             }
 
-            HostDetails {
-                id: detailsView
-                objectName: "detailsView"
+            Loader {
+                id: hostDetailsLoader
                 visible: body.splitSize > 0.01
                 width: parent.width
-                hostId: hostTableModel.getSelectedHostId()
 
                 SplitView.minimumHeight: 0.5 * body.splitSize * body.height
                 SplitView.preferredHeight: body.splitSize * body.height
                 SplitView.maximumHeight: 1.5 * body.splitSize * body.height
+            }
 
-                onMinimizeClicked: {
+            Connections {
+                target: hostDetailsLoader.item
+
+                function onMinimizeClicked() {
                     body.splitSize = 0.8
                 }
-                onMaximizeClicked: {
+
+                function onMaximizeClicked() {
                     body.splitSize = 1.0
                 }
-                onCloseClicked: {
+
+                function onCloseClicked() {
                     hostTableModel.toggleRow(hostTableModel.selectedRow)
                 }
-                onCustomCommandsDialogOpened: {
-                    root.dialogHandler.openCustomCommandsDialog(detailsView.hostId)
+
+                function onCustomCommandsDialogOpened() {
+                    root.dialogHandler.openCustomCommandsDialog(hostDetailsLoader.item.hostId)
                 }
             }
         }
@@ -330,11 +335,6 @@ ApplicationWindow {
             NumberAnimation {
                 duration: Theme.animationDuration
                 easing.type: Easing.OutQuad
-
-                onFinished: {
-                    // TODO: animate?
-                    hostTable.centerRow()
-                }
             }
         }
     }
@@ -401,5 +401,17 @@ ApplicationWindow {
         dialogHandlerLoader.active = false
         dialogHandlerLoader.source = "DialogHandler.qml"
         dialogHandlerLoader.active = true
+
+        hostDetailsLoader.setSource("")
+        hostDetailsLoader.active = false
+        hostDetailsLoader.setSource("DetailsView/HostDetails.qml", {
+            hostId: hostTableModel.getSelectedHostId()
+        })
+        hostDetailsLoader.active = true
+    }
+
+    /// For testing.
+    function test() {
+        return Test.test(root)
     }
 }
