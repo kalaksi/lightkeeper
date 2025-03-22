@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -8,16 +9,15 @@ import Theme
 
 import ".."
 import "../js/TextTransform.js" as TextTransform
-import "../DetailsView"
 
 
 Item {
     id: root
     property string hostId: ""
-    property int columnMinimumWidth: Theme.groupboxMinWidth
-    property int columnMaximumWidth: Theme.groupboxMaxWidth
-    property int columnMinimumHeight: 450
-    property int columnMaximumHeight: 450
+    property int columnMinimumWidth: rootScrollView.availableWidth / 2
+    property int columnMaximumWidth: rootScrollView.availableWidth
+    property int columnMinimumHeight: 300
+    property int columnMaximumHeight: 300
     property int chartHeight: 100
     property int columnSpacing: Theme.spacingNormal
     property bool enableShortcuts: false
@@ -59,6 +59,8 @@ Item {
 
                 GroupBox {
                     id: groupBox
+                    required property var modelData
+                    property alias categoryName: groupBox.modelData
                     property var _invocationIdToButton: {}
 
                     leftPadding: Theme.spacingTight
@@ -76,18 +78,14 @@ Item {
                         color: Theme.categoryBackgroundColor
                     }
 
-                    // Custom label provides more flexibility.
                     label: GroupBoxLabel {
                         id: groupBoxLabel
                         anchors.left: groupBox.left
                         anchors.right: groupBox.right
 
-                        text: TextTransform.capitalize(modelData)
-                        icon: Theme.categoryIcon(modelData)
-                        color: Theme.categoryColor(modelData)
-                        onRefreshClicked: function() {
-                            // TODO
-                        }
+                        text: TextTransform.capitalize(groupBox.categoryName)
+                        icon: Theme.categoryIcon(groupBox.categoryName)
+                        color: Theme.categoryColor(groupBox.categoryName)
                     }
 
                     ColumnLayout {
@@ -122,7 +120,7 @@ Item {
                                     responsive: true,
                                     title: {
                                         display: true,
-                                        text: modelData,
+                                        text: groupBox.categoryName,
                                         fontColor: Theme.textColor,
                                         padding: 5,
                                         lineHeight: 1.0
