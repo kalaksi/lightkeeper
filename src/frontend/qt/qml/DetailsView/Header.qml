@@ -17,7 +17,7 @@ Item {
     property bool showOpenInWindowButton: false
     property bool showSaveButton: false
     property bool disableSaveButton: false
-    property bool showCharts: LK.config.showCharts
+    property bool showCharts: false
     property var tabs: []
     property alias tabIndex: tabBar.currentIndex
     property bool _maximized: false

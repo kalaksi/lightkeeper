@@ -122,6 +122,7 @@ Item {
         showMaximizeButton: true
         showRefreshButton: root.getCurrentTabContent() !== undefined && root.getCurrentTabContent().refreshContent !== undefined
         showSaveButton: root.getCurrentTabContent() !== undefined && root.getCurrentTabContent().save !== undefined
+        showCharts: root.showCharts
         disableSaveButton: true
 
         onRefreshClicked: root.getCurrentTabContent().refreshContent()

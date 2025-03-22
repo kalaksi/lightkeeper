@@ -197,7 +197,7 @@ Item {
                             size: 34
                             flatButtons: false
                             roundButtons: false
-                            commands: LK.command.getCommandsOnLevel(root.hostId, modelData, "", 0).map(JSON.parse)
+                            commands: LK.command.getCommandsOnLevel(root.hostId, groupBox.categoryName, "", 0).map(JSON.parse)
                             hoverEnabled: !groupBox.isBlocked
 
                             Layout.alignment: Qt.AlignHCenter
@@ -210,10 +210,10 @@ Item {
 
                         PropertyTable {
                             id: propertyTable
-                            category: modelData
-                            monitoring_datas: LK.hosts.getCategoryMonitorIds(root.hostId, modelData)
+                            category: groupBox.categoryName
+                            monitoring_datas: LK.hosts.getCategoryMonitorIds(root.hostId, groupBox.categoryName)
                                                       .map(monitorId => LK.hosts.getMonitoringData(root.hostId, monitorId))
-                            command_datas: LK.command.getCategoryCommands(root.hostId, modelData)
+                            command_datas: LK.command.getCategoryCommands(root.hostId, groupBox.categoryName)
 
                             Layout.fillHeight: true
                             Layout.fillWidth: true

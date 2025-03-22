@@ -73,6 +73,7 @@ TabButton {
         Row {
             id: contentRow
             anchors.fill: parent
+            anchors.leftMargin: 4
 
             NormalText {
                 id: label
