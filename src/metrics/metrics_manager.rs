@@ -3,7 +3,6 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::process::Command;
-use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
 use std::time::{Duration, SystemTime};
 use std::{process, thread};
@@ -76,7 +75,7 @@ impl MetricsManager {
                 Ok(tls_stream) => {
                     Self::process_requests(tls_stream, request_receiver, new_update_sender);
                     // It's enough to only set self.request_sender before trying to stop.
-                    self.stop();
+                    self.stop()?;
                 }
             }
         }

@@ -82,9 +82,7 @@ pub fn get_data_dir() -> io::Result<PathBuf> {
 pub fn create_file(host: &Host, remote_file_path: &str, mut metadata: FileMetadata, contents: Vec<u8>) -> io::Result<String> {
     let (dir_path, file_path) = convert_to_local_paths(host, remote_file_path);
 
-    if !Path::new(&dir_path).is_dir() {
-        fs::create_dir_all(&dir_path)?;
-    }
+    fs::create_dir_all(&dir_path)?;
 
     metadata.local_path = Some(file_path.clone());
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
