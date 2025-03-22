@@ -154,7 +154,7 @@ impl MetricsManager {
 
     fn download_lmserver(lmserver_path: &Path, signature_path: &Path) -> io::Result<()> {
         // Check and store version info for detecting updates.
-        let current_lmserver_version = "v0.1.9";
+        let current_lmserver_version = "v0.1.10";
         let version_file_path = lmserver_path.with_extension("version");
         let download_lmserver = match std::fs::metadata(&version_file_path) {
             Err(_) => {
