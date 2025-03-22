@@ -16,7 +16,6 @@ use crate::file_handler;
 // NOTE: This is MetricsManager that handles connections to metrics server that stores host metrics for charts.
 // Only LMServer (Light Metrics Server) is currently supported. It is a simple, lightweight, locally run, closed-source metrics database server and is developed by the Lightkeeper project.
 // It is tailored for the needs of Lightkeeper, but is independent and could be used with any software.
-//
 // LMServer is closed-source to help make open-core model possible.
 //
 // Using LMServer and metrics is optional. The binary is not installed by default, but it's downloaded automatically if charts are enabled.
