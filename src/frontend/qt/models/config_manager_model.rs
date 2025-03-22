@@ -26,6 +26,7 @@ pub struct ConfigManagerModel {
     //
     showStatusBar: qt_property!(bool; READ showStatusBar),
     showCharts: qt_property!(bool; READ showCharts),
+    showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
     getCurrentWorkDir: qt_method!(fn(&self) -> QString),
@@ -250,6 +251,10 @@ impl ConfigManagerModel {
 
     fn showCharts(&self) -> bool {
         self.main_config.display_options.show_charts
+    }
+
+    fn showInfoNotifications(&self) -> bool {
+        self.main_config.preferences.show_monitor_notifications
     }
 
     fn isSandboxed(&self) -> bool {

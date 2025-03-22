@@ -84,13 +84,13 @@ ApplicationWindow {
             dialogHandler.openHostConfig(hostId)
         }
         onClickedCertificateMonitor: {
-            dialogHandler.openCertificateMonitor()
+            root.dialogHandler.openCertificateMonitor()
         }
         onClickedPreferences: {
-            dialogHandler.openPreferences()
+            root.dialogHandler.openPreferences()
         }
         onClickedHotkeyHelp: {
-            dialogHandler.openHotkeyHelp()
+            root.dialogHandler.openHotkeyHelp()
         }
         onClickedAutoRefresh: {
             LK.command.forceInitializeHosts()
@@ -157,7 +157,7 @@ ApplicationWindow {
             }
 
             if (commandResult.show_in_notification === true &&
-                (commandResult.criticality !== "Normal" || Theme.hide_info_notifications() === false)) {
+                (commandResult.criticality !== "Normal" || LK.config.showInfoNotifications === false)) {
 
                 if (commandResult.error !== "") {
                     snackbarContainer.addSnackbar(commandResult.criticality, commandResult.error)
