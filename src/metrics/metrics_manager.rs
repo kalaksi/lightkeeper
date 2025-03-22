@@ -59,6 +59,7 @@ impl MetricsManager {
         let lmserver_path = data_dir.join("lmserver");
         let signature_path = lmserver_path.with_extension("sig");
         let socket_path = lmserver_path.with_extension("sock");
+        let version_file_path = lmserver_path.with_extension("version");
 
         // There exists obvious classic race conditions regarding file handling.
         if socket_path.exists() {
@@ -86,7 +87,13 @@ impl MetricsManager {
         Self::download_lmserver(&lmserver_path, &signature_path)?;
 
         let sign_cert = include_bytes!("../../certs/sign.crt");
-        verify_signature(&lmserver_path, &signature_path, sign_cert)?;
+        if let Err(error) = verify_signature(&lmserver_path, &signature_path, sign_cert) {
+            // Delete files to force re-download and to lower the risk of accidentally running possibly unverified binary.
+            std::fs::remove_file(&lmserver_path)?;
+            std::fs::remove_file(&signature_path)?;
+            std::fs::remove_file(&version_file_path)?;
+            return Err(LkError::from(error));
+        }
 
         // Start Light Metrics Server process. Failure is not critical, but charts will be unavailable.
         let mut process_handle = Command::new(lmserver_path)
