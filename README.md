@@ -75,7 +75,7 @@ So, I started formulating an idea about a more integrated maintenance tool for p
 
 
 # Known issues
-### Error: "Unable to exchange encryption keys":
+### Error: "Unable to exchange encryption keys" (shouldn't be an issue anymore):
 With NixOS, most likely server and client couldn't agree on MAC algorithm.  
 This is caused by `ssh2`-crate dependency, which hasn't published a release in a while and has limited algorithm support. Consider including hmac-sha2-512 and hmac-sha2-256 in server's `services.openssh.settings.Macs` if you're missing those.  
   
@@ -191,9 +191,11 @@ Automatic testing (`cargo test`) is currently not usable.
 
 # License
 ## Lightkeeper
-Copyright © 2023 kalaksi@users.noreply.github.com.
+Copyright © 2023 kalaksi@users.noreply.github.com.  
+  
+This software is licensed under GNU General Public License 3.  
+Dual-licensing is possible if your organization needs something else than GPL. Get in contact.  
 
-This software is licensed under GNU General Public License 3.
 
 ## Crate dependencies
 All crate dependencies contain permissive licenses (mostly MIT license).  
