@@ -32,9 +32,9 @@ Item {
     Connections {
         target: LK.hosts
 
-        function onMonitoringDataReceived(hostId, category, monitoringDataQv, invocationId) {
+        function onMonitoringDataReceived(hostId, category, _monitoringDataQv, _invocationId) {
             if (hostId === root.hostId) {
-                root.refresh()
+                root.refreshCategory(category)
                 customCommandsGroupBox.isBlocked = !LK.hosts.isHostInitialized(root.hostId)
             }
         }
@@ -230,10 +230,21 @@ Item {
 
     function refresh() {
         if (root.hostId !== "") {
-            root._hostDetails = Parse.TryParseJson(LK.hosts.getHostDataJson(hostId))
-            // TODO: effect on performance if checking categories every time?
+            root._hostDetails = Parse.TryParseJson(LK.hosts.getHostDataJson(root.hostId))
             root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
             customCommandsGroupBox.refresh()
+        }
+    }
+
+    function refreshCategory(category) {
+        if (root.hostId !== "") {
+            if (category === "host") {
+                root._hostDetails = Parse.TryParseJson(LK.hosts.getHostDataJson(root.hostId))
+            }
+            else {
+                // TODO: effect on performance if checking categories every time?
+                root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
+            }
         }
     }
 
