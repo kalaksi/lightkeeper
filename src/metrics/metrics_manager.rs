@@ -387,7 +387,12 @@ impl MetricsManager {
                 }
             };
 
-            log::debug!("Request took {} ms", response.lag);
+            if response.lag > 100 {
+                log::debug!("Request took {} ms", response.lag);
+            }
+            else if response.lag > 500 {
+                log::warn!("Request took {} ms", response.lag);
+            }
 
             if response.errors.len() > 0 {
                 log::error!("Service error: {}", response.errors.join(". "));

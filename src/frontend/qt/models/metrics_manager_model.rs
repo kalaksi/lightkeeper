@@ -6,7 +6,6 @@ use qmetaobject::*;
 
 use crate::{
     configuration,
-    frontend,
     metrics,
     module::monitoring::DataPoint
 };
@@ -23,6 +22,7 @@ pub struct MetricsManagerModel {
     startService: qt_method!(fn(&self) -> ()),
     refreshCharts: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> u64),
     getCategories: qt_method!(fn(&self, host_id: QString) -> QStringList),
+    getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category_id: QString) -> QStringList),
 
 
     //
@@ -131,8 +131,8 @@ impl MetricsManagerModel {
         let host_config = self.hosts_config.hosts.get(&host_id).unwrap();
 
         let host_monitors = host_config.effective.monitors.iter()
-            .filter(|(_monitor_id, config)| config.enabled.is_none() || config.enabled.unwrap())
-            .map(|(monitor_id, config)| monitor_id)
+            .filter(|(_monitor_id, config)| config.enabled.unwrap_or(true))
+            .map(|(monitor_id, _config)| monitor_id)
             .collect::<Vec<_>>();
 
         // Filters out categories that don't have any monitors on this host.
@@ -141,5 +141,29 @@ impl MetricsManagerModel {
             .map(|category| category.name.clone());
 
         QStringList::from_iter(categories)
+    }
+
+    fn getCategoryMonitorIds(&self, host_id: QString, category_id: QString) -> QStringList {
+        let host_id = host_id.to_string();
+        let category_id = category_id.to_string();
+        let host_config = self.hosts_config.hosts.get(&host_id).unwrap();
+
+        let host_monitors = host_config.effective.monitors.iter()
+            .filter(|(_monitor_id, config)| config.enabled.unwrap_or(true))
+            .map(|(monitor_id, _config)| monitor_id)
+            .collect::<Vec<_>>();
+
+        let category_monitors = self.display_options.chart_categories.iter()
+            .find(|category| category.name == category_id)
+            .map(|category| category.monitors.clone())
+            .unwrap_or_default();
+
+        // Intersection between host monitors and category monitors.
+        let valid_monitors = host_monitors.into_iter()
+            .filter(|monitor_id| category_monitors.contains(monitor_id))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        QStringList::from_iter(valid_monitors)
     }
 }

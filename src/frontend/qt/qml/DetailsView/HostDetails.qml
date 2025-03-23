@@ -36,7 +36,7 @@ Item {
                     "component": chartsView.createObject(root._tabStacks[root.hostId], {
                         hostId: hostId,
                     })
-                })
+                }, false)
             }
 
             createNewTab({
@@ -318,7 +318,7 @@ Item {
         tabStackContainer.currentIndex = root._tabStacks[root.hostId].parentStackIndex
     }
 
-    function createNewTab(tabData) {
+    function createNewTab(tabData, selectTab = true) {
         let similarTabs = root._tabContents[root.hostId].filter(tab => tab.title.startsWith(tabData.title)).length
         if (similarTabs > 0) {
             tabData.title = `${tabData.title} (${similarTabs + 1})`
@@ -327,7 +327,10 @@ Item {
         root._tabContents[root.hostId].push(tabData)
         let lastTabIndex = root._tabContents[root.hostId].length - 1
         mainViewHeader.tabs = getTabTitles()
-        mainViewHeader.selectTab(lastTabIndex)
+
+        if (selectTab) {
+            mainViewHeader.selectTab(lastTabIndex)
+        }
     }
 
     function closeTab(tabIndex) {
