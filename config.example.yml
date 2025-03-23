@@ -85,21 +85,15 @@ display_options:
       color: "#8010a0ee"
       command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
   chart_categories:
-    host:
-      priority: 1
+    - name: host
       monitors: ["load", "ram"]
-    storage:
-      priority: 2
+    - name: storage
       monitors: ["filesystem"]
-    network:
-      priority: 3
+    - name: network
       monitors: ["tcp-connect"]
-    systemd:
-      priority: 4
+    - name: systemd
       monitors: ["systemd-service"]
-    docker-compose:
-      priority: 5
+    - name: docker-compose
       monitors: ["docker-compose"]
-    docker-containers:
-      priority: 6
+    - name: docker-containers
       monitors: ["docker-containers"]

@@ -5,9 +5,10 @@ use std::time::SystemTime;
 use qmetaobject::*;
 
 use crate::{
-    metrics::Metric,
-    module::monitoring::DataPoint,
+    configuration,
+    frontend,
     metrics,
+    module::monitoring::DataPoint
 };
 
 
@@ -21,6 +22,7 @@ pub struct MetricsManagerModel {
     //
     startService: qt_method!(fn(&self) -> ()),
     refreshCharts: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> u64),
+    getCategories: qt_method!(fn(&self, host_id: QString) -> QStringList),
 
 
     //
@@ -32,13 +34,21 @@ pub struct MetricsManagerModel {
     // Private properties
     //
     metrics_manager: Option<metrics::MetricsManager>,
+    hosts_config: configuration::Hosts,
+    display_options: configuration::DisplayOptions,
 }
 
 #[allow(non_snake_case)]
 impl MetricsManagerModel {
-    pub fn new(metrics_manager: Option<metrics::MetricsManager>) -> MetricsManagerModel {
+    pub fn new(
+        metrics_manager: Option<metrics::MetricsManager>,
+        hosts_config: configuration::Hosts,
+        display_options: configuration::DisplayOptions) -> MetricsManagerModel {
+
         MetricsManagerModel {
-            metrics_manager,
+            metrics_manager: metrics_manager,
+            hosts_config: hosts_config,
+            display_options: display_options,
             ..Default::default()
         }
     }
@@ -56,14 +66,14 @@ impl MetricsManagerModel {
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as i64;
 
-            let mut metrics = vec![Metric {
+            let mut metrics = vec![metrics::Metric {
                 label: data_point.label.clone(),
                 value: data_point.value_int,
                 time: current_unix_ms
             }];
 
             for child in data_point.multivalue.iter() {
-                metrics.push(Metric {
+                metrics.push(metrics::Metric {
                     label: child.label.clone(),
                     value: child.value_int,
                     time: current_unix_ms
@@ -114,5 +124,22 @@ impl MetricsManagerModel {
         else {
             0
         }
+    }
+
+    fn getCategories(&self, host_id: QString) -> QStringList {
+        let host_id = host_id.to_string();
+        let host_config = self.hosts_config.hosts.get(&host_id).unwrap();
+
+        let host_monitors = host_config.effective.monitors.iter()
+            .filter(|(_monitor_id, config)| config.enabled.is_none() || config.enabled.unwrap())
+            .map(|(monitor_id, config)| monitor_id)
+            .collect::<Vec<_>>();
+
+        // Filters out categories that don't have any monitors on this host.
+        let categories = self.display_options.chart_categories.iter()
+            .filter(|category| category.monitors.iter().any(|monitor_id| host_monitors.contains(&monitor_id)))
+            .map(|category| category.name.clone());
+
+        QStringList::from_iter(categories)
     }
 }

@@ -26,8 +26,13 @@ Item {
 
     Component.onCompleted: {
         root._categories = []
+        if (root.hostId !== "") {
+            root._categories =  LK.metrics.getCategories(root.hostId)
+        }
+
         LK.metrics.startService()
-        root.refresh()
+
+        root.refreshContent()
     }
 
     // ScrollView doesn't have boundsBehavior so this is the workaround.
@@ -193,7 +198,7 @@ Item {
                                 function onDataReceived(invocationId, chartDataJson) {
                                     if (hostId === root.hostId) {
                                         let chartDatas = JSON.parse(chartDataJson)
-                                        console.log("ChartsView.onDataReceived", invocationId, chartDataJson)
+                                        // console.log("ChartsView.onDataReceived", invocationId, chartDataJson)
                                         for (const monitorId in chartDatas) {
                                             if (monitorId === "ram") {
                                                 let newValues = chartDatas[monitorId].map(item => { return {"t": item.time * 1000, "y": item.value}})
@@ -203,7 +208,6 @@ Item {
                                             }
 
                                         }
-                                        root.refresh()
                                     }
                                 }
                             }
@@ -211,14 +215,6 @@ Item {
                     }
                 }
             }
-        }
-    }
-
-    function refresh() {
-        if (root.hostId !== "") {
-            // TODO: effect on performance if checking categories every time?
-            root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
-
         }
     }
 
