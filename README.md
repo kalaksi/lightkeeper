@@ -43,7 +43,8 @@ You can see executed commands through debug log and on target hosts's logs (depe
 ## Some features
 - Monitor status changes periodically and get alert notifications.
 - Monitor certificate validity and expiration.
-- Status summary in host table for quick status view
+- Status summary in host table for quick status view.
+- Charts for visualizing historical values (not yet complete!).
 - Log viewer with regex search and hotkeys similar to less/vim.
 - Text file editor for editing remote files (with built-in editor or using CLI over SSH).
 - Follow console output for longer running commands such as container builds and package updates.
@@ -175,8 +176,8 @@ Configuration can now be done using the graphical UI, but configuring can always
 ## Configuration files
 Example configuration files `config.example.yml`, `hosts.example.yml` and `groups.example.yml` can be found in the root of this repository.
 
-When running without flatpak, the default configuration directory is usually `~/.config/lightkeeper` and cache directory `~/.cache/lightkeeper`.
-With flatpak, it's the usual app specific directory: `~/.var/app/io.github.kalaksi.Lightkeeper/config` and `~/.var/app/io.github.kalaksi.Lightkeeper/cache`.
+When running without flatpak, the default configuration directory is usually `~/.config/lightkeeper`.
+With flatpak, it's the usual app specific directory `~/.var/app/io.github.kalaksi.Lightkeeper/config`.
 You can use a custom configuration directory with the `-c`/`--config-dir` option.
 
 # Debug logging
