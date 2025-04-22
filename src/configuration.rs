@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::os::unix::prelude::PermissionsExt;

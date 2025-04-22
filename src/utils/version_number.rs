@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 use std::default::Default;
 use std::fmt::Display;
 use std::str::FromStr;

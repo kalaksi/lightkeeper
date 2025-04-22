@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 use std::io::{self, BufRead, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;

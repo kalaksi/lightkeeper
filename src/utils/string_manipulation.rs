@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 pub fn strip_newline<Stringable: ToString>(input: &Stringable) -> String {
     let input = input.to_string();
     input.strip_suffix("\r\n").or(input.strip_suffix('\n')).unwrap_or(&input).to_string()

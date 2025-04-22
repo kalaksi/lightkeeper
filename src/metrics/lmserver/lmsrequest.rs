@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 ///
 /// This module contains the client-server communication protocol of the locally run LMServer metrics server.
 /// Protocol version 1.0

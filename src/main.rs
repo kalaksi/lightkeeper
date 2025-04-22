@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #![allow(clippy::redundant_field_names)]
 #![allow(clippy::needless_return)]
 #![forbid(unsafe_code)]
