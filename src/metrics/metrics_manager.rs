@@ -91,15 +91,24 @@ impl MetricsManager {
         // If data directory is missing, this is probably the first run, so create data directory.
         std::fs::create_dir_all(&data_dir)?;
 
-        Self::download_lmserver(&lmserver_path, &signature_path)?;
+        // Sometimes there can be a one-time network problem.
+        for retry_count in 0..2 {
+            Self::download_lmserver(&lmserver_path, &signature_path)?;
 
-        let sign_cert = include_bytes!("../../certs/sign.crt");
-        if let Err(error) = verify_signature(&lmserver_path, &signature_path, sign_cert) {
-            // Delete files to force re-download and to lower the risk of accidentally running possibly unverified binary.
-            std::fs::remove_file(&lmserver_path)?;
-            std::fs::remove_file(&signature_path)?;
-            std::fs::remove_file(&version_file_path)?;
-            return Err(LkError::from(error));
+            let sign_cert = include_bytes!("../../certs/sign.crt");
+            match verify_signature(&lmserver_path, &signature_path, sign_cert) {
+                Ok(_) => break,
+                Err(error) => {
+                    // Delete files to force re-download and to lower the risk of accidentally running possibly unverified binary.
+                    std::fs::remove_file(&lmserver_path)?;
+                    std::fs::remove_file(&signature_path)?;
+                    std::fs::remove_file(&version_file_path)?;
+
+                    if retry_count > 0 {
+                        return Err(LkError::from(error));
+                    }
+                }
+            }
         }
 
         // Start Light Metrics Server process. Failure is not critical, but charts will be unavailable.
@@ -171,7 +180,7 @@ impl MetricsManager {
     fn download_lmserver(lmserver_path: &Path, signature_path: &Path) -> io::Result<()> {
         use base64::{Engine as _, engine::general_purpose};
 
-        // Check and store version info for detecting updates.
+        // Check and store version info for triggering updates.
         let current_lmserver_version = "v0.1.10";
         let version_file_path = lmserver_path.with_extension("version");
         let download_lmserver = match std::fs::metadata(&version_file_path) {
@@ -425,7 +434,7 @@ fn download_file(url: &str, access_token: &str, output_path: &str) -> io::Result
     let response = ureq::get(url)
         .set("PRIVATE-TOKEN", access_token)
         // Keep timeout short so it doesn't block startup too long in case there's no access to internet.
-        .timeout(std::time::Duration::from_secs(2))
+        .timeout(std::time::Duration::from_secs(3))
         .call()
         .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
@@ -445,7 +454,7 @@ fn download_file(url: &str, access_token: &str, output_path: &str) -> io::Result
 fn download_string(url: &str) -> io::Result<String> {
     let response = ureq::get(url)
         // Keep timeout short so it doesn't block startup too long in case there's no access to internet.
-        .timeout(std::time::Duration::from_secs(2))
+        .timeout(std::time::Duration::from_secs(3))
         .call()
         .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
@@ -470,11 +479,11 @@ fn verify_signature(file_path: &std::path::Path, signature_path: &std::path::Pat
     verifier.update(&file_bytes)?;
 
     if !verifier.verify(&signature)? {
-        log::error!("{} signature verification failed.", file_path.file_name().unwrap_or_default().to_string_lossy());
-        Err(io::Error::new(io::ErrorKind::Other, "Signature verification failed."))
+        log::error!("{} integrity verification failed.", file_path.file_name().unwrap_or_default().to_string_lossy());
+        Err(io::Error::new(io::ErrorKind::Other, "Integrity verification failed."))
     }
     else {
-        log::debug!("{} signature verified.", file_path.file_name().unwrap_or_default().to_string_lossy());
+        log::debug!("{} integrity verified.", file_path.file_name().unwrap_or_default().to_string_lossy());
         Ok(())
     }
 }
