@@ -37,20 +37,26 @@ impl Tcp {
 
 impl Module for Tcp {
     fn new(settings: &HashMap<String, String>) -> Self {
-        let verify_certificate: bool = settings.get("verify_certificate").map(|value| value.parse().unwrap_or_default()).unwrap_or(false);
+        let verify_certificate: bool = settings.get("verify_certificate")
+            .map(|value| value.parse().unwrap_or_default())
+            .unwrap_or(false);
+
         let ca_certificates_path = settings.get("ca_certificates_path").cloned();
         let mut store = rustls::RootCertStore::empty();
 
         let client_config = if verify_certificate {
-            match rustls_native_certs::load_native_certs() {
-                Ok(roots) => { 
-                    for cert in roots {
-                        if let Err(_) = store.add(cert) {
-                            log::error!("Failed to add certificate to CA certificate store.");
-                        }
+            let cert_result = rustls_native_certs::load_native_certs();
+            if cert_result.errors.is_empty() {
+                for cert in cert_result.certs {
+                    if let Err(_) = store.add(cert) {
+                        log::error!("Failed to add certificate to CA certificate store.");
                     }
-                },
-                Err(error) => log::error!("Failed to load OS CA certificates: {}", error),
+                }
+            }
+            else {
+                for error in cert_result.errors {
+                    log::error!("Failed to load native CA certificate: {}", error);
+                }
             }
 
             if let Some(path) = ca_certificates_path.as_ref() {
