@@ -18,13 +18,12 @@ use crate::metrics::lmserver::{self, RequestType, LMSRequest, LMSResponse};
 use crate::file_handler;
 
 //
-// NOTE: This is MetricsManager that handles connections to metrics server that stores host metrics for charts.
-// Only LMServer (Light Metrics Server) is currently supported. It is a simple, lightweight, locally run, closed-source metrics database server and is developed by the Lightkeeper project.
-// It is tailored for the needs of Lightkeeper, but is independent and could be used with any software.
-// LMServer is closed-source to help make open-core model possible.
+// NOTE: MetricsManager handles connections to metrics server that stores host metrics for charts.
+// Only LMServer (Light Metrics Server) is currently supported. It is a simple, lightweight, locally run,
+// metrics server developed by the Lightkeeper project. It is closed-source to help make open-core model possible.
 //
-// Using LMServer and metrics is optional. The binary is not installed by default, but it's downloaded automatically if charts are enabled.
-// Download is sourced from GitLab (where it's built and signed) and verified.
+// Using LMServer and metrics is optional. The server is not installed by default.
+// It's downloaded automatically if charts are enabled. Download is sourced from GitLab (where it's built and signed) and verified.
 // The communication protocol is open, see lmserver/lmsrequest.rs. The protocol can not be used to send malicious input to Lightkeeper.
 // The metrics server does not require network access (it uses unix sockets) and if using flatpak, this is enforced.
 //
@@ -40,7 +39,7 @@ pub struct MetricsManager {
 
     /// Every request gets an invocation ID. Valid numbers begin from 1.
     invocation_id_counter: u64,
-    // TODO: support remote database backends in the future.
+    // TODO: support remote database backends in the future?
     update_sender: mpsc::Sender<UIUpdate>,
 }
 
@@ -71,14 +70,14 @@ impl MetricsManager {
 
         // There exists obvious classic race conditions regarding file handling.
         if socket_path.exists() {
-            log::warn!("Found existing socket file. Trying to stop existing process.");
+            log::debug!("Found existing socket file. Trying to stop existing process.");
             let (request_sender, request_receiver) = mpsc::channel();
             let new_update_sender = self.update_sender.clone();
             self.request_sender = Some(request_sender);
             
             match lmserver::setup_connection(&socket_path) {
                 Err(_error) => {
-                    log::info!("Failed to connect to metrics server, removing socket file");
+                    log::debug!("Failed to connect to metrics server, removing socket file");
                     std::fs::remove_file(&socket_path)?;
                 },
                 Ok(tls_stream) => {
@@ -194,7 +193,8 @@ impl MetricsManager {
         if download_lmserver {
             use base64::{Engine as _, engine::general_purpose};
 
-            // Simple read-only token is used to try to limit metrics server downloads to Lightkeeper.
+            // Simple read-only token is used to try to limit metrics server downloads to Lightkeeper and
+            // to make the repo less public. Obfuscated to keep bots away.
             let token_b64 = download_string("https://github.com/kalaksi/lightkeeper/raw/refs/heads/master/src/metrics/download-token.txt")?;
             // let token_b64 = "".chars().zip("".bytes()).map(|(b, k)| (b as u8) ^ k).collect::<Vec<u8>>();
             let token = general_purpose::STANDARD.decode(token_b64.as_str())
