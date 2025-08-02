@@ -169,38 +169,44 @@ impl MetricsManager {
     }
 
     fn download_lmserver(lmserver_path: &Path, signature_path: &Path) -> io::Result<()> {
+        use base64::{Engine as _, engine::general_purpose};
+
         // Check and store version info for detecting updates.
         let current_lmserver_version = "v0.1.10";
         let version_file_path = lmserver_path.with_extension("version");
         let download_lmserver = match std::fs::metadata(&version_file_path) {
-            Err(_) => {
-                log::debug!("Downloading Light Metrics Server");
-                true
-            }
+            Err(_) => true,
             Ok(_) => {
-                let version = std::fs::read_to_string(&version_file_path)?;
-                if version.trim() != current_lmserver_version {
-                    log::debug!("New version of Light Metrics Server available");
+                if std::fs::metadata(&lmserver_path).is_err() {
                     true
-                }
-                else {
-                    false
+                } else {
+                    let version = std::fs::read_to_string(&version_file_path)?;
+                    if version.trim() != current_lmserver_version {
+                        log::debug!("New version of Light Metrics Server available");
+                        true
+                    }
+                    else {
+                        false
+                    }
                 }
             }
         };
 
+        // let t = "".chars().zip("".bytes()).map(|(b, k)| (b as u8) ^ k).collect::<Vec<u8>>();
+        // let t_b64 = general_purpose::STANDARD.encode(t);
+
         // The binary is not included by default so download it first.
         if download_lmserver {
-            use base64::{Engine as _, engine::general_purpose};
+            log::debug!("Downloading Light Metrics Server");
 
             // Simple read-only token is used to try to limit metrics server downloads to Lightkeeper and
             // to make the repo less public. Obfuscated to keep bots away.
-            let token_b64 = download_string("https://github.com/kalaksi/lightkeeper/raw/refs/heads/master/src/metrics/download-token.txt")?;
-            // let token_b64 = "".chars().zip("".bytes()).map(|(b, k)| (b as u8) ^ k).collect::<Vec<u8>>();
+            // Date suffix in filename, so old tokens can be kept available without overwriting.
+            let token_b64 = download_string("https://github.com/kalaksi/lightkeeper/raw/refs/heads/develop/src/metrics/token-2508.txt")?;
             let token = general_purpose::STANDARD.decode(token_b64.as_str())
                 .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?
                 .iter()
-                .zip("ktn86rdoktc26bwv431o4whcno".bytes())
+                .zip("LoremipsumdolorsitametconsecteturadipiscingelitCurabitura".bytes())
                 .map(|(b, k)| (b ^ k) as char)
                 .collect::<String>();
 
