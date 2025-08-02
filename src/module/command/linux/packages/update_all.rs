@@ -77,7 +77,7 @@ impl CommandModule for UpdateAll {
                 1
             }
             else {
-                panic!()
+                1
             };
 
             Ok(CommandResult::new_partial(response.message.clone(), progress))

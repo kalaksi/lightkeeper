@@ -160,7 +160,8 @@ impl MonitoringModule for Compose {
 
             // Check just in case that all have the same compose-file.
             if data_points.iter().any(|point| point.command_params[0] != compose_file) {
-                panic!("Containers under same project can't have different compose-files");
+                log::error!("Containers under same project can't have different compose-files");
+                continue;
             }
 
             if let Some(most_critical) = data_points.iter().max_by_key(|datapoint| datapoint.criticality) {

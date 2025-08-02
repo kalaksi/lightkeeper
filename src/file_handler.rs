@@ -146,11 +146,12 @@ pub fn write_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()>
     // Verify, just in case, that path belongs to cache directory.
     let cache_dir = get_cache_dir().unwrap();
     if Path::new(local_file_path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
-        panic!()
+        Err(io::Error::new(io::ErrorKind::Other, "Path does not belong to cache directory"))
     }
-
-    fs::write(local_file_path, contents)?;
-    Ok(())
+    else {
+        fs::write(local_file_path, contents)?;
+        Ok(())
+    }
 }
 
 pub fn write_file_metadata(metadata: FileMetadata) -> io::Result<()> {
@@ -167,7 +168,7 @@ pub fn remove_file(path: &String) -> io::Result<()> {
     // Verify, just in case, that path belongs to cache directory.
     let cache_dir = get_cache_dir().unwrap();
     if Path::new(path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
-        panic!()
+        return Err(io::Error::new(io::ErrorKind::Other, "Path does not belong to cache directory"));
     }
 
     if path.ends_with(METADATA_SUFFIX) {

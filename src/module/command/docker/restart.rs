@@ -50,7 +50,7 @@ impl CommandModule for Restart {
 
         let target_id = parameters.first().unwrap();
         if !string_validation::is_alphanumeric(target_id) {
-            panic!("Invalid container ID: {}", target_id)
+            Err(LkError::invalid_parameter("Invalid container ID", target_id))
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             let url = format!("http://localhost/containers/{}/restart", target_id);

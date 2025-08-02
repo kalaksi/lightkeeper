@@ -90,7 +90,10 @@ impl MonitorManager {
             let mut new_monitors = Vec::<Monitor>::new();
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
                 let monitor_spec = ModuleSpecification::monitor(monitor_id, &monitor_config.version);
-                let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
+                let monitor = match self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings) {
+                    Some(monitor) => monitor,
+                    None => continue,
+                };
                 new_monitors.push(monitor);
             }
 
@@ -432,10 +435,17 @@ impl MonitorManager {
                 let monitor = platform_info_providers.get(monitor_id).unwrap_or_else(|| {
                     &monitors[&response.host.name][monitor_id]
                 });
-                let parent_datapoint = match response.request_type.clone() {
-                    RequestType::MonitorCommand { parent_datapoint, .. } => parent_datapoint,
-                    _ => panic!()
+                
+                let (parent_datapoint, mut extension_monitors, cache_policy) = match response.request_type {
+                    RequestType::MonitorCommand { parent_datapoint, extension_monitors, cache_policy, .. } => {
+                        (parent_datapoint, extension_monitors, cache_policy)
+                    },
+                    _ => {
+                        log::warn!("[{}][{}] Ignoring invalid datapoint", response.host.name, monitor_id);
+                        continue; 
+                    }
                 };
+
 
                 let mut datapoint_result;
                 if results_len == 0 {
@@ -478,15 +488,6 @@ impl MonitorManager {
                 for error in errors.iter() {
                     log::error!("[{}][{}] Error: {}", response.host.name, monitor_id, error.message);
                 }
-
-                let cache_policy = match response.request_type {
-                    RequestType::MonitorCommand { cache_policy, .. } => cache_policy,
-                    _ => panic!()
-                };
-                let mut extension_monitors = match response.request_type.clone() {
-                    RequestType::MonitorCommand { extension_monitors, .. } => extension_monitors,
-                    _ => panic!()
-                };
 
                 if extension_monitors.len() > 0 {
                     // Process extension modules until the final result is reached.

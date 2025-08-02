@@ -56,7 +56,7 @@ impl CommandModule for Remove {
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
         if !string_validation::is_alphanumeric_with(target_id, ":-.") {
-            panic!("Invalid image ID: {}", target_id)
+            Err(LkError::invalid_parameter("Invalid image ID", target_id))
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             let url = format!("http://localhost/images/{}", target_id);

@@ -76,7 +76,10 @@ impl ConnectionManager {
 
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
                 let monitor_spec = ModuleSpecification::monitor(monitor_id.as_str(), monitor_config.version.as_str());
-                let monitor = self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings);
+                let monitor = match self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings) {
+                    Some(monitor) => monitor,
+                    None => continue,
+                };
 
                 if let Some(mut connector_spec) = monitor.get_connector_spec() {
                     connector_spec.module_type = ModuleType::Connector;
@@ -86,7 +89,11 @@ impl ConnectionManager {
                         None => HashMap::new(),
                     };
 
-                    let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
+                    let connector = match self.module_factory.new_connector(&connector_spec, &connector_settings) {
+                        Some(connector) => connector,
+                        None => continue,
+                    };
+
                     if !connector.get_metadata_self().is_stateless {
                         host_connectors.entry(connector_spec).or_insert_with(|| connector);
                     }
@@ -106,7 +113,11 @@ impl ConnectionManager {
                         None => HashMap::new(),
                     };
 
-                    let connector = self.module_factory.new_connector(&connector_spec, &connector_settings);
+                    let connector = match self.module_factory.new_connector(&connector_spec, &connector_settings) {
+                        Some(connector) => connector,
+                        None => continue,
+                    };
+
                     if !connector.get_metadata_self().is_stateless {
                         host_connectors.entry(connector_spec).or_insert_with(|| connector);
                     }
@@ -222,7 +233,10 @@ impl ConnectionManager {
 
                     // Stateless connectors.
                     let connector = if connector_metadata.is_stateless {
-                        &mut Box::new(module_factory.new_connector(&connector_spec, &HashMap::new()))
+                        match module_factory.new_connector(&connector_spec, &HashMap::new()) {
+                            Some(connector) => &mut Box::new(connector),
+                            None => return,
+                        }
                     }
                     // Stateful connectors.
                     else {

@@ -324,7 +324,7 @@ impl QAbstractTableModel for PropertyTableModel {
 
                 serde_json::to_string(&command_datas).unwrap().to_qvariant()
             },
-            _ => panic!(),
+            _ => QString::from("").to_qvariant(),
         }
     }
 

@@ -75,7 +75,7 @@ impl syn::parse::Parse for ModuleArgs {
                         }
                     }
                 },
-                _ => panic!("Unknown key: {}", key),
+                _ => return Err(syn::Error::new(key.span(), format!("Unknown key: {}", key))),
             }
             if !input.is_empty() {
                 input.parse::<syn::Token![,]>()?;

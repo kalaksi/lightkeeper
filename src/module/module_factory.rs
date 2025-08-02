@@ -39,24 +39,36 @@ impl ModuleFactory {
         manager
     }
 
-    pub fn new_connector(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> connection::Connector {
+    pub fn new_connector(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<connection::Connector> {
         let mut normalized_spec = module_spec.clone();
         if normalized_spec.latest_version() {
-            normalized_spec.version = self.get_latest_version_for_connector(&normalized_spec.id);
+            if let Some(latest_version) = self.get_latest_version_for_connector(&normalized_spec.id) {
+                normalized_spec.version = latest_version;
+            }
+            else {
+                log::error!("Connector module '{}' was not found.", normalized_spec.id);
+                return None;
+            }
         }
 
         let constructor = self.connector_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
-        constructor(settings)
+        Some(constructor(settings))
     }
 
-    pub fn new_monitor(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> monitoring::Monitor {
+    pub fn new_monitor(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<monitoring::Monitor> {
         let mut normalized_spec = module_spec.clone();
         if normalized_spec.latest_version() {
-            normalized_spec.version = self.get_latest_version_for_monitor(&normalized_spec.id);
+            if let Some(latest_version) = self.get_latest_version_for_monitor(&normalized_spec.id) {
+                normalized_spec.version = latest_version;
+            }
+            else {
+                log::error!("Monitoring module '{}' was not found.", normalized_spec.id);
+                return None;
+            }
         }
 
         let constructor = self.monitor_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
-        constructor(settings)
+        Some(constructor(settings))
     }
 
     pub fn new_command(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<command::Command> {
@@ -84,22 +96,22 @@ impl ModuleFactory {
         all_versions.last().cloned()
     }
 
-    pub fn get_latest_version_for_monitor(&self, module_id: &String) -> String {
+    pub fn get_latest_version_for_monitor(&self, module_id: &String) -> Option<String> {
         let mut all_versions = self.monitor_modules.iter()
                                                    .filter(|(metadata, _)| &metadata.module_spec.id == module_id)
                                                    .map(|(metadata, _)| metadata.module_spec.version.clone())
                                                    .collect::<Vec<String>>();
         all_versions.sort();
-        all_versions.last().unwrap_or_else(|| panic!("Monitoring module '{}' was not found.", module_id)).to_owned()
+        all_versions.last().cloned()
     }
 
-    pub fn get_latest_version_for_connector(&self, module_id: &String) -> String {
+    pub fn get_latest_version_for_connector(&self, module_id: &String) -> Option<String> {
         let mut all_versions = self.connector_modules.iter()
                                                      .filter(|(metadata, _)| &metadata.module_spec.id == module_id)
                                                      .map(|(metadata, _)| metadata.module_spec.version.clone())
                                                      .collect::<Vec<String>>();
         all_versions.sort();
-        all_versions.last().unwrap_or_else(|| panic!("Connector module '{}' was not found.", module_id)).to_owned()
+        all_versions.last().cloned()
     }
 
     pub fn get_connector_module_metadata(&self, module_spec: &ModuleSpecification) -> Metadata {
@@ -115,40 +127,40 @@ impl ModuleFactory {
         metadatas
     }
 
-    pub fn validate_modules(&self) {
+    pub fn validate_modules(&self) -> Result<(), String> {
         log::debug!("Validating modules");
 
         // Validate monitoring modules.
         for (metadata, constructor) in self.monitor_modules.iter() {
             let new_monitor = constructor(&HashMap::new());
             if let Err(error) = new_monitor.get_display_options().validate() {
-                panic!("Error in monitoring module '{}' display_options: {}", metadata.module_spec.id, error);
+                return Err(format!("Error in monitoring module '{}' display_options: {}", metadata.module_spec.id, error));
             }
 
             if let Some(connector_spec) = new_monitor.get_connector_spec() {
                 if connector_spec.module_type != ModuleType::Connector {
-                    panic!("Invalid connector module type for monitoring module '{}'.", metadata.module_spec.id);
+                    return Err(format!("Invalid connector module type for monitoring module '{}'.", metadata.module_spec.id));
                 }
 
-                self.connector_modules.iter()
-                    .find(|(metadata, _ctor)| metadata.module_spec == connector_spec)
-                    .unwrap_or_else(|| panic!("Connector module '{}' for monitoring module '{}' was not found.",
+                if !self.connector_modules.iter().any(|(metadata, _)| metadata.module_spec == connector_spec) {
+                    return Err(format!("Connector module '{}' for monitoring module '{}' was not found.",
                         connector_spec.id, metadata.module_spec.id));
+                }
             }
 
             if let Some(parent_spec) = &metadata.parent_module {
                 if parent_spec.module_type != ModuleType::Monitor {
-                    panic!("Invalid parent module type for monitoring module '{}'.", metadata.module_spec.id);
+                    return Err(format!("Invalid parent module type for monitoring module '{}'.", metadata.module_spec.id));
                 }
 
                 let matches = self.monitor_modules.iter().filter(|(metadata, _)| metadata.module_spec == *parent_spec).collect::<Vec<_>>();
                 if matches.is_empty() {
-                    panic!("Parent module '{}' for monitoring extension module '{}' was not found.", parent_spec.id, metadata.module_spec.id);
+                    return Err(format!("Parent module '{}' for monitoring extension module '{}' was not found.", parent_spec.id, metadata.module_spec.id));
                 }
                 // Currently, multiple extension modules for the same parent/base are not supported.
                 else if matches.len() > 1 {
                     let extension_modules = matches.iter().map(|(metadata, _)| metadata.module_spec.clone().id).collect::<Vec<_>>().join(", ");
-                    panic!("Multiple extension modules for monitoring module '{}' were found ({})", parent_spec.id, extension_modules);
+                    return Err(format!("Multiple extension modules for monitoring module '{}' were found ({})", parent_spec.id, extension_modules));
                 }
             }
         }
@@ -157,17 +169,19 @@ impl ModuleFactory {
         for (metadata, constructor) in self.command_modules.iter() {
             let new_command = constructor(&HashMap::new());
             if let Err(error) = new_command.get_display_options().validate() {
-                panic!("Error in command module '{}' display_options: {}", metadata.module_spec.id, error);
+                return Err(format!("Error in command module '{}' display_options: {}", metadata.module_spec.id, error));
             }
 
             if let Some(connector_spec) = new_command.get_connector_spec() {
                 let connector_spec = ModuleSpecification::new_with_type(connector_spec.id.as_str(), connector_spec.version.as_str(), ModuleType::Connector);
-                self.connector_modules.iter()
-                    .find(|(metadata, _ctor)| metadata.module_spec == connector_spec)
-                    .unwrap_or_else(|| panic!("Connector module '{}' for command module '{}' was not found.",
+                if !self.connector_modules.iter().any(|(metadata, _)| metadata.module_spec == connector_spec) {
+                    return Err(format!("Connector module '{}' for command module '{}' was not found.",
                         connector_spec.id, metadata.module_spec.id));
+                }
             }
         }
+
+        Ok(())
     }
 
     pub fn get_monitoring_module_info(&self) -> String {
@@ -346,7 +360,13 @@ impl ModuleFactory {
             (command::network::SocketTcp::get_metadata(), command::network::SocketTcp::new_command_module),
         ];
 
-        self.validate_modules();
+        if let Err(error) = self.validate_modules() {
+            log::error!("Error validating modules: {}", error);
+            self.connector_modules.clear();
+            self.monitor_modules.clear();
+            self.command_modules.clear();
+        }
+
         self.connector_modules.iter().map(|(metadata, _)| metadata).for_each(|metadata| log::debug!("Loaded connector module: {}", metadata.module_spec.id));
         self.monitor_modules.iter().map(|(metadata, _)| metadata).for_each(|metadata| log::debug!("Loaded monitoring module: {}", metadata.module_spec.id));
         self.command_modules.iter().map(|(metadata, _)| metadata).for_each(|metadata| log::debug!("Loaded command module: {}", metadata.module_spec.id));

@@ -167,7 +167,7 @@ impl QAbstractTableModel for HostTableModel {
             3 => row.ip_address.to_qvariant(),
             // Return host id to use with different methods.
             4 => row.name.to_qvariant(),
-            _ => panic!(),
+            _ => QString::from("").to_qvariant(),
         }
     }
 

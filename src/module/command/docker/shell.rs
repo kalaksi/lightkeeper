@@ -49,7 +49,7 @@ impl CommandModule for Shell {
         let target_id = parameters.first().unwrap();
 
         if !string_validation::is_alphanumeric(target_id) {
-            panic!("Invalid container ID: {}", target_id)
+            return Err(LkError::invalid_parameter("Invalid container ID", target_id));
         }
 
         let mut command = ShellCommand::new();

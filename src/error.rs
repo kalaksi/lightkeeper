@@ -26,6 +26,15 @@ impl LkError {
         }
     }
 
+    pub fn invalid_parameter<Stringable: ToString>(message: Stringable, value: Stringable) -> LkError {
+        LkError {
+            source_id: String::new(),
+            kind: ErrorKind::InvalidParameter,
+            message: message.to_string(),
+            parameter: Some(value.to_string()),
+        }
+    }
+
     pub fn not_implemented() -> LkError {
         LkError {
             source_id: String::new(),
@@ -109,6 +118,8 @@ pub enum ErrorKind {
     InvalidConfig,
     /// Not implemented.
     NotImplemented,
+    /// Invalid parameter.
+    InvalidParameter,
     #[default]
     /// Other unspecified error.
     Other,
