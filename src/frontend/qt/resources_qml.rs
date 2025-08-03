@@ -32,6 +32,7 @@ pub fn init_resources() {
             "Button/CommandButton.qml",
             "Button/ImageButton.qml",
             "Button/RefreshButton.qml",
+            "ChartsView/BarChart.qml",
             "ChartsView/ChartsView.qml",
             "ChartsView/GroupBoxLabel.qml",
             "ChartsView/LineChart.qml",
