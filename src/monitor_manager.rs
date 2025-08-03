@@ -66,7 +66,12 @@ impl MonitorManager {
 
         self.stop();
 
-        self.monitors.lock().unwrap().clear();
+        match self.monitors.lock() {
+            Ok(mut monitors) => monitors.clear(),
+            // Previous state doesn't matter, so ignore the error.
+            Err(error) => error.into_inner().clear(),
+        };
+
         self.request_sender = Some(request_sender);
         self.state_update_sender = Some(state_update_sender);
 

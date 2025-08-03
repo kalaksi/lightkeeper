@@ -30,8 +30,12 @@ pub struct DisplayOptions {
 
     /// Category for monitor or command. Monitors and commands in same category are grouped to the same box.
     pub category: String,
+
+    /// Unit may be displayed in the UI.
     pub unit: String,
+    /// Configures value range used in charts.
     pub value_min: f64,
+    /// Configures value range used in charts.
     pub value_max: f64,
 
     /// For monitors that produce a group of values.

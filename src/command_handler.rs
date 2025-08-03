@@ -84,7 +84,13 @@ impl CommandHandler {
                      state_update_sender: mpsc::Sender<StateUpdateMessage>) {
 
         self.stop();
-        self.commands.lock().unwrap().clear();
+
+        match self.commands.lock() {
+            Ok(mut commands) => commands.clear(),
+            // Previous state doesn't matter, so ignore the error.
+            Err(error) => error.into_inner().clear(),
+        };
+
         self.custom_commands.clear();
 
         self.request_sender = Some(request_sender);
