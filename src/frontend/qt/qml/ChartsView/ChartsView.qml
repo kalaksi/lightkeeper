@@ -25,7 +25,7 @@ Item {
     Component.onCompleted: {
         root._categories = []
         if (root.hostId !== "") {
-            root._categories =  LK.metrics.getCategories(root.hostId)
+            root._categories =  ['host', 'filesystem']
         }
     }
 
@@ -97,10 +97,15 @@ Item {
                                 id: chart
                                 required property var modelData
                                 property string monitorId: modelData
+                                property var monitoringData: JSON.parse(LK.hosts.getMonitoringDataJson(root.hostId, monitorId))
                                 property int invocationId: -1
 
                                 width: parent.width / 2
                                 height: root.chartHeight
+                                title: monitoringData.display_options.display_text
+                                yLabel: monitoringData.display_options.unit
+                                yMin: monitoringData.display_options.value_min
+                                yMax: monitoringData.display_options.value_max > 0 ? monitoringData.display_options.value_max : 100
 
                                 Connections {
                                     target: root

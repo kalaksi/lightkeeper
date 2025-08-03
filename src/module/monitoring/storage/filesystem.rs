@@ -43,9 +43,9 @@ impl Module for Filesystem {
                 String::from("/sys/fs"),
                 String::from("/var/lib/docker"),
             ],
-            threshold_critical: settings.get("critical_threshold").unwrap_or(&String::from("95")).parse().unwrap(),
-            threshold_error: settings.get("error_threshold").unwrap_or(&String::from("90")).parse().unwrap(),
-            threshold_warning: settings.get("warning_threshold").unwrap_or(&String::from("80")).parse().unwrap(),
+            threshold_critical: settings.get("critical_threshold").unwrap_or(&String::from("95")).parse().unwrap_or(95.0),
+            threshold_error: settings.get("error_threshold").unwrap_or(&String::from("90")).parse().unwrap_or(90.0),
+            threshold_warning: settings.get("warning_threshold").unwrap_or(&String::from("80")).parse().unwrap_or(80.0),
         }
     }
 }

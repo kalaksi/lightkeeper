@@ -31,6 +31,8 @@ pub struct DisplayOptions {
     /// Category for monitor or command. Monitors and commands in same category are grouped to the same box.
     pub category: String,
     pub unit: String,
+    pub value_min: f64,
+    pub value_max: f64,
 
     /// For monitors that produce a group of values.
     pub use_multivalue: bool,

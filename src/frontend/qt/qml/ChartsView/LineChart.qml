@@ -18,9 +18,9 @@ Item {
         chartData: {
             return {
                 datasets: [{
-                    label: "Filled",
+                    label: "",
                     fill: true,
-                    backgroundColor: "rgba(192,222,255,0.3)",
+                    backgroundColor: "rgba(100,200,100,0.3)",
                     borderColor: "rgba(255,255,255,1.0)",
                     borderWidth: 2,
                     // pointRadius: 2,

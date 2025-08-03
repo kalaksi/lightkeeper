@@ -21,12 +21,19 @@ use crate::module::monitoring::*;
     name="load",
     version="0.0.1",
     description="Provides information about average load (using uptime-command).",
+    settings={
+        value_max => "Maximum value for the load average. Affects charts. Default: 20",
+    }
 )]
-pub struct Load;
+pub struct Load {
+    value_max: f64,
+}
 
 impl Module for Load {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Load { }
+    fn new(settings: &HashMap<String, String>) -> Self {
+        Load {
+            value_max: settings.get("value_max").unwrap_or(&String::from("20")).parse().unwrap_or(20.0),
+        }
     }
 }
 
@@ -36,6 +43,8 @@ impl MonitoringModule for Load {
             display_style: frontend::DisplayStyle::Text,
             display_text: String::from("Loads"),
             category: String::from("host"),
+            use_with_charts: true,
+            value_max: self.value_max,
             ..Default::default()
         }
     }
