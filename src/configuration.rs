@@ -89,6 +89,7 @@ pub struct DisplayOptions {
     pub hide_info_notifications: bool,
     // Currently not writing everything in the config file since they are not user-configurable.
     #[serde(default, skip_serializing_if = "Configuration::always")]
+    // TODO: could be a list and 'priority' removed.
     pub categories: HashMap<String, Category>,
     #[serde(default = "DisplayOptions::default_to_true")]
     pub show_status_bar: bool,

@@ -47,7 +47,7 @@ LightkeeperDialog {
         spacing: Theme.spacingLoose
 
         NormalText {
-            text: "Certificate monitor allows you to monitor the validity and expiration of certificates."
+            text: "Certificate monitor allows you to monitor the validity and expiration of TLS certificates."
             bottomPadding: Theme.spacingLoose
         }
 
