@@ -36,9 +36,9 @@ pub struct Ram {
 impl Module for Ram {
     fn new(settings: &HashMap<String, String>) -> Self {
         Ram {
-            threshold_critical: settings.get("critical_threshold").unwrap_or(&String::from("90")).parse().unwrap(),
-            threshold_error: settings.get("error_threshold").unwrap_or(&String::from("80")).parse().unwrap(),
-            threshold_warning: settings.get("warning_threshold").unwrap_or(&String::from("70")).parse().unwrap(),
+            threshold_critical: settings.get("critical_threshold").and_then(|value| value.parse().ok()).unwrap_or(90.0),
+            threshold_error: settings.get("error_threshold").and_then(|value| value.parse().ok()).unwrap_or(80.0),
+            threshold_warning: settings.get("warning_threshold").and_then(|value| value.parse().ok()).unwrap_or(70.0),
         }
     }
 }

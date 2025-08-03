@@ -39,7 +39,7 @@ pub struct Cryptsetup {
 impl Module for Cryptsetup {
     fn new(settings: &HashMap<String, String>) -> Cryptsetup {
         Cryptsetup {
-            only_crypttab: settings.get("only_crypttab").unwrap_or(&String::from("false")).parse().unwrap(),
+            only_crypttab: settings.get("only_crypttab").and_then(|value| value.parse().ok()).unwrap_or(false),
         }
     }
 }

@@ -71,7 +71,7 @@ impl CommandModule for RebuildDryrun {
             for line in response.message.lines() {
                 if to_build == 0 {
                     if let Some(captures) = self.regex_build_count.captures(line) {
-                        to_build = captures.get(1).unwrap().as_str().parse().unwrap();
+                        to_build = captures.get(1).unwrap().as_str().parse().unwrap_or_default();
                     }
                 }
 

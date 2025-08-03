@@ -125,7 +125,7 @@ impl MonitoringModule for Service {
                     _follows: chunk[5].to_string(),
                     _unit_path: chunk[6].to_string(),
                     // Previous parsing misses unquoted integers.
-                    _job_id: chunk[7].split(" ").next().unwrap_or("0").parse().unwrap(),
+                    _job_id: chunk[7].split(" ").next().and_then(|value| value.parse::<u32>().ok()).unwrap_or(0),
                     _job_type: chunk[7].split(" \"").nth(1).unwrap_or("").to_string(),
                     _job_path: chunk[8].to_string(),
                 }

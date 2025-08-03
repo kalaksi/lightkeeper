@@ -152,7 +152,13 @@ impl CommandHandlerModel {
     fn getCommandsOnLevel(&self, host_id: QString, category: QString, parent_id: QString, multivalue_level: QString) -> QVariantList {
         let category_string = category.to_string();
         let parent_id_string = parent_id.to_string();
-        let multivalue_level: u8 = multivalue_level.to_string().parse().unwrap();
+        let multivalue_level: u8 = match multivalue_level.to_string().parse() {
+            Ok(level) => level,
+            Err(_) => {
+                ::log::error!("Invalid multivalue level: {}", multivalue_level);
+                return QVariantList::default();
+            }
+        };
 
         let mut all_commands = self.command_handler.get_commands_for_host(host_id.to_string())
                                    .into_iter().filter(|(_, data)| 

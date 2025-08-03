@@ -41,9 +41,9 @@ pub struct Images {
 impl Module for Images {
     fn new(settings: &HashMap<String, String>) -> Self {
         Images {
-            age_warning_threshold: settings.get("age_warning_threshold").unwrap_or(&String::from("180")).parse().unwrap(),
-            age_error_threshold: settings.get("age_error_threshold").unwrap_or(&String::from("365")).parse().unwrap(),
-            age_critical_threshold: settings.get("age_critical_threshold").unwrap_or(&String::from("730")).parse().unwrap(),
+            age_warning_threshold: settings.get("age_warning_threshold").and_then(|value| value.parse().ok()).unwrap_or(180),
+            age_error_threshold: settings.get("age_error_threshold").and_then(|value| value.parse().ok()).unwrap_or(365),
+            age_critical_threshold: settings.get("age_critical_threshold").and_then(|value| value.parse().ok()).unwrap_or(730),
             local_image_prefix: settings.get("local_image_prefix").unwrap_or(&String::from("localhost")).clone(),
         }
     }

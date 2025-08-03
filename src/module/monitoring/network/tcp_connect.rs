@@ -26,7 +26,7 @@ pub struct TcpConnect {
 impl Module for TcpConnect {
     fn new(settings: &HashMap<String, String>) -> Self {
         TcpConnect {
-            port: settings.get("port").map(|value| value.parse().unwrap()).unwrap_or(22),
+            port: settings.get("port").and_then(|value| value.parse().ok()).unwrap_or(22),
         }
     }
 }

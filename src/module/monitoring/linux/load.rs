@@ -32,7 +32,7 @@ pub struct Load {
 impl Module for Load {
     fn new(settings: &HashMap<String, String>) -> Self {
         Load {
-            value_max: settings.get("value_max").unwrap_or(&String::from("20")).parse().unwrap_or(20.0),
+            value_max: settings.get("value_max").and_then(|value| value.parse().ok()).unwrap_or(20.0),
         }
     }
 }

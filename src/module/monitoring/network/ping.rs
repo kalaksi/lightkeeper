@@ -30,8 +30,8 @@ pub struct Ping {
 impl Module for Ping {
     fn new(_settings: &HashMap<String, String>) -> Self {
         Ping {
-            count: _settings.get("count").map(|value| value.parse().unwrap()).unwrap_or(2),
-            timeout: _settings.get("timeout").map(|value| value.parse().unwrap()).unwrap_or(10),
+            count: _settings.get("count").and_then(|value| value.parse().ok()).unwrap_or(2),
+            timeout: _settings.get("timeout").and_then(|value| value.parse().ok()).unwrap_or(10),
         }
     }
 }

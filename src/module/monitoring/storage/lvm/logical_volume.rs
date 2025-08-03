@@ -36,8 +36,8 @@ pub struct LogicalVolume {
 impl Module for LogicalVolume {
     fn new(settings: &HashMap<String, String>) -> Self {
         LogicalVolume {
-            threshold_warning: settings.get("warning_threshold").unwrap_or(&String::from("80")).parse().unwrap_or(80.0),
-            threshold_error: settings.get("error_threshold").unwrap_or(&String::from("90")).parse().unwrap_or(90.0),
+            threshold_warning: settings.get("warning_threshold").and_then(|value| value.parse().ok()).unwrap_or(80.0),
+            threshold_error: settings.get("error_threshold").and_then(|value| value.parse().ok()).unwrap_or(90.0),
         }
     }
 }
