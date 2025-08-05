@@ -25,7 +25,9 @@ Item {
     Component.onCompleted: {
         root._categories = []
         if (root.hostId !== "") {
-            root._categories =  ['host', 'filesystem']
+            // TODO: enable more categories later after better support.
+            // root._categories = LK.metrics.getCategories(root.hostId)
+            root._categories = ["host", "storage"]
         }
     }
 
@@ -92,12 +94,13 @@ Item {
 
                         Repeater {
                             model: LK.metrics.getCategoryMonitorIds(root.hostId, groupBox.categoryName)
+                                             .map(monitorId => JSON.parse(LK.hosts.getMonitoringDataJson(root.hostId, monitorId)))
+                                             .filter(monitor => monitor.display_options.use_with_charts)
 
                             LineChart {
                                 id: chart
                                 required property var modelData
-                                property string monitorId: modelData
-                                property var monitoringData: JSON.parse(LK.hosts.getMonitoringDataJson(root.hostId, monitorId))
+                                property var monitoringData: modelData
                                 property int invocationId: -1
 
                                 width: parent.width / 2
@@ -111,7 +114,7 @@ Item {
                                     target: root
 
                                     function onRefreshRequested() {
-                                        chart.invocationId = LK.metrics.refreshCharts(root.hostId, monitorId)
+                                        chart.invocationId = LK.metrics.refreshCharts(root.hostId, chart.monitoringData.monitor_id)
                                     }
                                 }
 
@@ -121,12 +124,12 @@ Item {
                                     function onDataReceived(invocationId, chartDataJson) {
                                         if (invocationId === chart.invocationId) {
                                             let chartDatas = JSON.parse(chartDataJson)
-                                            if (chart.monitorId in chartDatas) {
-                                                let newValues = chartDatas[chart.monitorId]
+                                            if (chart.monitoringData.monitor_id in chartDatas) {
+                                                let newValues = chartDatas[chart.monitoringData.monitor_id]
                                                     .map(item => { return {"t": item.time * 1000, "y": item.value}})
                                                 chart.setData(newValues)
-                                                console.log("chart data: " + JSON.stringify(chartDatas))
                                             }
+                                            console.log("chart data: " + JSON.stringify(chartDatas))
                                         }
                                     }
                                 }
@@ -139,6 +142,7 @@ Item {
     }
 
     function refreshContent() {
+        console.log("Refreshing charts for host: " + root.hostId)
         root.refreshRequested()
     }
 

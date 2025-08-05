@@ -93,19 +93,28 @@ impl MetricsManager {
 
         // Sometimes there can be a one-time network problem.
         for retry_count in 0..2 {
-            Self::download_lmserver(&lmserver_path, &signature_path)?;
+            if let Err(error) = Self::download_lmserver(&lmserver_path, &signature_path) {
+                if retry_count > 0 {
+                    return Err(LkError::from(error));
+                }
 
-            let sign_cert = include_bytes!("../../certs/sign.crt");
-            match verify_signature(&lmserver_path, &signature_path, sign_cert) {
-                Ok(_) => break,
-                Err(error) => {
-                    // Delete files to force re-download and to lower the risk of accidentally running possibly unverified binary.
-                    std::fs::remove_file(&lmserver_path)?;
-                    std::fs::remove_file(&signature_path)?;
-                    std::fs::remove_file(&version_file_path)?;
+                continue;
+            }
 
-                    if retry_count > 0 {
-                        return Err(LkError::from(error));
+            // Verify signature only if not in debug mode.
+            if !cfg!(debug_assertions) {
+                let sign_cert = include_bytes!("../../certs/sign.crt");
+                match verify_signature(&lmserver_path, &signature_path, sign_cert) {
+                    Ok(_) => break,
+                    Err(error) => {
+                        // Delete files to force re-download and to lower the risk of accidentally running possibly unverified binary.
+                        std::fs::remove_file(&lmserver_path)?;
+                        std::fs::remove_file(&signature_path)?;
+                        std::fs::remove_file(&version_file_path)?;
+
+                        if retry_count > 0 {
+                            return Err(LkError::from(error));
+                        }
                     }
                 }
             }
@@ -138,7 +147,7 @@ impl MetricsManager {
             log_thread = thread::spawn(move || {
                 for line in stderr_reader.lines() {
                     match line {
-                        Ok(line) => log::info!("{}", line),
+                        Ok(line) => log::info!("[lmserver] {}", line),
                         Err(error) => {
                             log::error!("Error while reading process output: {}", error);
                         }
@@ -190,7 +199,7 @@ impl MetricsManager {
                     true
                 } else {
                     let version = std::fs::read_to_string(&version_file_path)?;
-                    if version.trim() != current_lmserver_version {
+                    if version.trim() != "dev" && version.trim() != current_lmserver_version {
                         log::debug!("New version of Light Metrics Server available");
                         true
                     }
@@ -208,6 +217,7 @@ impl MetricsManager {
         if download_lmserver {
             log::debug!("Downloading Light Metrics Server");
 
+            // NOTE: Unfortunately, the download token's lifetime is limited to 1 year, so it will get updated periodically.
             // Simple read-only token is used to try to limit metrics server downloads to Lightkeeper and
             // to make the repo less public. Obfuscated to keep bots away.
             // Date suffix in filename, so old tokens can be kept available without overwriting.
@@ -376,13 +386,13 @@ impl MetricsManager {
                 };
             }
 
-            let mut buffer = vec![0; 1024];
+            let mut buffer = vec![0; 524288];
 
             let read_count = match service_request.request_type {
                 RequestType::Exit => match tls_stream.read_to_end(&mut buffer) {
                     Ok(count) => count,
                     Err(error) => {
-                        log::error!("Failed to read response: {}", error);
+                        log::error!("Failed to read response when exiting: {}", error);
                         break;
                     }
                 },

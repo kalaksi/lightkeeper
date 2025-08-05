@@ -156,6 +156,7 @@ impl HostDataManagerModel {
         display_data.host_state.monitor_data.get(&monitor_id).unwrap().to_qvariant()
     }
 
+    // TODO: getMonitorDisplayData and a QML model for it?
     fn getMonitoringDataJson(&self, host_id: QString, monitor_id: QString) -> QString {
         let host_id = host_id.to_string();
         let monitor_id = monitor_id.to_string();
