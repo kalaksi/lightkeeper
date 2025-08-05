@@ -10,6 +10,13 @@ Item {
     property int yMax: 100.0
     property int yMin: 0.0
     property string yLabel: "%"
+    property var chartData: []
+
+    function setData(data) {
+        console.log("Chart '" + root.title + "' data set: " + JSON.stringify(data))
+        chart.chartData.datasets[0].data = data
+        chart.animateToNewData()
+    }
 
     Chart {
         id: chart
@@ -101,10 +108,5 @@ Item {
                 }
             }
         }
-    }
-
-    function setData(data) {
-        chart.chartData.datasets[0].data = data
-        chart.animateToNewData()
     }
 }

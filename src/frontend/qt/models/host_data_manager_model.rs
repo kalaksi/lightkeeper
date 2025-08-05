@@ -343,6 +343,7 @@ impl HostDataManagerModel {
         result
     }
 
+    // TODO: proper data model in QML?
     fn getHostDataJson(&self, host_id: QString) -> QString {
         // Doesn't include monitor and command datas.
         if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {

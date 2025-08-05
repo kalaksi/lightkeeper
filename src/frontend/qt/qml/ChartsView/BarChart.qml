@@ -11,6 +11,8 @@ Item {
     property int yMin: 0.0
     property string yLabel: "%"
 
+    // TODO: outdated, get implementation in sync with LineChart, if needed.
+
     Chart {
         id: chart
         anchors.fill: parent

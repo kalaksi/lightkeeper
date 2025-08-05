@@ -97,18 +97,16 @@ Item {
                                              .map(monitorId => JSON.parse(LK.hosts.getMonitoringDataJson(root.hostId, monitorId)))
                                              .filter(monitor => monitor.display_options.use_with_charts)
 
-                            LineChart {
+                            Item {
                                 id: chart
                                 required property var modelData
                                 property var monitoringData: modelData
                                 property int invocationId: -1
+                                // Array of chart data.
+                                // Single array for single value charts, multiple arrays for multivalue charts.
+                                property var chartDatas: []
 
-                                width: parent.width / 2
-                                height: root.chartHeight
-                                title: monitoringData.display_options.display_text
-                                yLabel: monitoringData.display_options.unit
-                                yMin: monitoringData.display_options.value_min
-                                yMax: monitoringData.display_options.value_max > 0 ? monitoringData.display_options.value_max : 100
+                                anchors.fill: parent
 
                                 Connections {
                                     target: root
@@ -124,12 +122,68 @@ Item {
                                     function onDataReceived(invocationId, chartDataJson) {
                                         if (invocationId === chart.invocationId) {
                                             let chartDatas = JSON.parse(chartDataJson)
-                                            if (chart.monitoringData.monitor_id in chartDatas) {
-                                                let newValues = chartDatas[chart.monitoringData.monitor_id]
-                                                    .map(item => { return {"t": item.time * 1000, "y": item.value}})
-                                                chart.setData(newValues)
+                                            let chartData = chartDatas[chart.monitoringData.monitor_id]
+
+                                            if (chart.monitoringData.display_options.use_multivalue) {
+                                                // console.log("Multivalue chart data: " + JSON.stringify(chartData))
+                                                let labeledData = {};
+                                                let validData = chartData.filter(item => item.label !== "")
+                                                for (const data of validData) {
+                                                    if (!labeledData[data.label]) {
+                                                        labeledData[data.label] = [];
+                                                    }
+                                                    labeledData[data.label].push({"t": data.time * 1000, "y": data.value});
+                                                }
+
+                                                chart.chartDatas = Object.keys(labeledData).map(label => {
+                                                    return {
+                                                        label: chart.monitoringData.display_options.display_text + ": " + label,
+                                                        data: labeledData[label]
+                                                    }
+                                                });
                                             }
-                                            console.log("chart data: " + JSON.stringify(chartDatas))
+                                            else {
+                                                // console.log("chart data: " + JSON.stringify(chartDatas))
+                                                chart.chartDatas = []
+                                                let newValues = chartData.map(item => { return {"t": item.time * 1000, "y": item.value} })
+                                                chart.chartDatas = [{
+                                                    label: chart.monitoringData.display_options.display_text,
+                                                    data: newValues
+                                                }]
+                                            }
+
+                                            // console.log("Chart data for " + chart.monitoringData.display_options.display_text + ":" + JSON.stringify(chart.chartDatas))
+                                        }
+                                    }
+                                }
+
+                                Grid {
+                                    id: chartGrid
+                                    anchors.fill: parent
+                                    columns: 2
+                                    columnSpacing: Theme.spacingNormal
+
+                                    Repeater {
+                                        model: chart.chartDatas
+
+                                        LineChart {
+                                            required property var modelData
+                                            required property int index
+
+                                            Component.onCompleted: {
+                                                // Workaround, couldn't get data to update properly otherwise.
+                                                setData(modelData.data)
+                                            }
+
+                                            visible: !chart.monitoringData.display_options.use_multivalue
+                                            chartData: modelData.data
+                                            title: modelData.label
+                                            width: parent.width / 2
+                                            height: root.chartHeight
+                                            yLabel: chart.monitoringData.display_options.unit
+                                            yMin: chart.monitoringData.display_options.value_min
+                                            yMax: chart.monitoringData.display_options.value_max > 0 ?
+                                                chart.monitoringData.display_options.value_max : 100
                                         }
                                     }
                                 }

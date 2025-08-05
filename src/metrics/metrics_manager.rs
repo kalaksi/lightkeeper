@@ -399,6 +399,7 @@ impl MetricsManager {
                 _ => match tls_stream.read(&mut buffer) {
                     Ok(count) => count,
                     Err(error) => {
+                        // Too small buffer may also result in an error.
                         log::error!("Failed to read response: {}", error);
                         continue;
                     }
