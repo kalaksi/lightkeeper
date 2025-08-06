@@ -386,7 +386,8 @@ impl MetricsManager {
                 };
             }
 
-            let mut buffer = vec![0; 524288];
+            // 8 MB buffer.
+            let mut buffer = vec![0; 8388608];
 
             let read_count = match service_request.request_type {
                 RequestType::Exit => match tls_stream.read_to_end(&mut buffer) {

@@ -70,7 +70,6 @@ Item {
                     rightPadding: Theme.spacingTight
                     Layout.fillWidth: true
                     Layout.minimumHeight: root.groupHeight
-                    Layout.maximumHeight: root.groupHeight
                     Layout.alignment: Qt.AlignTop
 
                     background: Rectangle {
@@ -106,7 +105,8 @@ Item {
                                 // Single array for single value charts, multiple arrays for multivalue charts.
                                 property var chartDatas: []
 
-                                anchors.fill: parent
+                                width: chart.monitoringData.display_options.use_multivalue ? chartColumn.width : chartColumn.width / 2
+                                height: chartGrid.height
 
                                 Connections {
                                     target: root
@@ -121,15 +121,17 @@ Item {
 
                                     function onDataReceived(invocationId, chartDataJson) {
                                         if (invocationId === chart.invocationId) {
-                                            let chartDatas = JSON.parse(chartDataJson)
-                                            let chartData = chartDatas[chart.monitoringData.monitor_id]
+                                            let chartData = JSON.parse(chartDataJson)[chart.monitoringData.monitor_id]
+                                            if (chartData === undefined || chartData.length === 0) {
+                                                return
+                                            }
 
                                             if (chart.monitoringData.display_options.use_multivalue) {
-                                                // console.log("Multivalue chart data: " + JSON.stringify(chartData))
                                                 let labeledData = {};
                                                 let validData = chartData.filter(item => item.label !== "")
+
                                                 for (const data of validData) {
-                                                    if (!labeledData[data.label]) {
+                                                    if (labeledData[data.label] === undefined) {
                                                         labeledData[data.label] = [];
                                                     }
                                                     labeledData[data.label].push({"t": data.time * 1000, "y": data.value});
@@ -143,8 +145,6 @@ Item {
                                                 });
                                             }
                                             else {
-                                                // console.log("chart data: " + JSON.stringify(chartDatas))
-                                                chart.chartDatas = []
                                                 let newValues = chartData.map(item => { return {"t": item.time * 1000, "y": item.value} })
                                                 chart.chartDatas = [{
                                                     label: chart.monitoringData.display_options.display_text,
@@ -159,9 +159,9 @@ Item {
 
                                 Grid {
                                     id: chartGrid
-                                    anchors.fill: parent
                                     columns: 2
                                     columnSpacing: Theme.spacingNormal
+                                    width: parent.width
 
                                     Repeater {
                                         model: chart.chartDatas
@@ -175,10 +175,9 @@ Item {
                                                 setData(modelData.data)
                                             }
 
-                                            visible: !chart.monitoringData.display_options.use_multivalue
                                             chartData: modelData.data
                                             title: modelData.label
-                                            width: parent.width / 2
+                                            width: chartColumn.width / 2.05
                                             height: root.chartHeight
                                             yLabel: chart.monitoringData.display_options.unit
                                             yMin: chart.monitoringData.display_options.value_min
@@ -201,7 +200,7 @@ Item {
     }
 
     function activate() {
-        // TODO: this tab gets activated initially even if main view is the active view so this might impact performance.
+        // TODO: this tab gets activated initially for a short while even if main view is the active view so this might impact performance.
         root.enableShortcuts = true
         root.refreshContent()
     }

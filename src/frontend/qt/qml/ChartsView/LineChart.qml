@@ -13,9 +13,13 @@ Item {
     property var chartData: []
 
     function setData(data) {
-        console.log("Chart '" + root.title + "' data set: " + JSON.stringify(data))
+        // console.log("Chart '" + root.title + "' data set: " + JSON.stringify(data))
         chart.chartData.datasets[0].data = data
-        chart.animateToNewData()
+
+        // Sometimes the chart instance hasn't been created yet.
+        if (chart.jsChart !== undefined) {
+            chart.animateToNewData()
+        }
     }
 
     Chart {
@@ -29,8 +33,8 @@ Item {
                     fill: true,
                     backgroundColor: "rgba(100,200,100,0.3)",
                     borderColor: "rgba(255,255,255,1.0)",
-                    borderWidth: 2,
-                    // pointRadius: 2,
+                    borderWidth: 1,
+                    pointRadius: 1,
                     data: [],
                 }]
             }
