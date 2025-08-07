@@ -28,9 +28,8 @@ Item {
         target: LK.hosts
 
         function onCommandResultReceived(commandResultJson, invocationId) {
-            let commandResult = JSON.parse(commandResultJson)
-
             if (root.pendingInvocation === invocationId) {
+                let commandResult = JSON.parse(commandResultJson)
                 root.pendingInvocation = 0
 
                 if (commandResult.error) {
