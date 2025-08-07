@@ -78,6 +78,8 @@ pub struct Preferences {
     pub close_to_tray: bool,
     #[serde(default = "DisplayOptions::default_to_true")]
     pub show_monitor_notifications: bool,
+    #[serde(default)]
+    pub show_charts: bool,
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone)]
@@ -93,8 +95,6 @@ pub struct DisplayOptions {
     pub categories: HashMap<String, Category>,
     #[serde(default = "DisplayOptions::default_to_true")]
     pub show_status_bar: bool,
-    #[serde(default)]
-    pub show_charts: bool,
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub chart_categories: Vec<ChartCategory>,
 }

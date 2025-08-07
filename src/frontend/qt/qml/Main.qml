@@ -245,8 +245,10 @@ ApplicationWindow {
         // Starts the thread that receives host state updates in the backend.
         LK.receiveUpdates()
 
-        // Can be called multiple times.
-        LK.metrics.startService()
+        if (LK.config.showCharts) {
+            // Can be called multiple times.
+            LK.metrics.startService()
+        }
 
         // Starts the thread that receives portal responses from D-Bus.
         DesktopPortal.receiveResponses()

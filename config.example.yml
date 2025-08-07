@@ -16,6 +16,7 @@ preferences:
   # If set to "internal", will use the integrated terminal.
   terminal: "internal"
   terminal_args: [""]
+  show_charts: false
 
 # Caching can provide speed benefits especially if you have many hosts.
 # Recommended to be left disabled for now.
@@ -34,7 +35,6 @@ display_options:
   qtquick_style: ""
   hide_info_notifications: false
   show_status_bar: true
-  show_charts: true
   categories:
     host:
       # Priority controls the order of the category tiles. Host should be first.

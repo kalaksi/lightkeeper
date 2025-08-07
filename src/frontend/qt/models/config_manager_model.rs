@@ -182,7 +182,9 @@ impl ConfigManagerModel {
         preferences.insert("terminalArgs".into(), QString::from(self.main_config.preferences.terminal_args.join(" ")).into());
         preferences.insert("closeToTray".into(), self.main_config.preferences.close_to_tray.into());
         preferences.insert("showMonitorNotifications".into(), self.main_config.preferences.show_monitor_notifications.into());
+
         preferences.insert("showStatusBar".into(), self.main_config.display_options.show_status_bar.into());
+        preferences.insert("showCharts".into(), self.main_config.preferences.show_charts.into());
         preferences
     }
 
@@ -197,6 +199,7 @@ impl ConfigManagerModel {
                                                                 .split(' ').map(|arg| arg.to_string()).collect();
         self.main_config.preferences.close_to_tray = preferences.value("closeToTray".into(), true.into()).to_bool();
         self.main_config.preferences.show_monitor_notifications = preferences.value("showMonitorNotifications".into(), true.into()).to_bool();
+        self.main_config.preferences.show_charts = preferences.value("showCharts".into(), false.into()).to_bool();
 
         self.main_config.display_options.show_status_bar = preferences.value("showStatusBar".into(), true.into()).to_bool();
 
@@ -255,7 +258,7 @@ impl ConfigManagerModel {
     }
 
     fn showCharts(&self) -> bool {
-        self.main_config.display_options.show_charts
+        self.main_config.preferences.show_charts
     }
 
     fn showInfoNotifications(&self) -> bool {

@@ -66,7 +66,7 @@ pub fn run(
     let mut connection_manager = ConnectionManager::new(module_factory.clone());
     connection_manager.configure(&hosts_config, &main_config.cache_settings);
 
-    let metrics_manager = if main_config.display_options.show_charts {
+    let metrics_manager = if main_config.preferences.show_charts {
         Some(metrics::MetricsManager::new(frontend.new_update_sender()))
     }
     else {

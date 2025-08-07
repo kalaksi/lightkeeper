@@ -15,7 +15,7 @@ LightkeeperDialog {
 
     title: "Preferences"
     implicitWidth: 550
-    implicitHeight: 650
+    implicitHeight: 750
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     signal configurationChanged()
@@ -35,6 +35,7 @@ LightkeeperDialog {
             terminal: terminalAndArgs.text.split(" ")[0],
             terminalArgs: terminalAndArgs.text.split(" ").slice(1).join(" "),
             showStatusBar: showStatusBar.checkState === Qt.Checked,
+            showCharts: showCharts.checkState === Qt.Checked,
             closeToTray: closeToTray.checkState === Qt.Checked,
             showMonitorNotifications: showMonitorNotifications.checkState === Qt.Checked,
         }
@@ -311,6 +312,35 @@ LightkeeperDialog {
                 enabled: false
                 opacity: 0.5
                 checkState: root._preferences.showStatusBar ? Qt.Checked : Qt.Unchecked
+
+                Layout.leftMargin: content.width * 0.30
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            Column {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+
+                Label {
+                    width: parent.width
+                    text: "Show charts (experimental, requires restart)"
+                }
+
+                SmallText {
+                    width: parent.width
+                    text: ""
+                    color: Theme.textColorDark
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            CheckBox {
+                id: showCharts
+                opacity: 0.5
+                checkState: root._preferences.showCharts ? Qt.Checked : Qt.Unchecked
 
                 Layout.leftMargin: content.width * 0.30
             }

@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import Theme
 
 import ".."
+import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../StyleOverride"
 
@@ -44,8 +45,18 @@ Item {
         text: "Loading..."
     }
 
+    // Column {
+    //     visible: !LK.config.showCharts
+
+    //     NormalText {
+    //         anchors.centerIn: parent
+    //         text: "Charts are disabled in the configuration."
+    //     }
+    // }
+
     ScrollView {
         id: rootScrollView
+        // visible: LK.config.showCharts
         anchors.fill: parent
         contentWidth: availableWidth
         clip: true
@@ -86,10 +97,11 @@ Item {
                         color: Theme.categoryColor(groupBox.categoryName)
                     }
 
-                    Column {
+                    Grid {
                         id: chartColumn
                         width: parent.width
                         spacing: 0
+                        columns: 2
 
                         Repeater {
                             model: LK.metrics.getCategoryMonitorIds(root.hostId, groupBox.categoryName)
