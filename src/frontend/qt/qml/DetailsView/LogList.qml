@@ -264,7 +264,7 @@ ListView {
             if (root._lastRowCount === 0) {
                 newRows = root.rows
             }
-            else {
+            else if (root.model.count > 0) {
                 // Last line may be partial so replace that too.
                 root.model.remove(root.model.count - 1)
                 newRows = root.rows.slice(root._lastRowCount - 1)
