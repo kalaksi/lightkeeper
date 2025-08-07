@@ -527,7 +527,6 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: connectorEditDialog
-        anchors.centerIn: undefined
 
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root.groupConnectorSettings[moduleId] = moduleSettings
@@ -557,7 +556,6 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: monitorEditDialog
-        anchors.centerIn: undefined
 
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root.groupMonitorSettings[moduleId] = moduleSettings
@@ -587,7 +585,6 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: commandEditDialog
-        anchors.centerIn: undefined
 
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root.groupCommandSettings[moduleId] = moduleSettings
