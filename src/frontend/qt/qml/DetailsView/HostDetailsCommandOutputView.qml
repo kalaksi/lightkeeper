@@ -4,11 +4,10 @@ import QtQuick.Layouts
 
 import Theme
 
-import "../DetailsView"
 import "../Text"
 
-
-LightkeeperDialog {
+/// Content mainly copied from CommandOutputDialog.qml, keep in sync. Split into separate component if needed.
+Item {
     id: root
     property string text: ""
     property string errorText: ""
@@ -17,27 +16,6 @@ LightkeeperDialog {
     property bool enableShortcuts: false
     property int pendingInvocation: 0
 
-    modal: true
-    implicitWidth: commandOutput.width + 100
-    implicitHeight: commandOutput.height + 100
-    standardButtons: Dialog.Close | Dialog.Reset
-
-    signal moveToTab(int pendingInvocation, string text, string errorText, int progress)
-
-    Component.onCompleted: {
-        root.standardButton(Dialog.Reset).text = "Move to a tab"
-    }
-
-    onClosed: {
-        root.resetFields()
-    }
-
-    onReset: {
-        root.moveToTab(root.pendingInvocation, root.text, root.errorText, root.progress)
-        root.resetFields()
-        root.close()
-    }
-
     onTextChanged: {
         commandOutput.rows = root.text.split("\n")
 
@@ -45,8 +23,29 @@ LightkeeperDialog {
         commandOutput.positionViewAtEnd()
     }
 
+    Component.onCompleted: {
+    }
 
-    contentItem: ColumnLayout {
+    Connections {
+        target: LK.hosts
+
+        function onCommandResultReceived(commandResultJson, invocationId) {
+            if (root.pendingInvocation === invocationId) {
+                let commandResult = JSON.parse(commandResultJson)
+
+                root.text = commandResult.message
+                root.errorText = commandResult.error
+                root.progress = commandResult.progress
+            }
+        }
+    }
+
+    Rectangle {
+        color: Theme.backgroundColorLight
+        anchors.fill: parent
+    }
+
+    ColumnLayout {
         id: content
         anchors.fill: parent
         anchors.margins: Theme.marginDialog
@@ -136,4 +135,23 @@ LightkeeperDialog {
         // In append-only mode, only resetting text is not enough.
         commandOutput.resetFields()
     }
+
+    function close() {
+        root.resetFields()
+    }
+
+    function activate() {
+        root.enableShortcuts = true
+    }
+
+    function deactivate() {
+        root.enableShortcuts = false
+    }
+
+    function refresh()  {
+        // Do nothing.
+    }
 }
+
+
+

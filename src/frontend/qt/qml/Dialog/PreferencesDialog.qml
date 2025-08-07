@@ -14,8 +14,8 @@ LightkeeperDialog {
     property bool _loading: true
 
     title: "Preferences"
-    implicitWidth: 550
-    implicitHeight: 750
+    implicitWidth: 600
+    implicitHeight: 800
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     signal configurationChanged()
@@ -326,12 +326,12 @@ LightkeeperDialog {
 
                 Label {
                     width: parent.width
-                    text: "Show charts (experimental, requires restart)"
+                    text: "Enable charts (experimental, requires restart)"
                 }
 
                 SmallText {
                     width: parent.width
-                    text: ""
+                    text: "Enables charts and metrics server for handling historical data."
                     color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
@@ -339,7 +339,6 @@ LightkeeperDialog {
 
             CheckBox {
                 id: showCharts
-                opacity: 0.5
                 checkState: root._preferences.showCharts ? Qt.Checked : Qt.Unchecked
 
                 Layout.leftMargin: content.width * 0.30

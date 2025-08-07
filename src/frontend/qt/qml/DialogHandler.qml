@@ -54,11 +54,15 @@ Item {
 
     CommandOutputDialog {
         id: commandOutputDialog
-        property int pendingInvocation: 0
 
         enableShortcuts: visible
         width: root.width * 0.6
         height: root.height * 0.8
+
+        onMoveToTab: function(invocationId, text, errorText, progress) {
+            console.log("CommandOutputDialog: moveToTab", invocationId, text, errorText, progress)
+            LK.command.commandOutputViewOpened(invocationId, text, errorText, progress)
+        }
     }
 
     TextDialog {

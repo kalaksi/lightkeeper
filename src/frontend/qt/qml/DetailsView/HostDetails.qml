@@ -108,6 +108,19 @@ Item {
             root.createNewTab(tabData)
             tabData.component.open(command)
         }
+
+        function onCommandOutputViewOpened(invocationId, text, errorText, progress) {
+            let tabData = {
+                "title": "Command",
+                "component": commandOutputView.createObject(root._tabStacks[root.hostId], {
+                    pendingInvocation: invocationId,
+                    text: text,
+                    errorText: errorText,
+                    progress: progress,
+                })
+            }
+            root.createNewTab(tabData)
+        }
     }
 
     Rectangle {
@@ -221,6 +234,13 @@ Item {
         id: chartsView
 
         ChartsView {
+        }
+    }
+
+    Component {
+        id: commandOutputView
+
+        HostDetailsCommandOutputView {
         }
     }
 
