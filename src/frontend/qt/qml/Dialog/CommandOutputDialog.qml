@@ -22,7 +22,7 @@ LightkeeperDialog {
     implicitHeight: commandOutput.height + 100
     standardButtons: Dialog.Close | Dialog.Reset
 
-    signal moveToTab(int pendingInvocation, string text, string errorText, int progress)
+    signal moveToTab(int pendingInvocation, string title, string text, string errorText, int progress)
 
     Component.onCompleted: {
         root.standardButton(Dialog.Reset).text = "Move to a tab"
@@ -33,7 +33,7 @@ LightkeeperDialog {
     }
 
     onReset: {
-        root.moveToTab(root.pendingInvocation, root.text, root.errorText, root.progress)
+        root.moveToTab(root.pendingInvocation, root.title, root.text, root.errorText, root.progress)
         root.resetFields()
         root.close()
     }

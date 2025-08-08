@@ -61,7 +61,7 @@ pub struct CommandHandlerModel {
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
     textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
-    commandOutputViewOpened: qt_signal!(invocation_id: u64, text: QString, error_text: QString, progress: u32),
+    commandOutputViewOpened: qt_signal!(invocation_id: u64, title: QString, text: QString, error_text: QString, progress: u32),
     logsViewOpened: qt_signal!(time_controls: bool, title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
     commandExecuted: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.

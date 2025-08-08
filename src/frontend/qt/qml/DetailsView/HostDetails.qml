@@ -109,9 +109,9 @@ Item {
             tabData.component.open(command)
         }
 
-        function onCommandOutputViewOpened(invocationId, text, errorText, progress) {
+        function onCommandOutputViewOpened(invocationId, title, text, errorText, progress) {
             let tabData = {
-                "title": "Command",
+                "title": title,
                 "component": commandOutputView.createObject(root._tabStacks[root.hostId], {
                     pendingInvocation: invocationId,
                     text: text,
