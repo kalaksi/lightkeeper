@@ -68,6 +68,14 @@ impl MonitoringModule for Load {
         }
 
         let parts = response.message.split("load average: ").collect::<Vec<&str>>();
-        Ok(DataPoint::new(parts[1].to_string()))
+        let mut data_point = DataPoint::new(parts[1].to_string());
+
+        let loads = parts[1].split(", ").collect::<Vec<&str>>();
+        if loads.len() == 3 {
+            let load_1 = loads[0].replace(",", ".").parse::<f32>().unwrap_or(0.0);
+            data_point.value_float = load_1;
+        }
+
+        Ok(data_point)
     }
 }
