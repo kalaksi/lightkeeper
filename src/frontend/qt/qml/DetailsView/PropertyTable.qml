@@ -154,7 +154,7 @@ TableView {
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.parent.width * 0.6
                             height: 6
-                            value: styledValue.data_point.value_int / 100.0
+                            value: styledValue.data_point.value_float / 100.0
 
                             // The color can be wrong on some platforms and progress bar invisible, so force color.
                             // This can also later be used to set color according to criticality level.

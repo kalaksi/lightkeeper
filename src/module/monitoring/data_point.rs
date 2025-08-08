@@ -12,8 +12,8 @@ pub struct DataPoint {
     /// With multivalue, value can be a composite result/value of all of the values.
     /// For example, with service statuses, this can show the worst state in the multivalue group.
     pub value: String,
-    /// Pure integer value, currently used (as in, required) with charts and progress bars (DisplayStyle::ProgressBar).
-    pub value_int: i64,
+    /// Pure integer value, currently used with charts and progress bars (DisplayStyle::ProgressBar).
+    pub value_float: f32,
     /// Optional. Used with multivalue-data and usually filled programmatically.
     pub label: String,
     /// Optional description for label.
@@ -144,7 +144,7 @@ impl Default for DataPoint {
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
             is_from_cache: false,
-            value_int: 0,
+            value_float: 0.0,
         }
     }
 }

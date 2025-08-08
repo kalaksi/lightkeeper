@@ -73,14 +73,14 @@ impl MetricsManagerModel {
 
             let mut metrics = vec![metrics::Metric {
                 label: data_point.label.clone(),
-                value: data_point.value_int,
+                value: data_point.value_float,
                 time: current_unix_ms
             }];
 
             for child in data_point.multivalue.iter() {
                 metrics.push(metrics::Metric {
                     label: child.label.clone(),
-                    value: child.value_int,
+                    value: child.value_float,
                     time: current_unix_ms
                 });
             }

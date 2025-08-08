@@ -100,7 +100,7 @@ impl MonitoringModule for Ram {
 
         let value = format!("{:.0} % of {} M", usage_percent, total);
         let mut data_point = DataPoint::value_with_level(value, criticality);
-        data_point.value_int = usage_percent as i64;
+        data_point.value_float = usage_percent;
         Ok(data_point)
     }
 }

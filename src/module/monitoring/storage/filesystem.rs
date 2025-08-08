@@ -28,9 +28,9 @@ use crate::module::monitoring::*;
 )]
 pub struct Filesystem {
     ignored_filesystems: Vec<String>,
-    threshold_critical: f64,
-    threshold_error: f64,
-    threshold_warning: f64,
+    threshold_critical: f32,
+    threshold_error: f32,
+    threshold_warning: f32,
 }
 
 impl Module for Filesystem {
@@ -98,7 +98,7 @@ impl MonitoringModule for Filesystem {
             let mut used_percent = parts[5].to_string();
             // Remove percent symbol from the end.
             used_percent.pop();
-            let used_percent_float = used_percent.parse::<f64>().unwrap();
+            let used_percent_float = used_percent.parse::<f32>().unwrap();
 
             let mountpoint = parts[6].to_string();
 
@@ -107,7 +107,7 @@ impl MonitoringModule for Filesystem {
             }
 
             let mut data_point = DataPoint::labeled_value(mountpoint.clone(), format!("{} %", used_percent));
-            data_point.value_int = used_percent_float as i64;
+            data_point.value_float = used_percent_float;
             data_point.criticality = if used_percent_float >= self.threshold_critical {
                 Criticality::Critical
             }

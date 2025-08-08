@@ -16,7 +16,7 @@ use serde_derive::{Deserialize, Serialize};
 pub struct Metric {
     pub time: i64,
     pub label: String,
-    pub value: i64,
+    pub value: f32,
 }
 
 #[derive(Serialize, Deserialize)]
