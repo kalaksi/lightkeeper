@@ -14,6 +14,7 @@ Item {
     property bool showCharts: true
     property var _tabContents: {}
     property var _tabStacks: {}
+    property bool _refreshingHost: false
 
 
     signal closeClicked()
@@ -120,6 +121,27 @@ Item {
                 })
             }
             root.createNewTab(tabData)
+        }
+    }
+
+    Connections {
+        target: LK.hosts
+
+        function onUpdateReceived(hostId) {
+            if (hostId === root.hostId) {
+                let inProgress = LK.hosts.getPendingMonitorCount(hostId) > 0
+                if (inProgress && !root._refreshingHost) {
+                    root._refreshingHost = true
+                } else if (!inProgress && root._refreshingHost) {
+                    root._refreshingHost = false
+
+                    // Refresh charts tab after all monitoring data is received.
+                    let chartsTabIndex = 0
+                    if (root.showCharts && mainViewHeader.tabIndex === chartsTabIndex) {
+                        root._tabContents[root.hostId][chartsTabIndex].component.refreshContent()
+                    }
+                }
+            }
         }
     }
 
