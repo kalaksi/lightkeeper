@@ -527,6 +527,9 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: connectorEditDialog
+        anchors.centerIn: undefined
+        x: root.x + Theme.marginDialog
+        y: root.y + Theme.marginDialogTop
 
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root.groupConnectorSettings[moduleId] = moduleSettings
@@ -556,6 +559,9 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: monitorEditDialog
+        anchors.centerIn: undefined
+        x: root.x + Theme.marginDialog
+        y: root.y + Theme.marginDialogTop
 
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root.groupMonitorSettings[moduleId] = moduleSettings
@@ -585,6 +591,9 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: commandEditDialog
+        anchors.centerIn: undefined
+        x: root.x + Theme.marginDialog
+        y: root.y + Theme.marginDialogTop
 
         onSettingsUpdated: function(moduleId, moduleSettings) {
             root.groupCommandSettings[moduleId] = moduleSettings

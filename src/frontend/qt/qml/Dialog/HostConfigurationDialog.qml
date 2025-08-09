@@ -429,11 +429,11 @@ LightkeeperDialog {
     GroupConfigurationDialog {
         id: groupConfigDialog
         groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex]
+        topMargin: 100
 
-        // Not used currently but could prove useful later.
-        // contentItem's margin seems to affect this dialog's position, so compensating for it here.
-        // x: -100 + Theme.marginDialog
-        // anchors.centerIn: undefined
+        anchors.centerIn: undefined
+        x: root.x + Theme.marginDialog
+        y: root.y + Theme.marginDialogTop
     }
 
     GroupConfigurationDialog {
@@ -442,10 +442,9 @@ LightkeeperDialog {
         groupName: ""
         title: "Effective configuration"
 
-        // Not used currently but could prove useful later.
-        // contentItem's margin seems to affect this dialog's position, so compensating for it here.
-        // x: -100 + Theme.marginDialog
-        // anchors.centerIn: undefined
+        anchors.centerIn: undefined
+        x: root.x + Theme.marginDialog
+        y: root.y + Theme.marginDialogTop
     }
 
     InputDialog {
