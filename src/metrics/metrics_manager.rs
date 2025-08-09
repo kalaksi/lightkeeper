@@ -68,26 +68,6 @@ impl MetricsManager {
         let socket_path = lmserver_path.with_extension("sock");
         let version_file_path = lmserver_path.with_extension("version");
 
-        // There exists obvious classic race conditions regarding file handling.
-        if socket_path.exists() {
-            log::debug!("Found existing socket file. Trying to stop existing process.");
-            let (request_sender, request_receiver) = mpsc::channel();
-            let new_update_sender = self.update_sender.clone();
-            self.request_sender = Some(request_sender);
-            
-            match lmserver::setup_connection(&socket_path) {
-                Err(_error) => {
-                    log::debug!("Failed to connect to metrics server, removing socket file");
-                    std::fs::remove_file(&socket_path)?;
-                },
-                Ok(tls_stream) => {
-                    Self::process_requests(tls_stream, request_receiver, new_update_sender);
-                    // It's enough to only set self.request_sender before trying to stop.
-                    self.stop()?;
-                }
-            }
-        }
-
         // If data directory is missing, this is probably the first run, so create data directory.
         std::fs::create_dir_all(&data_dir)?;
 
@@ -120,68 +100,88 @@ impl MetricsManager {
             }
         }
 
-        // Start Light Metrics Server process. Failure is not critical, but charts will be unavailable.
-        // Logs are printed to stderr by default. With flatpak, access is further restricted.
-        let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-        let mut process_handle = if is_flatpak {
-            Command::new("flatpak-spawn")
-                .arg("--no-network")
-                .arg(lmserver_path)
-                .arg("-d")
-                .arg(data_dir)
-                .stderr(process::Stdio::piped())
-                .spawn()?
-        }
-        else {
-            Command::new(lmserver_path)
-                .arg("-d")
-                .arg(data_dir)
-                .stderr(process::Stdio::piped())
-                .spawn()?
-        };
+        if socket_path.exists() {
+            log::debug!("Found existing socket file. Connecting to existing server.");
 
+            let (request_sender, request_receiver) = mpsc::channel();
+            let new_update_sender = self.update_sender.clone();
+            self.request_sender = Some(request_sender);
 
-        let log_thread;
-        if let Some(stderr) = process_handle.stderr.take() {
-            let stderr_reader = std::io::BufReader::new(stderr);
-            log_thread = thread::spawn(move || {
-                for line in stderr_reader.lines() {
-                    match line {
-                        Ok(line) => log::info!("[lmserver] {}", line),
-                        Err(error) => {
-                            log::error!("Error while reading process output: {}", error);
-                        }
-                    }
-                }
-            });
-        }
-        else {
-            return Err(LkError::other("Couldn't capture process output."));
-        }
-
-        self.process_handle = Some(process_handle);
-        self.log_thread = Some(log_thread);
-
-        // Wait a little bit for server to start.
-        // TODO: replace with some kind of signalling.
-        thread::sleep(Duration::from_millis(100));
-
-        let (request_sender, request_receiver) = mpsc::channel();
-        self.request_sender = Some(request_sender);
-
-        let new_update_sender = self.update_sender.clone();
-
-        self.request_thread = Some(thread::spawn(move || {
             match lmserver::setup_connection(&socket_path) {
-                Err(error) => {
-                    log::error!("Failed to connect to metrics server: {}", error);
-                    // TODO: send error to UI?
+                Err(_error) => {
+                    log::debug!("Failed to connect to metrics server, removing socket file");
+                    std::fs::remove_file(&socket_path)?;
                 },
                 Ok(tls_stream) => {
-                    Self::process_requests(tls_stream, request_receiver, new_update_sender);
+                    self.request_thread = Some(thread::spawn(move || {
+                        Self::process_requests(tls_stream, request_receiver, new_update_sender);
+                    }));
                 }
             }
-        }));
+        }
+
+        if !socket_path.exists() {
+            // Start Light Metrics Server process. Failure is not critical, but charts will be unavailable.
+            // Logs are printed to stderr by default. With flatpak, access is further restricted.
+            let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+            let mut process_handle = if is_flatpak {
+                Command::new("flatpak-spawn")
+                    .arg("--no-network")
+                    .arg(lmserver_path)
+                    .arg("-d")
+                    .arg(data_dir)
+                    .stderr(process::Stdio::piped())
+                    .spawn()?
+            }
+            else {
+                Command::new(lmserver_path)
+                    .arg("-d")
+                    .arg(data_dir)
+                    .stderr(process::Stdio::piped())
+                    .spawn()?
+            };
+
+            let log_thread;
+            if let Some(stderr) = process_handle.stderr.take() {
+                let stderr_reader = std::io::BufReader::new(stderr);
+                log_thread = thread::spawn(move || {
+                    for line in stderr_reader.lines() {
+                        match line {
+                            Ok(line) => log::info!("[lmserver] {}", line),
+                            Err(error) => {
+                                log::error!("Error while reading process output: {}", error);
+                            }
+                        }
+                    }
+                });
+            }
+            else {
+                return Err(LkError::other("Couldn't capture process output."));
+            }
+
+            self.process_handle = Some(process_handle);
+            self.log_thread = Some(log_thread);
+
+            // Wait a little bit for server to start.
+            // TODO: replace with some kind of signalling.
+            thread::sleep(Duration::from_millis(100));
+
+            let (request_sender, request_receiver) = mpsc::channel();
+            let new_update_sender = self.update_sender.clone();
+            self.request_sender = Some(request_sender);
+
+            self.request_thread = Some(thread::spawn(move || {
+                match lmserver::setup_connection(&socket_path) {
+                    Err(error) => {
+                        log::error!("Failed to connect to metrics server: {}", error);
+                        // TODO: send error to UI?
+                    },
+                    Ok(tls_stream) => {
+                        Self::process_requests(tls_stream, request_receiver, new_update_sender);
+                    }
+                }
+            }));
+        }
 
         Ok(())
     }
@@ -261,6 +261,7 @@ impl MetricsManager {
         if let Some(request_sender) = self.request_sender.take() {
             let exit_request = LMSRequest::exit();
             if request_sender.send(exit_request).is_ok() {
+                // May not really be completely successful, but we can try.
                 stop_success = true;
             }
         }
