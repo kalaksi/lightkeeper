@@ -158,4 +158,11 @@ Item {
     function selectTab(index) {
         tabBar.setCurrentIndex(index)
     }
+
+    function selectDefaultTab() {
+        let defaultTabIndex = root.showCharts ? 1 : 0
+        if (tabBar.currentIndex !== defaultTabIndex) {
+            tabBar.setCurrentIndex(defaultTabIndex)
+        }
+    }
 }

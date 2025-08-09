@@ -336,6 +336,7 @@ Item {
 
         mainViewHeader.tabs = getTabTitles()
         tabStackContainer.currentIndex = root._tabStacks[root.hostId].parentStackIndex
+        mainViewHeader.selectDefaultTab()
     }
 
     function createNewTab(tabData, selectTab = true) {
@@ -365,8 +366,7 @@ Item {
         root._tabContents[root.hostId].splice(tabIndex, 1)
         mainViewHeader.tabs = getTabTitles()
 
-        let defaultTabIndex = root.showCharts ? 1 : 0
-        mainViewHeader.selectTab(defaultTabIndex)
+        mainViewHeader.selectDefaultTab()
     }
 
     function getTabTitles() {
