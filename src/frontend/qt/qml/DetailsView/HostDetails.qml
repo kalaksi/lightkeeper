@@ -364,6 +364,9 @@ Item {
         tabData.component.destroy()
         root._tabContents[root.hostId].splice(tabIndex, 1)
         mainViewHeader.tabs = getTabTitles()
+
+        let defaultTabIndex = root.showCharts ? 1 : 0
+        mainViewHeader.selectTab(defaultTabIndex)
     }
 
     function getTabTitles() {
