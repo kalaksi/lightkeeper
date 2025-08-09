@@ -11,7 +11,7 @@ Item {
     id: root
     required property string hostId
     property bool enableShortcuts: root.visible
-    property bool showCharts: LK.config.showCharts
+    property bool showCharts: true
     property var _tabContents: {}
     property var _tabStacks: {}
 

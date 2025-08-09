@@ -30,7 +30,7 @@ pub struct ConfigManagerModel {
     // Common
     //
     showStatusBar: qt_property!(bool; READ showStatusBar),
-    showCharts: qt_property!(bool; READ showCharts),
+    showCharts: qt_property!(bool; READ showCharts WRITE setShowCharts),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
@@ -259,6 +259,16 @@ impl ConfigManagerModel {
 
     fn showCharts(&self) -> bool {
         self.main_config.preferences.show_charts
+    }
+
+    fn setShowCharts(&mut self, show_charts: bool) {
+        if self.main_config.preferences.show_charts != show_charts {
+            self.main_config.preferences.show_charts = show_charts;
+
+            if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+                self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            }
+        }
     }
 
     fn showInfoNotifications(&self) -> bool {
