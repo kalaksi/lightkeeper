@@ -38,6 +38,18 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.29.0" date="2025-08-10">
+      <description>
+        <ul>
+          <li>Basic functionality for charts.</li>
+          <li>Button for moving command output dialog to a new tab instead.</li>
+          <li>Improvements to error and invalid parameter handling.</li>
+          <li>Small GUI fixes and performance improvements.</li>
+          <li>Fix for group adding dialog sometimes being blank.</li>
+          <li>Updated dependencies.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.28.4" date="2025-03-18">
       <description>
         <ul>
