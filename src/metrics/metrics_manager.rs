@@ -30,6 +30,7 @@ use crate::file_handler;
 
 /// In milliseconds.
 const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
+const LMSERVER_VERSION: &str = "v0.1.11";
 
 pub struct MetricsManager {
     process_handle: Option<process::Child>,
@@ -190,7 +191,6 @@ impl MetricsManager {
         use base64::{Engine as _, engine::general_purpose};
 
         // Check and store version info for triggering updates.
-        let current_lmserver_version = "v0.1.10";
         let version_file_path = lmserver_path.with_extension("version");
         let download_lmserver = match std::fs::metadata(&version_file_path) {
             Err(_) => true,
@@ -199,7 +199,7 @@ impl MetricsManager {
                     true
                 } else {
                     let version = std::fs::read_to_string(&version_file_path)?;
-                    if version.trim() != "dev" && version.trim() != current_lmserver_version {
+                    if version.trim() != "dev" && version.trim() != LMSERVER_VERSION {
                         log::debug!("New version of Light Metrics Server available");
                         true
                     }
@@ -231,18 +231,18 @@ impl MetricsManager {
 
             // Built and signed with GitLab CI.
             download_file(
-                &format!("https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver.sig/raw?ref={}", current_lmserver_version),
+                &format!("https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver.sig/raw?ref={}", LMSERVER_VERSION),
                 &token,
                 signature_path.to_str().unwrap(),
             )?;
             download_file(
-                &format!("https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver/raw?ref={}", current_lmserver_version),
+                &format!("https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver/raw?ref={}", LMSERVER_VERSION),
                 &token,
                 lmserver_path.to_str().unwrap(),
             )?;
 
             // Update version info.
-            std::fs::write(&version_file_path, current_lmserver_version)?;
+            std::fs::write(&version_file_path, LMSERVER_VERSION)?;
 
             // Make sure lmserver is executable.
             std::fs::set_permissions(&lmserver_path, std::fs::Permissions::from_mode(0o755))?;
