@@ -38,6 +38,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.29.2" date="2025-08-10">
+      <description>
+        <ul>
+          <li>Fix some dialog positioning with flatpak.</li>
+          <li>Sort module names in effective config dialog.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.29.1" date="2025-08-10">
       <description>
         <ul>
