@@ -615,17 +615,23 @@ LightkeeperDialog {
 
     function refreshModel() {
         // Settings can now be populated by parent instead of this component.
-        root._connectorList = Object.keys(root.groupConnectorSettings)
+        let connectorList = Object.keys(root.groupConnectorSettings)
+        connectorList.sort()
+        root._connectorList = connectorList
         if (root._connectorList.length === 0) {
             refreshConnectorList()
         }
 
-        root._monitorList = Object.keys(root.groupMonitorSettings)
+        let monitorList = Object.keys(root.groupMonitorSettings)
+        monitorList.sort()
+        root._monitorList = monitorList
         if (root._monitorList.length === 0) {
             refreshMonitorList()
         }
 
-        root._commandList = Object.keys(root.groupCommandSettings)
+        let commandList = Object.keys(root.groupCommandSettings)
+        commandList.sort()
+        root._commandList = commandList
         if (root._commandList.length === 0) {
             refreshCommandList()
         }
