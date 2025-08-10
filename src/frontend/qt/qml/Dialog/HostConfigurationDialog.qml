@@ -431,9 +431,12 @@ LightkeeperDialog {
         groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex]
         topMargin: 100
 
-        anchors.centerIn: undefined
-        x: root.x + Theme.marginDialog
-        y: root.y + Theme.marginDialogTop
+        // TODO
+        // This doesn't work correctly on flatpak, maybe different Qt version?
+        // Leaving it centered. It's less pretty but works more reliably for now.
+        // anchors.centerIn: undefined
+        // x: root.x + Theme.marginDialog
+        // y: root.y + Theme.marginDialogTop
     }
 
     GroupConfigurationDialog {
@@ -442,9 +445,12 @@ LightkeeperDialog {
         groupName: ""
         title: "Effective configuration"
 
-        anchors.centerIn: undefined
-        x: root.x + Theme.marginDialog
-        y: root.y + Theme.marginDialogTop
+        // TODO
+        // This doesn't work correctly on flatpak, maybe different Qt version?
+        // Leaving it centered. It's less pretty but works more reliably for now.
+        // anchors.centerIn: undefined
+        // x: root.x + Theme.marginDialog
+        // y: root.y + Theme.marginDialogTop
     }
 
     InputDialog {
