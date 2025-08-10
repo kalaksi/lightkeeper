@@ -38,7 +38,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.29.0" date="2025-08-10">
+    <release version="0.29.1" date="2025-08-10">
       <description>
         <ul>
           <li>Basic functionality for charts.</li>
