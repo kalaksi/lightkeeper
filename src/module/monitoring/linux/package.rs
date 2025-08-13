@@ -93,7 +93,8 @@ impl MonitoringModule for Package {
                 let new_version = parts.next().unwrap_or_default().to_string();
                 // let arch = parts.next().unwrap().to_string();
 
-                let old_version = string_manipulation::get_string_between(&line, "[upgradable from: ", "]");
+                let old_version = string_manipulation::get_string_between(&line, "[upgradable from: ", "]")
+                    .unwrap_or(String::from("unknown version"));
                 let mut data_point = DataPoint::labeled_value(package_name, new_version);
                 data_point.description = old_version;
                 data_point.command_params = vec![package];

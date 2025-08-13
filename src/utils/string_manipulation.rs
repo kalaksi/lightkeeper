@@ -12,11 +12,20 @@ pub fn remove_whitespace<Stringable: ToString>(input: &Stringable) -> String {
     input.to_string().chars().filter(|&c| !c.is_whitespace()).collect()
 }
 
-pub fn get_string_between<Stringable: ToString>(input: &Stringable, start: &str, end: &str) -> String {
+pub fn get_string_between<Stringable: ToString>(input: &Stringable, start: &str, end: &str) -> Option<String> {
     let input = input.to_string();
-    let start = input.find(start).unwrap() + start.len();
-    let end = input.find(end).unwrap();
-    input[start..end].to_string()
+
+    let start = match input.find(start) {
+        Some(index) => index + start.len(),
+        None => return None,
+    };
+
+    let end = match input.find(end) {
+        Some(index) => index,
+        None => return None,
+    };
+
+    Some(input[start..end].to_string())
 }
 
 pub fn remove_quotes<Stringable: ToString>(input: &Stringable) -> String {

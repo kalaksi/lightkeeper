@@ -76,7 +76,7 @@ impl MonitoringModule for Who {
 
             let value_text = if parts.len() > 4 {
                 // Removes parentheses.
-                let ip_address = string_manipulation::get_string_between(&parts[4], "(", ")");
+                let ip_address = string_manipulation::get_string_between(&parts[4], "(", ")").unwrap_or(String::from("?"));
                 format!("{} {} (from {})", login_date, login_time, ip_address)
             }
             else {
