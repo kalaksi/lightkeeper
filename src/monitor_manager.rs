@@ -190,7 +190,9 @@ impl MonitorManager {
     pub fn refresh_platform_info(&mut self, host_id: &String, cache_policy: Option<CachePolicy>) {
         let platform_info_providers = self.platform_info_providers.lock().unwrap();
         let monitors = self.monitors.lock().unwrap();
-        let monitors_for_host = monitors.iter().filter(|(name, _)| &host_id == name);
+        // Internal modules start with an underscore.
+        let monitors_for_host = monitors.iter()
+            .filter(|(host_id_key, _)| &host_id == host_id_key && !host_id_key.starts_with("_"));
 
         let cache_policy = if let Some(cache_policy) = cache_policy {
             cache_policy
