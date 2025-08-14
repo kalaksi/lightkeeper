@@ -43,8 +43,6 @@ Item {
         anchors.centerIn: parent
     }
 
-    // It seems that at least Qt 6.6 now has native support for alternating row colors.
-    // TODO: use the native support when it's available.
     function getBackgroundColor(selected) {
         if (selected === true) {
             return Qt.darker(palette.highlight)

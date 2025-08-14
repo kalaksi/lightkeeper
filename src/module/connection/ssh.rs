@@ -92,7 +92,6 @@ impl Module for Ssh2 {
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
             password: settings.get("password").cloned(),
             private_key_path: settings.get("private_key_path").cloned(),
-            // TODO: Hide passphrase in UI (currently behaves like a normal text field).
             private_key_passphrase: settings.get("private_key_passphrase").cloned(),
             agent_key_identifier: settings.get("agent_key_identifier").cloned(),
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
