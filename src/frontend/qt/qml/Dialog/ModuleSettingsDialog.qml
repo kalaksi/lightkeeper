@@ -114,6 +114,8 @@ LightkeeperDialog {
                         placeholderText: toggleSwitch.checked ? "" : "unset"
                         placeholderTextColor: Theme.textColorDark
                         text: toggleSwitch.checked ? modelData.value : ""
+                        echoMode: modelData.key.endsWith("_password") || modelData.key.endsWith("_passphrase") ?
+                            TextInput.Password : TextInput.Normal
 
                         Layout.preferredWidth: {
                             if (fileChooserButton.visible) {
