@@ -68,12 +68,7 @@ impl MonitoringModule for Images {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "10") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
-
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);
             Ok(command.to_string())
         }

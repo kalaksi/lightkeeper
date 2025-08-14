@@ -64,13 +64,7 @@ impl MonitoringModule for Compose {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        // TODO: Check for docker-compose version for a more controlled approach?
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "10") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
-
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             // Docker API is much better suited for this than using the docker-compose CLI. More effective too.
             // TODO: find down-status compose-projects with find-command?
             command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
