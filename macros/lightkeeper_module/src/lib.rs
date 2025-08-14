@@ -120,7 +120,7 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
             impl MetadataSupport for #struct_name {
                 fn get_metadata() -> Metadata {
                     Metadata {
-                        module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, ModuleType::Monitor),
+                        module_spec: ModuleSpecification::monitor(#module_name, #module_version),
                         description: String::from(#module_description),
                         settings: HashMap::from([
                             #(#settings),*
@@ -180,12 +180,12 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
             impl MetadataSupport for #struct_name {
                 fn get_metadata() -> Metadata {
                     Metadata {
-                        module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, ModuleType::Monitor),
+                        module_spec: ModuleSpecification::monitor(#module_name, #module_version),
                         description: String::from(#module_description),
                         settings: HashMap::from([
                             #(#settings),*
                         ]),
-                        parent_module: Some(ModuleSpecification::new_with_type(#parent_module_name, #parent_module_version, ModuleType::Monitor)),
+                        parent_module: Some(ModuleSpecification::monitor(#parent_module_name, #parent_module_version)),
                         is_stateless: true,
                         cache_scope: crate::cache::CacheScope::Host,
                     }
@@ -235,7 +235,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
         impl MetadataSupport for #struct_name {
             fn get_metadata() -> Metadata {
                 Metadata {
-                    module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, ModuleType::Command),
+                    module_spec: ModuleSpecification::command(#module_name, #module_version),
                     description: String::from(#module_description),
                     settings: HashMap::from([
                         #(#settings),*
@@ -286,7 +286,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
         impl MetadataSupport for #struct_name {
             fn get_metadata() -> Metadata {
                 Metadata {
-                    module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, ModuleType::Connector),
+                    module_spec: ModuleSpecification::connector(#module_name, #module_version),
                     description: String::from(#module_description),
                     settings: HashMap::from([
                         #(#settings),*
@@ -334,7 +334,7 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
             impl MetadataSupport for #struct_name {
                 fn get_metadata() -> Metadata {
                     Metadata {
-                        module_spec: ModuleSpecification::new_with_type(#module_name, #module_version, ModuleType::Connector),
+                        module_spec: ModuleSpecification::connector(#module_name, #module_version),
                         description: String::from(#module_description),
                         settings: HashMap::from([
                             #(#settings),*

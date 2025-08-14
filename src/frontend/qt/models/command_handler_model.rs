@@ -33,7 +33,6 @@ pub struct CommandHandlerModel {
     execute: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executeConfirmed: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
-    executeCustom: qt_method!(fn(&self, button_id: QString, host_id: QString, custom_command_id: QString)),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
     hasFileChanged: qt_method!(fn(&self, local_file_path: QString, contents: QString) -> bool),
@@ -305,17 +304,6 @@ impl CommandHandlerModel {
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
         self.command_handler.execute(&host_id, &command_id, &parameters)
-    }
-
-    // TODO: remove
-    fn executeCustom(&mut self, button_id: QString, host_id: QString, custom_command_id: QString) {
-        let host_id = host_id.to_string();
-        let custom_command_id = custom_command_id.to_string();
-        let invocation_id = self.command_handler.execute_custom(&host_id, &custom_command_id);
-
-        if invocation_id > 0 {
-            self.commandExecuted(invocation_id, host_id.into(), custom_command_id.into(), "_custom-command".into(), button_id.into());
-        }
     }
 
     fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64 {

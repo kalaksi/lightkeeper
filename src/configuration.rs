@@ -66,9 +66,7 @@ pub struct Preferences {
     pub refresh_hosts_on_start: bool,
     pub use_remote_editor: bool,
     pub sudo_remote_editor: bool,
-    // TODO: check for valid command.
     pub remote_text_editor: String,
-    // TODO: check for valid path.
     /// Command to run when launching a text editor. "internal" is a special value that uses the internal editor.
     pub text_editor: String,
     /// Command to run when launching a terminal. "internal" is a special value that uses the internal terminal.

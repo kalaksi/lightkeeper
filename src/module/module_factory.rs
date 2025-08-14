@@ -173,7 +173,7 @@ impl ModuleFactory {
             }
 
             if let Some(connector_spec) = new_command.get_connector_spec() {
-                let connector_spec = ModuleSpecification::new_with_type(connector_spec.id.as_str(), connector_spec.version.as_str(), ModuleType::Connector);
+                let connector_spec = ModuleSpecification::connector(connector_spec.id.as_str(), connector_spec.version.as_str());
                 if !self.connector_modules.iter().any(|(metadata, _)| metadata.module_spec == connector_spec) {
                     return Err(format!("Connector module '{}' for command module '{}' was not found.",
                         connector_spec.id, metadata.module_spec.id));

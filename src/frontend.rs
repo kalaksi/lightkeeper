@@ -13,8 +13,6 @@ pub use display_options::DisplayOptions;
 pub use display_options::DisplayStyle;
 pub use display_options::UserInputField;
 
-// TODO: Not sure if going to implement this. Remove later.
-// pub mod cli;
 pub mod qt;
 
 pub mod hot_reload;

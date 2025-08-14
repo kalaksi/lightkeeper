@@ -207,40 +207,6 @@ impl CommandHandler {
         self.invocation_id_counter
     }
 
-    /// Returns invocation ID or 0 on error.
-    /// TODO: remove?
-    pub fn execute_custom(&mut self, host_id: &String, custom_command_id: &String) -> u64 {
-        let host = self.host_manager.borrow().get_host(host_id);
-        let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
-        let internal_command_module = &self.commands.lock().unwrap()[host_id]["_custom-command"];
-
-        let custom_command = &self.custom_commands[host_id][custom_command_id].command.clone();
-        let message = internal_command_module.get_connector_message(host.clone(), vec![custom_command.clone()]).unwrap();
-
-        self.invocation_id_counter += 1;
-
-        // Notify host state manager about new command, so it can keep track of pending invocations.
-        state_update_sender.send(StateUpdateMessage {
-            host_name: host.name.clone(),
-            display_options: DisplayOptions::default(),
-            module_spec: internal_command_module.get_module_spec(),
-            command_result: Some(CommandResult::pending()),
-            invocation_id: self.invocation_id_counter,
-            ..Default::default()
-        }).unwrap();
-
-        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
-            connector_spec: Some(ModuleSpecification::connector("ssh", "0.0.1")),
-            source_id: internal_command_module.get_module_spec().id,
-            host: host.clone(),
-            invocation_id: self.invocation_id_counter,
-            request_type: RequestType::CommandFollowOutput { commands: vec![message] },
-            response_sender: self.new_response_sender(),
-        }).unwrap();
-
-        self.invocation_id_counter
-    }
-
     //
     // INTEGRATED COMMANDS
     //

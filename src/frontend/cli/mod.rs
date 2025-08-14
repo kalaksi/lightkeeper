@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+ // NOTE: The CLI UI is obsolete and is currently not being developed.
+ // The code is left here to give a good starting point if it is needed in the future.
 
 use std::str::FromStr;
 use owo_colors::OwoColorize;

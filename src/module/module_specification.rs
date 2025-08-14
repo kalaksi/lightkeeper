@@ -39,19 +39,6 @@ impl ModuleSpecification {
         ModuleSpecification::new(id, version, ModuleType::Monitor)
     }
 
-    /// TODO: Deprecated.
-    pub fn new_with_type(id: &str, version: &str, module_type: ModuleType) -> Self {
-        if id.chars().any(char::is_whitespace) {
-            panic!("No whitespace allowed in module ID.");
-        }
-
-        ModuleSpecification {
-            id: id.to_string(),
-            version: version.to_string(),
-            module_type: module_type,
-        }
-    }
-
     pub fn latest_version(&self) -> bool {
         self.version == "latest"
     }
