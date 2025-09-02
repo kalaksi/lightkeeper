@@ -335,7 +335,7 @@ Item {
 
     Shortcut {
         enabled: root.enableShortcuts
-        sequences: [StandardKey.Refresh]
+        sequences: [StandardKey.Refresh, "Ctrl+R"]
         onActivated: {
             let content = root.getCurrentTabContent()
             if (content !== undefined) {

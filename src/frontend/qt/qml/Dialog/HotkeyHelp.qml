@@ -24,7 +24,6 @@ LightkeeperDialog {
 
         ColumnLayout {
             id: rootColumn
-            visible: !root._loading
             anchors.fill: parent
             anchors.rightMargin: Theme.marginScrollbar
             spacing: Theme.spacingTight
@@ -43,8 +42,8 @@ LightkeeperDialog {
 
             Repeater {
                 model: [
-                    ["F5", "Refresh"],
-                    ["Alt + 1, 2, 3...", "Switch tabs"],
+                    ["F5, Ctrl + R", "Refresh"],
+                    ["Ctrl or Alt + 1, 2, 3...", "Switch tabs"],
                     ["Ctrl + W", "Close tab"],
                     ["Ctrl + T", "Open host shell in new tab\n(if linux-shell module is in use)"]
                 ]
