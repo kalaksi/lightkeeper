@@ -152,21 +152,22 @@ Item {
 
             TextField {
                 id: searchField
-                width: parent.width * 0.5
                 placeholderText: "Search"
                 placeholderTextColor: Theme.textColorDark
                 onAccepted: findNext.trigger()
+
+                Layout.preferredWidth: parent.width * 0.5
             }
 
             ImageButton {
                 flatButton: true
-                imageSource: "qrc:/main/images/button/search-up"
+                imageSource: "qrc:/main/images/button/arrow-up"
                 onClicked: findNext.trigger()
             }
 
             ImageButton {
                 flatButton: true
-                imageSource: "qrc:/main/images/button/search-down"
+                imageSource: "qrc:/main/images/button/arrow-down"
                 onClicked: findPrevious.trigger()
             }
 
