@@ -45,6 +45,7 @@ Item {
 
                 // Forces re-evaluation of the Repeater
                 root._searchMatches = newResult
+                console.log("Found match at " + startLine + ":" + startColumn + " to " + endLine + ":" + endColumn)
 
                 let lineOnScreen = startLine - terminal.scrollbarCurrentValue
 
@@ -214,6 +215,7 @@ Item {
     }
 
     Action {
+        // Next means backwards/up in terminal.
         id: findNext
         enabled: root.enableShortcuts
         shortcut: StandardKey.FindNext
