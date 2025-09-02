@@ -338,8 +338,8 @@ Item {
         sequences: [StandardKey.Refresh, "Ctrl+R"]
         onActivated: {
             let content = root.getCurrentTabContent()
-            if (content !== undefined) {
-                content.refresh()
+            if (content !== undefined && content.refreshContent !== undefined) {
+                content.refreshContent()
             }
         }
     }
