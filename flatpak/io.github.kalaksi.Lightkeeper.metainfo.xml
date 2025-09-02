@@ -38,6 +38,17 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.29.4" date="2025-09-02">
+      <description>
+        <ul>
+          <li>Fix terminal search (broke in Qt6 migration)</li>
+          <li>Fix refresh hotkey</li>
+          <li>Mask passwords in module settings</li>
+          <li>Loosen OS restrictions in docker-compose modules</li>
+          <li>Increase chart timespan to 4 days</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.29.3" date="2025-08-14">
       <description>
         <ul>
