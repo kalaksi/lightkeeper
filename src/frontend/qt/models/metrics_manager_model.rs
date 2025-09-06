@@ -151,7 +151,13 @@ impl MetricsManagerModel {
     fn getCategoryMonitorIds(&self, host_id: QString, category_id: QString) -> QStringList {
         let host_id = host_id.to_string();
         let category_id = category_id.to_string();
-        let host_config = self.hosts_config.hosts.get(&host_id).unwrap();
+        let host_config = match self.hosts_config.hosts.get(&host_id) {
+            Some(config) => config,
+            None => {
+                ::log::error!("Host '{}' not found", host_id);
+                return QStringList::new();
+            }
+        };
 
         let host_monitors = host_config.effective.monitors.iter()
             .filter(|(_monitor_id, config)| config.enabled.unwrap_or(true))
