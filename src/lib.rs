@@ -17,7 +17,6 @@ mod frontend;
 mod connection_manager;
 mod command_handler;
 mod file_handler;
-mod cache;
 mod metrics;
 
 pub use module::ModuleFactory;
@@ -64,7 +63,7 @@ pub fn run(
     host_manager.borrow_mut().configure(&hosts_config);
 
     let mut connection_manager = ConnectionManager::new(module_factory.clone());
-    connection_manager.configure(&hosts_config, &main_config.cache_settings);
+    connection_manager.configure(&hosts_config);
 
     let metrics_manager = if main_config.preferences.show_charts {
         Some(metrics::MetricsManager::new(frontend.new_update_sender()))
@@ -74,7 +73,7 @@ pub fn run(
         None
     };
 
-    let mut monitor_manager = MonitorManager::new(main_config.cache_settings.clone(), host_manager.clone(), module_factory.clone());
+    let mut monitor_manager = MonitorManager::new(host_manager.clone(), module_factory.clone());
     monitor_manager.configure(
         &hosts_config,
         connection_manager.new_request_sender(),

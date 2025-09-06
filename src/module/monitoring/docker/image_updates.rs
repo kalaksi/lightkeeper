@@ -103,8 +103,6 @@ impl MonitoringModule for ImageUpdates {
             // Responses are in the same order as the connector messages in get_connector_messages.
             let response = responses.get(index).unwrap();
 
-            new_point.is_from_cache = response.is_from_cache && old_point.is_from_cache;
-
             if response.is_error() {
                 new_point = DataPoint::empty_and_critical();
             }

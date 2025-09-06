@@ -67,9 +67,6 @@ pub struct ResponseMessage {
     pub message: String,
     pub return_code: i32,
     pub is_partial: bool,
-    pub is_from_cache: bool,
-    /// Not found in cache when OnlyCache policy was used.
-    pub not_found: bool,
 }
 
 impl ResponseMessage {
@@ -112,13 +109,6 @@ impl ResponseMessage {
         }
     }
 
-    pub fn not_found() -> ResponseMessage {
-        ResponseMessage {
-            not_found: true,
-            ..Default::default()
-        }
-    }
-
     pub fn is_success(&self) -> bool {
         self.return_code == 0
     }
@@ -129,10 +119,6 @@ impl ResponseMessage {
 
     pub fn is_empty(&self) -> bool {
         self.message.is_empty() && self.return_code == 0
-    }
-
-    pub fn is_not_found(&self) -> bool {
-        self.not_found
     }
 
     pub fn is_command_not_found(&self) -> bool {

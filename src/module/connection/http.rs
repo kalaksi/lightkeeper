@@ -14,7 +14,6 @@ use crate::module::connection::*;
 #[stateless_connection_module(
     name="http",
     version="0.0.1",
-    cache_scope="Global",
     description="Sends a simple HTTP request",
 )]
 pub struct Http {

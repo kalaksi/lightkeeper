@@ -181,12 +181,6 @@ LightkeeperDialog {
                             color: Theme.criticalityColor(root.dataPoints[modelData].criticality)
                             source: "qrc:/main/images/criticality/" + (root.dataPoints[modelData].criticality || "nodata").toLowerCase()
                         }
-
-                        // WaveAnimation {
-                        //     anchors.centerIn: statusImage
-                        //     color: parent.color
-                        //     visible: parent.monitorId in root.highlights && !parent.isFromCache
-                        // }
                     }
                 }
             }

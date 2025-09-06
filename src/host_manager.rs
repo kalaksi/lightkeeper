@@ -172,7 +172,6 @@ impl HostManager {
                 };
 
                 host_state.just_initialized = false;
-                host_state.just_initialized_from_cache = false;
                 let mut new_monitoring_data: Option<(u64, MonitoringData)> = None;
                 let mut new_command_results: Option<(u64, CommandResult)> = None;
 
@@ -187,13 +186,8 @@ impl HostManager {
                             log::debug!("[{}] Platform info updated", host_state.host.name);
 
                             // TODO: handle multiple platform info's.
-                            if !message_data_point.is_from_cache {
-                                host_state.just_initialized = true;
-                                host_state.is_initialized = true;
-                            }
-                            else {
-                                host_state.just_initialized_from_cache = true;
-                            }
+                            host_state.just_initialized = true;
+                            host_state.is_initialized = true;
                         }
                         else {
                             log::error!("[{}] Invalid platform info received", host_state.host.name);
@@ -406,9 +400,8 @@ impl HostStateCollection {
 pub struct HostState {
     pub host: Host,
     pub status: HostStatus,
-    /// Host has received a real-time update for platform info (not a cached initial value).
+    /// Host has received a real-time update for platform info.
     pub just_initialized: bool,
-    pub just_initialized_from_cache: bool,
     pub is_initialized: bool,
     pub monitor_data: HashMap<String, MonitoringData>,
     pub command_results: HashMap<String, CommandResult>,
@@ -424,7 +417,6 @@ impl HostState {
             host: host,
             status: status,
             just_initialized: false,
-            just_initialized_from_cache: false,
             is_initialized: false,
             monitor_data: HashMap::new(),
             command_results: HashMap::new(),

@@ -14,7 +14,6 @@ use crate::module::connection::*;
 #[stateless_connection_module(
     name="local-command",
     version="0.0.1",
-    cache_scope="Global",
     description="Executes a command locally.",
 )]
 pub struct LocalCommand {

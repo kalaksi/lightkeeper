@@ -31,8 +31,9 @@ pub struct Configuration {
     pub preferences: Preferences,
     #[serde(default)]
     pub display_options: DisplayOptions,
-    #[serde(default)]
-    pub cache_settings: CacheSettings,
+    // Obsolete field:
+    #[serde(default, skip_serializing_if = "Configuration::always")]
+    pub cache_settings: Option<serde_yaml::Value>,
     #[serde(default)]
     pub schema_version: Option<u16>,
 }
@@ -107,29 +108,6 @@ impl Default for DisplayOptions {
 impl DisplayOptions {
     pub fn default_to_true() -> bool {
         true
-    }
-}
-
-#[derive(Serialize, Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct CacheSettings {
-    /// Enable cache. Set false to disable completely and make sure cache file is empty.
-    /// Otherwise, cache file is maintained even if it's not used at that moment. This setting will make sure it's not used at all.
-    pub enable_cache: bool,
-    /// Cache provides an initial value before receiving the up-to-date value.
-    pub provide_initial_value: bool,
-    /// How long entries in cache are considered valid.
-    pub initial_value_time_to_live: u64,
-    /// If enabled, value is returned only from cache if it is available.
-    pub prefer_cache: bool,
-    /// How long entries in cache are considered valid.
-    pub time_to_live: u64,
-}
-
-impl Default for CacheSettings {
-    fn default() -> Self {
-        let default_main_config = get_default_main_config();
-        default_main_config.cache_settings
     }
 }
 
@@ -680,7 +658,7 @@ impl Configuration {
                         .groups
                         .entry(String::from("nixos"))
                         .or_insert(default_groups.groups["nixos"].to_owned());
-                }
+                },
                 _ => {}
             }
 

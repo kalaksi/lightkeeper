@@ -9,7 +9,7 @@ use std::{cell::RefCell, rc::Rc, sync::mpsc, thread};
 use qmetaobject::*;
 
 use crate::{
-    connection_manager::{CachePolicy, ConnectionManager},
+    connection_manager::ConnectionManager,
     frontend::{HostDisplayData, UIUpdate},
     host_manager,
     module::monitoring::MonitoringData,
@@ -103,12 +103,7 @@ impl LkBackend {
                 // Special case for host initialization. Proper monitor processing is started after initialization step.
                 if new_data.host_state.just_initialized {
                     ::log::debug!("Host {} initialized", new_data.host_state.host.name);
-                    self_pinned.borrow().command.borrow_mut().refresh_host_monitors(new_data.host_state.host.name, None);
-                    return;
-                }
-                else if new_data.host_state.just_initialized_from_cache {
-                    ::log::debug!("Host {} initialized from cache", new_data.host_state.host.name);
-                    self_pinned.borrow().command.borrow_mut().refresh_host_monitors(new_data.host_state.host.name, Some(CachePolicy::OnlyCache));
+                    self_pinned.borrow().command.borrow_mut().refresh_host_monitors(new_data.host_state.host.name);
                     return;
                 }
 
@@ -170,7 +165,7 @@ impl LkBackend {
     fn reload(&mut self) {
         match self.config.borrow_mut().reload_configuration() {
             Ok((main_config, hosts_config)) => {
-                self.connection_manager.configure(&hosts_config, &main_config.cache_settings);
+                self.connection_manager.configure(&hosts_config);
                 self.host_manager.borrow_mut().configure(&hosts_config);
                 self.command.borrow_mut().configure(
                     &main_config,

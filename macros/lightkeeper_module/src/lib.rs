@@ -25,7 +25,6 @@ struct ModuleArgs {
     description: String,
     parent_module_name: Option<String>,
     parent_module_version: Option<String>,
-    cache_scope: String,
     settings: HashMap<String, String>,
 }
 
@@ -36,7 +35,6 @@ impl syn::parse::Parse for ModuleArgs {
         let mut description = None;
         let mut parent_module_name = None;
         let mut parent_module_version = None;
-        let mut cache_scope = String::from("Host");
         let mut settings = HashMap::new();
 
         while !input.is_empty() {
@@ -57,9 +55,6 @@ impl syn::parse::Parse for ModuleArgs {
                 }
                 "parent_module_version" => {
                     parent_module_version = Some(input.parse::<syn::LitStr>()?.value());
-                }
-                "cache_scope" => {
-                    cache_scope = input.parse::<syn::LitStr>()?.value();
                 }
                 "settings" => {
                     let content;
@@ -88,7 +83,6 @@ impl syn::parse::Parse for ModuleArgs {
             description: description.unwrap(),
             parent_module_name: parent_module_name,
             parent_module_version: parent_module_version,
-            cache_scope: cache_scope,
             settings: settings,
         })
     }
@@ -127,7 +121,6 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
                         ]),
                         parent_module: None,
                         is_stateless: true,
-                        cache_scope: crate::cache::CacheScope::Host,
                     }
                 }
 
@@ -187,7 +180,6 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                         ]),
                         parent_module: Some(ModuleSpecification::monitor(#parent_module_name, #parent_module_version)),
                         is_stateless: true,
-                        cache_scope: crate::cache::CacheScope::Host,
                     }
                 }
 
@@ -242,7 +234,6 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     ]),
                     parent_module: None,
                     is_stateless: true,
-                    cache_scope: crate::cache::CacheScope::Host,
                 }
             }
 
@@ -293,7 +284,6 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     ]),
                     parent_module: None,
                     is_stateless: false,
-                    cache_scope: crate::cache::CacheScope::Host,
                 }
             }
 
@@ -315,7 +305,6 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
     let module_name = args_parsed.name;
     let module_version = args_parsed.version;
     let module_description = args_parsed.description;
-    let cache_scope = args_parsed.cache_scope;
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -341,7 +330,6 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
                         ]),
                         parent_module: None,
                         is_stateless: true,
-                        cache_scope: #cache_scope.parse::<crate::cache::CacheScope>().unwrap(),
                     }
                 }
 

@@ -18,15 +18,6 @@ preferences:
   terminal_args: [""]
   show_charts: false
 
-# Caching can provide speed benefits especially if you have many hosts.
-# Recommended to be left disabled for now.
-cache_settings:
-  enable_cache: false
-  provide_initial_value: true
-  initial_value_time_to_live: 604800
-  prefer_cache: true
-  time_to_live: 8400
-
 # Control category order, command buttons orders, colors. Defaults should be good.
 # NOTE: Currently, you shouldn't manually edit display_options at all.
 display_options:

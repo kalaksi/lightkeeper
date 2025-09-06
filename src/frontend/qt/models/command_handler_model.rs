@@ -11,7 +11,7 @@ use qmetaobject::*;
 
 use crate::command_handler::{CommandHandler, CommandButtonData};
 use crate::configuration;
-use crate::connection_manager::{CachePolicy, ConnectorRequest};
+use crate::connection_manager::ConnectorRequest;
 use crate::host_manager::StateUpdateMessage;
 use crate::module::command::UIAction;
 use crate::monitor_manager::MonitorManager;
@@ -106,9 +106,9 @@ impl CommandHandlerModel {
         self.monitor_manager.stop();
     }
 
-    pub fn refresh_host_monitors(&mut self, host_id: String, cache_policy: Option<CachePolicy>) {
+    pub fn refresh_host_monitors(&mut self, host_id: String) {
         for category in self.monitor_manager.get_all_host_categories(&host_id) {
-            let _invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id, &category, cache_policy);
+            let _invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id, &category);
         }
     }
 
@@ -336,17 +336,17 @@ impl CommandHandlerModel {
     }
 
     fn initializeHost(&mut self, host_id: QString) {
-        self.monitor_manager.refresh_platform_info(&host_id.to_string(), None);
+        self.monitor_manager.refresh_platform_info(&host_id.to_string());
         self.hostInitializing(host_id);
     }
 
     fn forceInitializeHost(&mut self, host_id: QString) {
-        self.monitor_manager.refresh_platform_info(&host_id.to_string(), Some(CachePolicy::BypassCache));
+        self.monitor_manager.refresh_platform_info(&host_id.to_string());
         self.hostInitializing(host_id);
     }
 
     fn forceInitializeHosts(&mut self) {
-        let host_ids = self.monitor_manager.refresh_platform_info_all(Some(CachePolicy::BypassCache));
+        let host_ids = self.monitor_manager.refresh_platform_info_all();
         for host_id in host_ids {
             self.hostInitializing(QString::from(host_id));
         }
@@ -370,12 +370,12 @@ impl CommandHandlerModel {
         };
 
         let monitor_id = command.display_options.parent_id;
-        let invocation_ids = self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id, CachePolicy::BypassCache);
+        let invocation_ids = self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id);
         QVariantList::from_iter(invocation_ids)
     }
 
     fn refreshMonitorsOfCategory(&mut self, host_id: QString, category: QString) -> QVariantList {
-        let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string(), Some(CachePolicy::BypassCache));
+        let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
         QVariantList::from_iter(invocation_ids)
     }
 

@@ -18,7 +18,6 @@ use crate::utils::string_validation::is_alphanumeric_with;
 #[connection_module(
     name="http-jwt",
     version="0.0.1",
-    cache_scope="Global",
     description="Sends a HTTP request and handles JWT authentication. Currently supports only anonymous authentication.",
 )]
 pub struct HttpJwt {

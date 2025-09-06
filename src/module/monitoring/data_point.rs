@@ -27,7 +27,6 @@ pub struct DataPoint {
     // TODO: rename to children?
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
-    pub is_from_cache: bool,
 }
 
 impl DataPoint {
@@ -143,7 +142,6 @@ impl Default for DataPoint {
             command_params: Vec::new(),
             multivalue: Vec::new(),
             criticality: Criticality::Normal,
-            is_from_cache: false,
             value_float: 0.0,
         }
     }

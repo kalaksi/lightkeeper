@@ -8,7 +8,6 @@ use std::{
     collections::HashMap,
     sync::mpsc,
     sync::Arc,
-    sync::Mutex,
     thread,
 };
 
@@ -18,11 +17,10 @@ use crate::error::LkError;
 use crate::module::monitoring::DataPoint;
 use crate::monitor_manager::CERT_MONITOR_HOST_ID;
 use crate::Host;
-use crate::configuration::{CacheSettings, Hosts};
+use crate::configuration::Hosts;
 use crate::file_handler::{self, FileMetadata};
 use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
-use crate::cache::{Cache, CacheScope};
 
 use self::request_response::RequestResponse;
 
@@ -39,7 +37,6 @@ pub struct ConnectionManager {
     /// Key is host name/id.
     stateful_connectors: Option<HashMap<String, ConnectorStates>>,
     module_factory: Arc<ModuleFactory>,
-    cache_settings: CacheSettings,
 
     request_receiver: Option<mpsc::Receiver<ConnectorRequest>>,
     request_sender_prototype: Option<mpsc::Sender<ConnectorRequest>>,
@@ -55,11 +52,10 @@ impl ConnectionManager {
         }
     }
 
-    pub fn configure(&mut self, hosts_config: &Hosts, cache_settings: &CacheSettings) {
+    pub fn configure(&mut self, hosts_config: &Hosts) {
         self.stop();
 
         self.stateful_connectors = Some(HashMap::new());
-        self.cache_settings = cache_settings.clone();
         let stateful_connectors = self.stateful_connectors.as_mut().unwrap();
 
         // For certificate monitoring.
@@ -139,7 +135,6 @@ impl ConnectionManager {
             self.stateful_connectors.take().unwrap(),
             self.request_receiver.take().unwrap(),
             self.module_factory.clone(),
-            self.cache_settings.clone()
         );
         self.receiver_thread = Some(thread);
     }
@@ -154,44 +149,18 @@ impl ConnectionManager {
         }
     }
 
-    /// Deprecated.
-    fn initialize_cache(cache_settings: CacheSettings) -> Cache<String, ResponseMessage> {
-        let new_command_cache = Cache::<String, ResponseMessage>::new(cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
-
-        // TODO: This cache functionality is now obsolete. Remove later when sure.
-        // if cache_settings.enable_cache {
-        //     match new_command_cache.read_from_disk() {
-        //         Ok(count) => log::debug!("Added {} entries from cache file", count),
-        //         // Failing to read cache file is not critical.
-        //         Err(error) => log::error!("{}", error),
-        //     }
-        //     log::debug!("Initialized cache with TTL of {} ({}) seconds", cache_settings.time_to_live, cache_settings.initial_value_time_to_live);
-        // }
-        // else {
-        //     log::debug!("Cache is disabled. Clearing existing cache files.");
-        //     // Clear any existing cache entries from cache file.
-        //     new_command_cache.purge();
-        // }
-
-        new_command_cache
-    }
-
     fn process_requests(
         stateful_connectors: HashMap<String, ConnectorStates>,
         receiver: mpsc::Receiver<ConnectorRequest>,
-        module_factory: Arc<ModuleFactory>,
-        cache_settings: CacheSettings) -> thread::JoinHandle<()> {
+        module_factory: Arc<ModuleFactory>) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
             let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build().unwrap();
             log::debug!("Created worker pool with {} threads", MAX_WORKER_THREADS);
 
-            let original_command_cache = Arc::new(Mutex::new(Self::initialize_cache(cache_settings.clone())));
             let stateful_connectors_arc = Arc::new(stateful_connectors);
 
             loop {
-                // NOTE: cache is actually not used currently for anything and may be removed later.
-                let command_cache = original_command_cache.clone();
                 let module_factory = module_factory.clone();
                 let stateful_connectors = stateful_connectors_arc.clone();
 
@@ -205,14 +174,6 @@ impl ConnectionManager {
 
                 if let RequestType::Exit = request.request_type {
                     log::debug!("Gracefully stopping connection manager thread");
-
-                    if cache_settings.enable_cache {
-                        match &command_cache.lock().unwrap().write_to_disk() {
-                            Ok(count) => log::debug!("Wrote {} entries to cache file", count),
-                            // Failing to write the file is not critical.
-                            Err(error) => log::error!("{}", error),
-                        }
-                    }
                     return;
                 }
 
@@ -257,11 +218,11 @@ impl ConnectionManager {
                     }
 
                     let responses = match &request.request_type {
-                        RequestType::MonitorCommand { cache_policy, extension_monitors: _, parent_datapoint: _, commands } => {
-                            Self::process_commands(&request, command_cache.clone(), &cache_policy, &connector, &commands)
+                        RequestType::MonitorCommand { extension_monitors: _, parent_datapoint: _, commands } => {
+                            Self::process_commands(&request, &connector, &commands)
                         },
                         RequestType::Command { commands } => {
-                            Self::process_commands(&request, command_cache.clone(), &CachePolicy::BypassCache, &connector, &commands)
+                            Self::process_commands(&request, &connector, &commands)
                         },
                         RequestType::CommandFollowOutput { commands } => {
                             if commands.len() != 1 {
@@ -292,11 +253,8 @@ impl ConnectionManager {
     }
 
     fn process_commands(request: &ConnectorRequest,
-                        command_cache: Arc<Mutex<Cache<String, ResponseMessage>>>,
-                        cache_policy: &CachePolicy,
                         connector: &Connector,
                         request_messages: &Vec<String>) -> Vec<Result<ResponseMessage, LkError>> {
-
 
         // let request = request.lock().unwrap();
         let mut results = Vec::new();
@@ -310,52 +268,21 @@ impl ConnectionManager {
                 log::debug!("[{}][{}] Command: {}", request.host.name, request.source_id, request_message);
             }
 
-            let cache_key = match connector.get_metadata_self().cache_scope {
-                CacheScope::Global => format!("{}|{}", connector.get_module_spec(), request_message),
-                CacheScope::Host => format!("{}|{}|{}", request.host.name, connector.get_module_spec(), request_message),
-            };
+            let response_result = connector.send_message(request_message);
 
-            let cached_response = if *cache_policy == CachePolicy::OnlyCache || *cache_policy == CachePolicy::PreferCache {
-                let mut command_cache = command_cache.lock().unwrap();
-                command_cache.get(&cache_key)
+            if let Ok(response) = response_result {
+                if response.return_code != 0 {
+                    log::warn!("[{}][{}] Command returned non-zero exit code: {}",
+                        request.host.name, request.source_id, response.return_code);
+                }
+                results.push(Ok(response))
             }
             else {
-                None
-            };
+                // Add module name to error details.
+                results.push(response_result.map_err(|error| error.set_source(connector.get_module_spec().id)));
 
-            if let Some(cached_response) = cached_response {
-                log::debug!("[{}][{}] Using cached response for command {}", request.host.name, request.source_id, request_message);
-                results.push(Ok(cached_response));
-            }
-            else if *cache_policy == CachePolicy::OnlyCache {
-                results.push(Ok(ResponseMessage::not_found()));
-            }
-            else {
-                let response_result = connector.send_message(request_message);
-
-                if let Ok(response) = response_result {
-                    if response.return_code != 0 {
-                        log::warn!("[{}][{}] Command returned non-zero exit code: {}",
-                            request.host.name, request.source_id, response.return_code);
-                    }
-                    else {
-                        if *cache_policy != CachePolicy::BypassCache {
-                            // Doesn't cache failed commands.
-                            let mut cached_response = response.clone();
-                            cached_response.is_from_cache = true;
-                            let mut command_cache = command_cache.lock().unwrap();
-                            command_cache.insert(cache_key, cached_response);
-                        }
-                    }
-                    results.push(Ok(response))
-                }
-                else {
-                    // Add module name to error details.
-                    results.push(response_result.map_err(|error| error.set_source(connector.get_module_spec().id)));
-
-                    // Abort on any errors.
-                    break;
-                }
+                // Abort on any errors.
+                break;
             }
         }
 
@@ -466,7 +393,6 @@ impl Debug for ConnectorRequest {
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub enum RequestType {
     MonitorCommand {
-        cache_policy: CachePolicy,
         extension_monitors: Vec<String>,
         parent_datapoint: Option<DataPoint>,
         commands: Vec<String>,
@@ -490,12 +416,4 @@ pub enum RequestType {
     /// Causes the receiver thread to exit.
     #[default]
     Exit,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum CachePolicy {
-    #[default]
-    BypassCache,
-    PreferCache,
-    OnlyCache,
 }

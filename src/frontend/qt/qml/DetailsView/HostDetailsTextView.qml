@@ -90,6 +90,6 @@ Item {
     }
 
     function close() {
-        // TODO: implement confirmation dialog.
+        // Do nothing.
     }
 }

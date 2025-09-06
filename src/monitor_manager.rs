@@ -13,12 +13,12 @@ use std::thread;
 use crate::error::*;
 use crate::module::connection::RequestResponse;
 use crate::Host;
-use crate::configuration::{CacheSettings, Hosts};
+use crate::configuration::Hosts;
 use crate::module::connection::ResponseMessage;
 use crate::module::{monitoring::*, ModuleSpecification};
 use crate::module::ModuleFactory;
 use crate::host_manager::{StateUpdateMessage, HostManager};
-use crate::connection_manager::{ ConnectorRequest, RequestType, CachePolicy };
+use crate::connection_manager::{ ConnectorRequest, RequestType };
 
 pub const CERT_MONITOR_HOST_ID: &str = "_cert-monitor";
 
@@ -35,7 +35,6 @@ pub struct MonitorManager {
     state_update_sender: Option<mpsc::Sender<StateUpdateMessage>>,
     /// Every refresh operation gets an invocation ID. Valid ID numbers begin from 1.
     invocation_id_counter: u64,
-    cache_settings: CacheSettings,
 
     // Shared resources. Only used for fetching up-to-date data.
     host_manager: Rc<RefCell<HostManager>>,
@@ -47,12 +46,9 @@ pub struct MonitorManager {
 }
 
 impl MonitorManager {
-    pub fn new(cache_settings: CacheSettings,
-               host_manager: Rc<RefCell<HostManager>>,
-               module_factory: Arc<ModuleFactory>) -> Self {
+    pub fn new(host_manager: Rc<RefCell<HostManager>>, module_factory: Arc<ModuleFactory>) -> Self {
 
         MonitorManager {
-            cache_settings: cache_settings,
             host_manager: host_manager.clone(),
             module_factory: module_factory,
             ..Default::default()
@@ -165,47 +161,22 @@ impl MonitorManager {
 
     /// Intended to be run only once in the beginning when possibly refreshing all host data.
     /// Returns list of host IDs that were refreshed.
-    pub fn refresh_platform_info_all(&mut self, cache_policy: Option<CachePolicy>) -> Vec<String> {
-        let cache_policy = if let Some(cache_policy) = cache_policy {
-            cache_policy
-        }
-        else if !self.cache_settings.enable_cache {
-            CachePolicy::BypassCache
-        }
-        else if self.cache_settings.provide_initial_value {
-            CachePolicy::PreferCache
-        }
-        else {
-            CachePolicy::BypassCache
-        };
+    pub fn refresh_platform_info_all(&mut self) -> Vec<String> {
         let host_ids = self.monitors.lock().unwrap().keys().cloned().collect::<Vec<_>>();
         for host_id in &host_ids {
-            self.refresh_platform_info(host_id, Some(cache_policy));
+            self.refresh_platform_info(host_id);
         }
 
         host_ids
     }
 
     /// Refreshes platform info and such in preparation for actual monitor refresh.
-    pub fn refresh_platform_info(&mut self, host_id: &String, cache_policy: Option<CachePolicy>) {
+    pub fn refresh_platform_info(&mut self, host_id: &String) {
         let platform_info_providers = self.platform_info_providers.lock().unwrap();
         let monitors = self.monitors.lock().unwrap();
         // Internal modules start with an underscore.
         let monitors_for_host = monitors.iter()
             .filter(|(host_id_key, _)| &host_id == host_id_key && !host_id_key.starts_with("_"));
-
-        let cache_policy = if let Some(cache_policy) = cache_policy {
-            cache_policy
-        }
-        else if !self.cache_settings.enable_cache {
-            CachePolicy::BypassCache
-        }
-        else if self.cache_settings.provide_initial_value {
-            CachePolicy::PreferCache
-        }
-        else {
-            CachePolicy::BypassCache
-        };
 
         for (host_name, monitor_collection) in monitors_for_host {
             let mut host = self.host_manager.borrow().get_host(host_name);
@@ -251,7 +222,6 @@ impl MonitorManager {
                     request_type: RequestType::MonitorCommand {
                         parent_datapoint: None,
                         extension_monitors: Vec::new(),
-                        cache_policy: cache_policy,
                         commands: commands,
                     },
                 }).unwrap();
@@ -272,50 +242,37 @@ impl MonitorManager {
         let monitors = self.monitors.lock().unwrap();
         let certificate_monitors = monitors[CERT_MONITOR_HOST_ID].iter().collect();
         let cert_monitor_host = self.host_manager.borrow().get_host(&CERT_MONITOR_HOST_ID.to_string());
-        self.refresh_monitors(cert_monitor_host, certificate_monitors, CachePolicy::BypassCache)
+        self.refresh_monitors(cert_monitor_host, certificate_monitors)
     }
 
     /// Returns the invocation IDs of the refresh operations.
-    pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String, cache_policy: Option<CachePolicy>) -> Vec<u64> {
+    pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let monitors = self.monitors.lock().unwrap();
         let monitors_by_category = monitors[host_id].iter()
                                                     .filter(|(_, monitor)| &monitor.get_display_options().category == category)
                                                     .collect();
 
-        let cache_policy = if let Some(cache_policy) = cache_policy {
-            cache_policy
-        }
-        else if !self.cache_settings.enable_cache {
-            CachePolicy::BypassCache
-        }
-        else if self.cache_settings.prefer_cache {
-            CachePolicy::PreferCache
-        }
-        else {
-            CachePolicy::BypassCache
-        };
-
-        let invocation_ids = self.refresh_monitors(host, monitors_by_category, cache_policy);
+        let invocation_ids = self.refresh_monitors(host, monitors_by_category);
         self.invocation_id_counter += invocation_ids.len() as u64;
         invocation_ids
     }
 
     /// Refresh by monitor ID.
     /// Returns the invocation IDs of the refresh operations.
-    pub fn refresh_monitors_by_id(&mut self, host_id: &String, monitor_id: &String, cache_policy: CachePolicy) -> Vec<u64> {
+    pub fn refresh_monitors_by_id(&mut self, host_id: &String, monitor_id: &String) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let monitors = self.monitors.lock().unwrap();
         let monitor = monitors[host_id].iter()
                                        .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
                                        .collect();
 
-        let invocation_ids = self.refresh_monitors(host, monitor, cache_policy);
+        let invocation_ids = self.refresh_monitors(host, monitor);
         self.invocation_id_counter += invocation_ids.len() as u64;
         invocation_ids
     }
 
-    fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>, cache_policy: CachePolicy) -> Vec<u64> {
+    fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>) -> Vec<u64> {
         if !host.platform.is_set() && monitors.values().any(|monitor| !monitor.is_internal()) {
             log::warn!("[{}] Refreshing monitors despite missing platform info", host.name);
         }
@@ -372,7 +329,6 @@ impl MonitorManager {
                 request_type: RequestType::MonitorCommand {
                     parent_datapoint: None,
                     extension_monitors: extension_ids,
-                    cache_policy: cache_policy,
                     commands: messages,
                 },
             }).unwrap();
@@ -430,11 +386,6 @@ impl MonitorManager {
                 let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
                 let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
-                // If CachePolicy::OnlyCache is used and an entry is not found, don't continue.
-                if responses.iter().any(|response| response.is_not_found()) {
-                    return;
-                }
-
                 let monitors = monitors.lock().unwrap();
                 let platform_info_providers = platform_info_providers.lock().unwrap();
                 let monitor_id = &response.source_id;
@@ -443,9 +394,9 @@ impl MonitorManager {
                     &monitors[&response.host.name][monitor_id]
                 });
                 
-                let (parent_datapoint, mut extension_monitors, cache_policy) = match response.request_type {
-                    RequestType::MonitorCommand { parent_datapoint, extension_monitors, cache_policy, .. } => {
-                        (parent_datapoint, extension_monitors, cache_policy)
+                let (parent_datapoint, mut extension_monitors) = match response.request_type {
+                    RequestType::MonitorCommand { parent_datapoint, extension_monitors, .. } => {
+                        (parent_datapoint, extension_monitors)
                     },
                     _ => {
                         log::warn!("[{}][{}] Ignoring invalid datapoint", response.host.name, monitor_id);
@@ -468,7 +419,6 @@ impl MonitorManager {
                             // Was not implemented, so try the other method.
                             let message = responses[0].clone();
                             datapoint_result = monitor.process_response(response.host.clone(), message.clone(), parent_datapoint.clone().unwrap_or_default())
-                                                      .map(|mut data_point| { data_point.is_from_cache = message.is_from_cache; data_point });
                         }
                         else {
                             datapoint_result = Err(error);
@@ -529,7 +479,6 @@ impl MonitorManager {
                         request_type: RequestType::MonitorCommand {
                             parent_datapoint: Some(new_data_point.clone()),
                             extension_monitors: extension_monitors,
-                            cache_policy: cache_policy,
                             commands: messages,
                         },
                     }).unwrap();

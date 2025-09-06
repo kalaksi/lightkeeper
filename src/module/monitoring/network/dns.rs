@@ -83,7 +83,6 @@ impl MonitoringModule for Dns {
 
                 let mut datapoint = DataPoint::label(dns_server);
                 datapoint.description = String::from("resolv.conf");
-                datapoint.is_from_cache = resolvconf_response.is_from_cache;
                 result.multivalue.push(datapoint);
             }
         }
@@ -100,7 +99,6 @@ impl MonitoringModule for Dns {
                         for dns_server in dns_servers {
                             let mut datapoint = DataPoint::label(dns_server);
                             datapoint.description = String::from("systemd-resolved");
-                            datapoint.is_from_cache = resolvectl_response.is_from_cache;
                             result.multivalue.push(datapoint);
                         }
                     }

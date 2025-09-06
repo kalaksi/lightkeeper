@@ -65,7 +65,6 @@ impl Default for HostDisplayData {
                 host: Host::default(),
                 status: HostStatus::default(),
                 just_initialized: false,
-                just_initialized_from_cache: false,
                 is_initialized: false,
                 monitor_data: HashMap::new(),
                 command_results: HashMap::new(),

@@ -69,7 +69,6 @@ pub struct HostDataManagerModel {
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
     configuration_preferences: configuration::Preferences,
-    configuration_cache_settings: configuration::CacheSettings,
 }
 
 #[allow(non_snake_case)]
@@ -86,7 +85,6 @@ impl HostDataManagerModel {
             // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             configuration_preferences: config.preferences,
-            configuration_cache_settings: config.cache_settings,
             ..Default::default()
         };
 
@@ -198,13 +196,7 @@ impl HostDataManagerModel {
 
     fn isHostInitialized(&self, host_id: QString) -> bool {
         if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
-            // When reading host status from cache, existing platform info is enough for making it initialized.
-            if self.configuration_cache_settings.enable_cache && self.configuration_cache_settings.prefer_cache {
-                display_data.host_state.host.platform.is_set()
-            }
-            else {
-                display_data.host_state.is_initialized
-            }
+            display_data.host_state.is_initialized
         }
         else {
             false

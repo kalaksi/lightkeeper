@@ -20,7 +20,6 @@ use crate::module::connection::*;
 #[connection_module(
     name="tcp",
     version="0.0.1",
-    cache_scope="Global",
     description="Connects using TCP. Used for testing TCP (and TLS) connections.",
     settings={
         verify_certificate => "Assume TLS (e.g. HTTPS) and verify certificate. Default: false.",
