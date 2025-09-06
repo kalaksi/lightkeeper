@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::{
     collections::HashMap,
     sync::mpsc,
     sync::Arc,
+    sync::Mutex,
     thread,
 };
 
@@ -17,7 +19,7 @@ use crate::error::LkError;
 use crate::module::monitoring::DataPoint;
 use crate::monitor_manager::CERT_MONITOR_HOST_ID;
 use crate::Host;
-use crate::configuration::Hosts;
+use crate::configuration::{HostSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
 use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
@@ -35,7 +37,7 @@ const MAX_WORKER_THREADS: usize = 4;
 #[derive(Default)]
 pub struct ConnectionManager {
     /// Key is host name/id.
-    stateful_connectors: Option<HashMap<String, ConnectorStates>>,
+    stateful_connectors: Arc<Mutex<HashMap<String, ConnectorStates>>>,
     module_factory: Arc<ModuleFactory>,
 
     request_receiver: Option<mpsc::Receiver<ConnectorRequest>>,
@@ -46,7 +48,7 @@ pub struct ConnectionManager {
 impl ConnectionManager {
     pub fn new(module_factory: Arc<ModuleFactory>) -> Self {
         ConnectionManager {
-            stateful_connectors: Some(HashMap::new()),
+            stateful_connectors: Arc::new(Mutex::new(HashMap::new())),
             module_factory: module_factory,
             ..Default::default()
         }
@@ -55,20 +57,37 @@ impl ConnectionManager {
     pub fn configure(&mut self, hosts_config: &Hosts) {
         self.stop();
 
-        self.stateful_connectors = Some(HashMap::new());
-        let stateful_connectors = self.stateful_connectors.as_mut().unwrap();
+        let mut stateful_connectors = self.stateful_connectors.lock().unwrap();
 
-        // For certificate monitoring.
-        let cert_monitor_connectors = stateful_connectors.entry(CERT_MONITOR_HOST_ID.to_string()).or_insert(HashMap::new());
-        let mut settings = HashMap::new();
-        settings.insert("verify_certificate".to_string(), "true".to_string());
-        let cert_monitor_connector = Tcp::new_connection_module(&settings);
-        cert_monitor_connectors.insert(cert_monitor_connector.get_module_spec(), cert_monitor_connector);
+        let new_host_configs = if stateful_connectors.is_empty() {
+            // Not previously configured.
+
+            // For certificate monitoring.
+            let cert_monitor_connectors = stateful_connectors.entry(CERT_MONITOR_HOST_ID.to_string()).or_insert(HashMap::new());
+            let mut settings = HashMap::new();
+            settings.insert("verify_certificate".to_string(), "true".to_string());
+            let cert_monitor_connector = Tcp::new_connection_module(&settings);
+            cert_monitor_connectors.insert(cert_monitor_connector.get_module_spec(), cert_monitor_connector);
+
+            // All hosts.
+            hosts_config.hosts.clone()
+        }
+        else {
+            // Remove hosts that are no longer present.
+            stateful_connectors.retain(|host_id, _| 
+                hosts_config.hosts.contains_key(host_id) || host_id == CERT_MONITOR_HOST_ID
+            );
+
+            // Only new hosts.
+            hosts_config.hosts.clone().into_iter()
+                .filter(|(host_id, _)| !stateful_connectors.contains_key(host_id))
+                .collect::<BTreeMap<String, HostSettings>>()
+        };
 
         // For regular host monitoring.
-        for (host_id, host_config) in hosts_config.hosts.iter() {
+        for (host_id, host_config) in new_host_configs {
             stateful_connectors.entry(host_id.clone()).or_insert(HashMap::new());
-            let host_connectors = stateful_connectors.get_mut(host_id).unwrap();
+            let host_connectors = stateful_connectors.get_mut(&host_id).unwrap();
 
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
                 let monitor_spec = ModuleSpecification::monitor(monitor_id.as_str(), monitor_config.version.as_str());
@@ -132,7 +151,7 @@ impl ConnectionManager {
 
     pub fn start_processing_requests(&mut self) {
         let thread = Self::process_requests(
-            self.stateful_connectors.take().unwrap(),
+            self.stateful_connectors.clone(),
             self.request_receiver.take().unwrap(),
             self.module_factory.clone(),
         );
@@ -150,7 +169,7 @@ impl ConnectionManager {
     }
 
     fn process_requests(
-        stateful_connectors: HashMap<String, ConnectorStates>,
+        stateful_connectors: Arc<Mutex<HashMap<String, ConnectorStates>>>,
         receiver: mpsc::Receiver<ConnectorRequest>,
         module_factory: Arc<ModuleFactory>) -> thread::JoinHandle<()> {
 
@@ -158,11 +177,9 @@ impl ConnectionManager {
             let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build().unwrap();
             log::debug!("Created worker pool with {} threads", MAX_WORKER_THREADS);
 
-            let stateful_connectors_arc = Arc::new(stateful_connectors);
-
             loop {
+                let stateful_connectors = stateful_connectors.clone();
                 let module_factory = module_factory.clone();
-                let stateful_connectors = stateful_connectors_arc.clone();
 
                 let request = match receiver.recv() {
                     Ok(data) => data,
@@ -173,7 +190,7 @@ impl ConnectionManager {
                 };
 
                 if let RequestType::Exit = request.request_type {
-                    log::debug!("Gracefully stopping connection manager thread");
+                    log::debug!("Gracefully stopping request processing");
                     return;
                 }
 
@@ -187,6 +204,8 @@ impl ConnectionManager {
                 };
 
                 worker_pool.spawn(move || {
+                    let stateful_connectors = stateful_connectors.lock().unwrap();
+
                     log::debug!("[{}][{}] Worker {} processing a request",
                         request.host.name, request.source_id, rayon::current_thread_index().unwrap_or_default());
 
@@ -201,8 +220,21 @@ impl ConnectionManager {
                     }
                     // Stateful connectors.
                     else {
-                        let host_connectors = stateful_connectors.get(&request.host.name).unwrap();
-                        host_connectors.get(&connector_spec).unwrap()
+                        let host_connectors = match stateful_connectors.get(&request.host.name) {
+                            Some(connectors) => connectors,
+                            None => {
+                                log::error!("[{}][{}] host connection is not configured", request.host.name, request.source_id);
+                                return;
+                            }
+                        };
+
+                        match host_connectors.get(&connector_spec) {
+                            Some(connector) => connector,
+                            None => {
+                                log::error!("[{}][{}] host connection is not configured", request.host.name, request.source_id);
+                                return;
+                            }
+                        }
                     };
 
                     connector.set_target(&request.host.get_address());
