@@ -68,7 +68,6 @@ impl HostManager {
         self.stop();
 
         let mut host_states = self.hosts.lock().unwrap();
-        let mut old_states: HashMap<String, HostState> = HashMap::new();
 
         let new_host_configs = if host_states.hosts.is_empty() {
             // For certificate monitoring.
@@ -87,9 +86,7 @@ impl HostManager {
                        || current_host_config.commands != new_host_config.effective.commands
                        || current_host_config.host_settings != new_host_config.effective.host_settings
                     {
-                        if let Some(old_state) = host_states.hosts.remove(host_id) {
-                            old_states.insert(host_id.clone(), old_state);
-                        }
+                        host_states.hosts.remove(host_id);
                     }
                 }
             }
@@ -115,17 +112,8 @@ impl HostManager {
                     continue;
                 }
 
-                let mut host_state = HostState::from_host(host.clone(), HostStatus::Unknown);
-
-                // If there's some old state available, restore some of it.
-                if let Some(old_state) = old_states.get(host_id) {
-                    host_state.host.platform = old_state.host.platform.clone();
-                    host_state.host.platform = old_state.host.platform.clone();
-                    host_state.status = old_state.status;
-                    host_state.is_initialized = old_state.is_initialized;
-                }
-
-                host_states.hosts.insert(host.name.clone(), host_state);
+                let host_state = HostState::from_host(host.clone(), HostStatus::Unknown);
+                host_states.hosts.insert(host.name.clone(), host_state.clone());
             }
             else {
                 log::error!("Failed to create host {}", host_id);
@@ -430,10 +418,6 @@ impl HostStateCollection {
         HostStateCollection {
             hosts: HashMap::new(),
         }
-    }
-
-    fn clear(&mut self) {
-        self.hosts.clear();
     }
 }
 

@@ -86,12 +86,12 @@ Item {
                     LK.command.refreshMonitorsOfCategory(root.hostId, hostGroupBox.categoryName)
                     hostGroupBox.refreshProgress = 0
                 }
-
             }
 
             CustomCommandGroupBox {
                 id: customCommandsGroupBox
                 hostId: root.hostId
+                visible: root.hostId !== ""
 
                 Layout.minimumWidth: root.columnMinimumWidth
                 Layout.maximumWidth: root.columnMaximumWidth

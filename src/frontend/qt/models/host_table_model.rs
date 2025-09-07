@@ -41,20 +41,10 @@ pub struct HostTableModel {
 #[allow(non_snake_case)]
 impl HostTableModel {
     fn set_display_data(&mut self, display_data: QVariant) {
-        // Remember currently selected host.
-        let selected_host_id = self.getSelectedHostId();
-
         self.begin_reset_model();
         self.i_display_data = frontend::DisplayData::from_qvariant(display_data).unwrap();
         self.update_row_data();
         self.end_reset_model();
-
-        self.selectedRow = self.host_row_map.get(&selected_host_id.to_string())
-                                            .map(|row| *row as i32).unwrap_or(-1);
-
-        if self.selectedRow >= 0 {
-            self.selectionActivated();
-        }
     }
 
     fn update_row_data(&mut self) {
@@ -71,7 +61,7 @@ impl HostTableModel {
         filtered_hosts.sort_by_key(|(key, _)| key.to_lowercase());
 
         // Remember currently selected host.
-        let selected_host_id = self.getSelectedHostId();
+        let selected_host_id = self.getSelectedHostId().to_string();
 
         self.host_row_map.clear();
         self.row_data.clear();
@@ -82,14 +72,10 @@ impl HostTableModel {
         }
 
         // Restore host selection.
-        self.selectedRow = match self.host_row_map.get(&selected_host_id.to_string()) {
+        self.selectedRow = match self.host_row_map.get(&selected_host_id) {
             Some(row) => *row as i32,
             None => -1,
         };
-
-        if self.selectedRow >= 0 {
-            self.selectionActivated();
-        }
     }
 
     // A slot for informing about change in table data.
