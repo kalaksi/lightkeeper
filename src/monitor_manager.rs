@@ -60,6 +60,7 @@ impl MonitorManager {
                      request_sender: mpsc::Sender<ConnectorRequest>,
                      state_update_sender: mpsc::Sender<StateUpdateMessage>) {
 
+        // MonitorManager has almost no state so can be reinitialized fully.
         self.stop();
 
         match self.monitors.lock() {

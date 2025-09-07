@@ -4,7 +4,7 @@
  */
 
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::str::FromStr;
 use std::sync::mpsc;
 use std::thread;
@@ -12,6 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use serde_derive::{Deserialize, Serialize};
 
+use crate::configuration::ConfigGroup;
 use crate::error::LkError;
 use crate::frontend::frontend::VerificationRequest;
 use crate::module::platform_info;
@@ -35,8 +36,12 @@ use crate::{
 const DATA_POINT_BUFFER_SIZE: usize = 4;
 
 
+/// Manages the host states.
 pub struct HostManager {
     hosts: Arc<Mutex<HostStateCollection>>,
+    /// Only meant for tracking config changes in re-configuration.
+    current_config: HashMap<String, ConfigGroup>,
+
     /// Provides sender handles for sending StateUpdateMessages to this instance.
     data_sender_prototype: Option<mpsc::Sender<StateUpdateMessage>>,
     data_receiver: Option<mpsc::Receiver<StateUpdateMessage>>,
@@ -51,6 +56,7 @@ impl HostManager {
 
         HostManager {
             hosts: hosts,
+            current_config: HashMap::new(),
             frontend_state_sender: frontend_state_sender,
             data_receiver: None,
             data_sender_prototype: None,
@@ -58,45 +64,78 @@ impl HostManager {
         }
     }
 
-    pub fn configure(&mut self, config: &configuration::Hosts) {
+    pub fn configure(&mut self, hosts_config: &configuration::Hosts) {
         self.stop();
 
-        let mut hosts = self.hosts.lock().unwrap();
-        let old_states = hosts.hosts.clone();
-        hosts.clear();
+        let mut host_states = self.hosts.lock().unwrap();
+        let mut old_states: HashMap<String, HostState> = HashMap::new();
 
-        // For certificate monitoring.
-        let cert_monitor_host = Host::empty(crate::monitor_manager::CERT_MONITOR_HOST_ID, &vec![]);
-        let cert_monitor_state = HostState::from_host(cert_monitor_host, HostStatus::Unknown);
-        hosts.hosts.insert(cert_monitor_state.host.name.clone(), cert_monitor_state);
+        let new_host_configs = if host_states.hosts.is_empty() {
+            // For certificate monitoring.
+            let cert_monitor_host = Host::empty(crate::monitor_manager::CERT_MONITOR_HOST_ID, &vec![]);
+            let cert_monitor_state = HostState::from_host(cert_monitor_host, HostStatus::Unknown);
+            host_states.hosts.insert(cert_monitor_state.host.name.clone(), cert_monitor_state);
+
+            // All hosts.
+            hosts_config.hosts.clone()
+        }
+        else {
+            // Reinitialize hosts that had their monitor config changed.
+            for (host_id, new_host_config) in hosts_config.hosts.iter() {
+                if let Some(current_host_config) = self.current_config.get(host_id) {
+                    if current_host_config.monitors != new_host_config.effective.monitors
+                       || current_host_config.commands != new_host_config.effective.commands
+                       || current_host_config.host_settings != new_host_config.effective.host_settings
+                    {
+                        if let Some(old_state) = host_states.hosts.remove(host_id) {
+                            old_states.insert(host_id.clone(), old_state);
+                        }
+                    }
+                }
+            }
+
+            // Remove connectors for hosts that are no longer present.
+            host_states.hosts.retain(|host_id, _|
+                hosts_config.hosts.contains_key(host_id) || host_id == crate::monitor_manager::CERT_MONITOR_HOST_ID
+            );
+
+            hosts_config.hosts.clone().into_iter()
+                .filter(|(host_id, _)| !host_states.hosts.contains_key(host_id))
+                .collect::<BTreeMap<String, configuration::HostSettings>>()
+        };
 
         // For regular host monitoring.
-        for (host_id, host_config) in config.hosts.iter() {
-            log::debug!("Found configuration for host {}", host_id);
+        for (host_id, new_host_config) in new_host_configs.iter() {
+            log::debug!("Configuring host {}", host_id);
 
             // TODO: UseSudo is currently always assumed.
-            if let Ok(host) = Host::new(host_id, &host_config.address, &host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]) {
-                if hosts.hosts.contains_key(&host.name) {
+            if let Ok(host) = Host::new(host_id, &new_host_config.address, &new_host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]) {
+                if host_states.hosts.contains_key(&host.name) {
                     log::error!("Host '{}' already exists", host.name);
                     continue;
                 }
 
                 let mut host_state = HostState::from_host(host.clone(), HostStatus::Unknown);
 
-                // If this is a reload and there's some old state available, restore some of it.
+                // If there's some old state available, restore some of it.
                 if let Some(old_state) = old_states.get(host_id) {
+                    host_state.host.platform = old_state.host.platform.clone();
                     host_state.host.platform = old_state.host.platform.clone();
                     host_state.status = old_state.status;
                     host_state.is_initialized = old_state.is_initialized;
                 }
 
-                hosts.hosts.insert(host.name.clone(), host_state);
+                host_states.hosts.insert(host.name.clone(), host_state);
             }
             else {
                 log::error!("Failed to create host {}", host_id);
                 continue;
             }
         }
+
+        self.current_config = hosts_config.hosts.iter()
+            .map(|(host_id, config)| (host_id.clone(), config.effective.clone()))
+            .collect();
 
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
         self.data_sender_prototype = Some(sender);
@@ -161,8 +200,8 @@ impl HostManager {
                     return;
                 }
 
-                let mut hosts = hosts.lock().unwrap();
-                let host_state = match hosts.hosts.get_mut(&state_update.host_name) {
+                let mut host_states = hosts.lock().unwrap();
+                let host_state = match host_states.hosts.get_mut(&state_update.host_name) {
                     Some(host_state) => host_state,
                     // It's possible that we receive state update from host that was just removed.
                     None => {
@@ -196,9 +235,11 @@ impl HostManager {
                     else {
                         // Initial NoData point will have invocation ID 0.
                         if state_update.invocation_id == 0 {
-                            let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
-                            new_data.values.push_back(message_data_point.clone());
-                            host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
+                            if !host_state.monitor_data.contains_key(&state_update.module_spec.id) {
+                                let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
+                                new_data.values.push_back(message_data_point.clone());
+                                host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
+                            }
                         }
                         else if message_data_point.criticality == Criticality::NoData {
                             host_state.monitor_invocations
@@ -358,6 +399,7 @@ pub struct StateUpdateMessage {
     pub host_name: String,
     pub display_options: frontend::DisplayOptions,
     pub module_spec: ModuleSpecification,
+    // TODO: use an enum.
     /// Only used with monitors.
     pub data_point: Option<DataPoint>,
     /// Only used with commands.
@@ -403,7 +445,9 @@ pub struct HostState {
     /// Host has received a real-time update for platform info.
     pub just_initialized: bool,
     pub is_initialized: bool,
+    /// Monitor ID as key.
     pub monitor_data: HashMap<String, MonitoringData>,
+    /// Command ID as key.
     pub command_results: HashMap<String, CommandResult>,
     /// Invocations in progress. Keeps track of monitor progress. Empty when all is done.
     pub monitor_invocations: HashMap<u64, InvocationDetails>,
