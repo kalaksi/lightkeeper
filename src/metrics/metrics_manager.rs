@@ -85,20 +85,19 @@ impl MetricsManager {
             // Verify signature only if not in debug mode.
             if !cfg!(debug_assertions) {
                 let sign_cert = include_bytes!("../../certs/sign.crt");
-                match verify_signature(&lmserver_path, &signature_path, sign_cert) {
-                    Ok(_) => break,
-                    Err(error) => {
-                        // Delete files to force re-download and to lower the risk of accidentally running possibly unverified binary.
-                        std::fs::remove_file(&lmserver_path)?;
-                        std::fs::remove_file(&signature_path)?;
-                        std::fs::remove_file(&version_file_path)?;
+                if let Err(error) = verify_signature(&lmserver_path, &signature_path, sign_cert) {
+                    // Delete files to force re-download and to lower the risk of accidentally running possibly unverified binary.
+                    std::fs::remove_file(&lmserver_path)?;
+                    std::fs::remove_file(&signature_path)?;
+                    std::fs::remove_file(&version_file_path)?;
 
-                        if retry_count > 0 {
-                            return Err(LkError::from(error));
-                        }
+                    if retry_count > 0 {
+                        return Err(LkError::from(error));
                     }
                 }
             }
+
+            break;
         }
 
         if socket_path.exists() {
