@@ -19,7 +19,7 @@ use crate::error::LkError;
 use crate::module::monitoring::DataPoint;
 use crate::monitor_manager::CERT_MONITOR_HOST_ID;
 use crate::Host;
-use crate::configuration::{HostSettings, Hosts};
+use crate::configuration::{ConfigGroup, HostSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
 use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
@@ -39,6 +39,8 @@ pub struct ConnectionManager {
     /// Key is host name/id.
     stateful_connectors: Arc<Mutex<HashMap<String, ConnectorStates>>>,
     module_factory: Arc<ModuleFactory>,
+    /// Only meant for tracking config changes in re-configuration.
+    current_config: HashMap<String, ConfigGroup>,
 
     request_receiver: Option<mpsc::Receiver<ConnectorRequest>>,
     request_sender_prototype: Option<mpsc::Sender<ConnectorRequest>>,
@@ -60,8 +62,6 @@ impl ConnectionManager {
         let mut stateful_connectors = self.stateful_connectors.lock().unwrap();
 
         let new_host_configs = if stateful_connectors.is_empty() {
-            // Not previously configured.
-
             // For certificate monitoring.
             let cert_monitor_connectors = stateful_connectors.entry(CERT_MONITOR_HOST_ID.to_string()).or_insert(HashMap::new());
             let mut settings = HashMap::new();
@@ -73,12 +73,20 @@ impl ConnectionManager {
             hosts_config.hosts.clone()
         }
         else {
-            // Remove hosts that are no longer present.
-            stateful_connectors.retain(|host_id, _| 
+            // Re-add hosts that had their config changed.
+            for (host_id, new_host_config) in hosts_config.hosts.iter() {
+                if let Some(current_host_config) = self.current_config.get(host_id) {
+                    if current_host_config.connectors != new_host_config.effective.connectors {
+                        stateful_connectors.remove(host_id);
+                    }
+                }
+            }
+
+            // Remove connectors for hosts that are no longer present.
+            stateful_connectors.retain(|host_id, _|
                 hosts_config.hosts.contains_key(host_id) || host_id == CERT_MONITOR_HOST_ID
             );
 
-            // Only new hosts.
             hosts_config.hosts.clone().into_iter()
                 .filter(|(host_id, _)| !stateful_connectors.contains_key(host_id))
                 .collect::<BTreeMap<String, HostSettings>>()
@@ -86,8 +94,7 @@ impl ConnectionManager {
 
         // For regular host monitoring.
         for (host_id, host_config) in new_host_configs {
-            stateful_connectors.entry(host_id.clone()).or_insert(HashMap::new());
-            let host_connectors = stateful_connectors.get_mut(&host_id).unwrap();
+            let host_connectors = stateful_connectors.entry(host_id.clone()).or_insert(HashMap::new());
 
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
                 let monitor_spec = ModuleSpecification::monitor(monitor_id.as_str(), monitor_config.version.as_str());
@@ -139,6 +146,10 @@ impl ConnectionManager {
                 }
             }
         }
+
+        self.current_config = hosts_config.hosts.iter()
+            .map(|(host_id, config)| (host_id.clone(), config.effective.clone()))
+            .collect();
 
         let (sender, receiver) = mpsc::channel::<ConnectorRequest>();
         self.request_receiver = Some(receiver);
