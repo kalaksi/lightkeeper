@@ -123,7 +123,7 @@ LightkeeperDialog {
     InputDialog {
         id: commandAddDialog
         title: "Add command"
-        width: parent.width
+        width: 500
         height: 200
         onInputValuesGiven: function(inputValues) {
             root.addCustomCommand(inputValues[0], inputValues[1], inputValues[2])
@@ -133,7 +133,7 @@ LightkeeperDialog {
     InputDialog {
         id: commandEditDialog
         title: "Edit command"
-        width: parent.width
+        width: 500
         height: 200
         onInputValuesGiven: function(inputValues) {
             root.editCustomCommand(inputValues[0], inputValues[1], inputValues[2])
