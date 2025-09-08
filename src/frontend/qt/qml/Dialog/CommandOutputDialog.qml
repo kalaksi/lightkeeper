@@ -6,6 +6,7 @@ import Theme
 
 import "../DetailsView"
 import "../Text"
+import "../js/TextTransform.js" as TextTransform
 
 
 LightkeeperDialog {
@@ -39,7 +40,8 @@ LightkeeperDialog {
     }
 
     onTextChanged: {
-        commandOutput.rows = root.text.split("\n")
+        let coloredText = TextTransform.ansiToRichText(root.text)
+        commandOutput.rows = coloredText.split("\n")
 
         // Scroll to bottom.
         commandOutput.positionViewAtEnd()

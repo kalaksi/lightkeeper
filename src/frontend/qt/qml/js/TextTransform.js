@@ -1,3 +1,14 @@
+var ANSI_COLORS = {
+    "30": "black",
+    "31": "red",
+    "32": "green",
+    "33": "yellow",
+    "34": "blue",
+    "35": "magenta",
+    "36": "cyan",
+    "37": "white",
+    "90": "grey",
+}
 
 function trimNewline(text) {
     if (text.endsWith('\n')) {
@@ -36,4 +47,23 @@ function escapeHtml(text)
                .replace(/&/g, "&amp;")
                .replace(/"/g, "&quot;")
                .replace(/'/g, "&#039;");
- }
+}
+
+/// Parse ANSI color codes and return rich text with appropriate coloring.
+function ansiToRichText(text) {
+
+    return text.replace(/\[1?\;?(1|3[0-7]|90|0)m/g, (match, p1) => {
+        if (p1 in ANSI_COLORS) {
+            return `<span style="color:${ANSI_COLORS[p1]}">`
+        }
+        else if (p1 === "1") {
+            return '<span style="font-weight:bold">'
+        }
+        else if (p1 === "0") {
+            return "</span>"
+        }
+        else {
+            return match
+        }
+    })
+}
