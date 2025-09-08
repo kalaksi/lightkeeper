@@ -22,7 +22,7 @@ use crate::module::monitoring::*;
     version="0.0.1",
     description="Provides information about network interfaces.",
     settings={
-        ignored_interfaces => "Comma-separated list of interface names to ignore. Default: empty."
+        ignored_interfaces => "Comma-separated list of interface names or name prefixes to ignore. Default: empty."
     }
 )]
 pub struct Interface {
