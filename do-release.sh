@@ -64,7 +64,7 @@ if [ -d ../io.github.kalaksi.Lightkeeper ]; then
     current_branch=$(git branch --show-current)
     if [ $current_branch != $minor_version ]; then
         # Will fail if branch already exists.
-        git checkout -b $minor_version
+        git checkout master && git checkout -b $minor_version
     fi
     # Pushing the changes has to be done manually
     git commit -a -m "Update to version $version_only"
