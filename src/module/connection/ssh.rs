@@ -313,6 +313,8 @@ impl ConnectionModule for Ssh2 {
 
 impl Ssh2 {
     fn wait_for_session(&self, invocation_id: u64, connect_automatically: bool) -> Result<MutexGuard<SharedSessionData>, LkError> {
+        let mut total_wait = Duration::from_secs(0);
+
         loop {
             for (index, session) in self.available_sessions.iter().enumerate() {
                 if let Ok(mut session_data) = session.try_lock() {
@@ -337,6 +339,12 @@ impl Ssh2 {
             }
 
             std::thread::sleep(Duration::from_millis(SESSION_WAIT_SLEEP));
+            total_wait += Duration::from_millis(SESSION_WAIT_SLEEP);
+
+            // Print a warning every 2 minutes.
+            if total_wait.as_secs() % 120 == 0 {
+                log::warn!("No free SSH session available after {} seconds. Still waiting.", total_wait.as_secs());
+            }
         }
     }
 
