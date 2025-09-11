@@ -30,7 +30,7 @@ use self::request_response::RequestResponse;
 type ConnectorStates = HashMap<ModuleSpecification, Connector>;
 
 
-const MAX_WORKER_THREADS: usize = 4;
+const MAX_WORKER_THREADS: usize = 6;
 
 
 // Default needs to be implemented because of Qt QObject requirements.
