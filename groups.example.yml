@@ -65,7 +65,10 @@ groups:
     monitors:
       docker-containers: {}
       docker-images: {}
-      docker-image-updates: {}
+      # Disabled. It isn't very useful to track updates to tags.
+      # Wasn't displayed correctly in the UI either.
+      # TODO: remove later when sure this is not needed.
+      # docker-image-updates: {}
     commands:
       docker-image-prune: {}
       docker-restart: {}
