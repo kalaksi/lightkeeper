@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::configuration::ConfigGroup;
+use crate::configuration::HostSettings;
 use crate::error::LkError;
 use crate::frontend::frontend::VerificationRequest;
 use crate::module::platform_info;
@@ -40,7 +40,7 @@ const DATA_POINT_BUFFER_SIZE: usize = 4;
 pub struct HostManager {
     hosts: Arc<Mutex<HostStateCollection>>,
     /// Only meant for tracking config changes in re-configuration.
-    current_config: HashMap<String, ConfigGroup>,
+    current_config: BTreeMap<String, HostSettings>,
 
     /// Provides sender handles for sending StateUpdateMessages to this instance.
     data_sender_prototype: Option<mpsc::Sender<StateUpdateMessage>>,
@@ -56,7 +56,7 @@ impl HostManager {
 
         HostManager {
             hosts: hosts,
-            current_config: HashMap::new(),
+            current_config: BTreeMap::new(),
             frontend_state_sender: frontend_state_sender,
             data_receiver: None,
             data_sender_prototype: None,
@@ -80,12 +80,9 @@ impl HostManager {
         }
         else {
             // Reinitialize hosts that had their monitor config changed.
-            for (host_id, new_host_config) in hosts_config.hosts.iter() {
-                if let Some(current_host_config) = self.current_config.get(host_id) {
-                    if current_host_config.monitors != new_host_config.effective.monitors
-                       || current_host_config.commands != new_host_config.effective.commands
-                       || current_host_config.host_settings != new_host_config.effective.host_settings
-                    {
+            for (host_id, new_host_settings) in hosts_config.hosts.iter() {
+                if let Some(current_host_settings) = self.current_config.get(host_id) {
+                    if current_host_settings != new_host_settings {
                         host_states.hosts.remove(host_id);
                     }
                 }
@@ -121,9 +118,7 @@ impl HostManager {
             }
         }
 
-        self.current_config = hosts_config.hosts.iter()
-            .map(|(host_id, config)| (host_id.clone(), config.effective.clone()))
-            .collect();
+        self.current_config = hosts_config.hosts.clone();
 
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
         self.data_sender_prototype = Some(sender);

@@ -135,7 +135,7 @@ pub struct ChartCategory {
     pub monitors: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct HostSettings {
     #[serde(default)]
