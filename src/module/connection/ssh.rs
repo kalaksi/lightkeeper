@@ -4,7 +4,7 @@
  */
 
 use std::path::PathBuf;
-use std::sync::MutexGuard;
+use std::sync::{Arc, MutexGuard};
 use std::time::Duration;
 use std::sync::Mutex;
 use std::{
@@ -49,9 +49,10 @@ const SESSION_WAIT_SLEEP: u64 = 200;
       parallel_sessions => "Number of parallel login sessions. Improves performance. Default: 2.",
     }
 )]
+/// SSH connection module. Manages parallel SSH sessions internally.
 pub struct Ssh2 {
-    address: Mutex<String>,
-    port: Mutex<u16>,
+    address: Arc<Mutex<String>>,
+    port: Arc<Mutex<u16>>,
     username: String,
     password: Option<String>,
     private_key_path: Option<String>,
@@ -61,7 +62,8 @@ pub struct Ssh2 {
     verify_host_key: bool,
     custom_known_hosts_path: Option<PathBuf>,
 
-    available_sessions: Vec<Mutex<SharedSessionData>>,
+    /// Cloning these sessions (essentially ssh2::Session) gets you another handle referencing the same session.
+    available_sessions: Arc<Vec<Mutex<SharedSessionData>>>,
 }
 
 pub struct SharedSessionData {
@@ -87,8 +89,8 @@ impl Module for Ssh2 {
         }
 
         Ssh2 {
-            address: Mutex::new(String::from("0.0.0.0")),
-            port: Mutex::new(settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap()),
+            address: Arc::new(Mutex::new(String::from("0.0.0.0"))),
+            port: Arc::new(Mutex::new(settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap())),
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
             password: settings.get("password").cloned(),
             private_key_path: settings.get("private_key_path").cloned(),
@@ -97,7 +99,7 @@ impl Module for Ssh2 {
             connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
             verify_host_key: settings.get("verify_host_key").unwrap_or(&String::from("true")).parse::<bool>().unwrap(),
             custom_known_hosts_path: settings.get("custom_known_hosts_path").map(|path| PathBuf::from(path)),
-            available_sessions: available_sessions,
+            available_sessions: Arc::new(available_sessions),
         }
     }
 }
@@ -342,7 +344,7 @@ impl Ssh2 {
             total_wait += Duration::from_millis(SESSION_WAIT_SLEEP);
 
             // Print a warning every 2 minutes.
-            if total_wait.as_secs() % 120 == 0 {
+            if total_wait.as_secs() > 0 && total_wait.as_secs() % 120 == 0 {
                 log::warn!("No free SSH session available after {} seconds. Still waiting.", total_wait.as_secs());
             }
         }

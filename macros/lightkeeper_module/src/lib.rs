@@ -256,6 +256,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+/// Stateful connection modules.
 pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let args_parsed = syn::parse_macro_input!(args as ModuleArgs);
     let module_name = args_parsed.name;
@@ -272,6 +273,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let struct_name = &ast.ident;
 
     quote! {
+        #[derive(Clone)]
         #original
 
         impl MetadataSupport for #struct_name {
@@ -293,6 +295,12 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
 
             fn get_module_spec(&self) -> ModuleSpecification {
                 Self::get_metadata().module_spec
+            }
+        }
+
+        impl BoxCloneableConnector for #struct_name {
+            fn box_clone(&self) -> Box<dyn ConnectionModule + Send + Sync> {
+                Box::new(self.clone())
             }
         }
     }.into()
@@ -318,6 +326,7 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
     // Works only for structs.
     if let syn::Data::Struct(_data) = ast.data {
         quote! {
+            #[derive(Clone)]
             #original
 
             impl MetadataSupport for #struct_name {
@@ -339,6 +348,12 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
 
                 fn get_module_spec(&self) -> ModuleSpecification {
                     Self::get_metadata().module_spec
+                }
+            }
+
+            impl BoxCloneableConnector for #struct_name {
+                fn box_clone(&self) -> Box<dyn ConnectionModule + Send + Sync> {
+                    Box::new(self.clone())
                 }
             }
         }.into()

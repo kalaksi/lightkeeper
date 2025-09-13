@@ -13,7 +13,7 @@ use crate::module::MetadataSupport;
 
 pub type Connector = Box<dyn ConnectionModule + Send + Sync>;
 
-pub trait ConnectionModule: MetadataSupport + Module {
+pub trait ConnectionModule: BoxCloneableConnector + MetadataSupport + Module {
     /// Stores target address. Should be called before anything else since connects/reconnects can happen at any point.
     fn set_target(&self, _address: &str) {}
 
@@ -47,4 +47,9 @@ pub trait ConnectionModule: MetadataSupport + Module {
     {
         Box::new(Self::new(settings))
     }
+}
+
+// Implemented by the macro.
+pub trait BoxCloneableConnector {
+    fn box_clone(&self) -> Connector;
 }

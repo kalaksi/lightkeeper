@@ -6,6 +6,7 @@
 pub mod connection_module;
 pub use connection_module::ConnectionModule;
 pub use connection_module::Connector;
+pub use connection_module::BoxCloneableConnector;
 
 pub mod request_response;
 pub use request_response::ResponseMessage;

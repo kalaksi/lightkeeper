@@ -8,7 +8,7 @@ use ureq;
 use serde_derive::Deserialize;
 use serde_json;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use lightkeeper_module::connection_module;
 use crate::error::LkError;
 use crate::module::*;
@@ -22,14 +22,14 @@ use crate::utils::string_validation::is_alphanumeric_with;
 )]
 pub struct HttpJwt {
     agent: ureq::Agent,
-    jwt_tokens: Mutex<HashMap<String, String>>,
+    jwt_tokens: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl Module for HttpJwt {
     fn new(_settings: &HashMap<String, String>) -> Self {
         HttpJwt {
             agent: ureq::Agent::new(),
-            jwt_tokens: Mutex::new(HashMap::new()),
+            jwt_tokens: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
