@@ -38,6 +38,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.31.0" date="2025-09-13">
+      <description>
+        <ul>
+          <li>Add basic ANSI color support for command output dialog.</li>
+          <li>Fix parallel execution of commands so they won't block each other.</li>
+          <li>Fix host IP/FQDN not getting updated after edit.</li>
+          <li>Fix custom commands input dialog width.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.30.0" date="2025-09-07">
       <description>
         <ul>
