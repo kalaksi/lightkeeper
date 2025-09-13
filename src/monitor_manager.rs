@@ -391,9 +391,17 @@ impl MonitorManager {
                 let platform_info_providers = platform_info_providers.lock().unwrap();
                 let monitor_id = &response.source_id;
                 // Search from internal monitors first.
-                let monitor = platform_info_providers.get(monitor_id).unwrap_or_else(|| {
-                    &monitors[&response.host.name][monitor_id]
-                });
+                let monitor = if let Some(monitor) = platform_info_providers.get(monitor_id) {
+                    monitor
+                }
+                else if let Some(monitor) = monitors.get(&response.host.name).and_then(|m| m.get(monitor_id)) {
+                    monitor
+                }
+                else {
+                    // Can happen if the host or monitor was removed while command was in progress.
+                    log::debug!("[{}][{}] Ignoring response for unknown host or monitor", response.host.name, monitor_id);
+                    continue;
+                };
                 
                 let (parent_datapoint, mut extension_monitors) = match response.request_type {
                     RequestType::MonitorCommand { parent_datapoint, extension_monitors, .. } => {

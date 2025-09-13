@@ -421,7 +421,16 @@ impl CommandHandler {
                 }
 
                 let commands = commands.lock().unwrap();
-                let command = &commands[&response.host.name][&response.source_id];
+                let command = if let Some(host_command) = commands.get(&response.host.name)
+                    .and_then(|host_commands| host_commands.get(&response.source_id)) {
+                    host_command
+                }
+                else {
+                    // Can happen if the host or command was removed while command was in progress.
+                    log::debug!("[{}][{}] Ignoring response for unknown host or command", response.host.name, response.source_id);
+                    continue;
+                };
+
                 let new_state_update_sender = state_update_sender.clone();
 
                 match command.get_display_options().action {

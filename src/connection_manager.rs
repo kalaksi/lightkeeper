@@ -215,35 +215,31 @@ impl ConnectionManager {
                 };
 
                 worker_pool.spawn(move || {
-                    let stateful_connectors = stateful_connectors.lock().unwrap();
-
                     log::debug!("[{}][{}] Worker {} processing a request",
                         request.host.name, request.source_id, rayon::current_thread_index().unwrap_or_default());
 
                     let connector_metadata = module_factory.get_connector_module_metadata(&connector_spec);
 
-                    // Stateless connectors.
-                    let connector = if connector_metadata.is_stateless {
-                        match module_factory.new_connector(&connector_spec, &HashMap::new()) {
-                            Some(connector) => &mut Box::new(connector),
-                            None => return,
-                        }
-                    }
-                    // Stateful connectors.
-                    else {
-                        let host_connectors = match stateful_connectors.get(&request.host.name) {
-                            Some(connectors) => connectors,
-                            None => {
-                                log::error!("[{}][{}] host connection is not configured", request.host.name, request.source_id);
-                                return;
-                            }
-                        };
+                    let connector = {
+                        let stateful_connectors = stateful_connectors.lock().unwrap();
 
-                        match host_connectors.get(&connector_spec) {
-                            Some(connector) => connector,
-                            None => {
-                                log::error!("[{}][{}] host connection is not configured", request.host.name, request.source_id);
-                                return;
+                        // Stateless connectors.
+                        if connector_metadata.is_stateless {
+                            match module_factory.new_connector(&connector_spec, &HashMap::new()) {
+                                Some(connector) => connector,
+                                None => return,
+                            }
+                        }
+                        // Stateful connectors.
+                        else {
+                            match stateful_connectors.get(&request.host.name)
+                                .and_then(|host_connectors| host_connectors.get(&connector_spec))
+                            {
+                                Some(connector) => connector.box_clone(),
+                                None => {
+                                    log::error!("[{}][{}] host connection is not configured", request.host.name, request.source_id);
+                                    return;
+                                }
                             }
                         }
                     };
@@ -268,12 +264,12 @@ impl ConnectionManager {
                             Self::process_commands(&request, &connector, &commands)
                         },
                         RequestType::CommandFollowOutput { commands } => {
-                            if commands.len() != 1 {
-                                vec![Err(LkError::other("Follow output is only supported for a single command"))]
-                            }
-                            else {
+                            if commands.len() == 1 {
                                 let command = commands.first().unwrap();
                                 vec![Self::process_command_follow_output(&request, &connector, command, request.response_sender.clone())]
+                            }
+                            else {
+                                vec![Err(LkError::other("Follow output is only supported for a single command"))]
                             }
                         },
                         RequestType::Download { remote_file_path: file_path } =>
