@@ -62,7 +62,6 @@ pub struct Ssh2 {
     verify_host_key: bool,
     custom_known_hosts_path: Option<PathBuf>,
 
-    /// Cloning these sessions (essentially ssh2::Session) gets you another handle referencing the same session.
     available_sessions: Arc<Vec<Mutex<SharedSessionData>>>,
 }
 
