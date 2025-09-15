@@ -113,7 +113,7 @@ Item {
                     placeholderText: "Number of lines"
                     placeholderTextColor: Theme.textColorDark
                     text: "1000"
-                    onAccepted: numberOfLinesSubmit.clicked(null)
+                    onAccepted: root.refresh()
                 }
 
                 ImageButton {
@@ -308,14 +308,14 @@ Item {
             root.pendingInvocation = LK.command.executePlain(
                 root.hostId,
                 root.commandId,
-                [...root.commandParams, fullStartTime, fullEndTime, "", ""]
+                [...root.commandParams, fullStartTime, fullEndTime, ""]
             )
         }
         else {
             root.pendingInvocation = LK.command.executePlain(
                 root.hostId,
                 root.commandId,
-                [...root.commandParams, "", "", "", ""]
+                [...root.commandParams, "", "", numberOfLines.text]
             )
         }
     }
