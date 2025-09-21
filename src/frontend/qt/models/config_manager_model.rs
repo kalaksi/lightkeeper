@@ -416,6 +416,9 @@ impl ConfigManagerModel {
         let host_settings = self.hosts_config.hosts.get(&host_name).cloned().unwrap_or_default();
 
         let custom_commands_json = host_settings.effective.custom_commands.iter()
+            // `example-command`` used to be in default config, but isn't anymore.
+            // TODO: clean up at some point.
+            .filter(|command| !(command.name == "example-command" && command.command == "ls -l ~"))
             .map(|command| serde_json::to_string(command).unwrap());
 
         QStringList::from_iter(custom_commands_json)
