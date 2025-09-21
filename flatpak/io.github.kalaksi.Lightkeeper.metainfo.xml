@@ -38,6 +38,15 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.31.1" date="2025-09-21">
+      <description>
+        <ul>
+          <li>Fix 'lines to fetch' in log view</li>
+          <li>Fix custom commands getting cleared after editing host</li>
+          <li>Remove example custom command</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.31.0" date="2025-09-13">
       <description>
         <ul>
