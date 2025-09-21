@@ -352,10 +352,17 @@ impl ConfigManagerModel {
             self.hosts_config.hosts.insert(new_host_name.clone(), host_config);
         }
 
-        let host_config = self.hosts_config.hosts.get_mut(&new_host_name).unwrap();
-        host_config.address = new_settings.address;
-        host_config.fqdn = new_settings.fqdn;
-        host_config.overrides = new_settings.overrides;
+
+        if let Some(host_config) = self.hosts_config.hosts.get_mut(&new_host_name) {
+            // Preserve custom commands. They are not configured in the host settings dialog.
+            let custom_commands = host_config.overrides.custom_commands.clone();
+
+            host_config.address = new_settings.address;
+            host_config.fqdn = new_settings.fqdn;
+            host_config.overrides = new_settings.overrides;
+
+            host_config.overrides.custom_commands = custom_commands;
+        }
     }
 
     fn get_all_groups(&self) -> QStringList {

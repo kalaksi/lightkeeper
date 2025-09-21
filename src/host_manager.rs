@@ -88,7 +88,7 @@ impl HostManager {
                 }
             }
 
-            // Remove connectors for hosts that are no longer present.
+            // Remove states for hosts that are no longer present.
             host_states.hosts.retain(|host_id, _|
                 hosts_config.hosts.contains_key(host_id) || host_id == crate::monitor_manager::CERT_MONITOR_HOST_ID
             );
