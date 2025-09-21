@@ -44,10 +44,6 @@ groups:
       storage-lvm-lvrefresh: {}
       network-socket-listen: {}
       network-socket-tcp: {}
-    custom_commands:
-      - name: "example-command"
-        description: ""
-        command: "ls -l ~"
 
   nixos:
     monitors:
