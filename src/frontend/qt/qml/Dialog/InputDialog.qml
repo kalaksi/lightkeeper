@@ -39,26 +39,30 @@ LightkeeperDialog {
             model: root.inputSpecs
 
             RowLayout {
+                id: inputRow
+                required property var modelData
                 width: rootColumn.width
 
                 Label {
-                    text: modelData.label
+                    text: parent.modelData.label
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
                 }
 
                 TextField {
-                    visible: modelData.field_type !== "Option"
-                    text: modelData.default_value || ""
-                    enabled: modelData.field_type !== "ReadOnlyText"
+                    visible: parent.modelData.field_type !== "Option"
+                    text: parent.modelData.default_value || ""
+                    enabled: parent.modelData.field_type !== "ReadOnlyText"
                     validator: RegularExpressionValidator {
-                        regularExpression: modelData.validator_regexp === "" ? /.*/ : RegExp(modelData.validator_regexp)
+                        regularExpression: inputRow.modelData.validator_regexp === "" ?
+                            /.*/ :
+                            RegExp(inputRow.modelData.validator_regexp)
                     }
                     Layout.fillWidth: true
                 }
 
                 Column {
-                    visible: modelData.field_type === "Option"
+                    visible: parent.modelData.field_type === "Option"
                     spacing: Theme.spacingNormal
 
                     Layout.minimumWidth: 220
@@ -66,13 +70,13 @@ LightkeeperDialog {
                     ComboBox {
                         id: comboBox
                         width: parent.width
-                        model: [''].concat(modelData.options)
+                        model: [''].concat(inputRow.modelData.options)
                         currentIndex: 0
                     }
 
                     SmallText {
                         width: parent.width
-                        text: [''].concat(modelData.option_descriptions)[comboBox.currentIndex]
+                        text: [''].concat(inputRow.modelData.option_descriptions)[comboBox.currentIndex]
                         color: Theme.textColorDark
                         wrapMode: Text.WordWrap
                     }
