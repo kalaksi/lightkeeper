@@ -41,6 +41,7 @@ Item {
         id: customCommandsDialog
         bottomMargin: 0.15 * parent.height
 
+        // TODO: don't force full reload
         onConfigurationChanged: LK.reload()
     }
 

@@ -22,7 +22,8 @@ TableView {
         target: root.model
 
         function onSelectedRowChanged() {
-            root.centerRow()
+            // Currently trying without.
+            // root.centerRow()
         }
     }
 
