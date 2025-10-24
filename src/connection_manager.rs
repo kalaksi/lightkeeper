@@ -209,7 +209,9 @@ impl ConnectionManager {
                     Some(spec) => spec.clone(),
                     None => {
                         // Requests with no connector dependency.
-                        request.response_sender.send(RequestResponse::new_empty(&request)).unwrap();
+                        request.response_sender
+                            .send(RequestResponse::new_empty(&request))
+                            .unwrap_or_else(|error| log::error!("Failed to send response: {}", error));
                         continue;
                     }
                 };
@@ -351,7 +353,8 @@ impl ConnectionManager {
 
                 if response_message.is_partial {
                     let response = RequestResponse::new(request, vec![Ok(response_message)]);
-                    response_sender.send(response).unwrap();
+                    response_sender.send(response)
+                        .unwrap_or_else(|error| log::error!("Failed to send response: {}", error));
 
                     response_message_result = connector.receive_partial_response(request.invocation_id);
                 }
