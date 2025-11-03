@@ -57,19 +57,26 @@ popd &>/dev/null
 
 if [ -d ../io.github.kalaksi.Lightkeeper ]; then
     echo -e "\n* Updating flatpak-repo"
-    cp -v flatpak/cargo-sources.json ../io.github.kalaksi.Lightkeeper/
-    cp -v flatpak/io.github.kalaksi.Lightkeeper.yml ../io.github.kalaksi.Lightkeeper/
+
     cd ../io.github.kalaksi.Lightkeeper
 
     current_branch=$(git branch --show-current)
-    git checkout master && git pull
     if [ $current_branch != $minor_version ]; then
+        git checkout master
+        git pull
         # Will fail if branch already exists.
         git checkout -b $minor_version
     else
-        git checkout $minor_version && git rebase master
+        git checkout master
+        git pull
+        git checkout $minor_version
+        git rebase master
     fi
+
+    cp -v ../lightkeeper/flatpak/cargo-sources.json .
+    cp -v ../lightkeeper/flatpak/io.github.kalaksi.Lightkeeper.yml .
     # Pushing the changes has to be done manually
     git commit -a -m "Update to version $version_only"
+
     cd -
 fi
