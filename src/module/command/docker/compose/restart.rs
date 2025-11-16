@@ -14,21 +14,21 @@ use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    name="docker-compose-stop",
+    name="docker-compose-restart",
     version="0.0.1",
-    description="Stops docker-compose projects or services.",
+    description="Restarts docker-compose projects or services.",
 )]
-pub struct Stop {
+pub struct Restart {
 }
 
-impl Module for Stop {
-    fn new(_settings: &HashMap<String, String>) -> Stop {
-        Stop {
+impl Module for Restart {
+    fn new(_settings: &HashMap<String, String>) -> Restart {
+        Restart {
         }
     }
 }
 
-impl CommandModule for Stop {
+impl CommandModule for Restart {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::connector("ssh", "0.0.1"))
     }
@@ -38,9 +38,9 @@ impl CommandModule for Stop {
             category: String::from("docker-compose"),
             parent_id: String::from("docker-compose"),
             display_style: frontend::DisplayStyle::Icon,
-            display_icon: String::from("stop"),
-            display_text: String::from("Stop"),
-            confirmation_text: String::from("Really stop container?"),
+            display_icon: String::from("refresh"),
+            display_text: String::from("Restart"),
+            confirmation_text: String::from("Really restart container?"),
             // Only displayed if the container is running.
             depends_on_criticality: vec![Criticality::Normal, Criticality::Info, Criticality::Warning],
             ..Default::default()
@@ -60,7 +60,7 @@ impl CommandModule for Stop {
            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") {
 
-            command.arguments(vec!["docker", "compose", "-f", compose_file, "stop"]);
+            command.arguments(vec!["docker", "compose", "-f", compose_file, "restart"]);
             if let Some(service_name) = parameters.get(2) {
                 command.argument(service_name);
             }

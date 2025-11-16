@@ -18,6 +18,9 @@ pub use start::Start;
 pub mod stop;
 pub use stop::Stop;
 
+pub mod restart;
+pub use restart::Restart;
+
 pub mod shell;
 pub use shell::Shell;
 
