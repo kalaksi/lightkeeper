@@ -57,7 +57,9 @@ impl CommandModule for UpdateAll {
             command.arguments(vec!["apt", "upgrade", "-y"]); 
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") {
+
             command.arguments(vec!["dnf", "update", "-y"]); 
         }
         else {
@@ -73,7 +75,8 @@ impl CommandModule for UpdateAll {
                 self.parse_progress_for_apt(response)
             }
             else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-                    host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+                    host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                    host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") {
                 1
             }
             else {
