@@ -97,6 +97,7 @@ groups:
     commands:
       systemd-service-start: {}
       systemd-service-stop: {}
+      systemd-service-restart: {}
       systemd-service-mask: {}
       systemd-service-unmask: {}
       systemd-service-logs: {}

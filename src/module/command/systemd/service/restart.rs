@@ -16,19 +16,19 @@ use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    name="systemd-service-stop",
+    name="systemd-service-restart",
     version="0.0.1",
-    description="Stops a SystemD service.",
+    description="Restarts a SystemD service.",
 )]
-pub struct Stop;
+pub struct Restart;
 
-impl Module for Stop {
+impl Module for Restart {
     fn new(_settings: &HashMap<String, String>) -> Self {
-        Stop { }
+        Restart { }
     }
 }
 
-impl CommandModule for Stop {
+impl CommandModule for Restart {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::connector("ssh", "0.0.1"))
     }
@@ -38,11 +38,11 @@ impl CommandModule for Stop {
             category: String::from("systemd"),
             parent_id: String::from("systemd-service"),
             display_style: frontend::DisplayStyle::Icon,
-            display_icon: String::from("stop"),
-            display_text: String::from("Stop"),
+            display_icon: String::from("refresh"),
+            display_text: String::from("Restart"),
             // Only displayed if the service is running.
             depends_on_criticality: vec![Criticality::Normal, Criticality::Info, Criticality::Warning],
-            confirmation_text: String::from("Really stop service?"),
+            confirmation_text: String::from("Really restart service?"),
             ..Default::default()
         }
     }
@@ -65,7 +65,7 @@ impl CommandModule for Stop {
             host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") ||
             host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
 
-            command.arguments(vec!["systemctl", "stop", service]);
+            command.arguments(vec!["systemctl", "restart", service]);
             Ok(command.to_string())
         }
         else {
