@@ -53,6 +53,15 @@ impl LkError {
         }
     }
 
+    pub fn unexpected() -> LkError {
+        LkError {
+            source_id: String::new(),
+            kind: ErrorKind::Other,
+            message: "An unexpected error occurred".to_string(),
+            parameter: None,
+        }
+    }
+
     pub fn host_key_unverified<Stringable: ToString>(source_id: Stringable, message: Stringable, key_id: Stringable) -> LkError {
         LkError {
             source_id: source_id.to_string(),
@@ -103,6 +112,12 @@ impl From<std::io::Error> for LkError {
 impl From<String> for LkError {
     fn from(error: String) -> Self {
         LkError::new(ErrorKind::Other, error)
+    }
+}
+
+impl From<LkError> for String {
+    fn from(error: LkError) -> Self {
+        error.to_string()
     }
 }
 

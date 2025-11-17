@@ -104,7 +104,7 @@ impl MonitoringModule for LogicalVolume {
             let mut data_point = DataPoint::labeled_value(lv_name.clone(), String::from("OK"));
             data_point.description = format!("{} | size: {}", vg_name, lv_size);
 
-            match lv_attr.chars().nth(0).unwrap() {
+            match lv_attr.chars().nth(0).unwrap_or_default() {
                 'r' => data_point.tags.push(String::from("RAID")),
                 'R' => data_point.tags.push(String::from("RAID")),
                 'm' => data_point.tags.push(String::from("Mirror")),
@@ -114,19 +114,19 @@ impl MonitoringModule for LogicalVolume {
                 _ => {}
             }
 
-            match lv_attr.chars().nth(1).unwrap() {
+            match lv_attr.chars().nth(1).unwrap_or_default() {
                 'r' => data_point.tags.push(String::from("Read-only")),
                 _ => {}
             }
 
-            if lv_attr.chars().nth(5).unwrap() == 'o' {
+            if lv_attr.chars().nth(5).unwrap_or_default() == 'o' {
                 data_point.description = format!("{} | Open", data_point.description);
             }
-            else if lv_attr.chars().nth(4).unwrap() == 'a' {
+            else if lv_attr.chars().nth(4).unwrap_or_default() == 'a' {
                 data_point.description = format!("{} | Active", data_point.description);
             }
 
-            match lv_attr.chars().nth(8).unwrap() {
+            match lv_attr.chars().nth(8).unwrap_or_default() {
                 'p' => {
                     data_point.tags.push(String::from("Partial"));
                     data_point.criticality = crate::enums::Criticality::Error;

@@ -75,7 +75,10 @@ pub struct SharedSessionData {
 
 impl Module for Ssh2 {
     fn new(settings: &HashMap<String, String>) -> Self {
-        let parallel_sessions = settings.get("parallel_sessions").unwrap_or(&String::from("2")).parse::<u16>().unwrap();
+        let parallel_sessions = settings.get("parallel_sessions")
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(2);
+
         let mut available_sessions = Vec::new();
 
         for _ in 0..parallel_sessions {
@@ -89,14 +92,14 @@ impl Module for Ssh2 {
 
         Ssh2 {
             address: Arc::new(Mutex::new(String::from("0.0.0.0"))),
-            port: Arc::new(Mutex::new(settings.get("port").unwrap_or(&String::from("22")).parse::<u16>().unwrap())),
+            port: Arc::new(Mutex::new(settings.get("port").and_then(|value| value.parse::<u16>().ok()).unwrap_or(22))),
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
             password: settings.get("password").cloned(),
             private_key_path: settings.get("private_key_path").cloned(),
             private_key_passphrase: settings.get("private_key_passphrase").cloned(),
             agent_key_identifier: settings.get("agent_key_identifier").cloned(),
-            connection_timeout: settings.get("connection_timeout").unwrap_or(&String::from("15")).parse::<u16>().unwrap(),
-            verify_host_key: settings.get("verify_host_key").unwrap_or(&String::from("true")).parse::<bool>().unwrap(),
+            connection_timeout: settings.get("connection_timeout").and_then(|value| value.parse::<u16>().ok()).unwrap_or(15),
+            verify_host_key: settings.get("verify_host_key").and_then(|value| value.parse::<bool>().ok()).unwrap_or(true),
             custom_known_hosts_path: settings.get("custom_known_hosts_path").map(|path| PathBuf::from(path)),
             available_sessions: Arc::new(available_sessions),
         }
@@ -130,7 +133,7 @@ impl ConnectionModule for Ssh2 {
         };
 
         // Merge stderr etc. to the same stream as stdout.
-        channel.handle_extended_data(ssh2::ExtendedData::Merge).unwrap();
+        channel.handle_extended_data(ssh2::ExtendedData::Merge)?;
 
         channel.exec(message)
                .map_err(|error| format!("Error executing command '{}': {}", message, error))?;

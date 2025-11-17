@@ -120,7 +120,7 @@ impl MonitoringModule for Compose {
                 }
             };
 
-            let service = container.labels.get("com.docker.compose.service").unwrap().clone();
+            let service = container.labels.get("com.docker.compose.service").ok_or(LkError::unexpected())?.clone();
             let compose_file = Path::new(&working_dir)
                                     .join(&self.compose_file_name).to_string_lossy().to_string();
 
@@ -141,7 +141,7 @@ impl MonitoringModule for Compose {
         projects_sorted.sort();
 
         for project in projects_sorted {
-            let mut data_points = projects.remove_entry(&project).unwrap().1;
+            let mut data_points = projects.remove_entry(&project).ok_or(LkError::unexpected())?.1;
             data_points.sort_by(|left, right| left.label.cmp(&right.label));
 
             let compose_file = match data_points.first() {

@@ -98,7 +98,7 @@ impl MonitoringModule for Filesystem {
             let mut used_percent = parts[5].to_string();
             // Remove percent symbol from the end.
             used_percent.pop();
-            let used_percent_float = used_percent.parse::<f32>().unwrap();
+            let used_percent_float = used_percent.parse::<f32>().map_err(|e| e.to_string())?;
 
             let mountpoint = parts[6].to_string();
 

@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use oping;
+use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, enums::Criticality, frontend };
 use lightkeeper_module::monitoring_module;
@@ -48,7 +49,7 @@ impl MonitoringModule for Oping {
         let mut responses = ping.send()
                                 .map_err(|e| e.to_string())?;
 
-        let response = responses.next().unwrap();
+        let response = responses.next().ok_or(LkError::unexpected())?;
 
         if response.latency_ms < 0.0 {
             Ok(DataPoint::value_with_level(String::from("-"), Criticality::Critical))

@@ -86,12 +86,12 @@ impl MonitoringModule for Package {
             let lines = response.message.lines().filter(|line| line.contains("[upgradable"));
             for line in lines {
                 let mut parts = line.split_whitespace();
-                let full_package = parts.next().unwrap().to_string();
+                let full_package = parts.next().ok_or(LkError::unexpected())?.to_string();
                 let package = full_package.split(',').nth(0).map(|s| s.to_string())
-                                            .unwrap_or(full_package.clone());
-                let package_name = full_package.split('/').next().unwrap().to_string();
+                                          .unwrap_or(full_package.clone());
+                let package_name = full_package.split('/').next().ok_or(LkError::unexpected())?.to_string();
                 let new_version = parts.next().unwrap_or_default().to_string();
-                // let arch = parts.next().unwrap().to_string();
+                // let arch = parts.next()?.to_string();
 
                 let old_version = string_manipulation::get_string_between(&line, "[upgradable from: ", "]")
                     .unwrap_or(String::from("unknown version"));

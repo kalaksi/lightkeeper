@@ -72,7 +72,7 @@ impl CommandModule for RemoteTags {
 
         if image.contains(".") {
             // Looks like a domain name. Use Docker Registry API v2.
-            let (domain, repository) = image.split_once("/").unwrap();
+            let (domain, repository) = image.split_once("/").ok_or(LkError::unexpected())?;
             Ok(vec![format!("https://{}/v2/{}/tags/list?n={}&last={}", domain, repository, self.page_size, 0)])
         }
         else {
