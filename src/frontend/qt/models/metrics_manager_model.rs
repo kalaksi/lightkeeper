@@ -69,7 +69,13 @@ impl MetricsManagerModel {
 
     pub fn insert_data_point(&mut self, host_id: &str, monitor_id: &str, data_point: DataPoint) {
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
-            let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as i64;
+            let current_unix_ms = if let Ok(duration) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                duration.as_millis() as i64
+            }
+            else {
+                ::log::error!("Time calculation error");
+                return;
+            };
 
             let mut metrics = vec![metrics::Metric {
                 label: data_point.label.clone(),

@@ -6,7 +6,7 @@
 extern crate qmetaobject;
 use qmetaobject::*;
 
-use crate::configuration;
+use crate::{configuration, host};
 use crate::enums::Criticality;
 use crate::frontend;
 use crate::module::monitoring::MonitoringData;
@@ -111,10 +111,10 @@ impl HostDataManagerModel {
 
             // Find out any monitor state changes and signal accordingly.
             if let Some(old_data) = maybe_old_data {
-                let new_criticality = new_monitor_data.values.back().unwrap().criticality;
+                let new_criticality = new_monitor_data.values.back().map(|p| p.criticality).unwrap_or(Criticality::NoData);
 
                 if let Some(old_monitor_data) = old_data.host_state.monitor_data.get(&new_monitor_data.monitor_id) {
-                    let old_criticality = old_monitor_data.values.back().unwrap().criticality;
+                    let old_criticality = old_monitor_data.values.back().map(|p| p.criticality).unwrap_or(Criticality::NoData);
 
                     if new_criticality != old_criticality {
                         self.monitorStateChanged(
@@ -150,8 +150,8 @@ impl HostDataManagerModel {
         let host_id = host_id.to_string();
         let monitor_id = monitor_id.to_string();
 
-        let display_data = self.display_data.hosts.get(&host_id).unwrap();
-        display_data.host_state.monitor_data.get(&monitor_id).unwrap().to_qvariant()
+        let display_data = self.display_data.hosts.get(&host_id).cloned().unwrap_or_default();
+        display_data.host_state.monitor_data.get(&monitor_id).cloned().unwrap_or_default().to_qvariant()
     }
 
     // TODO: getMonitorDisplayData and a QML model for it?
@@ -159,13 +159,9 @@ impl HostDataManagerModel {
         let host_id = host_id.to_string();
         let monitor_id = monitor_id.to_string();
 
-        if let Some(display_data) = self.display_data.hosts.get(&host_id) {
-            let monitor_data = display_data.host_state.monitor_data.get(&monitor_id).unwrap();
-            QString::from(serde_json::to_string(&monitor_data).unwrap())
-        }
-        else {
-            QString::from("{}")
-        }
+        let display_data = self.display_data.hosts.get(&host_id).cloned().unwrap_or_default();
+        let monitor_data = display_data.host_state.monitor_data.get(&monitor_id).cloned().unwrap_or_default();
+        QString::from(serde_json::to_string(&monitor_data).unwrap())
     }
 
     fn getDisplayData(&self) -> QVariant {
@@ -222,7 +218,11 @@ impl HostDataManagerModel {
         let host_id = host_id.to_string();
         let category = category.to_string();
 
-        let host_display_data = self.display_data.hosts.get(&host_id).unwrap();
+        let Some(host_display_data) = self.display_data.hosts.get(&host_id) else {
+            ::log::error!("Invalid host: {}", host_id);
+            return 0;
+        };
+
         host_display_data.host_state.monitor_invocations.values()
             .filter(|invocation| invocation.category == category)
             .count() as u64
@@ -231,19 +231,23 @@ impl HostDataManagerModel {
     fn getPendingCommandCount(&self, host_id: QString) -> u64 {
         let host_id = host_id.to_string();
 
-        if let Some(host_display_data) = self.display_data.hosts.get(&host_id) {
-            host_display_data.host_state.command_invocations.len() as u64
-        }
-        else {
-            0
-        }
+        let Some(host_display_data) = self.display_data.hosts.get(&host_id) else {
+            ::log::error!("Invalid host: {}", host_id);
+            return 0;
+        };
+
+        host_display_data.host_state.command_invocations.len() as u64
     }
 
     fn getPendingCommandCountForCategory(&self, host_id: QString, category: QString) -> u64 {
         let host_id = host_id.to_string();
         let category = category.to_string();
 
-        let host_display_data = self.display_data.hosts.get(&host_id).unwrap();
+        let Some(host_display_data) = self.display_data.hosts.get(&host_id) else {
+            ::log::error!("Invalid host: {}", host_id);
+            return 0;
+        };
+
         host_display_data.host_state.command_invocations.values()
             .filter(|invocation| invocation.category == category)
             .count() as u64
@@ -260,7 +264,11 @@ impl HostDataManagerModel {
     }
 
     fn is_empty_category(&self, host_id: &str, category: &str) -> bool {
-        let display_data = self.display_data.hosts.get(host_id).unwrap();
+        let Some(display_data) = self.display_data.hosts.get(host_id) else {
+            ::log::error!("Invalid host: {}", host_id);
+            return true;
+        };
+
         display_data.host_state.monitor_data.values()
             .filter(|monitor_data| monitor_data.display_options.category == category)
             .all(|monitor_data| monitor_data.values.iter()
@@ -271,7 +279,10 @@ impl HostDataManagerModel {
     /// Returns a readily sorted list of unique categories for a host. Gathered from monitoring data.
     fn getCategories(&self, host_id: QString, ignore_empty: bool) -> QStringList {
         let host_id = host_id.to_string();
-        let display_data = self.display_data.hosts.get(&host_id.to_string()).unwrap();
+        let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) else {
+            ::log::error!("Invalid host: {}", host_id);
+            return QStringList::default();
+        };
 
         // Get unique categories from monitoring datas, and sort them according to config and alphabetically.
         let mut categories = display_data.host_state.monitor_data.values()

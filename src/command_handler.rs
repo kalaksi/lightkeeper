@@ -161,19 +161,19 @@ impl CommandHandler {
         let commands = self.commands.lock().unwrap();
         let command = &commands[host_id][command_id];
 
-        let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
 
         let messages = match get_command_connector_messages(&host, command, parameters) {
             Ok(messages) => messages,
             Err(error) => {
                 log::error!("Command failed: {}", error);
-                state_update_sender.send(StateUpdateMessage {
+                self.send_state_update(StateUpdateMessage {
                     host_name: host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_error(error)),
                     ..Default::default()
-                }).unwrap();
+                });
+
                 return 0;
             }
         };
@@ -181,14 +181,14 @@ impl CommandHandler {
         self.invocation_id_counter += 1;
 
         // Notify host state manager about new command, so it can keep track of pending invocations.
-        state_update_sender.send(StateUpdateMessage {
+        self.send_state_update(StateUpdateMessage {
             host_name: host.name.clone(),
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: Some(CommandResult::pending()),
             invocation_id: self.invocation_id_counter,
             ..Default::default()
-        }).unwrap();
+        });
 
         let request_type = match command.get_display_options().action == UIAction::FollowOutput {
             true => RequestType::CommandFollowOutput { commands: messages },
@@ -196,14 +196,14 @@ impl CommandHandler {
         };
 
         // Send request to ConnectionManager.
-        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+        self.send_connector_request(ConnectorRequest {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
             invocation_id: self.invocation_id_counter,
             request_type: request_type,
             response_sender: self.new_response_sender(),
-        }).unwrap();
+        });
 
         self.invocation_id_counter
     }
@@ -225,7 +225,7 @@ impl CommandHandler {
         let (_, local_file_path) = file_handler::convert_to_local_paths(&host, remote_file_path);
         self.invocation_id_counter += 1;
 
-        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+        self.send_connector_request(ConnectorRequest {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
@@ -234,7 +234,7 @@ impl CommandHandler {
             request_type: RequestType::Download {
                 remote_file_path: connector_messages[0].to_owned(),
             },
-        }).unwrap();
+        });
 
         (self.invocation_id_counter, local_file_path)
     }
@@ -244,7 +244,6 @@ impl CommandHandler {
         let commands = self.commands.lock().unwrap();
         let command = &commands[host_id][command_id];
 
-        let state_update_sender = self.state_update_sender.as_ref().unwrap().clone();
         self.invocation_id_counter += 1;
 
         match file_handler::read_file(local_file_path) {
@@ -252,19 +251,19 @@ impl CommandHandler {
                 let local_file_hash = sha256::hash(&contents);
 
                 if local_file_hash == metadata.remote_file_hash {
-                    state_update_sender.send(StateUpdateMessage {
+                    self.send_state_update(StateUpdateMessage {
                         host_name: host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_error("File is unchanged")),
                         invocation_id: self.invocation_id_counter,
                         ..Default::default()
-                    }).unwrap();
+                    });
                 }
                 else {
                     metadata.update_hash(local_file_hash);
 
-                    self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+                    self.send_connector_request(ConnectorRequest {
                         connector_spec: command.get_connector_spec(),
                         source_id: command.get_module_spec().id,
                         host: host.clone(),
@@ -274,19 +273,19 @@ impl CommandHandler {
                             local_file_path: local_file_path.clone(),
                             metadata: metadata,
                         },
-                    }).unwrap();
+                    });
                 }
             },
             Err(error) => {
                 log::error!("Error while reading file: {}", error);
-                state_update_sender.send(StateUpdateMessage {
+                self.send_state_update(StateUpdateMessage {
                     host_name: host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_critical_error(error)),
                     invocation_id: self.invocation_id_counter,
                     ..Default::default()
-                }).unwrap();
+                });
             }
         }
 
@@ -298,7 +297,7 @@ impl CommandHandler {
         // Version numbers aren't currently used, so it's hardcoded here.
         let module_spec = crate::module::ModuleSpecification::connector(&connector_id, "0.0.1");
 
-        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+        self.send_connector_request(ConnectorRequest {
             connector_spec: Some(module_spec),
             source_id: String::new(),
             host: host.clone(),
@@ -307,7 +306,7 @@ impl CommandHandler {
             request_type: RequestType::KeyVerification {
                 key_id: key_id.to_owned(),
             },
-        }).unwrap();
+        });
     }
 
     pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &[String]) -> ShellCommand {
@@ -368,7 +367,7 @@ impl CommandHandler {
             return;
         }).unwrap();
 
-        self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+        self.send_connector_request(ConnectorRequest {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
@@ -378,7 +377,7 @@ impl CommandHandler {
             request_type: RequestType::Download {
                 remote_file_path: connector_messages[0].to_owned(),
             },
-        }).unwrap();
+        });
 
         file_handler::convert_to_local_paths(&host, remote_file_path).1
     }
@@ -717,6 +716,18 @@ impl CommandHandler {
 
         command.argument(remote_address);
         command
+    }
+
+    fn send_connector_request(&self, request: ConnectorRequest) {
+        if let Err(error) = self.request_sender.as_ref().unwrap().send(request) {
+            log::error!("Failed to send connector request: {}", error);
+        }
+    }
+
+    fn send_state_update(&self, message: StateUpdateMessage) {
+        if let Err(error) = self.state_update_sender.as_ref().unwrap().send(message) {
+            log::error!("Failed to send state update message: {}", error);
+        }
     }
 }
 

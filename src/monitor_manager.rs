@@ -120,7 +120,9 @@ impl MonitorManager {
                 .send(RequestResponse::stop())
                 .unwrap_or_else(|error| log::error!("Couldn't send exit token to command handler: {}", error));
 
-            thread.join().unwrap();
+            if let Err(error) = thread.join() {
+                log::error!("Error in thread: {:?}", error);
+            }
         }
     }
 

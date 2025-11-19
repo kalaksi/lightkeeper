@@ -232,12 +232,12 @@ impl MetricsManager {
             download_file(
                 &format!("https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver.sig/raw?ref={}", LMSERVER_VERSION),
                 &token,
-                signature_path.to_str().unwrap(),
+                signature_path,
             )?;
             download_file(
                 &format!("https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver/raw?ref={}", LMSERVER_VERSION),
                 &token,
-                lmserver_path.to_str().unwrap(),
+                lmserver_path,
             )?;
 
             // Update version info.
@@ -442,7 +442,7 @@ impl MetricsManager {
     }
 }
 /// Function to download a file using ureq.
-fn download_file(url: &str, access_token: &str, output_path: &str) -> io::Result<()> {
+fn download_file(url: &str, access_token: &str, output_path: &Path) -> io::Result<()> {
     let response = ureq::get(url)
         .set("PRIVATE-TOKEN", access_token)
         // Keep timeout short so it doesn't block startup too long in case there's no access to internet.
@@ -455,7 +455,7 @@ fn download_file(url: &str, access_token: &str, output_path: &str) -> io::Result
         let mut reader = response.into_reader();
         io::copy(&mut reader, &mut file)?;
 
-        log::debug!("Downloaded file: {}", output_path);
+        log::debug!("Downloaded file: {}", output_path.display());
         Ok(())
     }
     else {

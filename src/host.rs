@@ -65,8 +65,8 @@ impl Host {
                     Err(error) => return Err(format!("Failed to resolve {}: {}", self.fqdn, error)),
                 };
 
-                if addresses.len() > 0 {
-                    self.ip_address = addresses.next().unwrap().ip();
+                if let Some(address) = addresses.next() {
+                    self.ip_address = address.ip();
                 }
                 else {
                     return Err(format!("Failed to resolve {}: No addresses found.", self.fqdn));

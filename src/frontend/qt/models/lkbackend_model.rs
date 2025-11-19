@@ -196,7 +196,9 @@ impl LkBackend {
                 ::log::error!("Failed to send stop signal to UI state receiver: {}", error);
             }
 
-            thread.join().unwrap();
+            if let Err(error) = thread.join() {
+                ::log::error!("Error in thread: {:?}", error);
+            }
         }
 
         self.command.borrow_mut().stop();

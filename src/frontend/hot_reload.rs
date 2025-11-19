@@ -18,7 +18,13 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
 
     thread::spawn(move || {
         let (notify_sender, notify_receiver) = std::sync::mpsc::channel();
-        let mut watcher = notify::RecommendedWatcher::new(notify_sender, notify::Config::default()).unwrap();
+        let mut watcher = match notify::RecommendedWatcher::new(notify_sender, notify::Config::default()) {
+            Ok(watcher) => watcher,
+            Err(error) => {
+                log::error!("Hot reload failed to initialize: {}", error);
+                return;
+            }
+        };
 
         if let Err(error) = watcher.watch(&path, notify::RecursiveMode::Recursive) {
             log::error!("Hot reload failed to initialize: {}", error);
@@ -30,8 +36,15 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
         let mut last_reload = Instant::now();
 
         loop {
-            let event_result = notify_receiver.recv().unwrap();
-            if let Ok(event) = event_result {
+            if let Ok(event_result) = notify_receiver.recv() {
+                let event = match event_result {
+                    Ok(event) => event,
+                    Err(_error) => {
+                        log::error!("Hot reload stopped");
+                        break;
+                    }
+                };
+
                 if event.kind.is_access() || last_reload.elapsed().as_millis() < 500 {
                     continue;
                 }

@@ -144,7 +144,15 @@ impl CommandHandlerModel {
 
     fn getCustomCommands(&self, host_id: QString) -> QStringList {
         let custom_commands = self.command_handler.get_custom_commands_for_host(&host_id.to_string());
-        custom_commands.values().map(|item| QString::from(serde_json::to_string(&item).unwrap())).collect()
+        custom_commands.values().map(|item| {
+            match serde_json::to_string(&item) {
+                Ok(json_string) => QString::from(json_string),
+                Err(error) => {
+                    ::log::error!("Failed to serialize: {}", error);
+                    QString::from("")
+                }
+            }
+        }).collect()
     }
 
     // `parent_id` is either command ID or category ID (for category-level commands).
@@ -186,7 +194,9 @@ impl CommandHandlerModel {
         valid_commands_sorted.append(&mut rest_of_commands);
 
         // Return list of JSONs.
-        valid_commands_sorted.iter().map(|item| serde_json::to_string(&item).unwrap().to_qvariant()).collect()
+        valid_commands_sorted.iter()
+            .map(|item| serde_json::to_string(&item).unwrap_or_default().to_qvariant())
+            .collect()
     }
 
     fn execute(&mut self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList) {

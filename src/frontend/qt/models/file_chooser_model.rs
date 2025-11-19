@@ -116,7 +116,12 @@ impl FileChooserModel {
                 }
             });
 
-            let dbus_connection = dbus::blocking::Connection::new_session().unwrap();
+            let Ok(dbus_connection) = dbus::blocking::Connection::new_session() else {
+                ::log::error!("Failed to connect to D-Bus");
+                self.error(QString::from("Failed to connect to D-Bus"));
+                return;
+            };
+
             // Sender ID is formed according to:
             // https://docs.flatpak.org/en/latest/portal-api-reference.html#gdbus-org.freedesktop.portal.Request
 
@@ -223,7 +228,10 @@ impl FileChooserModel {
                 ..Default::default()
             };
             sender.send(request).unwrap();
-            self.thread.take().unwrap().join().unwrap();
+
+            if let Err(error) = self.thread.take().unwrap().join() {
+                ::log::error!("Error in thread: {:?}", error);
+            }
         }
     }
 
@@ -244,7 +252,14 @@ impl FileChooserModel {
 
     /// Calls org.freedestop.portal.OpenURI.OpenFile to open a file.
     pub fn openFile(&mut self, file_path: QString) -> QString {
-        let file = std::fs::File::open(file_path.to_string()).unwrap();
+        let file = match std::fs::File::open(file_path.to_string()) {
+            Ok(file) => file,
+            Err(error) => {
+                ::log::error!("Failed to open file {}: {}", file_path.to_string(), error);
+                return QString::from("");
+            }
+        };
+
         let token = Self::get_token();
         self.open_files.insert(token.clone(), file.as_raw_fd());
 

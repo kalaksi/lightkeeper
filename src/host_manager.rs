@@ -131,7 +131,9 @@ impl HostManager {
                 .send(StateUpdateMessage::stop())
                 .unwrap_or_else(|error| log::error!("Couldn't send stop command to state manager: {}", error));
 
-            thread.join().unwrap();
+            if let Err(error) = thread.join() {
+                log::error!("Error in thread: {:?}", error);
+            }
         }
     }
 
@@ -241,7 +243,7 @@ impl HostManager {
                                 }
 
                                 // Also add to a list of new data points.
-                                let mut new = host_state.monitor_data.get(&state_update.module_spec.id).unwrap().clone();
+                                let mut new = monitoring_data.clone();
                                 new.values = VecDeque::from(vec![message_data_point.clone()]);
                                 new_monitoring_data = Some((state_update.invocation_id, new));
                             }
