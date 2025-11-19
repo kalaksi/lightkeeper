@@ -644,15 +644,12 @@ impl Configuration {
     /// Helps keep the configuration up-to-date.
     pub fn upgrade_schema(main_config: &mut Configuration, groups_config: &mut Groups) {
         let default_groups = get_default_config_groups();
+        let mut schema_version = main_config.schema_version.unwrap_or_else(|| 1);
+        let old_version = schema_version;
 
-        if main_config.schema_version.is_none() {
-            main_config.schema_version = Some(1);
-        }
-
-        let old_version = main_config.schema_version.unwrap();
-        while main_config.schema_version.unwrap() < CURRENT_SCHEMA_VERSION {
+        while schema_version < CURRENT_SCHEMA_VERSION {
             // NOTE: Default config groups should rarely be removed since they are used in older schema upgrades.
-            match main_config.schema_version.unwrap() {
+            match schema_version {
                 1 => {
                     groups_config
                         .groups
@@ -662,15 +659,13 @@ impl Configuration {
                 _ => {}
             }
 
-            main_config.schema_version = main_config.schema_version.map(|version| version + 1);
+            schema_version += 1;
         }
 
-        if old_version < main_config.schema_version.unwrap() {
-            log::info!(
-                "Upgraded configuration schema from version {} to {}",
-                old_version,
-                main_config.schema_version.unwrap()
-            );
+        if old_version < schema_version {
+            main_config.schema_version = Some(schema_version);
+
+            log::info!("Upgraded configuration schema from version {} to {}", old_version, schema_version);
         }
     }
 
