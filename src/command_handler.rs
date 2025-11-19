@@ -62,6 +62,7 @@ pub struct CommandHandler {
     host_manager: Rc<RefCell<HostManager>>,
     module_factory: Arc<ModuleFactory>,
 
+    // Option is used only for Default implementation which is needed for Qt.
     response_sender_prototype: Option<mpsc::Sender<RequestResponse>>,
     response_receiver: Option<mpsc::Receiver<RequestResponse>>,
     response_receiver_thread: Option<thread::JoinHandle<()>>,
@@ -128,7 +129,9 @@ impl CommandHandler {
                 .send(RequestResponse::stop())
                 .unwrap_or_else(|error| log::error!("Couldn't send exit token to command handler: {}", error));
 
-            thread.join().unwrap();
+            if let Err(error) = thread.join() {
+                log::error!("Error in thread: {:?}", error);
+            }
         }
     }
 
@@ -138,9 +141,8 @@ impl CommandHandler {
 
     fn add_command(&mut self, host_id: &String, command: Command) {
         let mut commands = self.commands.lock().unwrap();
-        commands.entry(host_id.clone()).or_insert(HashMap::new());
 
-        let command_collection = commands.get_mut(host_id).unwrap();
+        let command_collection = commands.entry(host_id.clone()).or_insert_with(HashMap::new);
         let module_spec = command.get_module_spec();
 
         // Only add if missing.

@@ -279,7 +279,7 @@ impl Configuration {
     #![cfg_attr(any(), rustfmt::skip)]
     pub fn read(config_dir: &str) -> io::Result<(Configuration, Hosts, Groups)> {
         let config_dir = if config_dir.is_empty() {
-            file_handler::get_config_dir().unwrap()
+            file_handler::get_config_dir()
         }
         else {
             Path::new(config_dir).to_path_buf()
@@ -376,8 +376,14 @@ impl Configuration {
         let mut effective_config = ConfigGroup::default();
 
         for group_id in host_config.groups.iter() {
-            let group_config = all_groups.get(group_id).unwrap();
-            effective_config = Self::merge_group_config(&effective_config, group_config);
+            match all_groups.get(group_id) {
+                Some(group_config) => {
+                    effective_config = Self::merge_group_config(&effective_config, group_config);
+                }
+                None => {
+                    log::error!("Group {} not found when creating effective configuration", group_id);
+                }
+            }
         }
 
         // Old, deprecated host overrides.
@@ -516,7 +522,7 @@ impl Configuration {
     /// Writes the hosts.yml configuration file.
     pub fn write_hosts_config(config_dir: &String, hosts: &Hosts) -> io::Result<()> {
         let config_dir = if config_dir.is_empty() {
-            file_handler::get_config_dir().unwrap()
+            file_handler::get_config_dir()
         }
         else {
             Path::new(config_dir).to_path_buf()
@@ -532,7 +538,8 @@ impl Configuration {
                     .values_mut()
                     .for_each(|host| host.effective = ConfigGroup::default());
 
-                let hosts_config = serde_yaml::to_string(&sanitized_hosts).unwrap();
+                let hosts_config = serde_yaml::to_string(&sanitized_hosts)
+                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
                 if let Err(error) = file.write_all(hosts_config.as_bytes()) {
                     let message = format!("Failed to write host configuration file {}: {}", hosts_file_path.to_string_lossy(), error);
@@ -554,7 +561,7 @@ impl Configuration {
     /// Writes the groups.yml configuration file.
     pub fn write_groups_config(config_dir: &String, groups: &Groups) -> io::Result<()> {
         let config_dir = if config_dir.is_empty() {
-            file_handler::get_config_dir().unwrap()
+            file_handler::get_config_dir()
         }
         else {
             Path::new(config_dir).to_path_buf()
@@ -564,7 +571,9 @@ impl Configuration {
         let groups_config_file = fs::OpenOptions::new().write(true).truncate(true).open(groups_file_path.clone());
         match groups_config_file {
             Ok(mut file) => {
-                let groups_config = serde_yaml::to_string(groups).unwrap();
+                let groups_config = serde_yaml::to_string(groups)
+                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+
                 if let Err(error) = file.write_all(groups_config.as_bytes()) {
                     let message = format!(
                         "Failed to write group configuration file {}: {}",
@@ -593,7 +602,7 @@ impl Configuration {
     /// Writes the config.yml configuration file.
     pub fn write_main_config(config_dir: &String, config: &Configuration) -> io::Result<()> {
         let config_dir = if config_dir.is_empty() {
-            file_handler::get_config_dir().unwrap()
+            file_handler::get_config_dir()
         }
         else {
             Path::new(config_dir).to_path_buf()
@@ -615,7 +624,9 @@ impl Configuration {
                     schema_version: config.schema_version.clone(),
                 };
 
-                let main_config = serde_yaml::to_string(&config_without_display_options).unwrap();
+                let main_config = serde_yaml::to_string(&config_without_display_options)
+                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+
                 if let Err(error) = file.write_all(main_config.as_bytes()) {
                     let message = format!(
                         "Failed to write main configuration file {}: {}",
@@ -692,9 +703,11 @@ impl Configuration {
 }
 
 pub fn get_default_config_groups() -> Groups {
-    serde_yaml::from_str(DEFAULT_GROUPS_CONFIG).unwrap()
+    serde_yaml::from_str(DEFAULT_GROUPS_CONFIG)
+        .expect("Default groups configuration is invalid YAML")
 }
 
 pub fn get_default_main_config() -> Configuration {
-    serde_yaml::from_str(DEFAULT_MAIN_CONFIG).unwrap()
+    serde_yaml::from_str(DEFAULT_MAIN_CONFIG)
+        .expect("Default main configuration is invalid YAML")
 }

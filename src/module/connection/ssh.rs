@@ -475,7 +475,7 @@ impl Ssh2 {
             Ok(known_hosts_path.clone())
         }
         else {
-            let config_dir = file_handler::get_config_dir()?;
+            let config_dir = file_handler::get_config_dir();
             let known_hosts_path = config_dir.join("known_hosts");
 
             // Create known_hosts if it's missing.

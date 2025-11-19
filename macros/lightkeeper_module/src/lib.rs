@@ -78,9 +78,9 @@ impl syn::parse::Parse for ModuleArgs {
         }
 
         Ok(ModuleArgs {
-            name: name.unwrap(),
-            version: version.unwrap(),
-            description: description.unwrap(),
+            name: name.expect("Module name is required"),
+            version: version.expect("Module version is required"),
+            description: description.expect("Module description is required"),
             parent_module_name: parent_module_name,
             parent_module_version: parent_module_version,
             settings: settings,

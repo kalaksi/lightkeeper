@@ -16,7 +16,7 @@ const MAX_PATH_COMPONENTS: u8 = 2;
 const APP_DIR_NAME: &str = "lightkeeper";
 const METADATA_SUFFIX: &str = ".metadata.yml";
 
-pub fn get_config_dir() -> io::Result<PathBuf> {
+pub fn get_config_dir() -> PathBuf {
     let mut config_dir = if let Some(path) = env::var_os("XDG_CONFIG_HOME") {
         PathBuf::from(path)
     }
@@ -24,10 +24,7 @@ pub fn get_config_dir() -> io::Result<PathBuf> {
         PathBuf::from(path).join(".config")
     }
     else {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Cannot find configuration directory. $XDG_CONFIG_HOME or $HOME is not set.",
-        ));
+        panic!("Cannot find configuration directory. $XDG_CONFIG_HOME or $HOME is not set.");
     };
 
     // If not running inside flatpak, we need to add a separate subdir for the app.
@@ -35,10 +32,10 @@ pub fn get_config_dir() -> io::Result<PathBuf> {
         config_dir = config_dir.join(APP_DIR_NAME);
     }
 
-    Ok(config_dir)
+    config_dir
 }
 
-pub fn get_cache_dir() -> io::Result<PathBuf> {
+pub fn get_cache_dir() -> PathBuf {
     let mut cache_dir = if let Some(path) = env::var_os("XDG_CACHE_HOME") {
         PathBuf::from(path)
     }
@@ -46,10 +43,7 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
         PathBuf::from(home_path).join(".cache")
     }
     else {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set.",
-        ));
+        panic!("Cannot find cache directory. $XDG_CACHE_HOME or $HOME is not set.");
     };
 
     // If not running inside flatpak, we need to add a separate subdir for the app.
@@ -57,7 +51,7 @@ pub fn get_cache_dir() -> io::Result<PathBuf> {
         cache_dir = cache_dir.join(APP_DIR_NAME)
     }
 
-    Ok(cache_dir)
+    cache_dir
 }
 
 pub fn get_data_dir() -> io::Result<PathBuf> {
@@ -100,7 +94,7 @@ pub fn create_file(host: &Host, remote_file_path: &str, mut metadata: FileMetada
 }
 
 pub fn list_cached_files(only_metadata_files: bool) -> io::Result<Vec<String>> {
-    let cache_dir = file_handler::get_cache_dir()?;
+    let cache_dir = file_handler::get_cache_dir();
     let mut files = Vec::new();
 
     // Nice drifting...
@@ -144,7 +138,7 @@ pub fn list_cached_files(only_metadata_files: bool) -> io::Result<Vec<String>> {
 /// Updates existing local file. File has to exist and have accompanying metadata file.
 pub fn write_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()> {
     // Verify, just in case, that path belongs to cache directory.
-    let cache_dir = get_cache_dir().unwrap();
+    let cache_dir = get_cache_dir();
     if Path::new(local_file_path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
         Err(io::Error::new(io::ErrorKind::Other, "Path does not belong to cache directory"))
     }
@@ -166,7 +160,7 @@ pub fn write_file_metadata(metadata: FileMetadata) -> io::Result<()> {
 /// Removes local copy of the (possible) content file and metadata file.
 pub fn remove_file(path: &String) -> io::Result<()> {
     // Verify, just in case, that path belongs to cache directory.
-    let cache_dir = get_cache_dir().unwrap();
+    let cache_dir = get_cache_dir();
     if Path::new(path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
         return Err(io::Error::new(io::ErrorKind::Other, "Path does not belong to cache directory"));
     }
@@ -226,7 +220,7 @@ pub fn get_metadata_path(local_file_path: &str) -> String {
 
 /// Provides the local directory and file paths based on remote host name and remote file path.
 pub fn convert_to_local_paths(host: &Host, remote_file_path: &str) -> (String, String) {
-    let cache_dir = file_handler::get_cache_dir().unwrap();
+    let cache_dir = file_handler::get_cache_dir();
     let file_dir = cache_dir.join(host.name.clone());
 
     // Using only hash as the file name would suffice but providing some parts of
