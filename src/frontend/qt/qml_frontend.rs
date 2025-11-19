@@ -94,8 +94,8 @@ impl QmlFrontend {
             ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
         ));
 
-        let sandboxed = env::var("FLATPAK_ID").is_ok();
-        let sandboxed_updated = qt_lkbackend.pinned().borrow_mut().config.borrow_mut().setSandboxed(sandboxed);
+        let is_flatpak = env::var("FLATPAK_ID").is_ok();
+        let sandboxed_updated = qt_lkbackend.pinned().borrow_mut().config.borrow_mut().setSandboxed(is_flatpak);
         let mut engine = QmlEngine::new();
 
         if sandboxed_updated {
@@ -103,7 +103,7 @@ impl QmlFrontend {
             return ExitReason::Restart;
         }
         else {
-            if sandboxed {
+            if is_flatpak {
                 engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml"));
                 engine.add_import_path(QString::from("/app/ChartJs2QML"));
             }

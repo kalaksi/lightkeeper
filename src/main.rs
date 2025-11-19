@@ -59,9 +59,16 @@ fn main() {
         let exit_reason = lightkeeper::run(&args.config_dir, &main_config, &hosts_config, &group_config, false);
 
         match exit_reason {
-            ExitReason::Quit => break,
-            ExitReason::Error => break,
-            ExitReason::Restart => continue,
+            Err (error) => {
+                log::error!("Failed to start: {}", error);
+                break;
+            },
+            Ok(ExitReason::Quit) => {
+                break
+            },
+            Ok(ExitReason::Restart) => {
+                continue
+            },
         };
     }
 }
