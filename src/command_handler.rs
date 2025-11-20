@@ -719,6 +719,8 @@ impl CommandHandler {
     }
 
     fn send_connector_request(&self, request: ConnectorRequest) {
+        // TODO: what to actually do with these errors? Somehow restart?
+        // Should normally never happen. Ignoring for now instead of panicing.
         if let Err(error) = self.request_sender.as_ref().unwrap().send(request) {
             log::error!("Failed to send connector request: {}", error);
         }
