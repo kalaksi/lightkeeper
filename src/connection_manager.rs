@@ -175,7 +175,9 @@ impl ConnectionManager {
                 .send(ConnectorRequest::exit_token())
                 .unwrap_or_else(|error| log::error!("Couldn't send exit token to connection manager: {}", error));
 
-            thread.join().unwrap();
+            if let Err(error) = thread.join() {
+                log::error!("Error in thread: {:?}", error);
+            }
         }
     }
 
@@ -185,7 +187,9 @@ impl ConnectionManager {
         module_factory: Arc<ModuleFactory>) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
-            let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build().unwrap();
+            let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build()
+                .expect("Failed to create connection worker pool");
+
             log::debug!("Created worker pool with {} threads", MAX_WORKER_THREADS);
 
             loop {
@@ -209,9 +213,11 @@ impl ConnectionManager {
                     Some(spec) => spec.clone(),
                     None => {
                         // Requests with no connector dependency.
-                        request.response_sender
-                            .send(RequestResponse::new_empty(&request))
-                            .unwrap_or_else(|error| log::error!("Failed to send response: {}", error));
+                        if let Err(error) = request.response_sender.send(RequestResponse::new_empty(&request)) {
+                            log::error!("Failed to send response: {}", error);
+                            return;
+                        }
+
                         continue;
                     }
                 };
@@ -250,9 +256,20 @@ impl ConnectionManager {
 
                     // Key verifications have to be done before anything else.
                     match request.request_type {
-                        RequestType::KeyVerification { key_id } => {
+                        RequestType::KeyVerification { ref key_id } => {
                             log::debug!("[{}] Verifying host key", request.host.name);
-                            connector.verify_host_key(&request.host.get_address(), &key_id).unwrap();
+
+                            if let Err(error) = connector.verify_host_key(&request.host.get_address(), &key_id) {
+                                let response = RequestResponse::new(
+                                    &request,
+                                    vec![Err(error.set_source(connector.get_module_spec().id))],
+                                );
+
+                                if let Err(error) = request.response_sender.send(response) {
+                                    log::error!("Failed to send response: {}", error);
+                                }
+                            }
+
                             return;
                         },
                         _ => {}
@@ -266,8 +283,7 @@ impl ConnectionManager {
                             Self::process_commands(&request, &connector, &commands)
                         },
                         RequestType::CommandFollowOutput { commands } => {
-                            if commands.len() == 1 {
-                                let command = commands.first().unwrap();
+                            if let [command] = &commands[..] {
                                 vec![Self::process_command_follow_output(&request, &connector, command, request.response_sender.clone())]
                             }
                             else {
@@ -285,9 +301,9 @@ impl ConnectionManager {
                     };
 
                     let response = RequestResponse::new(&request, responses);
-                    request.response_sender.send(response).unwrap_or_else(|_response|
-                        log::warn!("[{}][{}] Couldn't process response", request.host.name, request.source_id)
-                    );
+                    if let Err(_) = request.response_sender.send(response) {
+                        log::warn!("[{}][{}] Couldn't send response", request.host.name, request.source_id);
+                    }
                 });
             }
         })
@@ -297,7 +313,6 @@ impl ConnectionManager {
                         connector: &Connector,
                         request_messages: &Vec<String>) -> Vec<Result<ResponseMessage, LkError>> {
 
-        // let request = request.lock().unwrap();
         let mut results = Vec::new();
         for request_message in request_messages {
             // Some commands are supposed to not actually execute.
@@ -347,33 +362,36 @@ impl ConnectionManager {
             // Wait for some time. No sense in processing too fast.
             thread::sleep(std::time::Duration::from_millis(100));
 
-            if let Ok(mut response_message) = response_message_result {
-                full_partial_message.push_str(&response_message.message);
-                response_message.message = full_partial_message.clone();
+            match response_message_result {
+                Ok(mut response_message) => {
+                    full_partial_message.push_str(&response_message.message);
+                    response_message.message = full_partial_message.clone();
 
-                if response_message.is_partial {
-                    let response = RequestResponse::new(request, vec![Ok(response_message)]);
-                    response_sender.send(response)
-                        .unwrap_or_else(|error| log::error!("Failed to send response: {}", error));
+                    if response_message.is_partial {
+                        let response = RequestResponse::new(request, vec![Ok(response_message)]);
+                        if let Err(error) = response_sender.send(response) {
+                            log::error!("Failed to send response: {}", error);
+                        }
 
-                    response_message_result = connector.receive_partial_response(request.invocation_id);
-                }
-                else {
-                    if response_message.return_code != 0 {
-                        log::warn!("[{}][{}] Command returned non-zero exit code: {}",
-                            request.host.name, request.source_id, response_message.return_code)
+                        response_message_result = connector.receive_partial_response(request.invocation_id);
                     }
+                    else {
+                        if response_message.return_code != 0 {
+                            log::warn!("[{}][{}] Command returned non-zero exit code: {}",
+                                request.host.name, request.source_id, response_message.return_code)
+                        }
 
-                    break Ok(response_message);
+                        break Ok(response_message);
+                    }
+                },
+                Err(ref error) => {
+                    log::error!("[{}][{}] Error while receiving partial response: {}",
+                        request.host.name, request.source_id, error);
+
+                    break response_message_result;
                 }
-            }
-            else {
-                log::error!("[{}][{}] Error while receiving partial response: {}",
-                    request.host.name, request.source_id, response_message_result.clone().err().unwrap());
-                break response_message_result;
             }
         }
-
     }
 
     fn process_download(host: &Host, connector: &Connector, file_path: &str) -> Result<ResponseMessage, LkError> {
