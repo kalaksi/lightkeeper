@@ -26,42 +26,48 @@ pub fn setup_connection(socket_path: &path::Path) -> io::Result<rustls::StreamOw
     unix_stream.set_write_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
 
     let ca_cert_pem = include_str!("../../../certs/ca.crt");
-    let tls_config = Arc::new(setup_client_tls(ca_cert_pem, None, None));
+    let tls_config = setup_client_tls(ca_cert_pem, None, None)
+        .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
     let server_name = rustls::pki_types::ServerName::try_from("tms").unwrap();
-    let tls_connection = rustls::ClientConnection::new(tls_config.clone(), server_name)
+    let tls_connection = rustls::ClientConnection::new(Arc::new(tls_config.clone()), server_name)
         .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
     Ok(rustls::StreamOwned::new(tls_connection, unix_stream))
 }
 
-fn setup_client_tls(ca_cert_pem: &str, client_cert_pem: Option<&str>, client_key_pem: Option<&str>) -> rustls::ClientConfig {
+fn setup_client_tls(ca_cert_pem: &str, client_cert_pem: Option<&str>, client_key_pem: Option<&str>) -> Result<rustls::ClientConfig, String> {
     let mut store = rustls::RootCertStore::empty();
 
     for result in rustls_pemfile::certs(&mut io::Cursor::new(ca_cert_pem)) {
         if let Ok(cert) = result {
-            store.add(cert.clone()).unwrap();
+            store.add(cert.clone())
+                .map_err(|error| format!("Failed to add CA certificate: {:?}", error))?;
         }
     }
 
-    if client_cert_pem.is_some() && client_key_pem.is_some() {
-        let client_cert_pem = client_cert_pem.unwrap();
-        let client_key_pem = client_key_pem.unwrap();
-
-        let client_key = rustls_pemfile::ec_private_keys(&mut io::Cursor::new(client_key_pem))
+    if let (Some(client_cert_pem), Some(client_key_pem)) = (client_cert_pem, client_key_pem) {
+        let client_key = rustls_pemfile::pkcs8_private_keys(&mut io::Cursor::new(client_key_pem))
             .next()
-            .unwrap()
-            .unwrap();
-        let client_cert = rustls_pemfile::certs(&mut io::Cursor::new(client_cert_pem)).next().unwrap().unwrap();
+            .ok_or("No valid client private key found")?
+            .map_err(|error| format!("Failed to parse client private key: {:?}", error))?;
 
-        rustls::ClientConfig::builder()
+        let client_cert = rustls_pemfile::certs(&mut io::Cursor::new(client_cert_pem))
+            .next()
+            .ok_or("No valid client certificate found")?
+            .map_err(|error| format!("Failed to parse client certificate: {:?}", error))?;
+
+
+        let client_config = rustls::ClientConfig::builder()
             .with_root_certificates(store)
             .with_client_auth_cert(vec![client_cert], client_key.into())
-            .unwrap()
+            .map_err(|error| format!("Failed to set up client authentication: {:?}", error))?;
+
+        Ok(client_config)
     }
     else {
-        rustls::ClientConfig::builder()
+        Ok(rustls::ClientConfig::builder()
             .with_root_certificates(store)
-            .with_no_client_auth()
+            .with_no_client_auth())
     }
 }
