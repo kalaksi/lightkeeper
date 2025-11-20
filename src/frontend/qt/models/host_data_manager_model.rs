@@ -6,7 +6,7 @@
 extern crate qmetaobject;
 use qmetaobject::*;
 
-use crate::{configuration, host};
+use crate::configuration;
 use crate::enums::Criticality;
 use crate::frontend;
 use crate::module::monitoring::MonitoringData;

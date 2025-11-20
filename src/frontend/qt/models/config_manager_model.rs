@@ -30,6 +30,7 @@ pub struct ConfigManagerModel {
     // Common
     //
     showStatusBar: qt_property!(bool; READ showStatusBar),
+    // Called only from QML.
     showCharts: qt_property!(bool; READ showCharts WRITE setShowCharts),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
     isSandboxed: qt_method!(fn(&self) -> bool),

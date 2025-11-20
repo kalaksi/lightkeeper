@@ -93,48 +93,6 @@ pub fn create_file(host: &Host, remote_file_path: &str, mut metadata: FileMetada
     Ok(file_path)
 }
 
-pub fn list_cached_files(only_metadata_files: bool) -> io::Result<Vec<String>> {
-    let cache_dir = file_handler::get_cache_dir();
-    let mut files = Vec::new();
-
-    // Nice drifting...
-    for subdirectory in fs::read_dir(cache_dir)? {
-        match subdirectory {
-            Ok(subdirectory) => {
-                if subdirectory.path().is_dir() && subdirectory.file_name() != "qmlcachedir" {
-                    for entry in fs::read_dir(subdirectory.path())? {
-                        match entry {
-                            Ok(entry) => {
-                                if entry.path().is_file() {
-                                    let file_path = entry.path().to_string_lossy().to_string();
-
-                                    if file_path.ends_with(METADATA_SUFFIX) {
-                                        if !only_metadata_files {
-                                            if let Some(content_file_path) = get_content_file_path(&file_path) {
-                                                files.push(content_file_path.to_string());
-                                            }
-                                        }
-
-                                        files.push(file_path);
-                                    }
-                                }
-                            }
-                            Err(error) => {
-                                log::error!("Error while reading cache directory: {}", error);
-                            }
-                        }
-                    }
-                }
-            }
-            Err(error) => {
-                log::error!("Error while reading cache directory: {}", error);
-            }
-        }
-    }
-
-    Ok(files)
-}
-
 /// Updates existing local file. File has to exist and have accompanying metadata file.
 pub fn write_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()> {
     // Verify, just in case, that path belongs to cache directory.
