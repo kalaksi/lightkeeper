@@ -141,14 +141,14 @@ impl MonitorManager {
 
             if send_initial_value {
                 // Add initial state value indicating no data as been received yet.
-                self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
+                self.send_state_update(StateUpdateMessage {
                     host_name: host_id,
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
                     data_point: Some(DataPoint::pending()),
                     invocation_id: 0,
                     ..Default::default()
-                }).unwrap();
+                });
             }
 
             // For platform info modules.
@@ -207,16 +207,16 @@ impl MonitorManager {
                 self.invocation_id_counter += 1;
 
                 // Notify host state manager about new pending monitor invocation.
-                self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
+                self.send_state_update(StateUpdateMessage {
                     host_name: host.name.clone(),
                     display_options: info_provider.get_display_options(),
                     module_spec: info_provider.get_module_spec(),
                     data_point: Some(DataPoint::pending()),
                     invocation_id: self.invocation_id_counter,
                     ..Default::default()
-                }).unwrap();
+                });
 
-                self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+                self.send_connector_request(ConnectorRequest {
                     connector_spec: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
@@ -227,7 +227,7 @@ impl MonitorManager {
                         extension_monitors: Vec::new(),
                         commands: commands,
                     },
-                }).unwrap();
+                });
             }
         }
     }
@@ -296,34 +296,34 @@ impl MonitorManager {
                 .map(|ext| ext.get_module_spec().id.clone()).collect();
 
             // Notify host state manager about new pending monitor invocation.
-            self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
+            self.send_state_update(StateUpdateMessage {
                 host_name: host.name.clone(),
                 display_options: monitor.get_display_options(),
                 module_spec: monitor.get_module_spec(),
                 data_point: Some(DataPoint::pending()),
                 invocation_id: current_invocation_id,
                 ..Default::default()
-            }).unwrap();
+            });
 
             let messages = match get_monitor_connector_messages(&host, &monitor, &DataPoint::empty()) {
                 Ok(messages) => messages,
                 Err(error) => {
                     log::error!("Monitor failed: {}", error);
 
-                    self.state_update_sender.as_ref().unwrap().send(StateUpdateMessage {
+                    self.send_state_update(StateUpdateMessage {
                         host_name: host.name.clone(),
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
                         errors: vec![error],
                         invocation_id: current_invocation_id,
                         ..Default::default()
-                    }).unwrap();
+                    });
 
                     continue;
                 }
             };
 
-            self.request_sender.as_ref().unwrap().send(ConnectorRequest {
+            self.send_connector_request(ConnectorRequest {
                 connector_spec: monitor.get_connector_spec(),
                 source_id: monitor.get_module_spec().id,
                 host: host.clone(),
@@ -334,10 +334,24 @@ impl MonitorManager {
                     extension_monitors: extension_ids,
                     commands: messages,
                 },
-            }).unwrap();
+            });
         }
 
         invocation_ids
+    }
+
+    fn send_connector_request(&self, request: ConnectorRequest) {
+        // TODO: what to actually do with these errors? stop?
+        // Should normally never happen. Ignoring for now instead of panicing.
+        if let Err(error) = self.request_sender.as_ref().unwrap().send(request) {
+            log::error!("Failed to send connector request: {}", error);
+        }
+    }
+
+    fn send_state_update(&self, message: StateUpdateMessage) {
+        if let Err(error) = self.state_update_sender.as_ref().unwrap().send(message) {
+            log::error!("Failed to send state update message: {}", error);
+        }
     }
 
 
@@ -465,23 +479,25 @@ impl MonitorManager {
 
                     let messages = match get_monitor_connector_messages(&response.host, &next_monitor, &next_parent_datapoint) {
                         Ok(messages) => messages,
-                        Err(error) => {
-                            log::error!("[{}][{}] Monitor failed: {}", response.host.name, monitor_id, error);
+                        Err(error1) => {
+                            log::error!("[{}][{}] Monitor failed: {}", response.host.name, monitor_id, error1);
 
-                            state_update_sender.send(StateUpdateMessage {
+                            if let Err(error2) = state_update_sender.send(StateUpdateMessage {
                                 host_name: response.host.name.clone(),
                                 display_options: next_monitor.get_display_options(),
                                 module_spec: next_monitor.get_module_spec(),
-                                errors: vec![error],
+                                errors: vec![error1],
                                 invocation_id: response.invocation_id,
                                 ..Default::default()
-                            }).unwrap();
+                            }) {
+                                log::error!("[{}][{}] Failed to send state update: {}", response.host.name, next_monitor_id, error2);
+                            }
 
                             return;
                         }
                     };
 
-                    request_sender.send(ConnectorRequest {
+                    if let Err(error) = request_sender.send(ConnectorRequest {
                         connector_spec: next_monitor.get_connector_spec(),
                         source_id: next_monitor.get_module_spec().id,
                         host: response.host.clone(),
@@ -492,10 +508,12 @@ impl MonitorManager {
                             extension_monitors: extension_monitors,
                             commands: messages,
                         },
-                    }).unwrap();
+                    }) {
+                        log::error!("[{}][{}] Failed to send connector request: {}", response.host.name, next_monitor_id, error);
+                    }
                 }
                 else {
-                    state_update_sender.send(StateUpdateMessage {
+                    if let Err(error) = state_update_sender.send(StateUpdateMessage {
                         host_name: response.host.name.clone(),
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
@@ -503,7 +521,9 @@ impl MonitorManager {
                         errors: errors,
                         invocation_id: response.invocation_id,
                         ..Default::default()
-                    }).unwrap();
+                    }) {
+                        log::error!("[{}][{}] Failed to send state update: {}", response.host.name, monitor_id, error);
+                    }
                 }
             }
         })
