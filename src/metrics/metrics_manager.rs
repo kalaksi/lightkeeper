@@ -345,7 +345,9 @@ impl MetricsManager {
             let invocation_id = self.invocation_id_counter;
             self.invocation_id_counter += 1;
 
-            let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u32;
+            let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)
+                .map_err(|_| LkError::other(format!("Time calculation error")))?
+                .as_millis() as u32;
 
             let service_request = LMSRequest {
                 request_id: invocation_id,

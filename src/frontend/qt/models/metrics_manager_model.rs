@@ -114,7 +114,10 @@ impl MetricsManagerModel {
 
     fn refreshCharts(&mut self, host_id: QString, monitor_id: QString) -> u64 {
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
-            let current_unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+            let Ok(current_unix_time) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) else {
+                ::log::error!("Time calculation error");
+                return 0;
+            };
 
             let invocation_result = metrics_manager.get_metrics(
                 &host_id.to_string(),
