@@ -132,7 +132,11 @@ impl MonitorManager {
 
     // Adds a monitor but only if a monitor with the same ID doesn't exist.
     fn add_monitor(&mut self, host_id: String, monitor: Monitor, send_initial_value: bool) {
-        let mut monitors = self.monitors.lock().unwrap();
+        let Ok(mut monitors) = self.monitors.lock() else {
+            log::error!("Thread has paniced");
+            return;
+        };
+
         let monitor_collection = monitors.entry(host_id.clone()).or_insert(HashMap::new());
         let module_spec = monitor.get_module_spec();
 
@@ -165,8 +169,15 @@ impl MonitorManager {
     /// Intended to be run only once in the beginning when possibly refreshing all host data.
     /// Returns list of host IDs that were refreshed.
     pub fn refresh_platform_info_all(&mut self) -> Vec<String> {
-        let host_ids = self.monitors.lock().unwrap().keys().cloned().collect::<Vec<_>>();
-        for host_id in &host_ids {
+        let Ok(monitors) = self.monitors.lock() else {
+            log::error!("Thread has paniced");
+            return Vec::new();
+        };
+
+        let host_ids = monitors.keys().cloned().collect::<Vec<_>>();
+        drop(monitors);
+
+        for host_id in host_ids.iter() {
             self.refresh_platform_info(host_id);
         }
 
@@ -175,8 +186,13 @@ impl MonitorManager {
 
     /// Refreshes platform info and such in preparation for actual monitor refresh.
     pub fn refresh_platform_info(&mut self, host_id: &String) {
+        let Ok(monitors) = self.monitors.lock() else {
+            log::error!("Thread has paniced");
+            return;
+        };
+
         let platform_info_providers = self.platform_info_providers.lock().unwrap();
-        let monitors = self.monitors.lock().unwrap();
+
         // Internal modules start with an underscore.
         let monitors_for_host = monitors.iter()
             .filter(|(host_id_key, _)| &host_id == host_id_key && !host_id_key.starts_with("_"));
@@ -233,16 +249,31 @@ impl MonitorManager {
     }
 
     pub fn get_all_host_categories(&self, host_id: &String) -> Vec<String> {
-        let mut categories = self.monitors.lock().unwrap()[host_id].iter()
-                                          .map(|(_, monitor)| monitor.get_display_options().category.clone())
-                                          .collect::<Vec<_>>();
+        let Ok(monitors) = self.monitors.lock() else {
+            log::error!("Thread has paniced");
+            return Vec::new();
+        };
+
+        let Some(host_monitors) = monitors.get(host_id) else {
+            log::error!("Invalid host: {}", host_id);
+            return Vec::new();
+        };
+
+        let mut categories = host_monitors.iter()
+            .map(|(_, monitor)| monitor.get_display_options().category.clone())
+            .collect::<Vec<_>>();
+
         categories.sort();
         categories.dedup();
         categories
     }
 
     pub fn refresh_certificate_monitors(&mut self) -> Vec<u64> {
-        let monitors = self.monitors.lock().unwrap();
+        let Ok(monitors) = self.monitors.lock() else {
+            log::error!("Thread has paniced");
+            return Vec::new();
+        };
+
         let certificate_monitors = monitors[CERT_MONITOR_HOST_ID].iter().collect();
         let cert_monitor_host = self.host_manager.borrow().get_host(&CERT_MONITOR_HOST_ID.to_string());
         self.refresh_monitors(cert_monitor_host, certificate_monitors)
@@ -251,10 +282,19 @@ impl MonitorManager {
     /// Returns the invocation IDs of the refresh operations.
     pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
-        let monitors = self.monitors.lock().unwrap();
-        let monitors_by_category = monitors[host_id].iter()
-                                                    .filter(|(_, monitor)| &monitor.get_display_options().category == category)
-                                                    .collect();
+        let Ok(monitors) = self.monitors.lock() else {
+            log::error!("Thread has paniced");
+            return Vec::new();
+        };
+
+        let Some(host_monitors) = monitors.get(host_id) else {
+            log::error!("Invalid host: {}", host_id);
+            return Vec::new();
+        };
+
+        let monitors_by_category = host_monitors.iter()
+            .filter(|(_, monitor)| &monitor.get_display_options().category == category)
+            .collect();
 
         let invocation_ids = self.refresh_monitors(host, monitors_by_category);
         self.invocation_id_counter += invocation_ids.len() as u64;
@@ -265,10 +305,20 @@ impl MonitorManager {
     /// Returns the invocation IDs of the refresh operations.
     pub fn refresh_monitors_by_id(&mut self, host_id: &String, monitor_id: &String) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
-        let monitors = self.monitors.lock().unwrap();
-        let monitor = monitors[host_id].iter()
-                                       .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
-                                       .collect();
+
+        let Ok(monitors) = self.monitors.lock() else {
+            log::error!("Thread has paniced");
+            return Vec::new();
+        };
+
+        let Some(host_monitors) = monitors.get(host_id) else {
+            log::error!("Invalid host: {}", host_id);
+            return Vec::new();
+        };
+
+        let monitor = host_monitors.iter()
+            .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
+            .collect();
 
         let invocation_ids = self.refresh_monitors(host, monitor);
         self.invocation_id_counter += invocation_ids.len() as u64;
@@ -341,19 +391,20 @@ impl MonitorManager {
     }
 
     fn send_connector_request(&self, request: ConnectorRequest) {
-        // TODO: what to actually do with these errors? stop?
-        // Should normally never happen. Ignoring for now instead of panicing.
+        // ConnectionManager should always be available. Even if modules would cause panics.
         if let Err(error) = self.request_sender.as_ref().unwrap().send(request) {
             log::error!("Failed to send connector request: {}", error);
+            panic!("Failed to send connector request: {}", error);
         }
     }
 
     fn send_state_update(&self, message: StateUpdateMessage) {
+        // TODO: stop gracefully?
         if let Err(error) = self.state_update_sender.as_ref().unwrap().send(message) {
             log::error!("Failed to send state update message: {}", error);
+            panic!("Failed to send state update message: {}", error);
         }
     }
-
 
     //
     // RESPONSE HANDLING
@@ -394,7 +445,6 @@ impl MonitorManager {
                 };
 
                 if response.stop {
-                    log::debug!("Gracefully stopping receiver thread");
                     return;
                 }
 
@@ -403,7 +453,11 @@ impl MonitorManager {
                 let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
                 let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
-                let monitors = monitors.lock().unwrap();
+                let Ok(monitors) = monitors.lock() else {
+                    log::error!("Thread has paniced");
+                    return;
+                };
+
                 let platform_info_providers = platform_info_providers.lock().unwrap();
                 let monitor_id = &response.source_id;
                 // Search from internal monitors first.
@@ -510,6 +564,7 @@ impl MonitorManager {
                         },
                     }) {
                         log::error!("[{}][{}] Failed to send connector request: {}", response.host.name, next_monitor_id, error);
+                        return;
                     }
                 }
                 else {
@@ -523,9 +578,12 @@ impl MonitorManager {
                         ..Default::default()
                     }) {
                         log::error!("[{}][{}] Failed to send state update: {}", response.host.name, monitor_id, error);
+                        return;
                     }
                 }
             }
+
+            log::debug!("Stopping receiver thread");
         })
     }
 
