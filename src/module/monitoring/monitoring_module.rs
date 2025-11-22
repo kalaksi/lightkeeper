@@ -41,10 +41,12 @@ pub trait MonitoringModule: BoxCloneableMonitor + MetadataSupport + Module {
         }
     }
 
+    /// Should never panic.
     fn get_connector_message(&self, _host: Host, _parent_result: DataPoint) -> Result<String, LkError> {
         Err(LkError::not_implemented())
     }
 
+    /// Should never panic.
     fn get_connector_messages(&self, _host: Host, _parent_result: DataPoint) -> Result<Vec<String>, LkError> {
         Err(LkError::not_implemented())
     }

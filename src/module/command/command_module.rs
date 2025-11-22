@@ -38,10 +38,12 @@ pub trait CommandModule: BoxCloneableCommand + MetadataSupport + Module {
         }
     }
 
+    /// Should never panic.
     fn get_connector_message(&self, _host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
         Err(LkError::not_implemented())
     }
 
+    /// Should never panic.
     fn get_connector_messages(&self, _host: Host, _parameters: Vec<String>) -> Result<Vec<String>, LkError> {
         Err(LkError::not_implemented())
     }
