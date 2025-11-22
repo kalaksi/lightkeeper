@@ -181,6 +181,7 @@ impl ConnectionManager {
         }
     }
 
+    /// Main loop processing incoming connector requests.
     fn process_requests(
         stateful_connectors: Arc<Mutex<HashMap<String, ConnectorStates>>>,
         receiver: mpsc::Receiver<ConnectorRequest>,
@@ -215,7 +216,6 @@ impl ConnectionManager {
                         // Requests with no connector dependency.
                         if let Err(error) = request.response_sender.send(RequestResponse::new_empty(&request)) {
                             log::error!("Failed to send response: {}", error);
-                            return;
                         }
 
                         continue;
@@ -267,6 +267,7 @@ impl ConnectionManager {
 
                                 if let Err(error) = request.response_sender.send(response) {
                                     log::error!("Failed to send response: {}", error);
+                                    return;
                                 }
                             }
 
@@ -301,8 +302,8 @@ impl ConnectionManager {
                     };
 
                     let response = RequestResponse::new(&request, responses);
-                    if let Err(_) = request.response_sender.send(response) {
-                        log::warn!("[{}][{}] Couldn't send response", request.host.name, request.source_id);
+                    if let Err(error) = request.response_sender.send(response) {
+                        log::error!("Failed to send response: {}", error);
                     }
                 });
             }
@@ -371,6 +372,7 @@ impl ConnectionManager {
                         let response = RequestResponse::new(request, vec![Ok(response_message)]);
                         if let Err(error) = response_sender.send(response) {
                             log::error!("Failed to send response: {}", error);
+                            break Err(LkError::unexpected());
                         }
 
                         response_message_result = connector.receive_partial_response(request.invocation_id);
