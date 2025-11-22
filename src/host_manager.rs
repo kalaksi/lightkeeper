@@ -185,6 +185,13 @@ impl HostManager {
                     return;
                 }
 
+                if state_update.fatal_error {
+                    for observer in observers.lock().unwrap().iter() {
+                        observer.send(frontend::UIUpdate::FatalError()).unwrap();
+                    }
+                    continue;
+                }
+
                 let mut host_states = hosts.lock().unwrap();
                 let host_state = match host_states.hosts.get_mut(&state_update.host_name) {
                     Some(host_state) => host_state,
@@ -392,6 +399,8 @@ pub struct StateUpdateMessage {
     pub errors: Vec<LkError>,
     /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
     pub invocation_id: u64,
+    /// Signals fatal error has happened and app needs to be reloaded.
+    pub fatal_error: bool,
     /// Stops the receiver thread.
     pub stop: bool,
 }
@@ -400,6 +409,13 @@ impl StateUpdateMessage {
     pub fn stop() -> Self {
         StateUpdateMessage {
             stop: true,
+            ..Default::default()
+        }
+    }
+
+    pub fn fatal_error() -> Self {
+        StateUpdateMessage {
+            fatal_error: true,
             ..Default::default()
         }
     }

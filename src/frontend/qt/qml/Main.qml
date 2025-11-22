@@ -113,6 +113,15 @@ ApplicationWindow {
     Connections {
         target: LK
 
+        function onCrashed() {
+            root.dialogHandler.openConfirmationDialog(
+                "A fatal error has occurred. Lightkeeper will reload now.\n"+
+                "Logs can provide more information.",
+                () => LK.reload(),
+                true
+            )
+        }
+
         function onReloaded(error) {
             hostTableModel.displayData = LK.hosts.getDisplayData()
 

@@ -48,6 +48,8 @@ pub struct LkBackend {
     //
 
     reloaded: qt_signal!(error: QString),
+    // Somewhere, a panic has occurred and app needs to be reloaded.
+    crashed: qt_signal!(),
 
     //
     // Private properties
@@ -127,6 +129,13 @@ impl LkBackend {
             }
         });
 
+        let self_ptr = QPointer::from(&*self);
+        let handle_crash = qmetaobject::queued_callback(move |_| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned.borrow().crashed();
+            }
+        });
+
         let thread = std::thread::spawn(move || {
             loop {
                 match update_receiver.recv() {
@@ -141,6 +150,9 @@ impl LkBackend {
                                 process_host_update(display_data);
                             }
                             UIUpdate::Chart(metrics) => process_chart_update(metrics),
+                            UIUpdate::FatalError() => {
+                                handle_crash(());
+                            },
                             UIUpdate::Stop() => {
                                 ::log::debug!("Gracefully exiting UI state receiver thread");
                                 return;

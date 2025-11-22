@@ -186,9 +186,12 @@ Item {
         commandOutputDialog.progress = progress
     }
 
-    function openConfirmationDialog(text, onAccepted) {
+    function openConfirmationDialog(text, onAccepted, acceptOnly = false) {
         let [instanceId, instance] = confirmationDialogManager.create(
-            { text: text },
+            {
+                text: text,
+                acceptOnly: acceptOnly
+            },
             // Removes connection after triggering once.
             {
                 onAccepted: () => {

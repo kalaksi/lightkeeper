@@ -63,11 +63,9 @@ impl MonitorManager {
         // MonitorManager has almost no state so can be reinitialized fully.
         self.stop();
 
-        match self.monitors.lock() {
-            Ok(mut monitors) => monitors.clear(),
-            // Previous state doesn't matter, so ignore the error.
-            Err(error) => error.into_inner().clear(),
-        };
+        // Just clearing is not enough if the mutex is poisoned.
+        self.monitors = Arc::new(Mutex::new(HashMap::new()));
+        self.platform_info_providers = Arc::new(Mutex::new(HashMap::new()));
 
         self.request_sender = Some(request_sender);
         self.state_update_sender = Some(state_update_sender);
@@ -116,12 +114,12 @@ impl MonitorManager {
 
     pub fn stop(&mut self) {
         if let Some(thread) = self.response_receiver_thread.take() {
-            self.new_response_sender()
-                .send(RequestResponse::stop())
-                .unwrap_or_else(|error| log::error!("Couldn't send exit token to command handler: {}", error));
+            if let Err(_) = self.new_response_sender().send(RequestResponse::stop()) {
+                log::warn!("Couldn't stop thread, it may have already stopped.");
+            }
 
-            if let Err(error) = thread.join() {
-                log::error!("Error in thread: {:?}", error);
+            if let Err(_) = thread.join() {
+                log::warn!("Thread had paniced");
             }
         }
     }
@@ -133,7 +131,7 @@ impl MonitorManager {
     // Adds a monitor but only if a monitor with the same ID doesn't exist.
     fn add_monitor(&mut self, host_id: String, monitor: Monitor, send_initial_value: bool) {
         let Ok(mut monitors) = self.monitors.lock() else {
-            log::error!("Thread has paniced");
+            self.send_state_update(StateUpdateMessage::fatal_error());
             return;
         };
 
@@ -170,7 +168,7 @@ impl MonitorManager {
     /// Returns list of host IDs that were refreshed.
     pub fn refresh_platform_info_all(&mut self) -> Vec<String> {
         let Ok(monitors) = self.monitors.lock() else {
-            log::error!("Thread has paniced");
+            self.send_state_update(StateUpdateMessage::fatal_error());
             return Vec::new();
         };
 
@@ -187,7 +185,7 @@ impl MonitorManager {
     /// Refreshes platform info and such in preparation for actual monitor refresh.
     pub fn refresh_platform_info(&mut self, host_id: &String) {
         let Ok(monitors) = self.monitors.lock() else {
-            log::error!("Thread has paniced");
+            self.send_state_update(StateUpdateMessage::fatal_error());
             return;
         };
 
@@ -201,6 +199,7 @@ impl MonitorManager {
             let mut host = self.host_manager.borrow().get_host(host_name);
 
             if let Err(error) = host.resolve_ip() {
+                // TODO: show in UI?
                 log::error!("Failed to resolve IP address for host {}: {}", host_name, error);
             }
 
@@ -250,7 +249,7 @@ impl MonitorManager {
 
     pub fn get_all_host_categories(&self, host_id: &String) -> Vec<String> {
         let Ok(monitors) = self.monitors.lock() else {
-            log::error!("Thread has paniced");
+            self.send_state_update(StateUpdateMessage::fatal_error());
             return Vec::new();
         };
 
@@ -270,7 +269,7 @@ impl MonitorManager {
 
     pub fn refresh_certificate_monitors(&mut self) -> Vec<u64> {
         let Ok(monitors) = self.monitors.lock() else {
-            log::error!("Thread has paniced");
+            self.send_state_update(StateUpdateMessage::fatal_error());
             return Vec::new();
         };
 
@@ -283,7 +282,7 @@ impl MonitorManager {
     pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let Ok(monitors) = self.monitors.lock() else {
-            log::error!("Thread has paniced");
+            self.send_state_update(StateUpdateMessage::fatal_error());
             return Vec::new();
         };
 
@@ -307,7 +306,7 @@ impl MonitorManager {
         let host = self.host_manager.borrow().get_host(host_id);
 
         let Ok(monitors) = self.monitors.lock() else {
-            log::error!("Thread has paniced");
+            self.send_state_update(StateUpdateMessage::fatal_error());
             return Vec::new();
         };
 
@@ -391,18 +390,17 @@ impl MonitorManager {
     }
 
     fn send_connector_request(&self, request: ConnectorRequest) {
-        // ConnectionManager should always be available. Even if modules would cause panics.
         if let Err(error) = self.request_sender.as_ref().unwrap().send(request) {
             log::error!("Failed to send connector request: {}", error);
-            panic!("Failed to send connector request: {}", error);
+            self.send_state_update(StateUpdateMessage::fatal_error());
         }
     }
 
     fn send_state_update(&self, message: StateUpdateMessage) {
-        // TODO: stop gracefully?
+        // If upstream state manager has crashed for some reason, there's nothing we can do to recover.
         if let Err(error) = self.state_update_sender.as_ref().unwrap().send(message) {
-            log::error!("Failed to send state update message: {}", error);
-            panic!("Failed to send state update message: {}", error);
+            log::error!("Failed to send state update: {}", error);
+            panic!("Failed to send state update: {}", error);
         }
     }
 
@@ -440,12 +438,12 @@ impl MonitorManager {
                     Ok(response) => response,
                     Err(error) => {
                         log::error!("Stopped response receiver thread: {}", error);
-                        return;
+                        break;
                     }
                 };
 
                 if response.stop {
-                    return;
+                    break;
                 }
 
                 let results_len = response.responses.len();
@@ -454,8 +452,11 @@ impl MonitorManager {
                 let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
                 let Ok(monitors) = monitors.lock() else {
-                    log::error!("Thread has paniced");
-                    return;
+                    if let Err(error) = state_update_sender.send(StateUpdateMessage::fatal_error()) {
+                        log::error!("Failed to send state update: {}", error);
+                        panic!("Failed to send state update: {}", error);
+                    }
+                    continue;
                 };
 
                 let platform_info_providers = platform_info_providers.lock().unwrap();
@@ -544,7 +545,8 @@ impl MonitorManager {
                                 invocation_id: response.invocation_id,
                                 ..Default::default()
                             }) {
-                                log::error!("[{}][{}] Failed to send state update: {}", response.host.name, next_monitor_id, error2);
+                                log::error!("Failed to send state update: {}", error2);
+                                panic!("Failed to send state update: {}", error2);
                             }
 
                             return;
@@ -564,7 +566,11 @@ impl MonitorManager {
                         },
                     }) {
                         log::error!("[{}][{}] Failed to send connector request: {}", response.host.name, next_monitor_id, error);
-                        return;
+
+                        if let Err(error) = state_update_sender.send(StateUpdateMessage::fatal_error()) {
+                            log::error!("Failed to send state update: {}", error);
+                            panic!("Failed to send state update: {}", error);
+                        }
                     }
                 }
                 else {
@@ -577,8 +583,8 @@ impl MonitorManager {
                         invocation_id: response.invocation_id,
                         ..Default::default()
                     }) {
-                        log::error!("[{}][{}] Failed to send state update: {}", response.host.name, monitor_id, error);
-                        return;
+                        log::error!("Failed to send state update: {}", error);
+                        panic!("Failed to send state update: {}", error);
                     }
                 }
             }
@@ -589,6 +595,8 @@ impl MonitorManager {
 
 }
 
+/// NOTE: Panics are not handled gracefully since this runs in main UI thread.
+/// get_connector_message and get_connector_messages should never panic.
 fn get_monitor_connector_messages(host: &Host, monitor: &Monitor, parent_datapoint: &DataPoint) -> Result<Vec<String>, LkError> {
     let mut all_messages: Vec<String> = Vec::new();
 

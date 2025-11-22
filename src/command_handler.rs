@@ -85,11 +85,8 @@ impl CommandHandler {
 
         self.stop();
 
-        match self.commands.lock() {
-            Ok(mut commands) => commands.clear(),
-            // Previous state doesn't matter, so ignore the error.
-            Err(error) => error.into_inner().clear(),
-        };
+        // Just clearing is not enough if the mutex is poisoned.
+        self.commands = Arc::new(Mutex::new(HashMap::new()));
 
         self.custom_commands.clear();
 
@@ -125,12 +122,12 @@ impl CommandHandler {
 
     pub fn stop(&mut self) {
         if let Some(thread) = self.response_receiver_thread.take() {
-            self.new_response_sender()
-                .send(RequestResponse::stop())
-                .unwrap_or_else(|error| log::error!("Couldn't send exit token to command handler: {}", error));
+            if let Err(_) = self.new_response_sender().send(RequestResponse::stop()) {
+                log::warn!("Couldn't stop thread, it may have already stopped.");
+            }
 
-            if let Err(error) = thread.join() {
-                log::error!("Error in thread: {:?}", error);
+            if let Err(_) = thread.join() {
+                log::warn!("Thread had paniced");
             }
         }
     }
@@ -140,7 +137,10 @@ impl CommandHandler {
     }
 
     fn add_command(&mut self, host_id: &String, command: Command) {
-        let mut commands = self.commands.lock().unwrap();
+        let Ok(mut commands) = self.commands.lock() else {
+            self.send_state_update(StateUpdateMessage::fatal_error());
+            return;
+        };
 
         let command_collection = commands.entry(host_id.clone()).or_insert_with(HashMap::new);
         let module_spec = command.get_module_spec();
@@ -151,6 +151,10 @@ impl CommandHandler {
 
     /// Returns invocation ID or 0 on error.
     pub fn execute(&mut self, host_id: &String, command_id: &String, parameters: &[String]) -> u64 {
+        let Ok(commands) = self.commands.lock() else {
+            self.send_state_update(StateUpdateMessage::fatal_error());
+            return 0;
+        };
 
         let host = self.host_manager.borrow().get_host(host_id);
 
@@ -158,7 +162,6 @@ impl CommandHandler {
             log::warn!("[{}] Executing command \"{}\" despite missing platform info", host_id, command_id);
         }
 
-        let commands = self.commands.lock().unwrap();
         let command = &commands[host_id][command_id];
 
 
@@ -213,14 +216,16 @@ impl CommandHandler {
     //
 
     pub fn download_editable_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> (u64, String) {
-        let host = self.host_manager.borrow().get_host(host_id);
-        let commands = self.commands.lock().unwrap();
-        let command = &commands[host_id][command_id];
+        let Ok(commands) = self.commands.lock() else {
+            self.send_state_update(StateUpdateMessage::fatal_error());
+            // TODO: check this is appropriate
+            return (0, String::new());
+        };
 
-        let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
-            log::error!("Command failed: {}", error);
-            return;
-        }).unwrap();
+        let command = &commands[host_id][command_id];
+        let host = self.host_manager.borrow().get_host(host_id);
+
+        let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).unwrap();
 
         let (_, local_file_path) = file_handler::convert_to_local_paths(&host, remote_file_path);
         self.invocation_id_counter += 1;
@@ -240,9 +245,13 @@ impl CommandHandler {
     }
 
     pub fn upload_file(&mut self, host_id: &String, command_id: &String, local_file_path: &String) -> u64 {
-        let host = self.host_manager.borrow().get_host(host_id);
-        let commands = self.commands.lock().unwrap();
+        let Ok(commands) = self.commands.lock() else {
+            self.send_state_update(StateUpdateMessage::fatal_error());
+            return 0;
+        };
+
         let command = &commands[host_id][command_id];
+        let host = self.host_manager.borrow().get_host(host_id);
 
         self.invocation_id_counter += 1;
 
@@ -310,11 +319,14 @@ impl CommandHandler {
     }
 
     pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &[String]) -> ShellCommand {
+        let Ok(commands) = self.commands.lock() else {
+            self.send_state_update(StateUpdateMessage::fatal_error());
+            return ShellCommand::new();
+        };
+
+        let command_module = &commands[host_id][command_id];
         let host = self.host_manager.borrow().get_host(host_id);
         let mut command = self.remote_ssh_command(&host);
-
-        let commands = self.commands.lock().unwrap();
-        let command_module = &commands[host_id][command_id];
 
         let connector_messages = get_command_connector_messages(&host, command_module, parameters).unwrap_or_else(|error| {
             log::error!("Command failed: {}", error);
@@ -358,9 +370,13 @@ impl CommandHandler {
     // TODO: this will block the UI thread? Improve!
     /// Returns local file path where file was downloaded.
     pub fn open_external_text_editor(&self, host_id: &String, command_id: &String, remote_file_path: &String) -> String {
-        let host = self.host_manager.borrow().get_host(host_id);
-        let commands = self.commands.lock().unwrap();
+        let Ok(commands) = self.commands.lock() else {
+            self.send_state_update(StateUpdateMessage::fatal_error());
+            return String::new();
+        };
+
         let command = &commands[host_id][command_id];
+        let host = self.host_manager.borrow().get_host(host_id);
 
         let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
             log::error!("Command failed: {}", error);
@@ -421,7 +437,15 @@ impl CommandHandler {
                     return;
                 }
 
-                let commands = commands.lock().unwrap();
+                let new_state_update_sender = state_update_sender.clone();
+
+                let Ok(commands) = commands.lock() else {
+                    if let Err(error) = state_update_sender.send(StateUpdateMessage::fatal_error()) {
+                        panic!("Failed to send state update: {}", error);
+                    }
+                    continue;
+                };
+
                 let command = if let Some(host_command) = commands.get(&response.host.name)
                     .and_then(|host_commands| host_commands.get(&response.source_id)) {
                     host_command
@@ -432,7 +456,6 @@ impl CommandHandler {
                     continue;
                 };
 
-                let new_state_update_sender = state_update_sender.clone();
 
                 match command.get_display_options().action {
                     UIAction::None |
@@ -646,7 +669,12 @@ impl CommandHandler {
 
     // Return value contains host's commands. `parameters` is not set since provided by data point later on.
     pub fn get_commands_for_host(&self, host_id: String) -> HashMap<String, CommandButtonData> {
-        if let Some(command_collection) = self.commands.lock().unwrap().get(&host_id) {
+        let Ok(commands) = self.commands.lock() else {
+            self.send_state_update(StateUpdateMessage::fatal_error());
+            return HashMap::new();
+        };
+
+        if let Some(command_collection) = commands.get(&host_id) {
             command_collection.iter().map(|(command_id, command)| {
                 (command_id.clone(), CommandButtonData::new(command_id.clone(), command.get_display_options()))
             }).collect()
@@ -657,7 +685,11 @@ impl CommandHandler {
     }
 
     pub fn get_command_for_host(&self, host_id: &String, command_id: &String) -> Option<CommandButtonData> {
-        let commands = self.commands.lock().unwrap();
+        let Ok(commands) = self.commands.lock() else {
+            self.send_state_update(StateUpdateMessage::fatal_error());
+            return None;
+        };
+
         let command = commands.get(host_id).unwrap()
                               .get(command_id).unwrap();
         Some(CommandButtonData::new(command_id.clone(), command.get_display_options()))
@@ -719,20 +751,23 @@ impl CommandHandler {
     }
 
     fn send_connector_request(&self, request: ConnectorRequest) {
-        // TODO: what to actually do with these errors? stop?
-        // Should normally never happen. Ignoring for now instead of panicing.
         if let Err(error) = self.request_sender.as_ref().unwrap().send(request) {
             log::error!("Failed to send connector request: {}", error);
+            self.send_state_update(StateUpdateMessage::fatal_error());
         }
     }
 
     fn send_state_update(&self, message: StateUpdateMessage) {
+        // If upstream state manager has crashed for some reason, there's nothing we can do to recover.
         if let Err(error) = self.state_update_sender.as_ref().unwrap().send(message) {
             log::error!("Failed to send state update message: {}", error);
+            panic!("Failed to send state update message: {}", error);
         }
     }
 }
 
+/// NOTE: Panics are not handled gracefully since this runs in main UI thread.
+/// get_connector_message and get_connector_messages should never panic.
 fn get_command_connector_messages(host: &Host, command: &Command, parameters: &[String]) -> Result<Vec<String>, LkError> {
     let mut all_messages: Vec<String> = Vec::new();
 

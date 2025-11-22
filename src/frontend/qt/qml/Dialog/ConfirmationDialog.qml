@@ -10,12 +10,13 @@ import "../js/Utils.js" as Utils
 LightkeeperDialog {
     id: root
 
+    property bool acceptOnly: false
     property string text: ""
     // Center short text automatically.
     property bool centerText: text.length < 40
 
     title: "Confirmation"
-    standardButtons: Dialog.Yes | Dialog.No
+    standardButtons: acceptOnly ? Dialog.Ok : Dialog.Yes | Dialog.No
     implicitWidth: Utils.clamp(dialogText.implicitWidth, 300, 1000) + 100
     implicitHeight: Utils.clamp(dialogText.implicitHeight, 200, 600) + 50
     anchors.centerIn: parent
