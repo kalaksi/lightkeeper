@@ -84,7 +84,7 @@ impl Module for Ssh2 {
         for _ in 0..parallel_sessions {
             available_sessions.push(Mutex::new(SharedSessionData {
                 is_initialized: false,
-                session: ssh2::Session::new().unwrap(),
+                session: ssh2::Session::new().expect("Unable to initialize SSH sessions."),
                 open_channel: None,
                 invocation_id: 0,
             }));
@@ -172,10 +172,11 @@ impl ConnectionModule for Ssh2 {
         };
 
         // Merge stderr etc. to the same stream as stdout.
-        channel.handle_extended_data(ssh2::ExtendedData::Merge).unwrap();
+        channel.handle_extended_data(ssh2::ExtendedData::Merge)
+            .map_err(|error| LkError::other(error.to_string()))?;
         
         channel.exec(message)
-               .map_err(|error| format!("Error executing command '{}': {}", message, error))?;
+            .map_err(|error| format!("Error executing command '{}': {}", message, error))?;
 
         let mut buffer = [0u8; 256];
         let output = channel.read(&mut buffer)
@@ -234,18 +235,27 @@ impl ConnectionModule for Ssh2 {
         let mut contents = Vec::new();
         let _bytes_written = file.read_to_end(&mut contents)?;
         let stat = file.stat()?;
-        let metadata = FileMetadata {
-            download_time: Utc::now(),
-            local_path: None,
-            remote_path: source.to_string(),
-            remote_file_hash: sha256::hash(&contents),
-            owner_uid: stat.uid.unwrap(),
-            owner_gid: stat.gid.unwrap(),
-            permissions: stat.perm.unwrap(),
-            temporary: true,
-        };
 
-        Ok((metadata, contents))
+        match (stat.uid, stat.gid, stat.perm) {
+            (Some(uid), Some(gid), Some(perm)) => {
+                let metadata = FileMetadata {
+                    download_time: Utc::now(),
+                    local_path: None,
+                    remote_path: source.to_string(),
+                    remote_file_hash: sha256::hash(&contents),
+                    owner_uid: uid,
+                    owner_gid: gid,
+                    permissions: perm,
+                    temporary: true,
+                };
+
+                Ok((metadata, contents))
+
+            },
+            _ => {
+                Err(LkError::unexpected())
+            }
+        }
     }
 
     fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> Result<(), LkError> {
@@ -275,9 +285,11 @@ impl ConnectionModule for Ssh2 {
 
         let known_hosts_path = self.get_known_hosts_path()?;
 
-        let mut known_hosts = session_data.session.known_hosts().unwrap();
+        let mut known_hosts = session_data.session.known_hosts()
+            .map_err(|error| LkError::other(format!("Failed to initialize known hosts file: {}", error)))?;
+
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
-                   .map_err(|error| LkError::other_p("Failed to read known hosts file", error))?;
+            .map_err(|error| LkError::other_p("Failed to read known hosts file", error))?;
 
         // The session probably gets disconnected since receiving host key fails if not reconnecting.
         let mut socket_addresses = format!("{}:{}", self_address, self_port).to_socket_addrs()?;
@@ -290,12 +302,12 @@ impl ConnectionModule for Ssh2 {
         let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
 
         log::info!("Connected to {}:{}", self_address, self_port);
-        session_data.session = ssh2::Session::new().unwrap();
+        session_data.session = ssh2::Session::new().expect("Unable to initialize SSH sessions.");
         session_data.session.set_tcp_stream(stream);
         session_data.session.handshake()?;
 
         if let Some((key, key_type)) = session_data.session.host_key() {
-            let key_string = Self::get_host_key_id(key_type, key);
+            let key_string = Self::get_host_key_id(key_type, key)?;
             let host_and_port = format!("[{}]:{}", hostname, self_port);
 
             if key_string == key_id {
@@ -367,7 +379,7 @@ impl Ssh2 {
         let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
         log::info!("Connected to {}:{}", address, port);
 
-        session_data.session = ssh2::Session::new().unwrap();
+        session_data.session = ssh2::Session::new().expect("Unable to initialize SSH sessions.");
         session_data.session.set_tcp_stream(stream);
         if let Err(error) = session_data.session.handshake() {
             log::debug!("Supported Kex algs: {:?}", session_data.session.supported_algs(ssh2::MethodType::Kex));
@@ -381,12 +393,12 @@ impl Ssh2 {
             self.check_known_hosts(&session_data, &address, port)?;
         }
 
-        if self.password.is_some() {
-            session_data.session.userauth_password(self.username.as_str(), self.password.as_ref().unwrap().as_str())
+        if let Some(password) = &self.password {
+            session_data.session.userauth_password(self.username.as_str(), password.as_str())
                 .map_err(|error| LkError::other(format!("Failed to authenticate with password: {}", error)))?;
         }
-        else if self.private_key_path.is_some() {
-            let path = Path::new(self.private_key_path.as_ref().unwrap());
+        else if let Some(private_key_path) = &self.private_key_path {
+            let path = Path::new(private_key_path);
             let passphrase_option = self.private_key_passphrase.as_ref().map(|pass| pass.as_str());
 
             session_data.session.userauth_pubkey_file(self.username.as_str(), None, path, passphrase_option)
@@ -436,12 +448,14 @@ impl Ssh2 {
     fn check_known_hosts(&self, session_data: &MutexGuard<SharedSessionData>, hostname: &str, port: u16) -> Result<(), LkError> {
         let known_hosts_path = self.get_known_hosts_path()?;
 
-        let mut known_hosts = session_data.session.known_hosts().unwrap();
+        let mut known_hosts = session_data.session.known_hosts()
+            .map_err(|error| LkError::other(format!("Failed to initialize known hosts file: {}", error)))?;
+
         known_hosts.read_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
-                   .map_err(|error| LkError::other(format!("Failed to read known hosts file: {}", error)))?;
+            .map_err(|error| LkError::other(format!("Failed to read known hosts file: {}", error)))?;
 
         if let Some((key, key_type)) = session_data.session.host_key() {
-            let key_string = Self::get_host_key_id(key_type, key);
+            let key_string = Self::get_host_key_id(key_type, key)?;
 
             match known_hosts.check_port(hostname, port, key) {
                 ssh2::CheckResult::Match => Ok(()),
@@ -465,14 +479,13 @@ impl Ssh2 {
     }
 
     fn get_known_hosts_path(&self) -> Result<PathBuf, LkError> {
-        if self.custom_known_hosts_path.is_some() {
-            let known_hosts_path = self.custom_known_hosts_path.as_ref().unwrap();
-
-            if !known_hosts_path.exists() {
-                return Err(LkError::other_p("No such file for custom_known_hosts_path", known_hosts_path.to_string_lossy()));
+        if let Some(custom_path) = &self.custom_known_hosts_path {
+            if !custom_path.exists() {
+                Err(LkError::other_p("No such file for custom_known_hosts_path", custom_path.to_string_lossy()))
             }
-
-            Ok(known_hosts_path.clone())
+            else {
+                Ok(custom_path.clone())
+            }
         }
         else {
             let config_dir = file_handler::get_config_dir();
@@ -488,17 +501,17 @@ impl Ssh2 {
         }
     }
 
-    fn get_host_key_id(key_type: ssh2::HostKeyType, key: &[u8]) -> String {
+    fn get_host_key_id(key_type: ssh2::HostKeyType, key: &[u8]) -> Result<String, LkError> {
         let fp_hex = sha256::hash(key);
-        let fp_bytes = Vec::<u8>::from_hex(fp_hex.clone()).unwrap();
+        let fp_bytes = Vec::<u8>::from_hex(fp_hex.clone()).map_err(|error| LkError::other(error))?;
         let fp_base64 = base64::engine::general_purpose::STANDARD_NO_PAD.encode(fp_bytes);
 
-        format!("{:?} {}\n\nFingerprints:\nSHA256 (hex): {}\nSHA256 (base64): {}",
+        Ok(format!("{:?} {}\n\nFingerprints:\nSHA256 (hex): {}\nSHA256 (base64): {}",
             key_type,
             base64::engine::general_purpose::STANDARD_NO_PAD.encode(key),
             fp_hex,
             fp_base64
-        )
+        ))
     }
 }
 
