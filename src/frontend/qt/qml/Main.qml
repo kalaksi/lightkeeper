@@ -153,7 +153,8 @@ ApplicationWindow {
                 tray.showMessage(title, message)
             }
 
-            hostTable.highlightMonitor(hostId, monitorId, newCriticality)
+            // TODO: disabled because a bit buggy
+            // hostTable.highlightMonitor(hostId, monitorId, newCriticality)
         }
 
         function onCommandResultReceived(commandResultJson, invocationId) {
