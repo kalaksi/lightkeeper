@@ -122,8 +122,8 @@ impl MetricsManagerModel {
             let invocation_result = metrics_manager.get_metrics(
                 &host_id.to_string(),
                 &monitor_id.to_string(),
-                // 4 days back.
-                current_unix_time.as_secs() as i64 - (60 * 60 * 24 * 4),
+                // 7 days back.
+                current_unix_time.as_secs() as i64 - (60 * 60 * 24 * 7),
                 current_unix_time.as_secs() as i64,
             );
 
