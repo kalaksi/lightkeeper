@@ -38,6 +38,17 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.32.0" date="2025-11-25">
+      <description>
+        <ul>
+          <li>Add modules systemd-service-restart and docker-compose-restart.</li>
+          <li>Extend chart timespan to 7 days.</li>
+          <li>Improve formatting support in command output dialog.</li>
+          <li>Add support for recovering from thread panics.  </li>
+          <li>Improve error handling in general.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.31.2" date="2025-11-03">
       <description>
         <ul>
