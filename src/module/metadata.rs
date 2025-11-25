@@ -7,7 +7,6 @@ use std::collections::HashMap;
 
 use super::ModuleSpecification;
 
-
 #[derive(Clone, Debug)]
 pub struct Metadata {
     pub module_spec: ModuleSpecification,

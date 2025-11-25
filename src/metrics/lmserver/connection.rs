@@ -26,12 +26,11 @@ pub fn setup_connection(socket_path: &path::Path) -> io::Result<rustls::StreamOw
     unix_stream.set_write_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
 
     let ca_cert_pem = include_str!("../../../certs/ca.crt");
-    let tls_config = setup_client_tls(ca_cert_pem, None, None)
-        .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+    let tls_config = setup_client_tls(ca_cert_pem, None, None).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
     let server_name = rustls::pki_types::ServerName::try_from("tms").unwrap();
-    let tls_connection = rustls::ClientConnection::new(Arc::new(tls_config.clone()), server_name)
-        .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+    let tls_connection =
+        rustls::ClientConnection::new(Arc::new(tls_config.clone()), server_name).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
     Ok(rustls::StreamOwned::new(tls_connection, unix_stream))
 }
@@ -41,7 +40,8 @@ fn setup_client_tls(ca_cert_pem: &str, client_cert_pem: Option<&str>, client_key
 
     for result in rustls_pemfile::certs(&mut io::Cursor::new(ca_cert_pem)) {
         if let Ok(cert) = result {
-            store.add(cert.clone())
+            store
+                .add(cert.clone())
                 .map_err(|error| format!("Failed to add CA certificate: {:?}", error))?;
         }
     }
@@ -57,7 +57,6 @@ fn setup_client_tls(ca_cert_pem: &str, client_cert_pem: Option<&str>, client_key
             .ok_or("No valid client certificate found")?
             .map_err(|error| format!("Failed to parse client certificate: {:?}", error))?;
 
-
         let client_config = rustls::ClientConfig::builder()
             .with_root_certificates(store)
             .with_client_auth_cert(vec![client_cert], client_key.into())
@@ -66,8 +65,6 @@ fn setup_client_tls(ca_cert_pem: &str, client_cert_pem: Option<&str>, client_key
         Ok(client_config)
     }
     else {
-        Ok(rustls::ClientConfig::builder()
-            .with_root_certificates(store)
-            .with_no_client_auth())
+        Ok(rustls::ClientConfig::builder().with_root_certificates(store).with_no_client_auth())
     }
 }

@@ -3,27 +3,28 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use std::rc::Rc;
-use std::{sync::mpsc, cell::RefCell};
 use std::env;
+use std::rc::Rc;
+use std::{cell::RefCell, sync::mpsc};
 extern crate qmetaobject;
 use qmetaobject::*;
+
+use super::models::*;
 use super::resources;
 #[allow(unused_imports)]
 use super::resources_qml;
-use super::models::*;
 use crate::frontend::hot_reload;
 use crate::metrics::MetricsManager;
 use crate::{
-    frontend,
     command_handler::CommandHandler,
-    monitor_manager::MonitorManager,
     configuration,
+    connection_manager::ConnectionManager,
+    frontend,
+    host_manager,
     module::Metadata,
+    monitor_manager::MonitorManager,
     ExitReason,
-    connection_manager::ConnectionManager, host_manager,
 };
-
 
 pub struct QmlFrontend {
     config_dir: String,
@@ -35,15 +36,15 @@ pub struct QmlFrontend {
     update_sender_prototype: mpsc::Sender<frontend::UIUpdate>,
 }
 
-
 impl QmlFrontend {
     /// Parameters provide the initial data and configuration for the frontend.
-    pub fn new(config_dir: &String,
-               main_config: &configuration::Configuration,
-               hosts_config: &configuration::Hosts,
-               group_config: &configuration::Groups,
-               module_metadatas: Vec<Metadata>) -> QmlFrontend {
-
+    pub fn new(
+        config_dir: &String,
+        main_config: &configuration::Configuration,
+        hosts_config: &configuration::Hosts,
+        group_config: &configuration::Groups,
+        module_metadatas: Vec<Metadata>,
+    ) -> QmlFrontend {
         qmetaobject::log::init_qt_to_rust();
         resources::init_resources();
 
@@ -51,9 +52,7 @@ impl QmlFrontend {
         if style.is_empty() {
             std::env::set_var("QT_STYLE_OVERRIDE", "Fusion");
         }
-        else if std::env::var("QT_QUICK_CONTROLS_STYLE").is_err() &&
-                std::env::var("QT_STYLE_OVERRIDE").is_err() {
-
+        else if std::env::var("QT_QUICK_CONTROLS_STYLE").is_err() && std::env::var("QT_STYLE_OVERRIDE").is_err() {
             std::env::set_var("QT_STYLE_OVERRIDE", style);
         }
 
@@ -71,13 +70,14 @@ impl QmlFrontend {
     }
 
     /// Takes ownership of most components (excl. HostDataManager).
-    pub fn start(&mut self,
+    pub fn start(
+        &mut self,
         command_handler: CommandHandler,
         monitor_manager: MonitorManager,
         connection_manager: ConnectionManager,
         host_manager: Rc<RefCell<host_manager::HostManager>>,
-        metrics_manager: Option<MetricsManager>) -> ExitReason {
-
+        metrics_manager: Option<MetricsManager>,
+    ) -> ExitReason {
         qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
 
@@ -91,7 +91,13 @@ impl QmlFrontend {
             HostDataManagerModel::new(display_data, self.main_config.clone()),
             CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
             MetricsManagerModel::new(metrics_manager, self.hosts_config.clone(), self.main_config.display_options.clone()),
-            ConfigManagerModel::new(self.config_dir.clone(), self.main_config.clone(), self.hosts_config.clone(), self.group_config.clone(), self.module_metadatas.clone()),
+            ConfigManagerModel::new(
+                self.config_dir.clone(),
+                self.main_config.clone(),
+                self.hosts_config.clone(),
+                self.group_config.clone(),
+                self.module_metadatas.clone(),
+            ),
         ));
 
         let is_flatpak = env::var("FLATPAK_ID").is_ok();

@@ -16,8 +16,22 @@ if [ ! -e third_party/qmltermwidget/QMLTermWidget/libqmltermwidget.so ]; then
 fi
 
 if [ ! -z "$(git status -s)" ]; then
-    # Expand use later. Currently, rustfmt in some cases makes readability worse.
-    rustfmt +nightly src/utils.rs
+    # Expand use later. Currently, rustfmt in many cases makes readability worse by splitting or joining lines badly.
+    rustfmt +nightly src/utils.rs \
+        src/metrics.rs \
+        src/enums.rs \
+        src/error.rs \
+        src/host.rs \
+        src/configuration.rs \
+        src/module/module_factory.rs \
+        src/module/metadata.rs \
+        src/module/platform_info.rs \
+        src/frontend/display_options.rs \
+        src/frontend/hot_reload.rs \
+        src/frontend/qt/qml_frontend.rs \
+        src/frontend/qt/resources.rs \
+        src/frontend/qt/resources_qml.rs \
+        src/file_handler.rs
 fi
 
 cargo build

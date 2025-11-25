@@ -3,14 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 use strum_macros::Display;
 
-use crate::{
-    module::command::UIAction,
-    enums::Criticality,
-    utils::string_validation,
-};
+use crate::{enums::Criticality, module::command::UIAction, utils::string_validation};
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct DisplayOptions {

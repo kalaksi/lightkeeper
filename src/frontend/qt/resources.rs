@@ -6,7 +6,7 @@
 use qmetaobject::qrc;
 
 pub fn init_resources() {
-    qrc!(resources_main, 
+    qrc!(resources_main,
         "src/frontend/qt" as "main" {
 
             // Fonts
@@ -98,7 +98,7 @@ pub fn init_resources() {
     );
     resources_main();
 
-    qrc!(resources_theme_light, 
+    qrc!(resources_theme_light,
         "src/frontend/qt" as "main" {
             // Fonts
             "fonts/Pixeloid/PixeloidSans-nR3g1.ttf" as "fonts/pixeloid",

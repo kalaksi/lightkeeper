@@ -107,14 +107,15 @@ pub fn write_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()>
 }
 
 pub fn write_file_metadata(metadata: FileMetadata) -> io::Result<()> {
-    let local_file_path = metadata.local_path.clone()
+    let local_file_path = metadata
+        .local_path
+        .clone()
         .ok_or(io::Error::new(io::ErrorKind::Other, "Metadata does not contain local file path"))?;
 
     let metadata_path = get_metadata_path(&local_file_path);
     let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_path)?;
 
-    serde_yaml::to_writer(metadata_file, &metadata)
-        .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+    serde_yaml::to_writer(metadata_file, &metadata).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
     Ok(())
 }

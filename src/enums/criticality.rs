@@ -21,4 +21,3 @@ pub enum Criticality {
     /// When command or service is not available in the system and therefore can't be monitored.
     NotAvailable,
 }
-

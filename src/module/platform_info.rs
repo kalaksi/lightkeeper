@@ -35,7 +35,8 @@ impl PlatformInfo {
 
     // Version is given as str for convenience.
     pub fn is_same_or_greater(&self, flavor: Flavor, version: &str) -> bool {
-        let Ok(parsed_version) = VersionNumber::from_str(version) else {
+        let Ok(parsed_version) = VersionNumber::from_str(version)
+        else {
             panic!("Invalid version {}", version);
         };
 

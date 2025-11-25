@@ -13,9 +13,9 @@ use std::time::{Duration, SystemTime};
 use std::{process, thread};
 
 use crate::error::LkError;
-use crate::frontend::UIUpdate;
-use crate::metrics::lmserver::{self, RequestType, LMSRequest, LMSResponse};
 use crate::file_handler;
+use crate::frontend::UIUpdate;
+use crate::metrics::lmserver::{self, LMSRequest, LMSResponse, RequestType};
 
 //
 // NOTE: MetricsManager handles connections to metrics server that stores host metrics for charts.
@@ -59,7 +59,7 @@ impl MetricsManager {
     /// Downloads (if needed) and verifies metrics server binary and then spawns a new process for it.
     pub fn start_service(&mut self) -> Result<(), LkError> {
         if self.is_running() {
-            return Ok(())
+            return Ok(());
         }
 
         log::info!("Starting metrics server");
@@ -111,7 +111,7 @@ impl MetricsManager {
                 Err(_error) => {
                     log::debug!("Failed to connect to metrics server, removing socket file");
                     std::fs::remove_file(&socket_path)?;
-                },
+                }
                 Ok(tls_stream) => {
                     self.request_thread = Some(thread::spawn(move || {
                         Self::process_requests(tls_stream, request_receiver, new_update_sender);
@@ -175,7 +175,7 @@ impl MetricsManager {
                     Err(error) => {
                         log::error!("Failed to connect to metrics server: {}", error);
                         // TODO: send error to UI?
-                    },
+                    }
                     Ok(tls_stream) => {
                         Self::process_requests(tls_stream, request_receiver, new_update_sender);
                     }
@@ -187,7 +187,7 @@ impl MetricsManager {
     }
 
     fn download_lmserver(lmserver_path: &Path, signature_path: &Path) -> io::Result<()> {
-        use base64::{Engine as _, engine::general_purpose};
+        use base64::{engine::general_purpose, Engine as _};
 
         // Check and store version info for triggering updates.
         let version_file_path = lmserver_path.with_extension("version");
@@ -196,7 +196,8 @@ impl MetricsManager {
             Ok(_) => {
                 if std::fs::metadata(&lmserver_path).is_err() {
                     true
-                } else {
+                }
+                else {
                     let version = std::fs::read_to_string(&version_file_path)?;
                     if version.trim() != "dev" && version.trim() != LMSERVER_VERSION {
                         log::debug!("New version of Light Metrics Server available");
@@ -221,7 +222,8 @@ impl MetricsManager {
             // to make the repo less public. Obfuscated to keep bots away.
             // Date suffix in filename, so old tokens can be kept available without overwriting.
             let token_b64 = download_string("https://github.com/kalaksi/lightkeeper/raw/refs/heads/develop/src/metrics/token-2508.txt")?;
-            let token = general_purpose::STANDARD.decode(token_b64.as_str())
+            let token = general_purpose::STANDARD
+                .decode(token_b64.as_str())
                 .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?
                 .iter()
                 .zip("LoremipsumdolorsitametconsecteturadipiscingelitCurabitura".bytes())
@@ -230,12 +232,18 @@ impl MetricsManager {
 
             // Built and signed with GitLab CI.
             download_file(
-                &format!("https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver.sig/raw?ref={}", LMSERVER_VERSION),
+                &format!(
+                    "https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver.sig/raw?ref={}",
+                    LMSERVER_VERSION
+                ),
                 &token,
                 signature_path,
             )?;
             download_file(
-                &format!("https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver/raw?ref={}", LMSERVER_VERSION),
+                &format!(
+                    "https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver/raw?ref={}",
+                    LMSERVER_VERSION
+                ),
                 &token,
                 lmserver_path,
             )?;
@@ -345,7 +353,8 @@ impl MetricsManager {
             let invocation_id = self.invocation_id_counter;
             self.invocation_id_counter += 1;
 
-            let current_unix_ms = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)
+            let current_unix_ms = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
                 .map_err(|_| LkError::other(format!("Time calculation error")))?
                 .as_millis() as u32;
 
@@ -355,7 +364,9 @@ impl MetricsManager {
                 request_type: request_type,
             };
 
-            request_sender.send(service_request).map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
+            request_sender
+                .send(service_request)
+                .map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
             Ok(invocation_id)
         }
         else {
@@ -363,7 +374,11 @@ impl MetricsManager {
         }
     }
 
-    fn process_requests(mut tls_stream: rustls::StreamOwned<rustls::ClientConnection, UnixStream>, request_receiver: mpsc::Receiver<LMSRequest>, update_sender: mpsc::Sender<UIUpdate>) {
+    fn process_requests(
+        mut tls_stream: rustls::StreamOwned<rustls::ClientConnection, UnixStream>,
+        request_receiver: mpsc::Receiver<LMSRequest>,
+        update_sender: mpsc::Sender<UIUpdate>,
+    ) {
         loop {
             // These should never fail.
             let service_request = request_receiver.recv().unwrap();
@@ -461,7 +476,7 @@ fn download_file(url: &str, access_token: &str, output_path: &Path) -> io::Resul
         Ok(())
     }
     else {
-        Err(io::Error::new(io::ErrorKind::Other, "Failed to download file.")) 
+        Err(io::Error::new(io::ErrorKind::Other, "Failed to download file."))
     }
 }
 
@@ -493,7 +508,10 @@ fn verify_signature(file_path: &std::path::Path, signature_path: &std::path::Pat
     verifier.update(&file_bytes)?;
 
     if !verifier.verify(&signature)? {
-        log::error!("{} integrity verification failed.", file_path.file_name().unwrap_or_default().to_string_lossy());
+        log::error!(
+            "{} integrity verification failed.",
+            file_path.file_name().unwrap_or_default().to_string_lossy()
+        );
         Err(io::Error::new(io::ErrorKind::Other, "Integrity verification failed."))
     }
     else {

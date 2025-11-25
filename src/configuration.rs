@@ -703,11 +703,9 @@ impl Configuration {
 }
 
 pub fn get_default_config_groups() -> Groups {
-    serde_yaml::from_str(DEFAULT_GROUPS_CONFIG)
-        .expect("Default groups configuration is invalid YAML")
+    serde_yaml::from_str(DEFAULT_GROUPS_CONFIG).expect("Default groups configuration is invalid YAML")
 }
 
 pub fn get_default_main_config() -> Configuration {
-    serde_yaml::from_str(DEFAULT_MAIN_CONFIG)
-        .expect("Default main configuration is invalid YAML")
+    serde_yaml::from_str(DEFAULT_MAIN_CONFIG).expect("Default main configuration is invalid YAML")
 }
