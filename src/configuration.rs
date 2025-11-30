@@ -18,9 +18,9 @@ use crate::host::HostSetting;
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
 const GROUPS_FILE: &str = "groups.yml";
-const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
-const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
-const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
+pub const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
+pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
+pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const CURRENT_SCHEMA_VERSION: u16 = 2;
 

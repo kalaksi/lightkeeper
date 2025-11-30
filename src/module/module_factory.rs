@@ -39,6 +39,18 @@ impl ModuleFactory {
         manager
     }
 
+    pub fn new_with(
+        connector_modules: Vec<(Metadata, fn(&HashMap<String, String>) -> connection::Connector)>,
+        monitor_modules: Vec<(Metadata, fn(&HashMap<String, String>) -> monitoring::Monitor)>,
+        command_modules: Vec<(Metadata, fn(&HashMap<String, String>) -> command::Command)>
+    ) -> Self {
+        ModuleFactory {
+            connector_modules,
+            monitor_modules,
+            command_modules,
+        }
+    }
+
     pub fn new_connector(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<connection::Connector> {
         let mut normalized_spec = module_spec.clone();
         if normalized_spec.latest_version() {

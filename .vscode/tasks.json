@@ -9,7 +9,17 @@
 				"kind": "build",
 				"isDefault": true
 			},
-			"problemMatcher": ["$rustc"],
+			"problemMatcher": ["$rustc"]
+		},
+		{
+			"type": "shell",
+			"label": "cargo test",
+			"command": "cargo test",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"problemMatcher": ["$rustc"]
 		}
 	]
 }

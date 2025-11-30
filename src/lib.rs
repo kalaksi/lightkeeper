@@ -8,15 +8,17 @@ extern crate openssl;
 pub mod error;
 pub mod module;
 pub mod configuration;
-mod host_manager;
-mod monitor_manager;
+// Made public for integration tests
+pub mod host_manager;
+pub mod connection_manager;
+pub mod command_handler;
+pub mod monitor_manager;
 mod host;
 mod utils;
 mod enums;
-mod frontend;
-mod connection_manager;
-mod command_handler;
-mod file_handler;
+// Made public for integration tests
+pub mod frontend;
+pub mod file_handler;
 mod metrics;
 
 pub use module::ModuleFactory;
@@ -29,6 +31,7 @@ use monitor_manager::MonitorManager;
 use connection_manager::ConnectionManager;
 use command_handler::CommandHandler;
 use host::Host;
+
 
 
 #[derive(PartialEq)]

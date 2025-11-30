@@ -60,6 +60,7 @@ impl MonitoringModule for PlatformInfoSsh {
         }
 
         // Special kind of datapoint for internal use.
+        // TODO: separate module type?
         let mut datapoint = DataPoint::new(String::from("_platform_info"));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os"), platform.os.to_string()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_version"), platform.os_version.to_string()));

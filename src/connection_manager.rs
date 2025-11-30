@@ -181,6 +181,14 @@ impl ConnectionManager {
         }
     }
 
+    /// Test helper to inject a mock connector for a specific host.
+    /// This allows integration tests to verify command execution flow.
+    pub fn inject_test_connector(&self, host_name: &str, connector_spec: ModuleSpecification, connector: Connector) {
+        let mut stateful_connectors = self.stateful_connectors.lock().unwrap();
+        let host_connectors = stateful_connectors.entry(host_name.to_string()).or_insert_with(HashMap::new);
+        host_connectors.insert(connector_spec, connector);
+    }
+
     /// Main loop processing incoming connector requests.
     fn process_requests(
         stateful_connectors: Arc<Mutex<HashMap<String, ConnectorStates>>>,
