@@ -29,6 +29,20 @@ impl PlatformInfo {
         Self::default()
     }
 
+    pub fn linux(flavor: Flavor, version: &str) -> Self {
+        let Ok(parsed_version) = VersionNumber::from_str(version)
+        else {
+            panic!("Invalid version {}", version);
+        };
+
+        PlatformInfo {
+            os: OperatingSystem::Linux,
+            architecture: Architecture::X86_64,
+            os_flavor: flavor,
+            os_version: parsed_version
+        }
+    }
+
     pub fn is_set(&self) -> bool {
         self.os != OperatingSystem::Unknown
     }

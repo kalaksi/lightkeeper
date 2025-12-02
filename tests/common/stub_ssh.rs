@@ -6,7 +6,6 @@
 use std::collections::HashMap;
 
 use lightkeeper::error::LkError;
-use lightkeeper::module::platform_info::*;
 use lightkeeper_module::connection_module;
 use lightkeeper::file_handler::FileMetadata;
 use lightkeeper::module::*;
@@ -26,30 +25,13 @@ pub struct StubSsh2 {
 }
 
 impl StubSsh2 {
-    pub fn new(flavor: Flavor) -> Self {
-        let mut responses = HashMap::new();
-        
-        match flavor {
-            Flavor::Debian => {
-                responses.insert("cat /etc/os-release", ResponseMessage::new_success(
-r#"PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
-NAME="Debian GNU/Linux"
-VERSION_ID="12"
-VERSION="12 (bookworm)"
-VERSION_CODENAME=bookworm
-ID=debian
-HOME_URL="https://www.debian.org/"
-SUPPORT_URL="https://www.debian.org/support"
-BUG_REPORT_URL="https://bugs.debian.org/""#));
-                responses.insert("uname -m", ResponseMessage::new_success("x86_64"));
-
-            },
-            _ => unimplemented!(),
+    pub fn new(request: &'static str, response: &'static str, exit_code: i32) -> Self {
+        let mut ssh = StubSsh2 {
+            responses: HashMap::new(),
         };
 
-        StubSsh2 {
-            responses
-        }
+        ssh.add_response(request, response, exit_code);
+        ssh
     }
 
     pub fn add_response(&mut self, request: &'static str, response: &'static str, exit_code: i32) {
@@ -67,9 +49,10 @@ impl Module for StubSsh2 {
 
 impl ConnectionModule for StubSsh2 {
     fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
-        let response = self.responses.get(message)
-            .expect("Response not defined")
-            .clone();
+        let response = match self.responses.get(message) {
+            Some(response) => response.clone(),
+            None => return Err(LkError::other_p("No test response set up for command", message))
+        };
 
         Ok(response)
     }
