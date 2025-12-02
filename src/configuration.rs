@@ -14,6 +14,7 @@ use serde_yaml;
 
 use crate::file_handler;
 use crate::host::HostSetting;
+use crate::module::PlatformInfo;
 
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
@@ -55,6 +56,10 @@ pub struct Groups {
 #[serde(deny_unknown_fields)]
 pub struct Hosts {
     pub hosts: BTreeMap<String, HostSettings>,
+    /// Used in testing to skip collecting platform info.
+    /// Could be used as an optimization in normal operations too.
+    #[serde(default, skip_serializing_if = "Configuration::always")]
+    pub predefined_platforms: BTreeMap<String, PlatformInfo>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub certificate_monitors: Vec<String>,
 }

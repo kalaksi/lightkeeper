@@ -109,8 +109,17 @@ impl HostManager {
                     continue;
                 }
 
-                let host_state = HostState::from_host(host.clone(), HostStatus::Unknown);
-                host_states.hosts.insert(host.name.clone(), host_state.clone());
+                let mut new_state = HostState::from_host(host.clone(), HostStatus::Unknown);
+
+                if let Some(platform) = hosts_config.predefined_platforms.get(&host.name) {
+                    new_state.host.platform = platform.clone();
+                }
+                // Re-use existing platform info, since it should rarely change.
+                else if let Some(old_state) = host_states.hosts.get(&host.name) {
+                    new_state.host.platform = old_state.host.platform.clone()
+                }
+
+                host_states.hosts.insert(host.name.clone(), new_state.clone());
             }
             else {
                 log::error!("Failed to create host {}", host_id);
