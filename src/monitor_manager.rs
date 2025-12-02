@@ -183,7 +183,7 @@ impl MonitorManager {
     }
 
     /// Refreshes platform info and such in preparation for actual monitor refresh.
-    pub fn refresh_platform_info(&mut self, host_id: &String) {
+    pub fn refresh_platform_info(&mut self, host_id: &str) {
         let Ok(monitors) = self.monitors.lock() else {
             self.send_state_update(StateUpdateMessage::fatal_error());
             return;
@@ -247,7 +247,7 @@ impl MonitorManager {
         }
     }
 
-    pub fn get_all_host_categories(&self, host_id: &String) -> Vec<String> {
+    pub fn get_all_host_categories(&self, host_id: &str) -> Vec<String> {
         let Ok(monitors) = self.monitors.lock() else {
             self.send_state_update(StateUpdateMessage::fatal_error());
             return Vec::new();
@@ -279,7 +279,7 @@ impl MonitorManager {
     }
 
     /// Returns the invocation IDs of the refresh operations.
-    pub fn refresh_monitors_of_category(&mut self, host_id: &String, category: &String) -> Vec<u64> {
+    pub fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Vec<u64> {
         let host = self.host_manager.borrow().get_host(host_id);
         let Ok(monitors) = self.monitors.lock() else {
             self.send_state_update(StateUpdateMessage::fatal_error());

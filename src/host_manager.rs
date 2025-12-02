@@ -138,7 +138,7 @@ impl HostManager {
     }
 
     /// Get Host details by name. Panics if the host is not found.
-    pub fn get_host(&self, host_name: &String) -> Host {
+    pub fn get_host(&self, host_name: &str) -> Host {
         let hosts = self.hosts.lock().unwrap();
         hosts.hosts.get(host_name)
                    .unwrap_or_else(|| panic!("Host '{}' not found", host_name))

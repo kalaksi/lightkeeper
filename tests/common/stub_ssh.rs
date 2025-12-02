@@ -52,8 +52,8 @@ BUG_REPORT_URL="https://bugs.debian.org/""#));
         }
     }
 
-    pub fn add_response(&mut self, request: &'static str, response: ResponseMessage) {
-        self.responses.insert(request, response);
+    pub fn add_response(&mut self, request: &'static str, response: &'static str, exit_code: i32) {
+        self.responses.insert(request, ResponseMessage::new(response.to_string(), exit_code));
     }
 }
 
