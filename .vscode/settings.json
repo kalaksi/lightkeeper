@@ -1,6 +1,11 @@
 {
-    "rust-analyzer.showUnlinkedFileNotification": false,
     "rust-analyzer.cargo.extraEnv": {
+        "QMAKE": "/usr/bin/qmake6"
+    },
+    "rust-analyzer.runnables.extraEnv": {
+        "QMAKE": "/usr/bin/qmake6"
+    },
+    "rust-analyzer.debug.extraEnv": {
         "QMAKE": "/usr/bin/qmake6"
     }
 }

@@ -23,7 +23,7 @@
             "cwd": "${workspaceFolder}",
             "env": {
                 "RUST_LOG": "debug",
-		"QT_LOGGING_RULES": "*.debug=true; qt.*.debug=false"
+                "QT_LOGGING_RULES": "*.debug=true; qt.*.debug=false"
             }
         },
         {
