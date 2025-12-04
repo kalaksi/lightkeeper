@@ -169,3 +169,57 @@ fn test_who() {
         assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
     });
 }
+
+#[test]
+/// Test handling of invalid responses of all linux-category monitors.
+fn test_invalid_responses() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new_any("probably-invalid-response", 1)
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_testers(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        vec![
+            (monitoring::linux::Interface::get_metadata(), monitoring::linux::Interface::new_monitoring_module),
+            (monitoring::linux::Kernel::get_metadata(), monitoring::linux::Kernel::new_monitoring_module),
+            (monitoring::linux::Load::get_metadata(), monitoring::linux::Load::new_monitoring_module),
+            (monitoring::linux::Package::get_metadata(), monitoring::linux::Package::new_monitoring_module),
+            (monitoring::linux::Ram::get_metadata(), monitoring::linux::Ram::new_monitoring_module),
+            (monitoring::linux::Uptime::get_metadata(), monitoring::linux::Uptime::new_monitoring_module),
+            (monitoring::linux::Who::get_metadata(), monitoring::linux::Who::new_monitoring_module),
+        ],
+    );
+
+    harness.refresh_monitors();
+
+    // Monitors shouldn't return data points on errors.
+    // There should be only the initial NoData datapoint available.
+    harness.verify_monitor_data(&monitoring::linux::Interface::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.criticality, Criticality::NoData);
+    });
+
+    harness.verify_monitor_data(&monitoring::linux::Kernel::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.criticality, Criticality::NoData);
+    });
+
+    harness.verify_monitor_data(&monitoring::linux::Load::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.criticality, Criticality::NoData);
+    });
+
+    harness.verify_monitor_data(&monitoring::linux::Package::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.criticality, Criticality::NoData);
+    });
+
+    harness.verify_monitor_data(&monitoring::linux::Ram::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.criticality, Criticality::NoData);
+    });
+
+    harness.verify_monitor_data(&monitoring::linux::Uptime::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.criticality, Criticality::NoData);
+    });
+
+    harness.verify_monitor_data(&monitoring::linux::Who::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.criticality, Criticality::NoData);
+    });
+}

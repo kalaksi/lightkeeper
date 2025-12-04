@@ -79,7 +79,6 @@ impl MonitorTestHarness {
 
         // Test host
         let mut host_settings = configuration::HostSettings::default();
-
         host_settings.address = "127.0.0.1".to_string();
 
         host_settings.effective.monitors.insert(
@@ -102,12 +101,43 @@ impl MonitorTestHarness {
             ..Default::default()
         };
 
-        let module_factory = ModuleFactory::new_with(
-            vec![ connector_module ],
-            vec![ monitor_module ],
-            vec![]
-        );
+        let module_factory = ModuleFactory::new_with(vec![ connector_module ], vec![ monitor_module ], vec![]);
+        MonitorTestHarness::new(hosts_config, module_factory)
+    }
 
+    fn new_monitor_testers(
+        platform_info: PlatformInfo,
+        connector_module: (Metadata, fn(&HashMap<String, String>) -> connection::Connector),
+        monitor_modules: Vec<(Metadata, fn(&HashMap<String, String>) -> monitoring::Monitor)>,
+    ) -> MonitorTestHarness {
+
+        // Test host
+        let mut host_settings = configuration::HostSettings::default();
+        host_settings.address = "127.0.0.1".to_string();
+
+        for monitor_module in &monitor_modules {
+            host_settings.effective.monitors.insert(
+                monitor_module.0.module_spec.id.clone(),
+                configuration::MonitorConfig {
+                    version: "0.0.1".to_string(),
+                    settings: HashMap::new(),
+                    ..Default::default()
+                }
+            );
+        }
+        
+        host_settings.effective.connectors.insert(
+            connector_module.0.module_spec.id.clone(),
+            configuration::ConnectorConfig::default()
+        );
+        
+        let hosts_config = configuration::Hosts {
+            hosts: BTreeMap::from([(TEST_HOST_ID.to_string(), host_settings)]),
+            predefined_platforms: BTreeMap::from([(TEST_HOST_ID.to_string(), platform_info)]),
+            ..Default::default()
+        };
+
+        let module_factory = ModuleFactory::new_with(vec![ connector_module ], monitor_modules, vec![]);
         MonitorTestHarness::new(hosts_config, module_factory)
     }
 

@@ -34,6 +34,15 @@ impl StubSsh2 {
         Box::new(ssh) as connection::Connector
     }
 
+    pub fn new_any(response: &'static str, exit_code: i32) -> connection::Connector {
+        let mut ssh = StubSsh2 {
+            responses: HashMap::new(),
+        };
+
+        ssh.add_response("_", response, exit_code);
+        Box::new(ssh) as connection::Connector
+    }
+
     pub fn add_response(&mut self, request: &'static str, response: &'static str, exit_code: i32) {
         self.responses.insert(request, ResponseMessage::new(response.to_string(), exit_code));
     }
