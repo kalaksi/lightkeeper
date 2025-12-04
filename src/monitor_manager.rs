@@ -449,7 +449,7 @@ impl MonitorManager {
                 let results_len = response.responses.len();
                 let (responses, errors): (Vec<_>, Vec<_>) =  response.responses.into_iter().partition(Result::is_ok);
                 let responses = responses.into_iter().map(Result::unwrap).collect::<Vec<_>>();
-                let errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
+                let mut errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
                 let Ok(monitors) = monitors.lock() else {
                     if let Err(error) = state_update_sender.send(StateUpdateMessage::fatal_error()) {
@@ -514,23 +514,26 @@ impl MonitorManager {
                 let new_data_point = match datapoint_result {
                     Ok(data_point) => {
                         log::debug!("[{}][{}] Data point received: {} {}", response.host.name, monitor_id, data_point.label, data_point);
-                        data_point
+                        Some(data_point)
                     },
-                    Err(_) => {
+                    Err(error) => {
+                        errors.push(LkError::other_p("Error while parsing", error));
+
                         // In case this was an extension module, retain the parents data point unmodified.
-                        parent_datapoint.clone().unwrap_or_default()
+                        // Otherwise None.
+                        parent_datapoint.clone()
                     }
                 };
 
                 for error in errors.iter() {
-                    log::error!("[{}][{}] Error: {}", response.host.name, monitor_id, error.message);
+                    log::error!("[{}][{}] {}", response.host.name, monitor_id, error.message);
                 }
 
-                if extension_monitors.len() > 0 {
+                if new_data_point.is_some() && extension_monitors.len() > 0 {
                     // Process extension modules until the final result is reached.
                     let next_monitor_id = extension_monitors.remove(0);
                     let next_monitor = &monitors[&response.host.name][&next_monitor_id];
-                    let next_parent_datapoint = parent_datapoint.unwrap_or_else(|| new_data_point.clone());
+                    let next_parent_datapoint = parent_datapoint.unwrap_or_else(|| new_data_point.clone().unwrap());
 
                     let messages = match get_monitor_connector_messages(&response.host, &next_monitor, &next_parent_datapoint) {
                         Ok(messages) => messages,
@@ -560,7 +563,7 @@ impl MonitorManager {
                         invocation_id: response.invocation_id,
                         response_sender: response_sender.clone(),
                         request_type: RequestType::MonitorCommand {
-                            parent_datapoint: Some(new_data_point.clone()),
+                            parent_datapoint: Some(new_data_point.clone().unwrap()),
                             extension_monitors: extension_monitors,
                             commands: messages,
                         },
@@ -578,7 +581,7 @@ impl MonitorManager {
                         host_name: response.host.name.clone(),
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
-                        data_point: Some(new_data_point),
+                        data_point: new_data_point,
                         errors: errors,
                         invocation_id: response.invocation_id,
                         ..Default::default()
