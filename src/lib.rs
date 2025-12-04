@@ -15,7 +15,7 @@ pub mod command_handler;
 pub mod monitor_manager;
 mod host;
 pub mod utils;
-mod enums;
+pub mod enums;
 // Made public for integration tests
 pub mod frontend;
 pub mod file_handler;

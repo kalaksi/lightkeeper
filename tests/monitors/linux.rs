@@ -3,52 +3,10 @@ use std::collections::HashMap;
 use lightkeeper::module::monitoring::*;
 use lightkeeper::module::platform_info::*;
 use lightkeeper::module::*;
+use lightkeeper::enums::Criticality;
 
 use crate::{MonitorTestHarness, StubSsh2};
 
-
-
-#[test]
-fn test_uptime() {
-    let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0);
-        Box::new(ssh) as connection::Connector
-    };
-
-    let mut harness = MonitorTestHarness::new_monitor_tester(
-        PlatformInfo::linux(Flavor::Debian, "12.0"),
-        (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Uptime::get_metadata(), monitoring::linux::Uptime::new_monitoring_module),
-    );
-
-    harness.refresh_monitors();
-
-    harness.verify_monitor_data(&monitoring::linux::Uptime::get_metadata().module_spec.id, |datapoint| {
-        // println!(harness.host)
-        assert_eq!(datapoint.value, "16");
-    });
-}
-
-#[test]
-fn test_load() {
-    let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0);
-        Box::new(ssh) as connection::Connector
-    };
-
-    let mut harness = MonitorTestHarness::new_monitor_tester(
-        PlatformInfo::linux(Flavor::Debian, "12.0"),
-        (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Load::get_metadata(), monitoring::linux::Load::new_monitoring_module),
-    );
-
-    harness.refresh_monitors();
-
-    harness.verify_monitor_data(&monitoring::linux::Load::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.value, "0.06, 0.05, 0.01");
-        assert_eq!(datapoint.value_float, 0.06);
-    });
-}
 
 
 #[test]
@@ -87,3 +45,135 @@ r#"[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"mtu":65536,
     });
 }
 
+#[test]
+fn test_kernel() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        let ssh = StubSsh2::new("uname -r -m", "6.1.0-41-amd64 x86_64", 0);
+        Box::new(ssh) as connection::Connector
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (monitoring::linux::Kernel::get_metadata(), monitoring::linux::Kernel::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_monitor_data(&monitoring::linux::Kernel::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.criticality, Criticality::Normal);
+    });
+}
+
+#[test]
+fn test_load() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        let ssh = StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0);
+        Box::new(ssh) as connection::Connector
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (monitoring::linux::Load::get_metadata(), monitoring::linux::Load::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_monitor_data(&monitoring::linux::Load::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.value, "0.06, 0.05, 0.01");
+        assert_eq!(datapoint.value_float, 0.06);
+    });
+}
+
+#[test]
+fn test_package() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        let ssh = StubSsh2::new(r#""sudo" "apt" "list" "--upgradable""#, 
+r#"Listing... Done
+docker-ce-cli/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]
+docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]"#, 0);
+        Box::new(ssh) as connection::Connector
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (monitoring::linux::Package::get_metadata(), monitoring::linux::Package::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_monitor_data(&monitoring::linux::Package::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.multivalue.len(), 2);
+        assert_eq!(datapoint.multivalue[0].label, "docker-ce-cli");
+        assert_eq!(datapoint.multivalue[1].label, "docker-ce");
+    });
+}
+
+#[test]
+fn test_ram() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        let ssh = StubSsh2::new("free -m",
+r#"               total        used        free      shared  buff/cache   available
+Mem:            1919         736         465           0         866        1182
+Swap:              0           0           0
+"#, 0);
+        Box::new(ssh) as connection::Connector
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (monitoring::linux::Ram::get_metadata(), monitoring::linux::Ram::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_monitor_data(&monitoring::linux::Ram::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.value_float as i32, 38);
+        assert_eq!(datapoint.criticality, Criticality::Normal);
+    });
+}
+
+#[test]
+fn test_uptime() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        let ssh = StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0);
+        Box::new(ssh) as connection::Connector
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (monitoring::linux::Uptime::get_metadata(), monitoring::linux::Uptime::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_monitor_data(&monitoring::linux::Uptime::get_metadata().module_spec.id, |datapoint| {
+        // println!(harness.host)
+        assert_eq!(datapoint.value, "16");
+    });
+}
+
+#[test]
+fn test_who() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        let ssh = StubSsh2::new("who -s", "user     pts/0        2025-12-04 20:27 (10.0.0.2)", 0);
+        Box::new(ssh) as connection::Connector
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (monitoring::linux::Who::get_metadata(), monitoring::linux::Who::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_monitor_data(&monitoring::linux::Who::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.multivalue[0].label, "user");
+        assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
+    });
+}
