@@ -25,13 +25,13 @@ pub struct StubSsh2 {
 }
 
 impl StubSsh2 {
-    pub fn new(request: &'static str, response: &'static str, exit_code: i32) -> Self {
+    pub fn new(request: &'static str, response: &'static str, exit_code: i32) -> connection::Connector {
         let mut ssh = StubSsh2 {
             responses: HashMap::new(),
         };
 
         ssh.add_response(request, response, exit_code);
-        ssh
+        Box::new(ssh) as connection::Connector
     }
 
     pub fn add_response(&mut self, request: &'static str, response: &'static str, exit_code: i32) {
@@ -51,7 +51,12 @@ impl ConnectionModule for StubSsh2 {
     fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         let response = match self.responses.get(message) {
             Some(response) => response.clone(),
-            None => return Err(LkError::other_p("No test response set up for command", message))
+            None => {
+                match self.responses.get("_") {
+                    Some(response) => response.clone(),
+                    None => return Err(LkError::other_p("No test response set up for command", message))
+                }
+            }
         };
 
         Ok(response)

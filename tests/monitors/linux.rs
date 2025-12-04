@@ -12,7 +12,7 @@ use crate::{MonitorTestHarness, StubSsh2};
 #[test]
 fn test_interface() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("ip -j addr show", 
+        StubSsh2::new("ip -j addr show", 
 r#"[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"mtu":65536,"qdisc":"noqueue",
 "operstate":"UNKNOWN","group":"default","txqlen":1000,"link_type":"loopback","address":"00:00:00:00:00:00",
 "broadcast":"00:00:00:00:00:00","addr_info":[{"family":"inet","local":"127.0.0.1","prefixlen":8,"scope":"host",
@@ -22,9 +22,7 @@ r#"[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"mtu":65536,
 "operstate":"UP","group":"default","txqlen":1000,"link_type":"ether","address":"00:00:00:00:00:00",
 "broadcast":"ff:ff:ff:ff:ff:ff","altnames":["enp0s3","ens3"],"addr_info":[{"family":"inet","local":"1.2.3.4",
 "prefixlen":32,"broadcast":"1.2.3.4","scope":"global","dynamic":true,"label":"eth0","valid_life_time":63633,
-"preferred_life_time":63633}]}]"#, 0);
-
-        Box::new(ssh) as connection::Connector
+"preferred_life_time":63633}]}]"#, 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -48,8 +46,7 @@ r#"[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"mtu":65536,
 #[test]
 fn test_kernel() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("uname -r -m", "6.1.0-41-amd64 x86_64", 0);
-        Box::new(ssh) as connection::Connector
+        StubSsh2::new("uname -r -m", "6.1.0-41-amd64 x86_64", 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -68,8 +65,7 @@ fn test_kernel() {
 #[test]
 fn test_load() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0);
-        Box::new(ssh) as connection::Connector
+        StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -89,11 +85,10 @@ fn test_load() {
 #[test]
 fn test_package() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new(r#""sudo" "apt" "list" "--upgradable""#, 
+        StubSsh2::new(r#""sudo" "apt" "list" "--upgradable""#, 
 r#"Listing... Done
 docker-ce-cli/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]
-docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]"#, 0);
-        Box::new(ssh) as connection::Connector
+docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]"#, 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -114,12 +109,11 @@ docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.
 #[test]
 fn test_ram() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("free -m",
+        StubSsh2::new("free -m",
 r#"               total        used        free      shared  buff/cache   available
 Mem:            1919         736         465           0         866        1182
 Swap:              0           0           0
-"#, 0);
-        Box::new(ssh) as connection::Connector
+"#, 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -139,8 +133,7 @@ Swap:              0           0           0
 #[test]
 fn test_uptime() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0);
-        Box::new(ssh) as connection::Connector
+        StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -160,8 +153,7 @@ fn test_uptime() {
 #[test]
 fn test_who() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("who -s", "user     pts/0        2025-12-04 20:27 (10.0.0.2)", 0);
-        Box::new(ssh) as connection::Connector
+        StubSsh2::new("who -s", "user     pts/0        2025-12-04 20:27 (10.0.0.2)", 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
