@@ -39,7 +39,7 @@ impl PlatformInfo {
             os: OperatingSystem::Linux,
             architecture: Architecture::X86_64,
             os_flavor: flavor,
-            os_version: parsed_version
+            os_version: parsed_version,
         }
     }
 

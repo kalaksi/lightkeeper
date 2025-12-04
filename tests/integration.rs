@@ -4,6 +4,8 @@
  */
 
 mod common;
+mod monitors;
+
 pub use common::*;
 use lightkeeper::module::monitoring::*;
 use lightkeeper::module::platform_info::*;
@@ -25,14 +27,14 @@ use lightkeeper::monitor_manager::MonitorManager;
 const TEST_HOST_ID: &str = "test-host";
 
 // Test harness for monitoring module tests
-struct TestHarness {
+struct MonitorTestHarness {
     host_manager: Rc<RefCell<HostManager>>,
     connection_manager: ConnectionManager,
     monitor_manager: MonitorManager,
 }
 
-impl TestHarness {
-    fn new(hosts_config: configuration::Hosts, module_factory: ModuleFactory) -> TestHarness {
+impl MonitorTestHarness {
+    fn new(hosts_config: configuration::Hosts, module_factory: ModuleFactory) -> MonitorTestHarness {
         let _ = env_logger::Builder::from_default_env()
             .is_test(true)
             .try_init();
@@ -62,7 +64,7 @@ impl TestHarness {
         // Otherwise, initial status summary icons are randomly not shown.
         std::thread::sleep(std::time::Duration::from_millis(100));
 
-        TestHarness {
+        MonitorTestHarness {
             host_manager,
             connection_manager,
             monitor_manager,
@@ -73,7 +75,7 @@ impl TestHarness {
         platform_info: PlatformInfo,
         connector_module: (Metadata, fn(&HashMap<String, String>) -> connection::Connector),
         monitor_module: (Metadata, fn(&HashMap<String, String>) -> monitoring::Monitor),
-    ) -> TestHarness {
+    ) -> MonitorTestHarness {
 
         // Test host
         let mut host_settings = configuration::HostSettings::default();
@@ -106,7 +108,7 @@ impl TestHarness {
             vec![]
         );
 
-        TestHarness::new(hosts_config, module_factory)
+        MonitorTestHarness::new(hosts_config, module_factory)
     }
 
     fn refresh_monitors(&mut self) {
@@ -151,54 +153,10 @@ impl TestHarness {
     }
 }
 
-impl Drop for TestHarness {
+impl Drop for MonitorTestHarness {
     fn drop(&mut self) {
         self.monitor_manager.stop();
         self.connection_manager.stop();
         self.host_manager.borrow_mut().stop();
     }
-}
-
-
-#[test]
-fn test_uptime() {
-
-    let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0);
-        Box::new(ssh) as connection::Connector
-    };
-
-    let mut harness = TestHarness::new_monitor_tester(
-        PlatformInfo::linux(Flavor::Debian, "12.0"),
-        (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Uptime::get_metadata(), monitoring::linux::Uptime::new_monitoring_module),
-    );
-
-    harness.refresh_monitors();
-
-    harness.verify_monitor_data("uptime", |datapoint| {
-        // println!(harness.host)
-        assert_eq!(datapoint.value, "16");
-    });
-}
-
-#[test]
-fn test_load() {
-    let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        let ssh = StubSsh2::new("uptime", " 17:26:40 up 16 days,  4:25,  1 user,  load average: 0.06, 0.05, 0.01", 0);
-        Box::new(ssh) as connection::Connector
-    };
-
-    let mut harness = TestHarness::new_monitor_tester(
-        PlatformInfo::linux(Flavor::Debian, "12.0"),
-        (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Load::get_metadata(), monitoring::linux::Load::new_monitoring_module),
-    );
-
-    harness.refresh_monitors();
-
-    harness.verify_monitor_data("load", |datapoint| {
-        assert_eq!(datapoint.value, "0.06, 0.05, 0.01");
-        assert_eq!(datapoint.value_float, 0.06);
-    });
 }
