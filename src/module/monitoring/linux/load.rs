@@ -64,7 +64,7 @@ impl MonitoringModule for Load {
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
         if response.is_error() {
-            return Ok(DataPoint::value_with_level(response.message, Criticality::Critical))
+            return Err(response.message);
         }
 
         let parts = response.message.split("load average: ").collect::<Vec<&str>>();
