@@ -150,7 +150,7 @@ impl CommandHandler {
     }
 
     /// Returns invocation ID or 0 on error.
-    pub fn execute(&mut self, host_id: &String, command_id: &String, parameters: &[String]) -> u64 {
+    pub fn execute(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> u64 {
         let Ok(commands) = self.commands.lock() else {
             self.send_state_update(StateUpdateMessage::fatal_error());
             return 0;

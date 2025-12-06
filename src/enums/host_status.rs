@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Serialize, Default, Deserialize, Clone, Copy)]
+#[derive(Serialize, Default, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum HostStatus {
     Unknown,

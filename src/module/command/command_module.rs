@@ -62,7 +62,7 @@ pub trait BoxCloneableCommand {
     fn box_clone(&self) -> Command;
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandResult {
     pub command_id: String,
     pub message: String,
