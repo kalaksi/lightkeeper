@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
-use lightkeeper::module::monitoring::*;
-use lightkeeper::module::platform_info::*;
 use lightkeeper::module::*;
+use lightkeeper::module::monitoring::*;
+use lightkeeper::module::monitoring::linux;
+use lightkeeper::module::platform_info::*;
 use lightkeeper::enums::Criticality;
 
 use crate::{MonitorTestHarness, StubSsh2};
@@ -28,12 +29,12 @@ r#"[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"mtu":65536,
     let mut harness = MonitorTestHarness::new_monitor_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Interface::get_metadata(), monitoring::linux::Interface::new_monitoring_module),
+        (linux::Interface::get_metadata(), linux::Interface::new_monitoring_module),
     );
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&monitoring::linux::Interface::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Interface::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.multivalue[0].label, "lo");
         assert_eq!(datapoint.multivalue[0].multivalue[0].label, "127.0.0.1/8");
         assert_eq!(datapoint.multivalue[0].multivalue[1].label, "::1/128");
@@ -52,12 +53,12 @@ fn test_kernel() {
     let mut harness = MonitorTestHarness::new_monitor_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Kernel::get_metadata(), monitoring::linux::Kernel::new_monitoring_module),
+        (linux::Kernel::get_metadata(), linux::Kernel::new_monitoring_module),
     );
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&monitoring::linux::Kernel::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Kernel::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::Normal);
     });
 }
@@ -71,12 +72,12 @@ fn test_load() {
     let mut harness = MonitorTestHarness::new_monitor_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Load::get_metadata(), monitoring::linux::Load::new_monitoring_module),
+        (linux::Load::get_metadata(), linux::Load::new_monitoring_module),
     );
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&monitoring::linux::Load::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Load::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.value, "0.06, 0.05, 0.01");
         assert_eq!(datapoint.value_float, 0.06);
     });
@@ -94,12 +95,12 @@ docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.
     let mut harness = MonitorTestHarness::new_monitor_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Package::get_metadata(), monitoring::linux::Package::new_monitoring_module),
+        (linux::Package::get_metadata(), linux::Package::new_monitoring_module),
     );
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&monitoring::linux::Package::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Package::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.multivalue.len(), 2);
         assert_eq!(datapoint.multivalue[0].label, "docker-ce-cli");
         assert_eq!(datapoint.multivalue[1].label, "docker-ce");
@@ -119,12 +120,12 @@ Swap:              0           0           0
     let mut harness = MonitorTestHarness::new_monitor_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Ram::get_metadata(), monitoring::linux::Ram::new_monitoring_module),
+        (linux::Ram::get_metadata(), linux::Ram::new_monitoring_module),
     );
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&monitoring::linux::Ram::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Ram::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.value_float as i32, 38);
         assert_eq!(datapoint.criticality, Criticality::Normal);
     });
@@ -139,12 +140,12 @@ fn test_uptime() {
     let mut harness = MonitorTestHarness::new_monitor_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Uptime::get_metadata(), monitoring::linux::Uptime::new_monitoring_module),
+        (linux::Uptime::get_metadata(), linux::Uptime::new_monitoring_module),
     );
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&monitoring::linux::Uptime::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Uptime::get_metadata().module_spec.id, |datapoint| {
         // println!(harness.host)
         assert_eq!(datapoint.value, "16");
     });
@@ -159,12 +160,12 @@ fn test_who() {
     let mut harness = MonitorTestHarness::new_monitor_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
-        (monitoring::linux::Who::get_metadata(), monitoring::linux::Who::new_monitoring_module),
+        (linux::Who::get_metadata(), linux::Who::new_monitoring_module),
     );
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&monitoring::linux::Who::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Who::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.multivalue[0].label, "user");
         assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
     });
@@ -181,13 +182,13 @@ fn test_invalid_responses() {
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
         vec![
-            (monitoring::linux::Interface::get_metadata(), monitoring::linux::Interface::new_monitoring_module),
-            (monitoring::linux::Kernel::get_metadata(), monitoring::linux::Kernel::new_monitoring_module),
-            (monitoring::linux::Load::get_metadata(), monitoring::linux::Load::new_monitoring_module),
-            (monitoring::linux::Package::get_metadata(), monitoring::linux::Package::new_monitoring_module),
-            (monitoring::linux::Ram::get_metadata(), monitoring::linux::Ram::new_monitoring_module),
-            (monitoring::linux::Uptime::get_metadata(), monitoring::linux::Uptime::new_monitoring_module),
-            (monitoring::linux::Who::get_metadata(), monitoring::linux::Who::new_monitoring_module),
+            (linux::Interface::get_metadata(), linux::Interface::new_monitoring_module),
+            (linux::Kernel::get_metadata(), linux::Kernel::new_monitoring_module),
+            (linux::Load::get_metadata(), linux::Load::new_monitoring_module),
+            (linux::Package::get_metadata(), linux::Package::new_monitoring_module),
+            (linux::Ram::get_metadata(), linux::Ram::new_monitoring_module),
+            (linux::Uptime::get_metadata(), linux::Uptime::new_monitoring_module),
+            (linux::Who::get_metadata(), linux::Who::new_monitoring_module),
         ],
     );
 
@@ -195,31 +196,31 @@ fn test_invalid_responses() {
 
     // Monitors shouldn't return data points on errors.
     // There should be only the initial NoData datapoint available.
-    harness.verify_monitor_data(&monitoring::linux::Interface::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Interface::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::NoData);
     });
 
-    harness.verify_monitor_data(&monitoring::linux::Kernel::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Kernel::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::NoData);
     });
 
-    harness.verify_monitor_data(&monitoring::linux::Load::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Load::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::NoData);
     });
 
-    harness.verify_monitor_data(&monitoring::linux::Package::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Package::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::NoData);
     });
 
-    harness.verify_monitor_data(&monitoring::linux::Ram::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Ram::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::NoData);
     });
 
-    harness.verify_monitor_data(&monitoring::linux::Uptime::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Uptime::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::NoData);
     });
 
-    harness.verify_monitor_data(&monitoring::linux::Who::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_monitor_data(&linux::Who::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::NoData);
     });
 }
