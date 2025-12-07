@@ -93,7 +93,7 @@ r#"default via 192.168.1.1 dev eth0 proto static
 fn test_dns() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         let mut ssh = StubSsh2::default();
-        ssh.add_response(r#""grep" "-E" "^nameserver" "/etc/resolv.conf""#, "#test\nnameserver 127.0.0.1\nnameserver 127.0.0.2", 0);
+        ssh.add_response(r#""grep" "-E" "^nameserver" "/etc/resolv.conf""#, "nameserver 127.0.0.1\nnameserver 127.0.0.2", 0);
         ssh.add_response("resolvectl dns", r#"Global:\nLink 2 (enp123s0f3u1u2): 127.0.0.1\nLink 3 (wlp1s0):"#, 0);
         
         Box::new(ssh) as connection::Connector
