@@ -54,10 +54,7 @@ impl MonitoringModule for Ping {
     fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
 
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec![
                 "ping", "-c", self.count.to_string().as_str(), "-W", self.timeout.to_string().as_str(), host.ip_address.to_string().as_str()
             ]);
@@ -71,8 +68,13 @@ impl MonitoringModule for Ping {
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         if response.is_success() {
-            let average_latency = response.message.lines().last().unwrap().split('/').nth(4).unwrap();
-            Ok(DataPoint::value_with_level(average_latency.to_string(), Criticality::Normal))
+            if let Some(last_line) = response.message.lines().last() {
+                let average_latency = last_line.split('/').nth(4).ok_or(LkError::unexpected())?;
+                Ok(DataPoint::value_with_level(average_latency.to_string(), Criticality::Normal))
+            }
+            else {
+                Err(LkError::unexpected().to_string())
+            }
         }
         else {
             Ok(DataPoint::value_with_level(response.message, Criticality::Critical))

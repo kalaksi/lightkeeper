@@ -66,6 +66,10 @@ impl MonitoringModule for Routes {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_error() {
+            return Err(response.message);
+        }
+
         let mut result = DataPoint::empty();
 
         let lines = response.message.lines();
