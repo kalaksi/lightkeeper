@@ -12,7 +12,7 @@ use crate::{CommandTestHarness, StubSsh2};
 fn test_update_all() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         // TODO: actual output
-        StubSsh2::new(r#""apt" "upgrade" "-y""#,
+        StubSsh2::new(r#""sudo" "apt" "upgrade" "-y""#,
 r#"Reading package lists... Done
 Building dependency tree... Done
 Reading state information... Done
@@ -36,23 +36,49 @@ Setting up docker-ce (5:29.0.3-1~debian.12~bookworm) ...
 Processing triggers for man-db (2.10.2-1) ..."#, 0)
     };
 
+    let module_id = linux::packages::update_all::UpdateAll::get_metadata().module_spec.id.clone();
+
     let mut harness = CommandTestHarness::new_command_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
         (linux::packages::update_all::UpdateAll::get_metadata(), linux::packages::update_all::UpdateAll::new_command_module),
     );
 
-    harness.execute_command(&linux::packages::update_all::UpdateAll::get_metadata().module_spec.id, vec![]);
+    harness.execute_command(&module_id, vec![]);
 
-    let update = harness.ui_update_receiver.recv_timeout(Duration::from_secs(1));
-    assert_eq!(update.is_ok(), true);
-    let ui_update = update.unwrap();
-    match ui_update {
+    let update = harness.ui_update_receiver.recv_timeout(Duration::from_secs(1)).unwrap();
+    match update {
         UIUpdate::Host(display_data) => {
             assert_eq!(display_data.host_state.status, HostStatus::Pending);
             assert_eq!(display_data.host_state.command_invocations.len(), 1);
             // TODO: more
         },
-        _ => {},
+        _ => unreachable!(),
+    }
+
+    harness.wait_for_completion();
+
+    let update = harness.ui_update_receiver.recv_timeout(Duration::from_secs(1)).unwrap();
+    match update {
+        UIUpdate::Host(display_data) => {
+            assert_eq!(display_data.host_state.command_invocations.len(), 1);
+            assert_eq!(display_data.host_state.command_results.len(), 1);
+            assert!(display_data.host_state.command_results[&module_id].progress < 100);
+            assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package list");
+            // TODO: more
+        },
+        _ => unreachable!(),
+    }
+
+    let update = harness.ui_update_receiver.recv_timeout(Duration::from_secs(1)).unwrap();
+    match update {
+        UIUpdate::Host(display_data) => {
+            assert_eq!(display_data.host_state.command_invocations.len(), 1);
+            assert_eq!(display_data.host_state.command_results.len(), 1);
+            assert!(display_data.host_state.command_results[&module_id].progress < 100);
+            assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package lists... Done\nBuilding d");
+            // TODO: more
+        },
+        _ => unreachable!(),
     }
 }

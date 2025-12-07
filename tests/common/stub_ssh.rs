@@ -32,7 +32,7 @@ impl StubSsh2 {
     pub fn new(request: &'static str, response: &'static str, exit_code: i32) -> connection::Connector {
         let mut ssh = StubSsh2 {
             responses: HashMap::new(),
-            partial_message_size: 10,
+            partial_message_size: 20,
             partial_responses: Arc::new(Mutex::new(HashMap::new())),
         };
 
@@ -43,7 +43,7 @@ impl StubSsh2 {
     pub fn new_any(response: &'static str, exit_code: i32) -> connection::Connector {
         let mut ssh = StubSsh2 {
             responses: HashMap::new(),
-            partial_message_size: 10,
+            partial_message_size: 20,
             partial_responses: Arc::new(Mutex::new(HashMap::new())),
         };
 
@@ -60,7 +60,7 @@ impl Module for StubSsh2 {
     fn new(_settings: &HashMap<String, String>) -> Self {
         StubSsh2 {
             responses: HashMap::new(),
-            partial_message_size: 10,
+            partial_message_size: 20,
             partial_responses: Arc::new(Mutex::new(HashMap::new())),
         }
     }
