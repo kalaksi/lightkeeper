@@ -8,6 +8,9 @@ mod monitors;
 mod commands;
 
 pub use common::*;
+use lightkeeper::enums::Criticality;
+use lightkeeper::frontend::HostDisplayData;
+use lightkeeper::frontend::UIUpdate;
 use lightkeeper::module::monitoring::*;
 use lightkeeper::module::command::*;
 use lightkeeper::module::platform_info::*;
@@ -18,6 +21,7 @@ use std::sync::Arc;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::mpsc;
+use std::time::Duration;
 
 
 use lightkeeper::*;
@@ -35,6 +39,9 @@ struct MonitorTestHarness {
     host_manager: Rc<RefCell<HostManager>>,
     connection_manager: ConnectionManager,
     monitor_manager: MonitorManager,
+    ui_update_receiver: mpsc::Receiver<frontend::UIUpdate>,
+    first_ui_update: RefCell<bool>,
+
 }
 
 impl MonitorTestHarness {
@@ -58,6 +65,9 @@ impl MonitorTestHarness {
             host_manager.borrow().new_state_update_sender()
         );
 
+        let (sender, ui_update_receiver) = mpsc::channel();
+        host_manager.borrow_mut().add_observer(sender);
+
         // Start backend threads.
         host_manager.borrow_mut().start_receiving_updates();
         connection_manager.start_processing_requests();
@@ -72,6 +82,8 @@ impl MonitorTestHarness {
             host_manager,
             connection_manager,
             monitor_manager,
+            ui_update_receiver,
+            first_ui_update: RefCell::new(true),
         }
     }
 
@@ -159,31 +171,65 @@ impl MonitorTestHarness {
 
     fn verify_monitor_data<F>(&self, monitor_id: &str, verify_fn: F)
     where
-        F: FnOnce(&DataPoint),
+        F: FnOnce(&HostDisplayData),
     {
         let display_data = self.host_manager.borrow().get_display_data();
-        let host_display = display_data.hosts.get(TEST_HOST_ID);
-        
-        assert!(host_display.is_some(), "Host should exist in display data");
-        
-        let host_state = &host_display.unwrap().host_state;
+
+        let maybe_host_display_data = display_data.hosts.get(TEST_HOST_ID);
+        assert!(maybe_host_display_data.is_some(), "Host should exist in display data");
+        let host_display_data = maybe_host_display_data.unwrap();
         
         assert!(
-            host_state.monitor_data.contains_key(monitor_id),
+            host_display_data.host_state.monitor_data.contains_key(monitor_id),
             "{} monitor data should be in host state",
             monitor_id
         );
         
-        let monitor_data = host_state.monitor_data.get(monitor_id).unwrap();
+        let monitor_data = host_display_data.host_state.monitor_data.get(monitor_id).unwrap();
         assert!(
             !monitor_data.values.is_empty(),
             "{} monitor should have at least one data point",
             monitor_id
         );
         
-        let latest_datapoint = monitor_data.values.back().unwrap();
+        verify_fn(&host_display_data);
+    }
 
-        verify_fn(latest_datapoint);
+    fn verify_next_ui_update<F>(&self, monitor_id: &str, verify_fn: F)
+    where
+        F: FnOnce(&HostDisplayData),
+    {
+        loop {
+            let update = self.ui_update_receiver.recv_timeout(Duration::from_secs(1));
+            assert!(update.is_ok());
+            match update.unwrap() {
+                UIUpdate::Host(display_data) => {
+                    // First UI update should be empty.
+                    if *self.first_ui_update.borrow() {
+                        assert!(display_data.host_state.command_results.is_empty());
+                        assert!(display_data.host_state.command_invocations.is_empty());
+                        self.first_ui_update.replace(false);
+
+                        continue;
+                    }
+
+                    let monitor_data = display_data.host_state.monitor_data.get(monitor_id);
+                    assert!(monitor_data.is_some(), "Monitor data should exist for {}", monitor_id);
+                    let monitor_data = monitor_data.unwrap();
+
+                    // Monitors also have initial NoData datapoint which can be ignored.
+                    if monitor_data.values.len() == 1 && monitor_data.values.back().unwrap().criticality == Criticality::NoData {
+                        continue;
+                    }
+                    else {
+                        verify_fn(&display_data);
+                        break;
+                    }
+                },
+                _ => unreachable!(),
+            }
+
+        }
     }
 }
 
@@ -200,6 +246,7 @@ struct CommandTestHarness {
     host_manager: Rc<RefCell<HostManager>>,
     command_manager: CommandHandler,
     ui_update_receiver: mpsc::Receiver<frontend::UIUpdate>,
+    first_ui_update: RefCell<bool>,
 }
 
 impl CommandTestHarness {
@@ -221,7 +268,7 @@ impl CommandTestHarness {
         let mut connection_manager = ConnectionManager::new(module_factory.clone());
         connection_manager.configure(&hosts_config);
 
-        let mut command_handler = CommandHandler::new( host_manager.clone(), module_factory.clone());
+        let mut command_handler = CommandHandler::new(host_manager.clone(), module_factory.clone());
         command_handler.configure(
             &hosts_config,
             &configuration::Preferences::default(),
@@ -241,6 +288,7 @@ impl CommandTestHarness {
             host_manager,
             command_manager: command_handler,
             ui_update_receiver,
+            first_ui_update: RefCell::new(true),
         }
     }
 
@@ -307,5 +355,34 @@ impl CommandTestHarness {
         
         let command_data = host_state.command_results.get(command_id).unwrap();
         verify_fn(command_data);
+    }
+
+    fn verify_next_ui_update<F>(&self, verify_fn: F)
+    where
+        F: FnOnce(&HostDisplayData),
+    {
+
+        if *self.first_ui_update.borrow() {
+            let update = self.ui_update_receiver.recv_timeout(Duration::from_secs(1));
+            assert!(update.is_ok());
+            match update.unwrap() {
+                UIUpdate::Host(display_data) => {
+                    // First UI update should be empty.
+                    assert!(display_data.host_state.command_results.is_empty());
+                    assert!(display_data.host_state.command_invocations.is_empty());
+                    self.first_ui_update.replace(false);
+                },
+                _ => unreachable!(),
+            }
+        }
+
+        let update = self.ui_update_receiver.recv_timeout(Duration::from_secs(1));
+        assert!(update.is_ok());
+        match update.unwrap() {
+            UIUpdate::Host(display_data) => {
+                verify_fn(&display_data);
+            },
+            _ => unreachable!(),
+        }
     }
 }

@@ -58,7 +58,7 @@ fn test_kernel() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&linux::Kernel::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_ui_update(&linux::Kernel::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.criticality, Criticality::Normal);
     });
 }

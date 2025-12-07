@@ -41,7 +41,7 @@ r#"[{
     harness.verify_monitor_data(&docker::Compose::get_metadata().module_spec.id, |datapoint| {
         assert_eq!(datapoint.multivalue.len(), 1);
         assert_eq!(datapoint.multivalue[0].label, "project1");
-        assert_eq!(datapoint.multivalue[0].value, "Up 2 hours"); // Compose uses container.status field
+        assert_eq!(datapoint.multivalue[0].value, "Up 2 hours");
         assert_eq!(datapoint.multivalue[0].multivalue.len(), 1);
         assert_eq!(datapoint.multivalue[0].multivalue[0].label, "service1");
     });

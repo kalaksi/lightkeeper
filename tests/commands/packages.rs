@@ -46,36 +46,17 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
 
     harness.execute_command(&module_id, vec![]);
 
-    let update = harness.ui_update_receiver.recv_timeout(Duration::from_secs(1)).unwrap();
-    match update {
-        UIUpdate::Host(display_data) => {
-            assert_eq!(display_data.host_state.status, HostStatus::Pending);
-            assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        },
-        _ => unreachable!(),
-    }
+    harness.verify_next_ui_update(|display_data| {
+        assert_eq!(display_data.host_state.command_invocations.len(), 1);
+        assert_eq!(display_data.host_state.command_results.len(), 1);
+        assert!(display_data.host_state.command_results[&module_id].progress < 100);
+        assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package list");
+    });
 
-    harness.wait_for_completion();
-
-    let update = harness.ui_update_receiver.recv_timeout(Duration::from_secs(1)).unwrap();
-    match update {
-        UIUpdate::Host(display_data) => {
-            assert_eq!(display_data.host_state.command_invocations.len(), 1);
-            assert_eq!(display_data.host_state.command_results.len(), 1);
-            assert!(display_data.host_state.command_results[&module_id].progress < 100);
-            assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package list");
-        },
-        _ => unreachable!(),
-    }
-
-    let update = harness.ui_update_receiver.recv_timeout(Duration::from_secs(1)).unwrap();
-    match update {
-        UIUpdate::Host(display_data) => {
-            assert_eq!(display_data.host_state.command_invocations.len(), 1);
-            assert_eq!(display_data.host_state.command_results.len(), 1);
-            assert!(display_data.host_state.command_results[&module_id].progress < 100);
-            assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package lists... Done\nBuilding d");
-        },
-        _ => unreachable!(),
-    }
+    harness.verify_next_ui_update(|display_data| {
+        assert_eq!(display_data.host_state.command_invocations.len(), 1);
+        assert_eq!(display_data.host_state.command_results.len(), 1);
+        assert!(display_data.host_state.command_results[&module_id].progress < 100);
+        assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package lists... Done\nBuilding d");
+    });
 }
