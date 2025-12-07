@@ -5,3 +5,4 @@ pub mod storage;
 pub mod systemd;
 pub mod network;
 pub mod docker;
+pub mod certificate;

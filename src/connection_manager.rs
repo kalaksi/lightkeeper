@@ -66,8 +66,16 @@ impl ConnectionManager {
             let cert_monitor_connectors = stateful_connectors.entry(CERT_MONITOR_HOST_ID.to_string()).or_insert(HashMap::new());
             let mut settings = HashMap::new();
             settings.insert("verify_certificate".to_string(), "true".to_string());
-            let cert_monitor_connector = Tcp::new_connection_module(&settings);
-            cert_monitor_connectors.insert(cert_monitor_connector.get_module_spec(), cert_monitor_connector);
+            // Use module_factory instead of directly creating Tcp::new_connection_module() to allow
+            // tests to inject mock connectors (e.g., StubTcp) via the module factory.
+            let connector_spec = ModuleSpecification::connector("tcp", "0.0.1");
+            if let Some(cert_monitor_connector) = self.module_factory.new_connector(&connector_spec, &settings) {
+                cert_monitor_connectors.insert(cert_monitor_connector.get_module_spec(), cert_monitor_connector);
+            }
+            else {
+                let cert_monitor_connector = Tcp::new_connection_module(&settings);
+                cert_monitor_connectors.insert(cert_monitor_connector.get_module_spec(), cert_monitor_connector);
+            }
 
             // All hosts.
             hosts_config.hosts.clone()

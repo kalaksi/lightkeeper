@@ -167,6 +167,11 @@ impl MonitorTestHarness {
         self.wait_for_completion();
     }
 
+    fn refresh_cert_monitors(&mut self) {
+        let _invocation_ids = self.monitor_manager.refresh_certificate_monitors();
+        self.wait_for_completion();
+    }
+
     fn wait_for_completion(&self) {
         std::thread::sleep(std::time::Duration::from_millis(500));
     }
