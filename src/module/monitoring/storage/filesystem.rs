@@ -83,30 +83,22 @@ impl MonitoringModule for Filesystem {
         // First line contains headers
         let lines = response.message.lines().skip(1);
         for line in lines {
-            let parts = line.split_whitespace().collect::<Vec<&str>>();
-            if parts.len() < 7 {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            let [_source, fs_type, size_h, used_h, _available_h, used_percent, mountpoint, ..] = parts.as_slice()
+            else {
                 ::log::debug!("Invalid line in response: {}", line);
                 continue;
-            }
+            };
 
-            // let _source = parts[0].to_string();
-            let fs_type = parts[1].to_string();
-            let size_h = parts[2].to_string();
-            let used_h = parts[3].to_string();
-            // let _available_h = parts[4].to_string();
-
-            let mut used_percent = parts[5].to_string();
             // Remove percent symbol from the end.
-            used_percent.pop();
+            let used_percent = used_percent.trim_end_matches('%');
             let used_percent_float = used_percent.parse::<f32>().map_err(|e| e.to_string())?;
-
-            let mountpoint = parts[6].to_string();
 
             if self.ignored_filesystems.iter().any(|item| mountpoint.starts_with(item)) {
                 continue;
             }
 
-            let mut data_point = DataPoint::labeled_value(mountpoint.clone(), format!("{} %", used_percent));
+            let mut data_point = DataPoint::labeled_value(mountpoint.to_string(), format!("{} %", used_percent));
             data_point.value_float = used_percent_float;
             data_point.criticality = if used_percent_float >= self.threshold_critical {
                 Criticality::Critical
@@ -121,7 +113,7 @@ impl MonitoringModule for Filesystem {
                 Criticality::Normal
             };
             data_point.description = format!("{} | {} / {} used", fs_type, used_h, size_h);
-            data_point.command_params.push(mountpoint);
+            data_point.command_params.push(mountpoint.to_string());
             result.multivalue.push(data_point);
         }
 
