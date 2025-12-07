@@ -7,6 +7,8 @@ mod common;
 mod monitors;
 mod commands;
 
+mod config;
+
 pub use common::*;
 use lightkeeper::enums::Criticality;
 use lightkeeper::frontend::HostDisplayData;
