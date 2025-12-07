@@ -38,7 +38,8 @@ r#"[{
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&docker::Compose::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&docker::Compose::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 1);
         assert_eq!(datapoint.multivalue[0].label, "project1");
         assert_eq!(datapoint.multivalue[0].value, "Up 2 hours");
@@ -79,7 +80,8 @@ r#"[{
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&docker::Containers::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&docker::Containers::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 2);
         assert_eq!(datapoint.multivalue[0].label, "container1");
         assert_eq!(datapoint.multivalue[0].value, "running");
@@ -117,7 +119,8 @@ r#"[{
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&docker::Images::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&docker::Images::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 2);
         assert_eq!(datapoint.multivalue[0].label, "nginx:latest");
         assert!(datapoint.multivalue[0].value.contains("days old"));
@@ -145,16 +148,16 @@ fn test_invalid_responses() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&docker::Compose::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&docker::Compose::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&docker::Containers::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&docker::Containers::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&docker::Images::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&docker::Images::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 }
 

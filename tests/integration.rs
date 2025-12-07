@@ -195,40 +195,49 @@ impl MonitorTestHarness {
         verify_fn(&host_display_data);
     }
 
-    fn verify_next_ui_update<F>(&self, monitor_id: &str, verify_fn: F)
+    fn verify_next_datapoint<F>(&self, monitor_id: &str, verify_fn: F)
     where
-        F: FnOnce(&HostDisplayData),
+        F: FnOnce(Option<&DataPoint>),
     {
-        loop {
+        if *self.first_ui_update.borrow() {
             let update = self.ui_update_receiver.recv_timeout(Duration::from_secs(1));
             assert!(update.is_ok());
             match update.unwrap() {
                 UIUpdate::Host(display_data) => {
                     // First UI update should be empty.
-                    if *self.first_ui_update.borrow() {
-                        assert!(display_data.host_state.command_results.is_empty());
-                        assert!(display_data.host_state.command_invocations.is_empty());
-                        self.first_ui_update.replace(false);
-
-                        continue;
-                    }
-
-                    let monitor_data = display_data.host_state.monitor_data.get(monitor_id);
-                    assert!(monitor_data.is_some(), "Monitor data should exist for {}", monitor_id);
-                    let monitor_data = monitor_data.unwrap();
-
-                    // Monitors also have initial NoData datapoint which can be ignored.
-                    if monitor_data.values.len() == 1 && monitor_data.values.back().unwrap().criticality == Criticality::NoData {
-                        continue;
-                    }
-                    else {
-                        verify_fn(&display_data);
-                        break;
-                    }
+                    assert!(display_data.host_state.command_results.is_empty());
+                    assert!(display_data.host_state.command_invocations.is_empty());
+                    self.first_ui_update.replace(false);
                 },
                 _ => unreachable!(),
             }
+        }
 
+        loop {
+            let update = self.ui_update_receiver.recv_timeout(Duration::from_secs(1));
+            match update {
+                Ok(UIUpdate::Host(display_data)) => {
+                    let monitor_data = display_data.host_state.monitor_data.get(monitor_id);
+                    assert!(monitor_data.is_some(), "Monitor data should exist for {}", monitor_id);
+                    let monitor_data = monitor_data.unwrap();
+                    let data_point = monitor_data.values.back().unwrap();
+
+                    // Monitors also have initial NoData datapoint which can be ignored.
+                    if monitor_data.values.len() == 1 && data_point.criticality == Criticality::NoData {
+                        continue;
+                    }
+                    else {
+                        verify_fn(Some(data_point));
+                        break;
+                    }
+
+                },
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    verify_fn(None);
+                    break;
+                },
+                _ => unreachable!(),
+            }
         }
     }
 }
@@ -367,9 +376,8 @@ impl CommandTestHarness {
             assert!(update.is_ok());
             match update.unwrap() {
                 UIUpdate::Host(display_data) => {
-                    // First UI update should be empty.
+                    // When executing commands, they receive initial UI update with no command results yet.
                     assert!(display_data.host_state.command_results.is_empty());
-                    assert!(display_data.host_state.command_invocations.is_empty());
                     self.first_ui_update.replace(false);
                 },
                 _ => unreachable!(),
@@ -384,5 +392,16 @@ impl CommandTestHarness {
             },
             _ => unreachable!(),
         }
+    }
+
+    fn verify_next_command_result<F>(&self, command_id: &str, verify_fn: F)
+    where
+        F: FnOnce(&CommandResult),
+    {
+        self.verify_next_ui_update(|display_data| {
+            let command_result = display_data.host_state.command_results.get(command_id);
+            assert!(command_result.is_some(), "Command result should exist for {}", command_id);
+            verify_fn(command_result.unwrap());
+        });
     }
 }

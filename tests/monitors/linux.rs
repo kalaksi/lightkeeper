@@ -34,7 +34,8 @@ r#"[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"mtu":65536,
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&linux::Interface::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&linux::Interface::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue[0].label, "lo");
         assert_eq!(datapoint.multivalue[0].multivalue[0].label, "127.0.0.1/8");
         assert_eq!(datapoint.multivalue[0].multivalue[1].label, "::1/128");
@@ -58,7 +59,8 @@ fn test_kernel() {
 
     harness.refresh_monitors();
 
-    harness.verify_next_ui_update(&linux::Kernel::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&linux::Kernel::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.criticality, Criticality::Normal);
     });
 }
@@ -77,7 +79,8 @@ fn test_load() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&linux::Load::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&linux::Load::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.value, "0.06, 0.05, 0.01");
         assert_eq!(datapoint.value_float, 0.06);
     });
@@ -100,7 +103,8 @@ docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&linux::Package::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&linux::Package::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 2);
         assert_eq!(datapoint.multivalue[0].label, "docker-ce-cli");
         assert_eq!(datapoint.multivalue[1].label, "docker-ce");
@@ -125,7 +129,8 @@ Swap:              0           0           0
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&linux::Ram::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&linux::Ram::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.value_float as i32, 38);
         assert_eq!(datapoint.criticality, Criticality::Normal);
     });
@@ -145,7 +150,8 @@ fn test_uptime() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&linux::Uptime::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&linux::Uptime::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         // println!(harness.host)
         assert_eq!(datapoint.value, "16");
     });
@@ -165,7 +171,8 @@ fn test_who() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&linux::Who::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&linux::Who::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue[0].label, "user");
         assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
     });
@@ -196,31 +203,31 @@ fn test_invalid_responses() {
 
     // Monitors shouldn't return data points on errors.
     // There should be only the initial NoData datapoint available.
-    harness.verify_monitor_data(&linux::Interface::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&linux::Interface::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&linux::Kernel::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&linux::Kernel::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&linux::Load::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&linux::Load::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&linux::Package::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&linux::Package::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&linux::Ram::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&linux::Ram::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&linux::Uptime::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&linux::Uptime::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&linux::Who::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&linux::Who::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 }

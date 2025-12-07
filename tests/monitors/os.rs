@@ -24,7 +24,8 @@ fn test_os() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&monitoring::os::Os::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&monitoring::os::Os::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.value, "Linux (Debian 12.0)");
         assert_eq!(datapoint.criticality, Criticality::Normal);
     });

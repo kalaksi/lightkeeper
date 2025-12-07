@@ -6,7 +6,7 @@ use lightkeeper::module::monitoring::network;
 use lightkeeper::module::platform_info::*;
 use lightkeeper::enums::Criticality;
 
-use crate::{MonitorTestHarness, StubSsh2, StubLocalCommand};
+use crate::{MonitorTestHarness, StubLocalCommand, StubSsh2};
 
 
 #[test]
@@ -31,7 +31,8 @@ rtt min/avg/max/mdev = 0.123/0.134/0.145/0.011 ms"#, 0)
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&network::Ping::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&network::Ping::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.value, "0.134");
         assert_eq!(datapoint.criticality, Criticality::Normal);
     });
@@ -53,7 +54,8 @@ fn test_ssh() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&network::Ssh::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&network::Ssh::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.value, "up");
         assert_eq!(datapoint.criticality, Criticality::Normal);
     });
@@ -77,7 +79,8 @@ r#"default via 192.168.1.1 dev eth0 proto static
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&network::Routes::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&network::Routes::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 3);
         assert_eq!(datapoint.multivalue[0].label, "default via 192.168.1.1");
         assert_eq!(datapoint.multivalue[0].value, "eth0");
@@ -88,15 +91,14 @@ r#"default via 192.168.1.1 dev eth0 proto static
 
 #[test]
 fn test_dns() {
-    // DNS module uses get_connector_messages which returns multiple commands
-    // The stub will return the same response for both commands
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
-        StubSsh2::new_any("nameserver 8.8.8.8\nnameserver 1.1.1.1", 0)
+        let mut ssh = StubSsh2::default();
+        ssh.add_response(r#""grep" "-E" "^nameserver" "/etc/resolv.conf""#, "#test\nnameserver 127.0.0.1\nnameserver 127.0.0.2", 0);
+        ssh.add_response("resolvectl dns", r#"Global:\nLink 2 (enp123s0f3u1u2): 127.0.0.1\nLink 3 (wlp1s0):"#, 0);
+        
+        Box::new(ssh) as connection::Connector
     };
 
-    // Note: The current stub implementation returns the same response for all commands
-    // This test verifies basic functionality
     let mut harness = MonitorTestHarness::new_monitor_tester(
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
@@ -105,9 +107,11 @@ fn test_dns() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&network::Dns::get_metadata().module_spec.id, |datapoint| {
-        // DNS should have at least one nameserver from resolv.conf
-        assert!(!datapoint.multivalue.is_empty());
+    harness.verify_next_datapoint(&network::Dns::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.multivalue.len(), 2);
+        assert_eq!(datapoint.multivalue[0].label, "127.0.0.1");
+        assert_eq!(datapoint.multivalue[1].label, "127.0.0.2");
     });
 }
 
@@ -123,7 +127,6 @@ fn test_invalid_responses() {
         PlatformInfo::linux(Flavor::Debian, "12.0"),
         (StubSsh2::get_metadata(), new_stub_ssh),
         vec![
-            // Ping uses local-command connector, so skip it
             (network::Routes::get_metadata(), network::Routes::new_monitoring_module),
             (network::Dns::get_metadata(), network::Dns::new_monitoring_module),
         ],
@@ -131,21 +134,41 @@ fn test_invalid_responses() {
 
     harness.refresh_monitors();
 
-    // Ping uses local-command connector, so it's ignored in this test
-    // harness.verify_monitor_data(&network::Ping::get_metadata().module_spec.id, |datapoint| {
-    //     assert_eq!(datapoint.criticality, Criticality::NoData);
-    // });
-
-    // Routes returns an error on parse failure
-    // The monitor manager may keep the initial datapoint or set to NoData
-    harness.verify_monitor_data(&network::Routes::get_metadata().module_spec.id, |_datapoint| {
-        // Accept any state - the important thing is that invalid response was handled
-        assert!(true);
+    // TODO: better handling of ordering, now refreshes monitors by category.
+    harness.verify_next_datapoint(&network::Dns::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        // Normally doesn't return Err, but possibly empty datapoint with Critical criticality.
+        assert_eq!(datapoint.criticality, Criticality::Critical);
     });
 
-    // DNS returns empty datapoint on error
-    harness.verify_monitor_data(&network::Dns::get_metadata().module_spec.id, |datapoint| {
-        assert!(datapoint.multivalue.is_empty());
+    harness.verify_next_datapoint(&network::Routes::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
+    });
+
+
+
+    //
+    // For local-command connectors
+    //
+
+    let new_stub_local = |_settings: &HashMap<String, String>| {
+        StubLocalCommand::new_any("invalid-response", 1)
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_testers(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubLocalCommand::get_metadata(), new_stub_local),
+        vec![
+            (network::Ping::get_metadata(), network::Ping::new_monitoring_module),
+        ],
+    );
+
+    harness.refresh_monitors();
+
+    // Ping is a bit special as it displays errors directly as datapoint values.
+    harness.verify_next_datapoint(&network::Ping::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.criticality, Criticality::Critical);
     });
 }
 

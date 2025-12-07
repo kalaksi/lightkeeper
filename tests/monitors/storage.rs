@@ -28,7 +28,8 @@ tmpfs           tmpfs      2.0G     0  2.0G   0% /dev/shm"#, 0)
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&storage::Filesystem::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&storage::Filesystem::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 2); // /dev/shm is ignored
         assert_eq!(datapoint.multivalue[0].label, "/");
         assert_eq!(datapoint.multivalue[0].value, "43 %");
@@ -65,7 +66,8 @@ r#"{
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&storage::Cryptsetup::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&storage::Cryptsetup::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 1);
         assert_eq!(datapoint.multivalue[0].label, "sda1");
         assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
@@ -89,7 +91,8 @@ r#"  LV Path|LV|VG|LSize|Attr|Sync%|#Mis|Snap%
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&storage::lvm::LogicalVolume::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&storage::lvm::LogicalVolume::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 1);
         assert_eq!(datapoint.multivalue[0].label, "lv0");
         assert_eq!(datapoint.multivalue[0].value, "OK");
@@ -114,7 +117,8 @@ r#"  VG|Attr|VSize|VFree
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&storage::lvm::VolumeGroup::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&storage::lvm::VolumeGroup::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 1);
         assert_eq!(datapoint.multivalue[0].label, "vg0");
         assert_eq!(datapoint.multivalue[0].value, "OK");
@@ -139,7 +143,8 @@ r#"  PV|Attr|PSize|PFree
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&storage::lvm::PhysicalVolume::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&storage::lvm::PhysicalVolume::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 1);
         assert_eq!(datapoint.multivalue[0].label, "/dev/sda1");
         assert_eq!(datapoint.multivalue[0].value, "OK");
@@ -169,26 +174,27 @@ fn test_invalid_responses() {
 
     harness.refresh_monitors();
 
-    // On error, monitors keep the initial datapoint (Normal criticality, empty multivalue)
-    // or return NoData depending on how they handle errors
-    harness.verify_monitor_data(&storage::Filesystem::get_metadata().module_spec.id, |datapoint| {
-        assert!(datapoint.criticality == Criticality::NoData || datapoint.multivalue.is_empty());
+    // Doesn't easily return errors, but parses what it can, since errors because of some mountpoints can be normal.
+    harness.verify_next_datapoint(&storage::Filesystem::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.criticality, Criticality::Normal);
+        assert!(datapoint.multivalue.is_empty());
     });
 
-    harness.verify_monitor_data(&storage::Cryptsetup::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.multivalue.len(), 0);
+    harness.verify_next_datapoint(&storage::Cryptsetup::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&storage::lvm::LogicalVolume::get_metadata().module_spec.id, |datapoint| {
-        assert!(datapoint.criticality == Criticality::NoData || datapoint.multivalue.is_empty());
+    harness.verify_next_datapoint(&storage::lvm::LogicalVolume::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&storage::lvm::VolumeGroup::get_metadata().module_spec.id, |datapoint| {
-        assert!(datapoint.criticality == Criticality::NoData || datapoint.multivalue.is_empty());
+    harness.verify_next_datapoint(&storage::lvm::VolumeGroup::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 
-    harness.verify_monitor_data(&storage::lvm::PhysicalVolume::get_metadata().module_spec.id, |datapoint| {
-        assert!(datapoint.criticality == Criticality::NoData || datapoint.multivalue.is_empty());
+    harness.verify_next_datapoint(&storage::lvm::PhysicalVolume::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 }
 

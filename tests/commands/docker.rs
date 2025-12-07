@@ -290,7 +290,7 @@ r#"{
     let module_id = docker::inspect::Inspect::get_metadata().module_spec.id;
 
     harness.execute_command(&module_id, vec!["test-container".to_string()]);
-    harness.verify_command_result(&module_id, |result: &CommandResult| {
+    harness.verify_next_command_result(&module_id, |result| {
         assert_eq!(result.criticality, Criticality::Info);
     });
 }

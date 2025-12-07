@@ -4,7 +4,6 @@ use lightkeeper::module::*;
 use lightkeeper::module::monitoring::*;
 use lightkeeper::module::monitoring::nixos;
 use lightkeeper::module::platform_info::*;
-use lightkeeper::enums::Criticality;
 
 use crate::{MonitorTestHarness, StubSsh2};
 
@@ -27,7 +26,8 @@ r#"[{"generation":3,"date":"2024-01-15T10:30:00Z","nixosVersion":"23.11","kernel
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&nixos::RebuildGenerations::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&nixos::RebuildGenerations::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 3);
         assert_eq!(datapoint.multivalue[0].label, "#3 @ 2024-01-15 10:30:00");
         assert!(datapoint.multivalue[0].tags.contains(&"Current".to_string()));
@@ -54,8 +54,8 @@ fn test_invalid_responses() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&nixos::RebuildGenerations::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&nixos::RebuildGenerations::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 }
 

@@ -14,6 +14,8 @@ use lightkeeper::module::*;
 use lightkeeper::module::connection::*;
 
 
+const DEFAULT_PARTIAL_MESSAGE_SIZE: usize = 20;
+
 #[connection_module(
     name="ssh",
     version="0.0.1",
@@ -30,29 +32,29 @@ pub struct StubSsh2 {
 
 impl StubSsh2 {
     pub fn new(request: &'static str, response: &'static str, exit_code: i32) -> connection::Connector {
-        let mut ssh = StubSsh2 {
-            responses: HashMap::new(),
-            partial_message_size: 20,
-            partial_responses: Arc::new(Mutex::new(HashMap::new())),
-        };
-
+        let mut ssh = StubSsh2::default();
         ssh.add_response(request, response, exit_code);
         Box::new(ssh) as connection::Connector
     }
 
     pub fn new_any(response: &'static str, exit_code: i32) -> connection::Connector {
-        let mut ssh = StubSsh2 {
-            responses: HashMap::new(),
-            partial_message_size: 20,
-            partial_responses: Arc::new(Mutex::new(HashMap::new())),
-        };
-
+        let mut ssh = StubSsh2::default();
         ssh.add_response("_", response, exit_code);
         Box::new(ssh) as connection::Connector
     }
 
     pub fn add_response(&mut self, request: &'static str, response: &'static str, exit_code: i32) {
         self.responses.insert(request, ResponseMessage::new(response.to_string(), exit_code));
+    }
+}
+
+impl Default for StubSsh2 {
+    fn default() -> Self {
+        StubSsh2 {
+            responses: HashMap::new(),
+            partial_message_size: DEFAULT_PARTIAL_MESSAGE_SIZE,
+            partial_responses: Arc::new(Mutex::new(HashMap::new())),
+        }
     }
 }
 

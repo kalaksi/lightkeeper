@@ -34,7 +34,8 @@ r#"{
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&systemd::Service::get_metadata().module_spec.id, |datapoint| {
+    harness.verify_next_datapoint(&systemd::Service::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.multivalue.len(), 3);
         assert_eq!(datapoint.multivalue[0].label, "failed.service");
         assert_eq!(datapoint.multivalue[0].criticality, Criticality::Critical);
@@ -65,8 +66,8 @@ fn test_invalid_responses() {
 
     harness.refresh_monitors();
 
-    harness.verify_monitor_data(&systemd::Service::get_metadata().module_spec.id, |datapoint| {
-        assert_eq!(datapoint.criticality, Criticality::NoData);
+    harness.verify_next_datapoint(&systemd::Service::get_metadata().module_spec.id, |datapoint| {
+        assert_eq!(datapoint.is_none(), true);
     });
 }
 
