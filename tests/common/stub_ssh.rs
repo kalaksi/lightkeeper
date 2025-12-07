@@ -123,17 +123,5 @@ impl ConnectionModule for StubSsh2 {
             return Ok(ResponseMessage::new(strip_newline(&response), 0));
         }
     }
-
-    fn download_file(&self, _source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {
-        unimplemented!()
-    }
-
-    fn upload_file(&self, _metadata: &FileMetadata, _contents: Vec<u8>) -> Result<(), LkError> {
-        unimplemented!()
-    }
-
-    fn verify_host_key(&self, _hostname: &str, _key_id: &str) -> Result<(), LkError> {
-        unimplemented!()
-    }
 }
 

@@ -18,7 +18,7 @@ r#"{
   "Created": "2025-11-16T10:49:42.466460495Z",
   "Path": "/docker-entrypoint.sh",
   "Args": [
-    "nginx",
+    "service1",
     "-g",
     "daemon off;"
   ],
@@ -40,7 +40,7 @@ r#"{
   "HostnamePath": "/var/lib/docker/containers/8001819398ea4b320c0604a26f0d0f15ebd0353bc76f113f1d9ac629a83458d8/hostname",
   "HostsPath": "/var/lib/docker/containers/8001819398ea4b320c0604a26f0d0f15ebd0353bc76f113f1d9ac629a83458d8/hosts",
   "LogPath": "",
-  "Name": "/web-frontend-nginx-1",
+  "Name": "/project1-service1-1",
   "RestartCount": 0,
   "Driver": "overlay2",
   "Platform": "linux",
@@ -50,7 +50,7 @@ r#"{
   "ExecIDs": null,
   "HostConfig": {
     "Binds": [
-      "/mnt/containers/web-frontend/data/www:/var/www:ro",
+      "/mnt/containers/project1/data/www:/var/www:ro",
     ],
     "ContainerIDFile": "",
     "LogConfig": {
@@ -59,7 +59,7 @@ r#"{
         "tag": "container/{{.Name}}/{{.ID}}"
       }
     },
-    "NetworkMode": "web-frontend_default",
+    "NetworkMode": "project1_default",
     "PortBindings": {
       "8080/tcp": [
         {
@@ -178,7 +178,7 @@ r#"{
   "Mounts": [
     {
       "Type": "bind",
-      "Source": "/mnt/containers/web-frontend/data/www",
+      "Source": "/mnt/containers/project1/data/www",
       "Destination": "/var/www",
       "Mode": "ro",
       "RW": false,
@@ -202,18 +202,18 @@ r#"{
     "StdinOnce": false,
     "Env": [
       "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-      "NGINX_VERSION=1.28.0",
+      "service1_VERSION=1.28.0",
       "NJS_VERSION=0.8.10",
       "NJS_RELEASE=1~bookworm",
       "PKG_RELEASE=1~bookworm",
       "DYNPKG_RELEASE=1~bookworm"
     ],
     "Cmd": [
-      "nginx",
+      "service1",
       "-g",
       "daemon off;"
     ],
-    "Image": "nginx:stable",
+    "Image": "service1:stable",
     "Volumes": null,
     "WorkingDir": "",
     "Entrypoint": [
@@ -225,13 +225,13 @@ r#"{
       "com.docker.compose.depends_on": "",
       "com.docker.compose.image": "sha256:28714d18af1a1a1ad4b147eb6fb9b043fd8aa2eec52556c506b532c251870ee0",
       "com.docker.compose.oneoff": "False",
-      "com.docker.compose.project": "web-frontend",
-      "com.docker.compose.project.config_files": "/mnt/containers/web-frontend/docker-compose.yml",
-      "com.docker.compose.project.working_dir": "/mnt/containers/web-frontend",
+      "com.docker.compose.project": "project1",
+      "com.docker.compose.project.config_files": "/mnt/containers/project1/docker-compose.yml",
+      "com.docker.compose.project.working_dir": "/mnt/containers/project1",
       "com.docker.compose.replace": "17d00f1461e343803f368e7cf3c500db9615fe9009b462b744c6e5bbd01270cc",
-      "com.docker.compose.service": "nginx",
+      "com.docker.compose.service": "service1",
       "com.docker.compose.version": "2.35.1",
-      "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
+      "maintainer": "service1 Docker Maintainers <docker-maint@nginx.com>"
     },
     "StopSignal": "SIGQUIT"
   },
@@ -252,12 +252,12 @@ r#"{
       ]
     },
     "Networks": {
-      "web-frontend_default": {
+      "project1_default": {
         "IPAMConfig": null,
         "Links": null,
         "Aliases": [
-          "web-frontend-nginx-1",
-          "nginx"
+          "project1-service1-1",
+          "service1"
         ],
         "DriverOpts": null,
         "GwPriority": 0,
@@ -271,8 +271,8 @@ r#"{
         "GlobalIPv6Address": "",
         "GlobalIPv6PrefixLen": 0,
         "DNSNames": [
-          "web-frontend-nginx-1",
-          "nginx",
+          "project1-service1-1",
+          "service1",
           "8001819398ea"
         ]
       }

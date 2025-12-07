@@ -51,7 +51,6 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
         UIUpdate::Host(display_data) => {
             assert_eq!(display_data.host_state.status, HostStatus::Pending);
             assert_eq!(display_data.host_state.command_invocations.len(), 1);
-            // TODO: more
         },
         _ => unreachable!(),
     }
@@ -65,7 +64,6 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
             assert_eq!(display_data.host_state.command_results.len(), 1);
             assert!(display_data.host_state.command_results[&module_id].progress < 100);
             assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package list");
-            // TODO: more
         },
         _ => unreachable!(),
     }
@@ -77,7 +75,6 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
             assert_eq!(display_data.host_state.command_results.len(), 1);
             assert!(display_data.host_state.command_results[&module_id].progress < 100);
             assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package lists... Done\nBuilding d");
-            // TODO: more
         },
         _ => unreachable!(),
     }

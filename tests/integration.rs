@@ -154,7 +154,7 @@ impl MonitorTestHarness {
     }
 
     fn wait_for_completion(&self) {
-        std::thread::sleep(std::time::Duration::from_millis(200));
+        std::thread::sleep(std::time::Duration::from_millis(500));
     }
 
     fn verify_monitor_data<F>(&self, monitor_id: &str, verify_fn: F)
