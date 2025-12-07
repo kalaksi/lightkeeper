@@ -5,6 +5,7 @@
 
 
 use std::collections::HashMap;
+use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::utils::ShellCommand;
@@ -68,22 +69,39 @@ impl MonitoringModule for Dns {
     }
 
     fn process_responses(&self, _host: Host, responses: Vec<ResponseMessage>, _parent_result: DataPoint) -> Result<DataPoint, String> {
+        // TODO: Not sure why this is needed.
         if responses.is_empty() {
             return Ok(DataPoint::empty());
         }
 
         let mut result = DataPoint::empty();
 
+        // Errors can be somewhat expected depending on what resources are available or how host is configured..
+        if let Some(resolvconf_response) = responses.get(0) {
+            if resolvconf_response.is_success() {
+                let lines = resolvconf_response.message.lines()
+                    .filter(|line| !line.is_empty() && !line.starts_with("#"))
+                    .collect::<Vec<&str>>();
 
-        let resolvconf_response = &responses[0];
-        if resolvconf_response.is_success() {
-            for line in resolvconf_response.message.lines() {
-                let mut parts = line.split(' ');
-                let dns_server = parts.nth(1).unwrap_or_default().trim().to_string();
+                for line in lines {
+                    let parts = line.split(' ')
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .collect::<Vec<&str>>();
 
-                let mut datapoint = DataPoint::label(dns_server);
-                datapoint.description = String::from("resolv.conf");
-                result.multivalue.push(datapoint);
+                    let [prefix, server_address, ..]  = parts.as_slice()
+                    else {
+                        continue;
+                    };
+
+                    if prefix != &"nameserver" {
+                        continue;
+                    }
+
+                    let mut datapoint = DataPoint::label(server_address);
+                    datapoint.description = String::from("resolv.conf");
+                    result.multivalue.push(datapoint);
+                }
             }
         }
 
@@ -105,6 +123,16 @@ impl MonitoringModule for Dns {
                 }
             }
         }
+
+        if result.multivalue.is_empty() {
+            result.multivalue.push(DataPoint::labeled_value_with_level(
+                ".conf".to_string(),
+                "No DNS servers found".to_string(),
+                Criticality::Critical
+            ));
+        }
+
+        result.update_criticality_from_children();
 
         Ok(result)
     }
