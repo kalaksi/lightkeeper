@@ -63,8 +63,15 @@ impl ModuleFactory {
             }
         }
 
-        let constructor = self.connector_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
-        Some(constructor(settings))
+        if let Some(constructor) = self.connector_modules.iter()
+            .find(|(metadata, _ctor)| metadata.module_spec == normalized_spec)
+            .map(|(_, ctor)| ctor) 
+        {
+            Some(constructor(settings))
+        }
+        else {
+            None
+        }
     }
 
     pub fn new_monitor(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<monitoring::Monitor> {
@@ -79,8 +86,15 @@ impl ModuleFactory {
             }
         }
 
-        let constructor = self.monitor_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
-        Some(constructor(settings))
+        if let Some(constructor) = self.monitor_modules.iter()
+            .find(|(metadata, _ctor)| metadata.module_spec == normalized_spec)
+            .map(|(_, ctor)| ctor) 
+        {
+            Some(constructor(settings))
+        }
+        else {
+            None
+        }
     }
 
     pub fn new_command(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<command::Command> {
@@ -95,8 +109,15 @@ impl ModuleFactory {
             }
         }
 
-        let constructor = self.command_modules.iter().find(|(metadata, _ctor)| metadata.module_spec == normalized_spec).unwrap().1;
-        Some(constructor(settings))
+        if let Some(constructor) = self.command_modules.iter()
+            .find(|(metadata, _ctor)| metadata.module_spec == normalized_spec)
+            .map(|(_, ctor)| ctor) 
+        {
+            Some(constructor(settings))
+        }
+        else {
+            None
+        }
     }
 
     pub fn get_latest_version_for_command(&self, module_id: &String) -> Option<String> {
