@@ -120,8 +120,9 @@ impl ConnectionModule for StubSsh2 {
         }
         else {
             let response = partial_response.message.to_string();
-            self.partial_responses.lock().unwrap().remove(&invocation_id);
-            return Ok(ResponseMessage::new(strip_newline(&response), 0));
+            let return_code = partial_response.return_code;
+            partial_responses.remove(&invocation_id);
+            return Ok(ResponseMessage::new(strip_newline(&response), return_code));
         }
     }
 }

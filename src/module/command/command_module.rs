@@ -145,9 +145,9 @@ impl CommandResult {
         }
     }
 
-    pub fn with_criticality(&mut self, criticality: Criticality) -> Self {
+    pub fn with_criticality(mut self, criticality: Criticality) -> Self {
         self.criticality = criticality;
-        self.to_owned()
+        self
     }
 }
 

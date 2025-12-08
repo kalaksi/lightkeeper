@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use lightkeeper::module::*;
 use lightkeeper::module::command::*;
 use lightkeeper::module::command::docker;
+use lightkeeper::module::command::docker::compose;
 use lightkeeper::module::platform_info::*;
 use lightkeeper::enums::Criticality;
 
@@ -292,5 +293,457 @@ r#"{
     harness.execute_command(&module_id, vec!["test-container".to_string()]);
     harness.verify_next_command_result(&module_id, |result| {
         assert_eq!(result.criticality, Criticality::Info);
+    });
+}
+
+// Docker Compose command tests
+
+#[test]
+fn test_compose_up_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "up" "-d""#,
+            "", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Up::get_metadata(), compose::Up::new_command_module),
+    );
+
+    let module_id = compose::Up::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/mnt/containers/project1/docker-compose.yml".to_string()]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Normal);
+        assert_eq!(result.message, "");
+    });
+}
+
+#[test]
+fn test_compose_up_with_service() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "up" "-d" "service1""#,
+            "", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Up::get_metadata(), compose::Up::new_command_module),
+    );
+
+    let module_id = compose::Up::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec![
+        "/mnt/containers/project1/docker-compose.yml".to_string(),
+        "project1".to_string(),
+        "service1".to_string(),
+    ]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Normal);
+    });
+}
+
+#[test]
+fn test_compose_up_error() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/nonexistent/docker-compose.yml" "up" "-d""#,
+            "Error: can't find a suitable configuration file", 1)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Up::get_metadata(), compose::Up::new_command_module),
+    );
+
+    let module_id = compose::Up::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/nonexistent/docker-compose.yml".to_string()]);
+
+    harness.verify_next_error(&module_id, |error| {
+        assert_eq!(error.criticality, Criticality::Error);
+        assert!(error.message.contains("can't find") || error.message.contains(&module_id));
+    });
+}
+
+#[test]
+fn test_compose_start_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "start""#,
+            "", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Start::get_metadata(), compose::Start::new_command_module),
+    );
+
+    let module_id = compose::Start::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/mnt/containers/project1/docker-compose.yml".to_string()]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Info);
+    });
+}
+
+#[test]
+fn test_compose_start_with_service() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "start" "service1""#,
+            "", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Start::get_metadata(), compose::Start::new_command_module),
+    );
+
+    let module_id = compose::Start::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec![
+        "/mnt/containers/project1/docker-compose.yml".to_string(),
+        "project1".to_string(),
+        "service1".to_string(),
+    ]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Info);
+    });
+}
+
+#[test]
+fn test_compose_stop_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "stop""#,
+            "", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Stop::get_metadata(), compose::Stop::new_command_module),
+    );
+
+    let module_id = compose::Stop::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/mnt/containers/project1/docker-compose.yml".to_string()]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Normal);
+        assert_eq!(result.message, "");
+    });
+}
+
+#[test]
+fn test_compose_stop_error() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/nonexistent/docker-compose.yml" "stop""#,
+            "Error: can't find a suitable configuration file", 1)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Stop::get_metadata(), compose::Stop::new_command_module),
+    );
+
+    let module_id = compose::Stop::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/nonexistent/docker-compose.yml".to_string()]);
+
+    harness.verify_next_error(&module_id, |error| {
+        assert_eq!(error.criticality, Criticality::Error);
+        assert!(error.message.contains("can't find") || error.message.contains(&module_id));
+    });
+}
+
+#[test]
+fn test_compose_restart_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "restart""#,
+            "", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Restart::get_metadata(), compose::Restart::new_command_module),
+    );
+
+    let module_id = compose::Restart::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/mnt/containers/project1/docker-compose.yml".to_string()]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Normal);
+        assert_eq!(result.message, "");
+    });
+}
+
+#[test]
+fn test_compose_restart_error() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/nonexistent/docker-compose.yml" "restart""#,
+            "Error: can't find a suitable configuration file", 1)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Restart::get_metadata(), compose::Restart::new_command_module),
+    );
+
+    let module_id = compose::Restart::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/nonexistent/docker-compose.yml".to_string()]);
+
+    harness.verify_next_error(&module_id, |error| {
+        assert_eq!(error.criticality, Criticality::Error);
+        assert!(error.message.contains("can't find") || error.message.contains(&module_id));
+    });
+}
+
+#[test]
+fn test_compose_logs_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "logs" "--no-color" "-t" "--tail" "1000" "service1""#,
+            r#"project1-service1-1  | 2025-12-01T10:00:00.000Z Starting service
+project1-service1-1  | 2025-12-01T10:00:01.000Z Service started successfully"#, 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Logs::get_metadata(), compose::Logs::new_command_module),
+    );
+
+    let module_id = compose::Logs::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec![
+        "/mnt/containers/project1/docker-compose.yml".to_string(),
+        "project1".to_string(),
+        "service1".to_string(),
+        "".to_string(),
+        "".to_string(),
+        "1000".to_string(),
+    ]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Normal);
+        assert!(result.message.contains("Starting service"));
+        // Prefix should be removed
+        assert!(!result.message.contains("project1-service1-1  |"));
+    });
+}
+
+#[test]
+fn test_compose_logs_error() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "logs" "--no-color" "-t" "--tail" "1000" "nonexistent""#,
+            "Error: no such service: nonexistent", 1)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Logs::get_metadata(), compose::Logs::new_command_module),
+    );
+
+    let module_id = compose::Logs::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec![
+        "/mnt/containers/project1/docker-compose.yml".to_string(),
+        "project1".to_string(),
+        "nonexistent".to_string(),
+        "".to_string(),
+        "".to_string(),
+        "1000".to_string(),
+    ]);
+
+    harness.verify_next_error(&module_id, |error| {
+        assert_eq!(error.criticality, Criticality::Error);
+        assert!(error.message.contains("no such service") || error.message.contains(&module_id));
+    });
+}
+
+#[test]
+fn test_compose_pull_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "pull""#,
+            "Pulling service1...\nlatest: Pulling from library/nginx\nStatus: Downloaded newer image", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Pull::get_metadata(), compose::Pull::new_command_module),
+    );
+
+    let module_id = compose::Pull::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/mnt/containers/project1/docker-compose.yml".to_string()]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Normal);
+        assert!(result.message.contains("Pulling"));
+    });
+}
+
+#[test]
+fn test_compose_pull_with_local_image() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "pull""#,
+            r#"Pulling service1...
+Error response from daemon: dial tcp 127.0.0.1:80: connect: connection refused
+0 errors occurred"#, 1)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Pull::get_metadata(), compose::Pull::new_command_module),
+    );
+
+    let module_id = compose::Pull::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/mnt/containers/project1/docker-compose.yml".to_string()]);
+
+    // Should succeed because local image errors are ignored
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Normal);
+    });
+}
+
+#[test]
+fn test_compose_pull_error() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "pull""#,
+            r#"Pulling service1...
+Error response from daemon: pull access denied
+1 errors occurred"#, 1)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Pull::get_metadata(), compose::Pull::new_command_module),
+    );
+
+    let module_id = compose::Pull::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/mnt/containers/project1/docker-compose.yml".to_string()]);
+
+    harness.verify_next_error(&module_id, |error| {
+        assert_eq!(error.criticality, Criticality::Error);
+        assert!(error.message.contains("pull access denied") || error.message.contains("errors occurred") || error.message.contains(&module_id));
+    });
+}
+
+#[test]
+fn test_compose_build_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "build" "service1""#,
+            r#"Building service1
+Step 1/5 : FROM nginx:latest
+Step 2/5 : COPY . /usr/share/nginx/html
+Step 3/5 : RUN echo 'Build complete'
+Step 4/5 : EXPOSE 80
+Step 5/5 : CMD ["nginx", "-g", "daemon off;"]
+Successfully built abc123"#, 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Build::get_metadata(), compose::Build::new_command_module),
+    );
+
+    let module_id = compose::Build::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec![
+        "/mnt/containers/project1/docker-compose.yml".to_string(),
+        "project1".to_string(),
+        "service1".to_string(),
+    ]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Normal);
+        // Build command returns hidden message with build output
+        assert!(result.message.contains("built")
+          || result.message.contains("Step")
+          || result.message.contains("Building")
+          || result.message.is_empty()
+        );
+    });
+}
+
+#[test]
+fn test_compose_build_error() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "build" "service1""#,
+            r#"Building service1
+Step 1/5 : FROM nginx:latest
+ERROR: failed to solve: failed to fetch"#, 1)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Build::get_metadata(), compose::Build::new_command_module),
+    );
+
+    let module_id = compose::Build::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec![
+        "/mnt/containers/project1/docker-compose.yml".to_string(),
+        "project1".to_string(),
+        "service1".to_string(),
+    ]);
+
+    harness.verify_next_ui_update(|display_data| {
+        assert_eq!(display_data.host_state.command_invocations.len(), 1);
+        assert_eq!(display_data.host_state.command_results.len(), 1);
+        let result = &display_data.host_state.command_results[&module_id];
+        assert!(result.progress < 100);
+    });
+
+    // Check additional partial updates (message is ~86 chars, so we get multiple partials)
+    harness.verify_next_ui_update(|display_data| {
+        let result = &display_data.host_state.command_results[&module_id];
+        assert!(result.progress < 100);
+    });
+
+    harness.verify_next_ui_update(|display_data| {
+        let result = &display_data.host_state.command_results[&module_id];
+        assert!(result.progress < 100);
+    });
+
+    harness.verify_next_ui_update(|display_data| {
+        let result = &display_data.host_state.command_results[&module_id];
+        assert!(result.progress < 100);
+    });
+
+    harness.verify_next_ui_update(|display_data| {
+        let result = &display_data.host_state.command_results[&module_id];
+        assert_eq!(result.progress, 100);
+        assert_eq!(result.criticality, Criticality::Error);
+        assert!(result.message.contains("ERROR") || result.message.contains("failed") || result.message.contains("Building"));
     });
 }

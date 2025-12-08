@@ -411,4 +411,25 @@ impl CommandTestHarness {
             verify_fn(command_result.unwrap());
         });
     }
+
+    fn verify_next_error<F>(&self, command_id: &str, verify_fn: F)
+    where
+        F: FnOnce(&crate::utils::ErrorMessage),
+    {
+        self.verify_next_ui_update(|display_data| {
+            // When process_response returns Err(), no command_result is created, but errors are sent
+            assert!(
+                !display_data.new_errors.is_empty(),
+                "Expected error for command {} but none found",
+                command_id
+            );
+            
+            // Find error for this command
+            let error = display_data.new_errors.iter()
+                .find(|e| e.message.contains(command_id) || display_data.new_errors.len() == 1)
+                .expect(&format!("Expected error for command {}", command_id));
+            
+            verify_fn(error);
+        });
+    }
 }
