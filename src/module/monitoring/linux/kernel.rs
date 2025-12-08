@@ -7,7 +7,6 @@
 use std::collections::HashMap;
 
 use lightkeeper_module::monitoring_module;
-use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{

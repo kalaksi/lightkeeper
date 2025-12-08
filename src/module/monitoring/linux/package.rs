@@ -6,7 +6,6 @@
 
 use std::collections::HashMap;
 
-use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::host::HostSetting;
 use crate::module::connection::ResponseMessage;

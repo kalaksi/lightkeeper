@@ -9,7 +9,6 @@ use std::sync::{Arc, Mutex};
 use lightkeeper::error::LkError;
 use lightkeeper::utils::strip_newline;
 use lightkeeper_module::connection_module;
-use lightkeeper::file_handler::FileMetadata;
 use lightkeeper::module::*;
 use lightkeeper::module::connection::*;
 

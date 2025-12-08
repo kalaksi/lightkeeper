@@ -5,7 +5,6 @@
 
 
 use std::collections::HashMap;
-use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::module::platform_info;

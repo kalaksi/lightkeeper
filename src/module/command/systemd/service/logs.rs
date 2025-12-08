@@ -90,7 +90,7 @@ impl CommandModule for Logs {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_error() {
-            Err(response.message.clone())
+            Ok(CommandResult::new_error(response.message.clone()))
         }
         else {
             Ok(CommandResult::new_hidden(response.message.clone()))
