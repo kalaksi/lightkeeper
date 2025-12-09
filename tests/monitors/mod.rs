@@ -6,3 +6,4 @@ pub mod systemd;
 pub mod network;
 pub mod docker;
 pub mod certificate;
+pub mod platform_info;

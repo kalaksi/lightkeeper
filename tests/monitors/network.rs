@@ -1,12 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use lightkeeper::module::*;
 use lightkeeper::module::monitoring::*;
 use lightkeeper::module::monitoring::network;
 use lightkeeper::module::platform_info::*;
 use lightkeeper::enums::Criticality;
+use lightkeeper::configuration;
 
-use crate::{MonitorTestHarness, StubLocalCommand, StubSsh2};
+use crate::{MonitorTestHarness, StubLocalCommand, StubSsh2, StubTcp, TEST_HOST_ID};
 
 
 #[test]
@@ -169,6 +170,91 @@ fn test_invalid_responses() {
     harness.verify_next_datapoint(&network::Ping::get_metadata().module_spec.id, |datapoint| {
         let datapoint = datapoint.expect("Should have datapoint");
         assert_eq!(datapoint.criticality, Criticality::Critical);
+    });
+}
+
+#[test]
+fn test_tcp_connect() {
+    let new_stub_tcp = |_settings: &HashMap<String, String>| {
+        StubTcp::new("127.0.0.1:22", "")
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubTcp::get_metadata(), new_stub_tcp),
+        (network::TcpConnect::get_metadata(), network::TcpConnect::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_next_datapoint(&network::TcpConnect::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.value, "open");
+        assert_eq!(datapoint.criticality, Criticality::Normal);
+    });
+}
+
+#[test]
+fn test_tcp_connect_error() {
+    let new_stub_tcp = |_settings: &HashMap<String, String>| {
+        StubTcp::new_error("127.0.0.1:22", "Connection refused")
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubTcp::get_metadata(), new_stub_tcp),
+        (network::TcpConnect::get_metadata(), network::TcpConnect::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_next_datapoint(&network::TcpConnect::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.value, "Connection refused");
+        assert_eq!(datapoint.criticality, Criticality::Error);
+    });
+}
+
+#[test]
+fn test_tcp_connect_custom_port() {
+    let mut settings = HashMap::new();
+    settings.insert("port".to_string(), "443".to_string());
+
+    let mut host_settings = configuration::HostSettings::default();
+    host_settings.address = "127.0.0.1".to_string();
+    host_settings.effective.monitors.insert(
+        network::TcpConnect::get_metadata().module_spec.id.clone(),
+        configuration::MonitorConfig {
+            version: "0.0.1".to_string(),
+            settings: settings,
+            ..Default::default()
+        }
+    );
+    host_settings.effective.connectors.insert(
+        StubTcp::get_metadata().module_spec.id.clone(),
+        configuration::ConnectorConfig::default()
+    );
+
+    let hosts_config = configuration::Hosts {
+        hosts: BTreeMap::from([(TEST_HOST_ID.to_string(), host_settings)]),
+        predefined_platforms: BTreeMap::from([(TEST_HOST_ID.to_string(), PlatformInfo::linux(Flavor::Debian, "12.0"))]),
+        ..Default::default()
+    };
+
+    let module_factory = ModuleFactory::new_with(
+        vec![(StubTcp::get_metadata(), |_settings: &HashMap<String, String>| {
+            StubTcp::new("127.0.0.1:443", "")
+        })],
+        vec![(network::TcpConnect::get_metadata(), network::TcpConnect::new_monitoring_module)],
+        vec![]
+    );
+
+    let mut harness = MonitorTestHarness::new(hosts_config, module_factory);
+    harness.refresh_monitors();
+
+    harness.verify_next_datapoint(&network::TcpConnect::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.value, "open");
     });
 }
 

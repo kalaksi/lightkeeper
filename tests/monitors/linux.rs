@@ -152,7 +152,6 @@ fn test_uptime() {
 
     harness.verify_next_datapoint(&linux::Uptime::get_metadata().module_spec.id, |datapoint| {
         let datapoint = datapoint.expect("Should have datapoint");
-        // println!(harness.host)
         assert_eq!(datapoint.value, "16");
     });
 }

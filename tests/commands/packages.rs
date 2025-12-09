@@ -86,7 +86,6 @@ fn test_update_all_error() {
         assert_eq!(display_data.host_state.command_results.len(), 1);
     });
 
-    // Wait for all partial responses to complete
     loop {
         harness.verify_next_ui_update(|display_data| {
             let result = &display_data.host_state.command_results[&module_id];
@@ -145,7 +144,6 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
     });
 
     // Wait for multiple partial responses (message is long, so we get many partials)
-    // Loop until we get the final response with progress 100
     loop {
         harness.verify_next_ui_update(|display_data| {
             let result = &display_data.host_state.command_results[&module_id];
@@ -286,10 +284,8 @@ Reading package lists... Done"#, 0)
         assert_eq!(display_data.host_state.command_results.len(), 1);
     });
 
-    // Wait longer for all partial responses to complete (message is split into many chunks)
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_millis(2000));
     
-    // Verify final result - Update command returns hidden result on success
     harness.verify_command_result(&module_id, |result| {
         assert_eq!(result.progress, 100);
         assert_eq!(result.criticality, Criticality::Normal);
@@ -320,7 +316,6 @@ fn test_refresh_error() {
         assert_eq!(display_data.host_state.command_results.len(), 1);
     });
 
-    // Wait for all partial responses to complete
     loop {
         harness.verify_next_ui_update(|display_data| {
             let result = &display_data.host_state.command_results[&module_id];
