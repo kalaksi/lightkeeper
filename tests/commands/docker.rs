@@ -389,7 +389,7 @@ fn test_compose_start_success() {
     harness.execute_command(&module_id, vec!["/mnt/containers/project1/docker-compose.yml".to_string()]);
 
     harness.verify_next_command_result(&module_id, |result| {
-        assert_eq!(result.criticality, Criticality::Info);
+        assert_eq!(result.criticality, Criticality::Normal);
     });
 }
 
@@ -415,7 +415,31 @@ fn test_compose_start_with_service() {
     ]);
 
     harness.verify_next_command_result(&module_id, |result| {
-        assert_eq!(result.criticality, Criticality::Info);
+        assert_eq!(result.criticality, Criticality::Normal);
+    });
+}
+
+#[test]
+fn test_compose_start_error() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        // TODO: auto-generated responses, check or replace with actual
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/nonexistent/docker-compose.yml" "start""#,
+            "Error: can't find a suitable configuration file", 1)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (compose::Start::get_metadata(), compose::Start::new_command_module),
+    );
+
+    let module_id = compose::Start::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["/nonexistent/docker-compose.yml".to_string()]);
+
+    harness.verify_next_error(&module_id, |error| {
+        assert_eq!(error.criticality, Criticality::Error);
+        assert!(error.message.contains("can't find") || error.message.contains(&module_id));
     });
 }
 
