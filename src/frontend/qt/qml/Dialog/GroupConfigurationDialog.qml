@@ -510,7 +510,7 @@ LightkeeperDialog {
 
     InputDialog {
         id: connectorAddDialog
-        width: parent.width
+        width: 500
         height: 200
         inputSpecs: [{
             label: "Connector module",
@@ -545,7 +545,7 @@ LightkeeperDialog {
 
     InputDialog {
         id: monitorAddDialog
-        width: parent.width
+        width: 500
         height: 200
         inputSpecs: [{
             label: "Monitoring module",
@@ -580,7 +580,7 @@ LightkeeperDialog {
 
     InputDialog {
         id: commandAddDialog
-        width: parent.width
+        width: 500
         height: 200
         inputSpecs: [{
             label: "Command module",

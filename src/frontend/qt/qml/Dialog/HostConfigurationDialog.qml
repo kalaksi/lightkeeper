@@ -455,7 +455,7 @@ LightkeeperDialog {
 
     InputDialog {
         id: groupAddDialog
-        width: parent.width
+        width: 500
         height: 150
 
         inputSpecs: [{
