@@ -134,6 +134,7 @@ impl MonitoringModule for Images {
             root_point.multivalue.push(point);
         }
 
+        root_point.update_criticality_from_children();
         Ok(root_point)
     }
 }
