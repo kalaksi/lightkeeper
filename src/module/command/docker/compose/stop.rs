@@ -4,7 +4,6 @@
  */
 
 use std::collections::HashMap;
-use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
@@ -41,8 +40,8 @@ impl CommandModule for Stop {
             display_icon: String::from("stop"),
             display_text: String::from("Stop"),
             confirmation_text: String::from("Really stop container?"),
-            // Only displayed if the container is running.
-            depends_on_criticality: vec![Criticality::Normal, Criticality::Info, Criticality::Warning],
+            // Hide if container is stopped (status starts with "Exited").
+            depends_on_no_value: vec![String::from("Exited")],
             ..Default::default()
         }
     }

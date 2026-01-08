@@ -60,6 +60,8 @@ pub struct DisplayOptions {
     pub depends_on_criticality: Vec<Criticality>,
     /// Show only if related monitor's value is one of these.
     pub depends_on_value: Vec<String>,
+    /// Hide if related monitor's value starts with any of these.
+    pub depends_on_no_value: Vec<String>,
     /// Show only if related monitor's tags contain one of these.
     pub depends_on_tags: Vec<String>,
     pub depends_on_no_tags: Vec<String>,

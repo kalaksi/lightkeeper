@@ -318,6 +318,8 @@ impl QAbstractTableModel for PropertyTableModel {
                                       command.display_options.depends_on_criticality.contains(&row_data.value.criticality))
                     .filter(|command| command.display_options.depends_on_value.is_empty() ||
                                       command.display_options.depends_on_value.contains(&row_data.value.value))
+                    .filter(|command| command.display_options.depends_on_no_value.is_empty() ||
+                                      !command.display_options.depends_on_no_value.iter().any(|excluded| row_data.value.value.starts_with(excluded)))
                     .filter(|command| command.display_options.depends_on_tags.iter().all(|tag| row_data.value.tags.contains(tag)))
                     .filter(|command| command.display_options.depends_on_no_tags.iter().all(|tag| !row_data.value.tags.contains(tag)))
                     .collect::<Vec<CommandButtonData>>();
