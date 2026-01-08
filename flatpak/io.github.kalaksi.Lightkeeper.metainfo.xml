@@ -38,6 +38,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.32.1" date="2026-01-08">
+      <description>
+        <ul>
+          <li>Fix ctrl-R not working in shell</li>
+          <li>Fix docker-compose-stop button not always visible</li>
+          <li>Fix some dialog widths</li>
+          <li>Improve error handling</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.32.0" date="2025-11-25">
       <description>
         <ul>
