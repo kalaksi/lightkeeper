@@ -334,7 +334,7 @@ Item {
     }
 
     Shortcut {
-        enabled: root.enableShortcuts
+        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
         sequences: [StandardKey.Refresh, "Ctrl+R"]
         onActivated: {
             let content = root.getCurrentTabContent()
