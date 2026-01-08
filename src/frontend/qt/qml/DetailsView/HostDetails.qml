@@ -268,7 +268,7 @@ Item {
 
     Shortcut {
         enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
-        sequence: StandardKey.Cancel
+        sequences: [StandardKey.Cancel]
         onActivated: root.close()
     }
 
