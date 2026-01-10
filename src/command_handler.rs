@@ -691,9 +691,13 @@ impl CommandHandler {
             return None;
         };
 
-        let command = commands.get(host_id).unwrap()
-                              .get(command_id).unwrap();
-        Some(CommandButtonData::new(command_id.clone(), command.get_display_options()))
+
+        if let Some(command) = commands.get(host_id).and_then(|c| c.get(command_id)) {
+            Some(CommandButtonData::new(command_id.clone(), command.get_display_options()))
+        }
+        else {
+            None
+        }
     }
 
     pub fn write_file(&mut self, local_file_path: &String, new_contents: Vec<u8>) {
