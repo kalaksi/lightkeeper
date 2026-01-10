@@ -111,7 +111,7 @@ Item {
         }
 
         // For file browser.
-        function onFileBrowserNavigated(invocationId) {
+        function onFileBrowserNavigated(invocationId, directory) {
             // Check if a file browser tab already exists
             if (root.hostId in root._tabContents) {
                 for (let i = 0; i < root._tabContents[root.hostId].length; i++) {
@@ -129,6 +129,7 @@ Item {
                 "component": fileBrowserView.createObject(root._tabStacks[root.hostId], {
                     hostId: root.hostId,
                     pendingInvocation: invocationId,
+                    pendingPath: directory,
                 })
             }
 

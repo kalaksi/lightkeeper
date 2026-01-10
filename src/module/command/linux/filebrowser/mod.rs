@@ -4,5 +4,5 @@
  */
 
 pub mod ls;
-pub use ls::FileBrowser;
+pub use ls::FileBrowserLs;
 

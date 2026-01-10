@@ -61,7 +61,7 @@ pub struct CommandHandlerModel {
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
     textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
-    fileBrowserNavigated: qt_signal!(invocation_id: u64),
+    fileBrowserNavigated: qt_signal!(invocation_id: u64, directory: QString),
     commandOutputViewOpened: qt_signal!(invocation_id: u64, title: QString, text: QString, error_text: QString, progress: u32),
     logsViewOpened: qt_signal!(time_controls: bool, title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
     commandExecuted: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
@@ -286,9 +286,10 @@ impl CommandHandlerModel {
                 }
             },
             UIAction::FileBrowser => {
+                let directory = parameters.first().unwrap().clone().into();
                 let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
-                    self.fileBrowserNavigated(invocation_id)
+                    self.fileBrowserNavigated(invocation_id, directory)
                 }
             },
             UIAction::TextEditor => {
@@ -326,13 +327,12 @@ impl CommandHandlerModel {
 
     fn listFiles(&mut self, host_id: QString, path: QString) -> u64 {
         let host_id = host_id.to_string();
-        let path = path.to_string();
-        let parameters = vec![path];
+        let parameters = vec![path.to_string()];
         let command_id = String::from("linux-filebrowser-ls");
         let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
 
         if invocation_id > 0 {
-            self.fileBrowserNavigated(invocation_id);
+            self.fileBrowserNavigated(invocation_id, path);
         }
         
         invocation_id

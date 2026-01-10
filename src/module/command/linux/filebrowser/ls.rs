@@ -20,17 +20,17 @@ use serde_json::{json, Value};
     version="0.0.1",
     description="List files and directories.",
 )]
-pub struct FileBrowser {
+pub struct FileBrowserLs {
 }
 
-impl Module for FileBrowser {
+impl Module for FileBrowserLs {
     fn new(_settings: &HashMap<String, String>) -> Self {
-        FileBrowser {
+        FileBrowserLs {
         }
     }
 }
 
-impl CommandModule for FileBrowser {
+impl CommandModule for FileBrowserLs {
     fn get_connector_spec(&self) -> Option<ModuleSpecification> {
         Some(ModuleSpecification::connector("ssh", "0.0.1"))
     }
@@ -94,11 +94,22 @@ fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
         
         // Handle names with spaces - everything from index 7 onwards is the name
         let name = name_parts.join(" ");
-        let is_directory = permissions.starts_with('d');
+        
+        // Determine file type from permissions first character
+        let file_type = match permissions.chars().next() {
+            Some('d') => "d",  // directory
+            Some('l') => "l",  // symbolic link
+            Some('c') => "c",  // character device
+            Some('b') => "b",  // block device
+            Some('p') => "p",  // named pipe (FIFO)
+            Some('s') => "s",  // socket
+            Some('-') => "f",  // regular file
+            _ => "f",          // default to file
+        };
         
         entries.push(json!({
             "name": name,
-            "isDirectory": is_directory,
+            "type": file_type,
             "size": size,
             "date": date,
             "time": time,
