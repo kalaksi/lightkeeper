@@ -67,6 +67,7 @@ pub fn init_resources() {
             "images/breeze/dark/project-open.svg" as "images/button/project-open",
             // "images/breeze/dark/office-chart-bar-stacked.svg" as "images/button/charts",
             "images/breeze/dark/office-chart-area-stacked.svg" as "images/button/charts",
+            "images/breeze/dark/view-list-tree.svg" as "images/button/view-list-tree",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
@@ -158,6 +159,7 @@ pub fn init_resources() {
             "images/breeze/light/project-open.svg" as "images/button/project-open",
             // "images/breeze/light/office-chart-bar-stacked.svg" as "images/button/charts",
             "images/breeze/light/office-chart-area-stacked.svg" as "images/button/charts",
+            "images/breeze/light/view-list-tree.svg" as "images/button/view-list-tree",
 
             // Host icons
             "images/breeze/light/preferences-system-linux.svg" as "images/host/linux",
