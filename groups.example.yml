@@ -30,6 +30,7 @@ groups:
     commands:
       logs: {}
       linux-shell: {}
+      linux-filebrowser-ls: {}
       shutdown: {}
       reboot: {}
       linux-packages-clean: {}

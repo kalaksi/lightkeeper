@@ -175,6 +175,7 @@ pub enum UIAction {
     Terminal,
     TextEditor,
     FollowOutput,
+    FileBrowser,
 }
 
 impl Default for UIAction {

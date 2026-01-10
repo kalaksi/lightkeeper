@@ -33,6 +33,7 @@ pub struct CommandHandlerModel {
     execute: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executeConfirmed: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
+    listFiles: qt_method!(fn(&self, host_id: QString, path: QString) -> u64),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
     hasFileChanged: qt_method!(fn(&self, local_file_path: QString, contents: QString) -> bool),
@@ -60,6 +61,7 @@ pub struct CommandHandlerModel {
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
     textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
+    fileBrowserNavigated: qt_signal!(invocation_id: u64),
     commandOutputViewOpened: qt_signal!(invocation_id: u64, title: QString, text: QString, error_text: QString, progress: u32),
     logsViewOpened: qt_signal!(time_controls: bool, title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
     commandExecuted: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
@@ -283,6 +285,12 @@ impl CommandHandlerModel {
                     self.command_handler.open_external_terminal(&host_id, &command_id, parameters);
                 }
             },
+            UIAction::FileBrowser => {
+                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                if invocation_id > 0 {
+                    self.fileBrowserNavigated(invocation_id)
+                }
+            },
             UIAction::TextEditor => {
                 let remote_file_path = parameters.first().unwrap().clone();
                 if self.configuration.preferences.use_remote_editor {
@@ -314,6 +322,20 @@ impl CommandHandlerModel {
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
         self.command_handler.execute(&host_id, &command_id, &parameters)
+    }
+
+    fn listFiles(&mut self, host_id: QString, path: QString) -> u64 {
+        let host_id = host_id.to_string();
+        let path = path.to_string();
+        let parameters = vec![path];
+        let command_id = String::from("linux-filebrowser-ls");
+        let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+
+        if invocation_id > 0 {
+            self.fileBrowserNavigated(invocation_id);
+        }
+        
+        invocation_id
     }
 
     fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64 {

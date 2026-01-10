@@ -67,7 +67,12 @@ CategoryGroupBox {
             Layout.bottomMargin: Theme.spacingLoose
 
             onClicked: function(buttonId, commandId, params) {
-                LK.command.execute(buttonId, root.hostId, commandId, params)
+                if (commandId === "linux-filebrowser-ls") {
+                    let path = (params && params.length > 0) ? params[0] : "/"
+                    LK.command.listFiles(root.hostId, path)
+                } else {
+                    LK.command.execute(buttonId, root.hostId, commandId, params)
+                }
             }
         }
 
@@ -185,7 +190,12 @@ CategoryGroupBox {
             Layout.fillWidth: true
 
             onButtonClicked: function(buttonId, commandId, params) {
-                LK.command.execute(buttonId, root.hostId, commandId, params)
+                if (commandId === "linux-filebrowser-ls") {
+                    let path = (params && params.length > 0) ? params[0] : "/"
+                    LK.command.listFiles(root.hostId, path)
+                } else {
+                    LK.command.execute(buttonId, root.hostId, commandId, params)
+                }
             }
         }
     }

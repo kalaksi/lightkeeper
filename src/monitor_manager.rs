@@ -20,6 +20,7 @@ use crate::module::ModuleFactory;
 use crate::host_manager::{StateUpdateMessage, HostManager};
 use crate::connection_manager::{ ConnectorRequest, RequestType };
 
+/// Certificate monitor is implemented as a special internal host.
 pub const CERT_MONITOR_HOST_ID: &str = "_cert-monitor";
 
 

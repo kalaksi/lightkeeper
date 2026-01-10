@@ -18,6 +18,7 @@ Item {
     property bool showSaveButton: false
     property bool disableSaveButton: false
     property bool showCharts: false
+    property string hostId: ""
     property var tabs: []
     property alias tabIndex: tabBar.currentIndex
     property bool _maximized: false

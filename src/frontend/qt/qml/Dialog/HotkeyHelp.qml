@@ -45,7 +45,8 @@ LightkeeperDialog {
                     ["F5, Ctrl + R", "Refresh"],
                     ["Ctrl or Alt + 1, 2, 3...", "Switch tabs"],
                     ["Ctrl + W", "Close tab"],
-                    ["Ctrl + T", "Open host shell in new tab\n(if linux-shell module is in use)"]
+                    ["Ctrl + T", "Open host shell in new tab\n(if linux-shell module is in use)"],
+                    ["Ctrl + Y", "Open file browser in new tab"]
                 ]
 
                 Row {

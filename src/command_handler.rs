@@ -463,7 +463,8 @@ impl CommandHandler {
                     UIAction::TextView |
                     UIAction::TextDialog |
                     UIAction::LogView |
-                    UIAction::LogViewWithTimeControls =>
+                    UIAction::LogViewWithTimeControls |
+                    UIAction::FileBrowser =>
                         Self::process_command_response(command, new_state_update_sender, response),
                     UIAction::TextEditor => {
                         match response.request_type.clone() {

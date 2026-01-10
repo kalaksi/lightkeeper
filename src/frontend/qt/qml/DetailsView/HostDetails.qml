@@ -110,6 +110,31 @@ Item {
             tabData.component.open(command)
         }
 
+        // For file browser.
+        function onFileBrowserNavigated(invocationId) {
+            // Check if a file browser tab already exists
+            if (root.hostId in root._tabContents) {
+                for (let i = 0; i < root._tabContents[root.hostId].length; i++) {
+                    let tabData = root._tabContents[root.hostId][i]
+                    if (tabData.component instanceof HostDetailsFileBrowserView) {
+                        // Tab already exists, do nothing
+                        return
+                    }
+                }
+            }
+
+            // Create new file browser tab
+            let tabData = {
+                "title": "File browser",
+                "component": fileBrowserView.createObject(root._tabStacks[root.hostId], {
+                    hostId: root.hostId,
+                    pendingInvocation: invocationId,
+                })
+            }
+
+            root.createNewTab(tabData)
+        }
+
         function onCommandOutputViewOpened(invocationId, title, text, errorText, progress) {
             let tabData = {
                 "title": title,
@@ -158,6 +183,7 @@ Item {
         showRefreshButton: root.getCurrentTabContent() !== undefined && root.getCurrentTabContent().refreshContent !== undefined
         showSaveButton: root.getCurrentTabContent() !== undefined && root.getCurrentTabContent().save !== undefined
         showCharts: root.showCharts
+        hostId: root.hostId
         disableSaveButton: true
 
         onRefreshClicked: root.getCurrentTabContent().refreshContent()
@@ -249,6 +275,13 @@ Item {
         id: terminalView
 
         HostDetailsTerminalView {
+        }
+    }
+
+    Component {
+        id: fileBrowserView
+
+        HostDetailsFileBrowserView {
         }
     }
 
@@ -348,6 +381,12 @@ Item {
         enabled: root.enableShortcuts
         sequence: "Ctrl+T"
         onActivated: LK.command.executeConfirmed("", root.hostId, "linux-shell", {})
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequence: "Ctrl+Y"
+        onActivated: LK.command.executeConfirmed("", root.hostId, "linux-filebrowser-ls", ["/"])
     }
 
 
