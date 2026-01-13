@@ -107,12 +107,14 @@ fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
             _ => "f",          // default to file
         };
         
+        // Merge date and time into a single time field
+        let time_combined = format!("{} {}", date, time);
+
         entries.push(json!({
             "name": name,
             "type": file_type,
             "size": size,
-            "date": date,
-            "time": time,
+            "time": time_combined,
             "permissions": permissions,
             "owner": owner,
             "group": group,

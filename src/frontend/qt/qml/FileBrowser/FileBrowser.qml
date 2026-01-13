@@ -1,7 +1,8 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
-import Qt.labs.qmlmodels
+import QtQuick.Layouts
+
 
 Item {
     id: root
@@ -13,16 +14,18 @@ Item {
     property int arrowWidth: 20
     property int nameColumnWidth: 200
     property var columnHeaders: ["Column 1", "Column 2"]
-    property var columnWidths: [200, 200]
+    property var columnWidths: [0.6, 0.4]
     property color headerColor: palette.alternateBase
+    property bool useSplitView: false
+    property string selectedDirectory: "/"
 
-    // Cache structure: cache[path] = fileEntries (raw entries from backend)
-    property var _cache: ({})
-    // Track expanded state: expandedPaths[path] = true/false
-    property var _expandedDirs: ({})
     property int _maxColumns: 8
+    property var _cache: ({})
+    property var _expandedDirs: ({})
+    property var _currentTreeView: null
+    property var _currentDirectoryTreeView: null
+    property var _currentFileListView: null
 
-    // Signal for directory expansion with is_cached parameter
     signal directoryExpanded(string path, bool is_cached)
 
     onColumnHeadersChanged: {
@@ -32,228 +35,149 @@ Item {
         }
     }
 
-    // Calculate total width of data columns
-    readonly property int dataColumnsWidth: {
-        var total = 0
-        for (var i = 0; i < columnWidths.length; i++)
-            total += columnWidths[i]
-        return total
+    onColumnWidthsChanged: {
+        if (root.columnWidths.length !== root.columnHeaders.length) {
+            console.error("FileBrowser: columnWidths count does not match columnHeaders count")
+            root.columnWidths = root.columnWidths.slice(0, root.columnHeaders.length)
+        }
     }
 
 
     Column {
+        id: treeViewContainer
         anchors.fill: parent
+        visible: !root.useSplitView
 
-        // Header
-        Rectangle {
+        FileBrowserHeader {
+            id: header
             width: parent.width
-            height: root.rowHeight
-            color: root.headerColor
-
-            Row {
-                anchors.fill: parent
-                anchors.leftMargin: root.arrowWidth
-
-                Label {
-                    width: root.nameColumnWidth
-                    text: "Name"
-                    font: palette.buttonText
-                    verticalAlignment: Text.AlignVCenter
-                    elide: Text.ElideRight
-                }
-
-                Repeater {
-                    model: root.columnHeaders.length
-
-                    Label {
-                        required property int index
-
-                        width: root._getColumnWidth(index + 3)
-                        text: root.columnHeaders[index]
-                        font: palette.buttonText
-                        verticalAlignment: Text.AlignVCenter
-                        elide: Text.ElideRight
-                    }
-                }
+            rowHeight: root.rowHeight
+            arrowWidth: root.arrowWidth
+            columnHeaders: root.columnHeaders
+            headerColor: root.headerColor
+            columnWidthProvider: function(column, totalWidth) {
+                return root._getColumnWidth(column, totalWidth, false)
             }
         }
 
-        TableView {
-            id: tableView
+        FileBrowserTreeView {
+            id: treeView
             width: parent.width
-            height: parent.height - root.rowHeight
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            onWidthChanged: forceLayout()
-            // Somehow shows warning if not using arrow function here.
-            columnWidthProvider: (column) => root._getColumnWidth(column)
-            rowHeightProvider: function(row) {
-                return root.rowHeight
+            height: parent.height - header.height
+            indentWidth: root.indentWidth
+            rowHeight: root.rowHeight
+            arrowWidth: root.arrowWidth
+            headerColor: root.headerColor
+            _cache: root._cache
+            _expandedDirs: root._expandedDirs
+            _maxColumns: root._maxColumns
+            rootPath: "/"
+            columnWidthProvider: function(column, totalWidth) {
+                return root._getColumnWidth(column, totalWidth, false)
             }
 
-            model: TableModel {
-                id: tableModel
-
-                TableModelColumn { display: "name" }
-                TableModelColumn { display: "fullPath" }
-                TableModelColumn { display: "fileType" }
-                // Count matches root._maxColumns, dynamically added.
-                TableModelColumn { display: "column-0" }
-                TableModelColumn { display: "column-1" }
-                TableModelColumn { display: "column-2" }
-                TableModelColumn { display: "column-3" }
-                TableModelColumn { display: "column-4" }
-                TableModelColumn { display: "column-5" }
-                TableModelColumn { display: "column-6" }
-                TableModelColumn { display: "column-7" }
+            onDirectoryExpanded: function(path, is_cached) {
+                root.directoryExpanded(path, is_cached)
             }
 
-            ScrollBar.vertical: ScrollBar {
-                active: true
-            }
-
-            delegate: TableViewDelegate {
-                id: viewDelegate
-
-                property string fullPath: {
-                    if (viewDelegate.row >= 0 && viewDelegate.row < tableModel.rowCount && tableModel.rows) {
-                        let rowData = tableModel.rows[viewDelegate.row]
-                        return rowData && rowData.fullPath ? String(rowData.fullPath) : ""
-                    }
-                    return ""
-                }
-                
-                property string name: {
-                    if (viewDelegate.row >= 0 && viewDelegate.row < tableModel.rowCount && tableModel.rows) {
-                        let rowData = tableModel.rows[viewDelegate.row]
-                        return rowData && rowData.name ? String(rowData.name) : ""
-                    }
-                    return ""
-                }
-                property string fileType: {
-                    if (viewDelegate.row >= 0 && viewDelegate.row < tableModel.rowCount && tableModel.rows) {
-                        let rowData = tableModel.rows[viewDelegate.row]
-                        return rowData && rowData.fileType ? String(rowData.fileType) : ""
-                    }
-                    return ""
-                }
-
-                onClicked: {
-                    if (viewDelegate.fileType === "d") {
-                        root.toggleDirectory(viewDelegate.fullPath)
-                    }
-                }
-
-                contentItem: Item {
-                    Row {
-                        id: nameColumn
-                        visible: viewDelegate.column === 0
-                        height: parent.height
-                        spacing: 4
-
-                        // Arrow/indent area
-                        Item {
-                            id: arrowIndentArea
-                            // TODO: is naive split accurate enough?
-                            property int depth: viewDelegate.fullPath.split("/").length - 1
-
-                            width: root.arrowWidth + (arrowIndentArea.depth * root.indentWidth)
-                            height: parent.height
-
-                            Text {
-                                anchors.left: parent.left
-                                anchors.leftMargin: (arrowIndentArea.depth * root.indentWidth)
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: root.arrowWidth
-                                visible: viewDelegate.fileType === "d"
-                                text: root._expandedDirs[viewDelegate.fullPath] === true ? "▼" : "▶"
-                                font: viewDelegate.font
-                                color: viewDelegate.highlighted ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
-                                verticalAlignment: Text.AlignVCenter
-                            }
-                        }
-
-                        Label {
-                            width: root.nameColumnWidth
-                            text: viewDelegate.model.display
-                            elide: Text.ElideRight
-                            color: viewDelegate.highlighted ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                    }
-
-                    Label {
-                        visible: viewDelegate.column > 2
-                        height: parent.height
-                        text: viewDelegate.model.display
-                        elide: Text.ElideRight
-                        color: viewDelegate.highlighted ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
-                    }
-                }
+            Component.onCompleted: {
+                root._currentTreeView = treeView
             }
         }
     }
 
-    // Sort entries by name, directories first.
-    function _sortEntries(entries) {
-        return [...entries].sort(function(a, b) {
-            if (a.fileType === "d" && b.fileType !== "d") {
-                return -1
+    SplitView {
+        id: splitViewContainer
+        anchors.fill: parent
+        orientation: Qt.Horizontal
+        visible: root.useSplitView
+
+        FileBrowserTreeView {
+            id: directoryTreeView
+            indentWidth: root.indentWidth
+            rowHeight: root.rowHeight
+            arrowWidth: root.arrowWidth
+            headerColor: root.headerColor
+            _cache: root._cache
+            _expandedDirs: root._expandedDirs
+            _maxColumns: root._maxColumns
+            rootPath: "/"
+            hideFiles: true
+            columnWidthProvider: function(column, totalWidth) {
+                return root._getColumnWidth(column, totalWidth, true)
             }
-            else if (a.fileType !== "d" && b.fileType === "d") {
-                return 1
+
+            SplitView.preferredWidth: parent.width * 0.25
+            SplitView.minimumWidth: 100
+
+            onDirectoryExpanded: function(path, is_cached) {
+                root.directoryExpanded(path, is_cached)
             }
-            return a.name.localeCompare(b.name)
-        })
-    }
 
-    // Build table model entries from cache. Path has to exist in cache.
-    function _buildFlatList(normalizedDirPath, depth = 0) {
-        let result = []
-        let entries = root._cache[normalizedDirPath]
-        let sortedEntries = root._sortEntries(entries)
+            onDirectorySelected: function(path) {
+                let normalizedPath = root._normalizePath(path)
+                root.selectedDirectory = normalizedPath
+                if (normalizedPath in root._cache) {
+                    fileListView.refreshView()
+                }
+                else {
+                    root.directoryExpanded(normalizedPath, false)
+                }
+            }
 
-        for (let entry of sortedEntries) {
-            result.push(entry)
-
-            // If directory is expanded, recursively add its children
-            let isExpanded = root._expandedDirs[entry.fullPath] === true
-            if (entry.fileType === "d" && isExpanded) {
-                let children = root._buildFlatList(entry.fullPath, depth + 1)
-                result.push(...children)
+            Component.onCompleted: {
+                root._currentDirectoryTreeView = directoryTreeView
             }
         }
 
-        return result
-    }
+        Column {
+            SplitView.fillWidth: true
 
-    function _getColumnWidth(column) {
-        if (column === 0) {
-            return root.arrowWidth + root.nameColumnWidth
-        }
-        else if (column === 1) {
-            return 0
-        }
-        else if (column === 2) {
-            return 0
-        }
-        else {
-            return root.columnWidths[column - 2] || 0
-        }
-    }
+            FileBrowserHeader {
+                id: fileHeader
+                width: parent.width
+                rowHeight: root.rowHeight
+                arrowWidth: root.arrowWidth
+                columnHeaders: root.columnHeaders
+                headerColor: root.headerColor
+                columnWidthProvider: function(column, totalWidth) {
+                    return root._getColumnWidth(column, totalWidth, false)
+                }
+            }
 
-    function _normalizePath(path) {
-        if (!path.endsWith("/") && path !== "/") {
-            path = path + "/"
+            FileBrowserTreeView {
+                id: fileListView
+                width: parent.width
+                height: parent.height - fileHeader.height
+                indentWidth: root.indentWidth
+                rowHeight: root.rowHeight
+                arrowWidth: root.arrowWidth
+                headerColor: root.headerColor
+                _cache: root._cache
+                _expandedDirs: root._expandedDirs
+                _maxColumns: root._maxColumns
+                rootPath: root.selectedDirectory
+                hideDirectories: true
+                enableDirectoryNavigation: false
+                columnWidthProvider: function(column, totalWidth) {
+                    return root._getColumnWidth(column, totalWidth, false)
+                }
+
+                onDirectoryExpanded: function(path, is_cached) {
+                    root.directoryExpanded(path, is_cached)
+                }
+
+                Component.onCompleted: {
+                    root._currentFileListView = fileListView
+                }
+            }
         }
-        return path
     }
 
     function openDirectory(dirPath, fileEntries) {
         let normalizedPath = root._normalizePath(dirPath)
 
         if (fileEntries !== undefined && fileEntries !== null) {
-            // TODO: save dir path?
             root._cache[normalizedPath] = fileEntries
         }
 
@@ -262,6 +186,32 @@ Item {
         if (normalizedPath in root._cache) {
             root.refreshView()
         }
+    }
+
+    function refreshView() {
+        if (root.useSplitView) {
+            if (root._currentDirectoryTreeView) root._currentDirectoryTreeView.refreshView()
+            if (root._currentFileListView) root._currentFileListView.refreshView()
+        }
+        else {
+            if (root._currentTreeView) root._currentTreeView.refreshView()
+        }
+    }
+
+    function toggleDirectory(normalizedPath) {
+        if (root.useSplitView) {
+            if (root._currentDirectoryTreeView) root._currentDirectoryTreeView.toggleDirectory(normalizedPath)
+        }
+        else {
+            if (root._currentTreeView) root._currentTreeView.toggleDirectory(normalizedPath)
+        }
+    }
+
+    function clearCache() {
+        root._cache = {}
+        root._expandedDirs = {}
+        root.selectedDirectory = "/"
+        root.refreshView()
     }
 
     function buildEntry(directory, name, fileType, columnData) {
@@ -275,24 +225,22 @@ Item {
         }
 
         let fullPath = directory === "/" ? "/" + name : directory + name
-        if (fileType === "d" && !fullPath.endsWith("/")) {
-            fullPath = fullPath + "/"
+        let fullPathStr = String(fullPath)
+        if (fileType === "d" && !fullPathStr.endsWith("/")) {
+            fullPath = fullPathStr + "/"
         }
 
-        // Create row object with properties matching column headers for TableModel
         let result = {
             name: name,
             fullPath: fullPath,
             fileType: fileType
         };
 
-        // Add column values as direct properties, pad to _maxColumns
         for (let i = 0; i < root._maxColumns; i++) {
             if (i < columnData.length) {
                 result["column-" + i] = columnData[i]
             }
             else {
-                // Pad with empty string for missing columns
                 result["column-" + i] = ""
             }
         }
@@ -300,37 +248,44 @@ Item {
         return result
     }
 
-    function refreshView() {
-        tableModel.clear()
-
-        let flatList = root._buildFlatList("/")
-        for (let row of flatList) {
-            tableModel.appendRow(row)
+    function _normalizePath(path) {
+        let pathStr = String(path)
+        if (!pathStr.endsWith("/") && pathStr !== "/") {
+            path = pathStr + "/"
         }
+        return path
     }
 
-    // Toggle directory expansion
-    function toggleDirectory(normalizedPath) {
-        let isCurrentlyExpanded = root._expandedDirs[normalizedPath] === true
-        let isCached = root._cache[normalizedPath] !== undefined
-
-        if (isCurrentlyExpanded) {
-            root._expandedDirs[normalizedPath] = false
+    function _getColumnWidth(column, tableViewWidth, hideColumns) {
+        if (column === 0) {
+            if (hideColumns) {
+                return tableViewWidth
+            }
+            return tableViewWidth * 0.4
+        }
+        else if (column === 1) {
+            return 0
+        }
+        else if (column === 2) {
+            return 0
         }
         else {
-            root._expandedDirs[normalizedPath] = true
-            root.directoryExpanded(normalizedPath, isCached)
-        }
+            if (hideColumns) {
+                return 0
+            }
 
-        if (isCached) {
-            root.refreshView()
-        }
-    }
+            let columnIndex = column - 3
+            if (columnIndex < 0 || columnIndex >= root.columnHeaders.length) {
+                return 0
+            }
 
-    // Clear the cache
-    function clearCache() {
-        root._cache = {}
-        root._expandedDirs = {}
-        tableModel.clear()
+            let totalPercentage = root.columnWidths.reduce((acc, width) => acc + width, 0)
+            if (totalPercentage <= 0.0) {
+                return 0
+            }
+
+            let columnPercentage = root.columnWidths[columnIndex] || 0.0
+            return (tableViewWidth * 0.6) * (columnPercentage / totalPercentage)
+        }
     }
 }

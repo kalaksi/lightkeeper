@@ -69,6 +69,8 @@ pub fn init_resources() {
             "Dialog/PreferencesDialog.qml",
             "Dialog/TextDialog.qml",
             "FileBrowser/FileBrowser.qml",
+            "FileBrowser/FileBrowserHeader.qml",
+            "FileBrowser/FileBrowserTreeView.qml",
             "js/Parse.js",
             "js/TextTransform.js",
             "js/Test.js",

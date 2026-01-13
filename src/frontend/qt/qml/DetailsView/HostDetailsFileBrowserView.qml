@@ -50,7 +50,7 @@ Item {
                     dirPath,
                     entry.name,
                     entry.type,
-                    [entry.size, entry.date, entry.time, entry.permissions, entry.owner, entry.group]
+                    [entry.size, entry.time, entry.permissions, entry.owner, entry.group]
                 ))
 
                 fileBrowser.openDirectory(dirPath, browserEntries)
@@ -67,8 +67,9 @@ Item {
         id: fileBrowser
         anchors.fill: parent
         visible: !root._loading
-        columnHeaders: ["Size", "Date", "Time", "Permissions", "Owner", "Group"]
-        columnWidths: [80, 100, 80, 100, 80, 80]
+        columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
+        columnWidths: [0.1, 0.3, 0.2, 0.2, 0.2]
+        useSplitView: true
 
         onDirectoryExpanded: function(path, is_cached) {
             if (!is_cached) {
