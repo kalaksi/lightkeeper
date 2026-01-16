@@ -807,7 +807,12 @@ pub struct CommandButtonData {
 }
 
 impl CommandButtonData {
-    pub fn new(command_id: String, display_options: DisplayOptions) -> Self {
+    pub fn new(command_id: String, mut display_options: DisplayOptions) -> Self {
+        // Append "..." to tooltip for commands that require input or confirmation.
+        if !display_options.user_parameters.is_empty() || !display_options.confirmation_text.is_empty() {
+            display_options.display_text.push_str("...");
+        }
+
         CommandButtonData {
             command_id: command_id,
             command_params: Vec::new(),
