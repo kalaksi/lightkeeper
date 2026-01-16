@@ -1,9 +1,11 @@
 import QtQuick
 import QtQuick.Controls
+import org.kde.syntaxhighlighting 1.0
 
 import Theme
 
 import ".."
+import "../js/Utils.js" as Utils
 
 
 Item {
@@ -12,11 +14,15 @@ Item {
     property var text: ""
     property string commandId: ""
     property int pendingInvocation: 0
-
+    property string _detectedLanguage: Utils.detectLanguageFromPath(root.localFilePath)
 
     signal saved(commandId: string, localFilePath: string, content: string)
     signal closed(localFilePath: string)
     signal contentChanged(localFilePath: string, newContent: string)
+
+    onLocalFilePathChanged: {
+        root._detectedLanguage = Utils.detectLanguageFromPath(root.localFilePath)
+    }
 
     Connections {
         target: LK.hosts
@@ -70,6 +76,25 @@ Item {
             font.family: "monospace"
 
             onTextChanged: root.activate()
+
+            SyntaxHighlighter {
+                id: syntaxHighlighter
+                textEdit: textEdit
+                definition: root._detectedLanguage || ""
+
+                Component.onCompleted: {
+                    let darkThemes = ["GitHub Dark", "Breeze Dark", "Solarized Dark"]
+                    for (let i = 0; i < darkThemes.length; i++) {
+                        let theme = Repository.theme(darkThemes[i])
+                        if (theme.name !== "") {
+                            syntaxHighlighter.theme = theme
+                            return
+                        }
+                    }
+                    // Fallback to default.
+                    syntaxHighlighter.theme = Repository.defaultTheme()
+                }
+            }
         }
     }
 

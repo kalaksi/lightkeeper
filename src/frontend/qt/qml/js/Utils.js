@@ -31,3 +31,103 @@ function getLocalTimezoneISOString(now) {
 
     return year + '-' + month + '-' + day + 'T' + hours + ':' + minutes + ':' + seconds;
 }
+
+/// Detects language definition name for SyntaxHighlighter based on file path.
+/// Returns language name string or empty string if unknown.
+function detectLanguageFromPath(filePath) {
+    if (!filePath) {
+        return ""
+    }
+
+    // Extract file extension
+    let lastDot = filePath.lastIndexOf('.')
+    if (lastDot === -1 || lastDot === filePath.length - 1) {
+        return ""
+    }
+
+    let extension = filePath.substring(lastDot + 1).toLowerCase()
+
+    // Locally defined files use hash suffix, so removing it.
+    if (extension.includes('_')) {
+        extension = extension.substring(0, extension.indexOf('_'))
+    }
+
+    // Map common file extensions to SyntaxHighlighter language definitions
+    let extensionMap = {
+        // Scripting languages
+        "sh": "Bash",
+        "bash": "Bash",
+        "zsh": "Bash",
+        "py": "Python",
+        "pyw": "Python",
+        "rb": "Ruby",
+        "pl": "Perl",
+        "php": "PHP",
+        "lua": "Lua",
+        "js": "JavaScript",
+        "jsx": "JavaScript",
+        "ts": "TypeScript",
+        "tsx": "TypeScript",
+        "mjs": "JavaScript",
+        "cjs": "JavaScript",
+
+        "conf": "INI Files",
+        "ini": "INI Files",
+        "cfg": "INI Files",
+        "config": "INI Files",
+        "yaml": "YAML",
+        "yml": "YAML",
+        "toml": "TOML",
+        "json": "JSON",
+        "xml": "XML",
+        "html": "HTML",
+        "htm": "HTML",
+        "xhtml": "HTML",
+
+        // Compiled languages
+        "c": "C",
+        "h": "C",
+        "cpp": "C++",
+        "cxx": "C++",
+        "cc": "C++",
+        "hpp": "C++",
+        "hxx": "C++",
+        "java": "Java",
+        "cs": "C#",
+        "go": "Go",
+        "rs": "Rust",
+        "swift": "Swift",
+        "kt": "Kotlin",
+        "scala": "Scala",
+
+        // Markup and documentation
+        "md": "Markdown",
+        "markdown": "Markdown",
+        "rst": "reStructuredText",
+        "tex": "LaTeX",
+        "css": "CSS",
+        "scss": "SCSS",
+        "sass": "SASS",
+        "less": "LESS",
+
+        // Shell and system files
+        "dockerfile": "Dockerfile",
+        "makefile": "Makefile",
+        "mk": "Makefile",
+        "cmake": "CMake",
+        "cmakecache": "CMake",
+
+        // Data formats
+        "sql": "SQL",
+        "csv": "CSV",
+        "diff": "Diff",
+        "patch": "Diff",
+
+        // Other
+        "log": "Log File",
+        "txt": "",
+        "text": "",
+    }
+
+    return extensionMap[extension] || ""
+}
