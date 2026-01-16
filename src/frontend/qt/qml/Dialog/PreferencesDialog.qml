@@ -287,8 +287,7 @@ LightkeeperDialog {
             TextField {
                 id: terminalAndArgs
                 text: root._preferences.terminal +
-                    (root._preferences.terminalArgs.length > 0 ? " " : "") +
-                    root._preferences.terminalArgs.join(" ")
+                    (root._preferences.terminalArgs.length > 0 ? " " + root._preferences.terminalArgs.join(" ") : "")
                 enabled: !LK.config.isSandboxed()
                 validator: RegularExpressionValidator {
                     regularExpression: /^(internal|[a-zA-Z0-9_\-\.\/\s]+)$/
