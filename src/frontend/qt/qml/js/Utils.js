@@ -131,3 +131,53 @@ function detectLanguageFromPath(filePath) {
 
     return extensionMap[extension] || ""
 }
+
+/// Maps SyntaxHighlighter language names to Ace editor mode names.
+/// Returns Ace mode name string or "text" if unknown.
+function mapLanguageToAceMode(languageName) {
+    if (!languageName) {
+        return "text"
+    }
+
+    let languageMap = {
+        "Bash": "sh",
+        "Python": "python",
+        "Ruby": "ruby",
+        "Perl": "perl",
+        "PHP": "php",
+        "Lua": "lua",
+        "JavaScript": "javascript",
+        "TypeScript": "typescript",
+        "INI Files": "ini",
+        "YAML": "yaml",
+        "TOML": "toml",
+        "JSON": "json",
+        "XML": "xml",
+        "HTML": "html",
+        "C": "c_cpp",
+        "C++": "c_cpp",
+        "Java": "java",
+        "C#": "csharp",
+        "Go": "golang",
+        "Rust": "rust",
+        "Swift": "swift",
+        "Kotlin": "kotlin",
+        "Scala": "scala",
+        "Markdown": "markdown",
+        "reStructuredText": "rst",
+        "LaTeX": "latex",
+        "CSS": "css",
+        "SCSS": "scss",
+        "SASS": "sass",
+        "LESS": "less",
+        "Dockerfile": "dockerfile",
+        "Makefile": "makefile",
+        "CMake": "cmake",
+        "SQL": "sql",
+        "CSV": "plain_text",
+        "Diff": "diff",
+        "Log File": "text"
+    }
+
+    return languageMap[languageName] || "text"
+}

@@ -112,10 +112,12 @@ impl QmlFrontend {
             if is_flatpak {
                 engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml"));
                 engine.add_import_path(QString::from("/app/ChartJs2QML"));
+                engine.add_import_path(QString::from("/app/qml-lighthouse-ace-editor"));
             }
             else {
                 engine.add_import_path(QString::from("./third_party/qmltermwidget"));
                 engine.add_import_path(QString::from("./third_party/ChartJs2QML"));
+                engine.add_import_path(QString::from("./third_party/qml-lighthouse-ace-editor"));
             }
             engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
             engine.set_object_property(QString::from("DesktopPortal"), qt_file_chooser.pinned());

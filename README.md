@@ -92,6 +92,7 @@ The alternative is building from source.
 # If you're missing the runtime and rust extension:
 flatpak install --user runtime/org.kde.Sdk/x86_64/6.10
 flatpak install --user org.kde.Platform/x86_64/6.10
+flatpak install --user io.qt.qtwebengine.BaseApp/x86_64/6.10
 flatpak install --user runtime/org.freedesktop.Sdk.Extension.rust-stable/x86_64/25.08
 
 # Test building: 
@@ -127,6 +128,8 @@ you'll need these packages on Ubuntu 24.04:
 - qml6-module-qt-labs-platform
 - qml6-module-qtcharts
 - qml-module-org-kde-syntaxhighlighting
+- qml6-module-qtwebview
+
 
 ### Building
 For development, run this in repo root:

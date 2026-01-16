@@ -3,8 +3,10 @@ set -eu
 # qmake path can be overridden with this (for cargo and qmetaobject-rs too):
 # export QMAKE="/usr/lib/qt6/bin/qmake"
 
-if [ ! -e third_party/qmltermwidget ] || \
-   [ ! -e third_party/ChartJs2QML ]; then
+if [ ! -e "third_party/qmltermwidget" ] || \
+   [ ! -e "third_party/ChartJs2QML" ] || \
+   [ ! -e "third_party/qml-lighthouse-ace-editor" ] \
+   ; then
 
     git submodule update --init --recursive --remote
 fi

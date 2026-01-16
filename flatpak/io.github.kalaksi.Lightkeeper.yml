@@ -1,4 +1,6 @@
 app-id: io.github.kalaksi.Lightkeeper
+base: io.qt.qtwebengine.BaseApp
+base-version: '6.10'
 runtime: org.kde.Platform
 runtime-version: '6.10'
 sdk: org.kde.Sdk
@@ -14,6 +16,7 @@ finish-args:
   - "--device=dri"
   - "--socket=ssh-auth"
   - "--talk-name=org.kde.StatusNotifierWatcher"
+  - "--env=QTWEBENGINEPROCESS_PATH=/app/bin/QtWebEngineProcess"
 modules:
   # Liboping is needed for oping monitoring module.
   - name: liboping
@@ -55,7 +58,23 @@ modules:
         commit: 2a7720e51f42ed96d48be1f24632e76e2a2889ab
         dest: 'ChartJs2QML'
     build-commands:
-      - cp -a ChartJs2QML /app/ChartJs2QML
+      - rm -rf ChartJs2QML/.git
+      - cp -va ChartJs2QML /app/ChartJs2QML
+  - name: qml-lighthouse-ace-editor
+    buildsystem: simple
+    sources:
+      - type: git
+        url: https://github.com/kalaksi/qml-lighthouse-ace-editor
+        commit: 45d27c37617318da79ef37c8c8a31c75669f6e47
+        dest: 'qml-lighthouse-ace-editor'
+    build-commands:
+      - mkdir -p /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds
+      - cp -a qml-lighthouse-ace-editor/LICENSE /app/qml-lighthouse-ace-editor/ 2>/dev/null || true
+      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-editor.html /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
+      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/AceEditor.qml /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
+      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/qmldir /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
+      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds/LICENSE /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds/
+      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds/src-min-noconflict /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds/
   - name: lightkeeper
     buildsystem: simple
     sources:

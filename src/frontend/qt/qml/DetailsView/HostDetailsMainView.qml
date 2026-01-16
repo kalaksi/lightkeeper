@@ -66,13 +66,12 @@ Item {
 
             HostGroupBox {
                 id: hostGroupBox
-                visible: root._categories.includes("host")
+                visible: root._categories.includes("host") && root._hostDetails && root._hostDetails.host
                 categoryName: "host"
-                // TODO: fix warnings when closing details view.
-                hostId: root._hostDetails.host.name
-                status: root._hostDetails.status
-                fqdn: root._hostDetails.host.fqdn
-                ipAddress: root._hostDetails.host.ip_address
+                hostId: root._hostDetails && root._hostDetails.host ? root._hostDetails.host.name : ""
+                status: root._hostDetails ? root._hostDetails.status : ""
+                fqdn: root._hostDetails && root._hostDetails.host ? root._hostDetails.host.fqdn : ""
+                ipAddress: root._hostDetails && root._hostDetails.host ? root._hostDetails.host.ip_address : ""
 
                 Layout.minimumWidth: root.columnMinimumWidth
                 Layout.maximumWidth: root.columnMaximumWidth

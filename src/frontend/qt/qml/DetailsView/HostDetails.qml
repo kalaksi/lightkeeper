@@ -259,7 +259,7 @@ Item {
     Component {
         id: textEditorView
 
-        HostDetailsTextEditorView {
+        HostDetailsCodeEditorView {
             onSaved: function(commandId, localFilePath, content) {
                 pendingInvocation = LK.command.saveAndUploadFile(root.hostId, commandId, localFilePath, content)
             }

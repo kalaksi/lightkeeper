@@ -48,6 +48,7 @@ pub fn init_resources() {
             "DetailsView/HostDetailsCommandOutputView.qml",
             "DetailsView/HostDetailsTerminalView.qml",
             "DetailsView/HostDetailsTextEditorView.qml",
+            "DetailsView/HostDetailsCodeEditorView.qml",
             "DetailsView/HostDetailsTextView.qml",
             "DetailsView/HostGroupBox.qml",
             "DetailsView/LogList.qml",

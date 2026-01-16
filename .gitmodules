@@ -1,4 +1,4 @@
-# These are third party modules, but forked.
+# These are third party modules. qmltermwidget and ChartJs2QML are forks.
 [submodule "third_party/qmltermwidget"]
 	path = third_party/qmltermwidget
 	url = https://github.com/kalaksi/qmltermwidget.git
@@ -6,3 +6,6 @@
 [submodule "third_party/ChartJs2QML"]
 	path = third_party/ChartJs2QML
 	url = https://github.com/kalaksi/ChartJs2QML.git
+[submodule "third_party/qml-lighthouse-ace-editor"]
+	path = third_party/qml-lighthouse-ace-editor
+	url = https://github.com/kalaksi/qml-lighthouse-ace-editor
