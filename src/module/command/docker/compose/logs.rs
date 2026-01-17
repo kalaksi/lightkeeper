@@ -63,7 +63,7 @@ impl CommandModule for Logs {
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
 
-            command.arguments(vec!["docker", "compose", "-f", compose_file, "logs", "--no-color", "-t"]);
+            command.arguments(vec!["docker", "compose", "-f", compose_file, "logs", "-t"]);
 
             if row_count > 0 {
                 command.arguments(vec!["--tail", &row_count.to_string()]);

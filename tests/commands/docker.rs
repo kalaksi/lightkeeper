@@ -541,7 +541,7 @@ fn test_compose_restart_error() {
 fn test_compose_logs_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         // TODO: auto-generated responses, check or replace with actual
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "logs" "--no-color" "-t" "--tail" "1000" "service1""#,
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "logs" "-t" "--tail" "1000" "service1""#,
             r#"project1-service1-1  | 2025-12-01T10:00:00.000Z Starting service
 project1-service1-1  | 2025-12-01T10:00:01.000Z Service started successfully"#, 0)
     };
@@ -575,7 +575,7 @@ project1-service1-1  | 2025-12-01T10:00:01.000Z Service started successfully"#, 
 fn test_compose_logs_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         // TODO: auto-generated responses, check or replace with actual
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "logs" "--no-color" "-t" "--tail" "1000" "nonexistent""#,
+        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "logs" "-t" "--tail" "1000" "nonexistent""#,
             "Error: no such service: nonexistent", 1)
     };
 
