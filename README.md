@@ -40,6 +40,29 @@ Just press Ctrl-T to open a terminal in a new tab.
 </p>
 <br />
 
+# Table of contents
+
+- [Some features](#some-features)
+- [Some background](#some-background)
+- [Installing](#installing)
+   - [Flatpak](#flatpak)
+- [Building from source](#building-from-source)
+   - [Flatpak](#flatpak-1)
+   - [Regular](#regular)
+      - [Dependencies](#dependencies)
+      - [Building](#building)
+      - [Post-install](#post-install)
+   - [Packaging tips (other than flatpak)](#packaging-tips-other-than-flatpak)
+- [Server OS support](#server-os-support)
+- [Configuration](#configuration)
+   - [Configuration files](#configuration-files)
+- [Debug logging](#debug-logging)
+- [Testing](#testing)
+- [License](#license)
+   - [Lightkeeper](#lightkeeper)
+   - [Crate dependencies](#crate-dependencies)
+   - [Liboping](#liboping)
+
 ## Some features
 - Monitor status changes periodically and get alert notifications.
 - Monitor certificate validity and expiration.
@@ -50,28 +73,10 @@ Just press Ctrl-T to open a terminal in a new tab.
 - Follow console output for longer running commands such as container builds and package updates.
 
 ## Some background
-The idea for Lightkeeper rose from personal needs. Writing the same commands over the years can get tiresome and feel slow, even if utilizing shell's command history.  
-Another pain point was monitoring. Configuring and maintaining a software stack for relatively simple monitoring needs (graphs, alerts) can get needlessly heavy. Specifically, in my case, I aim to replace CollectD, InfluxDB and Grafana (although, an external DB would still be possible with Lightkeeper).  
+Writing the same commands over the years can get tiresome and feel slow, even if utilizing shell's command history.  
+Another pain point is monitoring. Configuring and maintaining a software stack for relatively simple monitoring needs (graphs, alerts) can get needlessly heavy. Specifically, in my case, I aim to replace CollectD, InfluxDB and Grafana.  
   
-So, I started formulating an idea about a more integrated maintenance tool for power users to simplify everything. At the same time, deploying should be as simple as possible since the aim is to streamline. The plain old shell doesn't need additional daemons on the servers so Lightkeeper shouldn't either.  
-
-# Table of contents
-
-- [Installing](#installing)
-   - [Flatpak](#flatpak)
-- [Building from source](#building-from-source)
-   - [Flatpak](#flatpak-1)
-   - [Regular](#regular)
-      - [Post-install](#post-install)
-- [Server OS support](#server-os-support)
-- [Configuration](#configuration)
-   - [Configuration files](#configuration-files)
-- [Debug logging](#debug-logging)
-- [Testing](#testing)
-- [License](#license)
-   - [Lightkeeper](#lightkeeper)
-   - [Crate dependencies](#crate-dependencies)
-   - [Liboping](#liboping)
+Lightkeeper is an maintenance tool for power users to simplify everything. At the same time, deploying should be as simple as possible since the aim is to streamline. The plain old shell doesn't need additional daemons on the servers so Lightkeeper shouldn't either.  
 
 
 # Installing
@@ -97,7 +102,7 @@ flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.L
 ```
 
 ## Regular
-Dependencies are:
+### Dependencies
 - Qt 6.10
 - liboping
 - libdbus
@@ -123,12 +128,13 @@ you'll need these packages on Ubuntu 24.04:
 - qml6-module-qtcharts
 - qml-module-org-kde-syntaxhighlighting
 
-Building:
+### Building
+For development, run this in repo root:
 ```
 ./build.sh
 ```
 
-Running:
+For running:
 ```
 ./run.sh
 ```
@@ -138,6 +144,13 @@ If you're getting error about missing qmake, you'll have to point cargo to corre
 [env]
 QMAKE = "/usr/lib/qt6/bin/qmake"
 ```
+
+## Packaging tips (other than flatpak)
+Flatpak manifest `flatpak/io.github.kalaksi.Lightkeeper.yml` can be helpful for understanding needed build steps.  
+QML modules in `third_party/` have to be made available in runtime so that Qt can find and include them appropriately.  
+  
+(`qml_frontend.rs` also defines some additional import paths for finding them).
+
 
 ### Post-install
 
