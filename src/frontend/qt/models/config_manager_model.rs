@@ -194,7 +194,16 @@ impl ConfigManagerModel {
         self.main_config.preferences.use_remote_editor = preferences.value("useRemoteEditor".into(), false.into()).to_bool();
         self.main_config.preferences.remote_text_editor = preferences.value("remoteTextEditor".into(), QString::from("vim").into()).to_qbytearray().to_string();
         self.main_config.preferences.sudo_remote_editor = preferences.value("sudoRemoteEditor".into(), false.into()).to_bool();
-        self.main_config.preferences.text_editor = preferences.value("textEditor".into(), QString::from("kate").into()).to_qbytearray().to_string();
+        let text_editor = preferences.value("textEditor".into(), QString::from("kate").into()).to_qbytearray().to_string();
+        // In sandboxed mode, only allow "internal" or "internal-simple"
+        if self.main_config.preferences.use_sandbox_mode 
+            && text_editor != configuration::INTERNAL 
+            && text_editor != configuration::INTERNAL_SIMPLE {
+
+            self.main_config.preferences.text_editor = configuration::INTERNAL.to_string();
+        } else {
+            self.main_config.preferences.text_editor = text_editor;
+        }
         self.main_config.preferences.terminal = preferences.value("terminal".into(), QString::from("xterm").into()).to_qbytearray().to_string();
         self.main_config.preferences.terminal_args = preferences.value("terminalArgs".into(), QString::from("-e").into()).to_qbytearray().to_string()
                                                                 .split(' ').map(|arg| arg.to_string()).collect();
@@ -293,7 +302,11 @@ impl ConfigManagerModel {
         if self.main_config.preferences.use_sandbox_mode != use_sandbox_mode {
             self.main_config.preferences.use_sandbox_mode = use_sandbox_mode;
             if use_sandbox_mode {
-                self.main_config.preferences.text_editor = configuration::INTERNAL.to_string();
+                if self.main_config.preferences.text_editor != configuration::INTERNAL 
+                    && self.main_config.preferences.text_editor != configuration::INTERNAL_SIMPLE {
+
+                    self.main_config.preferences.text_editor = configuration::INTERNAL.to_string();
+                }
                 self.main_config.preferences.terminal = configuration::INTERNAL.to_string();
                 self.main_config.preferences.terminal_args = Vec::new();
             }

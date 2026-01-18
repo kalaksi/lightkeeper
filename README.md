@@ -128,7 +128,7 @@ you'll need these packages on Ubuntu 24.04:
 - qml6-module-qt-labs-platform
 - qml6-module-qtcharts
 - qml-module-org-kde-syntaxhighlighting
-- qml6-module-qtwebview
+- qml6-module-qtwebengine
 
 
 ### Building

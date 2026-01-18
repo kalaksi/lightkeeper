@@ -27,7 +27,7 @@ Item {
 
     PreferencesDialog {
         id: preferencesDialog
-        bottomMargin: 0.15 * parent.height
+        bottomMargin: 0.10 * parent.height
 
         onConfigurationChanged: LK.reload()
     }

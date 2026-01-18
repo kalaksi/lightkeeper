@@ -469,7 +469,8 @@ impl CommandHandler {
                     UIAction::TextEditor => {
                         match response.request_type.clone() {
                             RequestType::Download { .. } => {
-                                if preferences.text_editor == crate::configuration::INTERNAL {
+                                if preferences.text_editor == crate::configuration::INTERNAL 
+                                    || preferences.text_editor == crate::configuration::INTERNAL_SIMPLE {
                                     Self::process_download_for_internal_editor(command, new_state_update_sender, response);
                                 }
                                 else {

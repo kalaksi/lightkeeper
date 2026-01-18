@@ -14,7 +14,7 @@ LightkeeperDialog {
     property bool _loading: true
 
     title: "Preferences"
-    implicitWidth: 600
+    implicitWidth: 650
     implicitHeight: 800
     standardButtons: Dialog.Ok | Dialog.Cancel
 
@@ -23,6 +23,13 @@ LightkeeperDialog {
     onOpened: {
         root._preferences = LK.config.getPreferences()
         root._loading = false
+
+        // Update ComboBox when preferences are loaded
+        Qt.callLater(function() {
+            if (textEditorCombo) {
+                textEditorOther.text = root._preferences.textEditor || ""
+            }
+        })
     }
 
     onAccepted: {
@@ -31,7 +38,10 @@ LightkeeperDialog {
             useRemoteEditor: useRemoteEditor.checkState === Qt.Checked,
             remoteTextEditor: remoteTextEditor.text,
             sudoRemoteEditor: useSudoRemoteEditor.checkState === Qt.Checked,
-            textEditor: textEditor.text,
+            textEditor: (() => {
+                let value = textEditorCombo._getValue(textEditorCombo.currentIndex)
+                return value === "other" ? (textEditorOther.text || "internal") : value
+            })(),
             terminal: terminalAndArgs.text.split(" ")[0],
             terminalArgs: terminalAndArgs.text.split(" ").slice(1).join(" "),
             showStatusBar: showStatusBar.checkState === Qt.Checked,
@@ -182,6 +192,7 @@ LightkeeperDialog {
 
         RowLayout {
             Layout.fillWidth: true
+            visible: useRemoteEditor.checkState === Qt.Checked
 
             Label {
                 text: "Remote text editor"
@@ -204,6 +215,7 @@ LightkeeperDialog {
 
         RowLayout {
             Layout.fillWidth: true
+            visible: useRemoteEditor.checkState === Qt.Checked
 
             Column {
                 Layout.fillWidth: true
@@ -246,18 +258,77 @@ LightkeeperDialog {
 
                 SmallText {
                     width: parent.width
-                    text: "The text editor to use when editing files locally. Integrated editor is always used with flatpak."
+                    text: LK.config.isSandboxed() ? 
+                          "The text editor to use when editing files locally. Only integrated editors are available in flatpak." :
+                          "The text editor to use when editing files locally. Integrated editor is always used with flatpak."
                     color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }
             }
 
+            ComboBox {
+                id: textEditorCombo
+                
+                model: ListModel {
+                    ListElement { display: "internal"; value: "internal" }
+                    ListElement { display: "internal (simple)"; value: "internal-simple" }
+                    ListElement { display: "Other..."; value: "other" }
+                }
+                
+                textRole: "display"
+                
+                delegate: ItemDelegate {
+                    width: textEditorCombo.width
+                    text: model.display
+                    enabled: !LK.config.isSandboxed() || model.value !== "other"
+                }
+                
+                function _getValue(index) {
+                    return model.get(index).value
+                }
+                
+                function _determineCurrentIndex() {
+                    let textEditor = root._preferences.textEditor || "internal"
+                    
+                    if (textEditor === "internal") {
+                        return 0
+                    } else if (textEditor === "internal-simple") {
+                        return 1
+                    } else {
+                        return 2
+                    }
+                }
+                
+                Component.onCompleted: {
+                    currentIndex = _determineCurrentIndex()
+                    // If "Other..." is selected but sandboxed, default to "internal"
+                    if (currentIndex === 2) {
+                        if (LK.config.isSandboxed()) {
+                            currentIndex = 0
+                        } else {
+                            textEditorOther.text = root._preferences.textEditor || ""
+                        }
+                    }
+                }
+
+                Layout.preferredWidth: content.width * 0.35
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            visible: textEditorCombo.currentIndex === 2
+
+            Item {
+                Layout.fillWidth: true
+            }
+
             TextField {
-                id: textEditor
-                text: root._preferences.textEditor
+                id: textEditorOther
                 enabled: !LK.config.isSandboxed()
+                placeholderText: "execute..."
                 validator: RegularExpressionValidator {
-                    regularExpression: /^(internal|[a-zA-Z0-9_\-\.\/\s]+)$/
+                    regularExpression: /^[a-zA-Z0-9_\-\.\/\s]+$/
                 }
 
                 Layout.preferredWidth: content.width * 0.35
@@ -298,6 +369,9 @@ LightkeeperDialog {
         }
 
         RowLayout {
+            // TODO: remove later if not needed?
+            visible: false
+
             Layout.fillWidth: true
 
             Column {

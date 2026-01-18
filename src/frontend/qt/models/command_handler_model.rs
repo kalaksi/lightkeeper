@@ -305,7 +305,9 @@ impl CommandHandlerModel {
                     }
                 }
                 else {
-                    if self.configuration.preferences.text_editor == configuration::INTERNAL {
+                    if self.configuration.preferences.text_editor == configuration::INTERNAL 
+                        || self.configuration.preferences.text_editor == configuration::INTERNAL_SIMPLE {
+
                         let (invocation_id, file_contents) = self.command_handler.download_editable_file(&host_id, &command_id, &remote_file_path); 
                         self.textEditorViewOpened(QString::from(command_id), invocation_id, QString::from(file_contents));
                     }

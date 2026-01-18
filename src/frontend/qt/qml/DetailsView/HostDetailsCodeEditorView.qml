@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 
 import Theme
-import Lighthouse.AceEditor 1.0
 
 import ".."
 import "../js/Utils.js" as Utils
@@ -16,6 +15,16 @@ Item {
     property int pendingInvocation: 0
     property string _detectedLanguage: Utils.detectLanguageFromPath(root.localFilePath)
     property string _aceMode: Utils.mapLanguageToAceMode(root._detectedLanguage)
+    property var aceEditor: null
+    property var aceEditorObject: null
+    property var textEditorItem: null
+    property bool _useSimpleCodeEditor: false
+
+    function _updateUseSimpleCodeEditor() {
+        let preferences = LK.config.getPreferences()
+        let textEditor = preferences.textEditor || "internal"
+        root._useSimpleCodeEditor = textEditor === "internal-simple"
+    }
 
     signal saved(commandId: string, localFilePath: string, content: string)
     signal closed(localFilePath: string)
@@ -44,6 +53,17 @@ Item {
         }
     }
 
+    Component.onCompleted: {
+        root._updateUseSimpleCodeEditor()
+        
+        // Trigger editor creation if container is ready and simple editor is not selected
+        Qt.callLater(function() {
+            if (aceEditorContainer && !root._useSimpleCodeEditor) {
+                aceEditorContainer.createEditor()
+            }
+        })
+    }
+
     Rectangle {
         color: Theme.backgroundColorLight
         anchors.fill: parent
@@ -53,17 +73,125 @@ Item {
         visible: root.text === ""
     }
 
-    AceEditor {
-        id: aceEditor
-        visible: root.text !== ""
+    Item {
+        id: aceEditorContainer
         anchors.fill: parent
         anchors.margins: Theme.spacingLoose
-        content: root.text
-        mode: root._aceMode
+        visible: root.text !== "" && root.aceEditorObject !== null && !root._useSimpleCodeEditor
 
-        onEditorContentChanged: function(newContent) {
-            root.contentChanged(root.localFilePath, newContent)
+        function createEditor() {
+            if (root.aceEditorObject !== null || root._useSimpleCodeEditor) {
+                return
+            }
+            
+            // Create the AceEditor component dynamically using Qt.createQmlObject
+            // This will return null if Lighthouse.AceEditor import is not available
+            let aceEditorQml = "import QtQuick\n" +
+                               "import QtWebEngine\n" +
+                               "import Lighthouse.AceEditor 1.0\n" +
+                               "AceEditor {\n" +
+                               "anchors.fill: parent\n" +
+                               "property var rootItem: null\n" +
+                               "onEditorContentChanged: function(newContent) {\n" +
+                               "if (rootItem) {\n" +
+                               "rootItem.contentChanged(rootItem.localFilePath, newContent)\n" +
+                               "}\n" +
+                               "}\n" +
+                               "Component.onCompleted: {\n" +
+                               "console.log('AceEditor component created, editor visible:', editor.visible)\n" +
+                               "}\n" +
+                               "}"
+            let editorObject = Qt.createQmlObject(aceEditorQml, aceEditorContainer, "aceEditor")
+            if (editorObject !== null) {
+                root.aceEditorObject = editorObject
+                editorObject.rootItem = root
+                // editor is an alias property in AceEditor component
+                root.aceEditor = editorObject["editor"]
+                
+                // Set content and mode after a brief delay to ensure WebEngineView is ready
+                Qt.callLater(function() {
+                    if (editorObject) {
+                        editorObject.content = root.text
+                        editorObject.mode = root._aceMode
+                        console.log("Ace editor created successfully, content length:", root.text.length, "mode:", root._aceMode)
+                    }
+                })
+            } else {
+                console.log("Ace editor not available: Failed to create Ace editor object")
+            }
         }
+
+        Component.onCompleted: {
+            if (!root._useSimpleCodeEditor) {
+                createEditor()
+            }
+        }
+
+        Connections {
+            target: root
+            function on_UseSimpleCodeEditorChanged() {
+                if (root._useSimpleCodeEditor && root.aceEditorObject) {
+                    root.aceEditorObject.destroy()
+                    root.aceEditorObject = null
+                    root.aceEditor = null
+                } else if (!root._useSimpleCodeEditor && root.aceEditorObject === null) {
+                    aceEditorContainer.createEditor()
+                }
+            }
+        }
+    }
+
+    Loader {
+        id: textEditorLoader
+        anchors.fill: parent
+        visible: root.text !== "" && (root.aceEditorObject === null || root._useSimpleCodeEditor)
+        sourceComponent: (root.aceEditorObject === null || root._useSimpleCodeEditor) ? textEditorComponent : null
+
+        onItemChanged: {
+            if (item === null) {
+                root.textEditorItem = null
+            }
+        }
+
+        Component {
+            id: textEditorComponent
+
+            HostDetailsTextEditorView {
+                id: textEditorInstance
+                localFilePath: root.localFilePath
+                text: root.text
+                commandId: root.commandId
+                pendingInvocation: root.pendingInvocation
+
+                Component.onCompleted: {
+                    root.textEditorItem = textEditorInstance
+                }
+
+                onSaved: function(commandId, localFilePath, content) {
+                    root.saved(commandId, localFilePath, content)
+                }
+                onClosed: function(localFilePath) {
+                    root.closed(localFilePath)
+                }
+                onContentChanged: function(localFilePath, newContent) {
+                    root.contentChanged(localFilePath, newContent)
+                }
+            }
+        }
+    }
+
+    Text {
+        id: errorMessage
+        visible: root.text !== "" && root.aceEditorObject === null && !root._useSimpleCodeEditor
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: Theme.spacingLoose
+        wrapMode: Text.Wrap
+        horizontalAlignment: Text.AlignHCenter
+        color: Theme.textColor || "red"
+        text: "Integrated code editor could not be loaded. Possibly because of missing Qt web engine installation.\n"+
+              "You are using a simple text editor instead. To continue using simple editor without this warning, choose \"internal (simple)\" in settings."
     }
 
     Shortcut {
@@ -78,16 +206,26 @@ Item {
             return
         }
 
-        aceEditor.editor.getContent(function(content) {
-            root.saved(root.commandId, root.localFilePath, content)
-        })
+        if (root.aceEditorObject !== null && root.aceEditor && !root._useSimpleCodeEditor) {
+            root.aceEditor.getContent(function(content) {
+                root.saved(root.commandId, root.localFilePath, content)
+            })
+        } else if (root.textEditorItem) {
+            root.textEditorItem.save()
+        }
     }
 
     function activate() {
+        root._updateUseSimpleCodeEditor()
+        
         if (root.pendingInvocation === 0) {
-            aceEditor.editor.getContent(function(content) {
-                root.contentChanged(root.localFilePath, content)
-            })
+            if (root.aceEditorObject !== null && root.aceEditor && !root._useSimpleCodeEditor) {
+                root.aceEditor.getContent(function(content) {
+                    root.contentChanged(root.localFilePath, content)
+                })
+            } else if (root.textEditorItem) {
+                root.textEditorItem.activate()
+            }
         }
     }
 
@@ -102,10 +240,14 @@ Item {
     }
 
     onTextChanged: {
-        aceEditor.content = root.text
+        if (root.aceEditorObject !== null && !root._useSimpleCodeEditor) {
+            root.aceEditorObject.content = root.text
+        }
     }
 
     on_AceModeChanged: {
-        aceEditor.mode = root._aceMode
+        if (root.aceEditorObject !== null && !root._useSimpleCodeEditor) {
+            root.aceEditorObject.mode = root._aceMode
+        }
     }
 }

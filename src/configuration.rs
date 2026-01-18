@@ -23,6 +23,7 @@ pub const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
 pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
+pub const INTERNAL_SIMPLE: &str = "internal-simple";
 pub const CURRENT_SCHEMA_VERSION: u16 = 2;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
