@@ -69,7 +69,7 @@ Item {
                 CommandButton {
                     required property var modelData
 
-                    visible: !root.collapsible || root._showCommands || root._alwaysShownCommandIds.includes(modelData.command_id)
+                    visible: modelData.command_id !== "linux-filebrowser-ls" && (!root.collapsible || root._showCommands || root._alwaysShownCommandIds.includes(modelData.command_id))
                     buttonId: root.createButtonId(modelData)
                     size: root.buttonSize
                     roundButton: root.roundButtons
