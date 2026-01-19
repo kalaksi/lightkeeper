@@ -1,9 +1,13 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 import Theme
 
 import ".."
+import "../Button"
 import "../js/Utils.js" as Utils
 
 
@@ -19,6 +23,7 @@ Item {
     property var aceEditorObject: null
     property var textEditorItem: null
     property bool _useSimpleCodeEditor: false
+    property bool disableSaveButton: true
 
     function _updateUseSimpleCodeEditor() {
         let preferences = LK.config.getPreferences()
@@ -73,9 +78,43 @@ Item {
         visible: root.text === ""
     }
 
+    Rectangle {
+        id: topBar
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 34
+        color: Theme.backgroundColor
+        visible: root.text !== ""
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: Theme.spacingNormal
+            anchors.rightMargin: Theme.spacingNormal
+            anchors.bottomMargin: Theme.spacingTight
+            spacing: Theme.spacingTight
+
+            ImageButton {
+                size: 0.9 * parent.height
+                imageSource: "qrc:/main/images/button/document-save"
+                flatButton: true
+                tooltip: "Save"
+                onClicked: root.save()
+                enabled: !root.disableSaveButton
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
+        }
+    }
+
     Item {
         id: aceEditorContainer
-        anchors.fill: parent
+        anchors.top: topBar.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         visible: root.text !== "" && root.aceEditorObject !== null && !root._useSimpleCodeEditor
 
         function createEditor() {
@@ -94,6 +133,7 @@ Item {
                                "onEditorContentChanged: function(newContent) {\n" +
                                "if (rootItem) {\n" +
                                "rootItem.contentChanged(rootItem.localFilePath, newContent)\n" +
+                               "rootItem.disableSaveButton = !LK.command.hasFileChanged(rootItem.localFilePath, newContent)\n" +
                                "}\n" +
                                "}\n" +
                                "}"
@@ -138,40 +178,53 @@ Item {
         }
     }
 
-    Loader {
-        id: textEditorLoader
-        anchors.fill: parent
+    Rectangle {
+        id: simpleEditorBorder
+        anchors.top: topBar.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         visible: root.text !== "" && (root.aceEditorObject === null || root._useSimpleCodeEditor)
-        sourceComponent: (root.aceEditorObject === null || root._useSimpleCodeEditor) ? textEditorComponent : null
+        color: Theme.backgroundColorLight
+        border.width: 1
+        border.color: Theme.borderColor
 
-        onItemChanged: {
-            if (item === null) {
-                root.textEditorItem = null
+        Loader {
+            id: textEditorLoader
+            anchors.fill: parent
+            anchors.margins: 1
+            sourceComponent: (root.aceEditorObject === null || root._useSimpleCodeEditor) ? textEditorComponent : null
+
+            onItemChanged: {
+                if (item === null) {
+                    root.textEditorItem = null
+                }
             }
-        }
 
-        Component {
-            id: textEditorComponent
+            Component {
+                id: textEditorComponent
 
-            HostDetailsTextEditorView {
-                id: textEditorInstance
-                localFilePath: root.localFilePath
-                text: root.text
-                commandId: root.commandId
-                pendingInvocation: root.pendingInvocation
+                HostDetailsTextEditorView {
+                    id: textEditorInstance
+                    localFilePath: root.localFilePath
+                    text: root.text
+                    commandId: root.commandId
+                    pendingInvocation: root.pendingInvocation
 
-                Component.onCompleted: {
-                    root.textEditorItem = textEditorInstance
-                }
+                    Component.onCompleted: {
+                        root.textEditorItem = textEditorInstance
+                    }
 
-                onSaved: function(commandId, localFilePath, content) {
-                    root.saved(commandId, localFilePath, content)
-                }
-                onClosed: function(localFilePath) {
-                    root.closed(localFilePath)
-                }
-                onContentChanged: function(localFilePath, newContent) {
-                    root.contentChanged(localFilePath, newContent)
+                    onSaved: function(commandId, localFilePath, content) {
+                        root.saved(commandId, localFilePath, content)
+                    }
+                    onClosed: function(localFilePath) {
+                        root.closed(localFilePath)
+                    }
+                    onContentChanged: function(localFilePath, newContent) {
+                        root.contentChanged(localFilePath, newContent)
+                        root.disableSaveButton = !LK.command.hasFileChanged(localFilePath, newContent)
+                    }
                 }
             }
         }
@@ -219,6 +272,7 @@ Item {
             if (root.aceEditorObject !== null && root.aceEditor && !root._useSimpleCodeEditor) {
                 root.aceEditor.getContent(function(content) {
                     root.contentChanged(root.localFilePath, content)
+                    root.disableSaveButton = !LK.command.hasFileChanged(root.localFilePath, content)
                 })
             } else if (root.textEditorItem) {
                 root.textEditorItem.activate()

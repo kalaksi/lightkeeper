@@ -182,16 +182,13 @@ Item {
         showMinimizeButton: true
         showMaximizeButton: true
         showRefreshButton: root.getCurrentTabContent() !== undefined && root.getCurrentTabContent().refreshContent !== undefined
-        showSaveButton: root.getCurrentTabContent() !== undefined && root.getCurrentTabContent().save !== undefined
         showCharts: root.showCharts
         hostId: root.hostId
-        disableSaveButton: true
 
         onRefreshClicked: root.getCurrentTabContent().refreshContent()
         onMaximizeClicked: root.maximizeClicked()
         onMinimizeClicked: root.minimizeClicked()
         onCloseClicked: root.close()
-        onSaveClicked: root.getCurrentTabContent().save()
 
         onTabClosed: function(tabIndex) {
             root.closeTab(tabIndex)
@@ -265,9 +262,6 @@ Item {
             }
             onClosed: function(localFilePath) {
                 LK.command.removeFile(localFilePath)
-            }
-            onContentChanged: function(localFilePath, content) {
-                mainViewHeader.disableSaveButton = !LK.command.hasFileChanged(localFilePath, content)
             }
         }
     }

@@ -15,8 +15,6 @@ Item {
     property bool showMinimizeButton: false
     property bool showMaximizeButton: false
     property bool showOpenInWindowButton: false
-    property bool showSaveButton: false
-    property bool disableSaveButton: false
     property bool showCharts: false
     property string hostId: ""
     property var tabs: []
@@ -32,7 +30,6 @@ Item {
     signal maximizeClicked()
     signal minimizeClicked()
     signal closeClicked()
-    signal saveClicked()
     signal tabClosed(int index)
     signal tabChanged(int oldIndex, int newIndex)
 
@@ -101,16 +98,6 @@ Item {
             visible: root.showOpenInWindowButton
 
             Layout.rightMargin: Theme.spacingNormal
-        }
-
-        ImageButton {
-            size: 0.9 * parent.height
-            imageSource: "qrc:/main/images/button/document-save"
-            flatButton: true
-            tooltip: "Save"
-            onClicked: root.saveClicked()
-            enabled: !root.disableSaveButton
-            visible: root.showSaveButton
         }
 
         // Spacer
