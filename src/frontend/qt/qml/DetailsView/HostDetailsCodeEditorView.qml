@@ -76,7 +76,6 @@ Item {
     Item {
         id: aceEditorContainer
         anchors.fill: parent
-        anchors.margins: Theme.spacingLoose
         visible: root.text !== "" && root.aceEditorObject !== null && !root._useSimpleCodeEditor
 
         function createEditor() {
@@ -96,9 +95,6 @@ Item {
                                "if (rootItem) {\n" +
                                "rootItem.contentChanged(rootItem.localFilePath, newContent)\n" +
                                "}\n" +
-                               "}\n" +
-                               "Component.onCompleted: {\n" +
-                               "console.log('AceEditor component created, editor visible:', editor.visible)\n" +
                                "}\n" +
                                "}"
             let editorObject = Qt.createQmlObject(aceEditorQml, aceEditorContainer, "aceEditor")
@@ -129,6 +125,7 @@ Item {
 
         Connections {
             target: root
+
             function on_UseSimpleCodeEditorChanged() {
                 if (root._useSimpleCodeEditor && root.aceEditorObject) {
                     root.aceEditorObject.destroy()
