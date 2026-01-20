@@ -8,3 +8,6 @@ pub use criticality::Criticality;
 
 pub mod host_status;
 pub use host_status::HostStatus;
+
+pub mod edit_mode;
+pub use edit_mode::EditMode;

@@ -12,6 +12,7 @@ use std::{collections::HashMap, fs, io};
 use serde_derive::{Deserialize, Serialize};
 use serde_yaml;
 
+use crate::enums::EditMode;
 use crate::file_handler;
 use crate::host::HostSetting;
 use crate::module::PlatformInfo;
@@ -65,6 +66,12 @@ pub struct Hosts {
     pub certificate_monitors: Vec<String>,
 }
 
+#[derive(Default, Serialize, Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct EditorPreferences {
+    pub edit_mode: EditMode,
+}
+
 #[derive(Serialize, Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Preferences {
@@ -85,6 +92,8 @@ pub struct Preferences {
     pub show_monitor_notifications: bool,
     #[serde(default)]
     pub show_charts: bool,
+    #[serde(default)]
+    pub editor_preferences: EditorPreferences,
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone)]

@@ -8,9 +8,12 @@ extern crate qmetaobject;
 use qmetaobject::*;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use crate::{
-    configuration::{self, Configuration, Groups, HostSettings, Hosts}, module::{Metadata, ModuleType}
+    configuration::{self, Configuration, Groups, HostSettings, Hosts},
+    enums::EditMode,
+    module::{Metadata, ModuleType}
 };
 
 
@@ -186,6 +189,11 @@ impl ConfigManagerModel {
 
         preferences.insert("showStatusBar".into(), self.main_config.display_options.show_status_bar.into());
         preferences.insert("showCharts".into(), self.main_config.preferences.show_charts.into());
+
+        let mut editor_preferences = QVariantMap::default();
+        editor_preferences.insert("editMode".into(), QString::from(self.main_config.preferences.editor_preferences.edit_mode.to_string()).into());
+        preferences.insert("editorPreferences".into(), editor_preferences.into());
+
         preferences
     }
 
@@ -212,6 +220,13 @@ impl ConfigManagerModel {
         self.main_config.preferences.show_charts = preferences.value("showCharts".into(), false.into()).to_bool();
 
         self.main_config.display_options.show_status_bar = preferences.value("showStatusBar".into(), true.into()).to_bool();
+
+        let editor_prefs_variant = preferences.value("editorPreferences".into(), QVariant::default());
+        if !editor_prefs_variant.is_null() {
+            let editor_prefs_map = editor_prefs_variant.to_qvariantmap();
+            let edit_mode_str = editor_prefs_map.value("editMode".into(), QString::from("regular").into()).to_qbytearray().to_string();
+            self.main_config.preferences.editor_preferences.edit_mode = EditMode::from_str(&edit_mode_str).unwrap_or(EditMode::Regular);
+        }
 
         if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
             self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
