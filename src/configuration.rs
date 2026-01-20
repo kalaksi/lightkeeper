@@ -102,6 +102,9 @@ pub struct DisplayOptions {
     pub show_status_bar: bool,
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub chart_categories: Vec<ChartCategory>,
+    /// TODO/XXX: Obsolete. Moved to Preferences.
+    #[serde(default, skip_serializing_if = "Configuration::always")]
+    pub show_charts: bool,
 }
 
 impl Default for DisplayOptions {
