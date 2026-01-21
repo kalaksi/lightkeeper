@@ -295,13 +295,17 @@ Item {
     }
 
     Shortcut {
-        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
+        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && 
+                 !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView) && 
+                 root.enableShortcuts
         sequences: [StandardKey.Cancel]
         onActivated: root.close()
     }
 
     Shortcut {
-        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
+        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && 
+                 !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView) && 
+                 root.enableShortcuts
         sequences: [StandardKey.Close]
         // Close current tab.
         onActivated: root.closeTab(mainViewHeader.tabIndex)
@@ -362,7 +366,9 @@ Item {
     }
 
     Shortcut {
-        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && root.enableShortcuts
+        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && 
+                 !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView) && 
+                 root.enableShortcuts
         sequences: [StandardKey.Refresh, "Ctrl+R"]
         onActivated: {
             let content = root.getCurrentTabContent()
@@ -379,7 +385,8 @@ Item {
     }
 
     Shortcut {
-        enabled: root.enableShortcuts
+        enabled: root.enableShortcuts && 
+                 !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView)
         sequence: "Ctrl+Y"
         onActivated: LK.command.executeConfirmed("", root.hostId, "linux-filebrowser-ls", ["/"])
     }
