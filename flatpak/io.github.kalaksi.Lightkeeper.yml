@@ -64,12 +64,13 @@ modules:
     buildsystem: simple
     sources:
       - type: git
+        # Follows branch 'main'
         url: https://github.com/kalaksi/qml-lighthouse-ace-editor
-        commit: 45d27c37617318da79ef37c8c8a31c75669f6e47
+        commit: 6b65d8e217da7647a10b8e4725f270b9b72b7c19
         dest: 'qml-lighthouse-ace-editor'
     build-commands:
       - mkdir -p /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds
-      - cp -a qml-lighthouse-ace-editor/LICENSE /app/qml-lighthouse-ace-editor/ 2>/dev/null || true
+      - cp -a qml-lighthouse-ace-editor/LICENSE /app/qml-lighthouse-ace-editor/
       - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-editor.html /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
       - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/AceEditor.qml /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
       - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/qmldir /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
