@@ -1,4 +1,5 @@
 pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -6,8 +7,6 @@ import QtQuick.Layouts
 import Theme
 
 import ".."
-import "../Text"
-import "../StyleOverride"
 import "../FileBrowser"
 
 Item {

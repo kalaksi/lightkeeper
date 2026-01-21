@@ -124,16 +124,16 @@ Item {
             }
 
             // Create new file browser tab
-            let tabData = {
-                "title": "File browser",
-                "component": fileBrowserView.createObject(root._tabStacks[root.hostId], {
-                    hostId: root.hostId,
-                    pendingInvocation: invocationId,
-                    pendingPath: directory,
-                })
-            }
-
-            root.createNewTab(tabData)
+            // TODO: disabled for now
+            // let tabData = {
+            //     "title": "File browser",
+            //     "component": fileBrowserView.createObject(root._tabStacks[root.hostId], {
+            //         hostId: root.hostId,
+            //         pendingInvocation: invocationId,
+            //         pendingPath: directory,
+            //     })
+            // }
+            // root.createNewTab(tabData)
         }
 
         function onCommandOutputViewOpened(invocationId, title, text, errorText, progress) {
@@ -273,12 +273,12 @@ Item {
         }
     }
 
-    Component {
-        id: fileBrowserView
-
-        HostDetailsFileBrowserView {
-        }
-    }
+    // TODO: disabled for now
+    // Component {
+    //     id: fileBrowserView
+    //     HostDetailsFileBrowserView {
+    //     }
+    // }
 
     Component {
         id: chartsView
