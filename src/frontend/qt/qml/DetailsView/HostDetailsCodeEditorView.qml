@@ -123,6 +123,7 @@ Item {
                 text: "Edit mode:"
                 color: Theme.textColor
                 Layout.alignment: Qt.AlignVCenter
+                visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
             }
 
             ComboBox {
@@ -141,6 +142,7 @@ Item {
                 }
                 Layout.preferredWidth: 120
                 Layout.alignment: Qt.AlignVCenter
+                visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
             }
         }
     }
