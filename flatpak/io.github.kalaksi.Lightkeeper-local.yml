@@ -55,7 +55,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/kalaksi/ChartJs2QML
-        commit: 2a7720e51f42ed96d48be1f24632e76e2a2889ab
+        commit: cb1fbcb2618e5172ab0baebfd7a58908d0208fc5
         dest: 'ChartJs2QML'
     build-commands:
       - rm -rf ChartJs2QML/.git
