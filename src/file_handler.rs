@@ -85,7 +85,7 @@ pub fn create_file(host: &Host, remote_file_path: &str, mut metadata: FileMetada
 
     metadata.local_path = Some(file_path.clone());
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
-    let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_file_path)?;
+    let metadata_file = fs::OpenOptions::new().write(true).create(true).truncate(true).open(metadata_file_path)?;
 
     fs::write(&file_path, contents)?;
     serde_yaml::to_writer(metadata_file, &metadata).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
@@ -113,7 +113,7 @@ pub fn write_file_metadata(metadata: FileMetadata) -> io::Result<()> {
         .ok_or(io::Error::new(io::ErrorKind::Other, "Metadata does not contain local file path"))?;
 
     let metadata_path = get_metadata_path(&local_file_path);
-    let metadata_file = fs::OpenOptions::new().write(true).create(true).open(metadata_path)?;
+    let metadata_file = fs::OpenOptions::new().write(true).create(true).truncate(true).open(metadata_path)?;
 
     serde_yaml::to_writer(metadata_file, &metadata).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
