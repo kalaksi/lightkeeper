@@ -273,6 +273,58 @@ impl ConnectionModule for Ssh2 {
              .map(|_| Ok(()))?
     }
 
+    fn send_message_with_stdin(&self, command: &str, stdin_data: &[u8]) -> Result<ResponseMessage, LkError> {
+        if command.is_empty() {
+            return Ok(ResponseMessage::empty());
+        }
+
+        let mut session_data = self.wait_for_session(0, true)?;
+
+        let mut channel = match session_data.session.channel_session() {
+            Ok(channel) => channel,
+            Err(error) => {
+                // Error is likely due to disconnected or timeouted session. Try to reconnect once.
+                log::error!("Reconnecting channel due to error: {}", error);
+                self.reconnect(&mut session_data)
+                    .map_err(|error| format!("Error reconnecting: {}", error))?;
+
+                session_data.session.channel_session()
+                    .map_err(|error| format!("Error opening channel: {}", error))?
+            }
+        };
+
+        // Merge stderr etc. to the same stream as stdout.
+        channel.handle_extended_data(ssh2::ExtendedData::Merge)?;
+
+        // Execute the command
+        channel.exec(command)
+               .map_err(|error| format!("Error executing command '{}': {}", command, error))?;
+
+        // Write data to stdin
+        channel.write_all(stdin_data)
+               .map_err(|error| format!("Error writing to stdin: {}", error))?;
+
+        // Close stdin (send EOF)
+        channel.send_eof()
+               .map_err(|error| format!("Error closing stdin: {}", error))?;
+
+        // Read output
+        let mut output = String::new();
+        channel.read_to_string(&mut output)
+               .map_err(|error| format!("Invalid output received: {}", error))?;
+
+        if !channel.eof() {
+            return Err(LkError::new(ErrorKind::Other, "Channel is not at EOF even though full response was requested"));
+        }
+
+        let exit_status = channel.exit_status().unwrap_or(-1);
+
+        channel.wait_close()
+               .map_err(|error| format!("Error while closing channel: {}", error))?;
+
+        Ok(ResponseMessage::new(strip_newline(&output), exit_status))
+    }
+
     fn verify_host_key(&self, hostname: &str, key_id: &str) -> Result<(), LkError> {
         let mut session_data = self.wait_for_session(0, false)?;
         let self_address = self.address.lock().unwrap().to_string();

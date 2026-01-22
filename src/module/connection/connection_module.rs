@@ -37,6 +37,11 @@ pub trait ConnectionModule: BoxCloneableConnector + MetadataSupport + Module {
         Err(LkError::not_implemented())
     }
 
+    /// Sends a command and writes data to its stdin, then reads the response.
+    fn send_message_with_stdin(&self, _command: &str, _stdin_data: &[u8]) -> Result<ResponseMessage, LkError> {
+        Err(LkError::not_implemented())
+    }
+
     fn verify_host_key(&self, _hostname: &str, _key_id: &str) -> Result<(), LkError> {
         Err(LkError::not_implemented())
     }

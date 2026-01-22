@@ -23,6 +23,7 @@ use crate::configuration::{ConfigGroup, HostSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
 use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
+use crate::utils::ShellCommand;
 
 use self::request_response::RequestResponse;
 
@@ -414,14 +415,18 @@ impl ConnectionManager {
 
     fn process_download(host: &Host, connector: &Connector, file_path: &str) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Downloading file: {}", host.name, file_path);
-        match connector.download_file(file_path) {
-            Ok((metadata, contents)) => {
-                match file_handler::create_file(host, file_path, metadata, contents) {
-                    Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
-                    Err(error) => Err(error.into()),
-                }
-            },
-            Err(error) => Err(error),
+        if host.settings.contains(&crate::host::HostSetting::UseSudo) {
+            Self::download_file_with_sudo(host, connector, file_path)
+        } else {
+            match connector.download_file(file_path) {
+                Ok((metadata, contents)) => {
+                    match file_handler::create_file(host, file_path, metadata, contents) {
+                        Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
+                        Err(error) => Err(error.into()),
+                    }
+                },
+                Err(error) => Err(error),
+            }
         }
     }
 
@@ -429,13 +434,60 @@ impl ConnectionManager {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
         match file_handler::read_file(local_file_path) {
             Ok((metadata, contents)) => {
-                let result = connector.upload_file(&metadata, contents);
-
-                // Returns empty or error as is.
-                result.map(|_| ResponseMessage::empty())
+                if host.settings.contains(&crate::host::HostSetting::UseSudo) {
+                    Self::upload_file_with_sudo(connector, &metadata.remote_path, contents)
+                } else {
+                    match connector.upload_file(&metadata, contents) {
+                        Ok(()) => Ok(ResponseMessage::empty()),
+                        Err(error) => Err(error),
+                    }
+                }
             },
             Err(error) => Err(error.into()),
         }
+    }
+
+    fn download_file_with_sudo(host: &Host, connector: &Connector, file_path: &str) -> Result<ResponseMessage, LkError> {
+        use crate::file_handler::FileMetadata;
+        use chrono::Utc;
+        use crate::utils::sha256;
+
+        let cat_cmd = ShellCommand::new_from(vec!["sudo", "cat", file_path]);
+        let response = connector.send_message(&cat_cmd.to_string())?;
+
+        if response.return_code != 0 {
+            return Err(LkError::other(format!("Failed to read file: {}", response.message)));
+        }
+
+        let contents = response.message.into_bytes();
+
+        let metadata = FileMetadata {
+            download_time: Utc::now(),
+            local_path: None,
+            remote_path: file_path.to_string(),
+            remote_file_hash: sha256::hash(&contents),
+            owner_uid: 0,
+            owner_gid: 0,
+            permissions: 0o644,
+            temporary: true,
+        };
+
+        match file_handler::create_file(host, file_path, metadata, contents) {
+            Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    fn upload_file_with_sudo(connector: &Connector, remote_path: &str, contents: Vec<u8>) -> Result<ResponseMessage, LkError> {
+        // Preserves permissions when overwriting existing files.
+        let tee_cmd = ShellCommand::new_from(vec!["sudo", "tee", remote_path]);
+        let response = connector.send_message_with_stdin(&tee_cmd.to_string(), &contents)?;
+
+        if response.return_code != 0 {
+            return Err(LkError::other(format!("Failed to write file: {}", response.message)));
+        }
+
+        Ok(ResponseMessage::empty())
     }
 }
 
