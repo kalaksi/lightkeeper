@@ -129,7 +129,9 @@ you'll need these packages on Ubuntu 24.04:
 - qml6-module-qtcharts
 - qml-module-org-kde-syntaxhighlighting
 - qml6-module-qtwebengine
+  
 
+QtWebEngine is not strictly required, but needed for proper integrated editor.
 
 ### Building
 For development, run this in repo root:
