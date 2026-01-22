@@ -42,6 +42,11 @@ pub trait ConnectionModule: BoxCloneableConnector + MetadataSupport + Module {
         Err(LkError::not_implemented())
     }
 
+    /// Sends a command and reads binary output (for file downloads).
+    fn send_message_binary(&self, _command: &str) -> Result<(Vec<u8>, i32), LkError> {
+        Err(LkError::not_implemented())
+    }
+
     fn verify_host_key(&self, _hostname: &str, _key_id: &str) -> Result<(), LkError> {
         Err(LkError::not_implemented())
     }

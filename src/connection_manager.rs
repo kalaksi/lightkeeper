@@ -435,7 +435,7 @@ impl ConnectionManager {
         match file_handler::read_file(local_file_path) {
             Ok((metadata, contents)) => {
                 if host.settings.contains(&crate::host::HostSetting::UseSudo) {
-                    Self::upload_file_with_sudo(connector, &metadata.remote_path, contents)
+                    Self::upload_file_with_sudo(connector, &metadata.remote_path, contents, local_file_path)
                 } else {
                     match connector.upload_file(&metadata, contents) {
                         Ok(()) => Ok(ResponseMessage::empty()),
@@ -453,13 +453,11 @@ impl ConnectionManager {
         use crate::utils::sha256;
 
         let cat_cmd = ShellCommand::new_from(vec!["sudo", "cat", file_path]);
-        let response = connector.send_message(&cat_cmd.to_string())?;
+        let (contents, exit_status) = connector.send_message_binary(&cat_cmd.to_string())?;
 
-        if response.return_code != 0 {
-            return Err(LkError::other(format!("Failed to read file: {}", response.message)));
+        if exit_status != 0 {
+            return Err(LkError::other(format!("Failed to read file: exit code {}", exit_status)));
         }
-
-        let contents = response.message.into_bytes();
 
         let metadata = FileMetadata {
             download_time: Utc::now(),
@@ -478,13 +476,55 @@ impl ConnectionManager {
         }
     }
 
-    fn upload_file_with_sudo(connector: &Connector, remote_path: &str, contents: Vec<u8>) -> Result<ResponseMessage, LkError> {
-        // Preserves permissions when overwriting existing files.
+    fn upload_file_with_sudo(connector: &Connector, remote_path: &str, contents: Vec<u8>, local_file_path: &str) -> Result<ResponseMessage, LkError> {
+        use crate::utils::sha256;
+        
+        let expected_hash = sha256::hash(&contents);
+        
+        // Write directly to target file. Doesn't alter owner or permissions.
         let tee_cmd = ShellCommand::new_from(vec!["sudo", "tee", remote_path]);
         let response = connector.send_message_with_stdin(&tee_cmd.to_string(), &contents)?;
 
         if response.return_code != 0 {
-            return Err(LkError::other(format!("Failed to write file: {}", response.message)));
+            return Err(LkError::other(format!(
+                "Failed to write file: {}\n\nCached file location: {}",
+                response.message, local_file_path
+            )));
+        }
+
+        // Verify file was written correctly, try sha256sum first.
+        let sha256_cmd = ShellCommand::new_from(vec!["sudo", "sha256sum", remote_path]);
+        let sha256_response = connector.send_message(&sha256_cmd.to_string())?;
+        
+        if sha256_response.return_code == 0 {
+            // Parse the checksum from output (format: "hash  filename").
+            if let Some(actual_hash) = sha256_response.message.split_whitespace().next() {
+                if actual_hash == expected_hash {
+                    return Ok(ResponseMessage::empty());
+                }
+            }
+        }
+        
+        // Fall back to cat and compare contents.
+        let cat_cmd = ShellCommand::new_from(vec!["sudo", "cat", remote_path]);
+        let (remote_contents, exit_status) = connector.send_message_binary(&cat_cmd.to_string())?;
+        
+        if exit_status != 0 {
+            return Err(LkError::other(format!(
+                "Failed to verify file: exit code {}.\n\n\
+                Cached file location: {}.\n\n\
+                You can manually verify that files match.",
+                exit_status, local_file_path
+            )));
+        }
+        
+        if remote_contents != contents {
+            return Err(LkError::other(format!(
+                "File transfer was incomplete, hash mismatch.\n\n\
+                Cached file location: {}\n\n\
+                You can manually copy this file to the remote location.",
+                local_file_path
+            )));
         }
 
         Ok(ResponseMessage::empty())
