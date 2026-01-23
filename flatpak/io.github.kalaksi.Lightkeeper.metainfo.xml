@@ -39,7 +39,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.33.0" date="2026-01-23">
+    <release version="0.33.1" date="2026-01-23">
       <description>
         <ul>
           <li>Big improvements to integrated code editor!</li>
