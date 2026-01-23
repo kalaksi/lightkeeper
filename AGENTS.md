@@ -10,6 +10,6 @@
 - Avoid writing lines that are over 120 characters long.
 
 ### QML
-- Component structure is: id, public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
+- Component structure is: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
 - Reference errors to `LK` are expected and can be ignored.
 - When adding or removing QML files, resource file has to be updated.

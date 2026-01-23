@@ -192,6 +192,7 @@ impl ConfigManagerModel {
 
         let mut editor_preferences = QVariantMap::default();
         editor_preferences.insert("editMode".into(), QString::from(self.main_config.preferences.editor_preferences.edit_mode.to_string()).into());
+        editor_preferences.insert("fontSize".into(), (self.main_config.preferences.editor_preferences.font_size as i32).into());
         preferences.insert("editorPreferences".into(), editor_preferences.into());
 
         preferences
@@ -226,6 +227,10 @@ impl ConfigManagerModel {
             let editor_prefs_map = editor_prefs_variant.to_qvariantmap();
             let edit_mode_str = editor_prefs_map.value("editMode".into(), QString::from("regular").into()).to_qbytearray().to_string();
             self.main_config.preferences.editor_preferences.edit_mode = EditMode::from_str(&edit_mode_str).unwrap_or(EditMode::Regular);
+            let font_size = editor_prefs_map.value("fontSize".into(), 12.into()).to_int();
+            if font_size > 0 {
+                self.main_config.preferences.editor_preferences.font_size = font_size as u32;
+            }
         }
 
         if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {

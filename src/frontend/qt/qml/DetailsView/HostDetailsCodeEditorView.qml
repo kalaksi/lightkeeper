@@ -8,6 +8,7 @@ import Theme
 
 import ".."
 import "../Button"
+import "../Misc"
 import "../js/Utils.js" as Utils
 
 
@@ -20,6 +21,7 @@ Item {
     property var textEditorItem: null
     property bool disableSaveButton: true
     property string editMode: "regular"
+    property int fontSize: 12
     property var _aceEditorObject: null
     property bool _useSimpleCodeEditor: false
     property string _detectedLanguage: Utils.detectLanguageFromPath(root.localFilePath)
@@ -49,6 +51,13 @@ Item {
     onEditModeChanged: {
         if (!root._useSimpleCodeEditor) {
             root._setEditorKeybindings()
+        }
+        root._saveEditorPreferences()
+    }
+
+    onFontSizeChanged: {
+        if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
+            root._aceEditorObject.setEditorOption("fontSize", root.fontSize)
         }
         root._saveEditorPreferences()
     }
@@ -89,29 +98,62 @@ Item {
         visible: root.text === ""
     }
 
-    Rectangle {
+    ToolBar {
         id: topBar
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 34
-        color: Theme.backgroundColor
+        anchors.topMargin: 0
+        anchors.bottomMargin: Theme.spacingLoose
+        height: 36
         visible: root.text !== ""
 
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: Theme.spacingNormal
-            anchors.rightMargin: Theme.spacingNormal
-            anchors.bottomMargin: Theme.spacingTight
-            spacing: Theme.spacingTight
+        background: BorderRectangle {
+            backgroundColor: Theme.backgroundColor
+            borderColor: Theme.borderColor
+            borderBottom: 1
+        }
 
-            ImageButton {
-                size: 0.9 * parent.height
-                imageSource: "qrc:/main/images/button/document-save"
-                flatButton: true
-                tooltip: "Save"
+        RowLayout {
+            width: parent.width
+            height: parent.height
+            anchors.top: parent.top
+            spacing: Theme.spacingNormal
+
+            ToolButton {
+                icon.source: "qrc:/main/images/button/document-save"
+                text: "Save"
+                display: AbstractButton.IconOnly
                 onClicked: root.save()
                 enabled: !root.disableSaveButton
+                icon.height: 24
+                icon.width: 24
+                padding: 4
+            }
+
+            ToolSeparator {
+            }
+
+            Text {
+                text: "Font"
+                color: Theme.textColor
+                Layout.alignment: Qt.AlignVCenter
+                visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
+            }
+
+            ComboBox {
+                id: fontSizeComboBox
+                model: [10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24]
+                currentIndex: {
+                    let index = model.indexOf(root.fontSize)
+                    return index >= 0 ? index : 2
+                }
+                onCurrentIndexChanged: {
+                    root.fontSize = model[currentIndex]
+                }
+                Layout.preferredWidth: 80
+                Layout.alignment: Qt.AlignVCenter
+                visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
             }
 
             Item {
@@ -119,7 +161,7 @@ Item {
             }
 
             Text {
-                text: "Edit mode:"
+                text: "Edit mode"
                 color: Theme.textColor
                 Layout.alignment: Qt.AlignVCenter
                 visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
@@ -176,6 +218,18 @@ Item {
                             rootItem.disableSaveButton = !LK.command.hasFileChanged(rootItem.localFilePath, newContent);
                         }
                     }
+
+                    onSaved: {
+                        if (rootItem) {
+                            rootItem.save()
+                        }
+                    }
+
+                    onClosed: {
+                        if (rootItem) {
+                            rootItem.close()
+                        }
+                    }
                 }`
 
             let editorObject = Qt.createQmlObject(aceEditorQml, aceEditorContainer, "aceEditor")
@@ -185,6 +239,7 @@ Item {
                 
                 editorObject.editorReady.connect(function() {
                     root._setEditorKeybindings()
+                    root._aceEditorObject.setEditorOption("fontSize", root.fontSize)
                     root._aceEditorObject.content = root.text
                     root._aceEditorObject.mode = root._aceMode
                     root._aceEditorObject.theme = "tomorrow_night"
@@ -276,8 +331,13 @@ Item {
 
     function _loadEditorPreferences() {
         let preferences = LK.config.getPreferences()
-        if (preferences.editorPreferences && preferences.editorPreferences.editMode) {
-            root.editMode = preferences.editorPreferences.editMode
+        if (preferences.editorPreferences) {
+            if (preferences.editorPreferences.editMode) {
+                root.editMode = preferences.editorPreferences.editMode
+            }
+            if (preferences.editorPreferences.fontSize) {
+                root.fontSize = preferences.editorPreferences.fontSize
+            }
         }
     }
 
@@ -285,6 +345,7 @@ Item {
         let preferences = LK.config.getPreferences()
         preferences.editorPreferences = preferences.editorPreferences
         preferences.editorPreferences.editMode = root.editMode
+        preferences.editorPreferences.fontSize = root.fontSize
         LK.config.setPreferences(preferences)
     }
 

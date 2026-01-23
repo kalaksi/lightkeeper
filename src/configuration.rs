@@ -70,6 +70,14 @@ pub struct Hosts {
 #[serde(deny_unknown_fields)]
 pub struct EditorPreferences {
     pub edit_mode: EditMode,
+    #[serde(default = "EditorPreferences::default_font_size")]
+    pub font_size: u32,
+}
+
+impl EditorPreferences {
+    fn default_font_size() -> u32 {
+        12
+    }
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone)]
