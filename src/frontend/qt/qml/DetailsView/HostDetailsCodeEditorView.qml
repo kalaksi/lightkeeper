@@ -219,17 +219,18 @@ Item {
                         }
                     }
 
-                    onSaved: {
-                        if (rootItem) {
-                            rootItem.save()
-                        }
-                    }
+                    // TODO
+                    // onSaved: {
+                    //     if (rootItem) {
+                    //         rootItem.save()
+                    //     }
+                    // }
 
-                    onClosed: {
-                        if (rootItem) {
-                            rootItem.close()
-                        }
-                    }
+                    // onClosed: {
+                    //     if (rootItem) {
+                    //         rootItem.close()
+                    //     }
+                    // }
                 }`
 
             let editorObject = Qt.createQmlObject(aceEditorQml, aceEditorContainer, "aceEditor")

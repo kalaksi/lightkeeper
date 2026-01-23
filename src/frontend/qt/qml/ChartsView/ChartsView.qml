@@ -18,7 +18,7 @@ Item {
     property int chartHeight: 120
     property int columnSpacing: Theme.spacingNormal
     property bool enableShortcuts: false
-    property var _categories: {}
+    property var _categories: ({})
     property bool _showEmptyCategories: true
 
     signal refreshRequested()
