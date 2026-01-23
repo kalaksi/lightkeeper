@@ -39,6 +39,17 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.33.0" date="2026-01-23">
+      <description>
+        <ul>
+          <li>Big improvements to integrated code editor!</li>
+          <li>Handle colors in log viewer</li>
+          <li>Improve preferences dialog</li>
+          <li>docker-images: fix criticality in monitor summary</li>
+          <li>docker-compose-edit: set button visible by default</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.32.1" date="2026-01-08">
       <description>
         <ul>
