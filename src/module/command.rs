@@ -12,6 +12,7 @@ pub use command_module::UIAction;
 pub use command_module::BoxCloneableCommand;
 
 pub mod docker;
+pub mod podman;
 pub mod linux;
 pub mod os;
 pub mod storage;

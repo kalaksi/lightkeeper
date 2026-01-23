@@ -89,6 +89,34 @@ groups:
       docker-compose-logs: {}
       docker-compose-build: {}
 
+  # Monitors and commands for Podman.
+  podman:
+    monitors:
+      podman-containers: {}
+      podman-images: {}
+    commands:
+      podman-image-prune: {}
+      podman-restart: {}
+      podman-inspect: {}
+      podman-shell: {}
+      podman-image-remove: {}
+      podman-image-remote-tags: {}
+
+  # Monitors and commands for Podman-compose.
+  podman-compose:
+    monitors:
+      podman-compose: {}
+    commands:
+      podman-compose-edit: {}
+      podman-compose-pull: {}
+      podman-compose-up: {}
+      podman-compose-start: {}
+      podman-compose-stop: {}
+      podman-compose-restart: {}
+      podman-compose-shell: {}
+      podman-compose-logs: {}
+      podman-compose-build: {}
+
   # Monitors and commands for SystemD services.
   systemd-service:
     monitors:
