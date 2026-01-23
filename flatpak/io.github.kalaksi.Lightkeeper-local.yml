@@ -1,8 +1,8 @@
 app-id: io.github.kalaksi.Lightkeeper-local
 base: io.qt.qtwebengine.BaseApp
-base-version: '6.8'
+base-version: '6.10'
 runtime: org.kde.Platform
-runtime-version: '6.8'
+runtime-version: '6.10'
 sdk: org.kde.Sdk
 sdk-extensions:
   # For runtime version 6.10, org.freedesktop.Sdk.Extension.rust-stable/x86_64/25.08 is the appropriate Rust extension.
