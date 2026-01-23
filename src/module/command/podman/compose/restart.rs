@@ -53,13 +53,7 @@ impl CommandModule for Restart {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") {
-
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "compose", "-f", compose_file, "restart"]);
             if let Some(service_name) = parameters.get(2) {
                 command.argument(service_name);

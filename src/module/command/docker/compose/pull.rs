@@ -51,12 +51,7 @@ impl CommandModule for Pull {
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
 
-        if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
-
+        if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["docker", "compose", "-f", compose_file, "pull"]);
             if let Some(service_name) = parameters.get(2) {
                 command.argument(service_name);
