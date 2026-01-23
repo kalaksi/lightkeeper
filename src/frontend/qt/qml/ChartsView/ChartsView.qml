@@ -117,6 +117,7 @@ Item {
                     leftPadding: Theme.spacingTight
                     rightPadding: Theme.spacingTight
                     Layout.fillWidth: true
+                    Layout.fillHeight: true
                     Layout.minimumHeight: root.groupHeight
                     Layout.alignment: Qt.AlignTop
 
@@ -136,7 +137,10 @@ Item {
 
                     Grid {
                         id: chartColumn
-                        width: parent.width
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
                         spacing: 0
                         columns: 2
 
@@ -155,7 +159,7 @@ Item {
                                 property var chartDatas: []
 
                                 width: chart.monitoringData.display_options.use_multivalue ? chartColumn.width : chartColumn.width / 2
-                                height: chartGrid.height
+                                height: chartColumn.height
 
                                 Connections {
                                     target: root
@@ -208,9 +212,12 @@ Item {
 
                                 Grid {
                                     id: chartGrid
+                                    anchors.fill: parent
                                     columns: 2
                                     columnSpacing: Theme.spacingNormal
-                                    width: parent.width
+
+                                    property int rowCount: Math.ceil(chart.chartDatas.length / 2)
+                                    property real chartHeight: rowCount > 0 ? parent.height / rowCount : root.chartHeight
 
                                     Repeater {
                                         model: chart.chartDatas
@@ -227,7 +234,7 @@ Item {
                                             chartData: modelData.data
                                             title: modelData.label
                                             width: chartColumn.width / 2.05
-                                            height: root.chartHeight
+                                            height: chartGrid.chartHeight
                                             yLabel: chart.monitoringData.display_options.unit
                                             yMin: chart.monitoringData.display_options.value_min
                                             yMax: chart.monitoringData.display_options.value_max > 0 ?

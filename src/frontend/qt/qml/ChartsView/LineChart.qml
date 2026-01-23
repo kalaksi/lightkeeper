@@ -14,7 +14,20 @@ Item {
 
     function setData(data) {
         // console.log("Chart '" + root.title + "' data set: " + JSON.stringify(data))
-        chart.chartData.datasets[0].data = data
+        if (!data) {
+            chart.chartData.datasets[0].data = []
+            return
+        }
+
+        // Convert "t" to "x" for Chart.js time series format. Used to work, doesn't anymore.
+        // TODO: should have "x" to begin with.
+        var convertedData = data.map(function(item) {
+            if (item.t !== undefined) {
+                return {"x": item.t, "y": item.y}
+            }
+            return item
+        })
+        chart.chartData.datasets[0].data = convertedData
 
         // Sometimes the chart instance hasn't been created yet.
         if (chart.jsChart !== undefined) {
@@ -67,18 +80,23 @@ Item {
                 },
                 scales: {
                     xAxes: [{
-                        display: false,
+                        display: true,
                         type: "time",
                         time: {
                             // Unix timestamp in ms.
-                            parser: "x"
+                            parser: "x",
+                            unit: "day",
+                            displayFormats: {
+                                day: "DD"
+                            }
                         },
                         scaleLabel: {
                             display: true,
                             // labelString: "Time"
                         },
                         gridLines: {
-                            display: false,
+                            display: true,
+                            color: "rgba(255,255,255,0.1)"
                         },
                         ticks: {
                             maxTicksLimit: 12,
