@@ -39,6 +39,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.33.2" date="2026-01-24">
+      <description>
+        <ul>
+          <li>Fix terminal rendering after moving to Qt 6.10 in 0.33.1</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.33.1" date="2026-01-23">
       <description>
         <ul>
