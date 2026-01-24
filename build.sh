@@ -11,11 +11,9 @@ if [ ! -e "third_party/qmltermwidget" ] || \
     git submodule update --init --recursive --remote
 fi
 
-if [ ! -e third_party/qmltermwidget/QMLTermWidget/libqmltermwidget.so ]; then
-    pushd third_party/qmltermwidget
-    qmake6 && make -j 4
-    popd
-fi
+pushd third_party/qmltermwidget
+qmake6 && make -j 4
+popd
 
 if [ ! -z "$(git status -s)" ]; then
     # Expand use later. Currently, rustfmt in many cases makes readability worse by splitting or joining lines badly.
