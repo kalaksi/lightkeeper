@@ -403,8 +403,15 @@ impl CommandHandlerModel {
             None => return QVariantList::default(),
         };
 
-        let monitor_id = command.display_options.parent_id;
-        let invocation_ids = self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id);
+        let invocation_ids = if command.display_options.parent_id.is_empty() {
+            // Category-level command: refresh all monitors in the category
+            self.monitor_manager.refresh_monitors_of_category(&host_id, &command.display_options.category)
+        } else {
+            // Monitor-specific command: refresh only the related monitor
+            let monitor_id = command.display_options.parent_id;
+            self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id)
+        };
+
         QVariantList::from_iter(invocation_ids)
     }
 
