@@ -47,7 +47,7 @@ modules:
         # Fork from repo https://github.com/Swordfish90/qmltermwidget.git to add Qt 6 support.
         # Follows branch `lightkeeper`
         url: https://github.com/kalaksi/qmltermwidget.git
-        commit: 11df7dc5cbb358b6f98537a699678484447447e0
+        commit: 6b73b77690948f17f5c881fd79153191d066be10
     make-install-args:
       - "INSTALL_ROOT=/app/qmltermwidget"
   - name: ChartJs2QML
