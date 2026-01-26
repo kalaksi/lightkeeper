@@ -75,6 +75,22 @@ display_options:
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
+    podman-compose:
+      priority: 10
+      icon: "qrc:///main/images/docker"
+      color: "#8010a0ee"
+      command_order: ["podman-compose-edit", "podman-compose-start", "podman-compose-restart", "podman-compose-stop", "podman-compose-build", "podman-compose-pull", "podman-compose-up", "podman-compose-shell", "podman-compose-logs"]
+      collapsible_commands: ["podman-compose-start", "podman-compose-restart", "podman-compose-stop", "podman-compose-build", "podman-compose-pull", "podman-compose-up"]
+      monitor_order: ["podman-compose"]
+    podman-containers:
+      priority: 11
+      icon: "qrc:///main/images/docker"
+      color: "#8010a0ee"
+    podman-images:
+      priority: 12
+      icon: "qrc:///main/images/docker"
+      color: "#8010a0ee"
+      command_order: ["podman-inspect", "podman-restart", "podman-shell", "podman-image-remote-tags", "podman-image-remove"]
   chart_categories:
     - name: host
       monitors: ["load", "ram"]
