@@ -115,7 +115,6 @@ impl ConnectionModule for Ssh2 {
     fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         let (output_bytes, exit_status) = self.send_message_binary(message)?;
         
-        // Convert bytes to string, handling invalid UTF-8 gracefully
         let output = String::from_utf8_lossy(&output_bytes).to_string();
         
         Ok(ResponseMessage::new(strip_newline(&output), exit_status))
