@@ -452,7 +452,7 @@ impl ConnectionManager {
         use chrono::Utc;
         use crate::utils::sha256;
 
-        let cat_cmd = ShellCommand::new_from(vec!["sudo", "cat", file_path]);
+        let cat_cmd = ShellCommand::new_from(vec!["cat", file_path]).use_sudo();
         let (contents, exit_status) = connector.send_message_binary(&cat_cmd.to_string())?;
 
         if exit_status != 0 {
@@ -482,7 +482,7 @@ impl ConnectionManager {
         let expected_hash = sha256::hash(&contents);
         
         // Write directly to target file. Doesn't alter owner or permissions.
-        let tee_cmd = ShellCommand::new_from(vec!["sudo", "tee", remote_path]);
+        let tee_cmd = ShellCommand::new_from(vec!["tee", remote_path]).use_sudo();
         let response = connector.send_message_with_stdin(&tee_cmd.to_string(), &contents)?;
 
         if response.return_code != 0 {
@@ -493,7 +493,7 @@ impl ConnectionManager {
         }
 
         // Verify file was written correctly, try sha256sum first.
-        let sha256_cmd = ShellCommand::new_from(vec!["sudo", "sha256sum", remote_path]);
+        let sha256_cmd = ShellCommand::new_from(vec!["sha256sum", remote_path]).use_sudo();
         let sha256_response = connector.send_message(&sha256_cmd.to_string())?;
         
         if sha256_response.return_code == 0 {
@@ -506,7 +506,7 @@ impl ConnectionManager {
         }
         
         // Fall back to cat and compare contents.
-        let cat_cmd = ShellCommand::new_from(vec!["sudo", "cat", remote_path]);
+        let cat_cmd = ShellCommand::new_from(vec!["cat", remote_path]).use_sudo();
         let (remote_contents, exit_status) = connector.send_message_binary(&cat_cmd.to_string())?;
         
         if exit_status != 0 {

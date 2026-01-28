@@ -220,6 +220,15 @@ impl MonitorManager {
                     }
                 };
 
+                if !host.settings.contains(&crate::host::HostSetting::UseSudo) && commands.iter().any(|msg| {
+                    // Checking command instead of relying to module metadata is more accurate.
+                    let trimmed = msg.trim_start();
+                    trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\" ")
+                }) {
+                    log::warn!("[{}][{}] Skipping, sudo required", host.name, info_provider.get_module_spec().id);
+                    return;
+                }
+
                 self.invocation_id_counter += 1;
 
                 // Notify host state manager about new pending monitor invocation.
@@ -372,6 +381,15 @@ impl MonitorManager {
                     continue;
                 }
             };
+
+            if !host.settings.contains(&crate::host::HostSetting::UseSudo) && messages.iter().any(|msg| {
+                // Checking command instead of relying to module metadata is more accurate.
+                let trimmed = msg.trim_start();
+                trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\" ")
+            }) {
+                log::warn!("[{}][{}] Skipping, sudo required", host.name, monitor.get_module_spec().id);
+                continue;
+            }
 
             self.send_connector_request(ConnectorRequest {
                 connector_spec: monitor.get_connector_spec(),
@@ -537,7 +555,17 @@ impl MonitorManager {
                     let next_parent_datapoint = parent_datapoint.unwrap_or_else(|| new_data_point.clone().unwrap());
 
                     let messages = match get_monitor_connector_messages(&response.host, &next_monitor, &next_parent_datapoint) {
-                        Ok(messages) => messages,
+                        Ok(messages) => {
+                            if !response.host.settings.contains(&crate::host::HostSetting::UseSudo) && messages.iter().any(|msg| {
+                                // checking command instead of relying to module metadata is more accurate
+                                let trimmed = msg.trim_start();
+                                trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\" ")
+                            }) {
+                                log::warn!("[{}][{}] Skipping, sudo required", response.host.name, next_monitor.get_module_spec().id);
+                                continue;
+                            }
+                            messages
+                        },
                         Err(error1) => {
                             log::error!("[{}][{}] Monitor failed: {}", response.host.name, monitor_id, error1);
 

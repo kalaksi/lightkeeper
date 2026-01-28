@@ -51,6 +51,11 @@ impl ShellCommand {
         self
     }
 
+    pub fn use_sudo(mut self) -> Self {
+        self.use_sudo = true;
+        self
+    }
+
     pub fn pipe_to<IntoString>(&mut self, arguments: Vec<IntoString>) -> &mut Self
     where
         IntoString: Into<String>,

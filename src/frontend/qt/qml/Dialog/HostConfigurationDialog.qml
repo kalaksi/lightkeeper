@@ -46,11 +46,10 @@ LightkeeperDialog {
     }
 
     onAccepted: {
-        // TODO: GUI for host settings (UseSudo etc.)
         let newSettings = {
             overrides: {
                 connectors: {},
-                host_settings: {}
+                host_settings: []
             }
         }
 
@@ -73,6 +72,9 @@ LightkeeperDialog {
 
         if (useSudoCheckbox.checked) {
             newSettings.overrides.host_settings = ["use_sudo"]
+        }
+        else {
+            newSettings.overrides.host_settings = []
         }
 
         LK.config.setHostSettings(root.hostId, hostIdField.text, JSON.stringify(newSettings))
@@ -186,8 +188,17 @@ LightkeeperDialog {
 
             Switch {
                 id: useSudoCheckbox
-                enabled: false
-                checked: true
+                checked: {
+                    if (root.hostSettings.overrides !== undefined &&
+                        root.hostSettings.overrides.host_settings !== undefined) {
+                        return root.hostSettings.overrides.host_settings.indexOf("use_sudo") !== -1
+                    }
+                    if (root.hostSettings.effective !== undefined &&
+                        root.hostSettings.effective.host_settings !== undefined) {
+                        return root.hostSettings.effective.host_settings.indexOf("use_sudo") !== -1
+                    }
+                    return false
+                }
                 onCheckedChanged: root.updateOkButton()
             }
 

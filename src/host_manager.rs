@@ -102,8 +102,7 @@ impl HostManager {
         for (host_id, new_host_config) in new_host_configs.iter() {
             log::debug!("Configuring host {}", host_id);
 
-            // TODO: UseSudo is currently always assumed.
-            if let Ok(host) = Host::new(host_id, &new_host_config.address, &new_host_config.fqdn, &vec![crate::host::HostSetting::UseSudo]) {
+            if let Ok(host) = Host::new(host_id, &new_host_config.address, &new_host_config.fqdn, &new_host_config.effective.host_settings) {
                 if host_states.hosts.contains_key(&host.name) {
                     log::error!("Host '{}' already exists", host.name);
                     continue;
