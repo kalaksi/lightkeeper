@@ -536,7 +536,7 @@ impl MonitorManager {
                         Some(data_point)
                     },
                     Err(error) => {
-                        errors.push(LkError::other_p("Error while parsing", error));
+                        errors.push(LkError::other(error));
 
                         // In case this was an extension module, retain the parents data point unmodified.
                         // Otherwise None.
