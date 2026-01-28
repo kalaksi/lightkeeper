@@ -26,6 +26,7 @@ struct ModuleArgs {
     parent_module_name: Option<String>,
     parent_module_version: Option<String>,
     settings: HashMap<String, String>,
+    uses_sudo: Option<bool>,
 }
 
 impl syn::parse::Parse for ModuleArgs {
@@ -36,6 +37,7 @@ impl syn::parse::Parse for ModuleArgs {
         let mut parent_module_name = None;
         let mut parent_module_version = None;
         let mut settings = HashMap::new();
+        let mut uses_sudo = None;
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
@@ -55,6 +57,9 @@ impl syn::parse::Parse for ModuleArgs {
                 }
                 "parent_module_version" => {
                     parent_module_version = Some(input.parse::<syn::LitStr>()?.value());
+                }
+                "uses_sudo" => {
+                    uses_sudo = Some(input.parse::<syn::LitBool>()?.value);
                 }
                 "settings" => {
                     let content;
@@ -84,6 +89,7 @@ impl syn::parse::Parse for ModuleArgs {
             parent_module_name: parent_module_name,
             parent_module_version: parent_module_version,
             settings: settings,
+            uses_sudo: uses_sudo,
         })
     }
 }
@@ -95,6 +101,7 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let module_name = args_parsed.name;
     let module_version = args_parsed.version;
     let module_description = args_parsed.description;
+    let uses_sudo = args_parsed.uses_sudo.unwrap_or(false);
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -121,6 +128,7 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
                         ]),
                         parent_module: None,
                         is_stateless: true,
+                        uses_sudo: #uses_sudo,
                     }
                 }
 
@@ -154,6 +162,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
     let module_description = args_parsed.description;
     let parent_module_name = args_parsed.parent_module_name;
     let parent_module_version = args_parsed.parent_module_version;
+    let uses_sudo = args_parsed.uses_sudo.unwrap_or(false);
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -180,6 +189,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                         ]),
                         parent_module: Some(ModuleSpecification::monitor(#parent_module_name, #parent_module_version)),
                         is_stateless: true,
+                        uses_sudo: #uses_sudo,
                     }
                 }
 
@@ -210,6 +220,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let module_name = args_parsed.name;
     let module_version = args_parsed.version;
     let module_description = args_parsed.description;
+    let uses_sudo = args_parsed.uses_sudo.unwrap_or(false);
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -234,6 +245,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     ]),
                     parent_module: None,
                     is_stateless: true,
+                    uses_sudo: #uses_sudo,
                 }
             }
 
@@ -262,6 +274,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let module_name = args_parsed.name;
     let module_version = args_parsed.version;
     let module_description = args_parsed.description;
+    let uses_sudo = args_parsed.uses_sudo.unwrap_or(false);
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -286,6 +299,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     ]),
                     parent_module: None,
                     is_stateless: false,
+                    uses_sudo: #uses_sudo,
                 }
             }
 
@@ -313,6 +327,7 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
     let module_name = args_parsed.name;
     let module_version = args_parsed.version;
     let module_description = args_parsed.description;
+    let uses_sudo = args_parsed.uses_sudo.unwrap_or(false);
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -339,6 +354,7 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
                         ]),
                         parent_module: None,
                         is_stateless: true,
+                        uses_sudo: #uses_sudo,
                     }
                 }
 

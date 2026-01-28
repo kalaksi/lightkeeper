@@ -18,4 +18,6 @@ pub struct Metadata {
     pub parent_module: Option<ModuleSpecification>,
     /// Stateless modules can be run in parallel.
     pub is_stateless: bool,
+    /// Module uses sudo if available. True for modules that require sudo or can work with/without it.
+    pub uses_sudo: bool,
 }

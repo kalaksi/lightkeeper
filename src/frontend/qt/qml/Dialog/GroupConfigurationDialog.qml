@@ -299,6 +299,15 @@ LightkeeperDialog {
                                     Layout.alignment: Qt.AlignVCenter
                                 }
 
+                                PillText {
+                                    visible: LK.config.monitorRequiresSudo(modelData)
+                                    text: "sudo"
+                                    pillColor: Theme.colorForCriticality("Info")
+                                    tooltip: "may require sudo and root privileges"
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.leftMargin: Theme.spacingLoose
+                                }
+
                                 // Spacer
                                 Item {
                                     Layout.fillWidth: true
@@ -439,6 +448,14 @@ LightkeeperDialog {
 
                                     Layout.alignment: Qt.AlignVCenter
                                     Layout.rightMargin: Theme.spacingNormal
+                                }
+
+                                PillText {
+                                    visible: LK.config.commandRequiresSudo(modelData)
+                                    text: "sudo"
+                                    pillColor: Theme.colorForCriticality("Info")
+                                    tooltip: "may require sudo and root privileges"
+                                    Layout.alignment: Qt.AlignVCenter
                                 }
 
                                 // Spacer

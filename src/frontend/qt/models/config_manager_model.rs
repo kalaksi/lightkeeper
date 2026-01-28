@@ -107,6 +107,7 @@ pub struct ConfigManagerModel {
     //
     getUnselectedMonitorIds: qt_method!(fn(&self, selected_groups: QStringList) -> QStringList),
     getMonitorDescription: qt_method!(fn(&self, monitor_name: QString) -> QString),
+    monitorRequiresSudo: qt_method!(fn(&self, monitor_name: QString) -> bool),
     getGroupMonitorIds: qt_method!(fn(&self, group_name: QString) -> QStringList),
     addGroupMonitor: qt_method!(fn(&self, group_name: QString, monitor_name: QString)),
     getGroupMonitorSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
@@ -117,6 +118,7 @@ pub struct ConfigManagerModel {
     //
     getUnselectedCommandIds: qt_method!(fn(&self, selected_groups: QStringList) -> QStringList),
     getCommandDescription: qt_method!(fn(&self, command_name: QString) -> QString),
+    commandRequiresSudo: qt_method!(fn(&self, command_name: QString) -> bool),
     getGroupCommandIds: qt_method!(fn(&self, group_name: QString) -> QStringList),
     addGroupCommand: qt_method!(fn(&self, group_name: QString, command_name: QString)),
     getGroupCommandSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
@@ -496,6 +498,14 @@ impl ConfigManagerModel {
         QString::from(module_description)
     }
 
+    fn monitorRequiresSudo(&self, module_name: QString) -> bool {
+        let module_name = module_name.to_string();
+        self.module_metadatas.iter()
+            .find(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == ModuleType::Monitor)
+            .map(|metadata| metadata.uses_sudo)
+            .unwrap_or(false)
+    }
+
     fn getGroupMonitorIds(&self, group_name: QString) -> QStringList {
         let group_name = group_name.to_string();
         let group_monitors = self.groups_config.groups.get(&group_name).cloned().unwrap_or_default().monitors;
@@ -730,6 +740,14 @@ impl ConfigManagerModel {
             .next().unwrap_or_default();
 
         QString::from(module_description)
+    }
+
+    fn commandRequiresSudo(&self, module_name: QString) -> bool {
+        let module_name = module_name.to_string();
+        self.module_metadatas.iter()
+            .find(|metadata| metadata.module_spec.id == module_name && metadata.module_spec.module_type == ModuleType::Command)
+            .map(|metadata| metadata.uses_sudo)
+            .unwrap_or(false)
     }
 
     fn getGroupCommandIds(&self, group_name: QString) -> QStringList {

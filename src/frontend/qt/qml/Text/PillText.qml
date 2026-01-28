@@ -4,6 +4,9 @@
  */
 
 import QtQuick
+import QtQuick.Controls
+
+import Theme
 
 import "../js/TextTransform.js" as TextTransform
 
@@ -13,9 +16,21 @@ Item {
     property alias textColor: textElement.color
     property string pillColor: "#30FFFFFF"
     property int padding: 2
+    property string tooltip: ""
 
     implicitWidth: textElement.implicitWidth + padding * 2
     implicitHeight: textElement.implicitHeight
+
+    MouseArea {
+        id: mouseArea
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
+    }
+
+    ToolTip.visible: root.tooltip !== "" && mouseArea.containsMouse
+    ToolTip.delay: Theme.tooltipDelay
+    ToolTip.text: root.tooltip
 
     Rectangle {
         color: root.pillColor

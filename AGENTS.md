@@ -1,5 +1,5 @@
 # Basic project information
-- Rust-project with QML frontend.
+- Rust-project with QML frontend (Qt 6.10).
 - Ignore CLI frontend.
 - When being asked a question, don't implement anything without confirming first.
 

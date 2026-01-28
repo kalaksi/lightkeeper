@@ -204,7 +204,7 @@ LightkeeperDialog {
 
             Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Use sudo"
+                text: "Allow sudo"
             }
         }
 
