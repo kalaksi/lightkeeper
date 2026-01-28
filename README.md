@@ -177,9 +177,9 @@ The (current) goal is to support:
 
 
 # Configuration
-**NOTE: There is currently an assumption that your user can run sudo without password (or has root privileges) on the target host since some commands need higher privileges.**  
+**NOTE: Some commands need higher privileges. Those commands assume sudo is available and requires no password input. You can disallow sudo in host settings and those commands will be skipped.**  
   
-Configuration can now be done using the graphical UI, but configuring can always be done directly through configuration files, too.
+Configuration can be done using the graphical UI or by editing configuration files.
 
 ## Configuration files
 Example configuration files `config.example.yml`, `hosts.example.yml` and `groups.example.yml` can be found in the root of this repository.
