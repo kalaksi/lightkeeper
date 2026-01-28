@@ -526,10 +526,11 @@ impl ConfigManagerModel {
         let group_id = group_id.to_string();
         let module_id = module_id.to_string();
 
-        let settings_descriptions = &self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Monitor)
-            .next().unwrap()
-            .settings;
+        let settings_descriptions = match self.module_metadatas.iter()
+            .find(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Monitor) {
+            Some(metadata) => &metadata.settings,
+            None => return QStringList::default(),
+        };
 
         let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
         settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
@@ -622,10 +623,13 @@ impl ConfigManagerModel {
         let group_id = group_id.to_string();
         let module_id = module_id.to_string();
 
-        let settings_descriptions = &self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Connector)
-            .next().unwrap()
-            .settings;
+        let settings_descriptions = match self.module_metadatas.iter()
+            .find(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Connector) {
+            Some(metadata) => &metadata.settings,
+            // TODO: this may clear existing settings on save if module is not available.
+            // Maybe try to keep existing settings?
+            None => return QStringList::default(),
+        };
 
         let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
         settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
@@ -771,10 +775,11 @@ impl ConfigManagerModel {
         let group_id = group_id.to_string();
         let module_id = module_id.to_string();
 
-        let settings_descriptions = &self.module_metadatas.iter()
-            .filter(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Command)
-            .next().unwrap()
-            .settings;
+        let settings_descriptions = match self.module_metadatas.iter()
+            .find(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Command) {
+            Some(metadata) => &metadata.settings,
+            None => return QStringList::default(),
+        };
 
         let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
         settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
