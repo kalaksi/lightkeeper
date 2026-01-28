@@ -7,7 +7,6 @@
 use std::collections::HashMap;
 
 use crate::error::LkError;
-use crate::host::HostSetting;
 use crate::module::connection::ResponseMessage;
 use crate::module::platform_info::Flavor;
 use crate::{ Host, frontend };

@@ -17,7 +17,6 @@ use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
-use crate::host::HostSetting;
 
 #[monitoring_module(
     name="nixos-rebuild-generations",
