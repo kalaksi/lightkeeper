@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="storage-file-space-usage",
     version="0.0.1",
     description="Shows which files take the most disk space.",
+    uses_sudo=true,
     settings={
       line_count => "Number of lines to show. Default: 50.",
       one_file_system => "only show files on the same file system. Default: false."

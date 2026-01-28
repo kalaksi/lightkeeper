@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="linux-packages-uninstall",
     version="0.0.1",
     description="Uninstalls system packages.",
+    uses_sudo=true,
 )]
 pub struct Uninstall {
     pub purge: bool

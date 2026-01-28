@@ -22,6 +22,7 @@ use crate::host::HostSetting;
     name="storage-lvm-volume-group",
     version="0.0.1",
     description="Provides information about LVM volume groups.",
+    uses_sudo=true,
 )]
 pub struct VolumeGroup {
 }
@@ -74,11 +75,15 @@ impl MonitoringModule for VolumeGroup {
 
         let lines = response.message.lines().skip(1);
         for line in lines {
-            let mut parts = line.split("|");
-            let vg_name = parts.next().unwrap().trim_start().to_string();
-            let vg_attr = parts.next().unwrap().to_string();
-            let vg_size = parts.next().unwrap().to_string();
-            let vg_free = parts.next().unwrap().to_string();
+            let parts = line.split("|").collect::<Vec<&str>>();
+            let [vg_name, vg_attr, vg_size, vg_free, ..] = parts.as_slice()
+            else {
+                return Ok(DataPoint::invalid_response());
+            };
+            let vg_name = vg_name.trim_start().to_string();
+            let vg_attr = vg_attr.to_string();
+            let vg_size = vg_size.to_string();
+            let vg_free = vg_free.to_string();
 
             let mut data_point = DataPoint::labeled_value(vg_name.clone(), String::from("OK"));
             data_point.description = format!("free: {} / {}", vg_free, vg_size);

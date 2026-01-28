@@ -21,6 +21,7 @@ use crate::utils::ShellCommand;
     name="podman-containers",
     version="0.0.1",
     description="Provides information about Podman containers.",
+    uses_sudo=true,
     settings={
       ignore_compose_managed => "Ignore containers that are managed by podman-compose. Default: true.",
       socket_path => "Path to Podman socket. Default: /run/podman/podman.sock for root, /run/user/{uid}/podman/podman.sock for rootless."

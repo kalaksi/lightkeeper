@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="storage-lvm-lvrefresh",
     version="0.0.1",
     description="Refreshes an LVM logical volume.",
+    uses_sudo=true,
     settings={
     }
 )]

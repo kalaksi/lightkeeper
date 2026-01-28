@@ -22,6 +22,7 @@ use crate::host::HostSetting;
     name="storage-lvm-physical-volume",
     version="0.0.1",
     description="Provides information about LVM physical volumes.",
+    uses_sudo=true,
 )]
 pub struct PhysicalVolume {
 }

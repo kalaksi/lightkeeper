@@ -21,6 +21,7 @@ use lightkeeper_module::command_module;
     name="podman-compose-build",
     version="0.0.1",
     description="Builds local podman-compose service images.",
+    uses_sudo=true,
 )]
 pub struct Build {
     regex_step: Regex,

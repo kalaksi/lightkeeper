@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="systemd-service-stop",
     version="0.0.1",
     description="Stops a SystemD service.",
+    uses_sudo=true,
 )]
 pub struct Stop;
 

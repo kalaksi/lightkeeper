@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="docker-restart",
     version="0.0.1",
     description="Restarts a Docker container.",
+    uses_sudo=true,
 )]
 pub struct Restart;
 

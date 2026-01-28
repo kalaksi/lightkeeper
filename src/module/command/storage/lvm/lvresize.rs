@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="storage-lvm-lvresize",
     version="0.0.1",
     description="Resizes an LVM logical volume.",
+    uses_sudo=true,
 )]
 pub struct LVResize {
 }

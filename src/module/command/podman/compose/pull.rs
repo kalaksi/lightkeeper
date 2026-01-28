@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="podman-compose-pull",
     version="0.0.1",
     description="Pulls images for podman-compose projects or services.",
+    uses_sudo=true,
 )]
 pub struct Pull {
 }

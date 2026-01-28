@@ -21,6 +21,7 @@ use crate::utils::ShellCommand;
     name="docker-containers",
     version="0.0.1",
     description="Provides information about Docker containers.",
+    uses_sudo=true,
     settings={
       ignore_compose_managed => "Ignore containers that are managed by docker-compose. Default: true."
     }

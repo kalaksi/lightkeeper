@@ -21,6 +21,7 @@ use lightkeeper_module::command_module;
     name="storage-lvm-snapshot",
     version="0.0.1",
     description="Creates a snapshot of an LVM logical volume.",
+    uses_sudo=true,
     settings={
       snapshot_suffix => "The suffix to append to the snapshot name. Defaults to '_snapshot_$TIME'."
     }

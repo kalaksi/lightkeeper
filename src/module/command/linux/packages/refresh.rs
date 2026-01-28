@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="linux-packages-refresh",
     version="0.0.1",
     description="Refreshes (or updates) package lists.",
+    uses_sudo=true,
 )]
 pub struct Refresh;
 

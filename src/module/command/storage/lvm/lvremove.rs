@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="storage-lvm-lvremove",
     version="0.0.1",
     description="Removes an LVM logical volume.",
+    uses_sudo=true,
 )]
 pub struct LVRemove {
 }

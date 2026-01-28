@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="nixos-collectgarbage",
     version="0.0.1",
     description="Collects garbage from the Nix store.",
+    uses_sudo=true,
     settings={
         delete_older_than => "Delete generations of profiles older than the specified number of days. Default: 7.",
     }

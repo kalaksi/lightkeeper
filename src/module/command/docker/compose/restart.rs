@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="docker-compose-restart",
     version="0.0.1",
     description="Restarts docker-compose projects or services.",
+    uses_sudo=true,
 )]
 pub struct Restart {
 }

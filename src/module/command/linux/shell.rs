@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="linux-shell",
     version="0.0.1",
     description="Opens a shell on a Linux host.",
+    uses_sudo=true,
     settings={
         as_root => "Switch to root user after login. Default: true.",
     }

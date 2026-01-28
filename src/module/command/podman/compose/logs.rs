@@ -16,6 +16,7 @@ use lightkeeper_module::command_module;
     name="podman-compose-logs",
     version="0.0.1",
     description="Show podman-compose logs for services.",
+    uses_sudo=true,
 )]
 pub struct Logs {
 }

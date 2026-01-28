@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="docker-inspect",
     version="0.0.1",
     description="Inspects a Docker container.",
+    uses_sudo=true,
 )]
 pub struct Inspect;
 

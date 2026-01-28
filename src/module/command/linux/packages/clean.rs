@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="linux-packages-clean",
     version="0.0.1",
     description="Cleans the system's package cache.",
+    uses_sudo=true,
 )]
 pub struct Clean;
 

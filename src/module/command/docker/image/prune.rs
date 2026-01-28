@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="docker-image-prune",
     version="0.0.1",
     description="Prunes all unused Docker images.",
+    uses_sudo=true,
 )]
 pub struct Prune;
 

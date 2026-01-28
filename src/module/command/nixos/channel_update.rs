@@ -16,7 +16,8 @@ use lightkeeper_module::command_module;
 #[command_module(
     name="nixos-channel-update",
     version="0.0.1",
-    description="Updates the nix channel."
+    description="Updates the nix channel.",
+    uses_sudo=true,
 )]
 pub struct ChannelUpdate;
 

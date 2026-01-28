@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="linux-packages-update-all",
     version="0.0.1",
     description="Updates all system packages.",
+    uses_sudo=true,
 )]
 pub struct UpdateAll {
     regex_install_counts: Regex,

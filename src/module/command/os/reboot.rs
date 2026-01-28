@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="reboot",
     version="0.0.1",
     description="Reboots the host.",
+    uses_sudo=true,
 )]
 pub struct Reboot;
 

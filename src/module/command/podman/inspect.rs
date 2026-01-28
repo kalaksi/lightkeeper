@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="podman-inspect",
     version="0.0.1",
     description="Inspects a Podman container.",
+    uses_sudo=true,
 )]
 pub struct Inspect;
 

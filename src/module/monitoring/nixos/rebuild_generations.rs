@@ -23,6 +23,7 @@ use crate::host::HostSetting;
     name="nixos-rebuild-generations",
     version="0.0.1",
     description="Provides information about configuration generations.",
+    uses_sudo=true,
     settings={
     }
 )]

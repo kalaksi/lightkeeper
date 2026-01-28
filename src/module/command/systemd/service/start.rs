@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="systemd-service-start",
     version="0.0.1",
     description="Starts a SystemD service.",
+    uses_sudo=true,
 )]
 pub struct Start;
 

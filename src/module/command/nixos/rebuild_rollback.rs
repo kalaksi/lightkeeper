@@ -17,7 +17,8 @@ use regex::Regex;
 #[command_module(
     name="nixos-rebuild-rollback",
     version="0.0.1",
-    description="Roll back to a specified NixOS generation."
+    description="Roll back to a specified NixOS generation.",
+    uses_sudo=true,
 )]
 pub struct RebuildRollback {
     regex_path_count: Regex,

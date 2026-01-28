@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="network-socket-tcp",
     version="0.0.1",
     description="Show TCP connections.",
+    uses_sudo=true,
 )]
 pub struct SocketTcp;
 

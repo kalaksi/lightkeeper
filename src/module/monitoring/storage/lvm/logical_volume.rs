@@ -23,6 +23,7 @@ use crate::host::HostSetting;
     name="storage-lvm-logical-volume",
     version="0.0.1",
     description="Provides information about LVM logical volumes.",
+    uses_sudo=true,
     settings={
         snapshot_warning_threshold => "Snapshot utilization warning threshold in percent. Default: 80",
         snapshot_error_threshold => "Snapshot utilization error threshold in percent. Default: 90",

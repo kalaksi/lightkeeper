@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="linux-packages-logs",
     version="0.0.1",
     description="Shows package manager logs",
+    uses_sudo=true,
 )]
 pub struct Logs;
 

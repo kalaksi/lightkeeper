@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="docker-compose-shell",
     version="0.0.1",
     description="Opens a shell inside a Docker compose managed container.",
+    uses_sudo=true,
 )]
 pub struct Shell;
 

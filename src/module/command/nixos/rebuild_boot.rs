@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="nixos-rebuild-boot",
     version="0.0.1",
     description="Runs 'nixos-rebuild boot' and shows output",
+    uses_sudo=true,
 )]
 pub struct RebuildBoot {
     regex_build_count: Regex,

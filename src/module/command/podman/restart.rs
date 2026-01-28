@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="podman-restart",
     version="0.0.1",
     description="Restarts a Podman container.",
+    uses_sudo=true,
 )]
 pub struct Restart;
 

@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="systemd-service-unmask",
     version="0.0.1",
     description="Unmasks a SystemD service.",
+    uses_sudo=true,
 )]
 pub struct Unmask;
 

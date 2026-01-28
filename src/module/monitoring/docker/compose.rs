@@ -22,6 +22,7 @@ use crate::utils::ShellCommand;
     name="docker-compose",
     version="0.0.1",
     description="Provides information about docker-compose projects.",
+    uses_sudo=true,
     settings={
         compose_file_name => "Name of the docker-compose file. Default: docker-compose.yml",
         working_dir => "This is only needed with older docker-compose versions that don't include working_dir label on the container,

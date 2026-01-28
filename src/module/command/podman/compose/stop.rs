@@ -16,6 +16,7 @@ use lightkeeper_module::command_module;
     name="podman-compose-stop",
     version="0.0.1",
     description="Stops podman-compose projects or services.",
+    uses_sudo=true,
 )]
 pub struct Stop {
 }

@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="nixos-rebuild-switch",
     version="0.0.1",
     description="Runs 'nixos-rebuild switch' and shows output",
+    uses_sudo=true,
 )]
 pub struct RebuildSwitch {
     regex_build_count: Regex,

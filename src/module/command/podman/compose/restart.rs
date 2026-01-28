@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="podman-compose-restart",
     version="0.0.1",
     description="Restarts podman-compose projects or services.",
+    uses_sudo=true,
 )]
 pub struct Restart {
 }

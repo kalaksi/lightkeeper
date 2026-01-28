@@ -16,6 +16,7 @@ use lightkeeper_module::command_module;
     name="docker-compose-up",
     version="0.0.1",
     description="Builds, (re)creates and starts containers for a service.",
+    uses_sudo=true,
 )]
 pub struct Up {
 }

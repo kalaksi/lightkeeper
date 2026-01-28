@@ -24,6 +24,7 @@ use crate::utils::ShellCommand;
     name="podman-images",
     version="0.0.1",
     description="Provides information about Podman images.",
+    uses_sudo=true,
     settings={
         age_warning_threshold => "Warning threshold in days. Default: 180",
         age_error_threshold => "Error threshold in days. Default: 365",

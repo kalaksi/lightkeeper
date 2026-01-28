@@ -22,6 +22,7 @@ use lightkeeper_module::command_module;
     name="docker-image-remove",
     version="0.0.1",
     description="Removes a Docker image.",
+    uses_sudo=true,
 )]
 pub struct Remove;
 

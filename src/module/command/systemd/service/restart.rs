@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="systemd-service-restart",
     version="0.0.1",
     description="Restarts a SystemD service.",
+    uses_sudo=true,
 )]
 pub struct Restart;
 
