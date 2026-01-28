@@ -51,7 +51,7 @@ impl CommandModule for Logs {
         let page_size = parameters.get(3).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1000);
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+        command.use_sudo = true;
 
         let row_count = if page_number > 0 {
             page_number * page_size

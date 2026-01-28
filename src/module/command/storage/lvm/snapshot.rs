@@ -72,7 +72,7 @@ impl CommandModule for Snapshot {
         let snapshot_name = format!("{}{}", lv_name, snapshot_suffix_with_timestamp);
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if !string_validation::is_numeric_with_unit(&new_size, &self.get_display_options().user_parameters[0].units) {
             Err(LkError::other_p("Invalid size", &new_size))

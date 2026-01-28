@@ -53,7 +53,7 @@ impl CommandModule for Logs {
         let page_size = parameters.get(3).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1000);
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||

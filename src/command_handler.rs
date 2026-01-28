@@ -184,7 +184,7 @@ impl CommandHandler {
         if !host.settings.contains(&crate::host::HostSetting::UseSudo) && messages.iter().any(|msg| {
                 // checking command instead of relying to module metadata is more accurate
                 let trimmed = msg.trim_start();
-                trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\" ")
+                trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\"")
             }) {
 
             log::warn!("[{}][{}] Skipping, sudo required", host_id, command_id);

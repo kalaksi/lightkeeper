@@ -52,7 +52,7 @@ impl CommandModule for Restart {
         let service = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
             string_validation::begins_with_dash(service){

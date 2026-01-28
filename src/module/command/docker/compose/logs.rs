@@ -56,7 +56,7 @@ impl CommandModule for Logs {
         let row_count = parameters.get(5).and_then(|s| s.parse::<i32>().ok()).unwrap_or(1000);
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["docker", "compose", "-f", compose_file, "logs", "-t"]);

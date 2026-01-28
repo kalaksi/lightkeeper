@@ -53,7 +53,7 @@ impl CommandModule for Shell {
         let service = parameters.get(2).unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["docker", "compose", "-f", compose_file, "exec", service,

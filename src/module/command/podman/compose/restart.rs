@@ -52,7 +52,7 @@ impl CommandModule for Restart {
         let compose_file = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "compose", "-f", compose_file, "restart"]);

@@ -59,7 +59,7 @@ impl MonitoringModule for Containers {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             // TODO: somehow connect directly to the unix socket instead of using curl?

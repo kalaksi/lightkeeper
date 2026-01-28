@@ -67,7 +67,7 @@ impl MonitoringModule for Images {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);

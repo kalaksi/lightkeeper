@@ -52,7 +52,7 @@ impl MonitoringModule for VolumeGroup {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec![ "vgs", "--separator", "|", "--options", "vg_name,vg_attr,vg_size,vg_free", "--units", "h" ]);

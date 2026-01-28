@@ -223,7 +223,7 @@ impl MonitorManager {
                 if !host.settings.contains(&crate::host::HostSetting::UseSudo) && commands.iter().any(|msg| {
                     // Checking command instead of relying to module metadata is more accurate.
                     let trimmed = msg.trim_start();
-                    trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\" ")
+                    trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\"")
                 }) {
                     log::warn!("[{}][{}] Skipping, sudo required", host.name, info_provider.get_module_spec().id);
                     return;
@@ -385,7 +385,7 @@ impl MonitorManager {
             if !host.settings.contains(&crate::host::HostSetting::UseSudo) && messages.iter().any(|msg| {
                 // Checking command instead of relying to module metadata is more accurate.
                 let trimmed = msg.trim_start();
-                trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\" ")
+                trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\"")
             }) {
                 log::warn!("[{}][{}] Skipping, sudo required", host.name, monitor.get_module_spec().id);
                 continue;
@@ -559,7 +559,7 @@ impl MonitorManager {
                             if !response.host.settings.contains(&crate::host::HostSetting::UseSudo) && messages.iter().any(|msg| {
                                 // checking command instead of relying to module metadata is more accurate
                                 let trimmed = msg.trim_start();
-                                trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\" ")
+                                trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\"")
                             }) {
                                 log::warn!("[{}][{}] Skipping, sudo required", response.host.name, next_monitor.get_module_spec().id);
                                 continue;

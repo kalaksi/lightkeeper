@@ -49,7 +49,7 @@ impl CommandModule for Inspect {
         let target_id = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if !string_validation::is_alphanumeric_with(target_id, &"-_") {
             Err(LkError::invalid_parameter("Invalid container ID", target_id))

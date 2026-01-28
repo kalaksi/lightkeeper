@@ -54,7 +54,7 @@ impl CommandModule for Shell {
         }
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&crate::host::HostSetting::UseSudo);
+        command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["docker", "exec", "-it", target_id, "/bin/sh"]);
