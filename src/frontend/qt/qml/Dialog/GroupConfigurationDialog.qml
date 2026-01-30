@@ -303,7 +303,7 @@ LightkeeperDialog {
                                     visible: LK.config.monitorRequiresSudo(modelData)
                                     text: "sudo"
                                     pillColor: Theme.colorForCriticality("Info")
-                                    tooltip: "may require sudo and root privileges"
+                                    tooltip: "may require sudo for root privileges"
                                     Layout.alignment: Qt.AlignVCenter
                                     Layout.leftMargin: Theme.spacingLoose
                                 }
@@ -454,7 +454,7 @@ LightkeeperDialog {
                                     visible: LK.config.commandRequiresSudo(modelData)
                                     text: "sudo"
                                     pillColor: Theme.colorForCriticality("Info")
-                                    tooltip: "may require sudo and root privileges"
+                                    tooltip: "may require sudo for root privileges"
                                     Layout.alignment: Qt.AlignVCenter
                                 }
 
