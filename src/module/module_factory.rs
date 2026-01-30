@@ -358,6 +358,7 @@ impl ModuleFactory {
             (command::os::Shutdown::get_metadata(), command::os::Shutdown::new_command_module),
             (command::linux::Shell::get_metadata(), command::linux::Shell::new_command_module),
             (command::linux::FileBrowserLs::get_metadata(), command::linux::FileBrowserLs::new_command_module),
+            (command::linux::FileBrowserDownload::get_metadata(), command::linux::FileBrowserDownload::new_command_module),
             (command::linux::packages::Clean::get_metadata(), command::linux::packages::Clean::new_command_module),
             (command::linux::packages::Update::get_metadata(), command::linux::packages::Update::new_command_module),
             (command::linux::packages::UpdateAll::get_metadata(), command::linux::packages::UpdateAll::new_command_module),

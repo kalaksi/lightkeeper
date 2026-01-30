@@ -5,4 +5,5 @@
 
 pub mod ls;
 pub use ls::FileBrowserLs;
-
+pub mod download;
+pub use download::FileBrowserDownload;

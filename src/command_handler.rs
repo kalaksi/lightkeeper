@@ -336,14 +336,25 @@ impl CommandHandler {
 
         let command_module = &commands[host_id][command_id];
         let host = self.host_manager.borrow().get_host(host_id);
-        let mut command = self.remote_ssh_command(&host);
-
         let connector_messages = get_command_connector_messages(&host, command_module, parameters).unwrap_or_else(|error| {
             log::error!("Command failed: {}", error);
             Vec::new()
         });
 
-        command.arguments(connector_messages);
+        let command = if command_module.get_connector_spec().as_ref().map(|s| s.id.as_str()) == Some("local-command") {
+            if let Some(message) = connector_messages.first() {
+                ShellCommand::new_from(vec!["bash", "-c", message])
+            }
+            else {
+                ShellCommand::new()
+            }
+        }
+        else {
+            let mut cmd = self.remote_ssh_command(&host);
+            cmd.arguments(connector_messages);
+            cmd
+        };
+
         ::log::debug!("Opening terminal with command: {}", command.to_string());
         command
     }

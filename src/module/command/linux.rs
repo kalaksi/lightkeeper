@@ -12,4 +12,5 @@ pub mod shell;
 pub use shell::Shell;
 
 pub mod filebrowser;
+pub use filebrowser::FileBrowserDownload;
 pub use filebrowser::FileBrowserLs;
