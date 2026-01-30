@@ -55,7 +55,6 @@ groups:
       uptime: {}
       who: {}
     commands:
-      linux-filebrowser-ls: {}
       linux-packages-clean: {}
       linux-packages-logs: {}
       linux-packages-refresh: {}

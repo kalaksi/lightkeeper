@@ -393,7 +393,7 @@ Item {
         enabled: root.enableShortcuts && 
                  !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView)
         sequence: "Ctrl+Y"
-        onActivated: LK.command.executeConfirmed("", root.hostId, "linux-filebrowser-ls", ["/"])
+        onActivated: LK.command.executeConfirmed("", root.hostId, "_internal-filebrowser-ls", ["/"])
     }
 
 

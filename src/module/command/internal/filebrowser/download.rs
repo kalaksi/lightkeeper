@@ -15,7 +15,7 @@ use crate::enums;
 use lightkeeper_module::command_module;
 
 #[command_module(
-    name="linux-filebrowser-download",
+    name="_internal-filebrowser-download",
     version="0.0.1",
     description="Download remote files with rsync.",
 )]
@@ -39,11 +39,11 @@ impl CommandModule for FileBrowserDownload {
             category: String::from("host"),
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("folder-download"),
-            display_text: String::from("Download"),
+            display_text: String::from("Download with rsync"),
             depends_on_criticality: vec![enums::Criticality::Normal],
             action: UIAction::FollowOutput,
             tab_title: String::from("Download"),
-            parent_id: String::from("linux-filebrowser-ls"),
+            parent_id: String::from("_internal-filebrowser-ls"),
             user_parameters: vec![
                 frontend::UserInputField {
                     label: String::from("Remote path"),

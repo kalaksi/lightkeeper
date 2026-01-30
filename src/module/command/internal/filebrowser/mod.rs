@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-pub mod ls;
-pub use ls::FileBrowserLs;
 pub mod download;
+pub mod ls;
 pub use download::FileBrowserDownload;
+pub use ls::FileBrowserLs;

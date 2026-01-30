@@ -72,7 +72,7 @@ CategoryGroupBox {
             Layout.bottomMargin: Theme.spacingLoose
 
             onClicked: function(buttonId, commandId, params) {
-                if (commandId === "linux-filebrowser-ls") {
+                if (commandId === "_internal-filebrowser-ls") {
                     let path = (params && params.length > 0) ? params[0] : "/"
                     LK.command.listFiles(root.hostId, path)
                 } else {
@@ -195,7 +195,7 @@ CategoryGroupBox {
             Layout.fillWidth: true
 
             onButtonClicked: function(buttonId, commandId, params) {
-                if (commandId === "linux-filebrowser-ls") {
+                if (commandId === "_internal-filebrowser-ls") {
                     let path = (params && params.length > 0) ? params[0] : "/"
                     LK.command.listFiles(root.hostId, path)
                 } else {

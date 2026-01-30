@@ -113,6 +113,11 @@ impl CommandHandler {
 
             let custom_command_module = crate::module::command::internal::custom_command::CustomCommand::new_command_module(&HashMap::new());
             self.add_command(host_id, custom_command_module);
+
+            let filebrowser_ls = crate::module::command::internal::FileBrowserLs::new_command_module(&HashMap::new());
+            self.add_command(host_id, filebrowser_ls);
+            let filebrowser_download = crate::module::command::internal::FileBrowserDownload::new_command_module(&HashMap::new());
+            self.add_command(host_id, filebrowser_download);
         }
 
         let (sender, receiver) = mpsc::channel::<RequestResponse>();

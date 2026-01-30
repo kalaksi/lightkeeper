@@ -4,4 +4,7 @@
  */
 
 pub mod custom_command;
+pub mod filebrowser;
 pub use custom_command::CustomCommand;
+pub use filebrowser::FileBrowserDownload;
+pub use filebrowser::FileBrowserLs;

@@ -25,7 +25,7 @@ pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
-pub const CURRENT_SCHEMA_VERSION: u16 = 2;
+pub const CURRENT_SCHEMA_VERSION: u16 = 3;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -692,6 +692,15 @@ impl Configuration {
                         .groups
                         .entry(String::from("nixos"))
                         .or_insert(default_groups.groups["nixos"].to_owned());
+                },
+                // Remove linux-filebrowser-ls, which now doesn't need to be added explicitly.
+                2 => {
+                    groups_config
+                        .groups
+                        .entry(String::from("linux"))
+                        .or_insert(default_groups.groups["linux"].to_owned())
+                        .commands
+                        .remove("linux-filebrowser-ls");
                 },
                 _ => {}
             }

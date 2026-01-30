@@ -16,7 +16,7 @@ use lightkeeper_module::command_module;
 use serde_json::{json, Value};
 
 #[command_module(
-    name="linux-filebrowser-ls",
+    name="_internal-filebrowser-ls",
     version="0.0.1",
     description="List files and directories.",
 )]
@@ -65,11 +65,11 @@ impl CommandModule for FileBrowserLs {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         let entries = parse_ls_output(&response.message)?;
-        
+
         let json_result = json!({
             "entries": entries
         });
-        
+
         Ok(CommandResult::new_hidden(json_result.to_string()))
     }
 }
@@ -77,24 +77,24 @@ impl CommandModule for FileBrowserLs {
 fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
     let mut entries = Vec::new();
     let lines: Vec<&str> = output.lines().collect();
-    
+
     // Skip the first line which contains "total X"
     for line in lines.iter().skip(1) {
         let line = line.trim();
         if line.is_empty() {
             continue;
         }
-        
+
         let parts: Vec<&str> = line.split_whitespace().collect();
         let [permissions, links, owner, group, size, date, time, name_parts @ ..] = parts.as_slice()
         else {
             log::warn!("Invalid line: {}", line);
             continue;
         };
-        
+
         // Handle names with spaces - everything from index 7 onwards is the name
         let name = name_parts.join(" ");
-        
+
         // Determine file type from permissions first character
         let file_type = match permissions.chars().next() {
             Some('d') => "d",  // directory
@@ -106,7 +106,7 @@ fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
             Some('-') => "f",  // regular file
             _ => "f",          // default to file
         };
-        
+
         // Merge date and time into a single time field
         let time_combined = format!("{} {}", date, time);
 
@@ -121,7 +121,6 @@ fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
             "links": links
         }));
     }
-    
+
     Ok(entries)
 }
-

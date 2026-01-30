@@ -330,7 +330,7 @@ impl CommandHandlerModel {
     fn listFiles(&mut self, host_id: QString, path: QString) -> u64 {
         let host_id = host_id.to_string();
         let parameters = vec![path.to_string()];
-        let command_id = String::from("linux-filebrowser-ls");
+        let command_id = String::from("_internal-filebrowser-ls");
         let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
 
         if invocation_id > 0 {
