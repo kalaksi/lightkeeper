@@ -70,7 +70,6 @@ Item {
     FileBrowser {
         id: fileBrowser
         anchors.fill: parent
-        visible: !root._loading
         columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
         columnWidths: [0.1, 0.3, 0.2, 0.2, 0.2]
         useSplitView: true
