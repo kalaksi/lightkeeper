@@ -29,6 +29,7 @@ Item {
     property var _cache: ({})
     property var _expandedDirs: ({})
     property int _maxColumns: 8
+    property int _anchorRow: -1
 
     signal directoryExpanded(string path, bool is_cached)
     signal selectionChanged(var paths)
@@ -109,17 +110,72 @@ Item {
                 }
                 return ""
             }
+            property string columnValue: {
+                if (viewDelegate.column <= 2 || viewDelegate.row < 0 || viewDelegate.row >= tableModel.rowCount ||
+                    !tableModel.rows) {
+                    return ""
+                }
+                let rowData = tableModel.rows[viewDelegate.row]
+                let key = "column-" + (viewDelegate.column - 3)
+                return rowData && rowData[key] !== undefined ? String(rowData[key]) : ""
+            }
+
+            // To override default background that sometimes leaves a extraneous border after unselecting.
+            background: Rectangle {
+                color: viewDelegate.selected ? viewDelegate.palette.highlight : "transparent"
+                border.width: 0
+            }
 
             contentItem: Item {
                 anchors.fill: parent
 
+                // TableView doesn't seem to update ItemSelectionModel properly with custom delegate,
+                // so have to implement selection manually.
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {
-                        tableView.selectionModel.select(
-                            tableView.model.index(viewDelegate.row, 0),
-                            ItemSelectionModel.ClearAndSelect | ItemSelectionModel.Current | ItemSelectionModel.Rows
-                        );
+                    onClicked: function(mouse) {
+                        let rowIndex = tableView.model.index(viewDelegate.row, 0)
+                        if (root.singleSelection) {
+                            tableView.selectionModel.select(
+                                rowIndex,
+                                ItemSelectionModel.ClearAndSelect | ItemSelectionModel.Current |
+                                    ItemSelectionModel.Rows
+                            )
+                            return
+                        }
+                        if (mouse.modifiers & Qt.ShiftModifier) {
+                            let anchor = root._anchorRow >= 0 ? root._anchorRow : viewDelegate.row
+                            let top = Math.min(anchor, viewDelegate.row)
+                            let bottom = Math.max(anchor, viewDelegate.row)
+                            tableView.selectionModel.clearSelection()
+                            for (let r = top; r <= bottom; r++) {
+                                tableView.selectionModel.select(
+                                    tableView.model.index(r, 0),
+                                    ItemSelectionModel.Select | ItemSelectionModel.Rows
+                                )
+                            }
+                            tableView.selectionModel.setCurrentIndex(
+                                rowIndex, ItemSelectionModel.Current
+                            )
+                        }
+                        else if (mouse.modifiers & Qt.ControlModifier) {
+                            tableView.selectionModel.select(
+                                rowIndex,
+                                ItemSelectionModel.Toggle | ItemSelectionModel.Rows
+                            )
+                            tableView.selectionModel.setCurrentIndex(
+                                rowIndex, ItemSelectionModel.Current
+                            )
+                            root._anchorRow = viewDelegate.row
+                        }
+                        else {
+                            tableView.selectionModel.select(
+                                rowIndex,
+                                ItemSelectionModel.ClearAndSelect | ItemSelectionModel.Current |
+                                    ItemSelectionModel.Rows
+                            )
+                            root._anchorRow = viewDelegate.row
+                        }
                     }
                 }
 
@@ -169,7 +225,7 @@ Item {
                 Label {
                     visible: viewDelegate.column > 2
                     anchors.fill: parent
-                    text: viewDelegate.model["column-" + (viewDelegate.column - 3)] || ""
+                    text: viewDelegate.columnValue
                     elide: Text.ElideRight
                     color: viewDelegate.selected ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
                 }
@@ -180,6 +236,7 @@ Item {
     function refreshView() {
         tableModel.clear()
         tableView.selectionModel.clearSelection()
+        root._anchorRow = -1
 
         let flatList = root._buildFlatList(root.rootPath)
         for (let row of flatList) {
