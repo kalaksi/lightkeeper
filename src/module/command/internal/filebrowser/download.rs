@@ -68,15 +68,22 @@ impl CommandModule for FileBrowserDownload {
         let username = parameters.get(2).map(String::as_str).unwrap_or("root");
         let remote_spec = format!("{}@{}:{}", username, host.get_address(), remote_path);
 
+        if remote_path.len() == 0 {
+            return Err(LkError::other("Remote path is empty"));
+        }
+        if local_path.len() == 0 {
+            return Err(LkError::other("Local path is empty"));
+        }
+
         let mut command = ShellCommand::new();
         command.use_sudo = false;
         command.arguments(vec![
-            "sudo",
-            "--preserve-env=SSH_AUTH_SOCK",
+            // "sudo",
+            // "--preserve-env=SSH_AUTH_SOCK",
             "rsync",
             "-avz",
             "--info=progress2",
-            "--rsync-path=sudo rsync",
+            // "--rsync-path=sudo rsync",
             &remote_spec,
             local_path,
         ]);
