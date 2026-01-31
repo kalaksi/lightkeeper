@@ -122,7 +122,16 @@ Item {
 
             // To override default background that sometimes leaves a extraneous border after unselecting.
             background: Rectangle {
-                color: viewDelegate.selected ? viewDelegate.palette.highlight : "transparent"
+                color: {
+                    if (viewDelegate.selected) {
+                        return viewDelegate.palette.highlight
+                    }
+                    if (viewDelegate.row % 2 === 0) {
+                        return viewDelegate.palette.base
+                    }
+                    return viewDelegate.palette.alternateBase
+                }
+
                 border.width: 0
             }
 
