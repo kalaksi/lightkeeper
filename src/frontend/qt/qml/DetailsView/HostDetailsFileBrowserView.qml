@@ -98,6 +98,10 @@ Item {
                 icon.height: 24
                 icon.width: 24
                 padding: 4
+
+                ToolTip.visible: hovered
+                ToolTip.delay: Theme.tooltipDelay
+                ToolTip.text: "Download selected files"
             }
 
             Item {
@@ -138,9 +142,11 @@ Item {
                 path = path.substring(7)
             }
             let localDir = path
+            let remoteUser = LK.config.getSshUsername(root.hostId)
             for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
                 let remotePath = fileBrowser.selectedFiles[i]
-                LK.command.executePlain(root.hostId, "_internal-filebrowser-download", [remotePath, localDir])
+                LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
+                    [remotePath, localDir, remoteUser])
             }
         }
     }

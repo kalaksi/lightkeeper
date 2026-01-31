@@ -68,6 +68,7 @@ pub struct ConfigManagerModel {
     getSelectedGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     getAvailableGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     updateHostGroups: qt_method!(fn(&self, host_name: QString, groups: QStringList)),
+    getSshUsername: qt_method!(fn(&self, host_id: QString) -> QString),
 
     //
     // Custom commands
@@ -444,6 +445,15 @@ impl ConfigManagerModel {
 
         let host_settings = self.hosts_config.hosts.get_mut(&host_id).unwrap();
         host_settings.groups = groups;
+    }
+
+    fn getSshUsername(&self, host_id: QString) -> QString {
+        let host_id = host_id.to_string();
+        let host_settings = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
+        let ssh_settings = host_settings.effective.connectors.get("ssh").cloned().unwrap_or_default();
+        let username = ssh_settings.settings.get("username").cloned().unwrap_or_else(|| "".to_string());
+
+        QString::from(username)
     }
 
     /// Returns list of JSON strings representing CustomCommandConfig.

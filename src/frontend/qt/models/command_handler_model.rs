@@ -79,7 +79,7 @@ pub struct CommandHandlerModel {
 #[allow(non_snake_case)]
 impl CommandHandlerModel {
     pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, configuration: configuration::Configuration) -> Self {
-        CommandHandlerModel { 
+        CommandHandlerModel {
             command_handler: command_handler,
             monitor_manager: monitor_manager,
             configuration: configuration,
@@ -336,7 +336,7 @@ impl CommandHandlerModel {
         if invocation_id > 0 {
             self.fileBrowserNavigated(invocation_id, path);
         }
-        
+
         invocation_id
     }
 
