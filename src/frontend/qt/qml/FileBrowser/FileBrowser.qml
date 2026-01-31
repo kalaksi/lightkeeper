@@ -22,7 +22,10 @@ Item {
     property var columnWidths: [0.6, 0.4]
     property color headerColor: palette.alternateBase
     property bool useSplitView: false
-    property string selectedDirectory: "/"
+    readonly property string selectedDirectory: dirTreeView && dirTreeView.selectedPaths.length > 0 ?
+        dirTreeView.selectedPaths[0] : "/"
+    readonly property var selectedFiles: fileListView && fileListView.selectedPaths.length > 0 ?
+        fileListView.selectedPaths : []
 
     property int _maxColumns: 8
     property var _cache: ({})
@@ -31,7 +34,7 @@ Item {
     property var _currentDirectoryTreeView: null
     property var _currentFileListView: null
 
-    signal directoryExpanded(string path, bool is_cached)
+    signal directoryExpanded(string path, bool isCached)
 
     onColumnHeadersChanged: {
         if (root.columnHeaders.length > root._maxColumns) {
@@ -77,12 +80,13 @@ Item {
             _expandedDirs: root._expandedDirs
             _maxColumns: root._maxColumns
             rootPath: "/"
+            singleSelection: true
             columnWidthProvider: function(column, totalWidth) {
                 return root._getColumnWidth(column, totalWidth, false)
             }
 
-            onDirectoryExpanded: function(path, is_cached) {
-                root.directoryExpanded(path, is_cached)
+            onDirectoryExpanded: function(path, isCached) {
+                root.directoryExpanded(path, isCached)
             }
 
             Component.onCompleted: {
@@ -98,7 +102,7 @@ Item {
         visible: root.useSplitView
 
         FileBrowserTreeView {
-            id: directoryTreeView
+            id: dirTreeView
             indentWidth: root.indentWidth
             rowHeight: root.rowHeight
             arrowWidth: root.arrowWidth
@@ -108,6 +112,7 @@ Item {
             _maxColumns: root._maxColumns
             rootPath: "/"
             hideFiles: true
+            singleSelection: true
             columnWidthProvider: function(column, totalWidth) {
                 return root._getColumnWidth(column, totalWidth, true)
             }
@@ -115,23 +120,16 @@ Item {
             SplitView.preferredWidth: parent.width * 0.25
             SplitView.minimumWidth: 100
 
-            onDirectoryExpanded: function(path, is_cached) {
-                root.directoryExpanded(path, is_cached)
+            onDirectoryExpanded: function(path, isCached) {
+                root.directoryExpanded(path, isCached)
             }
 
-            onDirectorySelected: function(path) {
-                let normalizedPath = root._normalizePath(path)
-                root.selectedDirectory = normalizedPath
-                if (normalizedPath in root._cache) {
-                    fileListView.refreshView()
-                }
-                else {
-                    root.directoryExpanded(normalizedPath, false)
-                }
+            onSelectionChanged: function(_paths) {
+                fileListView.refreshView()
             }
 
             Component.onCompleted: {
-                root._currentDirectoryTreeView = directoryTreeView
+                root._currentDirectoryTreeView = dirTreeView
             }
         }
 
@@ -168,8 +166,8 @@ Item {
                     return root._getColumnWidth(column, totalWidth, false)
                 }
 
-                onDirectoryExpanded: function(path, is_cached) {
-                    root.directoryExpanded(path, is_cached)
+                onDirectoryExpanded: function(path, isCached) {
+                    root.directoryExpanded(path, isCached)
                 }
 
                 Component.onCompleted: {
@@ -180,16 +178,31 @@ Item {
     }
 
     function openDirectory(dirPath, fileEntries) {
-        let normalizedPath = root._normalizePath(dirPath)
+        let normalizedPath = root._normalizeDirectoryPath(dirPath)
+
+        if (normalizedPath in root._expandedDirs && root._expandedDirs[normalizedPath]) {
+            // Already expanded, do nothing.
+            return
+        }
+
+        root._expandedDirs[normalizedPath] = true
 
         if (fileEntries !== undefined && fileEntries !== null) {
             root._cache[normalizedPath] = fileEntries
         }
 
-        root._expandedDirs[normalizedPath] = true
+        let cachedEntries = root._cache[normalizedPath]
+        if (cachedEntries === undefined || cachedEntries === null) {
+            console.error(`Contents for directory ${normalizedPath} haven't been provided`)
+            return
+        }
 
-        if (normalizedPath in root._cache) {
-            root.refreshView()
+        if (root.useSplitView && root._currentDirectoryTreeView) {
+            root._currentDirectoryTreeView.insertDirectoryContent(normalizedPath, cachedEntries)
+            root._currentFileListView.refreshView()
+        }
+        else if (root._currentTreeView) {
+            root._currentTreeView.insertDirectoryContent(normalizedPath, cachedEntries)
         }
     }
 
@@ -215,7 +228,6 @@ Item {
     function clearCache() {
         root._cache = {}
         root._expandedDirs = {}
-        root.selectedDirectory = "/"
         root.refreshView()
     }
 
@@ -253,7 +265,7 @@ Item {
         return result
     }
 
-    function _normalizePath(path) {
+    function _normalizeDirectoryPath(path) {
         let pathStr = String(path)
         if (!pathStr.endsWith("/") && pathStr !== "/") {
             path = pathStr + "/"

@@ -13,3 +13,6 @@
 - Component structure is: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
 - Reference errors to `LK` are expected and can be ignored.
 - When adding or removing QML files, resource file has to be updated.
+
+# Web searches
+- Qt 6 has had many changes between versions, so it's important that the information is recent, preferably less than 3 years old. That way Qt 6.10 features can be utilized.

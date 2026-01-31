@@ -9,3 +9,6 @@
 [submodule "third_party/qml-lighthouse-ace-editor"]
 	path = third_party/qml-lighthouse-ace-editor
 	url = https://github.com/kalaksi/qml-lighthouse-ace-editor
+[submodule "third_party/qml-lighthouse-file-browser"]
+	path = third_party/qml-lighthouse-file-browser
+	url = https://github.com/kalaksi/qml-lighthouse-file-browser.git

@@ -7,6 +7,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import Qt.labs.qmlmodels
+import QtQml.Models
 
 Item {
     id: root
@@ -21,14 +22,16 @@ Item {
     property bool hideFiles: false
     property bool hideDirectories: false
     property bool enableDirectoryNavigation: true
+    /// Meant for read-only access.
+    property var selectedPaths: []
+    property bool singleSelection: false
 
     property var _cache: ({})
     property var _expandedDirs: ({})
     property int _maxColumns: 8
 
-
     signal directoryExpanded(string path, bool is_cached)
-    signal directorySelected(string path)
+    signal selectionChanged(var paths)
 
     onRootPathChanged: refreshView()
 
@@ -42,6 +45,9 @@ Item {
         rowHeightProvider: function(row) {
             return root.rowHeight
         }
+        selectionBehavior: TableView.SelectRows
+        selectionMode: root.singleSelection ? TableView.SingleSelection : TableView.ExtendedSelection
+        editTriggers: TableView.NoEditTriggers
 
         model: TableModel {
             id: tableModel
@@ -57,6 +63,21 @@ Item {
             TableModelColumn { display: "column-5" }
             TableModelColumn { display: "column-6" }
             TableModelColumn { display: "column-7" }
+        }
+
+        selectionModel: ItemSelectionModel {
+            onSelectionChanged: {
+                root.selectedPaths = root.getSelectedPaths()
+                if (root.selectedPaths.length === 1 &&
+                    root.selectedPaths[0].endsWith("/")) {
+
+                    let isCached = root._cache[root.selectedPaths[0]] !== undefined
+                    root.directoryExpanded(root.selectedPaths[0], isCached)
+                }
+                else {
+                    root.selectionChanged(root.selectedPaths)
+                }
+            }
         }
 
         ScrollBar.vertical: ScrollBar {
@@ -89,15 +110,18 @@ Item {
                 return ""
             }
 
-            onClicked: {
-                if (viewDelegate.fileType === "d") {
-                    root.toggleDirectory(viewDelegate.fullPath)
-                    root.directorySelected(viewDelegate.fullPath)
-                }
-            }
-
             contentItem: Item {
                 anchors.fill: parent
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        tableView.selectionModel.select(
+                            tableView.model.index(viewDelegate.row, 0),
+                            ItemSelectionModel.ClearAndSelect | ItemSelectionModel.Current | ItemSelectionModel.Rows
+                        );
+                    }
+                }
 
                 Row {
                     id: nameColumn
@@ -121,16 +145,23 @@ Item {
                             width: root.arrowWidth
                             visible: viewDelegate.fileType === "d" && root.enableDirectoryNavigation
                             text: root._expandedDirs[viewDelegate.fullPath] === true ? "▼" : "▶"
-                            color: viewDelegate.highlighted ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
+                            color: viewDelegate.selected ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
                             verticalAlignment: Text.AlignVCenter
+
+                            MouseArea {
+                                anchors.fill: parent
+                                propagateComposedEvents: false
+                                onClicked: root.toggleDirectory(viewDelegate.fullPath)
+                            }
                         }
                     }
 
                     Label {
-                        width: nameColumn.width - arrowIndentArea.width - nameColumn.spacing
-                        text: viewDelegate.model.display
+                        width: parent.width - arrowIndentArea.width - parent.spacing
+                        height: parent.height
+                        text: viewDelegate.name
                         elide: Text.ElideRight
-                        color: viewDelegate.highlighted ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
+                        color: viewDelegate.selected ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
                         verticalAlignment: Text.AlignVCenter
                     }
                 }
@@ -138,11 +169,91 @@ Item {
                 Label {
                     visible: viewDelegate.column > 2
                     anchors.fill: parent
-                    text: viewDelegate.model.display
+                    text: viewDelegate.model["column-" + (viewDelegate.column - 3)] || ""
                     elide: Text.ElideRight
-                    color: viewDelegate.highlighted ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
+                    color: viewDelegate.selected ? viewDelegate.palette.highlightedText : viewDelegate.palette.buttonText
                 }
             }
+        }
+    }
+
+    function refreshView() {
+        tableModel.clear()
+        tableView.selectionModel.clearSelection()
+
+        let flatList = root._buildFlatList(root.rootPath)
+        for (let row of flatList) {
+            tableModel.appendRow(row)
+        }
+    }
+
+    function getSelectedPaths() {
+        return tableView.selectionModel
+            .selectedRows(0)
+            .map(row => root.getPathAtRow(row.row))
+            .filter(p => p !== "")
+    }
+
+    function toggleDirectory(normalizedPath) {
+        let isCurrentlyExpanded = root._expandedDirs[normalizedPath] === true
+        let isCached = root._cache[normalizedPath] !== undefined
+
+        if (isCurrentlyExpanded) {
+            root._expandedDirs[normalizedPath] = false
+        }
+        else {
+            root._expandedDirs[normalizedPath] = true
+            root.directoryExpanded(normalizedPath, isCached)
+        }
+
+        if (isCached) {
+            root.refreshView()
+        }
+    }
+
+    function getPathAtRow(row) {
+        if (row < 0 || !tableModel.rows || row >= tableModel.rowCount) {
+            return ""
+        }
+        let rowData = tableModel.rows[row]
+        return rowData && rowData.fullPath ? String(rowData.fullPath) : ""
+    }
+
+    /// Inserts new directory contents to the table without re-rendering the entire table.
+    /// This way selection is also preserved.
+    function insertDirectoryContent(dirPath, fileEntries) {
+        let rowIndex = -1
+
+        if (dirPath === root.rootPath) {
+            rowIndex = 0
+        }
+        else {
+            let normalizedPath = root._normalizeDirectoryPath(dirPath)
+            for (let r = 0; r < tableModel.rowCount; r++) {
+                if (root.getPathAtRow(r) === normalizedPath) {
+                    rowIndex = r + 1
+                    break
+                }
+            }
+        }
+
+        if (rowIndex < 0) {
+            console.error(`Row index not found for path ${normalizedPath}`)
+            return
+        }
+
+        let sortedEntries = root._sortEntries(fileEntries)
+        for (let i = 0; i < sortedEntries.length; i++) {
+            let entry = sortedEntries[i]
+
+            if (root.hideFiles && entry.fileType !== "d") {
+                continue
+            }
+            if (root.hideDirectories && entry.fileType === "d") {
+                continue
+            }
+
+            tableModel.insertRow(rowIndex + i, entry)
         }
     }
 
@@ -186,31 +297,12 @@ Item {
         return result
     }
 
-    function refreshView() {
-        tableModel.clear()
-
-        let flatList = root._buildFlatList(root.rootPath)
-        for (let row of flatList) {
-            tableModel.appendRow(row)
+    function _normalizeDirectoryPath(path) {
+        let pathStr = String(path)
+        if (!pathStr.endsWith("/") && pathStr !== "/") {
+            path = pathStr + "/"
         }
+        return path
     }
-
-    function toggleDirectory(normalizedPath) {
-        let isCurrentlyExpanded = root._expandedDirs[normalizedPath] === true
-        let isCached = root._cache[normalizedPath] !== undefined
-
-        if (isCurrentlyExpanded) {
-            root._expandedDirs[normalizedPath] = false
-        }
-        else {
-            root._expandedDirs[normalizedPath] = true
-            root.directoryExpanded(normalizedPath, isCached)
-        }
-
-        if (isCached) {
-            root.refreshView()
-        }
-    }
-
 }
 
