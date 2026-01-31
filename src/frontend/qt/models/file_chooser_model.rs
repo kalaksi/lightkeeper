@@ -18,6 +18,8 @@ use std::thread;
 
 /// The need for this model came from poor support for portals (related to sandboxing), like file chooser, in Qt.
 /// However, things seem to be improving in Qt so this might be unneeded in the future.
+// TODO: Greetings from Qt 6.10, QML now works seamlessly with flatpak, see file browser for example.
+//       Remove this implementation or maybe move it to Lighthouse component.
 #[derive(QObject, Default)]
 #[allow(non_snake_case)]
 pub struct FileChooserModel {

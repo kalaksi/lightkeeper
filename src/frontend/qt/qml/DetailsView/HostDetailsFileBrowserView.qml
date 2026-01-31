@@ -8,11 +8,14 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
+import QtCore
 
 import Theme
 
 import ".."
 import "../FileBrowser"
+import "../Misc"
 
 Item {
     id: root
@@ -67,9 +70,48 @@ Item {
         anchors.fill: parent
     }
 
+    ToolBar {
+        id: topBar
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 36
+
+        background: BorderRectangle {
+            backgroundColor: Theme.backgroundColor
+            borderColor: Theme.borderColor
+            borderBottom: 1
+        }
+
+        RowLayout {
+            width: parent.width
+            height: parent.height
+            anchors.top: parent.top
+            spacing: Theme.spacingNormal
+
+            ToolButton {
+                icon.source: "qrc:/main/images/button/download"
+                text: "Download"
+                display: AbstractButton.IconOnly
+                onClicked: downloadFolderDialog.open()
+                enabled: fileBrowser.selectedFiles.length > 0
+                icon.height: 24
+                icon.width: 24
+                padding: 4
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
+        }
+    }
+
     FileBrowser {
         id: fileBrowser
-        anchors.fill: parent
+        anchors.top: topBar.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
         columnWidths: [0.1, 0.3, 0.2, 0.2, 0.2]
         useSplitView: true
@@ -81,6 +123,24 @@ Item {
             }
             else {
                 fileBrowser.openDirectory(path)
+            }
+        }
+    }
+
+    FolderDialog {
+        id: downloadFolderDialog
+        title: "Choose download destination"
+        currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+
+        onAccepted: {
+            let path = selectedFolder.toString()
+            if (path.indexOf("file://") === 0) {
+                path = path.substring(7)
+            }
+            let localDir = path
+            for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
+                let remotePath = fileBrowser.selectedFiles[i]
+                LK.command.executePlain(root.hostId, "_internal-filebrowser-download", [remotePath, localDir])
             }
         }
     }
