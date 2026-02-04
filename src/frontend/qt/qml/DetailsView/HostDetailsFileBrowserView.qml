@@ -16,6 +16,7 @@ import Theme
 import ".."
 import "../FileBrowser"
 import "../Misc"
+import "../Text"
 
 Item {
     id: root
@@ -26,6 +27,9 @@ Item {
     property string currentPath: root.defaultPath
     property bool enableShortcuts: false
     property bool _loading: pendingInvocation > 0
+    property int _downloadProgressPercent: 0
+    property bool _hasActiveDownload: false
+    property var _downloadInvocations: ({})
 
     Connections {
         target: LK.command
@@ -36,10 +40,37 @@ Item {
         }
     }
 
+    function _minDownloadProgress() {
+        let invs = root._downloadInvocations
+        let keys = Object.keys(invs)
+        if (keys.length === 0) {
+            return 100
+        }
+        let minP = 100
+        for (let i = 0; i < keys.length; i++) {
+            let p = invs[keys[i]]
+            if (p < minP) {
+                minP = p
+            }
+        }
+        return minP
+    }
+
     Connections {
         target: LK.hosts
 
         function onCommandResultReceived(commandResultJson, invocationId) {
+            if (invocationId in root._downloadInvocations) {
+                let commandResult = JSON.parse(commandResultJson)
+                root._downloadInvocations[invocationId] = commandResult.progress
+                if (commandResult.progress >= 100) {
+                    delete root._downloadInvocations[invocationId]
+                }
+                root._downloadProgressPercent = root._minDownloadProgress()
+                if (Object.keys(root._downloadInvocations).length === 0) {
+                    root._hasActiveDownload = false
+                }
+            }
             if (root.pendingInvocation === invocationId) {
                 let dirPath = root.pendingPath
 
@@ -113,7 +144,7 @@ Item {
     FileBrowser {
         id: fileBrowser
         anchors.top: topBar.bottom
-        anchors.bottom: parent.bottom
+        anchors.bottom: downloadProgressBar.top
         anchors.left: parent.left
         anchors.right: parent.right
         columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
@@ -131,6 +162,54 @@ Item {
         }
     }
 
+    Rectangle {
+        id: downloadProgressBar
+        visible: root._hasActiveDownload
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: visible ? 28 : 0
+        color: Theme.backgroundColor
+        border.width: 1
+        border.color: Theme.borderColor
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 4
+            spacing: Theme.spacingNormal
+
+            ProgressBar {
+                id: progressBar
+                Layout.fillWidth: true
+                Layout.fillHeight: false
+                Layout.preferredHeight: 18
+                Layout.alignment: Qt.AlignVCenter
+                value: root._downloadProgressPercent / 100.0
+
+                contentItem: Rectangle {
+                    implicitHeight: progressBar.height
+                    implicitWidth: progressBar.width
+                    color: "#202020"
+                    radius: 4
+
+                    Rectangle {
+                        height: parent.height
+                        width: progressBar.visualPosition * parent.width
+                        color: palette.highlight
+                        radius: parent.radius
+                    }
+                }
+            }
+
+            NormalText {
+                id: label
+                lineHeight: 0.9
+                text: root._downloadProgressPercent + " %"
+                Layout.alignment: Qt.AlignVCenter
+            }
+        }
+    }
+
     FolderDialog {
         id: downloadFolderDialog
         title: "Choose download destination"
@@ -143,10 +222,15 @@ Item {
             }
             let localDir = path
             let remoteUser = LK.config.getSshUsername(root.hostId)
+            root._hasActiveDownload = true
+            root._downloadProgressPercent = 0
             for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
                 let remotePath = fileBrowser.selectedFiles[i]
-                LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
+                let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
                     [remotePath, localDir, remoteUser])
+                let invs = root._downloadInvocations
+                invs[invId] = 0
+                root._downloadInvocations = invs
             }
         }
     }
