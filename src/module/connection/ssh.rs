@@ -350,7 +350,7 @@ impl ConnectionModule for Ssh2 {
 }
 
 impl Ssh2 {
-    fn wait_for_session(&self, invocation_id: u64, connect_automatically: bool) -> Result<MutexGuard<SharedSessionData>, LkError> {
+    fn wait_for_session(&self, invocation_id: u64, connect_automatically: bool) -> Result<MutexGuard<'_, SharedSessionData>, LkError> {
         let mut total_wait = Duration::from_secs(0);
 
         loop {
@@ -386,7 +386,7 @@ impl Ssh2 {
         }
     }
 
-    fn connect(&self, session_data: &mut MutexGuard<SharedSessionData>, address: &str, port: u16) -> Result<(), LkError> {
+    fn connect(&self, session_data: &mut MutexGuard<'_, SharedSessionData>, address: &str, port: u16) -> Result<(), LkError> {
         if session_data.is_initialized {
             return Ok(())
         }
@@ -457,7 +457,7 @@ impl Ssh2 {
         Ok(())
     }
 
-    fn reconnect(&self, session_data: &mut MutexGuard<SharedSessionData>) -> Result<(), LkError> {
+    fn reconnect(&self, session_data: &mut MutexGuard<'_, SharedSessionData>) -> Result<(), LkError> {
         let address = self.address.lock().unwrap().clone();
         let port = *self.port.lock().unwrap();
 
@@ -467,7 +467,7 @@ impl Ssh2 {
         self.connect(session_data, &address, port)
     }
 
-    fn check_known_hosts(&self, session_data: &MutexGuard<SharedSessionData>, hostname: &str, port: u16) -> Result<(), LkError> {
+    fn check_known_hosts(&self, session_data: &MutexGuard<'_, SharedSessionData>, hostname: &str, port: u16) -> Result<(), LkError> {
         let known_hosts_path = self.get_known_hosts_path()?;
 
         let mut known_hosts = session_data.session.known_hosts()
