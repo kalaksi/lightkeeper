@@ -19,6 +19,7 @@ use lightkeeper::module::platform_info::*;
 use lightkeeper::module::*;
 
 use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -60,7 +61,12 @@ impl MonitorTestHarness {
         let mut connection_manager = ConnectionManager::new(module_factory.clone());
         connection_manager.configure(&hosts_config);
 
-        let mut monitor_manager = MonitorManager::new(host_manager.clone(), module_factory.clone());
+        let invocation_id_counter = Arc::new(AtomicU64::new(0));
+        let mut monitor_manager = MonitorManager::new(
+            host_manager.clone(),
+            module_factory.clone(),
+            invocation_id_counter.clone(),
+        );
         monitor_manager.configure(
             &hosts_config,
             connection_manager.new_request_sender(),
@@ -284,7 +290,12 @@ impl CommandTestHarness {
         let mut connection_manager = ConnectionManager::new(module_factory.clone());
         connection_manager.configure(&hosts_config);
 
-        let mut command_handler = CommandHandler::new(host_manager.clone(), module_factory.clone());
+        let invocation_id_counter = Arc::new(AtomicU64::new(0));
+        let mut command_handler = CommandHandler::new(
+            host_manager.clone(),
+            module_factory.clone(),
+            invocation_id_counter,
+        );
         command_handler.configure(
             &hosts_config,
             &configuration::Preferences::default(),

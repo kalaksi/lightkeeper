@@ -5,6 +5,7 @@
 
 
 use core::panic;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::sync::mpsc;
 use std::collections::HashMap;
@@ -54,8 +55,8 @@ pub struct CommandHandler {
     preferences: Preferences,
     /// Effective host configurations.
     hosts_config: Hosts,
-    /// Every execution gets an invocation ID. Valid ID numbers begin from 1.
-    invocation_id_counter: u64,
+    /// Shared counter for globally unique invocation IDs. Valid ID numbers begin from 1.
+    invocation_id_counter: Arc<AtomicU64>,
 
     // Shared resources.
     /// Mainly for getting up-to-date Host-datas.
@@ -69,12 +70,21 @@ pub struct CommandHandler {
 }
 
 impl CommandHandler {
-    pub fn new(host_manager: Rc<RefCell<HostManager>>, module_factory: Arc<ModuleFactory>) -> Self {
+    pub fn new(
+        host_manager: Rc<RefCell<HostManager>>,
+        module_factory: Arc<ModuleFactory>,
+        invocation_id_counter: Arc<AtomicU64>,
+    ) -> Self {
         CommandHandler {
             host_manager: host_manager.clone(),
             module_factory: module_factory,
+            invocation_id_counter,
             ..Default::default()
         }
+    }
+
+    fn next_invocation_id(&self) -> u64 {
+        self.invocation_id_counter.fetch_add(1, Ordering::SeqCst) + 1
     }
 
     pub fn configure(&mut self,
@@ -196,7 +206,7 @@ impl CommandHandler {
             return 0;
         }
 
-        self.invocation_id_counter += 1;
+        let invocation_id = self.next_invocation_id();
 
         // Notify host state manager about new command, so it can keep track of pending invocations.
         self.send_state_update(StateUpdateMessage {
@@ -204,7 +214,7 @@ impl CommandHandler {
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: Some(CommandResult::pending()),
-            invocation_id: self.invocation_id_counter,
+            invocation_id,
             ..Default::default()
         });
 
@@ -218,12 +228,12 @@ impl CommandHandler {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
-            invocation_id: self.invocation_id_counter,
+            invocation_id,
             request_type: request_type,
             response_sender: self.new_response_sender(),
         });
 
-        self.invocation_id_counter
+        invocation_id
     }
 
     //
@@ -243,20 +253,20 @@ impl CommandHandler {
         let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).unwrap();
 
         let (_, local_file_path) = file_handler::convert_to_local_paths(&host, remote_file_path);
-        self.invocation_id_counter += 1;
+        let invocation_id = self.next_invocation_id();
 
         self.send_connector_request(ConnectorRequest {
             connector_spec: command.get_connector_spec(),
             source_id: command.get_module_spec().id,
             host: host.clone(),
-            invocation_id: self.invocation_id_counter,
+            invocation_id,
             response_sender: self.new_response_sender(),
             request_type: RequestType::Download {
                 remote_file_path: connector_messages[0].to_owned(),
             },
         });
 
-        (self.invocation_id_counter, local_file_path)
+        (invocation_id, local_file_path)
     }
 
     pub fn upload_file(&mut self, host_id: &String, command_id: &String, local_file_path: &String) -> u64 {
@@ -268,7 +278,7 @@ impl CommandHandler {
         let command = &commands[host_id][command_id];
         let host = self.host_manager.borrow().get_host(host_id);
 
-        self.invocation_id_counter += 1;
+        let invocation_id = self.next_invocation_id();
 
         match file_handler::read_file(local_file_path) {
             Ok((mut metadata, contents)) => {
@@ -280,7 +290,7 @@ impl CommandHandler {
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_error("File is unchanged")),
-                        invocation_id: self.invocation_id_counter,
+                        invocation_id,
                         ..Default::default()
                     });
                 }
@@ -291,7 +301,7 @@ impl CommandHandler {
                         connector_spec: command.get_connector_spec(),
                         source_id: command.get_module_spec().id,
                         host: host.clone(),
-                        invocation_id: self.invocation_id_counter,
+                        invocation_id,
                         response_sender: self.new_response_sender(),
                         request_type: RequestType::Upload {
                             local_file_path: local_file_path.clone(),
@@ -307,13 +317,13 @@ impl CommandHandler {
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_critical_error(error)),
-                    invocation_id: self.invocation_id_counter,
+                    invocation_id,
                     ..Default::default()
                 });
             }
         }
 
-        self.invocation_id_counter
+        invocation_id
     }
 
     pub fn verify_host_key(&self, host_id: &String, connector_id: &String, key_id: &String) {

@@ -6,6 +6,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
@@ -34,8 +35,8 @@ pub struct MonitorManager {
     request_sender: Option<mpsc::Sender<ConnectorRequest>>,
     // Channel to send state updates to HostManager.
     state_update_sender: Option<mpsc::Sender<StateUpdateMessage>>,
-    /// Every refresh operation gets an invocation ID. Valid ID numbers begin from 1.
-    invocation_id_counter: u64,
+    /// Shared counter for globally unique invocation IDs. Valid ID numbers begin from 1.
+    invocation_id_counter: Arc<AtomicU64>,
 
     // Shared resources. Only used for fetching up-to-date data.
     host_manager: Rc<RefCell<HostManager>>,
@@ -47,13 +48,26 @@ pub struct MonitorManager {
 }
 
 impl MonitorManager {
-    pub fn new(host_manager: Rc<RefCell<HostManager>>, module_factory: Arc<ModuleFactory>) -> Self {
-
+    pub fn new(
+        host_manager: Rc<RefCell<HostManager>>,
+        module_factory: Arc<ModuleFactory>,
+        invocation_id_counter: Arc<AtomicU64>,
+    ) -> Self {
         MonitorManager {
             host_manager: host_manager.clone(),
             module_factory: module_factory,
+            invocation_id_counter,
             ..Default::default()
         }
+    }
+
+    fn next_invocation_id(&self) -> u64 {
+        self.invocation_id_counter.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    fn reserve_invocation_ids(&self, n: usize) -> Vec<u64> {
+        let start = self.invocation_id_counter.fetch_add(n as u64, Ordering::SeqCst);
+        (1..=n).map(|i| start + i as u64).collect()
     }
 
     pub fn configure(&mut self,
@@ -229,7 +243,7 @@ impl MonitorManager {
                     return;
                 }
 
-                self.invocation_id_counter += 1;
+                let invocation_id = self.next_invocation_id();
 
                 // Notify host state manager about new pending monitor invocation.
                 self.send_state_update(StateUpdateMessage {
@@ -237,7 +251,7 @@ impl MonitorManager {
                     display_options: info_provider.get_display_options(),
                     module_spec: info_provider.get_module_spec(),
                     data_point: Some(DataPoint::pending()),
-                    invocation_id: self.invocation_id_counter,
+                    invocation_id,
                     ..Default::default()
                 });
 
@@ -245,7 +259,7 @@ impl MonitorManager {
                     connector_spec: info_provider.get_connector_spec(),
                     source_id: info_provider.get_module_spec().id,
                     host: host.clone(),
-                    invocation_id: self.invocation_id_counter,
+                    invocation_id,
                     response_sender: self.new_response_sender(),
                     request_type: RequestType::MonitorCommand {
                         parent_datapoint: None,
@@ -305,9 +319,7 @@ impl MonitorManager {
             .filter(|(_, monitor)| &monitor.get_display_options().category == category)
             .collect();
 
-        let invocation_ids = self.refresh_monitors(host, monitors_by_category);
-        self.invocation_id_counter += invocation_ids.len() as u64;
-        invocation_ids
+        self.refresh_monitors(host, monitors_by_category)
     }
 
     /// Refresh by monitor ID.
@@ -329,9 +341,7 @@ impl MonitorManager {
             .filter(|(_, monitor)| &monitor.get_module_spec().id == monitor_id)
             .collect();
 
-        let invocation_ids = self.refresh_monitors(host, monitor);
-        self.invocation_id_counter += invocation_ids.len() as u64;
-        invocation_ids
+        self.refresh_monitors(host, monitor)
     }
 
     fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>) -> Vec<u64> {
@@ -339,16 +349,15 @@ impl MonitorManager {
             log::warn!("[{}] Refreshing monitors despite missing platform info", host.name);
         }
 
-        let mut current_invocation_id = self.invocation_id_counter;
-        let mut invocation_ids = Vec::new();
-
         // Split into 2: base modules and extension modules.
         let (extensions, bases): (Vec<&Monitor>, Vec<&Monitor>) = 
             monitors.values().partition(|monitor| monitor.get_metadata_self().parent_module.is_some());
 
+        let mut invocation_ids = self.reserve_invocation_ids(bases.len());
+        let mut id_iter = invocation_ids.iter();
+
         for monitor in bases {
-            current_invocation_id += 1;
-            invocation_ids.push(current_invocation_id);
+            let current_invocation_id = *id_iter.next().unwrap();
 
             let extension_ids = extensions.iter()
                 .filter(|ext| ext.get_metadata_self().parent_module.unwrap() == monitor.get_module_spec())

@@ -23,6 +23,7 @@ mod metrics;
 
 pub use module::ModuleFactory;
 pub use configuration::Configuration;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -76,14 +77,24 @@ pub fn run(
         None
     };
 
-    let mut monitor_manager = MonitorManager::new(host_manager.clone(), module_factory.clone());
+    let invocation_id_counter = Arc::new(AtomicU64::new(0));
+
+    let mut monitor_manager = MonitorManager::new(
+        host_manager.clone(),
+        module_factory.clone(),
+        invocation_id_counter.clone(),
+    );
     monitor_manager.configure(
         &hosts_config,
         connection_manager.new_request_sender(),
         host_manager.borrow().new_state_update_sender()
     );
 
-    let mut command_handler = CommandHandler::new(host_manager.clone(), module_factory.clone());
+    let mut command_handler = CommandHandler::new(
+        host_manager.clone(),
+        module_factory.clone(),
+        invocation_id_counter,
+    );
     command_handler.configure(
         &hosts_config,
         &main_config.preferences,
