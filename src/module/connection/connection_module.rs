@@ -38,12 +38,8 @@ pub trait ConnectionModule: BoxCloneableConnector + MetadataSupport + Module {
     }
 
     /// Sends a command and writes data to its stdin, then reads the response.
-    fn send_message_with_stdin(&self, _command: &str, _stdin_data: &[u8]) -> Result<ResponseMessage, LkError> {
-        Err(LkError::not_implemented())
-    }
-
-    /// Sends a command and reads binary output (for file downloads).
-    fn send_message_binary(&self, _command: &str) -> Result<(Vec<u8>, i32), LkError> {
+    /// Sends a command and reads binary output (for file downloads and uploads).
+    fn send_message_binary(&self, _command: &str, _stdin_data: &[u8]) -> Result<ResponseMessage, LkError> {
         Err(LkError::not_implemented())
     }
 

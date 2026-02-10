@@ -484,24 +484,24 @@ impl ConnectionManager {
         use crate::utils::sha256;
 
         let cat_cmd = ShellCommand::new_from(vec!["cat", file_path]).use_sudo();
-        let (contents, exit_status) = connector.send_message_binary(&cat_cmd.to_string())?;
+        let response = connector.send_message_binary(&cat_cmd.to_string(), &[])?;
 
-        if exit_status != 0 {
-            return Err(LkError::other(format!("Failed to read file: exit code {}", exit_status)));
+        if response.return_code != 0 {
+            return Err(LkError::other(format!("Failed to read file: exit code {}", response.return_code)));
         }
 
         let metadata = FileMetadata {
             download_time: Utc::now(),
             local_path: None,
             remote_path: file_path.to_string(),
-            remote_file_hash: sha256::hash(&contents),
+            remote_file_hash: sha256::hash(&response.data),
             owner_uid: 0,
             owner_gid: 0,
             permissions: 0o644,
             temporary: true,
         };
 
-        match file_handler::create_file(host, file_path, metadata, contents) {
+        match file_handler::create_file(host, file_path, metadata, response.data) {
             Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
             Err(error) => Err(error.into()),
         }
@@ -514,7 +514,7 @@ impl ConnectionManager {
         
         // Write directly to target file. Doesn't alter owner or permissions.
         let tee_cmd = ShellCommand::new_from(vec!["tee", remote_path]).use_sudo();
-        let response = connector.send_message_with_stdin(&tee_cmd.to_string(), &contents)?;
+        let response = connector.send_message_binary(&tee_cmd.to_string(), &contents)?;
 
         if response.return_code != 0 {
             return Err(LkError::other(format!(
@@ -538,18 +538,18 @@ impl ConnectionManager {
         
         // Fall back to cat and compare contents.
         let cat_cmd = ShellCommand::new_from(vec!["cat", remote_path]).use_sudo();
-        let (remote_contents, exit_status) = connector.send_message_binary(&cat_cmd.to_string())?;
+        let response = connector.send_message_binary(&cat_cmd.to_string(), &contents)?;
         
-        if exit_status != 0 {
+        if response.return_code != 0 {
             return Err(LkError::other(format!(
                 "Failed to verify file: exit code {}.\n\n\
                 Cached file location: {}.\n\n\
                 You can manually verify that files match.",
-                exit_status, local_file_path
+                response.return_code, local_file_path
             )));
         }
         
-        if remote_contents != contents {
+        if response.data != contents {
             return Err(LkError::other(format!(
                 "File transfer was incomplete, hash mismatch.\n\n\
                 Cached file location: {}\n\n\

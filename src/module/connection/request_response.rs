@@ -65,6 +65,7 @@ impl RequestResponse {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ResponseMessage {
     pub message: String,
+    pub data: Vec<u8>,
     pub return_code: i32,
     pub is_partial: bool,
 }
@@ -73,6 +74,14 @@ impl ResponseMessage {
     pub fn new(message: String, return_code: i32) -> ResponseMessage {
         ResponseMessage {
             message: message,
+            return_code: return_code,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_binary(data: Vec<u8>, return_code: i32) -> ResponseMessage {
+        ResponseMessage {
+            data: data,
             return_code: return_code,
             ..Default::default()
         }
