@@ -33,6 +33,7 @@ pub struct CommandHandlerModel {
     execute: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executeConfirmed: qt_method!(fn(&self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList)),
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
+    interruptInvocation: qt_method!(fn(&self, invocation_id: u64)),
     listFiles: qt_method!(fn(&self, host_id: QString, path: QString) -> u64),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
@@ -91,11 +92,16 @@ impl CommandHandlerModel {
         main_config: &configuration::Configuration,
         hosts_config: &configuration::Hosts,
         request_sender: mpsc::Sender<ConnectorRequest>,
-        update_sender: mpsc::Sender<StateUpdateMessage>
+        update_sender: mpsc::Sender<StateUpdateMessage>,
     ) {
         self.configuration = main_config.clone();
         self.monitor_manager.configure(&hosts_config, request_sender.clone(), update_sender.clone());
-        self.command_handler.configure(&hosts_config, &main_config.preferences, request_sender, update_sender);
+        self.command_handler.configure(
+            &hosts_config,
+            &main_config.preferences,
+            request_sender,
+            update_sender,
+        );
     }
 
     pub fn start_processing_responses(&mut self) {
@@ -325,6 +331,10 @@ impl CommandHandlerModel {
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
         self.command_handler.execute(&host_id, &command_id, &parameters)
+    }
+
+    fn interruptInvocation(&self, invocation_id: u64) {
+        self.command_handler.interrupt_invocation(invocation_id);
     }
 
     fn listFiles(&mut self, host_id: QString, path: QString) -> u64 {

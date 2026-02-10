@@ -46,6 +46,7 @@ pub struct ConnectionManager {
     request_receiver: Option<mpsc::Receiver<ConnectorRequest>>,
     request_sender_prototype: Option<mpsc::Sender<ConnectorRequest>>,
     receiver_thread: Option<thread::JoinHandle<()>>,
+    interrupt_pending: Option<Arc<Mutex<Vec<u64>>>>,
 }
 
 impl ConnectionManager {
@@ -59,6 +60,8 @@ impl ConnectionManager {
 
     pub fn configure(&mut self, hosts_config: &Hosts) {
         self.stop();
+
+        self.interrupt_pending = Some(Arc::new(Mutex::new(Vec::new())));
 
         let mut stateful_connectors = self.stateful_connectors.lock().unwrap();
 
@@ -170,10 +173,12 @@ impl ConnectionManager {
     }
 
     pub fn start_processing_requests(&mut self) {
+        let interrupt_pending = self.interrupt_pending.clone().expect("configure must be called first");
         let thread = Self::process_requests(
             self.stateful_connectors.clone(),
             self.request_receiver.take().unwrap(),
             self.module_factory.clone(),
+            interrupt_pending,
         );
         self.receiver_thread = Some(thread);
     }
@@ -202,7 +207,9 @@ impl ConnectionManager {
     fn process_requests(
         stateful_connectors: Arc<Mutex<HashMap<String, ConnectorStates>>>,
         receiver: mpsc::Receiver<ConnectorRequest>,
-        module_factory: Arc<ModuleFactory>) -> thread::JoinHandle<()> {
+        module_factory: Arc<ModuleFactory>,
+        interrupt_pending: Arc<Mutex<Vec<u64>>>,
+    ) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
             let worker_pool = rayon::ThreadPoolBuilder::new().num_threads(MAX_WORKER_THREADS).build()
@@ -213,6 +220,7 @@ impl ConnectionManager {
             loop {
                 let stateful_connectors = stateful_connectors.clone();
                 let module_factory = module_factory.clone();
+                let interrupt_pending = interrupt_pending.clone();
 
                 let request = match receiver.recv() {
                     Ok(data) => data,
@@ -225,6 +233,15 @@ impl ConnectionManager {
                 if let RequestType::Exit = request.request_type {
                     log::debug!("Gracefully stopping request processing");
                     return;
+                }
+
+                if let RequestType::Interrupt { invocation_id } = request.request_type {
+                    log::debug!("Interrupting invocation {}", invocation_id);
+                    interrupt_pending.lock().unwrap().push(invocation_id);
+                    if let Err(error) = request.response_sender.send(RequestResponse::new_empty(&request)) {
+                        log::error!("Failed to send response: {}", error);
+                    }
+                    continue;
                 }
 
                 let connector_spec = match &request.connector_spec {
@@ -302,7 +319,14 @@ impl ConnectionManager {
                         },
                         RequestType::CommandFollowOutput { commands } => {
                             if let [command] = &commands[..] {
-                                vec![Self::process_command_follow_output(&request, &connector, command, request.response_sender.clone())]
+                                let pending = interrupt_pending.clone();
+                                vec![Self::process_command_follow_output(
+                                    &request,
+                                    &connector,
+                                    command,
+                                    request.response_sender.clone(),
+                                    &pending,
+                                )]
                             }
                             else {
                                 vec![Err(LkError::other("Follow output is only supported for a single command"))]
@@ -368,6 +392,7 @@ impl ConnectionManager {
         connector: &Connector,
         request_message: &String,
         response_sender: mpsc::Sender<RequestResponse>,
+        interrupt_pending: &Arc<Mutex<Vec<u64>>>,
     ) -> Result<ResponseMessage, LkError> {
 
         log::debug!("[{}][{}] Command: {}", request.host.name, request.source_id, request_message);
@@ -377,6 +402,12 @@ impl ConnectionManager {
         let mut full_partial_message = String::new();
 
         loop {
+            let mut pending = interrupt_pending.lock().unwrap();
+            if let Some(pos) = pending.iter().position(|&id| id == request.invocation_id) {
+                pending.remove(pos);
+                let _ = connector.interrupt(request.invocation_id);
+            }
+
             // Wait for some time. No sense in processing too fast.
             thread::sleep(std::time::Duration::from_millis(100));
 
@@ -572,6 +603,9 @@ pub enum RequestType {
     },
     CommandFollowOutput {
         commands: Vec<String>,
+    },
+    Interrupt {
+        invocation_id: u64,
     },
     Download {
         remote_file_path: String,

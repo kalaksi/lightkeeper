@@ -1,5 +1,5 @@
 # Basic project information
-- Rust-project with QML frontend (Qt 6.10).
+- This is a Rust-project with QML frontend (Qt 6.10).
 - Ignore CLI frontend.
 - When being asked a question, don't implement anything without confirming first.
 
@@ -10,7 +10,7 @@
 - Avoid writing lines that are over 120 characters long.
 
 ### QML
-- Component structure is: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
+- Component structure should be: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
 - Reference errors to `LK` are expected and can be ignored.
 - When adding or removing QML files, resource file has to be updated.
 

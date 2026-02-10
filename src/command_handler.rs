@@ -463,6 +463,10 @@ impl CommandHandler {
                     return;
                 }
 
+                if let RequestType::Interrupt { .. } = response.request_type {
+                    continue;
+                }
+
                 let new_state_update_sender = state_update_sender.clone();
 
                 let Ok(commands) = commands.lock() else {
@@ -780,6 +784,17 @@ impl CommandHandler {
 
         command.argument(remote_address);
         command
+    }
+
+    pub fn interrupt_invocation(&self, invocation_id: u64) {
+        self.send_connector_request(ConnectorRequest {
+            connector_spec: None,
+            source_id: String::new(),
+            host: Host::default(),
+            invocation_id,
+            request_type: RequestType::Interrupt { invocation_id },
+            response_sender: self.new_response_sender(),
+        });
     }
 
     fn send_connector_request(&self, request: ConnectorRequest) {

@@ -285,6 +285,14 @@ impl ConnectionModule for Ssh2 {
         }
     }
 
+    fn interrupt(&self, invocation_id: u64) -> Result<(), LkError> {
+        let mut session_data = self.wait_for_session(invocation_id, true)?;
+        if let Some(ref mut channel) = session_data.open_channel {
+            channel.signal("INT").map_err(|e| LkError::other(e.to_string()))?;
+        }
+        Ok(())
+    }
+
     fn download_file(&self, source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {
         let session_data = self.wait_for_session(0, true)?;
         let sftp = session_data.session.sftp()?;

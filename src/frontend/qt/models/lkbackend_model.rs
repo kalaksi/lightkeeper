@@ -71,10 +71,10 @@ impl LkBackend {
         host_manager: Rc<RefCell<host_manager::HostManager>>,
         connection_manager: ConnectionManager,
         host_data_model: HostDataManagerModel,
-        // host_manager: Rc<RefCell<host_manager::HostManager>>,
         command_model: CommandHandlerModel,
         metrics_model: MetricsManagerModel,
-        config_model: ConfigManagerModel) -> LkBackend {
+        config_model: ConfigManagerModel,
+    ) -> LkBackend {
 
         LkBackend {
             hosts: RefCell::new(host_data_model),
@@ -183,7 +183,7 @@ impl LkBackend {
                     &main_config,
                     &hosts_config,
                     self.connection_manager.new_request_sender(),
-                    self.host_manager.borrow().new_state_update_sender()
+                    self.host_manager.borrow().new_state_update_sender(),
                 );
 
                 // `self.metrics` doesn't have to be reconfigured.

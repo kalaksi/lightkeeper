@@ -70,7 +70,7 @@ LightkeeperDialog {
             ProgressBar {
                 id: progressBar
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.parent.width * 0.95
+                width: Math.max(0, parent.width - label.implicitWidth - stopButton.implicitWidth - Theme.spacingNormal * 2)
                 height: parent.height * 0.5
                 value: root.progress / 100.0
 
@@ -88,6 +88,25 @@ LightkeeperDialog {
                         color: palette.highlight
                         radius: parent.radius
                     }
+                }
+            }
+
+            Button {
+                id: stopButton
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Stop"
+                enabled: root.pendingInvocation > 0 && root.progress < 100
+                visible: enabled
+                flat: true
+
+                focusPolicy: Qt.NoFocus
+
+                ToolTip.visible: hovered
+                ToolTip.delay: Theme.tooltipDelay
+                ToolTip.text: "Stop"
+
+                onClicked: {
+                    LK.command.interruptInvocation(root.pendingInvocation)
                 }
             }
 

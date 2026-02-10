@@ -51,6 +51,11 @@ pub trait ConnectionModule: BoxCloneableConnector + MetadataSupport + Module {
         Err(LkError::not_implemented())
     }
 
+    /// Interrupt request.
+    fn interrupt(&self, _invocation_id: u64) -> Result<(), LkError> {
+        Err(LkError::not_implemented())
+    }
+
     fn new_connection_module(settings: &HashMap<String, String>) -> Connector
     where
         Self: Sized + 'static + Send + Sync,
