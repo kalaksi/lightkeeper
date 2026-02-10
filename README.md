@@ -193,9 +193,14 @@ Log levels are controlled with environment variable `RUST_LOG`, so use `RUST_LOG
 
 
 # Testing
-`test-env`-directory contains Vagrantfiles for virtual machines and also matching configurations for testing.  
+
+Tests are still a work-in-progress, but you can run them with:
+```
+cargo test
+```
+  
+Also, `test-env`-directory contains Vagrantfiles for virtual machines and also matching configurations for testing.  
 You can use `--config-dir` to load the test configuration for manual testing. For example, `./target/debug/lightkeeper --config-dir test` if building from source.  
-Automatic testing (`cargo test`) is currently not usable.
 
 
 # License
