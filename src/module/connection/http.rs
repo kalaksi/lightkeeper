@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use ureq;
 
+use async_trait::async_trait;
 use lightkeeper_module::stateless_connection_module;
 use crate::error::LkError;
 use crate::module::*;
@@ -32,8 +33,9 @@ impl Module for Http {
     }
 }
 
+#[async_trait]
 impl ConnectionModule for Http {
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+    async fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }

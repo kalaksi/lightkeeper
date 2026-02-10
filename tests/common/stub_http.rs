@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
+use lightkeeper::async_trait::async_trait;
 use lightkeeper::error::LkError;
 use lightkeeper_module::stateless_connection_module;
 use lightkeeper::module::*;
@@ -77,8 +78,9 @@ impl Module for StubHttp {
     }
 }
 
+#[async_trait]
 impl ConnectionModule for StubHttp {
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+    async fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }

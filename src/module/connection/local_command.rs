@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::process;
 
+use async_trait::async_trait;
 use lightkeeper_module::stateless_connection_module;
 use crate::error::LkError;
 use crate::module::*;
@@ -26,12 +27,13 @@ impl Module for LocalCommand {
     }
 }
 
+#[async_trait]
 impl ConnectionModule for LocalCommand {
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+    async fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         self.run_command(message)
     }
 
-    fn send_message_partial(&self, message: &str, _invocation_id: u64) -> Result<ResponseMessage, LkError> {
+    async fn send_message_partial(&self, message: &str, _invocation_id: u64) -> Result<ResponseMessage, LkError> {
         self.run_command(message)
     }
 }

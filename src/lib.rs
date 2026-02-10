@@ -21,6 +21,7 @@ pub mod frontend;
 pub mod file_handler;
 mod metrics;
 
+pub use async_trait;
 pub use module::ModuleFactory;
 pub use configuration::Configuration;
 use std::sync::atomic::AtomicU64;

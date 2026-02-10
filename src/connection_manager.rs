@@ -293,7 +293,9 @@ impl ConnectionManager {
                         RequestType::KeyVerification { ref key_id } => {
                             log::debug!("[{}] Verifying host key", request.host.name);
 
-                            if let Err(error) = connector.verify_host_key(&request.host.get_address(), &key_id) {
+                            if let Err(error) = smol::block_on(async {
+                                connector.verify_host_key(&request.host.get_address(), &key_id).await
+                            }) {
                                 let response = RequestResponse::new(
                                     &request,
                                     vec![Err(error.set_source(connector.get_module_spec().id))],
@@ -366,7 +368,9 @@ impl ConnectionManager {
                 log::debug!("[{}][{}] Command: {}", request.host.name, request.source_id, request_message);
             }
 
-            let response_result = connector.send_message(request_message);
+            let response_result = smol::block_on(async {
+                connector.send_message(request_message).await
+            });
 
             if let Ok(response) = response_result {
                 if response.return_code != 0 {
@@ -396,7 +400,9 @@ impl ConnectionManager {
     ) -> Result<ResponseMessage, LkError> {
 
         log::debug!("[{}][{}] Command: {}", request.host.name, request.source_id, request_message);
-        let mut response_message_result = connector.send_message_partial(request_message, request.invocation_id);
+        let mut response_message_result = smol::block_on(async {
+            connector.send_message_partial(request_message, request.invocation_id).await
+        });
 
         // Paradoxical name...
         let mut full_partial_message = String::new();
@@ -405,7 +411,7 @@ impl ConnectionManager {
             let mut pending = interrupt_pending.lock().unwrap();
             if let Some(pos) = pending.iter().position(|&id| id == request.invocation_id) {
                 pending.remove(pos);
-                let _ = connector.interrupt(request.invocation_id);
+                let _ = smol::block_on(async { connector.interrupt(request.invocation_id).await });
             }
 
             // Wait for some time. No sense in processing too fast.
@@ -423,7 +429,9 @@ impl ConnectionManager {
                             break Err(LkError::unexpected());
                         }
 
-                        response_message_result = connector.receive_partial_response(request.invocation_id);
+                        response_message_result = smol::block_on(async {
+                            connector.receive_partial_response(request.invocation_id).await
+                        });
                     }
                     else {
                         if response_message.return_code != 0 {
@@ -449,7 +457,7 @@ impl ConnectionManager {
         if host.settings.contains(&crate::host::HostSetting::UseSudo) {
             Self::download_file_with_sudo(host, connector, file_path)
         } else {
-            match connector.download_file(file_path) {
+            match smol::block_on(async { connector.download_file(file_path).await }) {
                 Ok((metadata, contents)) => {
                     match file_handler::create_file(host, file_path, metadata, contents) {
                         Ok(file_path) => Ok(ResponseMessage::new_success(file_path)),
@@ -468,7 +476,7 @@ impl ConnectionManager {
                 if host.settings.contains(&crate::host::HostSetting::UseSudo) {
                     Self::upload_file_with_sudo(connector, &metadata.remote_path, contents, local_file_path)
                 } else {
-                    match connector.upload_file(&metadata, contents) {
+                    match smol::block_on(async { connector.upload_file(&metadata, contents).await }) {
                         Ok(()) => Ok(ResponseMessage::empty()),
                         Err(error) => Err(error),
                     }
@@ -484,7 +492,9 @@ impl ConnectionManager {
         use crate::utils::sha256;
 
         let cat_cmd = ShellCommand::new_from(vec!["cat", file_path]).use_sudo();
-        let response = connector.send_message_binary(&cat_cmd.to_string(), &[])?;
+        let response = smol::block_on(async {
+            connector.send_message_binary(&cat_cmd.to_string(), &[]).await
+        })?;
 
         if response.return_code != 0 {
             return Err(LkError::other(format!("Failed to read file: exit code {}", response.return_code)));
@@ -514,7 +524,9 @@ impl ConnectionManager {
         
         // Write directly to target file. Doesn't alter owner or permissions.
         let tee_cmd = ShellCommand::new_from(vec!["tee", remote_path]).use_sudo();
-        let response = connector.send_message_binary(&tee_cmd.to_string(), &contents)?;
+        let response = smol::block_on(async {
+            connector.send_message_binary(&tee_cmd.to_string(), &contents).await
+        })?;
 
         if response.return_code != 0 {
             return Err(LkError::other(format!(
@@ -525,7 +537,9 @@ impl ConnectionManager {
 
         // Verify file was written correctly, try sha256sum first.
         let sha256_cmd = ShellCommand::new_from(vec!["sha256sum", remote_path]).use_sudo();
-        let sha256_response = connector.send_message(&sha256_cmd.to_string())?;
+        let sha256_response = smol::block_on(async {
+            connector.send_message(&sha256_cmd.to_string()).await
+        })?;
         
         if sha256_response.return_code == 0 {
             // Parse the checksum from output (format: "hash  filename").
@@ -538,8 +552,10 @@ impl ConnectionManager {
         
         // Fall back to cat and compare contents.
         let cat_cmd = ShellCommand::new_from(vec!["cat", remote_path]).use_sudo();
-        let response = connector.send_message_binary(&cat_cmd.to_string(), &contents)?;
-        
+        let response = smol::block_on(async {
+            connector.send_message_binary(&cat_cmd.to_string(), &contents).await
+        })?;
+
         if response.return_code != 0 {
             return Err(LkError::other(format!(
                 "Failed to verify file: exit code {}.\n\n\

@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use lightkeeper::async_trait::async_trait;
 use lightkeeper::error::LkError;
 use lightkeeper::utils::strip_newline;
 use lightkeeper_module::connection_module;
@@ -67,8 +68,9 @@ impl Module for StubSsh2 {
     }
 }
 
+#[async_trait]
 impl ConnectionModule for StubSsh2 {
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+    async fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         let response = match self.responses.get(message) {
             Some(response) => response.clone(),
             None => {
@@ -82,7 +84,7 @@ impl ConnectionModule for StubSsh2 {
         Ok(response)
     }
 
-    fn send_message_partial(&self, message: &str, invocation_id: u64) -> Result<ResponseMessage, LkError> {
+    async fn send_message_partial(&self, message: &str, invocation_id: u64) -> Result<ResponseMessage, LkError> {
         let response = match self.responses.get(message) {
             Some(response) => response.clone(),
             None => {
@@ -108,7 +110,7 @@ impl ConnectionModule for StubSsh2 {
         }
     }
 
-    fn receive_partial_response(&self, invocation_id: u64) -> Result<ResponseMessage, LkError> {
+    async fn receive_partial_response(&self, invocation_id: u64) -> Result<ResponseMessage, LkError> {
         let mut partial_responses = self.partial_responses.lock().unwrap();
         let partial_response = partial_responses.get_mut(&invocation_id).unwrap();
 

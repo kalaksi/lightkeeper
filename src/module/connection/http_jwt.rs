@@ -9,6 +9,7 @@ use serde_derive::Deserialize;
 use serde_json;
 
 use std::sync::{Arc, Mutex};
+use async_trait::async_trait;
 use lightkeeper_module::connection_module;
 use crate::error::LkError;
 use crate::module::*;
@@ -34,8 +35,9 @@ impl Module for HttpJwt {
     }
 }
 
+#[async_trait]
 impl ConnectionModule for HttpJwt {
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+    async fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         if message.is_empty() {
             return Ok(ResponseMessage::empty());
         }

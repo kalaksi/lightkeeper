@@ -16,6 +16,7 @@ use std::{
     io::Write,
 };
 
+use async_trait::async_trait;
 use base64::Engine;
 use hex::FromHex;
 use chrono::Utc;
@@ -106,21 +107,22 @@ impl Module for Ssh2 {
     }
 }
 
+#[async_trait]
 impl ConnectionModule for Ssh2 {
     fn set_target(&self, address: &str) {
         let mut mutex_address = self.address.lock().unwrap();
          *mutex_address = address.to_string();
     }
 
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
-        let mut response = self.send_message_binary(message, &[])?;
+    async fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+        let mut response = self.send_message_binary(message, &[]).await?;
         response.message = String::from_utf8_lossy(&response.data).to_string();
         response.data = Vec::new();
 
         Ok(response)
     }
 
-    fn send_message_partial(&self, message: &str, invocation_id: u64) -> Result<ResponseMessage, LkError> {
+    async fn send_message_partial(&self, message: &str, invocation_id: u64) -> Result<ResponseMessage, LkError> {
         let mut session_data = self.wait_for_session(0, true)?;
 
         let mut channel = match session_data.session.channel_session() {
@@ -162,7 +164,7 @@ impl ConnectionModule for Ssh2 {
         }
     }
 
-    fn send_message_binary(&self, command: &str, stdin_data: &[u8]) -> Result<ResponseMessage, LkError> {
+    async fn send_message_binary(&self, command: &str, stdin_data: &[u8]) -> Result<ResponseMessage, LkError> {
         if command.is_empty() {
             return Ok(ResponseMessage::empty());
         }
@@ -211,7 +213,7 @@ impl ConnectionModule for Ssh2 {
         Ok(ResponseMessage::new_binary(output, exit_status))
     }
 
-    fn receive_partial_response(&self, invocation_id: u64) -> Result<ResponseMessage, LkError> {
+    async fn receive_partial_response(&self, invocation_id: u64) -> Result<ResponseMessage, LkError> {
         let mut partial_session = self.wait_for_session(invocation_id, true)?;
         let mut channel = match partial_session.open_channel.take() {
             Some(channel) => channel,
@@ -241,7 +243,7 @@ impl ConnectionModule for Ssh2 {
         }
     }
 
-    fn interrupt(&self, invocation_id: u64) -> Result<(), LkError> {
+    async fn interrupt(&self, invocation_id: u64) -> Result<(), LkError> {
         let mut session_data = self.wait_for_session(invocation_id, true)?;
         if let Some(ref mut channel) = session_data.open_channel {
             channel.signal("INT").map_err(|e| LkError::other(e.to_string()))?;
@@ -249,7 +251,7 @@ impl ConnectionModule for Ssh2 {
         Ok(())
     }
 
-    fn download_file(&self, source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {
+    async fn download_file(&self, source: &str) -> Result<(FileMetadata, Vec<u8>), LkError> {
         let session_data = self.wait_for_session(0, true)?;
         let sftp = session_data.session.sftp()?;
 
@@ -280,7 +282,7 @@ impl ConnectionModule for Ssh2 {
         }
     }
 
-    fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> Result<(), LkError> {
+    async fn upload_file(&self, metadata: &FileMetadata, contents: Vec<u8>) -> Result<(), LkError> {
         let session_data = self.wait_for_session(0, true)?;
         let sftp = session_data.session.sftp()?;
 
@@ -295,7 +297,7 @@ impl ConnectionModule for Ssh2 {
              .map(|_| Ok(()))?
     }
 
-    fn verify_host_key(&self, hostname: &str, key_id: &str) -> Result<(), LkError> {
+    async fn verify_host_key(&self, hostname: &str, key_id: &str) -> Result<(), LkError> {
         let mut session_data = self.wait_for_session(0, false)?;
         let self_address = self.address.lock().unwrap().to_string();
         let self_port = *self.port.lock().unwrap();

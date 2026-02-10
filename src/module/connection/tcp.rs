@@ -12,6 +12,7 @@ use std::net::ToSocketAddrs;
 use std::path::Path;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use lightkeeper_module::connection_module;
 use crate::error::*;
 use crate::module::*;
@@ -79,11 +80,12 @@ impl Module for Tcp {
     }
 }
 
+#[async_trait]
 impl ConnectionModule for Tcp {
     /// Connects to the specified address and returns the result.
     /// With `verify_certificate` enabled, returns the certificate chain in PEM format.
     /// With `verify_certificate` disabled, returns an empty string and uses exit code to determine success.
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+    async fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         if message.contains("/") {
             return Ok(ResponseMessage::new_error("Invalid address"));
         }
@@ -143,7 +145,7 @@ impl ConnectionModule for Tcp {
     }
 }
 
-fn load_certs(path: &Path) -> Vec<CertificateDer> {
+fn load_certs(path: &Path) -> Vec<CertificateDer<'_>> {
     let file = match std::fs::File::open(path) {
         Ok(file) => file,
         Err(_) => {

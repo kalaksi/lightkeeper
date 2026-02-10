@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use lightkeeper::async_trait::async_trait;
 use lightkeeper::error::LkError;
 use lightkeeper_module::connection_module;
 use lightkeeper::module::*;
@@ -54,8 +55,9 @@ impl Module for StubTcp {
     }
 }
 
+#[async_trait]
 impl ConnectionModule for StubTcp {
-    fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+    async fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         let response = match self.responses.get(message) {
             Some(response) => response.clone(),
             None => {
