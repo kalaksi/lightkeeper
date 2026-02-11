@@ -5,9 +5,10 @@
 
 # Implementation and style guidelines
 - Never change Cargo.toml without explicit approval.
-- Don't add trivial comments.
+- Don't add new trivial comments, but keep existing comments.
 - Always have an empty line before start of a QML element, e.g. `\nText {...`.
 - Avoid writing lines that are over 120 characters long.
+- When rewriting or refactoring code, don't apply stylistic changes to code, only strictly needed changes. Style can be improved later.
 
 ### QML
 - Component structure should be: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions

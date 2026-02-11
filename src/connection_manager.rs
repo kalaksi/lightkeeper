@@ -410,6 +410,7 @@ impl ConnectionManager {
         loop {
             let mut pending = interrupt_pending.lock().unwrap();
             if let Some(pos) = pending.iter().position(|&id| id == request.invocation_id) {
+                log::debug!("[{}][{}] Interrupting invocation {}", request.host.name, request.source_id, request.invocation_id);
                 pending.remove(pos);
                 let _ = smol::block_on(async { connector.interrupt(request.invocation_id).await });
             }
