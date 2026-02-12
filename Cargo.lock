@@ -892,7 +892,8 @@ dependencies = [
 [[package]]
 name = "libssh2-sys"
 version = "0.3.1"
-source = "git+https://github.com/kalaksi/ssh2-rs.git?branch=signal-support#011e18b570cc84ac9a96785f83d41545545d20d1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "220e4f05ad4a218192533b300327f5150e809b54c4ec83b5a1d91833601811b9"
 dependencies = [
  "cc",
  "libc",
@@ -1598,7 +1599,8 @@ checksum = "7fcf8323ef1faaee30a44a340193b1ac6814fd9b7b4e88e9d4519a3e4abe1cfd"
 [[package]]
 name = "ssh2"
 version = "0.9.5"
-source = "git+https://github.com/kalaksi/ssh2-rs.git?branch=signal-support#011e18b570cc84ac9a96785f83d41545545d20d1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f84d13b3b8a0d4e91a2629911e951db1bb8671512f5c09d7d4ba34500ba68c8"
 dependencies = [
  "bitflags 2.9.0",
  "libc",

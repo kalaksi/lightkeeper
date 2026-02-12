@@ -12,8 +12,7 @@ use std::{
     net::ToSocketAddrs,
     collections::HashMap,
     path::Path,
-    io::Read,
-    io::Write,
+    io::{Read, Write},
 };
 
 use base64::Engine;
@@ -29,6 +28,7 @@ use crate::module::connection::*;
 
 static MODULE_NAME: &str = "ssh";
 const SESSION_WAIT_SLEEP: u64 = 200;
+const PARTIAL_READ_TIMEOUT_MS: u32 = 2000;
 
 
 #[connection_module(
@@ -139,14 +139,32 @@ impl ConnectionModule for Ssh2 {
         // Merge stderr etc. to the same stream as stdout.
         channel.handle_extended_data(ssh2::ExtendedData::Merge)
             .map_err(|error| LkError::other(error.to_string()))?;
+
+        // Used to enable sending CTRL-C to the command.
+        channel.request_pty("dumb", None, None)?;
         
         channel.exec(message)
             .map_err(|error| format!("Error executing command '{}': {}", message, error))?;
 
-        let mut buffer = [0u8; 256];
-        let output = channel.read(&mut buffer)
-            .map(|bytes_read| String::from_utf8_lossy(&buffer[..bytes_read]).to_string())
-            .map_err(|error| format!("Invalid output received: {}", error))?;
+        let prev_timeout = session_data.session.timeout();
+        session_data.session.set_timeout(PARTIAL_READ_TIMEOUT_MS);
+
+        let mut buffer = [0u8; 1024];
+        let read_result = channel.read(&mut buffer);
+
+        session_data.session.set_timeout(prev_timeout);
+
+        let output = match read_result {
+            Ok(bytes_read) => String::from_utf8_lossy(&buffer[..bytes_read]).to_string(),
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                session_data.open_channel = Some(channel);
+                return Ok(ResponseMessage::new_partial(String::new()));
+            },
+            Err(error) => {
+                session_data.invocation_id = 0;
+                return Err(LkError::other(format!("Invalid output received: {}", error)));
+            },
+        };
 
         if channel.eof() {
             let exit_status = channel.exit_status().unwrap_or(-1);
@@ -218,13 +236,25 @@ impl ConnectionModule for Ssh2 {
             None => return Err(LkError::other("Can't do partial receive. No open channel available.")),
         };
 
+        let prev_timeout = partial_session.session.timeout();
+        partial_session.session.set_timeout(PARTIAL_READ_TIMEOUT_MS);
+
         let mut buffer = [0u8; 1024];
-        let output = channel.read(&mut buffer)
-            .map(|bytes_read| String::from_utf8_lossy(&buffer[..bytes_read]).to_string())
-            .map_err(|error| {
+        let read_result = channel.read(&mut buffer);
+
+        partial_session.session.set_timeout(prev_timeout);
+
+        let output = match read_result {
+            Ok(bytes_read) => String::from_utf8_lossy(&buffer[..bytes_read]).to_string(),
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                partial_session.open_channel = Some(channel);
+                return Ok(ResponseMessage::new_partial(String::new()));
+            },
+            Err(error) => {
                 partial_session.invocation_id = 0;
-                format!("Invalid output received: {}", error)
-            })?;
+                return Err(LkError::other(format!("Invalid output received: {}", error)));
+            },
+        };
 
         if channel.eof() {
             partial_session.invocation_id = 0;
@@ -244,7 +274,9 @@ impl ConnectionModule for Ssh2 {
     fn interrupt(&self, invocation_id: u64) -> Result<(), LkError> {
         let mut session_data = self.wait_for_session(invocation_id, true)?;
         if let Some(ref mut channel) = session_data.open_channel {
-            channel.signal("INT").map_err(|e| LkError::other(e.to_string()))?;
+            // Sends Ctrl-C.
+            channel.write_all(&[3])?;
+            channel.flush()?;
         }
         Ok(())
     }

@@ -23,7 +23,7 @@ use crate::configuration::{ConfigGroup, HostSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
 use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
-use crate::utils::ShellCommand;
+use crate::utils::{normalize_lines, normalize_line, ShellCommand};
 
 use self::request_response::RequestResponse;
 
@@ -236,7 +236,6 @@ impl ConnectionManager {
                 }
 
                 if let RequestType::Interrupt { invocation_id } = request.request_type {
-                    log::debug!("Interrupting invocation {}", invocation_id);
                     interrupt_pending.lock().unwrap().push(invocation_id);
                     if let Err(error) = request.response_sender.send(RequestResponse::new_empty(&request)) {
                         log::error!("Failed to send response: {}", error);
@@ -398,14 +397,19 @@ impl ConnectionManager {
         log::debug!("[{}][{}] Command: {}", request.host.name, request.source_id, request_message);
         let mut response_message_result = connector.send_message_partial(request_message, request.invocation_id);
 
-        // Paradoxical name...
         let mut full_partial_message = String::new();
+        // Track the index of the last newline in the full partial message.
+        // This is so normalization only applies to the latest update.
+        let mut last_newline_index: Option<usize> = None;
+        let mut normalized_complete = String::new();
 
         loop {
-            let mut pending = interrupt_pending.lock().unwrap();
-            if let Some(pos) = pending.iter().position(|&id| id == request.invocation_id) {
-                pending.remove(pos);
-                let _ = connector.interrupt(request.invocation_id);
+            {
+                let mut pending = interrupt_pending.lock().unwrap();
+                if let Some(pos) = pending.iter().position(|&id| id == request.invocation_id) {
+                    pending.remove(pos);
+                    let _ = connector.interrupt(request.invocation_id);
+                }
             }
 
             // Wait for some time. No sense in processing too fast.
@@ -414,7 +418,29 @@ impl ConnectionManager {
             match response_message_result {
                 Ok(mut response_message) => {
                     full_partial_message.push_str(&response_message.message);
-                    response_message.message = full_partial_message.clone();
+
+                    let message = match full_partial_message.rfind('\n') {
+                        None => normalize_line(&full_partial_message),
+                        Some(n) => {
+                            let current_line = normalize_line(&full_partial_message[n + 1..]);
+                            if let Some(p) = last_newline_index {
+                                if n > p {
+                                    let new_segment = &full_partial_message[p + 1..=n];
+                                    normalized_complete.push_str(&normalize_lines(new_segment));
+                                    last_newline_index = Some(n);
+                                }
+                            } else {
+                                normalized_complete = normalize_lines(&full_partial_message[..=n]);
+                                last_newline_index = Some(n);
+                            }
+                            if normalized_complete.is_empty() {
+                                current_line
+                            } else {
+                                normalized_complete.clone() + &current_line
+                            }
+                        }
+                    };
+                    response_message.message = message;
 
                     if response_message.is_partial {
                         let response = RequestResponse::new(request, vec![Ok(response_message)]);

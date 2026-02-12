@@ -61,18 +61,20 @@ LightkeeperDialog {
         anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
 
-        Row {
+        RowLayout {
             visible: root.showProgress
             spacing: Theme.spacingNormal
 
             Layout.fillWidth: true
+            Layout.rightMargin: Theme.spacingLoose
 
             ProgressBar {
                 id: progressBar
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(0, parent.width - label.implicitWidth - stopButton.implicitWidth - Theme.spacingNormal * 2)
-                height: parent.height * 0.5
+                implicitHeight: parent.height * 0.5
                 value: root.progress / 100.0
+
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
 
                 // The color can be wrong on some platforms and progress bar invisible, so force color.
                 // This can also later be used to set color according to criticality level.
@@ -91,15 +93,23 @@ LightkeeperDialog {
                 }
             }
 
+            NormalText {
+                id: label
+                lineHeight: 0.9
+                text: root.progress + " %"
+            }
+
             Button {
                 id: stopButton
-                anchors.verticalCenter: parent.verticalCenter
+                icon.source: "qrc:/main/images/button/stop"
+                icon.height: 16
+                icon.width: 16
                 text: "Stop"
                 enabled: root.pendingInvocation > 0 && root.progress < 100
-                visible: enabled
-                flat: true
 
                 focusPolicy: Qt.NoFocus
+
+                Layout.alignment: Qt.AlignVCenter
 
                 ToolTip.visible: hovered
                 ToolTip.delay: Theme.tooltipDelay
@@ -108,12 +118,6 @@ LightkeeperDialog {
                 onClicked: {
                     LK.command.interruptInvocation(root.pendingInvocation)
                 }
-            }
-
-            NormalText {
-                id: label
-                lineHeight: 0.9
-                text: root.progress + " %"
             }
         }
 
