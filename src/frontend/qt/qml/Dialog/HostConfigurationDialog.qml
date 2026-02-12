@@ -197,7 +197,7 @@ LightkeeperDialog {
                         root.hostSettings.effective.host_settings !== undefined) {
                         return root.hostSettings.effective.host_settings.indexOf("use_sudo") !== -1
                     }
-                    return false
+                    return true
                 }
                 onCheckedChanged: root.updateOkButton()
             }
