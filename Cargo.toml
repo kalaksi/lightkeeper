@@ -1,6 +1,6 @@
 [package]
 name = "lightkeeper"
-version = "0.33.2"
+version = "0.34.0"
 edition = "2021"
 
 [[bin]]
