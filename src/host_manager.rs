@@ -396,6 +396,8 @@ impl Default for HostManager {
 
 #[derive(Default)]
 pub struct StateUpdateMessage {
+    /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
+    pub invocation_id: u64,
     pub host_name: String,
     pub display_options: frontend::DisplayOptions,
     pub module_spec: ModuleSpecification,
@@ -405,8 +407,6 @@ pub struct StateUpdateMessage {
     /// Only used with commands.
     pub command_result: Option<CommandResult>,
     pub errors: Vec<LkError>,
-    /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
-    pub invocation_id: u64,
     /// Signals fatal error has happened and app needs to be reloaded.
     pub fatal_error: bool,
     /// Stops the receiver thread.

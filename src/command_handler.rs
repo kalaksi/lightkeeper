@@ -579,8 +579,11 @@ impl CommandHandler {
                 Some(command_result)
             },
             Err(error) => {
+                let mut error_result = CommandResult::new_error(&error.message);
+                error_result.command_id = command_id.clone();
+
                 errors.push(error.set_source(command_id));
-                None
+                Some(error_result)
             }
         };
 
@@ -589,12 +592,12 @@ impl CommandHandler {
         }
 
         state_update_sender.send(StateUpdateMessage {
+            invocation_id: response.invocation_id,
             host_name: response.host.name,
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: new_command_result,
             errors: errors,
-            invocation_id: response.invocation_id,
             ..Default::default()
         }).unwrap();
     }
