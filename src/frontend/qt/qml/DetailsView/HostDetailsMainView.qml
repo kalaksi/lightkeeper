@@ -202,6 +202,7 @@ Item {
                             flatButtons: false
                             roundButtons: false
                             commands: LK.command.getCommandsOnLevel(root.hostId, groupBox.categoryName, "", 0).map(JSON.parse)
+                                .filter(c => c.command_id !== "_internal-filebrowser-ls")
                             hoverEnabled: !groupBox.isBlocked
 
                             Layout.alignment: Qt.AlignHCenter
@@ -218,6 +219,7 @@ Item {
                             monitoring_datas: LK.hosts.getCategoryMonitorIds(root.hostId, groupBox.categoryName)
                                                       .map(monitorId => LK.hosts.getMonitoringData(root.hostId, monitorId))
                             command_datas: LK.command.getCategoryCommands(root.hostId, groupBox.categoryName)
+                                .filter(c => c.command_id !== "_internal-filebrowser-ls")
 
                             Layout.fillHeight: true
                             Layout.fillWidth: true
