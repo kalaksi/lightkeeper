@@ -520,10 +520,16 @@ impl CommandHandler {
                             RequestType::Upload { local_file_path, metadata } => {
                                 Self::process_upload_file_response(command, &local_file_path, metadata, false, new_state_update_sender, response);
                             },
-                            _ => panic!("Invalid request type: {:?}", response.request_type)
+                            _ => {
+                                log::error!("Invalid request type: {:?}", response.request_type);
+                                continue;
+                            }
                         }
                     },
-                    _ => panic!("Unsupported UIAction"),
+                    _ => {
+                        log::error!("Invalid request type: {:?}", response.request_type);
+                        continue;
+                    }
                 }
             }
         })
@@ -535,7 +541,7 @@ impl CommandHandler {
         response: RequestResponse) {
 
         let command_id = &command.get_module_spec().id;
-        let (messages, errors): (Vec<_>, Vec<_>) =  response.responses.into_iter().partition(Result::is_ok);
+        let (messages, errors): (Vec<_>, Vec<_>) = response.responses.into_iter().partition(Result::is_ok);
         let messages = messages.into_iter().map(Result::unwrap).collect::<Vec<_>>();
         let mut errors = errors.into_iter().map(Result::unwrap_err).collect::<Vec<_>>();
 
@@ -562,8 +568,8 @@ impl CommandHandler {
             Ok(mut command_result) => {
                 command_result.command_id = command_id.clone();
 
-                let log_message = if command_result.message.len() > 5000 {
-                    format!("{}...(long message cut)...", &command_result.message[..5000])
+                let log_message = if command_result.message.len() > 3000 {
+                    format!("{}...(long message cut)...", &command_result.message[..3000])
                 }
                 else {
                     command_result.message.clone()

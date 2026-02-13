@@ -186,7 +186,13 @@ Item {
             return
         }
 
-        commandOutputDialog.text = text
+        // Contains incremental update.
+        // Update last line too since it could be incomplete. It's empty if it's not.
+        let lastNewlineIndex = commandOutputDialog.text.lastIndexOf("\n")
+        commandOutputDialog.text = lastNewlineIndex === -1 ?
+            text :
+            commandOutputDialog.text.substring(0, lastNewlineIndex + 1) + text
+
         commandOutputDialog.errorText = errorText
         commandOutputDialog.progress = progress
     }

@@ -65,6 +65,10 @@ impl RequestResponse {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ResponseMessage {
     pub message: String,
+    /// For partial responses. Only newly received increment is stored here.
+    /// The full message is stored in the message-field.
+    // TODO: use enums for full and partial responses?
+    pub message_increment: String,
     pub data: Vec<u8>,
     pub return_code: i32,
     pub is_partial: bool,
@@ -89,9 +93,18 @@ impl ResponseMessage {
 
     pub fn new_partial(partial_message: String) -> ResponseMessage {
         ResponseMessage {
-            message: partial_message,
+            message_increment: partial_message,
             return_code: 0,
             is_partial: true,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_partial_complete(message: String, return_code: i32) -> ResponseMessage {
+        ResponseMessage {
+            message_increment: message,
+            return_code: return_code,
+            is_partial: false,
             ..Default::default()
         }
     }

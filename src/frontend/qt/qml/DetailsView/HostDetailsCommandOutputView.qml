@@ -40,7 +40,12 @@ Item {
             if (root.pendingInvocation === invocationId) {
                 let commandResult = JSON.parse(commandResultJson)
 
-                root.text = commandResult.message
+                // Contains incremental update.
+                let lastNewlineIndex = root.text.lastIndexOf("\n")
+                root.text = lastNewlineIndex === -1 ?
+                    commandResult.message :
+                    root.text.substring(0, lastNewlineIndex + 1) + commandResult.message
+
                 root.errorText = commandResult.error
                 root.progress = commandResult.progress
             }

@@ -82,13 +82,13 @@ impl CommandModule for Build {
                 }
             }
 
-            Ok(CommandResult::new_partial(response.message.clone(), progress))
+            Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
         }
         else {
             if response.return_code == 0 {
-                Ok(CommandResult::new_hidden(response.message.clone()))
+                Ok(CommandResult::new_hidden(response.message_increment.clone()))
             } else {
-                Ok(CommandResult::new_hidden(response.message.clone())
+                Ok(CommandResult::new_hidden(response.message_increment.clone())
                                  .with_criticality(crate::enums::Criticality::Error))
             }
         }

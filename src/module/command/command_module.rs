@@ -165,8 +165,9 @@ impl Default for CommandResult {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
 pub enum UIAction {
+    #[default]
     None,
     TextView,
     TextDialog,
@@ -178,8 +179,3 @@ pub enum UIAction {
     FileBrowser,
 }
 
-impl Default for UIAction {
-    fn default() -> Self {
-        UIAction::None
-    }
-}

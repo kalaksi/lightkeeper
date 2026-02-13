@@ -23,7 +23,7 @@ use crate::configuration::{ConfigGroup, HostSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
 use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
-use crate::utils::{normalize_lines, normalize_line, ShellCommand};
+use crate::utils::{normalize_line, ShellCommand};
 
 use self::request_response::RequestResponse;
 
@@ -397,11 +397,11 @@ impl ConnectionManager {
         log::debug!("[{}][{}] Command: {}", request.host.name, request.source_id, request_message);
         let mut response_message_result = connector.send_message_partial(request_message, request.invocation_id);
 
-        let mut full_partial_message = String::new();
-        // Track the index of the last newline in the full partial message.
-        // This is so normalization only applies to the latest update.
-        let mut last_newline_index: Option<usize> = None;
-        let mut normalized_complete = String::new();
+        // Full message without last incomplete line.
+        // Is sent in response to command handler so it can be processed as a whole.
+        let mut whole_message = String::new();
+        // Store last line in case it's incomplete. Empty means there was no incomplete line.
+        let mut last_incomplete_line = String::new();
 
         loop {
             {
@@ -417,36 +417,44 @@ impl ConnectionManager {
 
             match response_message_result {
                 Ok(mut response_message) => {
-                    full_partial_message.push_str(&response_message.message);
+                    let mut new_rows = response_message.message_increment
+                        .split('\n')
+                        .map(|line| line.to_string())
+                        .collect::<Vec<_>>();
 
-                    let message = match full_partial_message.rfind('\n') {
-                        None => normalize_line(&full_partial_message),
-                        Some(n) => {
-                            let current_line = normalize_line(&full_partial_message[n + 1..]);
-                            if let Some(p) = last_newline_index {
-                                if n > p {
-                                    let new_segment = &full_partial_message[p + 1..=n];
-                                    normalized_complete.push_str(&normalize_lines(new_segment));
-                                    last_newline_index = Some(n);
-                                }
-                            } else {
-                                normalized_complete = normalize_lines(&full_partial_message[..=n]);
-                                last_newline_index = Some(n);
-                            }
-                            if normalized_complete.is_empty() {
-                                current_line
-                            } else {
-                                normalized_complete.clone() + &current_line
-                            }
-                        }
-                    };
-                    response_message.message = message;
+                    if new_rows.len() > 0 {
+                        let completer_first_line = format!("{}{}", last_incomplete_line, new_rows[0]);
+                        new_rows[0] = completer_first_line;
+                        last_incomplete_line = new_rows.pop().unwrap();
+                    }
+
+                    // Add rows again but normalized.
+                    response_message.message = String::new();
+                    response_message.message_increment = String::new();
+
+                    if new_rows.len() > 0 {
+                        let normalized_text = new_rows.iter()
+                            .map(|line| normalize_line(line))
+                            .collect::<Vec<String>>()
+                            .join("\n");
+
+                        whole_message.push_str(&normalized_text);
+                        response_message.message = format!("{}\n", whole_message);
+                        response_message.message_increment.push_str(&format!("{}\n", normalized_text));
+                    }
+
+                    let normalized_last_row = normalize_line(&last_incomplete_line);
+                    response_message.message.push_str(&normalized_last_row);
+                    response_message.message_increment.push_str(&normalized_last_row);
 
                     if response_message.is_partial {
-                        let response = RequestResponse::new(request, vec![Ok(response_message)]);
-                        if let Err(error) = response_sender.send(response) {
-                            log::error!("Failed to send response: {}", error);
-                            break Err(LkError::unexpected());
+                        // Sometimes there's nothing to update, maybe returned because of read timeout.
+                        if !response_message.message_increment.is_empty() {
+                            let response = RequestResponse::new(request, vec![Ok(response_message)]);
+                            if let Err(error) = response_sender.send(response) {
+                                log::error!("Failed to send response: {}", error);
+                                break Err(LkError::unexpected());
+                            }
                         }
 
                         response_message_result = connector.receive_partial_response(request.invocation_id);

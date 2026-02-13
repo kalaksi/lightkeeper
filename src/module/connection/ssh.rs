@@ -263,7 +263,7 @@ impl ConnectionModule for Ssh2 {
             channel.wait_close()
                 .map_err(|error| format!("Error while closing channel: {}", error))?;
 
-            Ok(ResponseMessage::new(strip_newline(&output), exit_status))
+            Ok(ResponseMessage::new_partial_complete(output, exit_status))
         }
         else {
             partial_session.open_channel = Some(channel);

@@ -9,6 +9,7 @@ pub fn strip_newline<Stringable: ToString>(input: &Stringable) -> String {
 }
 
 /// For a single line, keep only the content after the last carriage return.
+/// Also trims trailing carriage return.
 pub fn normalize_line(line: &str) -> String {
     let line = line.trim_end_matches('\r');
     if let Some(last) = line.rfind('\r') {
@@ -17,12 +18,6 @@ pub fn normalize_line(line: &str) -> String {
     else {
         line.to_string()
     }
-}
-
-/// For each line, keep only the content after the last carriage return so progress lines show
-/// the latest update instead of concatenated overwrites. Also removes carriage returns from the end of the line.
-pub fn normalize_lines(full_text: &str) -> String {
-    full_text.split('\n').map(normalize_line).collect::<Vec<_>>().join("\n")
 }
 
 pub fn remove_whitespace<Stringable: ToString>(input: &Stringable) -> String {
