@@ -39,6 +39,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.34.1" date="2026-02-14">
+      <description>
+        <ul>
+          <li>Fix hotkeys sometimes being captured on wrong host</li>
+          <li>Remember active tab</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.34.0" date="2026-02-13">
       <description>
         <ul>
