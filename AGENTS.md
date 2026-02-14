@@ -10,7 +10,8 @@
 - Avoid writing lines that are over 120 characters long.
 - Don't add error handling for impossible scenarios.
 - Aim for minimum amount of code.
-- Ask often, for example when when there are alternative solutions.
+- Ask often! For example when when there are alternative solutions.
+- Don't use useless shorthands like "idx" instead of "index".
 
 ## When editing existing code
 - Don't "improve" adjacent code, comments, or formatting.

@@ -17,8 +17,9 @@ Item {
     required property string hostId
     property bool enableShortcuts: root.visible
     property bool showCharts: true
-    property var _tabContents: {}
-    property var _tabStacks: {}
+    property var _tabContents: ({})
+    property var _tabStacks: ({})
+    property var _tabIndexByHost: ({})
     property string _previousHostId: ""
     property bool _refreshingHost: false
 
@@ -220,6 +221,7 @@ Item {
             }
 
             root._tabStacks[root.hostId].currentIndex = newIndex
+            root._tabIndexByHost[root.hostId] = newIndex
             root._tabContents[root.hostId][newIndex].component.activate()
         }
     }
@@ -412,9 +414,18 @@ Item {
         let hostTabIndex = root.showCharts ? 1 : 0
         root._tabContents[root.hostId][hostTabIndex].component.refresh()
 
+        let savedIdx = getLastTabIndex()
         mainViewHeader.tabs = getTabTitles()
         tabStackContainer.currentIndex = root._tabStacks[root.hostId].parentStackIndex
-        mainViewHeader.selectDefaultTab()
+        mainViewHeader.selectTab(savedIdx)
+    }
+
+    function getLastTabIndex() {
+        let defaultTabIndex = root.showCharts ? 1 : 0
+        let tabCount = root._tabContents[root.hostId].length
+        let lastTabIndex = root._tabIndexByHost[root.hostId]
+        let result = (lastTabIndex !== undefined && lastTabIndex >= 0 && lastTabIndex < tabCount) ? lastTabIndex : defaultTabIndex
+        return result
     }
 
     function createNewTab(tabData, selectTab = true) {
