@@ -65,11 +65,6 @@ impl MonitorManager {
         self.invocation_id_counter.fetch_add(1, Ordering::SeqCst) + 1
     }
 
-    fn reserve_invocation_ids(&self, n: usize) -> Vec<u64> {
-        let start = self.invocation_id_counter.fetch_add(n as u64, Ordering::SeqCst);
-        (1..=n).map(|i| start + i as u64).collect()
-    }
-
     pub fn configure(&mut self,
                      hosts_config: &Hosts,
                      request_sender: mpsc::Sender<ConnectorRequest>,
@@ -353,7 +348,7 @@ impl MonitorManager {
         let (extensions, bases): (Vec<&Monitor>, Vec<&Monitor>) = 
             monitors.values().partition(|monitor| monitor.get_metadata_self().parent_module.is_some());
 
-        let mut invocation_ids = self.reserve_invocation_ids(bases.len());
+        let invocation_ids = (1..=bases.len()).map(|_| self.next_invocation_id()).collect::<Vec<_>>();
         let mut id_iter = invocation_ids.iter();
 
         for monitor in bases {

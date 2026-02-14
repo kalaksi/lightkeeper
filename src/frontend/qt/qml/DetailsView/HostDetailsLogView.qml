@@ -13,7 +13,6 @@ import ".."
 import "../Text"
 import "../Button"
 import "../js/Utils.js" as Utils
-import "../js/TextTransform.js" as TextTransform
 import "../StyleOverride"
 
 
@@ -42,8 +41,7 @@ Item {
                     root.errorText = commandResult.error
                 }
 
-                let coloredText = commandResult.message === "" ? "" : TextTransform.ansiToRichText(commandResult.message)
-                logList.rows = coloredText === "" ? [] : coloredText.split("\n")
+                logList.rows = commandResult.message === "" ? [] : commandResult.message.split("\n")
 
                 let [rowsMatched, totalMatches] = logList.getSearchDetails()
                 searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`

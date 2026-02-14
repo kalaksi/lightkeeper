@@ -10,7 +10,6 @@ import QtQuick.Layouts
 import Theme
 
 import "../Text"
-import "../js/TextTransform.js" as TextTransform
 
 /// Content mainly copied from CommandOutputDialog.qml, keep in sync. Split into separate component if needed.
 Item {
@@ -23,8 +22,7 @@ Item {
     property int pendingInvocation: 0
 
     onTextChanged: {
-        let coloredText = TextTransform.ansiToRichText(root.text)
-        commandOutput.rows = coloredText.split("\n")
+        commandOutput.rows = root.text.split("\n")
 
         // Scroll to bottom.
         commandOutput.positionViewAtEnd()

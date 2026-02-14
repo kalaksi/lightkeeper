@@ -564,7 +564,7 @@ impl CommandHandler {
             result = Err(LkError::other("No responses received"));
         }
 
-        let new_command_result = match result {
+        let mut new_command_result = match result {
             Ok(mut command_result) => {
                 command_result.command_id = command_id.clone();
 
@@ -589,6 +589,13 @@ impl CommandHandler {
 
         for error in errors.iter() {
             log::error!("[{}][{}] Error: {}", response.host.name, error.source_id, error.message);
+        }
+
+        // Convert ANSI color codes to rich text for commands that have visible output.
+        if command.get_display_options().action == UIAction::FollowOutput {
+            if let Some(ref mut cr) = new_command_result {
+                cr.message = ansi_to_rich_text(&cr.message);
+            }
         }
 
         state_update_sender.send(StateUpdateMessage {
