@@ -62,7 +62,9 @@ impl CommandModule for Build {
         command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command.arguments(vec!["podman", "compose", "-f", compose_file, "build", service_name]);
+            command.arguments(vec![
+                "podman", "compose", "--progress=plain", "-f", compose_file, "build", service_name
+            ]);
         }
         else {
             return Err(LkError::unsupported_platform())

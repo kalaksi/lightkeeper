@@ -29,8 +29,7 @@ function removeWhitespaces(text) {
 }
 
 /// This is probably not completely secure so don't use it for anything important
-function escapeHtml(text)
-{
+function escapeHtml(text) {
     return text.replace(/&/g, "&amp;")
                .replace(/</g, "&lt;")
                .replace(/>/g, "&gt;")
