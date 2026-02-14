@@ -19,6 +19,7 @@ Item {
     property bool showCharts: true
     property var _tabContents: {}
     property var _tabStacks: {}
+    property string _previousHostId: ""
     property bool _refreshingHost: false
 
 
@@ -29,6 +30,15 @@ Item {
 
 
     onHostIdChanged: {
+        if (root._previousHostId !== "" && root._previousHostId in root._tabContents) {
+            let contents = root._tabContents[root._previousHostId]
+            for (let content of contents) {
+                if (content.component.deactivate !== undefined) {
+                    content.component.deactivate()
+                }
+            }
+        }
+
         if (!(root.hostId in root._tabContents)) {
             root._tabContents[root.hostId] = []
             root._tabStacks[root.hostId] = tabStack.createObject(tabStackContainer, {
@@ -54,6 +64,7 @@ Item {
         }
 
         root.refresh()
+        root._previousHostId = root.hostId
     }
 
     Component.onCompleted: {
