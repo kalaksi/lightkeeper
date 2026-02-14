@@ -39,6 +39,15 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.34.2" date="2026-02-14">
+      <description>
+        <ul>
+          <li>Optimize command output processing more</li>
+          <li>Remove unhandled ANSI sequences from command output</li>
+          <li>Reduce flatpak size a bit</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.34.1" date="2026-02-14">
       <description>
         <ul>
