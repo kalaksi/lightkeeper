@@ -36,3 +36,43 @@ function escapeHtml(text) {
                .replace(/"/g, "&quot;")
                .replace(/'/g, "&#039;");
 }
+
+var ANSI_COLORS = {
+    30: "black",
+    31: "red",
+    32: "green",
+    33: "yellow",
+    34: "blue",
+    35: "magenta",
+    36: "cyan",
+    37: "white",
+    90: "grey",
+}
+
+/// Parse ANSI color codes and return rich text with appropriate coloring.
+/// Other ANSI sequences (cursor movement, mode changes, etc.) are stripped.
+function ansiToRichText(text) {
+    const withoutOtherAnsi = text.replace(/\x1b\[[\x20-\x3f]*([\x40-\x7e])/g, (match, finalByte) =>
+        finalByte === "m" ? match : ""
+    )
+    return withoutOtherAnsi.replace(/\x1b\[([\d;]+)m/g, (match, p1) => {
+        let codes = p1.split(";").map(Number)
+
+        if (codes.includes(0)) {
+            return "</span>"
+        }
+
+        let styles = []
+        for (const code of codes) {
+            if (code === 1) styles.push("font-weight:bold");
+            else if (code === 3) styles.push("font-style:italic");
+            else if (code === 4) styles.push("text-decoration:underline");
+            else if (code === 9) styles.push("text-decoration:line-through");
+            else if (code in ANSI_COLORS) {
+                styles.push(`color:${ANSI_COLORS[code]}`)
+            }
+        }
+
+        return styles.length > 0 ? `<span style="${styles.join(";")}">` : ""
+    })
+}
