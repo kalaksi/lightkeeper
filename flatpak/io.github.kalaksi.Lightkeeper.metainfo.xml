@@ -39,7 +39,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.34.2" date="2026-02-14">
+    <release version="0.34.3" date="2026-02-14">
       <description>
         <ul>
           <li>Optimize command output processing more</li>
