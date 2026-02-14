@@ -17,6 +17,17 @@ finish-args:
   - "--socket=ssh-auth"
   - "--talk-name=org.kde.StatusNotifierWatcher"
   - "--env=QTWEBENGINEPROCESS_PATH=/app/bin/QtWebEngineProcess"
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/*/cmake
+  - /lib/pkgconfig
+  - /mkspecs
+  - /share/man
+  - '*.la'
+  - '*.a'
+cleanup-commands:
+    - /app/cleanup-BaseApp.sh
 modules:
   # Liboping is needed for oping monitoring module.
   - name: liboping
