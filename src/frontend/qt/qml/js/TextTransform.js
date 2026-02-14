@@ -50,8 +50,12 @@ function escapeHtml(text)
 }
 
 /// Parse ANSI color codes and return rich text with appropriate coloring.
+/// Other ANSI sequences (cursor movement, mode changes, etc.) are stripped.
 function ansiToRichText(text) {
-    return text.replace(/\x1b\[([\d;]+)m/g, (match, p1) => {
+    const withoutOtherAnsi = text.replace(/\x1b\[[\x20-\x3f]*([\x40-\x7e])/g, (match, finalByte) =>
+        finalByte === "m" ? match : ""
+    )
+    return withoutOtherAnsi.replace(/\x1b\[([\d;]+)m/g, (match, p1) => {
         let codes = p1.split(";").map(Number)
 
         if (codes.includes(0)) {
