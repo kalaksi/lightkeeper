@@ -71,22 +71,19 @@ modules:
     build-commands:
       - rm -rf ChartJs2QML/.git
       - cp -va ChartJs2QML /app/ChartJs2QML
-  - name: qml-lighthouse-ace-editor
+  - name: qml-lighthouse-components
     buildsystem: simple
     sources:
       - type: git
-        # Follows branch 'main'
-        url: https://github.com/kalaksi/qml-lighthouse-ace-editor
-        commit: 6b65d8e217da7647a10b8e4725f270b9b72b7c19
-        dest: 'qml-lighthouse-ace-editor'
+        url: https://github.com/kalaksi/qml-lighthouse-components.git
+        # Set commit or tag for reproducible release builds.
+        dest: 'qml-lighthouse-components'
     build-commands:
-      - mkdir -p /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds
-      - cp -a qml-lighthouse-ace-editor/LICENSE /app/qml-lighthouse-ace-editor/
-      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-editor.html /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
-      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/AceEditor.qml /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
-      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/qmldir /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/
-      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds/LICENSE /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds/
-      - cp -a qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds/src-min-noconflict /app/qml-lighthouse-ace-editor/Lighthouse/AceEditor/ace-builds/
+      - cd qml-lighthouse-components/Lighthouse/AceEditor/ace-builds
+        && git sparse-checkout init --no-cone
+        && git sparse-checkout set LICENSE src-min-noconflict
+        && cd ../../../..
+      - cp -a qml-lighthouse-components /app/qml-lighthouse-components
   - name: lightkeeper
     buildsystem: simple
     sources:

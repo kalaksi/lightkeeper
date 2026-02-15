@@ -5,7 +5,7 @@ set -eu
 
 if [ ! -e "third_party/qmltermwidget" ] || \
    [ ! -e "third_party/ChartJs2QML" ] || \
-   [ ! -e "third_party/qml-lighthouse-ace-editor" ] \
+   [ ! -e "third_party/qml-lighthouse-components" ] \
    ; then
 
     git submodule update --init --recursive --remote

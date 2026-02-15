@@ -14,7 +14,7 @@ import QtCore
 import Theme
 
 import ".."
-import "../FileBrowser"
+import Lighthouse.FileBrowser 1.0
 import "../Misc"
 import "../Text"
 
