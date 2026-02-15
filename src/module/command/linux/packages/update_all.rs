@@ -115,10 +115,10 @@ impl UpdateAll {
 
         if total_to_install > 0 {
             let unpack_count = response.message.lines().filter(|line| line.contains("Preparing to unpack ")).count() as u32;
-            let unpack_progress = (unpack_count * 100 / total_to_install) as u8;
+            let unpack_progress = (unpack_count * 100 / total_to_install).min(100) as u8;
 
             let setting_up_count = response.message.lines().filter(|line| line.contains("Setting up ")).count() as u32;
-            let setting_up_progress = (setting_up_count * 100 / total_to_install) as u8;
+            let setting_up_progress = (setting_up_count * 100 / total_to_install).min(100) as u8;
 
             10 + (unpack_progress as f32 * 0.4) as u8 + (setting_up_progress as f32 * 0.4) as u8
         }
