@@ -21,8 +21,12 @@
 ## QML
 - Always have an empty line before start of a QML element, e.g. `\nText {...`.
 - Component structure should be: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
-- Reference errors to `LK` are expected and can be ignored.
+- Reference errors to `LK` (and only `LK`) are expected and can be ignored.
 - When adding or removing QML files, resource file has to be updated.
+
+## Icons
+- Icons are mostly from breeze in vendor-dir.
+- Use size 22 for icons.
 
 # Web searches
 - Qt 6 has had many changes between versions, so it's important that the information is recent, preferably less than 3 years old. That way Qt 6.10 features can be utilized.

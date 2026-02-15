@@ -1,0 +1,129 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+use std::collections::HashMap;
+use regex::Regex;
+use crate::error::LkError;
+use crate::frontend;
+use crate::host::*;
+use crate::module::connection::ResponseMessage;
+use crate::module::*;
+use crate::module::command::*;
+use crate::utils::ShellCommand;
+use crate::enums;
+use lightkeeper_module::command_module;
+
+#[command_module(
+    name="_internal-filebrowser-upload",
+    version="0.0.1",
+    description="Upload local files with rsync.",
+)]
+pub struct FileBrowserUpload {
+    regex_progress: Regex,
+}
+
+impl Module for FileBrowserUpload {
+    fn new(_settings: &HashMap<String, String>) -> Self {
+        FileBrowserUpload {
+            regex_progress: Regex::new(r"(\d+)%").unwrap(),
+        }
+    }
+}
+
+impl CommandModule for FileBrowserUpload {
+    fn get_connector_spec(&self) -> Option<ModuleSpecification> {
+        Some(ModuleSpecification::connector("local-command", "0.0.1"))
+    }
+
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
+            category: String::from("host"),
+            display_style: frontend::DisplayStyle::Icon,
+            display_icon: String::from("folder-upload"),
+            display_text: String::from("Upload with rsync"),
+            depends_on_criticality: vec![enums::Criticality::Normal],
+            action: UIAction::FollowOutput,
+            tab_title: String::from("Upload"),
+            parent_id: String::from("_internal-filebrowser-ls"),
+            user_parameters: vec![
+                frontend::UserInputField {
+                    label: String::from("Local path"),
+                    ..Default::default()
+                },
+                frontend::UserInputField {
+                    label: String::from("Remote path"),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        }
+    }
+
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
+        if host.platform.os != platform_info::OperatingSystem::Linux {
+            return Err(LkError::unsupported_platform());
+        }
+
+        let local_path = parameters.first().ok_or(LkError::other("No local path specified"))?;
+        let remote_path = parameters.get(1).ok_or(LkError::other("No remote path specified"))?;
+        let username = parameters.get(2).ok_or(LkError::other("Remote user is required"))?;
+
+        let remote_dir = if remote_path.ends_with('/') {
+            remote_path.clone()
+        } else {
+            format!("{}/", remote_path)
+        };
+        let remote_spec = match username.is_empty() {
+            true => format!("{}:{}", host.get_address(), remote_dir),
+            false => format!("{}@{}:{}", username, host.get_address(), remote_dir),
+        };
+
+        if local_path.is_empty() {
+            return Err(LkError::other("Local path is empty"));
+        }
+        if remote_path.is_empty() {
+            return Err(LkError::other("Remote path is empty"));
+        }
+
+        let mut command = ShellCommand::new();
+        command.use_sudo = false;
+        command.arguments(vec![
+            "rsync",
+            "-avz",
+            "--info=progress2",
+            local_path,
+            &remote_spec,
+        ]);
+
+        Ok(command.to_string())
+    }
+
+    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+        if response.is_partial {
+            let progress = self.parse_rsync_progress(response);
+            Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
+        }
+        else {
+            if response.return_code == 0 {
+                Ok(CommandResult::new_hidden(response.message_increment.clone()))
+            }
+            else {
+                Ok(CommandResult::new_hidden(response.message_increment.clone())
+                    .with_criticality(crate::enums::Criticality::Error))
+            }
+        }
+    }
+}
+
+impl FileBrowserUpload {
+    fn parse_rsync_progress(&self, response: &ResponseMessage) -> u8 {
+        self.regex_progress
+            .find_iter(&response.message)
+            .filter_map(|m| m.as_str().trim_end_matches('%').parse::<u8>().ok())
+            .filter(|&p| p <= 100)
+            .last()
+            .unwrap_or(10)
+    }
+}

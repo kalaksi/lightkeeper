@@ -27,9 +27,9 @@ Item {
     property string currentPath: root.defaultPath
     property bool enableShortcuts: false
     property bool _loading: pendingInvocation > 0
-    property int _downloadProgressPercent: 0
-    property bool _hasActiveDownload: false
-    property var _downloadInvocations: ({})
+    property int _transferProgressPercent: 0
+    property bool _hasActiveTransfer: false
+    property var _transferInvocations: ({})
 
     Connections {
         target: LK.command
@@ -40,8 +40,8 @@ Item {
         }
     }
 
-    function _minDownloadProgress() {
-        let invs = root._downloadInvocations
+    function _minTransferProgress() {
+        let invs = root._transferInvocations
         let keys = Object.keys(invs)
         if (keys.length === 0) {
             return 100
@@ -60,15 +60,15 @@ Item {
         target: LK.hosts
 
         function onCommandResultReceived(commandResultJson, invocationId) {
-            if (invocationId in root._downloadInvocations) {
+            if (invocationId in root._transferInvocations) {
                 let commandResult = JSON.parse(commandResultJson)
-                root._downloadInvocations[invocationId] = commandResult.progress
+                root._transferInvocations[invocationId] = commandResult.progress
                 if (commandResult.progress >= 100) {
-                    delete root._downloadInvocations[invocationId]
+                    delete root._transferInvocations[invocationId]
                 }
-                root._downloadProgressPercent = root._minDownloadProgress()
-                if (Object.keys(root._downloadInvocations).length === 0) {
-                    root._hasActiveDownload = false
+                root._transferProgressPercent = root._minTransferProgress()
+                if (Object.keys(root._transferInvocations).length === 0) {
+                    root._hasActiveTransfer = false
                 }
             }
             if (root.pendingInvocation === invocationId) {
@@ -135,6 +135,20 @@ Item {
                 ToolTip.text: "Download selected files"
             }
 
+            ToolButton {
+                icon.source: "qrc:/main/images/button/upload"
+                text: "Upload"
+                display: AbstractButton.IconOnly
+                onClicked: uploadFileDialog.open()
+                icon.height: 24
+                icon.width: 24
+                padding: 4
+
+                ToolTip.visible: hovered
+                ToolTip.delay: Theme.tooltipDelay
+                ToolTip.text: "Upload files to selected directory"
+            }
+
             Item {
                 Layout.fillWidth: true
             }
@@ -144,11 +158,13 @@ Item {
     FileBrowser {
         id: fileBrowser
         anchors.top: topBar.bottom
-        anchors.bottom: downloadProgressBar.top
+        anchors.bottom: transferProgressBar.top
         anchors.left: parent.left
         anchors.right: parent.right
         columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
         columnWidths: [0.1, 0.3, 0.2, 0.2, 0.2]
+        headerColor: Theme.backgroundColor
+        headerBorderColor: Theme.borderColor
         useSplitView: true
 
         onDirectoryExpanded: function(path, is_cached) {
@@ -163,8 +179,8 @@ Item {
     }
 
     Rectangle {
-        id: downloadProgressBar
-        visible: root._hasActiveDownload
+        id: transferProgressBar
+        visible: root._hasActiveTransfer
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
@@ -184,7 +200,7 @@ Item {
                 Layout.fillHeight: false
                 Layout.preferredHeight: 18
                 Layout.alignment: Qt.AlignVCenter
-                value: root._downloadProgressPercent / 100.0
+                value: root._transferProgressPercent / 100.0
 
                 contentItem: Rectangle {
                     implicitHeight: progressBar.height
@@ -204,7 +220,7 @@ Item {
             NormalText {
                 id: label
                 lineHeight: 0.9
-                text: root._downloadProgressPercent + " %"
+                text: root._transferProgressPercent + " %"
                 Layout.alignment: Qt.AlignVCenter
             }
         }
@@ -222,15 +238,44 @@ Item {
             }
             let localDir = path
             let remoteUser = LK.config.getSshUsername(root.hostId)
-            root._hasActiveDownload = true
-            root._downloadProgressPercent = 0
+            root._hasActiveTransfer = true
+            root._transferProgressPercent = 0
             for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
                 let remotePath = fileBrowser.selectedFiles[i]
                 let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
                     [remotePath, localDir, remoteUser])
-                let invs = root._downloadInvocations
+                let invs = root._transferInvocations
                 invs[invId] = 0
-                root._downloadInvocations = invs
+                root._transferInvocations = invs
+            }
+        }
+    }
+
+    FileDialog {
+        id: uploadFileDialog
+        title: "Choose files to upload"
+        currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+        fileMode: FileDialog.OpenFiles
+
+        onAccepted: {
+            let remoteDir = fileBrowser.selectedDirectory
+            let remoteUser = LK.config.getSshUsername(root.hostId)
+            root._hasActiveTransfer = true
+            root._transferProgressPercent = 0
+            for (let i = 0; i < selectedFiles.length; i++) {
+                let url = selectedFiles[i]
+                let localPath = url.toString()
+                if (localPath.indexOf("file://") === 0) {
+                    localPath = localPath.substring(7)
+                }
+                if (localPath.length === 0) {
+                    continue
+                }
+                let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
+                    [localPath, remoteDir, remoteUser])
+                let invs = root._transferInvocations
+                invs[invId] = 0
+                root._transferInvocations = invs
             }
         }
     }
