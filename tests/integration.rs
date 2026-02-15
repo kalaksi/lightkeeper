@@ -28,6 +28,7 @@ use std::time::Duration;
 
 
 use lightkeeper::*;
+use lightkeeper::HostSetting;
 
 // Import internal types for testing (modules are public in test mode)
 use lightkeeper::host_manager::HostManager;
@@ -104,6 +105,7 @@ impl MonitorTestHarness {
         // Test host
         let mut host_settings = configuration::HostSettings::default();
         host_settings.address = "127.0.0.1".to_string();
+        host_settings.effective.host_settings = vec![HostSetting::UseSudo];
 
         host_settings.effective.monitors.insert(
             monitor_module.0.module_spec.id.clone(),
@@ -138,6 +140,7 @@ impl MonitorTestHarness {
         // Test host
         let mut host_settings = configuration::HostSettings::default();
         host_settings.address = "127.0.0.1".to_string();
+        host_settings.effective.host_settings = vec![HostSetting::UseSudo];
 
         for monitor_module in &monitor_modules {
             host_settings.effective.monitors.insert(
@@ -328,6 +331,7 @@ impl CommandTestHarness {
         // Test host
         let mut host_settings = configuration::HostSettings::default();
         host_settings.address = "127.0.0.1".to_string();
+        host_settings.effective.host_settings = vec![HostSetting::UseSudo];
 
         host_settings.effective.commands.insert(
             command_module.0.module_spec.id.clone(),

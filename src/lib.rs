@@ -14,6 +14,7 @@ pub mod connection_manager;
 pub mod command_handler;
 pub mod monitor_manager;
 mod host;
+pub use host::HostSetting;
 pub mod utils;
 pub mod enums;
 // Made public for integration tests

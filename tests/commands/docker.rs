@@ -682,7 +682,7 @@ Error response from daemon: pull access denied
 fn test_compose_build_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         // TODO: auto-generated responses, check or replace with actual
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "build" "service1""#,
+        StubSsh2::new(r#""sudo" "docker" "compose" "--progress=plain" "-f" "/mnt/containers/project1/docker-compose.yml" "build" "service1""#,
             r#"Building service1
 Step 1/5 : FROM nginx:latest
 Step 2/5 : COPY . /usr/share/nginx/html
@@ -721,7 +721,7 @@ Successfully built abc123"#, 0)
 fn test_compose_build_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         // TODO: auto-generated responses, check or replace with actual
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "build" "service1""#,
+        StubSsh2::new(r#""sudo" "docker" "compose" "--progress=plain" "-f" "/mnt/containers/project1/docker-compose.yml" "build" "service1""#,
             r#"Building service1
 Step 1/5 : FROM nginx:latest
 ERROR: failed to solve: failed to fetch"#, 1)

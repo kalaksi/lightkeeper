@@ -184,7 +184,8 @@ r#"{
     // Create host settings with both parent and extension monitors
     let mut host_settings = configuration::HostSettings::default();
     host_settings.address = "127.0.0.1".to_string();
-    
+    host_settings.effective.host_settings = vec![lightkeeper::HostSetting::UseSudo];
+
     host_settings.effective.monitors.insert(
         docker::Images::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
