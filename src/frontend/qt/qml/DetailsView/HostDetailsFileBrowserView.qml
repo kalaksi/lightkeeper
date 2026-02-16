@@ -129,9 +129,10 @@ Item {
             width: parent.width
             height: parent.height
             anchors.top: parent.top
-            spacing: Theme.spacingNormal
+            spacing: Theme.spacingTight
 
             ToolButton {
+                flat: false
                 icon.source: "qrc:/main/images/button/download"
                 text: "Download"
                 display: AbstractButton.IconOnly
@@ -147,6 +148,7 @@ Item {
             }
 
             ToolButton {
+                flat: false
                 icon.source: "qrc:/main/images/button/upload"
                 text: "Upload"
                 display: AbstractButton.IconOnly
@@ -171,11 +173,17 @@ Item {
 
         MenuItem {
             text: "Download..."
+            icon.source: "qrc:/main/images/button/download"
+            icon.width: 22
+            icon.height: 22
             enabled: fileBrowser.selectedFiles.length > 0
             onTriggered: downloadFolderDialog.open()
         }
         MenuItem {
             text: "Rename..."
+            icon.source: "qrc:/main/images/button/entry-edit"
+            icon.width: 22
+            icon.height: 22
             enabled: fileBrowser.selectedFiles.length === 1
             onTriggered: {
                 root._renamePath = fileBrowser.selectedFiles[0]
