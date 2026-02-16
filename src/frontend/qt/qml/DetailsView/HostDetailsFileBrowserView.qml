@@ -180,6 +180,14 @@ Item {
             onTriggered: downloadFolderDialog.open()
         }
         MenuItem {
+            text: "Edit"
+            icon.source: "qrc:/main/images/button/story-editor"
+            icon.width: 22
+            icon.height: 22
+            enabled: fileBrowser.selectedFiles.length === 1
+            onTriggered: LK.command.openRemoteFileInEditor(root.hostId, fileBrowser.selectedFiles[0])
+        }
+        MenuItem {
             text: "Rename..."
             icon.source: "qrc:/main/images/button/entry-edit"
             icon.width: 22

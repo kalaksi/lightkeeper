@@ -35,6 +35,7 @@ pub struct CommandHandlerModel {
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
     interruptInvocation: qt_method!(fn(&self, invocation_id: u64)),
     listFiles: qt_method!(fn(&self, host_id: QString, path: QString) -> u64),
+    openRemoteFileInEditor: qt_method!(fn(&self, host_id: QString, remote_path: QString)),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
     removeFile: qt_method!(fn(&self, local_file_path: QString)),
     hasFileChanged: qt_method!(fn(&self, local_file_path: QString, contents: QString) -> bool),
@@ -348,6 +349,17 @@ impl CommandHandlerModel {
         }
 
         invocation_id
+    }
+
+    fn openRemoteFileInEditor(&mut self, host_id: QString, remote_path: QString) {
+        let host_id = host_id.to_string();
+        let remote_path = remote_path.to_string();
+        let command_id = String::from("_internal-filebrowser-edit");
+        let (invocation_id, local_file_path) =
+            self.command_handler.download_editable_file(&host_id, &command_id, &remote_path);
+        if invocation_id > 0 {
+            self.textEditorViewOpened( QString::from(command_id), invocation_id, QString::from(local_file_path));
+        }
     }
 
     fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64 {
