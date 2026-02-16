@@ -121,6 +121,9 @@ impl CommandHandler {
                 command_collection.entry(command_config.name.clone()).or_insert(command_config.clone());
             }
 
+
+            // Internal commands
+
             let custom_command_module = crate::module::command::internal::custom_command::CustomCommand::new_command_module(&HashMap::new());
             self.add_command(host_id, custom_command_module);
 
@@ -622,7 +625,11 @@ impl CommandHandler {
         let command_result = match message_result {
             Ok(response_message) => {
                 let (_, contents) = file_handler::read_file(&response_message.message).unwrap();
-                CommandResult::new_hidden(String::from_utf8(contents).unwrap())
+
+                match String::from_utf8(contents) {
+                    Ok(message) => CommandResult::new_hidden(message),
+                    Err(_) => CommandResult::new_critical_error("Unable to edit file, failed to convert to UTF-8"),
+                }
             },
             Err(error) => {
                 let error_message = format!("Error downloading file: {}", error);
