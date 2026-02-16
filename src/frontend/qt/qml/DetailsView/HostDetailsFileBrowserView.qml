@@ -15,7 +15,6 @@ import Theme
 
 import ".."
 import Lighthouse.FileBrowser 1.0
-import "../Dialog"
 import "../Misc"
 import "../Text"
 
@@ -35,7 +34,6 @@ Item {
     property var _transferInvocations: ({})
 
     // Related to renaming.
-    property string _renamePath: ""
     property int _pendingRenameInvocationId: 0
 
     Connections {
@@ -192,33 +190,8 @@ Item {
             icon.source: "qrc:/main/images/button/entry-edit"
             icon.width: 22
             icon.height: 22
-            enabled: fileBrowser.selectedFiles.length === 1
-            onTriggered: {
-                root._renamePath = fileBrowser.selectedFiles[0]
-                let basename = root._renamePath
-                    .split("/")
-                    .filter(part => part.length > 0)
-                    .pop()
-
-                renameInputDialog.title = "Rename"
-                renameInputDialog.inputSpecs = [{
-                    label: "New name:",
-                    default_value: basename,
-                    validator_regexp: ".*",
-                    additional_validator_regexp: "" 
-                }]
-                renameInputDialog.open()
-            }
-        }
-    }
-
-    InputDialog {
-        id: renameInputDialog
-        onInputValuesGiven: function(values) {
-            if (values.length > 0 && values[0].trim().length > 0 && root._renamePath.length > 0) {
-                root._pendingRenameInvocationId = LK.command.executePlain(root.hostId,
-                    "_internal-filebrowser-rename", [root._renamePath, values[0].trim()])
-            }
+            enabled: fileBrowser.hasSingleSelection
+            onTriggered: fileBrowser.startRenameForSelected()
         }
     }
 
@@ -234,6 +207,12 @@ Item {
         headerBorderColor: Theme.borderColor
         useSplitView: true
         contextMenu: contextMenu
+
+        onRenamed: function(fullPath, newName) {
+            console.log("File renamed:", fullPath, newName)
+            root._pendingRenameInvocationId = LK.command.executePlain(root.hostId,
+                "_internal-filebrowser-rename", [fullPath, newName])
+        }
 
         onDirectoryExpanded: function(path, is_cached) {
             if (!is_cached) {
