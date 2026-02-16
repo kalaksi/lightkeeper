@@ -6,6 +6,7 @@
 mod common;
 mod monitors;
 mod commands;
+mod other;
 
 mod config;
 
@@ -43,9 +44,9 @@ struct MonitorTestHarness {
     host_manager: Rc<RefCell<HostManager>>,
     connection_manager: ConnectionManager,
     monitor_manager: MonitorManager,
+    command_handler: Option<CommandHandler>,
     ui_update_receiver: mpsc::Receiver<frontend::UIUpdate>,
     first_ui_update: RefCell<bool>,
-
 }
 
 impl MonitorTestHarness {
@@ -91,6 +92,67 @@ impl MonitorTestHarness {
             host_manager,
             connection_manager,
             monitor_manager,
+            command_handler: None,
+            ui_update_receiver,
+            first_ui_update: RefCell::new(true),
+        }
+    }
+
+    fn new_with_command_handler(
+        hosts_config: configuration::Hosts,
+        module_factory: ModuleFactory,
+    ) -> MonitorTestHarness {
+        let _ = env_logger::Builder::from_default_env()
+            .is_test(true)
+            .try_init();
+
+        let module_factory = Arc::new(module_factory);
+
+        let host_manager = Rc::new(RefCell::new(HostManager::new()));
+        host_manager.borrow_mut().configure(&hosts_config);
+
+        let mut connection_manager = ConnectionManager::new(module_factory.clone());
+        connection_manager.configure(&hosts_config);
+
+        let invocation_id_counter = Arc::new(AtomicU64::new(0));
+        let mut monitor_manager = MonitorManager::new(
+            host_manager.clone(),
+            module_factory.clone(),
+            invocation_id_counter.clone(),
+        );
+        monitor_manager.configure(
+            &hosts_config,
+            connection_manager.new_request_sender(),
+            host_manager.borrow().new_state_update_sender(),
+        );
+
+        let mut command_handler = CommandHandler::new(
+            host_manager.clone(),
+            module_factory,
+            invocation_id_counter,
+        );
+        command_handler.configure(
+            &hosts_config,
+            &configuration::Preferences::default(),
+            connection_manager.new_request_sender(),
+            host_manager.borrow().new_state_update_sender(),
+        );
+
+        let (sender, ui_update_receiver) = mpsc::channel();
+        host_manager.borrow_mut().add_observer(sender);
+
+        host_manager.borrow_mut().start_receiving_updates();
+        connection_manager.start_processing_requests();
+        monitor_manager.start_processing_responses();
+        command_handler.start_processing_responses();
+
+        std::thread::sleep(Duration::from_millis(100));
+
+        MonitorTestHarness {
+            host_manager,
+            connection_manager,
+            monitor_manager,
+            command_handler: Some(command_handler),
             ui_update_receiver,
             first_ui_update: RefCell::new(true),
         }
@@ -260,6 +322,9 @@ impl MonitorTestHarness {
 
 impl Drop for MonitorTestHarness {
     fn drop(&mut self) {
+        if let Some(ref mut command_handler) = self.command_handler {
+            command_handler.stop();
+        }
         self.monitor_manager.stop();
         self.connection_manager.stop();
         self.host_manager.borrow_mut().stop();

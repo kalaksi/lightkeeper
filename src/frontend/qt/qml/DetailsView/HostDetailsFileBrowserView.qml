@@ -28,9 +28,13 @@ Item {
     property string currentPath: root.defaultPath
     property bool enableShortcuts: false
     property bool _loading: pendingInvocation > 0
+
+    // Related to downloads.
     property int _transferProgressPercent: 0
     property bool _hasActiveTransfer: false
     property var _transferInvocations: ({})
+
+    // Related to renaming.
     property string _renamePath: ""
     property int _pendingRenameInvocationId: 0
 
