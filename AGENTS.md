@@ -23,6 +23,8 @@
 - Component structure should be: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
 - Reference errors to `LK` (and only `LK`) are expected and can be ignored.
 - When adding or removing QML files, resource file has to be updated.
+- Prefer using native components from Qt instead of implementing something custom.
+- Prefer iterating with for..of or for..in instead of using indexes.
 
 ## Icons
 - Icons are mostly from breeze in vendor-dir.

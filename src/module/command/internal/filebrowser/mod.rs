@@ -5,7 +5,9 @@
 
 pub mod download;
 pub mod ls;
+pub mod rename;
 pub mod upload;
 pub use download::FileBrowserDownload;
 pub use ls::FileBrowserLs;
+pub use rename::FileBrowserRename;
 pub use upload::FileBrowserUpload;

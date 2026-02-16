@@ -15,6 +15,7 @@ import Theme
 
 import ".."
 import Lighthouse.FileBrowser 1.0
+import "../Dialog"
 import "../Misc"
 import "../Text"
 
@@ -30,6 +31,8 @@ Item {
     property int _transferProgressPercent: 0
     property bool _hasActiveTransfer: false
     property var _transferInvocations: ({})
+    property string _renamePath: ""
+    property int _pendingRenameInvocationId: 0
 
     Connections {
         target: LK.command
@@ -93,6 +96,10 @@ Item {
 
                 fileBrowser.openDirectory(dirPath, browserEntries)
             }
+            if (invocationId === root._pendingRenameInvocationId) {
+                root._pendingRenameInvocationId = 0
+                root.refreshCurrentDirectory()
+            }
         }
     }
 
@@ -155,6 +162,46 @@ Item {
         }
     }
 
+    Menu {
+        id: contextMenu
+
+        MenuItem {
+            text: "Download..."
+            enabled: fileBrowser.selectedFiles.length > 0
+            onTriggered: downloadFolderDialog.open()
+        }
+        MenuItem {
+            text: "Rename..."
+            enabled: fileBrowser.selectedFiles.length === 1
+            onTriggered: {
+                root._renamePath = fileBrowser.selectedFiles[0]
+                let basename = root._renamePath
+                    .split("/")
+                    .filter(part => part.length > 0)
+                    .pop()
+
+                renameInputDialog.title = "Rename"
+                renameInputDialog.inputSpecs = [{
+                    label: "New name:",
+                    default_value: basename,
+                    validator_regexp: ".*",
+                    additional_validator_regexp: "" 
+                }]
+                renameInputDialog.open()
+            }
+        }
+    }
+
+    InputDialog {
+        id: renameInputDialog
+        onInputValuesGiven: function(values) {
+            if (values.length > 0 && values[0].trim().length > 0 && root._renamePath.length > 0) {
+                root._pendingRenameInvocationId = LK.command.executePlain(root.hostId,
+                    "_internal-filebrowser-rename", [root._renamePath, values[0].trim()])
+            }
+        }
+    }
+
     FileBrowser {
         id: fileBrowser
         anchors.top: topBar.bottom
@@ -166,6 +213,7 @@ Item {
         headerColor: Theme.backgroundColor
         headerBorderColor: Theme.borderColor
         useSplitView: true
+        contextMenu: contextMenu
 
         onDirectoryExpanded: function(path, is_cached) {
             if (!is_cached) {
@@ -242,11 +290,9 @@ Item {
             root._transferProgressPercent = 0
             for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
                 let remotePath = fileBrowser.selectedFiles[i]
-                let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
+                let invocationId = LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
                     [remotePath, localDir, remoteUser])
-                let invs = root._transferInvocations
-                invs[invId] = 0
-                root._transferInvocations = invs
+                root._transferInvocations[invocationId] = 0
             }
         }
     }
@@ -302,6 +348,12 @@ Item {
         fileBrowser.clearCache()
         root.pendingPath = root.currentPath
         root.pendingInvocation = LK.command.listFiles(root.hostId, root.currentPath)
+    }
+
+    function refreshCurrentDirectory() {
+        let dir = fileBrowser.selectedDirectory
+        root.pendingPath = dir
+        root.pendingInvocation = LK.command.listFiles(root.hostId, dir)
     }
 
     function close() {
