@@ -226,13 +226,12 @@ Item {
         directoryIconSource: "qrc:/main/images/button/document-open-folder"
 
         onRenamed: function(fullPath, newName) {
-            console.log("File renamed:", fullPath, newName)
             root._pendingRenameInvocationId = LK.command.executePlain(root.hostId,
                 "_internal-filebrowser-rename", [fullPath, newName])
         }
 
-        onDirectoryExpanded: function(path, is_cached) {
-            if (!is_cached) {
+        onDirectoryExpanded: function(path, isCached) {
+            if (!isCached) {
                 root.pendingPath = path
                 root.pendingInvocation = LK.command.listFiles(root.hostId, path)
             }
@@ -367,9 +366,8 @@ Item {
     }
 
     function refreshCurrentDirectory() {
-        let dir = fileBrowser.selectedDirectory
-        root.pendingPath = dir
-        root.pendingInvocation = LK.command.listFiles(root.hostId, dir)
+        root.pendingPath = fileBrowser.selectedDirectory
+        root.pendingInvocation = LK.command.listFiles(root.hostId, fileBrowser.selectedDirectory)
     }
 
     function close() {
