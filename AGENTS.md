@@ -25,6 +25,7 @@
 - When adding or removing QML files, resource file has to be updated.
 - Prefer using native components from Qt instead of implementing something custom.
 - Prefer iterating with for..of or for..in instead of using indexes.
+- Avoid overly complicated width or height calculations.
 
 ## Icons
 - Icons are mostly from breeze in vendor-dir.

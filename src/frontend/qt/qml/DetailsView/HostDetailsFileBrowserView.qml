@@ -218,7 +218,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
-        columnWidths: [0.1, 0.3, 0.2, 0.2, 0.2]
+        columnWidths: [0.35, 0.08]
         headerColor: Theme.backgroundColor
         headerBorderColor: Theme.borderColor
         useSplitView: true
@@ -342,12 +342,8 @@ Item {
     }
 
     // Loading animation
-    Item {
-        visible: root._loading
-        anchors.fill: parent
-
-        WorkingSprite {
-        }
+    WorkingSprite {
+        show: root._loading
     }
 
     function activate() {
