@@ -13,9 +13,30 @@ Item {
     id: root
     property real scale: 1.5
     property string text: ""
+    /// When false, sprite fades out. Used by parent to trigger fade before hiding.
+    property bool show: true
 
+    opacity: 1
+    visible: opacity > 0
     anchors.centerIn: parent
     anchors.verticalCenterOffset: -0.1 * parent.height
+
+    onShowChanged: {
+        if (root.show) {
+            root.opacity = 1
+        }
+        else {
+            fadeOut.start()
+        }
+    }
+
+    NumberAnimation {
+        id: fadeOut
+        target: root
+        property: "opacity"
+        to: 0
+        duration: 120
+    }
 
     Column {
         anchors.fill: parent
