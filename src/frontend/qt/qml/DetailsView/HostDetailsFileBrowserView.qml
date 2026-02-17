@@ -163,6 +163,22 @@ Item {
             Item {
                 Layout.fillWidth: true
             }
+
+            Row {
+                visible: fileBrowser.useSplitView
+                spacing: Theme.spacingLoose
+
+                Layout.alignment: Qt.AlignVCenter
+
+                Label {
+                    text: "Show directories"
+                }
+
+                CheckBox {
+                    checked: !fileBrowser.hideDirectories
+                    onToggled: fileBrowser.hideDirectories = !checked
+                }
+            }
         }
     }
 
@@ -207,6 +223,7 @@ Item {
         headerBorderColor: Theme.borderColor
         useSplitView: true
         contextMenu: contextMenu
+        directoryIconSource: "qrc:/main/images/button/document-open-folder"
 
         onRenamed: function(fullPath, newName) {
             console.log("File renamed:", fullPath, newName)
