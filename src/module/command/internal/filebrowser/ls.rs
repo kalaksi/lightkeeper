@@ -54,7 +54,7 @@ impl CommandModule for FileBrowserLs {
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();
-            command.arguments(vec!["ls", "-lAh", "--group-directories-first", "--color=never", "--time-style=long-iso", path]);
+            command.arguments(vec!["ls", "-lAL", "--group-directories-first", "--color=never", "--time-style=long-iso", path]);
         }
         else {
             return Err(LkError::unsupported_platform());
@@ -65,16 +65,14 @@ impl CommandModule for FileBrowserLs {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         let entries = parse_ls_output(&response.message)?;
-
         let json_result = json!({
             "entries": entries
         });
-
         Ok(CommandResult::new_hidden(json_result.to_string()))
     }
 }
 
-fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
+pub fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
     let mut entries = Vec::new();
     let lines: Vec<&str> = output.lines().collect();
 
@@ -92,7 +90,8 @@ fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
             continue;
         };
 
-        // Handle names with spaces - everything from index 7 onwards is the name
+        // Everything from index 7 onwards is the name.
+        // This also converts any other whitespace characters to spaces.
         let name = name_parts.join(" ");
 
         // Determine file type from permissions first character

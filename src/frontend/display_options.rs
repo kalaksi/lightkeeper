@@ -103,6 +103,8 @@ pub enum DisplayStyle {
     CriticalityLevel,
     Icon,
     ProgressBar,
+    // Some internal commands are not directly shown in the UI.
+    Hidden,
 }
 
 #[derive(Clone, Default, Serialize, Deserialize, Display, PartialEq)]

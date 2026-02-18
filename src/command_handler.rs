@@ -129,6 +129,8 @@ impl CommandHandler {
 
             let filebrowser_ls = crate::module::command::internal::FileBrowserLs::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_ls);
+            let filebrowser_ls_links = crate::module::command::internal::FileBrowserLsLinks::new_command_module(&HashMap::new());
+            self.add_command(host_id, filebrowser_ls_links);
             let filebrowser_download = crate::module::command::internal::FileBrowserDownload::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_download);
             let filebrowser_edit = crate::module::command::internal::FileBrowserEdit::new_command_module(&HashMap::new());

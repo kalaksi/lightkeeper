@@ -219,7 +219,6 @@ Item {
         anchors.right: parent.right
         columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
         columnWidths: [0.35, 0.08]
-        headerColor: Theme.backgroundColor
         headerBorderColor: Theme.borderColor
         useSplitView: true
         contextMenu: contextMenu
