@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+pub mod chmod;
+pub mod chown;
 pub mod copy;
 pub mod download;
 pub mod edit;
@@ -11,6 +13,8 @@ pub mod ls_links;
 pub mod r#move;
 pub mod rename;
 pub mod upload;
+pub use chmod::FileBrowserChmod;
+pub use chown::FileBrowserChown;
 pub use copy::FileBrowserCopy;
 pub use download::FileBrowserDownload;
 pub use edit::FileBrowserEdit;

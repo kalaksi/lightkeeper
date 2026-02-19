@@ -58,6 +58,7 @@ pub fn init_resources() {
             "Dialog/CommandOutputDialog.qml",
             "Dialog/ConfigHelperDialog.qml",
             "Dialog/ConfirmationDialog.qml",
+            "Dialog/FilePermissionsDialog.qml",
             "Dialog/CustomCommandsDialog.qml",
             "Dialog/DialogBackground.qml",
             "Dialog/GroupConfigurationDialog.qml",

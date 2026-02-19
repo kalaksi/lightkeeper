@@ -15,6 +15,7 @@ import Theme
 
 import ".."
 import Lighthouse.FileBrowser 1.0
+import "../Dialog"
 import "../Misc"
 import "../Text"
 
@@ -245,6 +246,14 @@ Item {
             enabled: fileBrowser.hasSingleSelection
             onTriggered: fileBrowser.startRenameForSelected()
         }
+        MenuItem {
+            text: "Permissions..."
+            icon.source: "qrc:/main/images/button/lock"
+            icon.width: 22
+            icon.height: 22
+            enabled: fileBrowser.selectedFiles.length > 0
+            onTriggered: root.openPermissionsDialog()
+        }
     }
 
     FileBrowser {
@@ -378,6 +387,34 @@ Item {
         }
     }
 
+    property var _permissionsDialogPaths: []
+
+    FilePermissionsDialog {
+        id: permissionsDialog
+        contextLabel: "Path"
+        onApplied: function(ownerRwx, groupRwx, othersRwx, newOwner, newGroup) {
+            let modeStr = "u=" + ownerRwx + ",g=" + groupRwx + ",o=" + othersRwx
+            let initial = root._tripletsFromPermissions(permissionsDialog.permissions)
+            let permissionsChanged = root._permissionsDialogPaths.length > 1 ||
+                ownerRwx !== initial[0] || groupRwx !== initial[1] || othersRwx !== initial[2]
+            let ownershipChanged = newOwner !== permissionsDialog.owner || newGroup !== permissionsDialog.group
+            for (let i = 0; i < root._permissionsDialogPaths.length; i++) {
+                let path = root._permissionsDialogPaths[i]
+                if (permissionsChanged) {
+                    let id = LK.command.executePlain(root.hostId,
+                        "_internal-filebrowser-chmod", [path, modeStr])
+                    root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
+                }
+                if (ownershipChanged) {
+                    let id = LK.command.executePlain(root.hostId,
+                        "_internal-filebrowser-chown", [path, newOwner, newGroup])
+                    root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
+                }
+            }
+        }
+    }
+
+
     Shortcut {
         enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
         sequence: StandardKey.Copy
@@ -449,6 +486,37 @@ Item {
     function refreshCurrentDirectory() {
         root.pendingPath = fileBrowser.selectedDirectory
         root.pendingInvocation = LK.command.listFiles(root.hostId, fileBrowser.selectedDirectory)
+    }
+
+    function openPermissionsDialog() {
+        let paths = fileBrowser.selectedFiles.slice()
+        root._permissionsDialogPaths = paths
+        if (paths.length === 1) {
+            let path = paths[0]
+            permissionsDialog.contextText = path
+            permissionsDialog.permissions = fileBrowser.getCellValue(path, 3) ?? ""
+            permissionsDialog.owner = fileBrowser.getCellValue(path, 4) ?? ""
+            permissionsDialog.group = fileBrowser.getCellValue(path, 5) ?? ""
+        }
+        else {
+            permissionsDialog.contextText = paths.length + " files selected"
+            permissionsDialog.permissions = ""
+            permissionsDialog.owner = ""
+            permissionsDialog.group = ""
+        }
+        permissionsDialog.open()
+    }
+
+    function _tripletsFromPermissions(permStr) {
+        if (permStr.length < 9) {
+            return ["---", "---", "---"]
+        }
+        let start = permStr.length === 10 ? 1 : 0
+        return [
+            permStr.substring(start, start + 3),
+            permStr.substring(start + 3, start + 6),
+            permStr.substring(start + 6, start + 9)
+        ]
     }
 
     function close() {
