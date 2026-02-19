@@ -90,7 +90,7 @@ impl ThemeModel {
             marginDialogTop: 45,
             marginDialogBottom: 80,
             animationDuration: 175,
-            animationDurationFast: 60,
+            animationDurationFast: 40,
             groupboxMinWidth: 450,
             groupboxMaxWidth: 650,
             commonIndent: 16,
