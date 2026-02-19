@@ -21,13 +21,11 @@ use lightkeeper_module::command_module;
     description="Download remote files with rsync.",
 )]
 pub struct FileBrowserDownload {
-    regex_progress: Regex,
 }
 
 impl Module for FileBrowserDownload {
     fn new(_settings: &HashMap<String, String>) -> Self {
         FileBrowserDownload {
-            regex_progress: Regex::new(r"(\d+)%").unwrap(),
         }
     }
 }
@@ -101,7 +99,7 @@ impl CommandModule for FileBrowserDownload {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_partial {
-            let progress = self.parse_rsync_progress(response);
+            let progress = parse_rsync_progress(&response.message);
             Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
         }
         else {
@@ -116,13 +114,13 @@ impl CommandModule for FileBrowserDownload {
     }
 }
 
-impl FileBrowserDownload {
-    fn parse_rsync_progress(&self, response: &ResponseMessage) -> u8 {
-        self.regex_progress
-            .find_iter(&response.message)
-            .filter_map(|m| m.as_str().trim_end_matches('%').parse::<u8>().ok())
-            .filter(|&p| p <= 100)
-            .last()
-            .unwrap_or(10)
-    }
+/// Parses rsync --info=progress2 output and returns the last percentage (0-100).
+pub fn parse_rsync_progress(message: &str) -> u8 {
+    Regex::new(r"(\d+)%")
+        .unwrap()
+        .find_iter(message)
+        .filter_map(|m| m.as_str().trim_end_matches('%').parse::<u8>().ok())
+        .filter(|&p| p <= 100)
+        .last()
+        .unwrap_or(10)
 }

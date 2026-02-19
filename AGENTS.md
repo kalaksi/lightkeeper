@@ -18,6 +18,9 @@
 - Match existing style, even if you'd do it differently.
 - Only remove imports/variables/functions that YOUR changes made unused.
 
+## When adding new modules
+- Read a few similar modules and follow similar patterns with code style.
+
 ## QML
 - Always have an empty line before start of a QML element, e.g. `\nText {...`.
 - Component structure should be: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
@@ -28,7 +31,7 @@
 - Avoid overly complicated width or height calculations.
 
 ## Icons
-- Icons are mostly from breeze in vendor-dir.
+- Icons are mostly copied from breeze in `vendor`-dir.
 - Use size 22 for icons.
 
 # Web searches

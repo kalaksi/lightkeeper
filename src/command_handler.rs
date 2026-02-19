@@ -127,14 +127,19 @@ impl CommandHandler {
             let custom_command_module = crate::module::command::internal::custom_command::CustomCommand::new_command_module(&HashMap::new());
             self.add_command(host_id, custom_command_module);
 
+            // TODO: add to config or something?
             let filebrowser_ls = crate::module::command::internal::FileBrowserLs::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_ls);
             let filebrowser_ls_links = crate::module::command::internal::FileBrowserLsLinks::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_ls_links);
+            let filebrowser_copy = crate::module::command::internal::FileBrowserCopy::new_command_module(&HashMap::new());
+            self.add_command(host_id, filebrowser_copy);
             let filebrowser_download = crate::module::command::internal::FileBrowserDownload::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_download);
             let filebrowser_edit = crate::module::command::internal::FileBrowserEdit::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_edit);
+            let filebrowser_move = crate::module::command::internal::FileBrowserMove::new_command_module(&HashMap::new());
+            self.add_command(host_id, filebrowser_move);
             let filebrowser_rename = crate::module::command::internal::FileBrowserRename::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_rename);
             let filebrowser_upload = crate::module::command::internal::FileBrowserUpload::new_command_module(&HashMap::new());

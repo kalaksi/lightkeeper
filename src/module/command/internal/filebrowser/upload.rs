@@ -4,8 +4,8 @@
  */
 
 use std::collections::HashMap;
-use regex::Regex;
 use crate::error::LkError;
+use super::download;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
@@ -21,13 +21,11 @@ use lightkeeper_module::command_module;
     description="Upload local files with rsync.",
 )]
 pub struct FileBrowserUpload {
-    regex_progress: Regex,
 }
 
 impl Module for FileBrowserUpload {
     fn new(_settings: &HashMap<String, String>) -> Self {
         FileBrowserUpload {
-            regex_progress: Regex::new(r"(\d+)%").unwrap(),
         }
     }
 }
@@ -102,7 +100,7 @@ impl CommandModule for FileBrowserUpload {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_partial {
-            let progress = self.parse_rsync_progress(response);
+            let progress = download::parse_rsync_progress(&response.message);
             Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
         }
         else {
@@ -114,16 +112,5 @@ impl CommandModule for FileBrowserUpload {
                     .with_criticality(crate::enums::Criticality::Error))
             }
         }
-    }
-}
-
-impl FileBrowserUpload {
-    fn parse_rsync_progress(&self, response: &ResponseMessage) -> u8 {
-        self.regex_progress
-            .find_iter(&response.message)
-            .filter_map(|m| m.as_str().trim_end_matches('%').parse::<u8>().ok())
-            .filter(|&p| p <= 100)
-            .last()
-            .unwrap_or(10)
     }
 }

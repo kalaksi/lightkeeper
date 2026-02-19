@@ -33,8 +33,12 @@ Item {
     property bool _hasActiveTransfer: false
     property var _transferInvocations: ({})
 
-    // Related to renaming.
-    property int _pendingRenameInvocationId: 0
+    // Invocation ids for which we refresh the file list when they complete (rename, copy, move).
+    property var _pendingRefreshInvocationIds: []
+
+    // Copy/Cut/Paste clipboard (file list only).
+    property var _fileClipboardPaths: []
+    property bool _fileClipboardIsCut: false
 
     Connections {
         target: LK.command
@@ -70,6 +74,10 @@ Item {
                 root._transferInvocations[invocationId] = commandResult.progress
                 if (commandResult.progress >= 100) {
                     delete root._transferInvocations[invocationId]
+                    if (root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
+                        root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.filter(id => id !== invocationId)
+                        root.refreshCurrentDirectory()
+                    }
                 }
                 root._transferProgressPercent = root._minTransferProgress()
                 if (Object.keys(root._transferInvocations).length === 0) {
@@ -98,8 +106,8 @@ Item {
 
                 fileBrowser.openDirectory(dirPath, browserEntries)
             }
-            if (invocationId === root._pendingRenameInvocationId) {
-                root._pendingRenameInvocationId = 0
+            if (root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
+                root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.filter(id => id !== invocationId)
                 root.refreshCurrentDirectory()
             }
         }
@@ -185,6 +193,34 @@ Item {
     Menu {
         id: contextMenu
 
+        MenuSeparator {
+        }
+        MenuItem {
+            text: "Copy"
+            icon.source: "qrc:/main/images/button/copy"
+            icon.width: 22
+            icon.height: 22
+            enabled: fileBrowser.selectedFiles.length > 0
+            onTriggered: root.copySelected()
+        }
+        MenuItem {
+            text: "Cut"
+            icon.source: "qrc:/main/images/button/edit-cut"
+            icon.width: 22
+            icon.height: 22
+            enabled: fileBrowser.selectedFiles.length > 0
+            onTriggered: root.cutSelected()
+        }
+        MenuItem {
+            text: "Paste"
+            icon.source: "qrc:/main/images/button/edit-paste"
+            icon.width: 22
+            icon.height: 22
+            enabled: root._fileClipboardPaths.length > 0
+            onTriggered: root.paste()
+        }
+        MenuSeparator {
+        }
         MenuItem {
             text: "Download..."
             icon.source: "qrc:/main/images/button/download"
@@ -225,8 +261,9 @@ Item {
         directoryIconSource: "qrc:/main/images/button/document-open-folder"
 
         onRenamed: function(fullPath, newName) {
-            root._pendingRenameInvocationId = LK.command.executePlain(root.hostId,
+            let id = LK.command.executePlain(root.hostId,
                 "_internal-filebrowser-rename", [fullPath, newName])
+            root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
         }
 
         onDirectoryExpanded: function(path, isCached) {
@@ -340,9 +377,57 @@ Item {
         }
     }
 
+    Shortcut {
+        enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
+        sequence: StandardKey.Copy
+        onActivated: root.copySelected()
+    }
+    Shortcut {
+        enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
+        sequence: StandardKey.Cut
+        onActivated: root.cutSelected()
+    }
+    Shortcut {
+        enabled: root.enableShortcuts && root._fileClipboardPaths.length > 0
+        sequence: StandardKey.Paste
+        onActivated: root.paste()
+    }
+
     // Loading animation
     WorkingSprite {
         show: root._loading
+    }
+
+    function copySelected() {
+        root._fileClipboardPaths = fileBrowser.selectedFiles.slice()
+        root._fileClipboardIsCut = false
+    }
+
+    function cutSelected() {
+        root._fileClipboardPaths = fileBrowser.selectedFiles.slice()
+        root._fileClipboardIsCut = true
+    }
+
+    function paste() {
+        if (root._fileClipboardPaths.length === 0) {
+            return
+        }
+        let dest = fileBrowser.selectedDirectory
+        let params = [dest].concat(root._fileClipboardPaths)
+        if (root._fileClipboardIsCut) {
+            let id = LK.command.executePlain(root.hostId,
+                "_internal-filebrowser-move", params)
+            root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
+            root._fileClipboardPaths = []
+            root._fileClipboardIsCut = false
+        }
+        else {
+            let invocationId = LK.command.executePlain(root.hostId,
+                "_internal-filebrowser-copy", params)
+            root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invocationId])
+            root._hasActiveTransfer = true
+            root._transferInvocations[invocationId] = 0
+        }
     }
 
     function activate() {
