@@ -67,6 +67,32 @@ LightkeeperDialog {
             }
 
             BigText {
+                text: "File browser"
+
+                Layout.topMargin: Theme.spacingLoose
+                Layout.bottomMargin: Theme.spacingNormal
+            }
+
+            Repeater {
+                model: [
+                    ["Ctrl + C", "Copy selected files"],
+                    ["Ctrl + X", "Cut selected files"],
+                    ["Ctrl + V", "Paste"]
+                ]
+
+                Row {
+                    NormalText {
+                        width: root.implicitWidth * 0.5
+                        text: modelData[0]
+                    }
+
+                    NormalText {
+                        text: modelData[1]
+                    }
+                }
+            }
+
+            BigText {
                 text: "Log viewer"
 
                 Layout.topMargin: Theme.spacingLoose
