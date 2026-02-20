@@ -198,6 +198,7 @@ Item {
             text: "Edit"
             icon.source: "qrc:/main/images/button/story-editor"
             enabled: fileBrowser.selectedFiles.length === 1
+                && !fileBrowser.selectedFiles[0].endsWith("/")
             onTriggered: LK.command.openRemoteFileInEditor(root.hostId, fileBrowser.selectedFiles[0])
         }
         MenuItem {
