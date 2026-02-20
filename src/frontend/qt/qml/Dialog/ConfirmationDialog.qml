@@ -27,6 +27,17 @@ LightkeeperDialog {
     implicitHeight: Utils.clamp(dialogText.implicitHeight, 200, 600) + 50
     anchors.centerIn: parent
 
+    Shortcut {
+        enabled: root.visible
+        sequence: "Return"
+        onActivated: root.accept()
+    }
+    Shortcut {
+        enabled: root.visible
+        sequence: "Enter"
+        onActivated: root.accept()
+    }
+
     contentItem: Item {
         id: content
         anchors.fill: parent

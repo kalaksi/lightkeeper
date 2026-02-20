@@ -455,6 +455,11 @@ Item {
         sequence: "F2"
         onActivated: fileBrowser.startRenameForSelected()
     }
+    Shortcut {
+        enabled: root.enableShortcuts && fileBrowser.selectedFilesOnly.length > 0
+        sequence: StandardKey.Delete
+        onActivated: root.requestDeleteSelectedFiles()
+    }
 
     // Loading animation
     WorkingSprite {
