@@ -11,7 +11,6 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use crate::enums;
 use lightkeeper_module::command_module;
 use serde_json::{json, Value};
 
@@ -41,7 +40,6 @@ impl CommandModule for FileBrowserLs {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("view-list-tree"),
             display_text: String::from("Open file browser"),
-            depends_on_criticality: vec![enums::Criticality::Normal],
             action: UIAction::FileBrowser,
             tab_title: String::from("File browser"),
             ..Default::default()

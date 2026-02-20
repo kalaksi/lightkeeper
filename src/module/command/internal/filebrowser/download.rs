@@ -12,7 +12,6 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use crate::enums;
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -37,14 +36,10 @@ impl CommandModule for FileBrowserDownload {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("host"),
-            display_style: frontend::DisplayStyle::Icon,
+            display_style: frontend::DisplayStyle::Hidden,
             display_icon: String::from("folder-download"),
             display_text: String::from("Download with rsync"),
-            depends_on_criticality: vec![enums::Criticality::Normal],
-            action: UIAction::FollowOutput,
             tab_title: String::from("Download"),
-            parent_id: String::from("_internal-filebrowser-ls"),
             user_parameters: vec![
                 frontend::UserInputField {
                     label: String::from("Remote path"),

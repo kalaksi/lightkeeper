@@ -33,13 +33,11 @@ impl CommandModule for FileBrowserEdit {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("host"),
-            display_style: frontend::DisplayStyle::Icon,
+            display_style: frontend::DisplayStyle::Hidden,
             display_icon: String::from("story-editor"),
             display_text: String::from("Edit file"),
             action: UIAction::TextEditor,
             tab_title: String::from("Editor"),
-            parent_id: String::from("_internal-filebrowser-ls"),
             ..Default::default()
         }
     }

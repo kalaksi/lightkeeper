@@ -12,7 +12,6 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use crate::enums;
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -37,13 +36,9 @@ impl CommandModule for FileBrowserCopy {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("host"),
-            display_style: frontend::DisplayStyle::Icon,
+            display_style: frontend::DisplayStyle::Hidden,
             display_icon: String::from("edit-copy"),
             display_text: String::from("Copy files"),
-            depends_on_criticality: vec![enums::Criticality::Normal],
-            action: UIAction::FollowOutput,
-            tab_title: String::from("Copy"),
             parent_id: String::from("_internal-filebrowser-ls"),
             ..Default::default()
         }

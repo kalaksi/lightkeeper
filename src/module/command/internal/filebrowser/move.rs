@@ -11,7 +11,6 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use crate::enums;
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -36,13 +35,9 @@ impl CommandModule for FileBrowserMove {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("host"),
-            display_style: frontend::DisplayStyle::Icon,
+            display_style: frontend::DisplayStyle::Hidden,
             display_icon: String::from("edit-cut"),
             display_text: String::from("Move files"),
-            depends_on_criticality: vec![enums::Criticality::Normal],
-            action: UIAction::FollowOutput,
-            tab_title: String::from("Move"),
             parent_id: String::from("_internal-filebrowser-ls"),
             ..Default::default()
         }

@@ -12,7 +12,6 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use crate::enums;
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -36,24 +35,10 @@ impl CommandModule for FileBrowserRename {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("host"),
-            display_style: frontend::DisplayStyle::Icon,
+            display_style: frontend::DisplayStyle::Hidden,
             display_icon: String::from("edit-rename"),
             display_text: String::from("Rename file or directory"),
-            depends_on_criticality: vec![enums::Criticality::Normal],
-            action: UIAction::FollowOutput,
-            tab_title: String::from("Rename"),
             parent_id: String::from("_internal-filebrowser-ls"),
-            user_parameters: vec![
-                frontend::UserInputField {
-                    label: String::from("Path"),
-                    ..Default::default()
-                },
-                frontend::UserInputField {
-                    label: String::from("New name"),
-                    ..Default::default()
-                },
-            ],
             ..Default::default()
         }
     }

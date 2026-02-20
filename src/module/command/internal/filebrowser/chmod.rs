@@ -11,7 +11,6 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use crate::enums;
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -37,23 +36,10 @@ impl CommandModule for FileBrowserChmod {
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
             category: String::from("host"),
-            display_style: frontend::DisplayStyle::Icon,
+            display_style: frontend::DisplayStyle::Hidden,
             display_icon: String::from("lock"),
             display_text: String::from("Change permissions"),
-            depends_on_criticality: vec![enums::Criticality::Normal],
-            action: UIAction::FollowOutput,
-            tab_title: String::from("Chmod"),
             parent_id: String::from("_internal-filebrowser-ls"),
-            user_parameters: vec![
-                frontend::UserInputField {
-                    label: String::from("Path"),
-                    ..Default::default()
-                },
-                frontend::UserInputField {
-                    label: String::from("Mode (octal)"),
-                    ..Default::default()
-                },
-            ],
             ..Default::default()
         }
     }

@@ -12,9 +12,8 @@ use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
 use crate::module::command::UIAction;
-use crate::enums;
 use lightkeeper_module::command_module;
-use serde_json::{json, Value};
+use serde_json::json;
 
 use super::ls;
 
@@ -39,11 +38,9 @@ impl CommandModule for FileBrowserLsLinks {
 
     fn get_display_options(&self) -> frontend::DisplayOptions {
         frontend::DisplayOptions {
-            category: String::from("host"),
             display_style: frontend::DisplayStyle::Hidden,
             display_icon: String::from("view-list-tree"),
             display_text: String::from("List files (with symlinks)"),
-            depends_on_criticality: vec![enums::Criticality::Normal],
             action: UIAction::FileBrowser,
             ..Default::default()
         }
