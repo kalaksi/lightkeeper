@@ -450,6 +450,11 @@ Item {
         sequence: StandardKey.Paste
         onActivated: root.paste()
     }
+    Shortcut {
+        enabled: root.enableShortcuts && fileBrowser.hasSingleSelection
+        sequence: "F2"
+        onActivated: fileBrowser.startRenameForSelected()
+    }
 
     // Loading animation
     WorkingSprite {
