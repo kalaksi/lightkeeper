@@ -10,7 +10,7 @@ use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
-use crate::module::command::*;
+use crate::module::command::{UIAction, *};
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
@@ -40,6 +40,7 @@ impl CommandModule for FileBrowserCopy {
             display_icon: String::from("edit-copy"),
             display_text: String::from("Copy files"),
             parent_id: String::from("_internal-filebrowser-ls"),
+            action: UIAction::FollowOutput,
             ..Default::default()
         }
     }
@@ -68,7 +69,11 @@ impl CommandModule for FileBrowserCopy {
             else {
                 format!("{}/", destination)
             };
-            let mut args: Vec<&str> = vec!["rsync", "-av", "--info=progress2", "--ignore-existing"];
+            let mut args: Vec<&str> = vec![
+                // Try to keep output format more stable.
+                "env", "LANG=C", "LC_ALL=C",
+                "rsync", "-av", "--info=progress2", "--stats", "--ignore-existing",
+            ];
             args.extend(sources.iter().map(String::as_str));
             args.push(dest.as_str());
             command.arguments(args);
@@ -84,12 +89,8 @@ impl CommandModule for FileBrowserCopy {
             let progress = download::parse_rsync_progress(&response.message);
             Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
         }
-        else if response.return_code == 0 {
-            Ok(CommandResult::new_hidden(response.message_increment.clone()))
-        }
         else {
-            Ok(CommandResult::new_hidden(response.message_increment.clone())
-                .with_criticality(crate::enums::Criticality::Error))
+            Ok(download::process_rsync_final_response(response, "Copy"))
         }
     }
 }

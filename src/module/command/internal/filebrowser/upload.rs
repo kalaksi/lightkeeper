@@ -10,7 +10,7 @@ use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
-use crate::module::command::*;
+use crate::module::command::{UIAction, *};
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
@@ -41,6 +41,7 @@ impl CommandModule for FileBrowserUpload {
             display_text: String::from("Upload with rsync"),
             tab_title: String::from("Upload"),
             parent_id: String::from("_internal-filebrowser-ls"),
+            action: UIAction::FollowOutput,
             ..Default::default()
         }
     }
@@ -74,9 +75,12 @@ impl CommandModule for FileBrowserUpload {
         let mut command = ShellCommand::new();
         command.use_sudo = false;
         command.arguments(vec![
+            // Try to keep output format more stable.
+            "env", "LANG=C", "LC_ALL=C",
             "rsync",
             "-avz",
             "--info=progress2",
+            "--stats",
             local_path,
             &remote_spec,
         ]);
@@ -90,13 +94,7 @@ impl CommandModule for FileBrowserUpload {
             Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
         }
         else {
-            if response.return_code == 0 {
-                Ok(CommandResult::new_hidden(response.message_increment.clone()))
-            }
-            else {
-                Ok(CommandResult::new_hidden(response.message_increment.clone())
-                    .with_criticality(crate::enums::Criticality::Error))
-            }
+            Ok(download::process_rsync_final_response(response, "Upload"))
         }
     }
 }

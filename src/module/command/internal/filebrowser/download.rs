@@ -10,7 +10,7 @@ use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
-use crate::module::command::*;
+use crate::module::command::{UIAction, *};
 use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 
@@ -40,6 +40,7 @@ impl CommandModule for FileBrowserDownload {
             display_icon: String::from("folder-download"),
             display_text: String::from("Download with rsync"),
             tab_title: String::from("Download"),
+            action: UIAction::FollowOutput,
             user_parameters: vec![
                 frontend::UserInputField {
                     label: String::from("Remote path"),
@@ -81,9 +82,12 @@ impl CommandModule for FileBrowserDownload {
         command.arguments(vec![
             // "sudo",
             // "--preserve-env=SSH_AUTH_SOCK",
+            // Try to keep output format more stable.
+            "env", "LANG=C", "LC_ALL=C",
             "rsync",
             "-avz",
             "--info=progress2",
+            "--stats",
             // "--rsync-path=sudo rsync",
             &remote_spec,
             local_path,
@@ -98,13 +102,7 @@ impl CommandModule for FileBrowserDownload {
             Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
         }
         else {
-            if response.return_code == 0 {
-                Ok(CommandResult::new_hidden(response.message_increment.clone()))
-            }
-            else {
-                Ok(CommandResult::new_hidden(response.message_increment.clone())
-                    .with_criticality(crate::enums::Criticality::Error))
-            }
+            Ok(process_rsync_final_response(response, "Download"))
         }
     }
 }
@@ -118,4 +116,48 @@ pub fn parse_rsync_progress(message: &str) -> u8 {
         .filter(|&p| p <= 100)
         .last()
         .unwrap_or(10)
+}
+
+/// Parses rsync summary. Returns (skipped_count, transferred_count) when some files were skipped.
+pub fn parse_rsync_skipped_count(message: &str) -> Option<(u32, u32)> {
+    let transferred_re =
+        Regex::new(r"Number of (?:regular )?files transferred:\s*(\d+)").ok()?;
+    let transferred: u32 = transferred_re.captures(message)?.get(1)?.as_str().parse().ok()?;
+    let files_re =
+        Regex::new(r"Number of files:\s*(\d+)(?:\s*\(reg:\s*(\d+)(?:,\s*dir:\s*\d+)?\))?").ok()?;
+    let files_caps = files_re.captures(message)?;
+    let total_regular: u32 = files_caps
+        .get(2)
+        .and_then(|m| m.as_str().parse().ok())
+        .or_else(|| files_caps.get(1).and_then(|m| m.as_str().parse().ok()))?;
+    let skipped = total_regular.saturating_sub(transferred);
+    if skipped > 0 {
+        Some((skipped, transferred))
+    }
+    else {
+        None
+    }
+}
+
+/// Builds CommandResult for a non-partial rsync response. Use for copy, download, upload.
+pub fn process_rsync_final_response(
+    response: &ResponseMessage,
+    operation: &str,
+) -> CommandResult {
+    if response.return_code != 0 {
+        return CommandResult::new_error(response.message.clone());
+    }
+    if let Some((skipped, transferred)) = parse_rsync_skipped_count(&response.message) {
+        let msg = if transferred == 0 {
+            "All files were skipped (maybe already existed at destination).".to_string()
+        }
+        else {
+            format!(
+                "{} completed. {} files were skipped (already existed).",
+                operation, skipped
+            )
+        };
+        return CommandResult::new_info(msg);
+    }
+    CommandResult::new_hidden(response.message_increment.clone())
 }
