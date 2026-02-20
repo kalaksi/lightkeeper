@@ -15,4 +15,5 @@ pub use filebrowser::FileBrowserLs;
 pub use filebrowser::FileBrowserLsLinks;
 pub use filebrowser::FileBrowserMove;
 pub use filebrowser::FileBrowserRename;
+pub use filebrowser::FileBrowserRm;
 pub use filebrowser::FileBrowserUpload;

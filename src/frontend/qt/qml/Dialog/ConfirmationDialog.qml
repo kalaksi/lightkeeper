@@ -16,6 +16,7 @@ LightkeeperDialog {
     id: root
 
     property bool acceptOnly: false
+    property bool keepHidden: false
     property string text: ""
     // Center short text automatically.
     property bool centerText: text.length < 40
@@ -43,6 +44,8 @@ LightkeeperDialog {
     }
 
     Component.onCompleted: {
-        visible = true
+        if (!keepHidden) {
+            visible = true
+        }
     }
 }

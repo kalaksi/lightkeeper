@@ -41,6 +41,12 @@ Item {
     property var _fileClipboardPaths: []
     property bool _fileClipboardIsCut: false
 
+    // Paths for which we open the permissions dialog.
+    property var _permissionsDialogPaths: []
+
+    // Paths for which we delete files.
+    property var _pendingDeletePaths: []
+
     Connections {
         target: LK.command
 
@@ -197,9 +203,8 @@ Item {
         MenuItem {
             text: "Edit"
             icon.source: "qrc:/main/images/button/story-editor"
-            enabled: fileBrowser.selectedFiles.length === 1
-                && !fileBrowser.selectedFiles[0].endsWith("/")
-            onTriggered: LK.command.openRemoteFileInEditor(root.hostId, fileBrowser.selectedFiles[0])
+            enabled: fileBrowser.selectedFilesOnly.length === 1
+            onTriggered: LK.command.openRemoteFileInEditor(root.hostId, fileBrowser.selectedFilesOnly[0])
         }
         MenuItem {
             text: "Download..."
@@ -212,6 +217,12 @@ Item {
             icon.source: "qrc:/main/images/button/entry-edit"
             enabled: fileBrowser.hasSingleSelection
             onTriggered: fileBrowser.startRenameForSelected()
+        }
+        MenuItem {
+            text: "Delete"
+            icon.source: "qrc:/main/images/button/delete"
+            enabled: fileBrowser.selectedFilesOnly.length > 0
+            onTriggered: root.requestDeleteSelectedFiles()
         }
 
         MenuSeparator {
@@ -381,7 +392,18 @@ Item {
         }
     }
 
-    property var _permissionsDialogPaths: []
+    ConfirmationDialog {
+        id: deleteConfirmationDialog
+        parent: root
+        keepHidden: true
+        onAccepted: {
+            if (root._pendingDeletePaths.length > 0) {
+                let id = LK.command.executePlain(root.hostId, "_internal-filebrowser-rm", root._pendingDeletePaths)
+                root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
+                root._pendingDeletePaths = []
+            }
+        }
+    }
 
     FilePermissionsDialog {
         id: permissionsDialog
@@ -392,6 +414,7 @@ Item {
             let permissionsChanged = root._permissionsDialogPaths.length > 1 ||
                 ownerRwx !== initial[0] || groupRwx !== initial[1] || othersRwx !== initial[2]
             let ownershipChanged = newOwner !== permissionsDialog.owner || newGroup !== permissionsDialog.group
+
             for (let i = 0; i < root._permissionsDialogPaths.length; i++) {
                 let path = root._permissionsDialogPaths[i]
                 if (permissionsChanged) {
@@ -407,7 +430,6 @@ Item {
             }
         }
     }
-
 
     Shortcut {
         enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
@@ -460,6 +482,19 @@ Item {
             root._hasActiveTransfer = true
             root._transferInvocations[invocationId] = 0
         }
+    }
+
+    function requestDeleteSelectedFiles() {
+        let files = fileBrowser.selectedFilesOnly
+        if (files.length === 0) {
+            return
+        }
+        root._pendingDeletePaths = files
+        deleteConfirmationDialog.text = files.length === 1
+            ? "Remove file '" + files[0] + "'?"
+            : "Remove " + files.length + " selected files?"
+
+        deleteConfirmationDialog.open()
     }
 
     function activate() {
