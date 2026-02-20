@@ -194,8 +194,28 @@ Item {
     Menu {
         id: contextMenu
 
+        MenuItem {
+            text: "Edit"
+            icon.source: "qrc:/main/images/button/story-editor"
+            enabled: fileBrowser.selectedFiles.length === 1
+            onTriggered: LK.command.openRemoteFileInEditor(root.hostId, fileBrowser.selectedFiles[0])
+        }
+        MenuItem {
+            text: "Download..."
+            icon.source: "qrc:/main/images/button/download"
+            enabled: fileBrowser.selectedFiles.length > 0
+            onTriggered: downloadFolderDialog.open()
+        }
+        MenuItem {
+            text: "Rename..."
+            icon.source: "qrc:/main/images/button/entry-edit"
+            enabled: fileBrowser.hasSingleSelection
+            onTriggered: fileBrowser.startRenameForSelected()
+        }
+
         MenuSeparator {
         }
+
         MenuItem {
             text: "Copy"
             icon.source: "qrc:/main/images/button/copy"
@@ -207,50 +227,22 @@ Item {
         MenuItem {
             text: "Cut"
             icon.source: "qrc:/main/images/button/edit-cut"
-            icon.width: 22
-            icon.height: 22
             enabled: fileBrowser.selectedFiles.length > 0
             onTriggered: root.cutSelected()
         }
         MenuItem {
             text: "Paste"
             icon.source: "qrc:/main/images/button/edit-paste"
-            icon.width: 22
-            icon.height: 22
             enabled: root._fileClipboardPaths.length > 0
             onTriggered: root.paste()
         }
+
         MenuSeparator {
         }
-        MenuItem {
-            text: "Download..."
-            icon.source: "qrc:/main/images/button/download"
-            icon.width: 22
-            icon.height: 22
-            enabled: fileBrowser.selectedFiles.length > 0
-            onTriggered: downloadFolderDialog.open()
-        }
-        MenuItem {
-            text: "Edit"
-            icon.source: "qrc:/main/images/button/story-editor"
-            icon.width: 22
-            icon.height: 22
-            enabled: fileBrowser.selectedFiles.length === 1
-            onTriggered: LK.command.openRemoteFileInEditor(root.hostId, fileBrowser.selectedFiles[0])
-        }
-        MenuItem {
-            text: "Rename..."
-            icon.source: "qrc:/main/images/button/entry-edit"
-            icon.width: 22
-            icon.height: 22
-            enabled: fileBrowser.hasSingleSelection
-            onTriggered: fileBrowser.startRenameForSelected()
-        }
+        
         MenuItem {
             text: "Permissions..."
             icon.source: "qrc:/main/images/button/lock"
-            icon.width: 22
-            icon.height: 22
             enabled: fileBrowser.selectedFiles.length > 0
             onTriggered: root.openPermissionsDialog()
         }
@@ -269,6 +261,7 @@ Item {
         useSplitView: true
         contextMenu: contextMenu
         directoryIconSource: "qrc:/main/images/button/document-open-folder"
+        dimmedPaths: root._fileClipboardIsCut ? root._fileClipboardPaths : []
 
         onRenamed: function(fullPath, newName) {
             let id = LK.command.executePlain(root.hostId,
