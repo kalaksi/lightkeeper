@@ -231,8 +231,6 @@ Item {
         MenuItem {
             text: "Copy"
             icon.source: "qrc:/main/images/button/copy"
-            icon.width: 22
-            icon.height: 22
             enabled: fileBrowser.selectedFiles.length > 0
             onTriggered: root.copySelected()
         }
@@ -247,6 +245,12 @@ Item {
             icon.source: "qrc:/main/images/button/edit-paste"
             enabled: root._fileClipboardPaths.length > 0
             onTriggered: root.paste()
+        }
+        MenuItem {
+            text: "Delete"
+            icon.source: "qrc:/main/images/button/delete"
+            enabled: fileBrowser.selectedFilesOnly.length > 0
+            onTriggered: root.requestDeleteSelectedFiles()
         }
 
         MenuSeparator {
