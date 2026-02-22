@@ -6,4 +6,6 @@
 pub mod lvm;
 
 pub mod file_space_usage;
+pub mod filebrowser;
 pub use file_space_usage::FileSpaceUsage;
+pub use filebrowser::FileBrowser;

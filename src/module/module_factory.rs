@@ -377,6 +377,7 @@ impl ModuleFactory {
             (command::nixos::CollectGarbage::get_metadata(), command::nixos::CollectGarbage::new_command_module),
             (command::nixos::ChannelUpdate::get_metadata(), command::nixos::ChannelUpdate::new_command_module),
             (command::storage::FileSpaceUsage::get_metadata(), command::storage::FileSpaceUsage::new_command_module),
+            (command::storage::FileBrowser::get_metadata(), command::storage::FileBrowser::new_command_module),
             (command::storage::lvm::Snapshot::get_metadata(), command::storage::lvm::Snapshot::new_command_module),
             (command::storage::lvm::LVResize::get_metadata(), command::storage::lvm::LVResize::new_command_module),
             (command::storage::lvm::LVRemove::get_metadata(), command::storage::lvm::LVRemove::new_command_module),

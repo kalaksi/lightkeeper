@@ -38,6 +38,7 @@ groups:
       linux-packages-refresh: {}
       linux-packages-logs: {}
       storage-file-space-usage: {}
+      storage-filebrowser: {}
       storage-lvm-snapshot: {}
       storage-lvm-lvresize: {}
       storage-lvm-lvremove: {}
