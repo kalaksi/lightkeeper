@@ -20,7 +20,7 @@ use crate::module::monitoring::*;
     version="0.0.1",
     description="Shows filesystem usage in a progress bar.",
     settings={
-        ignored_filesystems => "Comma-separated list of filesystems to ignore. Default: /run,/dev,/dev/shm,/sys/fs/cgroup",
+        ignored_filesystems => "Comma-separated list of filesystems to ignore. Default: /run,/dev,/dev/shm,/sys/fs,/var/lib/docker",
         warning_threshold => "Warning threshold in percent. Default: 80",
         error_threshold => "Error threshold in percent. Default: 90",
         critical_threshold => "Critical threshold in percent. Default: 95",
@@ -36,13 +36,12 @@ pub struct Filesystem {
 impl Module for Filesystem {
     fn new(settings: &HashMap<String, String>) -> Self {
         Filesystem {
-            ignored_filesystems: vec![
-                String::from("/run"),
-                String::from("/dev"),
-                String::from("/dev/shm"),
-                String::from("/sys/fs"),
-                String::from("/var/lib/docker"),
-            ],
+            ignored_filesystems: settings.get("ignored_filesystems")
+                .unwrap_or(&String::from("/run,/dev,/dev/shm,/sys/fs,/var/lib/docker"))
+                .split(',')
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect(),
             threshold_critical: settings.get("critical_threshold").and_then(|value| value.parse().ok()).unwrap_or(95.0),
             threshold_error: settings.get("error_threshold").and_then(|value| value.parse().ok()).unwrap_or(90.0),
             threshold_warning: settings.get("warning_threshold").and_then(|value| value.parse().ok()).unwrap_or(80.0),
