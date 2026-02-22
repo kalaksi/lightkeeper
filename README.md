@@ -131,7 +131,7 @@ you'll need these packages on Ubuntu 24.04:
 - qml6-module-qtwebengine
   
 
-QtWebEngine is not strictly required, but needed for proper integrated editor.
+QtWebEngine is not strictly required, but needed for proper integrated text editor.
 
 ### Building
 For development, run this in repo root:

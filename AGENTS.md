@@ -11,7 +11,8 @@
 - Don't add error handling for impossible scenarios.
 - Aim for minimum amount of code.
 - Ask often! For example when when there are alternative solutions.
-- Don't use useless shorthands like "idx" instead of "index".
+- Don't use shorthands like "idx" instead of "index".
+
 
 ## When editing existing code
 - Don't "improve" adjacent code, comments, or formatting.
@@ -29,6 +30,7 @@
 - Prefer using native components from Qt instead of implementing something custom.
 - Prefer iterating with for..of or for..in instead of using indexes.
 - Avoid overly complicated width or height calculations.
+- When warranted, prefer functional style (map, filter, etc.) instead of imperative.
 
 ## Icons
 - Icons are mostly copied from breeze in `vendor`-dir.
