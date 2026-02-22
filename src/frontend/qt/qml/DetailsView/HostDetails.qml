@@ -128,27 +128,16 @@ Item {
         }
 
         // For file browser.
-        function onFileBrowserNavigated(invocationId, directory) {
-            // Check if a file browser tab already exists
-            if (root.hostId in root._tabContents) {
-                for (let i = 0; i < root._tabContents[root.hostId].length; i++) {
-                    let tabData = root._tabContents[root.hostId][i]
-                    if (tabData.component instanceof HostDetailsFileBrowserView) {
-                        // Tab already exists, do nothing
-                        return
-                    }
-                }
-            }
-
+        function onFileBrowserOpened(directory) {
             // Create new file browser tab
             let tabData = {
                 "title": "File browser",
                 "component": fileBrowserView.createObject(root._tabStacks[root.hostId], {
                     hostId: root.hostId,
-                    pendingInvocation: invocationId,
-                    pendingPath: directory,
+                    initialPath: directory,
                 })
             }
+
             root.createNewTab(tabData)
         }
 

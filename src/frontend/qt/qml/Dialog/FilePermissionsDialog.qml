@@ -19,7 +19,7 @@ LightkeeperDialog {
     property alias owner: permissionsContent.owner
     property alias group: permissionsContent.group
 
-    signal applied(string ownerRwx, string groupRwx, string othersRwx, string newOwner, string newGroup)
+    signal permissionsApplied(string ownerRwx, string groupRwx, string othersRwx, string newOwner, string newGroup)
 
     title: "Permissions and ownership"
     modal: true
@@ -35,7 +35,7 @@ LightkeeperDialog {
     Connections {
         target: permissionsContent
         function onCanAcceptChanged() {
-            _updateOkButton()
+            root._updateOkButton()
         }
     }
 
@@ -52,7 +52,7 @@ LightkeeperDialog {
 
     onAccepted: {
         if (permissionsContent.canAccept)
-            root.applied(permissionsContent.resultOwnerRwx, permissionsContent.resultGroupRwx,
+            root.permissionsApplied(permissionsContent.resultOwnerRwx, permissionsContent.resultGroupRwx,
                 permissionsContent.resultOthersRwx, permissionsContent.resultOwner,
                 permissionsContent.resultGroup)
     }

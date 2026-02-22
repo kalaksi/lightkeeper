@@ -21,11 +21,11 @@ import "../Text"
 
 Item {
     id: root
+    required property string initialPath
+
     property string hostId: ""
     property int pendingInvocation: 0
     property string pendingPath: ""
-    property string defaultPath: "/"
-    property string currentPath: root.defaultPath
     property bool enableShortcuts: false
     property bool _loading: pendingInvocation > 0
 
@@ -47,15 +47,6 @@ Item {
     // Paths for which we delete files.
     property var _pendingDeletePaths: []
 
-    Connections {
-        target: LK.command
-
-        function onFileBrowserNavigated(invocationId, directory) {
-            root.pendingInvocation = invocationId
-            root.pendingPath = directory
-        }
-    }
-
     function _minTransferProgress() {
         let invs = root._transferInvocations
         let keys = Object.keys(invs)
@@ -70,6 +61,10 @@ Item {
             }
         }
         return minP
+    }
+
+    Component.onCompleted: {
+        fileBrowser.openInitialDirectory(root.initialPath)
     }
 
     Connections {
@@ -92,8 +87,8 @@ Item {
                 }
             }
             if (root.pendingInvocation === invocationId) {
-                let dirPath = root.pendingPath
-
+                let pendingPath = root.pendingPath
+                // It's important to to clear these early to avoid race conditions.
                 root.pendingPath = ""
                 root.pendingInvocation = 0
 
@@ -105,13 +100,13 @@ Item {
 
                 let data = JSON.parse(commandResult.message)
                 let browserEntries = data.entries.map(entry => fileBrowser.buildEntry(
-                    dirPath,
+                    pendingPath,
                     entry.name,
                     entry.type,
                     [entry.size, entry.time, entry.permissions, entry.owner, entry.group]
                 ))
 
-                fileBrowser.openDirectory(dirPath, browserEntries)
+                fileBrowser.openDirectory(pendingPath, browserEntries)
             }
             if (root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
                 root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.filter(id => id !== invocationId)
@@ -270,6 +265,9 @@ Item {
         anchors.bottom: transferProgressBar.top
         anchors.left: parent.left
         anchors.right: parent.right
+        rootPath: root.initialPath
+        directoryTreeRootPath: "/"
+        directorySeparator: "/"
         columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
         columnWidths: [0.35, 0.08]
         headerColor: Theme.backgroundColor
@@ -412,7 +410,7 @@ Item {
     FilePermissionsDialog {
         id: permissionsDialog
         contextLabel: "Path"
-        onApplied: function(ownerRwx, groupRwx, othersRwx, newOwner, newGroup) {
+        onPermissionsApplied: function(ownerRwx, groupRwx, othersRwx, newOwner, newGroup) {
             let modeStr = "u=" + ownerRwx + ",g=" + groupRwx + ",o=" + othersRwx
             let initial = root._tripletsFromPermissions(permissionsDialog.permissions)
             let permissionsChanged = root._permissionsDialogPaths.length > 1 ||
@@ -522,8 +520,8 @@ Item {
     function refresh() {
         // Clear cache and reload current directory.
         fileBrowser.clearCache()
-        root.pendingPath = root.currentPath
-        root.pendingInvocation = LK.command.listFiles(root.hostId, root.currentPath)
+        root.pendingPath = fileBrowser.rootPath
+        root.pendingInvocation = LK.command.listFiles(root.hostId, fileBrowser.rootPath)
     }
 
     function refreshCurrentDirectory() {

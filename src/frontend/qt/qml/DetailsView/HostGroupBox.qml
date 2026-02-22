@@ -72,12 +72,7 @@ CategoryGroupBox {
             Layout.bottomMargin: Theme.spacingLoose
 
             onClicked: function(buttonId, commandId, params) {
-                if (commandId === "_internal-filebrowser-ls") {
-                    let path = (params && params.length > 0) ? params[0] : "/"
-                    LK.command.listFiles(root.hostId, path)
-                } else {
-                    LK.command.execute(buttonId, root.hostId, commandId, params)
-                }
+                LK.command.execute(buttonId, root.hostId, commandId, params)
             }
         }
 
