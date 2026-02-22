@@ -153,7 +153,7 @@ pub fn process_rsync_final_response(
         }
         else {
             format!(
-                "{} completed. {} files were skipped (already existed).",
+                "{} completed. {} files were skipped.",
                 operation, skipped
             )
         };
