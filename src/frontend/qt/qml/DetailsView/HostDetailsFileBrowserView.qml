@@ -213,12 +213,6 @@ Item {
             enabled: fileBrowser.hasSingleSelection
             onTriggered: fileBrowser.startRenameForSelected()
         }
-        MenuItem {
-            text: "Delete"
-            icon.source: "qrc:/main/images/button/delete"
-            enabled: fileBrowser.selectedFilesOnly.length > 0
-            onTriggered: root.requestDeleteSelectedFiles()
-        }
 
         MenuSeparator {
         }
