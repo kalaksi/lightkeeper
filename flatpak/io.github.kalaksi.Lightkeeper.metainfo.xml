@@ -39,6 +39,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.35.0" date="2026-02-27">
+      <description>
+        <ul>
+          <li>Add file browser!</li>
+          <li>Various small fixes</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.34.3" date="2026-02-14">
       <description>
         <ul>
