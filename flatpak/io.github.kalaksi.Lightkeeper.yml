@@ -76,7 +76,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/kalaksi/qml-lighthouse-components.git
-        commit: a00a8f69e5d5ef597dc317b4197319e53de94937
+        commit: b051ead433ee30475642505068ee2901e7d23e41
         dest: 'qml-lighthouse-components'
     build-commands:
       - cd qml-lighthouse-components/Lighthouse/AceEditor/ace-builds
@@ -88,8 +88,8 @@ modules:
     buildsystem: simple
     sources:
       - type: archive
-        url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/v0.35.2.tar.gz
-        sha256: 92e5b455682f670bf0e61ea1e4ca1b320f63dc208a46172c2d8cee4035f9e4d1
+        url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/v0.35.3.tar.gz
+        sha256: 7d00e4f28eeb70216333a4cf748739cbc94ec3fbbce3711af32af323f23771d2
       - "cargo-sources.json"
     build-options:
       append-path: /usr/lib/sdk/rust-stable/bin
