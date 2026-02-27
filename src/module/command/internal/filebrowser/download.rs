@@ -79,19 +79,11 @@ impl CommandModule for FileBrowserDownload {
 
         let mut command = ShellCommand::new();
         command.use_sudo = false;
-        command.arguments(vec![
-            // "sudo",
-            // "--preserve-env=SSH_AUTH_SOCK",
-            // Try to keep output format more stable.
-            "env", "LANG=C", "LC_ALL=C",
-            "rsync",
-            "-avz",
-            "--info=progress2",
-            "--stats",
-            // "--rsync-path=sudo rsync",
-            &remote_spec,
-            local_path,
-        ]);
+        command.arguments(vec!["env", "LANG=C", "LC_ALL=C", "rsync", "-avz", "--info=progress2", "--stats"]);
+        if host.settings.contains(&HostSetting::UseSudo) {
+            command.argument("--rsync-path=sudo rsync");
+        }
+        command.arguments(vec![remote_spec, local_path.clone()]);
 
         Ok(command.to_string())
     }

@@ -74,16 +74,11 @@ impl CommandModule for FileBrowserUpload {
 
         let mut command = ShellCommand::new();
         command.use_sudo = false;
-        command.arguments(vec![
-            // Try to keep output format more stable.
-            "env", "LANG=C", "LC_ALL=C",
-            "rsync",
-            "-avz",
-            "--info=progress2",
-            "--stats",
-            local_path,
-            &remote_spec,
-        ]);
+        command.arguments(vec!["env", "LANG=C", "LC_ALL=C", "rsync", "-avz", "--info=progress2", "--stats"]);
+        if host.settings.contains(&HostSetting::UseSudo) {
+            command.argument("--rsync-path=sudo rsync");
+        }
+        command.arguments(vec![local_path.clone(), remote_spec]);
 
         Ok(command.to_string())
     }
