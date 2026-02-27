@@ -21,22 +21,32 @@ Just press Ctrl-T to open a terminal in a new tab.
 <br />
 <p align="center">
     <img src="doc/images/lightkeeper-overview.png" width="100%" />
-    <i>Overview of LightkeeperRM's GUI.</i>
+    <i>Overview of LightkeeperRM's GUI</i>
 </p>
 <br />
 <p align="center">
-    <img src="doc/images/lightkeeper-cert-monitor.png" width="100%" />
-    <i>Certificate monitoring tool.</i>
+    <img src="doc/images/lightkeeper-file-browser.png" width="100%" />
+    <i>File browser</i>
+</p>
+<br />
+<p align="center">
+    <img src="doc/images/lightkeeper-charts.png" width="100%" />
+    <i>Charts</i>
 </p>
 <br />
 <p align="center">
     <img src="doc/images/lightkeeper-log-viewer.png" width="100%" />
-    <i>Integrated log viewer.</i>
+    <i>Integrated log viewer</i>
 </p>
 <br />
 <p align="center">
     <img src="doc/images/lightkeeper-terminal.png" width="100%" />
-    <i>Integrated terminal.</i>
+    <i>Integrated terminal</i>
+</p>
+<br />
+<p align="center">
+    <img src="doc/images/lightkeeper-cert-monitor.png" width="100%" />
+    <i>Certificate monitoring tool</i>
 </p>
 <br />
 
