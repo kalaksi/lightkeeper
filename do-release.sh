@@ -46,10 +46,14 @@ echo -e "\n* Creating a git tag..."
 git tag -a "$new_version" -m "Version $new_version"
 git push origin "$new_version"
 
+# Read qml-lighthouse-components submodule commit for pinning in the Flatpak manifest.
+qml_lighthouse_components_commit=$(git -C .. submodule status -- third_party/qml-lighthouse-components | awk '{print $1}' | tr -d '+-')
+
 echo -e "\n* Updating io.github.kalaksi.Lightkeeper.yml..."
 sed -ri 's|(\s+url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/).*|\1'$new_version'.tar.gz|' io.github.kalaksi.Lightkeeper.yml
 new_checksum=$(wget -qO- "https://github.com/kalaksi/lightkeeper/archive/refs/tags/$new_version.tar.gz"|sha256sum|cut -f 1 -d ' ')
 sed -ri '/url: https:\/\/github.com\/kalaksi\/lightkeeper\/archive/{n;s/(\s+sha256: ).*/\1'$new_checksum'/}' io.github.kalaksi.Lightkeeper.yml
+sed -ri '/- name: qml-lighthouse-components/{:a;n;/commit:/s/(commit: ).*/\1'"$qml_lighthouse_components_commit"'/;ba}' io.github.kalaksi.Lightkeeper.yml
 git commit -a -m "Update flatpak manifest for $new_version"
 git push
 

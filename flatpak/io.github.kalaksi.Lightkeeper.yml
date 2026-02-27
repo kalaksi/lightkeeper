@@ -76,6 +76,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/kalaksi/qml-lighthouse-components.git
+        commit: a00a8f69e5d5ef597dc317b4197319e53de94937
         # Set commit or tag for reproducible release builds.
         dest: 'qml-lighthouse-components'
     build-commands:
