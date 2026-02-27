@@ -139,6 +139,8 @@ you'll need these packages on Ubuntu 24.04:
 - qml6-module-qtcharts
 - qml-module-org-kde-syntaxhighlighting
 - qml6-module-qtwebengine
+
+At least on RPM-based distro's, you'll need perl-Time-Piece for building OpenSSL.
   
 
 QtWebEngine is not strictly required, but needed for proper integrated text editor.
