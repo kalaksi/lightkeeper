@@ -37,7 +37,7 @@ impl CommandModule for FileBrowserEdit {
             display_icon: String::from("story-editor"),
             display_text: String::from("Edit file"),
             action: UIAction::TextEditor,
-            tab_title: String::from("Editor"),
+            tab_title: String::from("Edit: %s"),
             ..Default::default()
         }
     }

@@ -5,6 +5,7 @@
 
 extern crate qmetaobject;
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::mpsc;
 
 use qmetaobject::*;
@@ -12,6 +13,7 @@ use qmetaobject::*;
 use crate::command_handler::{CommandHandler, CommandButtonData};
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
+use crate::frontend::DisplayOptions;
 use crate::host_manager::StateUpdateMessage;
 use crate::module::command::UIAction;
 use crate::monitor_manager::MonitorManager;
@@ -118,6 +120,26 @@ impl CommandHandlerModel {
     pub fn refresh_host_monitors(&mut self, host_id: String) {
         for category in self.monitor_manager.get_all_host_categories(&host_id) {
             let _invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id, &category);
+        }
+    }
+
+    fn build_editor_header_text(&self, display_options: &DisplayOptions, command_id: &str, file_path: &str) -> QString {
+        let file_name = Path::new(file_path)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or(file_path);
+
+        if !display_options.tab_title.is_empty() {
+            if display_options.tab_title.contains("%s") {
+                let title = display_options.tab_title.replace("%s", file_name);
+                return QString::from(title);
+            }
+
+            let title = format!("{}: {}", display_options.tab_title, file_name);
+            return QString::from(title);
+        }
+        else {
+            return QString::from(command_id);
         }
     }
 
@@ -306,7 +328,8 @@ impl CommandHandlerModel {
                     if self.configuration.preferences.terminal == configuration::INTERNAL {
                         let command = self.command_handler.open_remote_text_editor(&host_id, &remote_file_path);
                         let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
-                        self.terminalViewOpened(QString::from(display_options.tab_title), command_qsl);
+                        let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_file_path);
+                        self.terminalViewOpened(editor_header_text, command_qsl);
                     }
                     else {
                         self.command_handler.open_external_terminal(&host_id, &command_id, parameters);
@@ -317,7 +340,8 @@ impl CommandHandlerModel {
                         || self.configuration.preferences.text_editor == configuration::INTERNAL_SIMPLE {
 
                         let (invocation_id, file_contents) = self.command_handler.download_editable_file(&host_id, &command_id, &remote_file_path); 
-                        self.textEditorViewOpened(QString::from(command_id), invocation_id, QString::from(file_contents));
+                        let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_file_path);
+                        self.textEditorViewOpened(editor_header_text, invocation_id, QString::from(file_contents));
                     }
                     else {
                         let local_file_path = self.command_handler.open_external_text_editor(&host_id, &command_id, &remote_file_path);
@@ -352,10 +376,15 @@ impl CommandHandlerModel {
         let host_id = host_id.to_string();
         let remote_path = remote_path.to_string();
         let command_id = String::from("_internal-filebrowser-edit");
+        let display_options = match self.command_handler.get_command_for_host(&host_id, &command_id) {
+            Some(command_data) => command_data.display_options,
+            None => return,
+        };
         let (invocation_id, local_file_path) =
             self.command_handler.download_editable_file(&host_id, &command_id, &remote_path);
         if invocation_id > 0 {
-            self.textEditorViewOpened( QString::from(command_id), invocation_id, QString::from(local_file_path));
+            let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_path);
+            self.textEditorViewOpened(editor_header_text, invocation_id, QString::from(local_file_path));
         }
     }
 
