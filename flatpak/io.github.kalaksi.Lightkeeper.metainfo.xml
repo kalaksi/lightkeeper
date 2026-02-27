@@ -22,24 +22,32 @@
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-overview.png</image>
-      <caption>Overview of LightkeeperRM.</caption>
+      <caption>Overview of LightkeeperRM</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-cert-monitor.png</image>
-      <caption>Certificate monitoring tool.</caption>
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-file-browser.png</image>
+      <caption>File browser</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-log-viewer.png</image>
-      <caption>Integrated log viewer.</caption>
+      <caption>Integrated log viewer</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-charts.png</image>
+      <caption>Charts</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-terminal.png</image>
-      <caption>Integrated terminal.</caption>
+      <caption>Integrated terminal</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-cert-monitor.png</image>
+      <caption>Certificate monitoring tool</caption>
     </screenshot>
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.35.0" date="2026-02-27">
+    <release version="0.35.1" date="2026-02-27">
       <description>
         <ul>
           <li>Add file browser!</li>
