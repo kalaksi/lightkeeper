@@ -8,3 +8,11 @@ It doesn't seem possible to return custom QML objects from rust to QML, so that 
 It is possible to pass custom QObjects *through* QML (i.e. rust -> QML -> rust) using QMetaType **or** instantiate custom QML types in QML side.
 
 This limitation is the reason there may, in some cases, be a lot of function calls that return simple values instead of complex objects or they return objects as JSON strings.
+
+# Problems
+If QML linter can't find modules, add to project root in .qmlls.ini:
+```
+[General]
+importPaths=PROJECT_PATH/third_party/qml-lighthouse-components
+```
+
