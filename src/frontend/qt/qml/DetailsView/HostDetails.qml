@@ -444,7 +444,10 @@ Item {
         root._tabContents[root.hostId].splice(tabIndex, 1)
         mainViewHeader.tabs = getTabTitles()
 
-        mainViewHeader.selectDefaultTab()
+        let tabCount = root._tabContents[root.hostId].length
+        if (tabCount > 0) {
+            mainViewHeader.selectTab(Math.min(tabIndex, tabCount - 1))
+        }
     }
 
     function getTabTitles() {
