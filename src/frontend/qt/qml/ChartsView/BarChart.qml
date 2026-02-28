@@ -21,6 +21,7 @@ Item {
     Chart {
         id: chart
         anchors.fill: parent
+        layer.enabled: true
         chartType: "bar"
         chartData: {
             return {

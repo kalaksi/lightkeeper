@@ -43,6 +43,7 @@ Item {
     Chart {
         id: chart
         anchors.fill: parent
+        layer.enabled: true
         chartType: "line"
         chartData: {
             return {
