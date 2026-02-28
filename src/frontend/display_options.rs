@@ -38,10 +38,21 @@ pub struct DisplayOptions {
     pub use_multivalue: bool,
     /// Don't include in the host table status summary.
     pub use_without_summary: bool,
-    /// Use DataPoint values in graphical charts.
-    pub use_with_charts: bool,
     /// extension modules. If set, will hide defined monitor id from summary.
     pub override_summary_monitor_id: String,
+
+    /// Use DataPoint values in charts.
+    pub use_with_charts: bool,
+    /// Shows indicator in charts if value is above this level.
+    /// Name of the setting key for the warning level.
+    pub charts_warning_level_setting: String,
+    /// Shows indicator in charts if value is above this level.
+    /// Name of the setting key for the critical level.
+    pub charts_critical_level_setting: String,
+    /// Fallback value for chart warning line when not set in monitor config.
+    pub charts_warning_value_default: Option<f64>,
+    /// Fallback value for chart critical line when not set in monitor config.
+    pub charts_critical_value_default: Option<f64>,
 
     /// Display confirmation dialog with this text.
     pub confirmation_text: String,

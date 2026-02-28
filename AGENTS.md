@@ -10,9 +10,9 @@
 - Avoid writing lines that are over 120 characters long.
 - Don't add error handling for impossible scenarios.
 - Aim for minimum amount of code.
-- Ask often! For example when when there are alternative solutions.
+- Ask often! For example when there are alternative solutions.
 - Don't use shorthands like "idx" instead of "index".
-
+- Try to keep QML models (*_model.rs) lean. UI shouldn't handle a lot of logic.
 
 ## When editing existing code
 - Don't "improve" adjacent code, comments, or formatting.
