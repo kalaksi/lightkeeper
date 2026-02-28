@@ -11,6 +11,7 @@ import QtQuick.Layouts
 import Theme
 
 import ".."
+import "../Misc"
 import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../StyleOverride"
@@ -25,6 +26,10 @@ Item {
     property bool enableShortcuts: false
     property var _categories: ({})
     property bool _showEmptyCategories: true
+
+    property int _periodSeconds: 7 * 24 * 60 * 60
+    property int _chartStartTimeSec: 0
+    property int _chartEndTimeSec: 0
 
     signal refreshRequested()
 
@@ -48,6 +53,61 @@ Item {
         visible: root._categories.length === 0
         scale: 1.5
         text: "Loading..."
+    }
+
+    ToolBar {
+        id: chartsToolBar
+        visible: LK.config.showCharts
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 36
+
+        background: BorderRectangle {
+            backgroundColor: Theme.backgroundColor
+            borderColor: Theme.borderColor
+            borderBottom: 1
+        }
+
+        RowLayout {
+            width: parent.width
+            height: parent.height
+            anchors.top: parent.top
+            spacing: Theme.spacingNormal
+
+            Item {
+                Layout.fillWidth: true
+            }
+
+            Text {
+                text: "Time period"
+                color: Theme.textColor
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            ComboBox {
+                id: periodComboBox
+                model: ["24 hours", "7 days", "14 days", "30 days"]
+                property var _periodSecondsList: [
+                    24 * 60 * 60,
+                    7 * 24 * 60 * 60,
+                    14 * 24 * 60 * 60,
+                    30 * 24 * 60 * 60,
+                ]
+                currentIndex: 1
+                onCurrentIndexChanged: {
+                    root._periodSeconds = _periodSecondsList[currentIndex]
+                    if (root.hostId !== "") {
+                        root.refreshContent()
+                    }
+                }
+                Component.onCompleted: {
+                    root._periodSeconds = _periodSecondsList[currentIndex]
+                }
+                Layout.preferredWidth: 120
+                Layout.alignment: Qt.AlignVCenter
+            }
+        }
     }
 
     Rectangle {
@@ -99,7 +159,11 @@ Item {
     ScrollView {
         id: rootScrollView
         visible: LK.config.showCharts
-        anchors.fill: parent
+        anchors.top: chartsToolBar.bottom
+        anchors.topMargin: Theme.spacingNormal
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
         contentWidth: availableWidth
         clip: true
 
@@ -170,7 +234,9 @@ Item {
                                     target: root
 
                                     function onRefreshRequested() {
-                                        chart.invocationId = LK.metrics.refreshCharts(root.hostId, chart.monitoringData.monitor_id)
+                                        chart.invocationId = LK.metrics.refreshCharts(
+                                            root.hostId, chart.monitoringData.monitor_id,
+                                            root._chartStartTimeSec, root._chartEndTimeSec)
                                     }
                                 }
 
@@ -256,6 +322,9 @@ Item {
     }
 
     function refreshContent() {
+        let endSec = Math.floor(Date.now() / 1000)
+        root._chartEndTimeSec = endSec
+        root._chartStartTimeSec = endSec - root._periodSeconds
         console.log("Refreshing charts for host: " + root.hostId)
         root.refreshRequested()
     }

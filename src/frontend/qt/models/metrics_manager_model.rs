@@ -25,7 +25,7 @@ pub struct MetricsManagerModel {
     // Slots
     //
     startService: qt_method!(fn(&self) -> ()),
-    refreshCharts: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> u64),
+    refreshCharts: qt_method!(fn(&self, host_id: QString, monitor_id: QString, start_time_sec: i64, end_time_sec: i64) -> u64),
     getCategories: qt_method!(fn(&self, host_id: QString) -> QStringList),
     getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category_id: QString) -> QStringList),
 
@@ -112,19 +112,13 @@ impl MetricsManagerModel {
         }
     }
 
-    fn refreshCharts(&mut self, host_id: QString, monitor_id: QString) -> u64 {
+    fn refreshCharts(&mut self, host_id: QString, monitor_id: QString, start_time_sec: i64, end_time_sec: i64) -> u64 {
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
-            let Ok(current_unix_time) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) else {
-                ::log::error!("Time calculation error");
-                return 0;
-            };
-
             let invocation_result = metrics_manager.get_metrics(
                 &host_id.to_string(),
                 &monitor_id.to_string(),
-                // 7 days back.
-                current_unix_time.as_secs() as i64 - (60 * 60 * 24 * 7),
-                current_unix_time.as_secs() as i64,
+                start_time_sec,
+                end_time_sec,
             );
 
             match invocation_result {
