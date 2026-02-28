@@ -16,8 +16,8 @@ Item {
     property int yMin: 0.0
     property string yLabel: "%"
     property var chartData: []
-    property real warningLevel: NaN
-    property real criticalLevel: NaN
+    property real warningLevel: 0.0
+    property real criticalLevel: 0.0
 
     property var _mainData: []
 
@@ -60,6 +60,7 @@ Item {
             borderWidth: 1,
             pointRadius: 0,
             borderDash: [4, 4],
+            tension: 0,
             data: [{"x": xMin, "y": level}, {"x": xMax, "y": level}]
         }
     }
@@ -78,15 +79,16 @@ Item {
                 borderColor: "rgba(255,255,255,1.0)",
                 borderWidth: 1,
                 pointRadius: 1,
+                tension: 0,
                 data: data,
             }]
-            if (typeof root.warningLevel === "number" && !isNaN(root.warningLevel)) {
-                datasets.push(root._thresholdDataset(
-                    root.warningLevel, Theme.criticalityColor("warning"), "Warning"))
+            if (root.warningLevel > 0.0) {
+                let dataset = root._thresholdDataset(root.warningLevel, Theme.criticalityColor("warning"), "Warning")
+                datasets.push(dataset)
             }
-            if (typeof root.criticalLevel === "number" && !isNaN(root.criticalLevel)) {
-                datasets.push(root._thresholdDataset(
-                    root.criticalLevel, Theme.criticalityColor("critical"), "Critical"))
+            if (root.criticalLevel > 0.0) {
+                let dataset = root._thresholdDataset(root.criticalLevel, Theme.criticalityColor("critical"), "Critical")
+                datasets.push(dataset)
             }
             return { datasets: datasets }
         }
@@ -146,6 +148,9 @@ Item {
                     }],
                     yAxes: [{
                         display: true,
+                        suggestedMin: root.yMin,
+                        suggestedMax: root.yMax,
+                        beginAtZero: true,
                         scaleLabel: {
                             display: true,
                             labelString: root.yLabel,
@@ -156,8 +161,6 @@ Item {
                             color: "rgba(255,255,255,0.1)"
                         },
                         ticks: {
-                            min: root.yMin,
-                            max: root.yMax,
                             maxTicksLimit: 8,
                             fontColor: Theme.textColor,
                             // Performance optimization:

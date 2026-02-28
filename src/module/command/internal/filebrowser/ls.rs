@@ -52,7 +52,14 @@ impl CommandModule for FileBrowserLs {
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();
-            command.arguments(vec!["ls", "-lAL", "--group-directories-first", "--color=never", "--time-style=long-iso", path]);
+            command.arguments(vec![
+                "ls",
+                "-lAL",
+                "--group-directories-first",
+                "--color=never",
+                "--time-style=long-iso",
+                path
+            ]);
         }
         else {
             return Err(LkError::unsupported_platform());
