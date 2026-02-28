@@ -50,8 +50,8 @@ impl CommandModule for FileBrowserRm {
             return Err(LkError::other("No paths specified"));
         }
         for path in &parameters {
-            if path.is_empty() {
-                return Err(LkError::other("Empty path in list"));
+            if path.len() < 2 {
+                return Err(LkError::other("Invalid path in list"));
             }
         }
 
