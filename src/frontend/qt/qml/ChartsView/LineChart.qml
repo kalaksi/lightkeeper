@@ -16,27 +16,51 @@ Item {
     property int yMin: 0.0
     property string yLabel: "%"
     property var chartData: []
+    property real warningLevel: NaN
+    property real criticalLevel: NaN
+
+    property var _mainData: []
+
+    onChartDataChanged: {
+        if (root.chartData) {
+            setData(root.chartData)
+        }
+    }
 
     function setData(data) {
-        // console.log("Chart '" + root.title + "' data set: " + JSON.stringify(data))
         if (!data) {
-            chart.chartData.datasets[0].data = []
+            root._mainData = []
+            if (chart.jsChart !== undefined) {
+                chart.animateToNewData()
+            }
             return
         }
 
-        // Convert "t" to "x" for Chart.js time series format. Used to work, doesn't anymore.
-        // TODO: should have "x" to begin with.
         var convertedData = data.map(function(item) {
             if (item.t !== undefined) {
                 return {"x": item.t, "y": item.y}
             }
             return item
         })
-        chart.chartData.datasets[0].data = convertedData
+        root._mainData = convertedData
 
-        // Sometimes the chart instance hasn't been created yet.
         if (chart.jsChart !== undefined) {
             chart.animateToNewData()
+        }
+    }
+
+    function _thresholdDataset(level, color, label) {
+        var data = root._mainData || []
+        var xMin = data.length > 0 ? data[0].x : 0
+        var xMax = data.length > 0 ? data[data.length - 1].x : 0
+        return {
+            label: label,
+            fill: false,
+            borderColor: color,
+            borderWidth: 1,
+            pointRadius: 0,
+            borderDash: [4, 4],
+            data: [{"x": xMin, "y": level}, {"x": xMax, "y": level}]
         }
     }
 
@@ -46,17 +70,25 @@ Item {
         layer.enabled: true
         chartType: "line"
         chartData: {
-            return {
-                datasets: [{
-                    label: "",
-                    fill: true,
-                    backgroundColor: "rgba(100,200,100,0.3)",
-                    borderColor: "rgba(255,255,255,1.0)",
-                    borderWidth: 1,
-                    pointRadius: 1,
-                    data: [],
-                }]
+            var data = root._mainData || []
+            var datasets = [{
+                label: "",
+                fill: true,
+                backgroundColor: "rgba(100,200,100,0.5)",
+                borderColor: "rgba(255,255,255,1.0)",
+                borderWidth: 1,
+                pointRadius: 1,
+                data: data,
+            }]
+            if (typeof root.warningLevel === "number" && !isNaN(root.warningLevel)) {
+                datasets.push(root._thresholdDataset(
+                    root.warningLevel, Theme.criticalityColor("warning"), "Warning"))
             }
+            if (typeof root.criticalLevel === "number" && !isNaN(root.criticalLevel)) {
+                datasets.push(root._thresholdDataset(
+                    root.criticalLevel, Theme.criticalityColor("critical"), "Critical"))
+            }
+            return { datasets: datasets }
         }
 
         chartOptions: {

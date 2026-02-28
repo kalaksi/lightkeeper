@@ -88,7 +88,7 @@ impl QmlFrontend {
             self.update_receiver.take().unwrap(),
             host_manager,
             connection_manager,
-            HostDataManagerModel::new(display_data, self.main_config.clone()),
+            HostDataManagerModel::new(display_data, self.main_config.clone(), self.hosts_config.clone()),
             CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
             MetricsManagerModel::new(metrics_manager, self.hosts_config.clone(), self.main_config.display_options.clone()),
             ConfigManagerModel::new(

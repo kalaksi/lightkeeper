@@ -69,11 +69,16 @@ pub struct HostDataManagerModel {
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
     configuration_preferences: configuration::Preferences,
+    hosts_config: configuration::Hosts,
 }
 
 #[allow(non_snake_case)]
 impl HostDataManagerModel {
-    pub fn new(display_data: frontend::DisplayData, config: configuration::Configuration) -> Self {
+    pub fn new(
+        display_data: frontend::DisplayData,
+        config: configuration::Configuration,
+        hosts_config: configuration::Hosts,
+    ) -> Self {
         let mut priorities = config.display_options.categories.iter()
                                                               .map(|(category, options)| (category.clone(), options.priority))
                                                               .collect::<Vec<_>>();
@@ -82,9 +87,9 @@ impl HostDataManagerModel {
 
         let mut result = HostDataManagerModel {
             display_data: display_data,
-            // display_options: display_options,
             display_options_category_order: priorities.into_iter().map(|(category, _)| category).collect(),
             configuration_preferences: config.preferences,
+            hosts_config: hosts_config,
             ..Default::default()
         };
 
@@ -161,7 +166,35 @@ impl HostDataManagerModel {
 
         let display_data = self.display_data.hosts.get(&host_id).cloned().unwrap_or_default();
         let monitor_data = display_data.host_state.monitor_data.get(&monitor_id).cloned().unwrap_or_default();
-        QString::from(serde_json::to_string(&monitor_data).unwrap())
+
+        let mut value = serde_json::to_value(&monitor_data).unwrap_or(serde_json::Value::Null);
+        if let Some(obj) = value.as_object_mut() {
+            let warning = if monitor_data.display_options.charts_warning_level_setting.is_empty() {
+                None
+            } else {
+                self.hosts_config.hosts.get(&host_id)
+                    .and_then(|host| host.effective.monitors.get(&monitor_id))
+                    .and_then(|m| m.settings.get(&monitor_data.display_options.charts_warning_level_setting))
+                    .and_then(|v| v.parse().ok())
+            }.or(monitor_data.display_options.charts_warning_value_default);
+            let critical = if monitor_data.display_options.charts_critical_level_setting.is_empty() {
+                None
+            } else {
+                self.hosts_config.hosts.get(&host_id)
+                    .and_then(|host| host.effective.monitors.get(&monitor_id))
+                    .and_then(|m| m.settings.get(&monitor_data.display_options.charts_critical_level_setting))
+                    .and_then(|v| v.parse().ok())
+            }.or(monitor_data.display_options.charts_critical_value_default);
+            obj.insert(
+                "charts_warning_value".to_string(),
+                warning.map(serde_json::Value::from).unwrap_or(serde_json::Value::Null),
+            );
+            obj.insert(
+                "charts_critical_value".to_string(),
+                critical.map(serde_json::Value::from).unwrap_or(serde_json::Value::Null),
+            );
+        }
+        QString::from(value.to_string())
     }
 
     fn getDisplayData(&self) -> QVariant {

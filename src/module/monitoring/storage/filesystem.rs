@@ -58,6 +58,10 @@ impl MonitoringModule for Filesystem {
             unit: String::from("%"),
             use_multivalue: true,
             use_with_charts: true,
+            charts_warning_level_setting: String::from("warning_threshold"),
+            charts_critical_level_setting: String::from("critical_threshold"),
+            charts_warning_value_default: Some(80.0),
+            charts_critical_value_default: Some(95.0),
             ..Default::default()
         }
     }

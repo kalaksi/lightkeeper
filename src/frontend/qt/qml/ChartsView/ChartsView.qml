@@ -297,11 +297,6 @@ Item {
                                             required property var modelData
                                             required property int index
 
-                                            Component.onCompleted: {
-                                                // Workaround, couldn't get data to update properly otherwise.
-                                                setData(modelData.data)
-                                            }
-
                                             chartData: modelData.data
                                             title: modelData.label
                                             width: chartColumn.width / 2.05
@@ -310,6 +305,8 @@ Item {
                                             yMin: chart.monitoringData.display_options.value_min
                                             yMax: chart.monitoringData.display_options.value_max > 0 ?
                                                 chart.monitoringData.display_options.value_max : 100
+                                            warningLevel: chart.monitoringData.charts_warning_value
+                                            criticalLevel: chart.monitoringData.charts_critical_value
                                         }
                                     }
                                 }
