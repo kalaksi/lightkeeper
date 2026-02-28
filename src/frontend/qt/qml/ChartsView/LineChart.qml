@@ -56,7 +56,7 @@ Item {
 
     function _thresholdDataset(level, color, label) {
         var data = root._mainData || []
-        
+
         return {
             label: label,
             fill: false,
