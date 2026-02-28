@@ -35,6 +35,7 @@ pub struct ConfigManagerModel {
     showStatusBar: qt_property!(bool; READ showStatusBar),
     // Called only from QML.
     showCharts: qt_property!(bool; READ showCharts WRITE setShowCharts),
+    showChartThresholdLines: qt_property!(bool; READ showChartThresholdLines WRITE setShowChartThresholdLines),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
@@ -192,6 +193,7 @@ impl ConfigManagerModel {
 
         preferences.insert("showStatusBar".into(), self.main_config.display_options.show_status_bar.into());
         preferences.insert("showCharts".into(), self.main_config.preferences.show_charts.into());
+        preferences.insert("showChartThresholdLines".into(), self.main_config.preferences.show_chart_threshold_lines.into());
 
         let mut editor_preferences = QVariantMap::default();
         editor_preferences.insert("editMode".into(), QString::from(self.main_config.preferences.editor_preferences.edit_mode.to_string()).into());
@@ -222,6 +224,8 @@ impl ConfigManagerModel {
         self.main_config.preferences.close_to_tray = preferences.value("closeToTray".into(), true.into()).to_bool();
         self.main_config.preferences.show_monitor_notifications = preferences.value("showMonitorNotifications".into(), true.into()).to_bool();
         self.main_config.preferences.show_charts = preferences.value("showCharts".into(), false.into()).to_bool();
+        self.main_config.preferences.show_chart_threshold_lines =
+            preferences.value("showChartThresholdLines".into(), true.into()).to_bool();
 
         self.main_config.display_options.show_status_bar = preferences.value("showStatusBar".into(), true.into()).to_bool();
 
@@ -297,6 +301,20 @@ impl ConfigManagerModel {
     fn setShowCharts(&mut self, show_charts: bool) {
         if self.main_config.preferences.show_charts != show_charts {
             self.main_config.preferences.show_charts = show_charts;
+
+            if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+                self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            }
+        }
+    }
+
+    fn showChartThresholdLines(&self) -> bool {
+        self.main_config.preferences.show_chart_threshold_lines
+    }
+
+    fn setShowChartThresholdLines(&mut self, show_chart_threshold_lines: bool) {
+        if self.main_config.preferences.show_chart_threshold_lines != show_chart_threshold_lines {
+            self.main_config.preferences.show_chart_threshold_lines = show_chart_threshold_lines;
 
             if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
                 self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));

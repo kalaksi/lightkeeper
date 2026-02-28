@@ -16,6 +16,7 @@ Item {
     property int yMin: 0.0
     property string yLabel: "%"
     property var chartData: []
+    property bool showThresholdLines: true
     property real warningLevel: 0.0
     property real criticalLevel: 0.0
 
@@ -82,11 +83,11 @@ Item {
                 tension: 0,
                 data: data,
             }]
-            if (root.warningLevel > 0.0) {
+            if (root.showThresholdLines && root.warningLevel > 0.0) {
                 let dataset = root._thresholdDataset(root.warningLevel, Theme.criticalityColor("warning"), "Warning")
                 datasets.push(dataset)
             }
-            if (root.criticalLevel > 0.0) {
+            if (root.showThresholdLines && root.criticalLevel > 0.0) {
                 let dataset = root._thresholdDataset(root.criticalLevel, Theme.criticalityColor("critical"), "Critical")
                 datasets.push(dataset)
             }

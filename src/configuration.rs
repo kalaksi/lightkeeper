@@ -100,6 +100,8 @@ pub struct Preferences {
     pub show_monitor_notifications: bool,
     #[serde(default)]
     pub show_charts: bool,
+    #[serde(default = "DisplayOptions::default_to_true")]
+    pub show_chart_threshold_lines: bool,
     #[serde(default)]
     pub editor_preferences: EditorPreferences,
 }

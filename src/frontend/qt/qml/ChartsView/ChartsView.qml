@@ -79,6 +79,16 @@ Item {
                 Layout.fillWidth: true
             }
 
+            CheckBox {
+                id: thresholdLinesCheckBox
+                text: "Threshold lines"
+                checked: LK.config.showChartThresholdLines
+                onCheckedChanged: {
+                    LK.config.showChartThresholdLines = thresholdLinesCheckBox.checked
+                }
+                Layout.alignment: Qt.AlignVCenter
+            }
+
             Text {
                 text: "Time period"
                 color: Theme.textColor
@@ -305,6 +315,7 @@ Item {
                                             yMin: chart.monitoringData.display_options.value_min
                                             yMax: chart.monitoringData.display_options.value_max > 0 ?
                                                 chart.monitoringData.display_options.value_max : 100
+                                            showThresholdLines: LK.config.showChartThresholdLines
                                             warningLevel: chart.monitoringData.charts_warning_value
                                             criticalLevel: chart.monitoringData.charts_critical_value
                                         }
