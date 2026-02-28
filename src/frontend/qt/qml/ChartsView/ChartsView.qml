@@ -75,23 +75,34 @@ Item {
             anchors.top: parent.top
             spacing: Theme.spacingNormal
 
-            Item {
-                Layout.fillWidth: true
+            Row {
+                spacing: Theme.spacingNormal
+                Layout.alignment: Qt.AlignVCenter
+
+                Text {
+                    text: "Threshold lines"
+                    color: Theme.textColor
+                    font.pointSize: Theme.fontSize
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Switch {
+                    id: thresholdLinesSwitch
+                    checked: LK.config.showChartThresholdLines
+                    onCheckedChanged: {
+                        LK.config.showChartThresholdLines = thresholdLinesSwitch.checked
+                    }
+                }
             }
 
-            CheckBox {
-                id: thresholdLinesCheckBox
-                text: "Threshold lines"
-                checked: LK.config.showChartThresholdLines
-                onCheckedChanged: {
-                    LK.config.showChartThresholdLines = thresholdLinesCheckBox.checked
-                }
-                Layout.alignment: Qt.AlignVCenter
+            Item {
+                Layout.fillWidth: true
             }
 
             Text {
                 text: "Time period"
                 color: Theme.textColor
+                font.pointSize: Theme.fontSize
                 Layout.alignment: Qt.AlignVCenter
             }
 
@@ -114,6 +125,7 @@ Item {
                 Component.onCompleted: {
                     root._periodSeconds = _periodSecondsList[currentIndex]
                 }
+                font.pointSize: Theme.fontSize
                 Layout.preferredWidth: 120
                 Layout.alignment: Qt.AlignVCenter
             }
@@ -318,6 +330,8 @@ Item {
                                             showThresholdLines: LK.config.showChartThresholdLines
                                             warningLevel: chart.monitoringData.charts_warning_value
                                             criticalLevel: chart.monitoringData.charts_critical_value
+                                            timeMin: root._chartStartTimeSec * 1000
+                                            timeMax: root._chartEndTimeSec * 1000
                                         }
                                     }
                                 }

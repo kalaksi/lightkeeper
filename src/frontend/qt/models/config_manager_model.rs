@@ -28,6 +28,7 @@ pub struct ConfigManagerModel {
     // TODO: use this? implement in some other way?
     fileError: qt_signal!(config_dir: QString, error_message: QString),
     hostConfigurationChanged: qt_signal!(),
+    showChartThresholdLinesChanged: qt_signal!(),
 
     //
     // Common
@@ -35,7 +36,7 @@ pub struct ConfigManagerModel {
     showStatusBar: qt_property!(bool; READ showStatusBar),
     // Called only from QML.
     showCharts: qt_property!(bool; READ showCharts WRITE setShowCharts),
-    showChartThresholdLines: qt_property!(bool; READ showChartThresholdLines WRITE setShowChartThresholdLines),
+    showChartThresholdLines: qt_property!(bool; READ showChartThresholdLines WRITE setShowChartThresholdLines NOTIFY showChartThresholdLinesChanged),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
@@ -315,6 +316,7 @@ impl ConfigManagerModel {
     fn setShowChartThresholdLines(&mut self, show_chart_threshold_lines: bool) {
         if self.main_config.preferences.show_chart_threshold_lines != show_chart_threshold_lines {
             self.main_config.preferences.show_chart_threshold_lines = show_chart_threshold_lines;
+            self.showChartThresholdLinesChanged();
 
             if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
                 self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));

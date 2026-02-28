@@ -19,6 +19,8 @@ Item {
     property bool showThresholdLines: true
     property real warningLevel: 0.0
     property real criticalLevel: 0.0
+    property real timeMin: 0
+    property real timeMax: 0
 
     property var _mainData: []
 
@@ -37,6 +39,8 @@ Item {
             return
         }
 
+        // Convert "t" to "x" for Chart.js time series format. Used to work, doesn't anymore.
+        // TODO: should have "x" to begin with.
         var convertedData = data.map(function(item) {
             if (item.t !== undefined) {
                 return {"x": item.t, "y": item.y}
@@ -52,8 +56,7 @@ Item {
 
     function _thresholdDataset(level, color, label) {
         var data = root._mainData || []
-        var xMin = data.length > 0 ? data[0].x : 0
-        var xMax = data.length > 0 ? data[data.length - 1].x : 0
+        
         return {
             label: label,
             fill: false,
@@ -62,7 +65,7 @@ Item {
             pointRadius: 0,
             borderDash: [4, 4],
             tension: 0,
-            data: [{"x": xMin, "y": level}, {"x": xMax, "y": level}]
+            data: [{"x": root.timeMin, "y": level}, {"x": root.timeMax, "y": level}]
         }
     }
 
@@ -140,11 +143,13 @@ Item {
                             color: "rgba(255,255,255,0.1)"
                         },
                         ticks: {
-                            maxTicksLimit: 12,
+                            maxTicksLimit: 15,
                             fontColor: Theme.textColor,
                             // Performance optimization:
                             maxRotation: 0,
                             minRotation: 0,
+                            min: root.timeMin,
+                            max: root.timeMax,
                         }
                     }],
                     yAxes: [{
