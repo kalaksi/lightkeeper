@@ -13,6 +13,7 @@ pub mod host_manager;
 pub mod connection_manager;
 pub mod command_handler;
 pub mod monitor_manager;
+pub mod secrets_manager;
 mod host;
 pub use host::HostSetting;
 pub mod utils;
@@ -47,7 +48,8 @@ pub fn run(
     main_config: &Configuration,
     hosts_config: &configuration::Hosts,
     group_config: &configuration::Groups,
-    test: bool) -> Result<ExitReason, String> {
+    test: bool,
+) -> Result<ExitReason, String> {
 
     // Due to some weirdness between ssh2, openssl and qmetaobject crates, openssl initialization needs to be forced here.
     // Otherwise, there might be a problem in ssh2 handshake with error "Unable to exchange encryption keys" for no apparent reason.
