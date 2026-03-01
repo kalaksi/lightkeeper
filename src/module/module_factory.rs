@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::{
     command,
@@ -162,6 +162,15 @@ impl ModuleFactory {
 
     pub fn validate_modules(&self) -> Result<(), String> {
         log::debug!("Validating modules");
+
+        // Make sure all module ids are unique.
+        let all_ids: Vec<String> = self.get_module_metadatas().into_iter().map(|m| m.module_spec.id).collect();
+        let mut seen = HashSet::new();
+        for id in all_ids {
+            if !seen.insert(id.clone()) {
+                return Err(format!("Module id '{}' is not unique.", id));
+            }
+        }
 
         // Validate monitoring modules.
         for (metadata, constructor) in self.monitor_modules.iter() {
@@ -336,7 +345,6 @@ impl ModuleFactory {
             (monitoring::systemd::Service::get_metadata(), monitoring::systemd::Service::new_monitoring_module),
             (monitoring::network::Oping::get_metadata(), monitoring::network::Oping::new_monitoring_module),
             (monitoring::network::Ping::get_metadata(), monitoring::network::Ping::new_monitoring_module),
-            (monitoring::network::Ssh::get_metadata(), monitoring::network::Ssh::new_monitoring_module),
             (monitoring::network::TcpConnect::get_metadata(), monitoring::network::TcpConnect::new_monitoring_module),
             (monitoring::network::Routes::get_metadata(), monitoring::network::Routes::new_monitoring_module),
             (monitoring::network::Dns::get_metadata(), monitoring::network::Dns::new_monitoring_module),

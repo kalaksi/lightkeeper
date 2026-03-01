@@ -25,7 +25,7 @@ pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
-pub const CURRENT_SCHEMA_VERSION: u16 = 3;
+pub const CURRENT_SCHEMA_VERSION: u16 = 4;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -703,6 +703,12 @@ impl Configuration {
                         .or_insert(default_groups.groups["linux"].to_owned())
                         .commands
                         .remove("linux-filebrowser-ls");
+                },
+                // Remove deprecated ssh monitoring module from all groups.
+                3 => {
+                    for group in groups_config.groups.values_mut() {
+                        group.monitors.remove("ssh");
+                    }
                 },
                 _ => {}
             }
