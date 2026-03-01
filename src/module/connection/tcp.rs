@@ -143,7 +143,7 @@ impl ConnectionModule for Tcp {
     }
 }
 
-fn load_certs(path: &Path) -> Vec<CertificateDer> {
+fn load_certs(path: &Path) -> Vec<CertificateDer<'_>> {
     let file = match std::fs::File::open(path) {
         Ok(file) => file,
         Err(_) => {

@@ -26,6 +26,7 @@ struct ModuleArgs {
     parent_module_name: Option<String>,
     parent_module_version: Option<String>,
     settings: HashMap<String, String>,
+    secrets: HashMap<String, String>,
     uses_sudo: Option<bool>,
 }
 
@@ -37,6 +38,7 @@ impl syn::parse::Parse for ModuleArgs {
         let mut parent_module_name = None;
         let mut parent_module_version = None;
         let mut settings = HashMap::new();
+        let mut secrets = HashMap::new();
         let mut uses_sudo = None;
 
         while !input.is_empty() {
@@ -75,6 +77,20 @@ impl syn::parse::Parse for ModuleArgs {
                         }
                     }
                 },
+                "secrets" => {
+                    let content;
+                    syn::braced!(content in input);
+
+                    while !content.is_empty() {
+                        let key: syn::Ident = content.parse()?;
+                        content.parse::<syn::Token![=>]>()?;
+                        let value: syn::LitStr = content.parse()?;
+                        secrets.insert(key.to_string(), value.value());
+                        if !content.is_empty() {
+                            content.parse::<syn::Token![,]>()?;
+                        }
+                    }
+                },
                 _ => return Err(syn::Error::new(key.span(), format!("Unknown key: {}", key))),
             }
             if !input.is_empty() {
@@ -89,6 +105,7 @@ impl syn::parse::Parse for ModuleArgs {
             parent_module_name: parent_module_name,
             parent_module_version: parent_module_version,
             settings: settings,
+            secrets: secrets,
             uses_sudo: uses_sudo,
         })
     }
@@ -126,6 +143,7 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
                         settings: HashMap::from([
                             #(#settings),*
                         ]),
+                        secrets: HashMap::new(),
                         parent_module: None,
                         is_stateless: true,
                         uses_sudo: #uses_sudo,
@@ -187,6 +205,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                         settings: HashMap::from([
                             #(#settings),*
                         ]),
+                        secrets: HashMap::new(),
                         parent_module: Some(ModuleSpecification::monitor(#parent_module_name, #parent_module_version)),
                         is_stateless: true,
                         uses_sudo: #uses_sudo,
@@ -243,6 +262,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     settings: HashMap::from([
                         #(#settings),*
                     ]),
+                    secrets: HashMap::new(),
                     parent_module: None,
                     is_stateless: true,
                     uses_sudo: #uses_sudo,
@@ -280,6 +300,11 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
             (#key.to_string(), #value.to_string())
         }
     });
+    let secrets = args_parsed.secrets.iter().map(|(key, value)| {
+        quote! {
+            (#key.to_string(), #value.to_string())
+        }
+    });
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -296,6 +321,9 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     description: String::from(#module_description),
                     settings: HashMap::from([
                         #(#settings),*
+                    ]),
+                    secrets: HashMap::from([
+                        #(#secrets),*
                     ]),
                     parent_module: None,
                     is_stateless: false,
@@ -333,6 +361,11 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
             (#key.to_string(), #value.to_string())
         }
     });
+    let secrets = args_parsed.secrets.iter().map(|(key, value)| {
+        quote! {
+            (#key.to_string(), #value.to_string())
+        }
+    });
 
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let original = ast.clone();
@@ -351,6 +384,9 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
                         description: String::from(#module_description),
                         settings: HashMap::from([
                             #(#settings),*
+                        ]),
+                        secrets: HashMap::from([
+                            #(#secrets),*
                         ]),
                         parent_module: None,
                         is_stateless: true,

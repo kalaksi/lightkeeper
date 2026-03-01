@@ -13,6 +13,8 @@ pub struct Metadata {
     pub description: String,
     /// Setting key and description.
     pub settings: HashMap<String, String>,
+    /// Secret key and description. Same shape as settings but for values stored in e.g. keyring.
+    pub secrets: HashMap<String, String>,
     /// Used with extension modules.
     /// Extension modules enrich or modify the original data and are processed after parent module.
     pub parent_module: Option<ModuleSpecification>,
