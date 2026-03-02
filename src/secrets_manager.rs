@@ -13,6 +13,28 @@ use crate::error::LkError;
 const SERVICE_NAME: &str = "lightkeeper";
 pub const KEYRING_PLACEHOLDER_PREFIX: &str = "keyring:";
 
+pub struct SecretsManager {
+    cache: HashMap<String, Option<String>>,
+}
+
+impl SecretsManager {
+    pub fn new() -> Self {
+        SecretsManager {
+            cache: HashMap::new(),
+        }
+    }
+
+    pub fn get(&mut self, key: &str) -> Result<Option<String>, LkError> {
+        if let Some(cached) = self.cache.get(key) {
+            return Ok(cached.clone());
+        }
+
+        let value = crate::secrets_manager::get(key)?;
+        self.cache.insert(key.to_string(), value.clone());
+        Ok(value)
+    }
+}
+
 pub fn get(key: &str) -> Result<Option<String>, LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
     match entry.get_password() {
@@ -35,46 +57,8 @@ pub fn set(key: &str, value: &str) -> Result<(), LkError> {
 
 pub fn delete(key: &str) -> Result<(), LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
-    match entry.delete_credential() {
-        Ok(()) => Ok(()),
-        Err(KeyringError::NoEntry) => {
-            log::warn!("Secret not found in keyring: {}", key);
-            Ok(())
-        },
-        Err(e) => Err(e.into()),
-    }
-}
-
-/// Stores secret settings in the keyring and returns a new map with placeholders for secret values.
-/// source_id is "group:<id>" or "host:<id>". Call before writing config.
-pub fn store_connector_secrets(
-    connector_id: &str,
-    source_id: &str,
-    settings: &HashMap<String, String>,
-    secret_keys: &HashMap<String, String>,
-) -> HashMap<String, String> {
-    let mut result = HashMap::new();
-    for (key, value) in settings {
-        if !secret_keys.contains_key(key) {
-            result.insert(key.clone(), value.clone());
-            continue;
-        }
-        if value.starts_with(KEYRING_PLACEHOLDER_PREFIX) {
-            result.insert(key.clone(), value.clone());
-            continue;
-        }
-        let lookup_key = secret_lookup_key(connector_id, source_id, key);
-        if value.is_empty() {
-            let _ = delete(&lookup_key);
-        }
-        else {
-            if let Err(e) = set(&lookup_key, value) {
-                log::warn!("Failed to store secret for {} {}: {}", connector_id, key, e);
-            }
-            result.insert(key.clone(), format!("{}{}", KEYRING_PLACEHOLDER_PREFIX, source_id));
-        }
-    }
-    result
+    entry.delete_credential()?;
+    Ok(())
 }
 
 /// Keyring key for placeholder "keyring:SOURCE_ID". Works for any connector and setting.
