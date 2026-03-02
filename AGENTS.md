@@ -6,7 +6,7 @@
 # Implementation and style guidelines
 - Never change Cargo.toml without explicit approval.
 - Don't add new trivial comments.
-- Don't remove existing comments when refactoring.
+- Never remove existing comments, only update.
 - Avoid writing lines that are over 120 characters long.
 - Don't add error handling for impossible scenarios.
 - Aim for minimum amount of code.

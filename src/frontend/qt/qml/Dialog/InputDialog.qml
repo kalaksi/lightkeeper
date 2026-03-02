@@ -58,6 +58,7 @@ LightkeeperDialog {
                     visible: parent.modelData.field_type !== "Option"
                     text: parent.modelData.default_value || ""
                     enabled: parent.modelData.field_type !== "ReadOnlyText"
+                    echoMode: parent.modelData.isSecret === true ? TextInput.Password : TextInput.Normal
                     validator: RegularExpressionValidator {
                         regularExpression: inputRow.modelData.validator_regexp === "" ?
                             /.*/ :

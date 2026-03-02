@@ -10,6 +10,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use crate::secrets_manager::{self, secret_lookup_key, KEYRING_PREFIX};
 use crate::{
     configuration::{self, Configuration, Groups, HostSettings, Hosts},
     enums::EditMode,
@@ -36,6 +37,7 @@ pub struct ConfigManagerModel {
     showStatusBar: qt_property!(bool; READ showStatusBar),
     // Called only from QML.
     showCharts: qt_property!(bool; READ showCharts WRITE setShowCharts),
+    // Called only from QML.
     showChartThresholdLines: qt_property!(bool; READ showChartThresholdLines WRITE setShowChartThresholdLines NOTIFY showChartThresholdLinesChanged),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
     isSandboxed: qt_method!(fn(&self) -> bool),
@@ -104,6 +106,7 @@ pub struct ConfigManagerModel {
     addGroupConnector: qt_method!(fn(&self, group_name: QString, connector_name: QString)),
     getGroupConnectorSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
     getEffectiveConnectorSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList) -> QString),
+    storeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
 
     //
     // Group configuration: monitors
@@ -551,31 +554,36 @@ impl ConfigManagerModel {
         self.groups_config.groups.get_mut(&group_name).unwrap().monitors.insert(monitor_name, Default::default());
     }
 
-    /// Returns a list of JSON serialized `ModuleSetting`. Includes all setting keys.
     fn getGroupMonitorSettings(&self, group_id: QString, module_id: QString) -> QStringList {
         let group_id = group_id.to_string();
         let module_id = module_id.to_string();
 
-        let settings_descriptions = match self.module_metadatas.iter()
+        let metadata = match self.module_metadatas.iter()
             .find(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Monitor) {
-            Some(metadata) => &metadata.settings,
+
+            Some(metadata) => metadata,
             None => return QStringList::default(),
         };
 
-        let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
-        settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
+        let mut full_settings: Vec<(&String, &String)> = metadata.settings
+            .iter()
+            .chain(metadata.secrets.iter())
+            .collect::<Vec<_>>();
+
+        full_settings.sort_by_key(|(key, _)| key.to_lowercase());
 
         let group_monitor_settings = self.groups_config
             .groups.get(&group_id).cloned().unwrap_or_default()
             .monitors.get(&module_id).cloned().unwrap_or_default()
             .settings;
 
-        let module_settings = settings_keys.into_iter().map(|setting_key| {
+        let module_settings = full_settings.into_iter().map(|(setting_key, description)| {
             ModuleSetting {
                 key: setting_key.clone(),
                 value: group_monitor_settings.get(setting_key).cloned().unwrap_or_default(),
-                description: settings_descriptions.get(setting_key).cloned().unwrap_or_default(),
+                description: description.clone(),
                 enabled: group_monitor_settings.get(setting_key).is_some(),
+                is_secret: metadata.secrets.contains_key(setting_key),
             }
         });
 
@@ -598,6 +606,7 @@ impl ConfigManagerModel {
                     value: value.clone(),
                     description: "".into(),
                     enabled: true,
+                    is_secret: false,
                 }
             }).collect::<Vec<ModuleSetting>>())
         }).collect::<HashMap<String, Vec<ModuleSetting>>>();
@@ -648,33 +657,36 @@ impl ConfigManagerModel {
         self.groups_config.groups.get_mut(&group_name).unwrap().connectors.insert(connector_name, Default::default());
     }
 
-    /// Returns a list of JSON serialized `ModuleSetting`. Includes all setting keys.
+    /// Returns a list of JSON serialized `ModuleSetting`. Includes all setting keys (settings + secrets).
     fn getGroupConnectorSettings(&self, group_id: QString, module_id: QString) -> QStringList {
         let group_id = group_id.to_string();
         let module_id = module_id.to_string();
 
-        let settings_descriptions = match self.module_metadatas.iter()
+        let metadata = match self.module_metadatas.iter()
             .find(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Connector) {
-            Some(metadata) => &metadata.settings,
-            // TODO: this may clear existing settings on save if module is not available.
-            // Maybe try to keep existing settings?
+            Some(metadata) => metadata,
             None => return QStringList::default(),
         };
 
-        let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
-        settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
+        let mut full_settings: Vec<(&String, &String)> = metadata.settings
+            .iter()
+            .chain(metadata.secrets.iter())
+            .collect::<Vec<_>>();
 
-        let group_connector_settings = self.groups_config
+        full_settings.sort_by_key(|(key, _)| key.to_lowercase());
+
+        let group_settings = self.groups_config
             .groups.get(&group_id).cloned().unwrap_or_default()
             .connectors.get(&module_id).cloned().unwrap_or_default()
             .settings;
 
-        let module_settings = settings_keys.into_iter().map(|setting_key| {
+        let module_settings = full_settings.into_iter().map(|(setting_key, description)| {
             ModuleSetting {
                 key: setting_key.clone(),
-                value: group_connector_settings.get(setting_key).cloned().unwrap_or_default(),
-                description: settings_descriptions.get(setting_key).cloned().unwrap_or_default(),
-                enabled: group_connector_settings.get(setting_key).is_some(),
+                value: group_settings.get(setting_key).cloned().unwrap_or_default(),
+                description: description.clone(),
+                enabled: group_settings.get(setting_key).is_some(),
+                is_secret: metadata.secrets.contains_key(setting_key),
             }
         });
 
@@ -697,11 +709,28 @@ impl ConfigManagerModel {
                     value: value.clone(),
                     description: "".into(),
                     enabled: true,
+                    is_secret: false,
                 }
             }).collect::<Vec<ModuleSetting>>())
         }).collect::<HashMap<String, Vec<ModuleSetting>>>();
 
         QString::from(serde_json::to_string(&modules_settings).unwrap())
+    }
+
+    fn storeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString {
+        let group_id = group_id.to_string();
+        let module_id = module_id.to_string();
+        let setting_key = setting_key.to_string();
+        let secret_value = secret_value.to_string();
+        let source_id = format!("group:{}", group_id);
+        let lookup_key = secret_lookup_key(&module_id, &source_id, &setting_key);
+
+        if let Err(e) = secrets_manager::set(&lookup_key, &secret_value) {
+            ::log::warn!("Failed to store secret for {} {}: {}", module_id, setting_key, e);
+            return QString::from(format!("{}{}", KEYRING_PREFIX, "error"));
+        }
+
+        QString::from(lookup_key)
     }
 
     /// Settings should contain JSON serialized hashmaps. Module ID as key and list of ModuleSetting as value.
@@ -800,31 +829,36 @@ impl ConfigManagerModel {
         self.groups_config.groups.get_mut(&group_name).unwrap().commands.insert(command_name, Default::default());
     }
 
-    /// Returns a list of JSON serialized `ModuleSetting`. Includes all setting keys.
+    /// Returns a list of JSON serialized `ModuleSetting`. Includes all setting keys (settings + secrets).
     fn getGroupCommandSettings(&self, group_id: QString, module_id: QString) -> QStringList {
         let group_id = group_id.to_string();
         let module_id = module_id.to_string();
 
-        let settings_descriptions = match self.module_metadatas.iter()
+        let metadata = match self.module_metadatas.iter()
             .find(|metadata| metadata.module_spec.id == module_id && metadata.module_spec.module_type == ModuleType::Command) {
-            Some(metadata) => &metadata.settings,
+            Some(metadata) => metadata,
             None => return QStringList::default(),
         };
 
-        let mut settings_keys = settings_descriptions.keys().collect::<Vec<&String>>();
-        settings_keys.sort_by(|&a, &b| a.to_lowercase().cmp(&b.to_lowercase()));
+        let mut full_settings: Vec<(&String, &String)> = metadata.settings
+            .iter()
+            .chain(metadata.secrets.iter())
+            .collect::<Vec<_>>();
 
-        let group_command_settings = self.groups_config
+        full_settings.sort_by_key(|(key, _)| key.to_lowercase());
+
+        let group_settings = self.groups_config
             .groups.get(&group_id).cloned().unwrap_or_default()
             .commands.get(&module_id).cloned().unwrap_or_default()
             .settings;
 
-        let module_settings = settings_keys.into_iter().map(|setting_key| {
+        let module_settings = full_settings.into_iter().map(|(setting_key, description)| {
             ModuleSetting {
                 key: setting_key.clone(),
-                value: group_command_settings.get(setting_key).cloned().unwrap_or_default(),
-                description: settings_descriptions.get(setting_key).cloned().unwrap_or_default(),
-                enabled: group_command_settings.get(setting_key).is_some(),
+                value: group_settings.get(setting_key).cloned().unwrap_or_default(),
+                description: description.clone(),
+                enabled: group_settings.get(setting_key).is_some(),
+                is_secret: metadata.secrets.contains_key(setting_key),
             }
         });
 
@@ -847,6 +881,7 @@ impl ConfigManagerModel {
                     value: value.clone(),
                     description: "".into(),
                     enabled: true,
+                    is_secret: false,
                 }
             }).collect::<Vec<ModuleSetting>>())
         }).collect::<HashMap<String, Vec<ModuleSetting>>>();
@@ -917,4 +952,6 @@ struct ModuleSetting {
     pub value: String,
     pub description: String,
     pub enabled: bool,
+    #[serde(rename = "isSecret", default)]
+    pub is_secret: bool,
 }

@@ -38,15 +38,17 @@ const PARTIAL_READ_TIMEOUT_MS: u32 = 2000;
     settings={
       port => "Port of the SSH server. Default: 22.",
       username => "Username for the SSH connection. Default: root.",
-      password => "Password for the SSH connection. Stored as plaintext. Default: empty (not used).",
       private_key_path => "Path to the private key file for the SSH connection. Default: empty.",
-      private_key_passphrase => "Passphrase for the private key file. Stored as plaintext. Default: empty.",
       connection_timeout => "Timeout (in seconds) for the SSH connection. Default: 15.",
       agent_key_identifier => "Identifier for selecting key from ssh-agent. This is the comment part of the \
                                key (e.g. user@desktop). Default: empty (all keys are tried).",
       verify_host_key => "Whether to verify the host key using a known_hosts-file. Default: true.",
       custom_known_hosts_path => "Path to a custom known_hosts file. Default: (inside configuration directory).",
       parallel_sessions => "Number of parallel login sessions. Improves performance. Default: 2.",
+    },
+    secrets={
+      password => "Password for the SSH connection. Stored as plaintext. Default: empty (not used).",
+      private_key_passphrase => "Passphrase for the private key file. Stored as plaintext. Default: empty.",
     }
 )]
 /// SSH connection module. Manages parallel SSH sessions internally.

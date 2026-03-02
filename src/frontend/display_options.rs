@@ -132,6 +132,8 @@ pub enum UserInputFieldType {
 pub struct UserInputField {
     pub field_type: UserInputFieldType,
     pub label: String,
+    #[serde(rename = "isSecret", default)]
+    pub is_secret: bool,
     pub default_value: String,
     pub units: Vec<String>,
     pub validator_regexp: String,

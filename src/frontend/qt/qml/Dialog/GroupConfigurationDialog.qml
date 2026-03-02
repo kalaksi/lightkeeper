@@ -549,6 +549,7 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: connectorEditDialog
+        groupName: root.groupName
         // TODO
         // This doesn't work correctly on flatpak, maybe different Qt version?
         // Leaving it centered. It's less pretty but works more reliably for now.
@@ -584,6 +585,7 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: monitorEditDialog
+        groupName: root.groupName
         // TODO
         // This doesn't work correctly on flatpak, maybe different Qt version?
         // Leaving it centered. It's less pretty but works more reliably for now.
@@ -619,6 +621,7 @@ LightkeeperDialog {
 
     ModuleSettingsDialog {
         id: commandEditDialog
+        groupName: root.groupName
         // TODO
         // This doesn't work correctly on flatpak, maybe different Qt version?
         // Leaving it centered. It's less pretty but works more reliably for now.

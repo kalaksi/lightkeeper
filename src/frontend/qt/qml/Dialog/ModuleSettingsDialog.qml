@@ -18,8 +18,10 @@ import "../StyleOverride"
 LightkeeperDialog {
     id: root
     property string moduleId: ""
+    property string groupName: ""
     property alias moduleSettings: repeater.model
     property bool _loading: moduleId === ""
+    property var _secretTarget: null
 
     title: `Module settings: ${root.moduleId}`
     implicitWidth: 600
@@ -115,16 +117,16 @@ LightkeeperDialog {
 
                     TextField {
                         id: textField
-                        enabled: toggleSwitch.checked && !fileChooserButton.visible
+                        enabled: toggleSwitch.checked && !fileChooserButton.visible && !keyringButton.visible
                         placeholderText: toggleSwitch.checked ? "" : "unset"
                         placeholderTextColor: Theme.textColorDark
                         text: toggleSwitch.checked ? modelData.value : ""
-                        echoMode: modelData.key.endsWith("_password") || modelData.key.endsWith("_passphrase") ?
-                            TextInput.Password : TextInput.Normal
+                        echoMode: modelData.isSecret === true ? TextInput.Password : TextInput.Normal
 
                         Layout.preferredWidth: {
-                            if (fileChooserButton.visible) {
-                                scrollView.width * 0.35 - fileChooserButton.width - rowLayout.spacing
+                            if (fileChooserButton.visible || keyringButton.visible) {
+                                scrollView.width * 0.35 - (fileChooserButton.visible ? fileChooserButton.width :
+                                    keyringButton.width) - rowLayout.spacing
                             }
                             else {
                                 scrollView.width * 0.35
@@ -159,6 +161,29 @@ LightkeeperDialog {
                         Layout.alignment: Qt.AlignVCenter
                     }
 
+                    ImageButton {
+                        id: keyringButton
+                        visible: modelData.isSecret === true && root.groupName !== ""
+                        enabled: toggleSwitch.checked
+                        imageSource: "qrc:/main/images/button/lock"
+                        size: textField.implicitHeight * 0.8
+                        onClicked: {
+                            root._secretTarget = { textField: textField, key: modelData.key }
+                            secretDialog.inputSpecs = [
+                                {
+                                    label: modelData.key,
+                                    field_type: "Password",
+                                    validator_regexp: ".*",
+                                    additional_validator_regexp: ""
+                                }
+                            ]
+                            secretDialog.open()
+                        }
+
+                        Layout.preferredWidth: textField.implicitHeight
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
                 }
             }
         }
@@ -166,5 +191,25 @@ LightkeeperDialog {
 
     function resetModel() {
         root.moduleSettings = []
+    }
+
+    InputDialog {
+        id: secretDialog
+        title: "Store secret in keyring"
+
+        onInputValuesGiven: function(inputValues) {
+            if (root._secretTarget && inputValues.length > 0) {
+                let placeholder = LK.config.storeGroupSecret(
+                    root.groupName, root.moduleId, root._secretTarget.key, inputValues[0])
+                if (placeholder !== "") {
+                    root._secretTarget.textField.text = placeholder
+                }
+                root._secretTarget = null
+            }
+        }
+
+        onRejected: {
+            root._secretTarget = null
+        }
     }
 }
