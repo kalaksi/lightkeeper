@@ -418,7 +418,7 @@ LightkeeperDialog {
                                 groupAddDialog.inputSpecs = [{
                                     label: "Configuration group name",
                                     field_type: "Text",
-                                    validator_regexp: "[a-zA-Z\d\-]+",
+                                    validator_regexp: "[a-zA-Z0-9\\-]+",
                                 }]
                                 groupAddDialog.open()
                             }
@@ -477,7 +477,7 @@ LightkeeperDialog {
         inputSpecs: [{
             label: "Configuration group name",
             field_type: "Text",
-            validator_regexp: "[a-zA-Z\d\-]+",
+            validator_regexp: "[a-zA-Z0-9\\-]+",
         }]
 
         onInputValuesGiven: function(inputValues) {
