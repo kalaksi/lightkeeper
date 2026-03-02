@@ -11,7 +11,7 @@ use keyring::Error as KeyringError;
 use crate::error::LkError;
 
 const SERVICE_NAME: &str = "lightkeeper";
-pub const KEYRING_PLACEHOLDER_PREFIX: &str = "keyring:";
+pub const KEYRING_PREFIX: &str = "keyring:";
 
 pub struct SecretsManager {
     cache: HashMap<String, Option<String>>,
@@ -61,7 +61,7 @@ pub fn delete(key: &str) -> Result<(), LkError> {
     Ok(())
 }
 
-/// Keyring key for placeholder "keyring:SOURCE_ID". Works for any connector and setting.
+/// Keyring key for placeholder "keyring:SOURCE_ID". Works for any module and setting.
 /// source_id is "group:<id>" or "host:<id>".
 pub fn secret_lookup_key(connector_id: &str, source_id: &str, setting_key: &str) -> String {
     format!("{}:{}:{}", connector_id, source_id, setting_key)

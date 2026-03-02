@@ -13,9 +13,11 @@ use serde_derive::{Deserialize, Serialize};
 use serde_yaml;
 
 use crate::enums::EditMode;
+use crate::error::LkError;
 use crate::file_handler;
 use crate::host::HostSetting;
 use crate::module::PlatformInfo;
+use crate::secrets_manager;
 
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
@@ -366,11 +368,12 @@ impl Configuration {
             .flat_map(|host_config| host_config.groups.clone())
             .filter(|group_id| !all_groups.groups.contains_key(group_id))
             .collect::<Vec<String>>();
-
         if !invalid_groups.is_empty() {
             let error_message = format!("Invalid group references: {}", invalid_groups.join(", "));
             return Err(io::Error::new(io::ErrorKind::Other, error_message));
         }
+
+        let mut secrets = secrets_manager::SecretsManager::new();
 
         // Merge config groups to form the final, effective config.
         for (_, host_config) in hosts.hosts.iter_mut() {
@@ -394,9 +397,41 @@ impl Configuration {
             host_config.monitors = BTreeMap::new();
             host_config.connectors = BTreeMap::new();
             host_config.settings = Vec::new();
+
+            Self::resolve_secrets_in_effective_config(&mut host_config.effective, &mut secrets);
         }
 
         Ok((main_config, hosts, all_groups))
+    }
+
+    fn resolve_secrets_in_effective_config(
+        effective: &mut ConfigGroup,
+        secrets: &mut secrets_manager::SecretsManager,
+    ) {
+        for (connector_id, connector_config) in effective.connectors.iter_mut() {
+            let to_resolve: Vec<(String, String)> = connector_config.settings.iter()
+                .filter(|(_, value)| value.starts_with(secrets_manager::KEYRING_PREFIX))
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect();
+
+            for (key, placeholder_value) in to_resolve {
+                let source_id = &placeholder_value[secrets_manager::KEYRING_PREFIX.len()..];
+                let lookup_key = secrets_manager::secret_lookup_key(connector_id, source_id, &key);
+
+                match secrets.get(&lookup_key) {
+                    Ok(Some(secret)) => {
+                        connector_config.settings.insert(key, secret);
+                    }
+                    Ok(None) => {
+                        log::warn!("Keyring secret not found for {}", lookup_key);
+                        connector_config.settings.insert(key, format!("{}{}", secrets_manager::KEYRING_PREFIX, "error"));
+                    }
+                    Err(e) => {
+                        log::warn!("Failed to get keyring secret for {}: {}", lookup_key, e);
+                    }
+                }
+            }
+        }
     }
 
     /// Merge config groups to form the final, effective config.
