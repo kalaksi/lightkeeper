@@ -16,6 +16,7 @@ finish-args:
   - "--device=dri"
   - "--socket=ssh-auth"
   - "--talk-name=org.kde.StatusNotifierWatcher"
+  - "--env=SSH_ASKPASS=/app/bin/ksshaskpass"
   - "--env=QTWEBENGINEPROCESS_PATH=/app/bin/QtWebEngineProcess"
 cleanup:
   - /include
@@ -74,8 +75,9 @@ modules:
   - name: qml-lighthouse-components
     buildsystem: simple
     sources:
-      - type: dir
-        path: ../../third_party/qml-lighthouse-components
+      - type: git
+        url: https://github.com/kalaksi/qml-lighthouse-components.git
+        branch: main
         dest: 'qml-lighthouse-components'
     build-commands:
       - cd qml-lighthouse-components/Lighthouse/AceEditor/ace-builds
@@ -83,6 +85,12 @@ modules:
         && git sparse-checkout set LICENSE src-min-noconflict
         && cd ../../../..
       - cp -a qml-lighthouse-components /app/qml-lighthouse-components
+  - name: ksshaskpass
+    buildsystem: cmake-ninja
+    sources:
+      - type: git
+        url: https://invent.kde.org/plasma/ksshaskpass.git
+        branch: Plasma/6.1
   - name: lightkeeper
     buildsystem: simple
     sources:
