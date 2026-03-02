@@ -234,9 +234,9 @@ LightkeeperDialog {
                 size: root.buttonSize
                 tooltip: "Show effective configuration"
                 onClicked: {
-                    let connectorsAndSettings = JSON.parse(LK.config.getEffectiveConnectorSettings(root.hostId, root._selectedGroups))
-                    let monitorsAndSettings = JSON.parse(LK.config.getEffectiveMonitorSettings(root.hostId, root._selectedGroups))
-                    let commandsAndSettings = JSON.parse(LK.config.getEffectiveCommandSettings(root.hostId, root._selectedGroups))
+                    let connectorsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, root._selectedGroups, "connector"))
+                    let monitorsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, root._selectedGroups, "monitor"))
+                    let commandsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, root._selectedGroups, "command"))
                     effectiveConfigDialog.groupConnectorSettings = connectorsAndSettings
                     effectiveConfigDialog.groupMonitorSettings = monitorsAndSettings
                     effectiveConfigDialog.groupCommandSettings = commandsAndSettings

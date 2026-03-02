@@ -37,15 +37,7 @@ LightkeeperDialog {
             let moduleType = parts[0]
             let moduleName = parts[1]
 
-            if (moduleType === "Monitor") {
-                LK.config.addGroupMonitor(root.groupName, moduleName)
-            }
-            else if (moduleType === "Command") {
-                LK.config.addGroupCommand(root.groupName, moduleName)
-            }
-            else if (moduleType === "Connector") {
-                LK.config.addGroupConnector(root.groupName, moduleName)
-            }
+            LK.config.addGroupModule(root.groupName, moduleName, moduleType)
 
         }
         LK.config.writeGroupConfiguration()

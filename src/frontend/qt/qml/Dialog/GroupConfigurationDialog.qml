@@ -101,12 +101,12 @@ LightkeeperDialog {
                     visible: !root.readOnly
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let connectors = LK.config.getUnselectedConnectorIds(root._connectorList)
+                        let connectors = LK.config.getUnselectedModuleIds(root._connectorList, "connector")
                         connectorAddDialog.inputSpecs = [{
                             label: "Connector module",
                             field_type: "Option",
                             options: connectors,
-                            option_descriptions: connectors.map((connector) => LK.config.getConnectorDescription(connector))
+                            option_descriptions: connectors.map((connector) => LK.config.getModuleDescription(connector))
                         }]
                         connectorAddDialog.open()
                     }
@@ -142,7 +142,7 @@ LightkeeperDialog {
                         height: connectorModuleRow.height
 
                         onClicked: {
-                            connectorDescriptionText.text = connectorDescriptionText.text !== "" ? "" : LK.config.getConnectorDescription(modelData)
+                            connectorDescriptionText.text = connectorDescriptionText.text !== "" ? "" : LK.config.getModuleDescription(modelData)
                         }
 
                         Column {
@@ -243,12 +243,12 @@ LightkeeperDialog {
                     visible: !root.readOnly
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let monitors = LK.config.getUnselectedMonitorIds(root._monitorList)
+                        let monitors = LK.config.getUnselectedModuleIds(root._monitorList, "monitor")
                         monitorAddDialog.inputSpecs = [{
                             label: "Monitoring module",
                             field_type: "Option",
                             options: monitors,
-                            option_descriptions: monitors.map((monitor) => LK.config.getMonitorDescription(monitor))
+                            option_descriptions: monitors.map((monitor) => LK.config.getModuleDescription(monitor))
                         }]
                         monitorAddDialog.open()
                     }
@@ -283,7 +283,7 @@ LightkeeperDialog {
                         height: monitoringModuleRow.height
 
                         onClicked: {
-                            monitorDescriptionText.text = monitorDescriptionText.text !== "" ? "" : LK.config.getMonitorDescription(modelData)
+                            monitorDescriptionText.text = monitorDescriptionText.text !== "" ? "" : LK.config.getModuleDescription(modelData)
                         }
 
                         Column {
@@ -300,7 +300,7 @@ LightkeeperDialog {
                                 }
 
                                 PillText {
-                                    visible: LK.config.monitorRequiresSudo(modelData)
+                                    visible: LK.config.moduleRequiresSudo(modelData)
                                     text: "sudo"
                                     pillColor: Theme.colorForCriticality("Info")
                                     tooltip: "may require sudo for root privileges"
@@ -392,12 +392,12 @@ LightkeeperDialog {
                     visible: !root.readOnly
                     imageSource: "qrc:/main/images/button/add"
                     onClicked: {
-                        let commands = LK.config.getUnselectedCommandIds(root._commandList)
+                        let commands = LK.config.getUnselectedModuleIds(root._commandList, "command")
                         commandAddDialog.inputSpecs = [{
                             label: "Command module",
                             field_type: "Option",
                             options: commands,
-                            option_descriptions: commands.map((command) => LK.config.getCommandDescription(command))
+                            option_descriptions: commands.map((command) => LK.config.getModuleDescription(command))
                         }]
                         commandAddDialog.open()
                     }
@@ -432,7 +432,7 @@ LightkeeperDialog {
                         height: commandModuleRow.height
 
                         onClicked: {
-                            commandDescriptionText.text = commandDescriptionText.text !== "" ? "" : LK.config.getCommandDescription(modelData)
+                            commandDescriptionText.text = commandDescriptionText.text !== "" ? "" : LK.config.getModuleDescription(modelData)
                         }
 
                         Column {
@@ -451,7 +451,7 @@ LightkeeperDialog {
                                 }
 
                                 PillText {
-                                    visible: LK.config.commandRequiresSudo(modelData)
+                                    visible: LK.config.moduleRequiresSudo(modelData)
                                     text: "sudo"
                                     pillColor: Theme.colorForCriticality("Info")
                                     tooltip: "may require sudo for root privileges"
@@ -541,7 +541,7 @@ LightkeeperDialog {
             option_descriptions: {}
         }]
         onInputValuesGiven: function(inputValues) {
-            root.groupConnectorSettings[inputValues[0]] = LK.config.getGroupConnectorSettings(root.groupName, inputValues[0]).map(JSON.parse)
+            root.groupConnectorSettings[inputValues[0]] = LK.config.getGroupModuleSettings(root.groupName, inputValues[0]).map(JSON.parse)
             let newConnectors = root._connectorList.concat(inputValues[0]).sort()
             root._connectorList = newConnectors
         }
@@ -577,7 +577,7 @@ LightkeeperDialog {
             option_descriptions: {}
         }]
         onInputValuesGiven: function(inputValues) {
-            root.groupMonitorSettings[inputValues[0]] = LK.config.getGroupMonitorSettings(root.groupName, inputValues[0]).map(JSON.parse)
+            root.groupMonitorSettings[inputValues[0]] = LK.config.getGroupModuleSettings(root.groupName, inputValues[0]).map(JSON.parse)
             let newMonitors = root._monitorList.concat(inputValues[0]).sort()
             root._monitorList = newMonitors
         }
@@ -613,7 +613,7 @@ LightkeeperDialog {
             option_descriptions: {}
         }]
         onInputValuesGiven: function(inputValues) {
-            root.groupCommandSettings[inputValues[0]] = LK.config.getGroupCommandSettings(root.groupName, inputValues[0]).map(JSON.parse)
+            root.groupCommandSettings[inputValues[0]] = LK.config.getGroupModuleSettings(root.groupName, inputValues[0]).map(JSON.parse)
             let newCommands = root._commandList.concat(inputValues[0]).sort()
             root._commandList = newCommands
         }
@@ -666,9 +666,9 @@ LightkeeperDialog {
         root._connectorList = []
         root.groupConnectorSettings = {}
 
-        let connectorIds = LK.config.getGroupConnectorIds(root.groupName)
+        let connectorIds = LK.config.getGroupModuleIds(root.groupName, "connector")
         for (let connectorId of connectorIds) {
-            root.groupConnectorSettings[connectorId] = LK.config.getGroupConnectorSettings(root.groupName, connectorId).map(JSON.parse)
+            root.groupConnectorSettings[connectorId] = LK.config.getGroupModuleSettings(root.groupName, connectorId).map(JSON.parse)
         }
 
         // Set last since this controls when list is re-rendered.
@@ -679,9 +679,9 @@ LightkeeperDialog {
         root._monitorList = []
         root.groupMonitorSettings = {}
 
-        let monitorIds = LK.config.getGroupMonitorIds(root.groupName)
+        let monitorIds = LK.config.getGroupModuleIds(root.groupName, "monitor")
         for (let monitorId of monitorIds) {
-            root.groupMonitorSettings[monitorId] = LK.config.getGroupMonitorSettings(root.groupName, monitorId).map(JSON.parse)
+            root.groupMonitorSettings[monitorId] = LK.config.getGroupModuleSettings(root.groupName, monitorId).map(JSON.parse)
         }
 
         // Set last since this controls when list is re-rendered.
@@ -692,9 +692,9 @@ LightkeeperDialog {
         root._commandList = []
         root.groupCommandSettings = {}
 
-        let commandIds = LK.config.getGroupCommandIds(root.groupName)
+        let commandIds = LK.config.getGroupModuleIds(root.groupName, "command")
         for (let commandId of commandIds) {
-            root.groupCommandSettings[commandId] = LK.config.getGroupCommandSettings(root.groupName, commandId).map(JSON.parse)
+            root.groupCommandSettings[commandId] = LK.config.getGroupModuleSettings(root.groupName, commandId).map(JSON.parse)
         }
 
         // Set last since this controls when list is re-rendered.
