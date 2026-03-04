@@ -27,7 +27,7 @@ LightkeeperDialog {
     property bool _loading: true
     title: "Host details"
 
-    implicitWidth: 570
+    implicitWidth: 630
     implicitHeight: 700
     standardButtons: Dialog.Ok | Dialog.Cancel
 

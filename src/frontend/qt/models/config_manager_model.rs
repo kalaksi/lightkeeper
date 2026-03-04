@@ -108,6 +108,8 @@ pub struct ConfigManagerModel {
     getGroupModuleSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
     getEffectiveModuleSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList, module_type: QString) -> QString),
     storeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
+    getGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString),
+    removeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString)),
 
 
     config_dir: String,
@@ -574,13 +576,18 @@ impl ConfigManagerModel {
             .collect::<Vec<_>>();
         full_settings.sort_by_key(|(key, _)| key.to_lowercase());
 
+        let source_id = format!("group:{}", group_id);
         let module_settings = full_settings.into_iter().map(|(setting_key, description)| {
+            let value = group_settings.get(setting_key).cloned().unwrap_or_default();
+            let lookup_key = secret_lookup_key(&module_id, &source_id, setting_key);
+            let secret_backend = if value == lookup_key { "keyring" } else { "plaintext" };
             ModuleSetting {
                 key: setting_key.clone(),
-                value: group_settings.get(setting_key).cloned().unwrap_or_default(),
+                value,
                 description: description.clone(),
                 enabled: group_settings.get(setting_key).is_some(),
                 is_secret: metadata.secrets.contains_key(setting_key),
+                secret_backend: secret_backend.to_string(),
             }
         });
 
@@ -605,6 +612,7 @@ impl ConfigManagerModel {
                         description: "".into(),
                         enabled: true,
                         is_secret: false,
+                        secret_backend: "plaintext".into(),
                     }
                 }).collect::<Vec<ModuleSetting>>())
             }).collect(),
@@ -616,6 +624,7 @@ impl ConfigManagerModel {
                         description: "".into(),
                         enabled: true,
                         is_secret: false,
+                        secret_backend: "plaintext".into(),
                     }
                 }).collect::<Vec<ModuleSetting>>())
             }).collect(),
@@ -627,6 +636,7 @@ impl ConfigManagerModel {
                         description: "".into(),
                         enabled: true,
                         is_secret: false,
+                        secret_backend: "plaintext".into(),
                     }
                 }).collect::<Vec<ModuleSetting>>())
             }).collect(),
@@ -649,7 +659,22 @@ impl ConfigManagerModel {
             return QString::from(format!("{}{}", KEYRING_PREFIX, "error"));
         }
 
-        QString::from(lookup_key)
+        QString::from(format!("{}{}", KEYRING_PREFIX, lookup_key))
+    }
+
+    fn getGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString {
+        let source_id = format!("group:{}", group_id.to_string());
+        let lookup_key = secret_lookup_key(&module_id.to_string(), &source_id, &setting_key.to_string());
+        match secrets_manager::get(&lookup_key) {
+            Ok(Some(value)) => QString::from(value),
+            _ => QString::from(format!("{}{}", KEYRING_PREFIX, "error")),
+        }
+    }
+
+    fn removeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) {
+        let source_id = format!("group:{}", group_id.to_string());
+        let lookup_key = secret_lookup_key(&module_id.to_string(), &source_id, &setting_key.to_string());
+        let _ = secrets_manager::delete(&lookup_key);
     }
 
     /// Settings should contain JSON serialized hashmaps. Module ID as key and list of ModuleSetting as value.
@@ -755,8 +780,12 @@ impl ConfigManagerModel {
 struct ModuleSetting {
     pub key: String,
     pub value: String,
-    pub description: String,
     pub enabled: bool,
+    // These are not used during deserialization.
+    #[serde(default)]
+    pub description: String,
     #[serde(rename = "isSecret", default)]
     pub is_secret: bool,
+    #[serde(rename = "secretBackend", default)]
+    pub secret_backend: String,
 }

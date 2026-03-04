@@ -29,8 +29,8 @@ LightkeeperDialog {
     property int _buttonSize: 26
 
     title: `Configuration group: ${root.groupName}`
-    implicitWidth: 600
-    implicitHeight: 670
+    implicitWidth: 630
+    implicitHeight: 700
     standardButtons: Dialog.Cancel | Dialog.Ok
 
     Component.onCompleted: {
@@ -171,7 +171,8 @@ LightkeeperDialog {
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         connectorEditDialog.moduleId = modelData
-                                        connectorEditDialog.moduleSettings = root.groupConnectorSettings[modelData]
+                                        connectorEditDialog.moduleSettings =
+                                            LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
                                         connectorEditDialog.open()
                                     }
                                     flatButton: true
@@ -219,7 +220,7 @@ LightkeeperDialog {
                             }
 
                             SmallText {
-                                text: modelData.value
+                                text: modelData.isSecret === true ? "••••••" : modelData.value
                                 color: Theme.textColorDark
 
                                 Layout.fillWidth: true
@@ -321,7 +322,8 @@ LightkeeperDialog {
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         monitorEditDialog.moduleId = modelData
-                                        monitorEditDialog.moduleSettings = root.groupMonitorSettings[modelData]
+                                        monitorEditDialog.moduleSettings =
+                                            LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
                                         monitorEditDialog.open()
                                     }
                                     flatButton: true
@@ -368,7 +370,7 @@ LightkeeperDialog {
                             }
 
                             SmallText {
-                                text: modelData.value
+                                text: modelData.isSecret === true ? "••••••" : modelData.value
                                 color: Theme.textColorDark
 
                                 Layout.fillWidth: true
@@ -471,7 +473,8 @@ LightkeeperDialog {
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         commandEditDialog.moduleId = modelData
-                                        commandEditDialog.moduleSettings = root.groupCommandSettings[modelData]
+                                        commandEditDialog.moduleSettings =
+                                            LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
                                         commandEditDialog.open()
                                     }
                                     flatButton: true
@@ -518,7 +521,7 @@ LightkeeperDialog {
                             }
 
                             SmallText {
-                                text: modelData.value
+                                text: modelData.isSecret === true ? "••••••" : modelData.value
                                 color: Theme.textColorDark
 
                                 Layout.fillWidth: true

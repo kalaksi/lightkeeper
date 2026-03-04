@@ -68,6 +68,7 @@ pub fn init_resources() {
             "Dialog/LightkeeperDialog.qml",
             "Dialog/ModuleSettingsDialog.qml",
             "Dialog/PreferencesDialog.qml",
+            "Dialog/SecretEditDialog.qml",
             "Dialog/TextDialog.qml",
             "js/Parse.js",
             "js/TextTransform.js",

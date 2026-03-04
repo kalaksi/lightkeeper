@@ -57,8 +57,13 @@ pub fn set(key: &str, value: &str) -> Result<(), LkError> {
 
 pub fn delete(key: &str) -> Result<(), LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
-    entry.delete_credential()?;
-    Ok(())
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            log::warn!("Failed to remove keyring secret for {}: {}", key, error);
+            Err(error.into())
+        }
+    }
 }
 
 /// Keyring key for placeholder "keyring:SOURCE_ID". Works for any module and setting.

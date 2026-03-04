@@ -31,9 +31,10 @@
 - Prefer iterating with for..of or for..in instead of using indexes.
 - Avoid overly complicated width or height calculations.
 - When warranted, prefer functional style (map, filter, etc.) instead of imperative.
+- Prefer Columns and Rows instead of manually calculating positions and sizes.
 
 ## Icons
-- Icons are mostly copied from breeze in `vendor`-dir.
+- Icons should be copied from breeze in `vendor/breeze-icons-5.95.0`-dir.
 - Use size 22 for icons.
 
 # Web searches

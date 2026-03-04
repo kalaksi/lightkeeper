@@ -47,8 +47,8 @@ const PARTIAL_READ_TIMEOUT_MS: u32 = 2000;
       parallel_sessions => "Number of parallel login sessions. Improves performance. Default: 2.",
     },
     secrets={
-      password => "Password for the SSH connection. Stored as plaintext. Default: empty (not used).",
-      private_key_passphrase => "Passphrase for the private key file. Stored as plaintext. Default: empty.",
+      password => "Password for the SSH connection. Default: empty (not used).",
+      private_key_passphrase => "Passphrase for the private key file. Default: empty.",
     }
 )]
 /// SSH connection module. Manages parallel SSH sessions internally.
