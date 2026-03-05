@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="_internal-filebrowser-rm",
     version="0.0.1",
     description="Remove files on the remote host.",
+    uses_sudo=true,
 )]
 pub struct FileBrowserRm {
 }
@@ -56,7 +57,7 @@ impl CommandModule for FileBrowserRm {
         }
 
         let mut command = ShellCommand::new();
-        command.use_sudo = false;
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
         let mut args = vec!["rm", "--"];
         args.extend(parameters.iter().map(String::as_str));
         command.arguments(args);

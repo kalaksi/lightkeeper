@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="_internal-filebrowser-upload",
     version="0.0.1",
     description="Upload local files with rsync.",
+    uses_sudo=true,
 )]
 pub struct FileBrowserUpload {
 }

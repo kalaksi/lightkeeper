@@ -18,6 +18,7 @@ use serde_json::{json, Value};
     name="_internal-filebrowser-ls",
     version="0.0.1",
     description="List files and directories.",
+    uses_sudo=true,
 )]
 pub struct FileBrowserLs {
 }
@@ -48,7 +49,7 @@ impl CommandModule for FileBrowserLs {
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = false;
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();

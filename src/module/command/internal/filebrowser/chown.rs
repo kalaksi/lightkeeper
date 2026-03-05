@@ -70,7 +70,7 @@ impl CommandModule for FileBrowserChown {
         };
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
         command.arguments(vec!["chown", &owner_group, path]);
 
         Ok(command.to_string())

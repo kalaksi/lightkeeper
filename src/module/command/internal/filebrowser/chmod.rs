@@ -60,7 +60,7 @@ impl CommandModule for FileBrowserChmod {
         }
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
         command.arguments(vec!["chmod", mode, path]);
 
         Ok(command.to_string())

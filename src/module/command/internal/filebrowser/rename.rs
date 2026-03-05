@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="_internal-filebrowser-rename",
     version="0.0.1",
     description="Rename a file or directory on the remote host.",
+    uses_sudo=true,
 )]
 pub struct FileBrowserRename {
 }
@@ -65,7 +66,7 @@ impl CommandModule for FileBrowserRename {
         let new_path_str = new_path.to_string_lossy();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = false;
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
         command.arguments(vec!["mv", "-n", old_path, &new_path_str]);
 
         Ok(command.to_string())

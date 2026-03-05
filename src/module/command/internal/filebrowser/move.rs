@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     name="_internal-filebrowser-move",
     version="0.0.1",
     description="Move files or directories on the remote host.",
+    uses_sudo=true,
 )]
 pub struct FileBrowserMove {
 }
@@ -45,7 +46,7 @@ impl CommandModule for FileBrowserMove {
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = false;
+        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             if parameters.len() < 2 {
