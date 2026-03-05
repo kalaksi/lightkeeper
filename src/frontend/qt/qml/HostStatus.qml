@@ -14,14 +14,25 @@ import "Misc"
 Item {
     id: root
     required property string status
-    property var colors: {}
+    property var colors: ({})
+    property var secondaryColors: ({})
     property bool showIcon: true
     anchors.fill: parent
 
     Component.onCompleted: {
         colors = {
+            // Color in theme model was not good.
             up: "forestgreen",
-            down: "firebrick",
+            down: Theme.colorForCriticality("Error"),
+            pending: "orange",
+            unknown: Theme.colorForCriticality("NoData"),
+            _: "orange",
+        }
+        secondaryColors = {
+            up: "forestgreen",
+            down: Theme.colorForCriticality("Error"),
+            pending: "orange",
+            unknown: "orange",
             _: "orange",
         }
     }
@@ -38,7 +49,7 @@ Item {
             id: image
             antialiasing: true
             source: "qrc:/main/images/status/" + root.status
-            color: root.getColor(root.status)
+            color: root.getSecondaryColor(root.status)
             visible: root.showIcon
 
             Layout.leftMargin: root.showIcon ? 0.4 * parent.height : 0
@@ -51,7 +62,9 @@ Item {
         NormalText {
             text: root.status.toUpperCase()
             font.family: fontStatus.name
-            color: Theme.criticalityColor(root.status === "up" ? "normal" : root.status === "down" ? "error" : "_")
+            color: root.getColor(root.status)
+            // style: root.status === "unknown" ? Text.Outline : Text.Normal
+            styleColor: root.status === "unknown" ? root.getColor("pending") : "transparent"
 
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
@@ -59,9 +72,17 @@ Item {
     }
 
     function getColor(status) {
-        let result = colors[status]
+        let result = root.colors[status]
         if (typeof result === "undefined") {
-            return colors["_"]
+            return root.colors["_"]
+        }
+        return result
+    }
+
+    function getSecondaryColor(status) {
+        let result = root.secondaryColors[status]
+        if (typeof result === "undefined") {
+            return root.secondaryColors["_"]
         }
         return result
     }

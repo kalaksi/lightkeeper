@@ -88,6 +88,7 @@ fn convert_single(data_point: &DataPoint, display_options: &DisplayOptions) -> S
         },
         DisplayStyle::StatusUpDown => {
             match HostStatus::from_str(&data_point.value).unwrap_or_default() {
+                HostStatus::Unknown => "Unknown".to_string(),
                 HostStatus::Pending => "Pending".red().to_string(),
                 HostStatus::Up => "Up".green().to_string(),
                 HostStatus::Down => "Down".red().to_string(),
@@ -122,6 +123,7 @@ fn convert_multivalue(data_point: &DataPoint, display_options: &DisplayOptions) 
             },
             DisplayStyle::StatusUpDown => {
                 match HostStatus::from_str(&data_point.value).unwrap_or_default() {
+                    HostStatus::Unknown => "Unknown".to_string(),
                     HostStatus::Pending => "Pending".red().to_string(),
                     HostStatus::Up => "Up".to_string(),
                     HostStatus::Down => "Down".to_string(),

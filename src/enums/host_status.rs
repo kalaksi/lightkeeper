@@ -12,8 +12,8 @@ use serde_derive::{Deserialize, Serialize};
 #[derive(Serialize, Default, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum HostStatus {
-    Unknown,
     #[default]
+    Unknown,
     Pending,
     Up,
     Down,
