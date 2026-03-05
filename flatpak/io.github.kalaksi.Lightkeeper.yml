@@ -91,7 +91,8 @@ modules:
     sources:
       - type: git
         url: https://invent.kde.org/plasma/ksshaskpass.git
-        branch: Plasma/6.1
+        # branch: Plasma/6.6
+        commit: 67c43fee0d003e085b34fdeada468a0a5c8cf92e
   - name: lightkeeper
     buildsystem: simple
     sources:
