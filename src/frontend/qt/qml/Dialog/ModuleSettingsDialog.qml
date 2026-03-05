@@ -131,6 +131,7 @@ LightkeeperDialog {
                             visible: !(modelData.isSecret === true && rowLayout._revealedSecret !== "")
                             enabled: toggleSwitch.checked && modelData.isSecret !== true
                             readOnly: modelData.isSecret === true
+                            selectByMouse: modelData.isSecret !== true
                             placeholderText: toggleSwitch.checked ? "" : "unset"
                             placeholderTextColor: Theme.textColorDark
                             text: toggleSwitch.checked
@@ -156,6 +157,7 @@ LightkeeperDialog {
                             id: resolvedSecretField
                             visible: modelData.isSecret === true && rowLayout._revealedSecret !== ""
                             readOnly: true
+                            selectByMouse: false
                             text: rowLayout._revealedSecret
                             placeholderText: ""
 

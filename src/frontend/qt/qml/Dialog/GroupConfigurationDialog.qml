@@ -19,9 +19,9 @@ LightkeeperDialog {
     required property string groupName 
     property bool readOnly: false
     /// Module ID as key, array of settings as value.
-    property var groupConnectorSettings: {}
-    property var groupMonitorSettings: {}
-    property var groupCommandSettings: {}
+    property var groupConnectorSettings: ({})
+    property var groupMonitorSettings: ({})
+    property var groupCommandSettings: ({})
     property var _connectorList: []
     property var _monitorList: []
     property var _commandList: []
@@ -171,8 +171,9 @@ LightkeeperDialog {
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         connectorEditDialog.moduleId = modelData
+                                        let full = LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
                                         connectorEditDialog.moduleSettings =
-                                            LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
+                                            root.mergeModuleSettingsWithCache(full, root.groupConnectorSettings[modelData])
                                         connectorEditDialog.open()
                                     }
                                     flatButton: true
@@ -322,8 +323,9 @@ LightkeeperDialog {
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         monitorEditDialog.moduleId = modelData
+                                        let full = LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
                                         monitorEditDialog.moduleSettings =
-                                            LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
+                                            root.mergeModuleSettingsWithCache(full, root.groupMonitorSettings[modelData])
                                         monitorEditDialog.open()
                                     }
                                     flatButton: true
@@ -473,8 +475,9 @@ LightkeeperDialog {
                                     imageSource: "qrc:/main/images/button/entry-edit"
                                     onClicked: {
                                         commandEditDialog.moduleId = modelData
+                                        let full = LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
                                         commandEditDialog.moduleSettings =
-                                            LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
+                                            root.mergeModuleSettingsWithCache(full, root.groupCommandSettings[modelData])
                                         commandEditDialog.open()
                                     }
                                     flatButton: true
@@ -639,6 +642,21 @@ LightkeeperDialog {
             root._commandList = []
             root._commandList = temp
         }
+    }
+
+    function mergeModuleSettingsWithCache(fullSettings, cached) {
+        if (!cached || cached.length !== fullSettings.length) {
+            return fullSettings
+        }
+
+        for (let i = 0; i < fullSettings.length; i++) {
+            let found = cached.find(item => item.key === fullSettings[i].key)
+            if (found) {
+                fullSettings[i].value = found.value
+                fullSettings[i].enabled = found.enabled
+            }
+        }
+        return fullSettings
     }
 
     function refreshModel() {
