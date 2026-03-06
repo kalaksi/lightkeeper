@@ -415,8 +415,7 @@ impl Configuration {
                 .collect();
 
             for (key, placeholder_value) in to_resolve {
-                let source_id = &placeholder_value[secrets_manager::KEYRING_PREFIX.len()..];
-                let lookup_key = secrets_manager::secret_lookup_key(connector_id, source_id, &key);
+                let lookup_key = placeholder_value[secrets_manager::KEYRING_PREFIX.len()..].to_string();
 
                 match secrets.get(&lookup_key) {
                     Ok(Some(secret)) => {

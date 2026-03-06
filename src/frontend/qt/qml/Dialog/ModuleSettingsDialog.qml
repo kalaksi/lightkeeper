@@ -276,6 +276,7 @@ LightkeeperDialog {
                     row._secretSaveValue = value
                 }
                 row._lastSecretBackend = backend
+                row._revealedSecret = ""
             }
         }
 

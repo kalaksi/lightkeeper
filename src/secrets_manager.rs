@@ -50,7 +50,8 @@ pub fn get(key: &str) -> Result<Option<String>, LkError> {
 pub fn set(key: &str, value: &str) -> Result<(), LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
     entry.set_password(value)?;
-    let attrs = HashMap::from([("application", "lightkeeper")]);
+    let label = format!("lightkeeper/{}", key);
+    let attrs = HashMap::from([("application", "lightkeeper"), ("label", label.as_str())]);
     entry.update_attributes(&attrs)?;
     Ok(())
 }
