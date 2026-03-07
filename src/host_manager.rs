@@ -479,27 +479,21 @@ impl HostState {
         let critical_monitor = self.monitor_data.iter()
             .find(|(_, data)| data.is_critical && data.values.back().unwrap().criticality == Criticality::Critical);
 
-        // Status is "unknown" when no data yet; "pending" when waiting for critical monitor data.
-        let pending_critical_monitor = self.monitor_data.values()
-            .find(|data| data.is_critical && data.values.back().unwrap().criticality == Criticality::NoData);
-
-        let has_only_pending_monitors = self.monitor_data.values()
-            .all(|data| data.values.iter().all(|datapoint| datapoint.criticality == Criticality::NoData));
-
         if let Some((name, _)) = critical_monitor {
             log::debug!("Host is now down since monitor \"{}\" is at critical level", name);
         }
+
         self.status = if critical_monitor.is_some() {
             HostStatus::Down
         }
-        else if pending_critical_monitor.is_some() || !self.command_invocations.is_empty() {
+        else if self.is_initialized {
+            HostStatus::Up
+        }
+        else if !self.monitor_invocations.is_empty() {
             HostStatus::Pending
         }
-        else if has_only_pending_monitors {
-            HostStatus::Unknown
-        }
         else {
-            HostStatus::Up
+            HostStatus::Unknown
         };
     }
 }
