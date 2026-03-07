@@ -654,6 +654,12 @@ LightkeeperDialog {
             if (found) {
                 fullSettings[i].value = found.value
                 fullSettings[i].enabled = found.enabled
+                if (found.value.startsWith("keyring:")) {
+                    fullSettings[i].secretBackend = "keyring"
+                }
+                else {
+                    fullSettings[i].secretBackend = "plaintext"
+                }
             }
         }
         return fullSettings

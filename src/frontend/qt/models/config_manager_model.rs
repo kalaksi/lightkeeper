@@ -593,9 +593,11 @@ impl ConfigManagerModel {
         let module_settings = full_settings.into_iter().map(|(setting_key, description)| {
             let value = group_settings.get(setting_key).cloned().unwrap_or_default();
             let lookup_key = secret_lookup_key(&module_id, &source_id, setting_key);
-            let secret_backend = match value == format!("{}{}", KEYRING_PREFIX, lookup_key) {
-                true => "keyring",
-                false => "plaintext",
+            let keyring_placeholder = format!("{}{}", KEYRING_PREFIX, lookup_key);
+            let secret_backend = if value.is_empty() || value == keyring_placeholder {
+                "keyring"
+            } else {
+                "plaintext"
             };
 
             ModuleSetting {
