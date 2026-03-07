@@ -9,6 +9,7 @@ use keyring::Entry;
 use keyring::Error as KeyringError;
 
 use crate::error::LkError;
+use crate::utils::strip_unprintable;
 
 const SERVICE_NAME: &str = "lightkeeper";
 pub const KEYRING_PREFIX: &str = "keyring:";
@@ -38,7 +39,7 @@ impl SecretsManager {
 pub fn get(key: &str) -> Result<Option<String>, LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
     match entry.get_password() {
-        Ok(value) => Ok(Some(value)),
+        Ok(value) => Ok(Some(strip_unprintable(&value))),
         Err(KeyringError::NoEntry) => {
             log::warn!("Secret not found in keyring: {}", key);
             Ok(None)
@@ -48,8 +49,9 @@ pub fn get(key: &str) -> Result<Option<String>, LkError> {
 }
 
 pub fn set(key: &str, value: &str) -> Result<(), LkError> {
+    let value = strip_unprintable(value);
     let entry = Entry::new(SERVICE_NAME, key)?;
-    entry.set_password(value)?;
+    entry.set_password(&value)?;
     let label = format!("lightkeeper/{}", key);
     let attrs = HashMap::from([("application", "lightkeeper"), ("label", label.as_str())]);
     entry.update_attributes(&attrs)?;

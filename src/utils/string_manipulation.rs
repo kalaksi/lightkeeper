@@ -26,6 +26,10 @@ pub fn remove_whitespace<Stringable: ToString>(input: &Stringable) -> String {
     input.to_string().chars().filter(|&c| !c.is_whitespace()).collect()
 }
 
+pub fn strip_unprintable(s: &str) -> String {
+    s.chars().filter(|c| !c.is_control()).collect()
+}
+
 pub fn get_string_between<Stringable: ToString>(input: &Stringable, start: &str, end: &str) -> Option<String> {
     let input = input.to_string();
 
