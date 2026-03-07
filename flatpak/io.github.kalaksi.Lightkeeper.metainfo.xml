@@ -47,6 +47,18 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.36.0" date="2026-03-07">
+      <description>
+        <ul>
+          <li>Time period selection and alert indicator lines for charts</li> 
+          <li>Add keyring support for managing secrets</li> 
+          <li>Add ksshaskpass to flatpak</li> 
+          <li>Improve host status handling</li> 
+          <li>Remember split view ratio</li> 
+          <li>Other small improvements here and there</li> 
+        </ul>
+      </description>
+    </release>
     <release version="0.35.3" date="2026-02-28">
       <description>
         <ul>
