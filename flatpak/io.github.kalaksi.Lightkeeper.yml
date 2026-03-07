@@ -95,20 +95,20 @@ modules:
       - type: git
         url: https://github.com/frankosterfeld/qtkeychain.git
         # 0.15.0
-        commit: ad7344c45a86a4f66cbafc4b081b5f7b876cb0b7
+        commit: b051ead433ee30475642505068ee2901e7d23e41
   - name: ksshaskpass
     buildsystem: cmake-ninja
     sources:
       - type: git
         url: https://invent.kde.org/plasma/ksshaskpass.git
         # Plasma/6.6
-        commit: 67c43fee0d003e085b34fdeada468a0a5c8cf92e
+        commit: b051ead433ee30475642505068ee2901e7d23e41
   - name: lightkeeper
     buildsystem: simple
     sources:
       - type: archive
-        url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/v0.35.3.tar.gz
-        sha256: 7d00e4f28eeb70216333a4cf748739cbc94ec3fbbce3711af32af323f23771d2
+        url: https://github.com/kalaksi/lightkeeper/archive/refs/tags/v0.36.0.tar.gz
+        sha256: 488d84af78892be2f241ff416116d27fe7a8c290982879936b5f67b208d7af11
       - "cargo-sources.json"
     build-options:
       append-path: /usr/lib/sdk/rust-stable/bin
