@@ -77,8 +77,13 @@ impl CommandModule for FileBrowserRename {
             Ok(CommandResult::new_hidden(response.message_increment.clone()))
         }
         else {
-            Ok(CommandResult::new_hidden(response.message_increment.clone())
-                .with_criticality(crate::enums::Criticality::Error))
+            let msg = if response.message.is_empty() {
+                response.message_increment.clone()
+            }
+            else {
+                response.message.clone()
+            };
+            Ok(CommandResult::new_error(if msg.is_empty() { "Rename failed" } else { &msg }))
         }
     }
 }
