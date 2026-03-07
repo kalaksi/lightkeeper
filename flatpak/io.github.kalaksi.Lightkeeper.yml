@@ -86,12 +86,22 @@ modules:
         && git sparse-checkout set LICENSE src-min-noconflict
         && cd ../../../..
       - cp -a qml-lighthouse-components /app/qml-lighthouse-components
+  - name: qt6keychain
+    buildsystem: cmake-ninja
+    build-options:
+      config-opts:
+        - "-DBUILD_WITH_QT6=ON"
+    sources:
+      - type: git
+        url: https://github.com/frankosterfeld/qtkeychain.git
+        # 0.15.0
+        commit: ad7344c45a86a4f66cbafc4b081b5f7b876cb0b7
   - name: ksshaskpass
     buildsystem: cmake-ninja
     sources:
       - type: git
         url: https://invent.kde.org/plasma/ksshaskpass.git
-        # branch: Plasma/6.6
+        # Plasma/6.6
         commit: 67c43fee0d003e085b34fdeada468a0a5c8cf92e
   - name: lightkeeper
     buildsystem: simple
