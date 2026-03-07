@@ -126,6 +126,8 @@ pub struct DisplayOptions {
     /// TODO/XXX: Obsolete. Moved to Preferences.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub show_charts: bool,
+    #[serde(default = "DisplayOptions::default_main_view_split_ratio")]
+    pub main_view_split_ratio: f64,
 }
 
 impl Default for DisplayOptions {
@@ -138,6 +140,10 @@ impl Default for DisplayOptions {
 impl DisplayOptions {
     pub fn default_to_true() -> bool {
         true
+    }
+
+    fn default_main_view_split_ratio() -> f64 {
+        0.8
     }
 }
 
@@ -351,6 +357,7 @@ impl Configuration {
 
         // Exceptions. Allow some to be configurable.
         actual_display_options.show_status_bar = main_config.display_options.show_status_bar;
+        actual_display_options.main_view_split_ratio = main_config.display_options.main_view_split_ratio;
         main_config.display_options = actual_display_options;
 
         log::info!("Reading host configuration from {}", hosts_file_path.display());
@@ -678,6 +685,7 @@ impl Configuration {
                 let mut actual_display_options = get_default_main_config().display_options;
                 // Exceptions. Allow some to be configurable.
                 actual_display_options.show_status_bar = config.display_options.show_status_bar;
+                actual_display_options.main_view_split_ratio = config.display_options.main_view_split_ratio;
 
                 let config_without_display_options = Configuration {
                     preferences: config.preferences.clone(),

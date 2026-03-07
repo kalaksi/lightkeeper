@@ -283,10 +283,20 @@ ApplicationWindow {
         objectName: "body"
         anchors.fill: parent
         property real splitSize: 0.0
+        property bool _wasResizing: false
 
         SplitView {
+            id: mainSplitView
             anchors.fill: parent
             orientation: Qt.Vertical
+
+            onResizingChanged: {
+                // Save value after finished resizing.
+                if (body._wasResizing && !resizing) {
+                    LK.config.mainViewSplitRatio = hostDetailsLoader.height / body.height
+                }
+                body._wasResizing = resizing
+            }
 
             HostTable {
                 id: hostTable
@@ -312,7 +322,7 @@ ApplicationWindow {
                     }
 
                     onSelectionActivated: {
-                        body.splitSize = 0.8
+                        body.splitSize = LK.config.mainViewSplitRatio
                     }
 
                     onSelectionDeactivated: {
@@ -326,16 +336,16 @@ ApplicationWindow {
                 visible: body.splitSize > 0.01
                 width: parent.width
 
-                SplitView.minimumHeight: 0.5 * body.splitSize * body.height
+                SplitView.minimumHeight: 0.1 * body.height
                 SplitView.preferredHeight: body.splitSize * body.height
-                SplitView.maximumHeight: 1.5 * body.splitSize * body.height
+                SplitView.maximumHeight: 0.9 * body.height
             }
 
             Connections {
                 target: hostDetailsLoader.item
 
                 function onMinimizeClicked() {
-                    body.splitSize = 0.8
+                    body.splitSize = LK.config.mainViewSplitRatio
                 }
 
                 function onMaximizeClicked() {

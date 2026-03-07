@@ -40,6 +40,7 @@ pub struct ConfigManagerModel {
     // Called only from QML.
     showChartThresholdLines: qt_property!(bool; READ showChartThresholdLines WRITE setShowChartThresholdLines NOTIFY showChartThresholdLinesChanged),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
+    mainViewSplitRatio: qt_property!(f64; READ getMainViewSplitRatio WRITE setMainViewSplitRatio),
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
     getCurrentWorkDir: qt_method!(fn(&self) -> QString),
@@ -305,6 +306,18 @@ impl ConfigManagerModel {
             if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
                 self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
             }
+        }
+    }
+
+    fn getMainViewSplitRatio(&self) -> f64 {
+        self.main_config.display_options.main_view_split_ratio
+    }
+
+    fn setMainViewSplitRatio(&mut self, value: f64) {
+        self.main_config.display_options.main_view_split_ratio = value.clamp(0.2, 0.9);
+
+        if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
         }
     }
 
