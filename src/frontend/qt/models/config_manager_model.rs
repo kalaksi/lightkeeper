@@ -369,7 +369,9 @@ impl ConfigManagerModel {
     }
 
     fn cancelHostConfiguration(&mut self) {
-        self.hosts_config = self.hosts_config_backup.take().unwrap();
+        self.hosts_config = self.hosts_config_backup.take()
+            // Too risky to continue without restoring config.
+            .expect("Tried to cancel host configuration, but no config to restore");
     }
 
     // TODO: this is wrong way around, shouldn't modify config directly. 
