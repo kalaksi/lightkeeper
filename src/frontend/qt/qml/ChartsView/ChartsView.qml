@@ -20,8 +20,7 @@ import "../StyleOverride"
 Item {
     id: root
     property string hostId: ""
-    property int groupHeight: 300
-    property int chartHeight: 120
+    property int chartHeight: 180
     property int columnSpacing: Theme.spacingNormal
     property bool enableShortcuts: false
     property var _categories: ({})
@@ -203,13 +202,12 @@ Item {
                     id: groupBox
                     required property var modelData
                     property alias categoryName: groupBox.modelData
-                    property var _invocationIdToButton: {}
+                    property var _invocationIdToButton: ({})
 
                     leftPadding: Theme.spacingTight
                     rightPadding: Theme.spacingTight
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.minimumHeight: root.groupHeight
+                    Layout.preferredHeight: chartColumn.height
                     Layout.alignment: Qt.AlignTop
 
                     background: Rectangle {
@@ -231,7 +229,6 @@ Item {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
-                        anchors.bottom: parent.bottom
                         spacing: 0
                         columns: 2
 
@@ -250,7 +247,7 @@ Item {
                                 property var chartDatas: []
 
                                 width: chart.monitoringData.display_options.use_multivalue ? chartColumn.width : chartColumn.width / 2
-                                height: chartColumn.height
+                                height: chartGrid.height
 
                                 Connections {
                                     target: root
@@ -305,12 +302,12 @@ Item {
 
                                 Grid {
                                     id: chartGrid
-                                    anchors.fill: parent
+                                    width: parent.width
+                                    height: (root.chartHeight + Theme.spacingNormal) * rowCount
                                     columns: 2
                                     columnSpacing: Theme.spacingNormal
 
                                     property int rowCount: Math.ceil(chart.chartDatas.length / 2)
-                                    property real chartHeight: rowCount > 0 ? parent.height / rowCount : root.chartHeight
 
                                     Repeater {
                                         model: chart.chartDatas
@@ -322,7 +319,7 @@ Item {
                                             chartData: modelData.data
                                             title: modelData.label
                                             width: chartColumn.width / 2.05
-                                            height: chartGrid.chartHeight
+                                            height: root.chartHeight
                                             yLabel: chart.monitoringData.display_options.unit
                                             yMin: chart.monitoringData.display_options.value_min
                                             yMax: chart.monitoringData.display_options.value_max > 0 ?
