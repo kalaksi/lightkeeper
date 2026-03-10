@@ -63,7 +63,12 @@ pub struct CommandHandlerModel {
     confirmationDialogOpened: qt_signal!(text: QString, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList),
     commandOutputDialogOpened: qt_signal!(title: QString, invocation_id: u64),
     textViewOpened: qt_signal!(title: QString, invocation_id: u64),
-    textEditorViewOpened: qt_signal!(header_text: QString, invocation_id: u64, local_file_path: QString),
+    textEditorViewOpened: qt_signal!(
+        header_text: QString,
+        command_id: QString,
+        invocation_id: u64,
+        local_file_path: QString
+    ),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
     fileBrowserOpened: qt_signal!(directory: QString),
     commandOutputViewOpened: qt_signal!(invocation_id: u64, title: QString, text: QString, error_text: QString, progress: u32),
@@ -341,7 +346,12 @@ impl CommandHandlerModel {
 
                         let (invocation_id, file_contents) = self.command_handler.download_editable_file(&host_id, &command_id, &remote_file_path); 
                         let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_file_path);
-                        self.textEditorViewOpened(editor_header_text, invocation_id, QString::from(file_contents));
+                        self.textEditorViewOpened(
+                            editor_header_text,
+                            QString::from(command_id.clone()),
+                            invocation_id,
+                            QString::from(file_contents)
+                        );
                     }
                     else {
                         let local_file_path = self.command_handler.open_external_text_editor(&host_id, &command_id, &remote_file_path);
@@ -384,7 +394,12 @@ impl CommandHandlerModel {
             self.command_handler.download_editable_file(&host_id, &command_id, &remote_path);
         if invocation_id > 0 {
             let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_path);
-            self.textEditorViewOpened(editor_header_text, invocation_id, QString::from(local_file_path));
+            self.textEditorViewOpened(
+                editor_header_text,
+                QString::from(command_id.clone()),
+                invocation_id,
+                QString::from(local_file_path)
+            );
         }
     }
 

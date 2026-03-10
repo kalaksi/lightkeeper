@@ -103,9 +103,9 @@ Item {
         }
 
         // For integrated text editor (not external).
-        function onTextEditorViewOpened(commandId, invocationId, localFilePath) {
+        function onTextEditorViewOpened(headerText, commandId, invocationId, localFilePath) {
             let tabData = {
-                "title": commandId,
+                "title": headerText,
                 "component": textEditorView.createObject(root._tabStacks[root.hostId], {
                     commandId: commandId,
                     localFilePath: localFilePath,
