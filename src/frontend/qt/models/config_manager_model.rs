@@ -20,6 +20,7 @@ use crate::{
 
 #[allow(non_snake_case)]
 #[derive(QObject, Default)]
+#[allow(dead_code)]
 pub struct ConfigManagerModel {
     base: qt_base_class!(trait QObject),
 

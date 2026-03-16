@@ -13,7 +13,6 @@ use serde_derive::{Deserialize, Serialize};
 use serde_yaml;
 
 use crate::enums::EditMode;
-use crate::error::LkError;
 use crate::file_handler;
 use crate::host::HostSetting;
 use crate::module::PlatformInfo;
@@ -415,7 +414,7 @@ impl Configuration {
         effective: &mut ConfigGroup,
         secrets: &mut secrets_manager::SecretsManager,
     ) {
-        for (connector_id, connector_config) in effective.connectors.iter_mut() {
+        for (_connector_id, connector_config) in effective.connectors.iter_mut() {
             let to_resolve: Vec<(String, String)> = connector_config.settings.iter()
                 .filter(|(_, value)| value.starts_with(secrets_manager::KEYRING_PREFIX))
                 .map(|(key, value)| (key.clone(), value.clone()))
