@@ -384,6 +384,7 @@ impl ModuleFactory {
             (command::nixos::RebuildRollback::get_metadata(), command::nixos::RebuildRollback::new_command_module),
             (command::nixos::CollectGarbage::get_metadata(), command::nixos::CollectGarbage::new_command_module),
             (command::nixos::ChannelUpdate::get_metadata(), command::nixos::ChannelUpdate::new_command_module),
+            (command::nixos::EditConfiguration::get_metadata(), command::nixos::EditConfiguration::new_command_module),
             (command::storage::FileSpaceUsage::get_metadata(), command::storage::FileSpaceUsage::new_command_module),
             (command::storage::FileBrowser::get_metadata(), command::storage::FileBrowser::new_command_module),
             (command::storage::lvm::Snapshot::get_metadata(), command::storage::lvm::Snapshot::new_command_module),

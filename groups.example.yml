@@ -51,6 +51,7 @@ groups:
       nixos-rebuild-generations: {}
     commands:
       nixos-channel-update: {}
+      nixos-edit-configuration: {}
       nixos-rebuild-dryrun: {}
       nixos-rebuild-switch: {}
       nixos-rebuild-boot: {}

@@ -262,6 +262,12 @@ impl CommandHandler {
     // INTEGRATED COMMANDS
     //
 
+    pub fn get_connector_message(&self, host_id: &String, command_id: &String) -> Option<String> {
+        let commands = self.commands.lock().ok()?;
+        let host = self.host_manager.borrow().get_host(host_id);
+        get_command_connector_messages(&host, &commands[host_id][command_id], &[]).ok()?.into_iter().next()
+    }
+
     pub fn download_editable_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> (u64, String) {
         let Ok(commands) = self.commands.lock() else {
             self.send_state_update(StateUpdateMessage::fatal_error());

@@ -40,7 +40,7 @@ display_options:
       priority: 2
       icon: "qrc:///main/images/nixos"
       color: "#804d70b8"
-      command_order: ["nixos-collectgarbage", "nixos-channel-update", "nixos-rebuild-dryrun", "nixos-rebuild-switch"]
+      command_order: ["nixos-edit-configuration", "nixos-collectgarbage", "nixos-channel-update", "nixos-rebuild-dryrun", "nixos-rebuild-switch"]
     storage:
       priority: 3
       icon: "qrc:///main/images/harddisk"

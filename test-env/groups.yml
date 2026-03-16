@@ -76,6 +76,7 @@ groups:
       nixos-rebuild-generations: {}
     commands:
       nixos-channel-update: {}
+      nixos-edit-configuration: {}
       nixos-collectgarbage: {}
       nixos-rebuild-boot: {}
       nixos-rebuild-dryrun: {}

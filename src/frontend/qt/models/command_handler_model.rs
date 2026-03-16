@@ -328,7 +328,16 @@ impl CommandHandlerModel {
                 self.fileBrowserOpened(directory)
             },
             UIAction::TextEditor => {
-                let remote_file_path = parameters.first().unwrap().clone();
+                // Commands with parent monitors receive file path as a parameter, but category-level
+                // commands don't. They should return it in `get_connector_message()`.
+                let remote_file_path = if let Some(path) = parameters.first().cloned() {
+                    path
+                } else if let Some(path) = self.command_handler.get_connector_message(&host_id, &command_id) {
+                    path
+                } else {
+                    return;
+                };
+
                 if self.configuration.preferences.use_remote_editor {
                     if self.configuration.preferences.terminal == configuration::INTERNAL {
                         let command = self.command_handler.open_remote_text_editor(&host_id, &remote_file_path);

@@ -20,3 +20,6 @@ pub use channel_update::ChannelUpdate;
 
 pub mod rebuild_rollback;
 pub use rebuild_rollback::RebuildRollback;
+
+pub mod edit_configuration;
+pub use edit_configuration::EditConfiguration;
