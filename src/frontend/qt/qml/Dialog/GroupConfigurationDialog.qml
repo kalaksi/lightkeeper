@@ -644,6 +644,7 @@ LightkeeperDialog {
         }
     }
 
+    // TODO: move implementation to config-backend?
     function mergeModuleSettingsWithCache(fullSettings, cached) {
         if (!cached || cached.length !== fullSettings.length) {
             return fullSettings
@@ -654,7 +655,7 @@ LightkeeperDialog {
             if (found) {
                 fullSettings[i].value = found.value
                 fullSettings[i].enabled = found.enabled
-                if (found.value.startsWith("keyring:")) {
+                if (found.value.startsWith("keyring:") || found.value.startsWith("pkeyring:")) {
                     fullSettings[i].secretBackend = "keyring"
                 }
                 else {

@@ -251,6 +251,10 @@ ApplicationWindow {
         function onHostConfigurationChanged() {
             root.hostDetails.refresh()
         }
+
+        function onError(message) {
+            snackbarContainer.addSnackbar("Error", message)
+        }
     }
 
     Component.onCompleted: {
@@ -267,6 +271,11 @@ ApplicationWindow {
 
         // Starts the thread that receives portal responses from D-Bus.
         DesktopPortal.receiveResponses()
+
+        let incompatibleSecretsWarning = LK.config.checkIncompatibleSecrets()
+        if (incompatibleSecretsWarning !== "") {
+            snackbarContainer.addSnackbar("Warning", incompatibleSecretsWarning)
+        }
 
         if (LK.hosts.refresh_hosts_on_start()) {
             LK.command.forceInitializeHosts()

@@ -429,12 +429,23 @@ impl Configuration {
                     }
                     Ok(None) => {
                         log::warn!("Keyring secret not found for {}", lookup_key);
-                        connector_config.settings.insert(key, format!("{}{}", secrets_manager::KEYRING_PREFIX, "error"));
+                        connector_config.settings.insert(key, format!("{}error", secrets_manager::KEYRING_PREFIX));
                     }
                     Err(e) => {
                         log::warn!("Failed to get keyring secret for {}: {}", lookup_key, e);
                     }
                 }
+            }
+
+            // Mark settings that use an incompatible secrets backend as errors.
+            let incompatible: Vec<String> = connector_config.settings.iter()
+                .filter(|(_, value)| value.starts_with(secrets_manager::INACTIVE_KEYRING_PREFIX))
+                .map(|(key, _)| key.clone())
+                .collect();
+
+            for key in incompatible {
+                log::warn!("Secret '{}' uses an incompatible keyring backend", key);
+                connector_config.settings.insert(key, format!("{}error", secrets_manager::KEYRING_PREFIX));
             }
         }
     }

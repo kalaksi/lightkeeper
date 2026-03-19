@@ -267,8 +267,8 @@ LightkeeperDialog {
 
                 if (backend === "keyring" && value !== "") {
                     let placeholder = LK.config.storeGroupSecret(root.groupName, root.moduleId, key, value)
-                    // Valid placeholder is lookup key (e.g. "ssh:group:id:key"); error return is "keyring:error"
-                    if (placeholder !== "keyring:error") {
+                    // Errors also result in empty string.
+                    if (placeholder !== "") {
                         row._secretSaveValue = placeholder
                     }
                 }

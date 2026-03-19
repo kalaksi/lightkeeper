@@ -10,7 +10,8 @@ use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use crate::secrets_manager::{self, secret_lookup_key, KEYRING_PREFIX};
+use crate::secrets_manager;
+use crate::secrets_manager::*;
 use crate::{
     configuration::{self, Configuration, Groups, HostSettings, Hosts},
     enums::EditMode,
@@ -27,8 +28,7 @@ pub struct ConfigManagerModel {
     //
     // Signals
     //
-    // TODO: use this? implement in some other way?
-    fileError: qt_signal!(config_dir: QString, error_message: QString),
+    error: qt_signal!(message: QString),
     hostConfigurationChanged: qt_signal!(),
     showChartThresholdLinesChanged: qt_signal!(),
 
@@ -112,6 +112,7 @@ pub struct ConfigManagerModel {
     storeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
     getGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString),
     removeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString)),
+    checkIncompatibleSecrets: qt_method!(fn(&self) -> QString),
 
 
     config_dir: String,
@@ -228,7 +229,7 @@ impl ConfigManagerModel {
         }
 
         if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
-            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.error(QString::from(error.to_string()));
         }
     }
 
@@ -265,7 +266,7 @@ impl ConfigManagerModel {
         self.hosts_config.certificate_monitors.push(domain.to_string());
 
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
-            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.error(QString::from(error.to_string()));
         }
     }
 
@@ -273,7 +274,7 @@ impl ConfigManagerModel {
         self.hosts_config.certificate_monitors.retain(|monitor_domain| monitor_domain != &domain.to_string());
 
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
-            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.error(QString::from(error.to_string()));
         }
     }
 
@@ -290,7 +291,7 @@ impl ConfigManagerModel {
             self.main_config.preferences.show_charts = show_charts;
 
             if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
-                self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+                self.error(QString::from(error.to_string()));
             }
         }
     }
@@ -305,7 +306,7 @@ impl ConfigManagerModel {
             self.showChartThresholdLinesChanged();
 
             if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
-                self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+                self.error(QString::from(error.to_string()));
             }
         }
     }
@@ -318,7 +319,7 @@ impl ConfigManagerModel {
         self.main_config.display_options.main_view_split_ratio = value.clamp(0.2, 0.9);
 
         if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
-            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.error(QString::from(error.to_string()));
         }
     }
 
@@ -353,7 +354,7 @@ impl ConfigManagerModel {
             }
 
             if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
-                self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+                self.error(QString::from(error.to_string()));
                 false
             }
             else {
@@ -381,14 +382,14 @@ impl ConfigManagerModel {
     fn endHostConfiguration(&mut self) {
         self.hosts_config_backup = None;
         if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
-            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.error(QString::from(error.to_string()));
         }
         self.hostConfigurationChanged();
     }
 
     fn writeGroupConfiguration(&mut self) {
         if let Err(error) = Configuration::write_groups_config(&self.config_dir, &self.groups_config) {
-            self.fileError(QString::from(self.config_dir.clone()), QString::from(error.to_string()));
+            self.error(QString::from(error.to_string()));
         }
     }
 
@@ -592,12 +593,11 @@ impl ConfigManagerModel {
             .collect::<Vec<_>>();
         full_settings.sort_by_key(|(key, _)| key.to_lowercase());
 
-        let source_id = format!("group:{}", group_id);
         let module_settings = full_settings.into_iter().map(|(setting_key, description)| {
             let value = group_settings.get(setting_key).cloned().unwrap_or_default();
-            let lookup_key = secret_lookup_key(&module_id, &source_id, setting_key);
-            let keyring_placeholder = format!("{}{}", KEYRING_PREFIX, lookup_key);
-            let secret_backend = if value.is_empty() || value == keyring_placeholder {
+            let secret_backend = if value.is_empty()
+                || value.starts_with(PORTAL_KEYRING_PREFIX)
+                || value.starts_with(NATIVE_KEYRING_PREFIX) {
                 "keyring"
             } else {
                 "plaintext"
@@ -678,7 +678,8 @@ impl ConfigManagerModel {
 
         if let Err(e) = secrets_manager::set(&lookup_key, &secret_value) {
             ::log::warn!("Failed to store secret for {} {}: {}", module_id, setting_key, e);
-            return QString::from(format!("{}{}", KEYRING_PREFIX, "error"));
+            self.error(QString::from(format!("Failed to store secret: {}", e)));
+            return QString::default();
         }
 
         QString::from(format!("{}{}", KEYRING_PREFIX, lookup_key))
@@ -689,7 +690,11 @@ impl ConfigManagerModel {
         let lookup_key = secret_lookup_key(&module_id.to_string(), &source_id, &setting_key.to_string());
         match secrets_manager::get(&lookup_key) {
             Ok(Some(value)) => QString::from(value),
-            _ => QString::from(format!("{}{}", KEYRING_PREFIX, "error")),
+            Ok(None) => QString::default(),
+            Err(e) => {
+                self.error(QString::from(format!("Failed to retrieve secret: {}", e)));
+                QString::default()
+            }
         }
     }
 
@@ -697,6 +702,29 @@ impl ConfigManagerModel {
         let source_id = format!("group:{}", group_id.to_string());
         let lookup_key = secret_lookup_key(&module_id.to_string(), &source_id, &setting_key.to_string());
         let _ = secrets_manager::delete(&lookup_key);
+    }
+
+    /// Returns a warning message if any group settings reference an incompatible secrets backend.
+    fn checkIncompatibleSecrets(&self) -> QString {
+        let mut affected = Vec::new();
+        for (group_id, group) in &self.groups_config.groups {
+            for (connector_id, connector) in &group.connectors {
+                for (key, value) in &connector.settings {
+                    if value.starts_with(INACTIVE_KEYRING_PREFIX) {
+                        affected.push(format!("{}/{}/{}", group_id, connector_id, key));
+                    }
+                }
+            }
+        }
+
+        if affected.is_empty() {
+            QString::default()
+        } else {
+            QString::from(format!(
+                "Some secrets use an incompatible keyring backend and need to be re-entered: {}",
+                affected.join(", ")
+            ))
+        }
     }
 
     /// Settings should contain JSON serialized hashmaps. Module ID as key and list of ModuleSetting as value.

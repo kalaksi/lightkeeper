@@ -17,7 +17,18 @@ use crate::error::LkError;
 use crate::utils::strip_unprintable;
 
 const SERVICE_NAME: &str = "lightkeeper";
-pub const KEYRING_PREFIX: &str = "keyring:";
+pub const NATIVE_KEYRING_PREFIX: &str = "keyring:";
+pub const PORTAL_KEYRING_PREFIX: &str = "pkeyring:";
+
+#[cfg(not(feature = "flatpak"))]
+pub const KEYRING_PREFIX: &str = NATIVE_KEYRING_PREFIX;
+#[cfg(feature = "flatpak")]
+pub const KEYRING_PREFIX: &str = PORTAL_KEYRING_PREFIX;
+
+#[cfg(not(feature = "flatpak"))]
+pub const INACTIVE_KEYRING_PREFIX: &str = PORTAL_KEYRING_PREFIX;
+#[cfg(feature = "flatpak")]
+pub const INACTIVE_KEYRING_PREFIX: &str = NATIVE_KEYRING_PREFIX;
 
 #[cfg(feature = "flatpak")]
 static TOKIO_RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
