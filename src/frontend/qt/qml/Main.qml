@@ -284,6 +284,7 @@ ApplicationWindow {
         anchors.fill: parent
         property real splitSize: 0.0
         property bool _wasResizing: false
+        property bool _animateSplit: true
 
         SplitView {
             id: mainSplitView
@@ -291,9 +292,15 @@ ApplicationWindow {
             orientation: Qt.Vertical
 
             onResizingChanged: {
-                // Save value after finished resizing.
                 if (body._wasResizing && !resizing) {
-                    LK.config.mainViewSplitRatio = hostDetailsLoader.height / body.height
+                    let ratio = hostDetailsLoader.height / body.height
+                    // Temporarily disable animation so animation doesn't restart when setting splitSize.
+                    body._animateSplit = false
+                    body.splitSize = ratio
+                    body._animateSplit = true
+
+                    // Save value after finished resizing.
+                    LK.config.mainViewSplitRatio = ratio
                 }
                 body._wasResizing = resizing
             }
@@ -363,6 +370,7 @@ ApplicationWindow {
         }
 
         Behavior on splitSize {
+            enabled: body._animateSplit
             NumberAnimation {
                 duration: Theme.animationDuration
                 easing.type: Easing.OutQuad
