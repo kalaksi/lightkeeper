@@ -34,4 +34,4 @@ if [ ! -z "$(git status -s)" ]; then
         src/file_handler.rs
 fi
 
-cargo build
+cargo build --features flatpak

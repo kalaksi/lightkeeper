@@ -41,6 +41,11 @@ ssh2 = { version = "0.9.5", features = ["vendored-openssl"] }
 
 lightkeeper_module = { path = "macros/lightkeeper_module" }
 keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
+oo7 = { version = "0.6", optional = true }
+tokio = { version = "1", optional = true, features = ["rt"] }
+
+[features]
+flatpak = ["dep:oo7", "dep:tokio"]
 
 # [dev-dependencies]
 # notify = { version = "7.0.0" }

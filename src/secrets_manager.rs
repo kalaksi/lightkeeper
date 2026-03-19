@@ -5,14 +5,40 @@
 
 use std::collections::HashMap;
 
+#[cfg(not(feature = "flatpak"))]
 use keyring::Entry;
+#[cfg(not(feature = "flatpak"))]
 use keyring::Error as KeyringError;
+
+#[cfg(feature = "flatpak")]
+use std::sync::OnceLock;
 
 use crate::error::LkError;
 use crate::utils::strip_unprintable;
 
 const SERVICE_NAME: &str = "lightkeeper";
 pub const KEYRING_PREFIX: &str = "keyring:";
+
+#[cfg(feature = "flatpak")]
+static TOKIO_RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+#[cfg(feature = "flatpak")]
+static OO7_KEYRING: OnceLock<oo7::Keyring> = OnceLock::new();
+
+#[cfg(feature = "flatpak")]
+fn runtime() -> &'static tokio::runtime::Runtime {
+    TOKIO_RUNTIME.get_or_init(|| {
+        tokio::runtime::Runtime::new().expect("Failed to create tokio runtime")
+    })
+}
+
+#[cfg(feature = "flatpak")]
+fn keyring() -> &'static oo7::Keyring {
+    OO7_KEYRING.get_or_init(|| {
+        runtime().block_on(async {
+            oo7::Keyring::new().await.expect("Failed to initialize oo7 keyring")
+        })
+    })
+}
 
 pub struct SecretsManager {
     cache: HashMap<String, Option<String>>,
@@ -36,6 +62,7 @@ impl SecretsManager {
     }
 }
 
+#[cfg(not(feature = "flatpak"))]
 pub fn get(key: &str) -> Result<Option<String>, LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
     match entry.get_password() {
@@ -48,6 +75,27 @@ pub fn get(key: &str) -> Result<Option<String>, LkError> {
     }
 }
 
+#[cfg(feature = "flatpak")]
+pub fn get(key: &str) -> Result<Option<String>, LkError> {
+    let attributes = [("service", SERVICE_NAME), ("key", key)];
+    let items = runtime().block_on(keyring().search_items(&attributes))?;
+    match items.first() {
+        Some(item) => {
+            let secret = runtime().block_on(item.secret())?;
+            let value = match &secret {
+                oo7::Secret::Text(text) => text.clone(),
+                oo7::Secret::Blob(bytes) => String::from_utf8_lossy(bytes).to_string(),
+            };
+            Ok(Some(strip_unprintable(&value)))
+        }
+        None => {
+            log::warn!("Secret not found in keyring: {}", key);
+            Ok(None)
+        }
+    }
+}
+
+#[cfg(not(feature = "flatpak"))]
 pub fn set(key: &str, value: &str) -> Result<(), LkError> {
     let value = strip_unprintable(value);
     let entry = Entry::new(SERVICE_NAME, key)?;
@@ -58,6 +106,16 @@ pub fn set(key: &str, value: &str) -> Result<(), LkError> {
     Ok(())
 }
 
+#[cfg(feature = "flatpak")]
+pub fn set(key: &str, value: &str) -> Result<(), LkError> {
+    let value = strip_unprintable(value);
+    let label = format!("lightkeeper/{}", key);
+    let attributes = [("service", SERVICE_NAME), ("key", key)];
+    runtime().block_on(keyring().create_item(&label, &attributes, oo7::Secret::text(&value), true))?;
+    Ok(())
+}
+
+#[cfg(not(feature = "flatpak"))]
 pub fn delete(key: &str) -> Result<(), LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
     match entry.delete_credential() {
@@ -69,14 +127,29 @@ pub fn delete(key: &str) -> Result<(), LkError> {
     }
 }
 
+#[cfg(feature = "flatpak")]
+pub fn delete(key: &str) -> Result<(), LkError> {
+    let attributes = [("service", SERVICE_NAME), ("key", key)];
+    runtime().block_on(keyring().delete(&attributes))?;
+    Ok(())
+}
+
 /// Keyring key for placeholder "keyring:SOURCE_ID". Works for any module and setting.
 /// source_id is "group:<id>" or "host:<id>".
 pub fn secret_lookup_key(connector_id: &str, source_id: &str, setting_key: &str) -> String {
     format!("{}:{}:{}", connector_id, source_id, setting_key)
 }
 
+#[cfg(not(feature = "flatpak"))]
 impl From<KeyringError> for LkError {
     fn from(e: KeyringError) -> Self {
+        LkError::other(e.to_string())
+    }
+}
+
+#[cfg(feature = "flatpak")]
+impl From<oo7::Error> for LkError {
+    fn from(e: oo7::Error) -> Self {
         LkError::other(e.to_string())
     }
 }
