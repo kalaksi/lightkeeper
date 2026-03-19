@@ -116,7 +116,7 @@ modules:
         CARGO_HOME: /run/build/lightkeeper/cargo
     build-commands:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
-      - cargo --offline build --release --features flatpak --verbose
+      - cargo --offline build --release --no-default-features --features flatpak --verbose
       - install -Dm755 ./target/release/lightkeeper -t /app/bin
       - install -Dm644 ./flatpak/${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo
       - install -Dm644 ./flatpak/${FLATPAK_ID}.desktop -t /app/share/applications

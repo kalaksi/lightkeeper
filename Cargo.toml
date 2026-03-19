@@ -8,6 +8,8 @@ name = "lightkeeper"
 path = "src/main.rs"
 
 [dependencies]
+lightkeeper_module = { path = "macros/lightkeeper_module" }
+
 oping = "0.4.0"
 dbus = "0.9.7"
 clap = { version = "4.5.42", features = ["derive"] }
@@ -39,14 +41,15 @@ openssl = { version = "0.10.73", features = ["vendored"] }
 notify = { version = "7.0.0" }
 ssh2 = { version = "0.9.5", features = ["vendored-openssl"] }
 
-lightkeeper_module = { path = "macros/lightkeeper_module" }
-keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
-
+# Used for multi-platform non-flatpak secrets management.
+keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"], optional = true }
 # Used for Flatpak secrets management through portal service.
 oo7 = { version = "0.6", optional = true }
 tokio = { version = "1", optional = true, features = ["rt"] }
 
 [features]
+default = ["native"]
+native = ["dep:keyring"]
 flatpak = ["dep:oo7", "dep:tokio"]
 
 # [dev-dependencies]

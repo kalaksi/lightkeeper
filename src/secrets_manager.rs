@@ -5,9 +5,9 @@
 
 use std::collections::HashMap;
 
-#[cfg(not(feature = "flatpak"))]
+#[cfg(feature = "native")]
 use keyring::Entry;
-#[cfg(not(feature = "flatpak"))]
+#[cfg(feature = "native")]
 use keyring::Error as KeyringError;
 
 #[cfg(feature = "flatpak")]
@@ -20,12 +20,12 @@ const SERVICE_NAME: &str = "lightkeeper";
 pub const NATIVE_KEYRING_PREFIX: &str = "keyring:";
 pub const PORTAL_KEYRING_PREFIX: &str = "pkeyring:";
 
-#[cfg(not(feature = "flatpak"))]
+#[cfg(feature = "native")]
 pub const KEYRING_PREFIX: &str = NATIVE_KEYRING_PREFIX;
 #[cfg(feature = "flatpak")]
 pub const KEYRING_PREFIX: &str = PORTAL_KEYRING_PREFIX;
 
-#[cfg(not(feature = "flatpak"))]
+#[cfg(feature = "native")]
 pub const INACTIVE_KEYRING_PREFIX: &str = PORTAL_KEYRING_PREFIX;
 #[cfg(feature = "flatpak")]
 pub const INACTIVE_KEYRING_PREFIX: &str = NATIVE_KEYRING_PREFIX;
@@ -73,7 +73,7 @@ impl SecretsManager {
     }
 }
 
-#[cfg(not(feature = "flatpak"))]
+#[cfg(feature = "native")]
 pub fn get(key: &str) -> Result<Option<String>, LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
     match entry.get_password() {
@@ -106,7 +106,7 @@ pub fn get(key: &str) -> Result<Option<String>, LkError> {
     }
 }
 
-#[cfg(not(feature = "flatpak"))]
+#[cfg(feature = "native")]
 pub fn set(key: &str, value: &str) -> Result<(), LkError> {
     let value = strip_unprintable(value);
     let entry = Entry::new(SERVICE_NAME, key)?;
@@ -126,7 +126,7 @@ pub fn set(key: &str, value: &str) -> Result<(), LkError> {
     Ok(())
 }
 
-#[cfg(not(feature = "flatpak"))]
+#[cfg(feature = "native")]
 pub fn delete(key: &str) -> Result<(), LkError> {
     let entry = Entry::new(SERVICE_NAME, key)?;
     match entry.delete_credential() {
@@ -151,7 +151,7 @@ pub fn secret_lookup_key(connector_id: &str, source_id: &str, setting_key: &str)
     format!("{}:{}:{}", connector_id, source_id, setting_key)
 }
 
-#[cfg(not(feature = "flatpak"))]
+#[cfg(feature = "native")]
 impl From<KeyringError> for LkError {
     fn from(e: KeyringError) -> Self {
         LkError::other(e.to_string())
