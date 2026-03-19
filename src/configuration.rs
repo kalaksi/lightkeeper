@@ -40,6 +40,9 @@ pub struct Configuration {
     pub cache_settings: Option<serde_yaml::Value>,
     #[serde(default)]
     pub schema_version: Option<u16>,
+    /// Configuration errors. Will be shown to the user in the UI.
+    #[serde(skip)]
+    pub config_errors: Vec<String>,
 }
 
 impl Default for Preferences {
@@ -407,6 +410,19 @@ impl Configuration {
             Self::resolve_secrets_in_effective_config(&mut host_config.effective, &mut secrets);
         }
 
+        for (group_id, group) in &all_groups.groups {
+            for (connector_id, connector) in &group.connectors {
+                for (key, value) in &connector.settings {
+                    if value.starts_with(secrets_manager::INACTIVE_KEYRING_PREFIX) {
+                        main_config.config_errors.push(format!(
+                            "Secret '{}/{}/{}' uses an incompatible keyring backend and needs to be re-entered",
+                            group_id, connector_id, key
+                        ));
+                    }
+                }
+            }
+        }
+
         Ok((main_config, hosts, all_groups))
     }
 
@@ -702,6 +718,7 @@ impl Configuration {
                     cache_settings: config.cache_settings.clone(),
                     display_options: actual_display_options,
                     schema_version: config.schema_version.clone(),
+                    config_errors: Vec::new(),
                 };
 
                 let main_config = serde_yaml::to_string(&config_without_display_options)

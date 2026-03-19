@@ -112,7 +112,7 @@ pub struct ConfigManagerModel {
     storeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
     getGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString),
     removeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString)),
-    checkIncompatibleSecrets: qt_method!(fn(&self) -> QString),
+    checkConfigErrors: qt_method!(fn(&self) -> QStringList),
 
 
     config_dir: String,
@@ -704,27 +704,9 @@ impl ConfigManagerModel {
         let _ = secrets_manager::delete(&lookup_key);
     }
 
-    /// Returns a warning message if any group settings reference an incompatible secrets backend.
-    fn checkIncompatibleSecrets(&self) -> QString {
-        let mut affected = Vec::new();
-        for (group_id, group) in &self.groups_config.groups {
-            for (connector_id, connector) in &group.connectors {
-                for (key, value) in &connector.settings {
-                    if value.starts_with(INACTIVE_KEYRING_PREFIX) {
-                        affected.push(format!("{}/{}/{}", group_id, connector_id, key));
-                    }
-                }
-            }
-        }
-
-        if affected.is_empty() {
-            QString::default()
-        } else {
-            QString::from(format!(
-                "Some secrets use an incompatible keyring backend and need to be re-entered: {}",
-                affected.join(", ")
-            ))
-        }
+    /// Returns a list of configuration errors, if any.
+    fn checkConfigErrors(&self) -> QStringList {
+        QStringList::from_iter(self.main_config.config_errors.iter().map(|e| QString::from(e.as_str())))
     }
 
     /// Settings should contain JSON serialized hashmaps. Module ID as key and list of ModuleSetting as value.

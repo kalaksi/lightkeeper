@@ -76,6 +76,7 @@ pub struct CommandHandlerModel {
     commandExecuted: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
     hostInitializing: qt_signal!(host_id: QString),
+    error: qt_signal!(message: QString),
 
     //
     // Private properties
@@ -441,17 +442,42 @@ impl CommandHandlerModel {
         self.command_handler.verify_host_key(&host_id, &connector_id, &key_id);
     }
 
+    fn check_config_errors(&self) -> bool {
+        if self.configuration.config_errors.is_empty() {
+            return false;
+        }
+
+        for error in &self.configuration.config_errors {
+            let message = format!("Configuration error: {}", error);
+            self.error(QString::from(message));
+        }
+
+        true
+    }
+
     fn initializeHost(&mut self, host_id: QString) {
+        if self.check_config_errors() {
+            return;
+        }
+
         self.monitor_manager.refresh_platform_info(&host_id.to_string());
         self.hostInitializing(host_id);
     }
 
     fn forceInitializeHost(&mut self, host_id: QString) {
+        if self.check_config_errors() {
+            return;
+        }
+
         self.monitor_manager.refresh_platform_info(&host_id.to_string());
         self.hostInitializing(host_id);
     }
 
     fn forceInitializeHosts(&mut self) {
+        if self.check_config_errors() {
+            return;
+        }
+
         let host_ids = self.monitor_manager.refresh_platform_info_all();
         for host_id in host_ids {
             self.hostInitializing(QString::from(host_id));
@@ -460,6 +486,10 @@ impl CommandHandlerModel {
 
     // Finds related monitors for a command and refresh them.
     fn refreshMonitorsOfCommand(&mut self, host_id: QString, command_id: QString) -> QVariantList  {
+        if self.check_config_errors() {
+            return QVariantList::default();
+        }
+
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
 
@@ -488,11 +518,19 @@ impl CommandHandlerModel {
     }
 
     fn refreshMonitorsOfCategory(&mut self, host_id: QString, category: QString) -> QVariantList {
+        if self.check_config_errors() {
+            return QVariantList::default();
+        }
+
         let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
         QVariantList::from_iter(invocation_ids)
     }
 
     fn refreshCertificateMonitors(&mut self) -> QVariantList {
+        if self.check_config_errors() {
+            return QVariantList::default();
+        }
+
         let invocation_ids = self.monitor_manager.refresh_certificate_monitors();
         QVariantList::from_iter(invocation_ids)
     }

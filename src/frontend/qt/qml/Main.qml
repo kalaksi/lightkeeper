@@ -230,6 +230,10 @@ ApplicationWindow {
                 (inputValues) => LK.command.executeConfirmed(buttonId, hostId, commandId, commandParams.concat(inputValues))
             )
         }
+
+        function onError(message) {
+            snackbarContainer.addSnackbar("Error", message)
+        }
     }
 
     Connections {
@@ -272,9 +276,8 @@ ApplicationWindow {
         // Starts the thread that receives portal responses from D-Bus.
         DesktopPortal.receiveResponses()
 
-        let incompatibleSecretsWarning = LK.config.checkIncompatibleSecrets()
-        if (incompatibleSecretsWarning !== "") {
-            snackbarContainer.addSnackbar("Warning", incompatibleSecretsWarning)
+        for (let error of LK.config.checkConfigErrors()) {
+            snackbarContainer.addSnackbar("Error", "Configuration error: " + error)
         }
 
         if (LK.hosts.refresh_hosts_on_start()) {
