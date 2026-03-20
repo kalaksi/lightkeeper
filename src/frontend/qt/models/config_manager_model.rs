@@ -701,6 +701,7 @@ impl ConfigManagerModel {
     fn removeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) {
         let source_id = format!("group:{}", group_id.to_string());
         let lookup_key = secret_lookup_key(&module_id.to_string(), &source_id, &setting_key.to_string());
+        // Currently, error gets only logged in secrets manager.
         let _ = secrets_manager::delete(&lookup_key);
     }
 

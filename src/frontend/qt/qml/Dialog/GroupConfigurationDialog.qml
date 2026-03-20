@@ -655,7 +655,7 @@ LightkeeperDialog {
             if (found) {
                 fullSettings[i].value = found.value
                 fullSettings[i].enabled = found.enabled
-                if (found.value.startsWith("keyring:") || found.value.startsWith("pkeyring:")) {
+                if (found.value === "" || found.value.startsWith("keyring:") || found.value.startsWith("pkeyring:")) {
                     fullSettings[i].secretBackend = "keyring"
                 }
                 else {

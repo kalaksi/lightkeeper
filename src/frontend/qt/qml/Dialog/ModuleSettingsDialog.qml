@@ -43,6 +43,10 @@ LightkeeperDialog {
                 "isSecret": nextItem._isSecret,
             }
             moduleSettings.push(moduleSetting)
+
+            if (!moduleSetting.enabled && nextItem._isSecret && root.groupName !== "") {
+                LK.config.removeGroupSecret(root.groupName, root.moduleId, moduleSetting.key)
+            }
         }
 
         root.settingsUpdated(root.moduleId, moduleSettings)
