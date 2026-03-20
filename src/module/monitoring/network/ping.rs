@@ -7,7 +7,6 @@
 use std::collections::HashMap;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
-use crate::utils::ShellCommand;
 use crate::{ Host, enums::Criticality, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
@@ -23,7 +22,9 @@ use crate::module::monitoring::*;
     }
 )]
 pub struct Ping {
+    #[cfg_attr(feature = "flatpak", allow(dead_code))]
     count: u8,
+    #[cfg_attr(feature = "flatpak", allow(dead_code))]
     timeout: u8,
 }
 
@@ -52,18 +53,29 @@ impl MonitoringModule for Ping {
     }
 
     fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, LkError> {
-        let mut command = ShellCommand::new();
-
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            command.arguments(vec![
-                "ping", "-c", self.count.to_string().as_str(), "-W", self.timeout.to_string().as_str(), host.ip_address.to_string().as_str()
-            ]);
-        }
-        else {
-            return Err(LkError::unsupported_platform());
+        #[cfg(feature = "flatpak")]
+        {
+            let _ = host;
+            return Err(LkError::other("Ping module is not available in Flatpak."));
         }
 
-        Ok(command.to_string())
+        #[cfg(not(feature = "flatpak"))]
+        {
+            use crate::utils::ShellCommand;
+
+            let mut command = ShellCommand::new();
+
+            if host.platform.os == platform_info::OperatingSystem::Linux {
+                command.arguments(vec![
+                    "ping", "-c", self.count.to_string().as_str(), "-W", self.timeout.to_string().as_str(), host.ip_address.to_string().as_str()
+                ]);
+            }
+            else {
+                return Err(LkError::unsupported_platform());
+            }
+
+            Ok(command.to_string())
+        }
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {

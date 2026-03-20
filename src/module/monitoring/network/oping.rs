@@ -5,10 +5,8 @@
 
 
 use std::collections::HashMap;
-use oping;
-use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
-use crate::{ Host, enums::Criticality, frontend };
+use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
@@ -38,25 +36,37 @@ impl MonitoringModule for Oping {
     }
 
     fn process_response(&self, host: Host, _responses: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        let mut ping = oping::Ping::new();
-
-        ping.set_timeout(5.0)
-            .map_err(|e| e.to_string())?;
-
-        ping.add_host(host.ip_address.to_string().as_str())
-            .map_err(|e| e.to_string())?;
-
-        let mut responses = ping.send()
-                                .map_err(|e| e.to_string())?;
-
-        let response = responses.next().ok_or(LkError::unexpected())?;
-
-        if response.latency_ms < 0.0 {
-            Ok(DataPoint::value_with_level(String::from("-"), Criticality::Critical))
-        }
-        else {
-            Ok(DataPoint::value_with_level(response.latency_ms.to_string(), Criticality::Normal))
+        #[cfg(not(feature = "oping"))]
+        {
+            let _ = host;
+            return Err("Oping module is not available in this build.".to_string());
         }
 
+        #[cfg(feature = "oping")]
+        {
+            use oping;
+            use crate::error::LkError;
+            use crate::enums::Criticality;
+
+            let mut ping = oping::Ping::new();
+
+            ping.set_timeout(5.0)
+                .map_err(|e| e.to_string())?;
+
+            ping.add_host(host.ip_address.to_string().as_str())
+                .map_err(|e| e.to_string())?;
+
+            let mut responses = ping.send()
+                                    .map_err(|e| e.to_string())?;
+
+            let response = responses.next().ok_or(LkError::unexpected())?;
+
+            if response.latency_ms < 0.0 {
+                Ok(DataPoint::value_with_level(String::from("-"), Criticality::Critical))
+            }
+            else {
+                Ok(DataPoint::value_with_level(response.latency_ms.to_string(), Criticality::Normal))
+            }
+        }
     }
 }

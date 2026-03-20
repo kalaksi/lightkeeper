@@ -10,7 +10,7 @@ path = "src/main.rs"
 [dependencies]
 lightkeeper_module = { path = "macros/lightkeeper_module" }
 
-oping = "0.4.0"
+oping = { version = "0.4.0", optional = true }
 dbus = "0.9.7"
 clap = { version = "4.5.42", features = ["derive"] }
 log = "0.4.27"
@@ -48,7 +48,7 @@ oo7 = { version = "0.6", optional = true }
 tokio = { version = "1", optional = true, features = ["rt"] }
 
 [features]
-default = ["native"]
+default = ["native", "oping"]
 native = ["dep:keyring"]
 flatpak = ["dep:oo7", "dep:tokio"]
 

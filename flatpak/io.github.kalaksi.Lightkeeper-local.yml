@@ -30,28 +30,6 @@ cleanup:
 cleanup-commands:
     - /app/cleanup-BaseApp.sh
 modules:
-  # Liboping is needed for oping monitoring module.
-  - name: liboping
-    buildsystem: autotools
-    build-options:
-      config-opts:
-        - "--without-perl-bindings"
-    sources:
-      - type: archive
-        url: https://noping.cc/files/liboping-1.10.0.tar.gz
-        sha256: c206b05743d0730814be3115b48abd0b00016677525153c78730da307aba0846
-      # Apparently liboping isn't well maintained upstream, so we need patches from Debian.
-      - type: archive
-        url: https://deb.debian.org/debian/pool/main/libo/liboping/liboping_1.10.0-5.debian.tar.xz
-        sha256: bd2d6bd63d032fb4d5a65ed74467baffea74e902d13fdd8409fba3ede35978a4
-        dest: debian-package
-      - type: shell
-        commands:
-          # Remove one patch that modifies configure.ac to avoid needing aclocal-1.14.
-          - rm debian-package/patches/0002-autoupdate-and-enable-automake-Wall.patch
-          - for patchfile in debian-package/patches/*.patch; do patch -p1 < "$patchfile"; done
-    cleanup:
-      - /app/lib/liboping/share/man
   - name: qmltermwidget
     buildsystem: qmake
     sources:
