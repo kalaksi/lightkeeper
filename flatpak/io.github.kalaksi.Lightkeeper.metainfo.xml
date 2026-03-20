@@ -47,6 +47,17 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.37.0" date="2026-03-20">
+      <description>
+        <ul>
+          <li>Add a portal-based secrets backend for flatpaks (better for sandboxing)</li>
+          <li>Some small fixes for secrets handling</li>
+          <li>Remove liboping from flatpak build</li>
+          <li>Fix splitview position when resizing window</li>
+          <li>Add module for editing NixOS configuration.nix</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.36.2" date="2026-03-10">
       <description>
         <ul>
