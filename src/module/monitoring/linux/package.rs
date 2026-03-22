@@ -59,14 +59,15 @@ impl MonitoringModule for Package {
             command.arguments(vec!["dnf", "check-update", "--quiet", "--color=never", "--assumeno"]);
             Ok(command.to_string())
         }
+        // On NixOS and CoreOS, things are more complicated.
+        // No easy way to get version update information, so ignoring for now.
+        else if host.platform.os_flavor == Flavor::NixOS ||
+                host.platform.is_variant(Flavor::Fedora, "coreos") {
+            Ok(String::new())
+        }
         else if host.platform.os_flavor == platform_info::Flavor::Fedora {
             command.arguments(vec!["dnf", "check-update", "--quiet", "--assumeno"]);
             Ok(command.to_string())
-        }
-        else if host.platform.is_same_or_greater(Flavor::NixOS, "20") {
-            // On NixOS, things are more complicated. No easy way to get version update information, so ignoring for now.
-            Ok(String::new())
-
         }
         else {
             Err(LkError::unsupported_platform())
@@ -76,7 +77,8 @@ impl MonitoringModule for Package {
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         let uses_dnf = host.platform.is_same_or_greater(Flavor::CentOS, "8") ||
             host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-            host.platform.os_flavor == platform_info::Flavor::Fedora;
+            (host.platform.os_flavor == platform_info::Flavor::Fedora &&
+                !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos"));
 
         // Uses exit code 100 if there are updates available.
         let dnf_updates_listing = uses_dnf && response.return_code == 100;
@@ -107,10 +109,7 @@ impl MonitoringModule for Package {
                 result.multivalue.push(data_point);
             }
         }
-        else if host.platform.is_same_or_greater(Flavor::CentOS, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-                host.platform.os_flavor == platform_info::Flavor::Fedora {
-
+        else if uses_dnf {
             let lines = response.message.lines().filter(|line| !line.is_empty());
             for line in lines {
                 let tokens: Vec<&str> = line.split_whitespace().collect();

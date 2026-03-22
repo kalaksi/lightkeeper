@@ -59,7 +59,8 @@ impl CommandModule for UpdateAll {
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") {
+                (host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") &&
+                    !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos")) {
 
             command.arguments(vec!["dnf", "update", "-y"]); 
         }
@@ -77,7 +78,8 @@ impl CommandModule for UpdateAll {
             }
             else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
                     host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-                    host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") {
+                    (host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") &&
+                        !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos")) {
                 1
             }
             else {
