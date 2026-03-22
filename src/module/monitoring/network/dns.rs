@@ -56,7 +56,8 @@ impl MonitoringModule for Dns {
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
            host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
+           host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") ||
+           host.platform.os_flavor == platform_info::Flavor::Fedora {
 
             let command_resolvconf = ShellCommand::new_from(vec!["grep", "-E", "^nameserver", "/etc/resolv.conf"]);
             // TODO: use busctl instead?

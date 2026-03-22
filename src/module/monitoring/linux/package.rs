@@ -74,7 +74,14 @@ impl MonitoringModule for Package {
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if response.is_error() {
+        let uses_dnf = host.platform.is_same_or_greater(Flavor::CentOS, "8") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+            host.platform.os_flavor == platform_info::Flavor::Fedora;
+
+        // Uses exit code 100 if there are updates available.
+        let dnf_updates_listing = uses_dnf && response.return_code == 100;
+
+        if response.is_error() && !dnf_updates_listing {
             return Err(response.message);
         }
 
@@ -106,11 +113,16 @@ impl MonitoringModule for Package {
 
             let lines = response.message.lines().filter(|line| !line.is_empty());
             for line in lines {
-                let mut parts = line.split_whitespace();
-
-                let package_name = parts.next().unwrap_or_default().to_string();
-                let new_version = parts.next().unwrap_or_default().to_string();
-                let repository = parts.next().unwrap_or_default().to_string();
+                let tokens: Vec<&str> = line.split_whitespace().collect();
+                if tokens.len() < 3 {
+                    continue;
+                }
+                let package_name = tokens[0].to_string();
+                if !package_name.contains('.') {
+                    continue;
+                }
+                let new_version = tokens[1].to_string();
+                let repository = tokens[2].to_string();
 
                 let mut data_point = DataPoint::labeled_value(package_name.clone(), new_version);
                 data_point.description = repository;
