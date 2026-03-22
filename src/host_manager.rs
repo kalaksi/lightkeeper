@@ -377,6 +377,9 @@ impl HostManager {
                 "architecture" => {
                     platform.architecture = platform_info::Architecture::from(&data.value)
                 },
+                "os_variant_id" => {
+                    platform.os_variant_id = data.value.clone();
+                },
                 "ip_address" => {
                     ip_address = std::net::IpAddr::from_str(data.value.as_str()).map_err(|error| error.to_string())?
                 },

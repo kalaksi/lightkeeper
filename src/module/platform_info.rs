@@ -21,6 +21,10 @@ pub struct PlatformInfo {
     /// Flavor covers different Windows OSes and Linux distributions.
     pub os_flavor: Flavor,
 
+    /// From VARIANT_ID in os-release when present (e.g. coreos for Fedora CoreOS).
+    #[serde(default)]
+    pub os_variant_id: String,
+
     pub architecture: Architecture,
 }
 
@@ -40,6 +44,7 @@ impl PlatformInfo {
             architecture: Architecture::X86_64,
             os_flavor: flavor,
             os_version: parsed_version,
+            os_variant_id: String::new(),
         }
     }
 
@@ -55,6 +60,10 @@ impl PlatformInfo {
         };
 
         self.os_flavor == flavor && self.os_version >= parsed_version
+    }
+
+    pub fn is_variant(&self, flavor: Flavor, variant_id: &str) -> bool {
+        self.os_flavor == flavor && self.os_variant_id == variant_id
     }
 }
 

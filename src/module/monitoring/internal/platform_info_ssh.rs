@@ -46,7 +46,7 @@ impl MonitoringModule for PlatformInfoSsh {
         platform.os = platform_info::OperatingSystem::Linux;
 
         if let Some(first) = response.get(0) {
-            (platform.os_flavor, platform.os_version) = parse_os_release(&first.message);
+            (platform.os_flavor, platform.os_version, platform.os_variant_id) = parse_os_release(&first.message);
         }
         else {
             return Err(String::from("No response for OS release"));
@@ -66,14 +66,16 @@ impl MonitoringModule for PlatformInfoSsh {
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_version"), platform.os_version.to_string()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_flavor"), platform.os_flavor.to_string()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("architecture"), platform.architecture.to_string()));
+        datapoint.multivalue.push(DataPoint::labeled_value(String::from("os_variant_id"), platform.os_variant_id.clone()));
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("ip_address"), host.ip_address.to_string()));
         Ok(datapoint)
     }
 }
 
-fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber) {
+fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber, String) {
     let mut flavor = platform_info::Flavor::default();
     let mut version = VersionNumber::default();
+    let mut variant_id = String::new();
 
     let lines = message.lines();
     for line in lines {
@@ -96,9 +98,10 @@ fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber) 
                 }
             },
             "VERSION_ID" => version = VersionNumber::from_string(&value.to_string()),
+            "VARIANT_ID" => variant_id = value,
             _ => ()
         }
     }
 
-    (flavor, version)
+    (flavor, version, variant_id)
 }
