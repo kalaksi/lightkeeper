@@ -184,6 +184,7 @@ The (current) goal is to support:
 - CentOS
 - NixOS
 - Fedora
+- Fedora CoreOS
 - Alpine
 - Linux in general (basic functionality for most distributions)
 

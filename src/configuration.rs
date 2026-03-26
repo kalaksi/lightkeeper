@@ -26,7 +26,7 @@ pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
-pub const CURRENT_SCHEMA_VERSION: u16 = 4;
+pub const MIGRATION_VERSION: u16 = 5;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -755,7 +755,7 @@ impl Configuration {
         let mut schema_version = main_config.schema_version.unwrap_or_else(|| 1);
         let old_version = schema_version;
 
-        while schema_version < CURRENT_SCHEMA_VERSION {
+        while schema_version < MIGRATION_VERSION {
             // NOTE: Default config groups should rarely be removed since they are used in older schema upgrades.
             match schema_version {
                 1 => {
@@ -779,6 +779,19 @@ impl Configuration {
                         group.monitors.remove("ssh");
                     }
                 },
+                4 => {
+                    for name in ["podman", "podman-compose"] {
+                        if let Some(default_group) = default_groups.groups.get(name) {
+                            groups_config
+                                .groups
+                                .entry((*name).to_string())
+                                .or_insert_with(|| default_group.clone());
+                        }
+                        else {
+                            return;
+                        }
+                    }
+                }
                 _ => {}
             }
 
@@ -794,7 +807,7 @@ impl Configuration {
 
     pub fn is_schema_outdated(schema_version: Option<u16>) -> bool {
         if let Some(version) = schema_version {
-            version < CURRENT_SCHEMA_VERSION
+            version < MIGRATION_VERSION
         }
         else {
             true
