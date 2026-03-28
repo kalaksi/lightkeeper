@@ -253,7 +253,7 @@ Item {
         MenuItem {
             text: "Delete"
             icon.source: "qrc:/main/images/button/delete"
-            enabled: fileBrowser.selectedFilesOnly.length > 0
+            enabled: fileBrowser.selectedFiles.length > 0
             onTriggered: root.requestDeleteSelectedFiles()
         }
 
@@ -497,7 +497,7 @@ Item {
         onActivated: fileBrowser.startRenameForSelected()
     }
     Shortcut {
-        enabled: root.enableShortcuts && fileBrowser.selectedFilesOnly.length > 0
+        enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
         sequence: StandardKey.Delete
         onActivated: root.requestDeleteSelectedFiles()
     }
@@ -540,14 +540,18 @@ Item {
     }
 
     function requestDeleteSelectedFiles() {
-        let files = fileBrowser.selectedFilesOnly
+        let files = fileBrowser.selectedFiles
         if (files.length === 0) {
             return
         }
         root._pendingDeletePaths = files
+        let hasDirectory = files.some(path => path.endsWith("/"))
         deleteConfirmationDialog.text = files.length === 1
-            ? "Remove file '" + files[0] + "'?"
-            : "Remove " + files.length + " selected files?"
+            ? "Remove '" + files[0] + "'?"
+            : "Remove " + files.length + " selected items?"
+        if (hasDirectory) {
+            deleteConfirmationDialog.text += "\nDirectories will be removed recursively."
+        }
 
         deleteConfirmationDialog.open()
     }

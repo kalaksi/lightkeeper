@@ -58,7 +58,7 @@ impl CommandModule for FileBrowserRm {
 
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
-        let mut args = vec!["rm", "--"];
+        let mut args = vec!["rm", "-r", "--"];
         args.extend(parameters.iter().map(String::as_str));
         command.arguments(args);
 
