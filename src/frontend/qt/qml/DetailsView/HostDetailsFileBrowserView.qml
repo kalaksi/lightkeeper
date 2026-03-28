@@ -170,6 +170,21 @@ Item {
                 ToolTip.text: "Upload files to selected directory"
             }
 
+            ToolButton {
+                flat: false
+                icon.source: "qrc:/main/images/button/document-open-folder"
+                text: "Upload folder"
+                display: AbstractButton.IconOnly
+                onClicked: uploadFolderDialog.open()
+                icon.height: 24
+                icon.width: 24
+                padding: 4
+
+                ToolTip.visible: hovered
+                ToolTip.delay: Theme.tooltipDelay
+                ToolTip.text: "Upload a folder to selected directory"
+            }
+
             Item {
                 Layout.fillWidth: true
             }
@@ -388,6 +403,31 @@ Item {
         }
     }
 
+    // Unfortunately, can't handle both files and folders in the same dialog.
+    FolderDialog {
+        id: uploadFolderDialog
+        title: "Choose folder to upload"
+        currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+
+        onAccepted: {
+            let path = selectedFolder.toString()
+            if (path.indexOf("file://") === 0) {
+                path = path.substring(7)
+            }
+            if (path.length === 0) {
+                return
+            }
+            let remoteDir = fileBrowser.selectedDirectory
+            let remoteUser = LK.config.getSshUsername(root.hostId)
+            root._hasActiveTransfer = true
+            root._transferProgressPercent = 0
+            let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload", [path, remoteDir, remoteUser])
+            let invs = root._transferInvocations
+            invs[invId] = 0
+            root._transferInvocations = invs
+        }
+    }
+
     ConfirmationDialog {
         id: deleteConfirmationDialog
         parent: root
@@ -552,6 +592,10 @@ Item {
             permStr.substring(start + 3, start + 6),
             permStr.substring(start + 6, start + 9)
         ]
+    }
+
+    function refreshContent() {
+        root.refresh()
     }
 
     function close() {
