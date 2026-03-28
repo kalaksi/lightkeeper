@@ -399,6 +399,7 @@ Item {
                 let invs = root._transferInvocations
                 invs[invId] = 0
                 root._transferInvocations = invs
+                root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invId])
             }
         }
     }
@@ -425,6 +426,7 @@ Item {
             let invs = root._transferInvocations
             invs[invId] = 0
             root._transferInvocations = invs
+            root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invId])
         }
     }
 

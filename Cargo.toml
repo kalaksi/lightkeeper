@@ -41,6 +41,9 @@ openssl = { version = "0.10.73", features = ["vendored"] }
 notify = { version = "7.0.0" }
 ssh2 = { version = "0.9.5", features = ["vendored-openssl"] }
 
+# Only for setting non-blocking for local-command
+libc = "0.2"
+
 # Used for multi-platform non-flatpak secrets management.
 keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"], optional = true }
 # Used for Flatpak secrets management through portal service.

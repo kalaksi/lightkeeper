@@ -109,6 +109,12 @@ impl From<std::io::Error> for LkError {
     }
 }
 
+impl<T> From<std::sync::PoisonError<T>> for LkError {
+    fn from(error: std::sync::PoisonError<T>) -> Self {
+        LkError::new(ErrorKind::Other, error.to_string())
+    }
+}
+
 impl From<String> for LkError {
     fn from(error: String) -> Self {
         LkError::new(ErrorKind::Other, error)

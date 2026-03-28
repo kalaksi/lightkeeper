@@ -1341,6 +1341,7 @@ dependencies = [
  "env_logger",
  "hex",
  "keyring",
+ "libc",
  "lightkeeper_module",
  "log",
  "notify",
