@@ -338,6 +338,13 @@ Item {
                         width: progressBar.visualPosition * parent.width
                         color: palette.highlight
                         radius: parent.radius
+
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: 200
+                                easing.type: Easing.OutQuad
+                            }
+                        }
                     }
                 }
             }
