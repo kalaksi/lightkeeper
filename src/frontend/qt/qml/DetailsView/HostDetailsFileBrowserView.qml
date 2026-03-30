@@ -47,6 +47,10 @@ Item {
     // Paths for which we delete files.
     property var _pendingDeletePaths: []
 
+    // Invocation id for a pending mkdir and the path to rename once the refresh completes.
+    property int _pendingCreateFolderInvocationId: 0
+    property string _pendingRenameAfterRefreshPath: ""
+
     function _minTransferProgress() {
         let invs = root._transferInvocations
         let keys = Object.keys(invs)
@@ -71,6 +75,17 @@ Item {
         target: LK.hosts
 
         function onCommandResultReceived(commandResultJson, invocationId) {
+            if (root._pendingCreateFolderInvocationId !== 0
+                && root._pendingCreateFolderInvocationId === invocationId) {
+
+                root._pendingCreateFolderInvocationId = 0
+                let result = JSON.parse(commandResultJson)
+                if (!result.error) {
+                    root._pendingRenameAfterRefreshPath =
+                        fileBrowser.selectedDirectory + "New folder/"
+                    root.refreshCurrentDirectory()
+                }
+            }
             if (invocationId in root._transferInvocations) {
                 let commandResult = JSON.parse(commandResultJson)
                 root._transferInvocations[invocationId] = commandResult.progress
@@ -94,7 +109,9 @@ Item {
 
                 let commandResult = JSON.parse(commandResultJson)
                 if (commandResult.error) {
-                    console.error("File browser error:", commandResult.error)
+                    if (!fileBrowser.navigationError(pendingPath)) {
+                        console.error("File browser error:", commandResult.error)
+                    }
                     return
                 }
 
@@ -107,6 +124,15 @@ Item {
                 ))
 
                 fileBrowser.openDirectory(pendingPath, browserEntries)
+
+                if (root._pendingRenameAfterRefreshPath !== "") {
+                    let renamePath = root._pendingRenameAfterRefreshPath
+                    root._pendingRenameAfterRefreshPath = ""
+                    Qt.callLater(() => {
+                        fileBrowser.selectFilePath(renamePath)
+                        fileBrowser.startRenameForSelected()
+                    })
+                }
             }
             if (root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
                 root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.filter(id => id !== invocationId)
@@ -144,7 +170,7 @@ Item {
                 icon.source: "qrc:/main/images/button/download"
                 text: "Download"
                 display: AbstractButton.IconOnly
-                onClicked: downloadFolderDialog.open()
+                onClicked: downloadFolderDialogLoader.active = true
                 enabled: fileBrowser.selectedFiles.length > 0
                 icon.height: 24
                 icon.width: 24
@@ -160,7 +186,7 @@ Item {
                 icon.source: "qrc:/main/images/button/upload"
                 text: "Upload"
                 display: AbstractButton.IconOnly
-                onClicked: uploadFileDialog.open()
+                onClicked: uploadFileDialogLoader.active = true
                 icon.height: 24
                 icon.width: 24
                 padding: 4
@@ -175,7 +201,7 @@ Item {
                 icon.source: "qrc:/main/images/button/document-open-folder"
                 text: "Upload folder"
                 display: AbstractButton.IconOnly
-                onClicked: uploadFolderDialog.open()
+                onClicked: uploadFolderDialogLoader.active = true
                 icon.height: 24
                 icon.width: 24
                 padding: 4
@@ -217,10 +243,15 @@ Item {
             onTriggered: LK.command.openRemoteFileInEditor(root.hostId, fileBrowser.selectedFilesOnly[0])
         }
         MenuItem {
+            text: "Create folder"
+            icon.source: "qrc:/main/images/button/folder-new"
+            onTriggered: root.createFolder()
+        }
+        MenuItem {
             text: "Download..."
             icon.source: "qrc:/main/images/button/download"
             enabled: fileBrowser.selectedFiles.length > 0
-            onTriggered: downloadFolderDialog.open()
+            onTriggered: downloadFolderDialogLoader.active = true
         }
         MenuItem {
             text: "Rename..."
@@ -358,82 +389,123 @@ Item {
         }
     }
 
-    FolderDialog {
-        id: downloadFolderDialog
-        title: "Choose download destination"
-        currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+    // Using loader because some backends leave some background metadata tasks running even after closing dialog
+    Loader {
+        id: downloadFolderDialogLoader
+        active: false
 
-        onAccepted: {
-            let path = selectedFolder.toString()
-            if (path.indexOf("file://") === 0) {
-                path = path.substring(7)
-            }
-            let localDir = path
-            let remoteUser = LK.config.getSshUsername(root.hostId)
-            root._hasActiveTransfer = true
-            root._transferProgressPercent = 0
-            for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
-                let remotePath = fileBrowser.selectedFiles[i]
-                let invocationId = LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
-                    [remotePath, localDir, remoteUser])
-                root._transferInvocations[invocationId] = 0
+        sourceComponent: Component {
+
+            FolderDialog {
+                title: "Choose download destination"
+                currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+
+                Component.onCompleted: open()
+
+                onAccepted: {
+                    let path = selectedFolder.toString()
+                    if (path.indexOf("file://") === 0) {
+                        path = path.substring(7)
+                    }
+                    let localDir = path
+                    let remoteUser = LK.config.getSshUsername(root.hostId)
+                    root._hasActiveTransfer = true
+                    root._transferProgressPercent = 0
+                    for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
+                        let remotePath = fileBrowser.selectedFiles[i]
+                        let invocationId = LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
+                            [remotePath, localDir, remoteUser])
+                        root._transferInvocations[invocationId] = 0
+                    }
+                    downloadFolderDialogLoader.active = false
+                }
+
+                onRejected: downloadFolderDialogLoader.active = false
             }
         }
     }
 
-    FileDialog {
-        id: uploadFileDialog
-        title: "Choose files to upload"
-        currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
-        fileMode: FileDialog.OpenFiles
+    // Using loader because some backends leave some background metadata tasks running even after closing dialog
+    Loader {
+        id: uploadFileDialogLoader
+        active: false
 
-        onAccepted: {
-            let remoteDir = fileBrowser.selectedDirectory
-            let remoteUser = LK.config.getSshUsername(root.hostId)
-            root._hasActiveTransfer = true
-            root._transferProgressPercent = 0
-            for (let i = 0; i < selectedFiles.length; i++) {
-                let url = selectedFiles[i]
-                let localPath = url.toString()
-                if (localPath.indexOf("file://") === 0) {
-                    localPath = localPath.substring(7)
+        sourceComponent: Component {
+
+            FileDialog {
+                title: "Choose files to upload"
+                currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+                fileMode: FileDialog.OpenFiles
+
+                Component.onCompleted: open()
+
+                onAccepted: {
+                    let remoteDir = fileBrowser.selectedDirectory
+                    let remoteUser = LK.config.getSshUsername(root.hostId)
+                    root._hasActiveTransfer = true
+                    root._transferProgressPercent = 0
+                    for (let i = 0; i < selectedFiles.length; i++) {
+                        let url = selectedFiles[i]
+                        let localPath = url.toString()
+                        if (localPath.indexOf("file://") === 0) {
+                            localPath = localPath.substring(7)
+                        }
+                        if (localPath.length === 0) {
+                            continue
+                        }
+                        let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
+                            [localPath, remoteDir, remoteUser])
+                        let invs = root._transferInvocations
+                        invs[invId] = 0
+                        root._transferInvocations = invs
+                        root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invId])
+                    }
+                    uploadFileDialogLoader.active = false
                 }
-                if (localPath.length === 0) {
-                    continue
-                }
-                let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
-                    [localPath, remoteDir, remoteUser])
-                let invs = root._transferInvocations
-                invs[invId] = 0
-                root._transferInvocations = invs
-                root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invId])
+
+                onRejected: uploadFileDialogLoader.active = false
             }
         }
     }
 
     // Unfortunately, can't handle both files and folders in the same dialog.
-    FolderDialog {
-        id: uploadFolderDialog
-        title: "Choose folder to upload"
-        currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+    // Using loader because some backends leave some background metadata tasks running even after closing dialog
+    Loader {
+        id: uploadFolderDialogLoader
+        active: false
 
-        onAccepted: {
-            let path = selectedFolder.toString()
-            if (path.indexOf("file://") === 0) {
-                path = path.substring(7)
+        sourceComponent: Component {
+
+            FolderDialog {
+                title: "Choose folder to upload"
+                currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+
+                Component.onCompleted: open()
+
+                onAccepted: {
+                    let path = selectedFolder.toString()
+                    if (path.indexOf("file://") === 0) {
+                        path = path.substring(7)
+                    }
+                    if (path.length === 0) {
+                        uploadFolderDialogLoader.active = false
+                        return
+                    }
+                    let remoteDir = fileBrowser.selectedDirectory
+                    let remoteUser = LK.config.getSshUsername(root.hostId)
+                    root._hasActiveTransfer = true
+                    root._transferProgressPercent = 0
+                    let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
+                        [path, remoteDir, remoteUser])
+                    let invs = root._transferInvocations
+                    invs[invId] = 0
+                    root._transferInvocations = invs
+                    root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invId])
+                    uploadFolderDialogLoader.active = false
+                }
+
+                onRejected: uploadFolderDialogLoader.active = false
             }
-            if (path.length === 0) {
-                return
-            }
-            let remoteDir = fileBrowser.selectedDirectory
-            let remoteUser = LK.config.getSshUsername(root.hostId)
-            root._hasActiveTransfer = true
-            root._transferProgressPercent = 0
-            let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload", [path, remoteDir, remoteUser])
-            let invs = root._transferInvocations
-            invs[invId] = 0
-            root._transferInvocations = invs
-            root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invId])
         }
     }
 
@@ -505,6 +577,12 @@ Item {
     // Loading animation
     WorkingSprite {
         show: root._loading
+    }
+
+    function createFolder() {
+        let id = LK.command.executePlain(root.hostId,
+            "_internal-filebrowser-mkdir", [fileBrowser.selectedDirectory, "New folder"])
+        root._pendingCreateFolderInvocationId = id
     }
 
     function copySelected() {

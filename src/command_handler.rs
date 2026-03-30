@@ -144,6 +144,8 @@ impl CommandHandler {
             self.add_command(host_id, filebrowser_rename);
             let filebrowser_rm = crate::module::command::internal::FileBrowserRm::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_rm);
+            let filebrowser_mkdir = crate::module::command::internal::FileBrowserMkdir::new_command_module(&HashMap::new());
+            self.add_command(host_id, filebrowser_mkdir);
             let filebrowser_chmod = crate::module::command::internal::FileBrowserChmod::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_chmod);
             let filebrowser_chown = crate::module::command::internal::FileBrowserChown::new_command_module(&HashMap::new());

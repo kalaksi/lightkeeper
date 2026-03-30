@@ -13,6 +13,7 @@ pub use filebrowser::FileBrowserDownload;
 pub use filebrowser::FileBrowserEdit;
 pub use filebrowser::FileBrowserLs;
 pub use filebrowser::FileBrowserLsLinks;
+pub use filebrowser::FileBrowserMkdir;
 pub use filebrowser::FileBrowserMove;
 pub use filebrowser::FileBrowserRename;
 pub use filebrowser::FileBrowserRm;
