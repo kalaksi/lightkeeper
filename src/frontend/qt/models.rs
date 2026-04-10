@@ -6,11 +6,8 @@
 pub mod lkbackend_model;
 pub use lkbackend_model::LkBackend;
 
-#[allow(non_snake_case)]
-pub mod Theme {
-    pub mod theme_model;
-}
-pub use Theme::theme_model::ThemeModel;
+pub mod theme_model;
+pub use theme_model::ThemeModel;
 
 pub mod host_data_manager_model;
 pub use host_data_manager_model::HostDataManagerModel;
