@@ -27,7 +27,7 @@ impl Http {
 impl Module for Http {
     fn new(_settings: &HashMap<String, String>) -> Self {
         Http {
-            agent: ureq::Agent::new(),
+            agent: ureq::Agent::new_with_defaults(),
         }
     }
 }
@@ -43,13 +43,13 @@ impl ConnectionModule for Http {
         let data = parts.next().unwrap_or_default();
 
         // Currently only supports GET and POST requests.
-        let response = if data.is_empty() {
+        let mut response = if data.is_empty() {
             self.agent.get(url).call()?
         } else {
-            self.agent.post(url).send_string(data)?
+            self.agent.post(url).send(data)?
         };
 
-        let response_string = response.into_string()?;
+        let response_string = response.body_mut().read_to_string()?;
         Ok(ResponseMessage::new_success(response_string))
     }
 }

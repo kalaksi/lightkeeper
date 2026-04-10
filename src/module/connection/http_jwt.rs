@@ -27,8 +27,12 @@ pub struct HttpJwt {
 
 impl Module for HttpJwt {
     fn new(_settings: &HashMap<String, String>) -> Self {
+        let agent = ureq::Agent::config_builder()
+            .http_status_as_error(false)
+            .build()
+            .new_agent();
         HttpJwt {
-            agent: ureq::Agent::new(),
+            agent,
             jwt_tokens: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -50,49 +54,49 @@ impl ConnectionModule for HttpJwt {
                                        .get(domain).cloned();
 
             // Currently only supports GET and POST requests.
-            let response = if data.is_empty() {
+            let mut response = if data.is_empty() {
                 let mut request = self.agent.get(url);
                 if let Some(token) = token {
-                    request = request.set("Authorization", &format!("Bearer {}", token));
+                    request = request.header("Authorization", &format!("Bearer {}", token));
                 }
                 request.call()
             } else {
                 let mut request = self.agent.post(url);
                 if let Some(token) = token {
-                    request = request.set("Authorization", &format!("Bearer {}", token));
+                    request = request.header("Authorization", &format!("Bearer {}", token));
                 }
-                request.send_string(data)
-            };
+                request.send(data)
+            }?;
 
-
-            if let Ok(response) = response {
-                let response_string = response.into_string()?;
+            let status = response.status().as_u16();
+            if (200..300).contains(&status) {
+                let response_string = response.body_mut().read_to_string()?;
                 return Ok(ResponseMessage::new_success(response_string));
             }
-            else if let Err(ureq::Error::Status(status, response)) = response {
-                if status != 401 {
-                    return Err(LkError::other_p("HTTP request failed with status", &status));
-                }
-
-                let auth_url = Self::parse_challenge_header(&response)?;
-                let auth_response = self.agent.get(&auth_url).call()
-                                              .map_err(|_| LkError::other("JWT authentication failed."))?;
-
-                let auth_response_string = auth_response.into_string()?;
-                let jwt_response: JwtResponse = serde_json::from_str(&auth_response_string)
-                    .map_err(|_| LkError::other("JWT authentication response is invalid."))?;
-
-                log::debug!("JWT authentication successful for {}", domain);
-
-                let mut jwt_tokens = self.jwt_tokens.lock().map_err(|_| LkError::other("Failed to lock JWT tokens."))?;
-
-                // Make sure the token cache doesn't grow indefinitely.
-                if jwt_tokens.len() > 200 {
-                    jwt_tokens.clear();
-                }
-
-                jwt_tokens.insert(domain.to_string(), jwt_response.token);
+            if status != 401 {
+                return Err(LkError::other_p("HTTP request failed with status", &status));
             }
+
+            let auth_url = Self::parse_challenge_header(&response)?;
+            let _ = response.body_mut().read_to_string();
+
+            let mut auth_response = self.agent.get(&auth_url).call()
+                .map_err(|_| LkError::other("JWT authentication failed."))?;
+
+            let auth_response_string = auth_response.body_mut().read_to_string()?;
+            let jwt_response: JwtResponse = serde_json::from_str(&auth_response_string)
+                .map_err(|_| LkError::other("JWT authentication response is invalid."))?;
+
+            log::debug!("JWT authentication successful for {}", domain);
+
+            let mut jwt_tokens = self.jwt_tokens.lock().map_err(|_| LkError::other("Failed to lock JWT tokens."))?;
+
+            // Make sure the token cache doesn't grow indefinitely.
+            if jwt_tokens.len() > 200 {
+                jwt_tokens.clear();
+            }
+
+            jwt_tokens.insert(domain.to_string(), jwt_response.token);
         }
 
         Err(LkError::other("JWT authentication failed."))
@@ -100,11 +104,14 @@ impl ConnectionModule for HttpJwt {
 }
 
 impl HttpJwt {
-    fn parse_challenge_header(response: &ureq::Response) -> Result<String, LkError> {
+    fn parse_challenge_header(response: &ureq::http::Response<ureq::Body>) -> Result<String, LkError> {
         let mut realm = None;
         let mut params = Vec::new();
 
-        if let Some(challenge_header) = response.header("WWW-Authenticate") {
+        let challenge_header = response.headers().get("WWW-Authenticate")
+            .and_then(|value| value.to_str().ok());
+
+        if let Some(challenge_header) = challenge_header {
             let (bearer, challenge_parts) = challenge_header.split_once(" ").unwrap_or_default();
 
             if bearer.to_lowercase() != "bearer" {

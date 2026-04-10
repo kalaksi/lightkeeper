@@ -460,16 +460,20 @@ impl MetricsManager {
 }
 /// Function to download a file using ureq.
 fn download_file(url: &str, access_token: &str, output_path: &Path) -> io::Result<()> {
-    let response = ureq::get(url)
-        .set("PRIVATE-TOKEN", access_token)
+    let agent = ureq::Agent::config_builder()
         // Keep timeout short so it doesn't block startup too long in case there's no access to internet.
-        .timeout(std::time::Duration::from_secs(3))
+        .timeout_global(Some(Duration::from_secs(3)))
+        .build()
+        .new_agent();
+    let mut response = agent
+        .get(url)
+        .header("PRIVATE-TOKEN", access_token)
         .call()
         .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
-    if response.status() == 200 {
+    if response.status().as_u16() == 200 {
         let mut file = std::fs::File::create(output_path)?;
-        let mut reader = response.into_reader();
+        let mut reader = response.body_mut().as_reader();
         io::copy(&mut reader, &mut file)?;
 
         log::debug!("Downloaded file: {}", output_path.display());
@@ -481,14 +485,15 @@ fn download_file(url: &str, access_token: &str, output_path: &Path) -> io::Resul
 }
 
 fn download_string(url: &str) -> io::Result<String> {
-    let response = ureq::get(url)
+    let agent = ureq::Agent::config_builder()
         // Keep timeout short so it doesn't block startup too long in case there's no access to internet.
-        .timeout(std::time::Duration::from_secs(3))
-        .call()
-        .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+        .timeout_global(Some(Duration::from_secs(3)))
+        .build()
+        .new_agent();
+    let mut response = agent.get(url).call().map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
-    if response.status() == 200 {
-        let mut reader = response.into_reader();
+    if response.status().as_u16() == 200 {
+        let mut reader = response.body_mut().as_reader();
         let mut content = String::new();
         reader.read_to_string(&mut content)?;
 
