@@ -122,13 +122,7 @@ impl QmlFrontend {
             }
 
             qml_register_singleton_instance(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("LK"), lk_backend);
-            qml_register_singleton_instance(
-                cstr::cstr!("Lightkeeper"),
-                1,
-                0,
-                cstr::cstr!("DesktopPortal"),
-                file_chooser,
-            );
+            qml_register_singleton_instance(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("DesktopPortal"), file_chooser);
 
             let qt_theme = ThemeModel::new(self.main_config.display_options.clone());
             qml_register_singleton_instance(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("Theme"), qt_theme);

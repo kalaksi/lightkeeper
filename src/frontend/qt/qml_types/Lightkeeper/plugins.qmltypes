@@ -48,15 +48,485 @@ Module {
     }
 
     Component {
+        name: "CommandHandlerModel"
+        prototype: "QObject"
+
+        Method {
+            name: "getAllHostCategories"
+            type: "QVariantList"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method {
+            name: "getCategoryCommands"
+            type: "QVariantList"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+        }
+        Method {
+            name: "getCustomCommands"
+            type: "QStringList"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method {
+            name: "getCommandsOnLevel"
+            type: "QVariantList"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+            Parameter { name: "parent_id"; type: "string" }
+            Parameter { name: "multivalue_level"; type: "string" }
+        }
+        Method {
+            name: "execute"
+            Parameter { name: "button_id"; type: "string" }
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "parameters"; type: "QStringList" }
+        }
+        Method {
+            name: "executeConfirmed"
+            Parameter { name: "button_id"; type: "string" }
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "parameters"; type: "QStringList" }
+        }
+        Method {
+            name: "executePlain"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "parameters"; type: "QStringList" }
+        }
+        Method { name: "interruptInvocation"; Parameter { name: "invocation_id"; type: "int" } }
+        Method {
+            name: "listFiles"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "path"; type: "string" }
+        }
+        Method {
+            name: "openRemoteFileInEditor"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "remote_path"; type: "string" }
+        }
+        Method {
+            name: "saveAndUploadFile"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "local_file_path"; type: "string" }
+            Parameter { name: "contents"; type: "string" }
+        }
+        Method { name: "removeFile"; Parameter { name: "local_file_path"; type: "string" } }
+        Method {
+            name: "hasFileChanged"
+            type: "bool"
+            Parameter { name: "local_file_path"; type: "string" }
+            Parameter { name: "contents"; type: "string" }
+        }
+        Method {
+            name: "verifyHostKey"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "connector_id"; type: "string" }
+            Parameter { name: "key_id"; type: "string" }
+        }
+        Method { name: "initializeHost"; Parameter { name: "host_id"; type: "string" } }
+        Method { name: "forceInitializeHost"; Parameter { name: "host_id"; type: "string" } }
+        Method { name: "forceInitializeHosts" }
+        Method {
+            name: "refreshMonitorsOfCommand"
+            type: "QVariantList"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+        }
+        Method {
+            name: "refreshMonitorsOfCategory"
+            type: "QVariantList"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+        }
+        Method { name: "refreshCertificateMonitors"; type: "QVariantList" }
+
+        Signal {
+            name: "inputDialogOpened"
+            Parameter { name: "input_specs"; type: "string" }
+            Parameter { name: "button_id"; type: "string" }
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "parameters"; type: "QStringList" }
+        }
+        Signal { name: "textDialogOpened"; Parameter { name: "invocation_id"; type: "int" } }
+        Signal {
+            name: "confirmationDialogOpened"
+            Parameter { name: "text"; type: "string" }
+            Parameter { name: "button_id"; type: "string" }
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "parameters"; type: "QStringList" }
+        }
+        Signal {
+            name: "commandOutputDialogOpened"
+            Parameter { name: "title"; type: "string" }
+            Parameter { name: "invocation_id"; type: "int" }
+        }
+        Signal {
+            name: "textViewOpened"
+            Parameter { name: "title"; type: "string" }
+            Parameter { name: "invocation_id"; type: "int" }
+        }
+        Signal {
+            name: "textEditorViewOpened"
+            Parameter { name: "header_text"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "invocation_id"; type: "int" }
+            Parameter { name: "local_file_path"; type: "string" }
+        }
+        Signal {
+            name: "terminalViewOpened"
+            Parameter { name: "header_text"; type: "string" }
+            Parameter { name: "command"; type: "QStringList" }
+        }
+        Signal { name: "fileBrowserOpened"; Parameter { name: "directory"; type: "string" } }
+        Signal {
+            name: "commandOutputViewOpened"
+            Parameter { name: "invocation_id"; type: "int" }
+            Parameter { name: "title"; type: "string" }
+            Parameter { name: "text"; type: "string" }
+            Parameter { name: "error_text"; type: "string" }
+            Parameter { name: "progress"; type: "int" }
+        }
+        Signal {
+            name: "logsViewOpened"
+            Parameter { name: "time_controls"; type: "bool" }
+            Parameter { name: "title"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "parameters"; type: "QStringList" }
+            Parameter { name: "invocation_id"; type: "int" }
+        }
+        Signal {
+            name: "commandExecuted"
+            Parameter { name: "invocation_id"; type: "int" }
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+            Parameter { name: "button_identifier"; type: "string" }
+        }
+        Signal { name: "hostInitializing"; Parameter { name: "host_id"; type: "string" } }
+        Signal { name: "error"; Parameter { name: "message"; type: "string" } }
+    }
+
+    Component {
+        name: "ConfigManagerModel"
+        prototype: "QObject"
+
+        Property { name: "showStatusBar"; type: "bool"; isReadonly: true; }
+        Property { name: "showCharts"; type: "bool"; isReadonly: false; }
+        Property { name: "showChartThresholdLines"; type: "bool"; isReadonly: false; }
+        Property { name: "showInfoNotifications"; type: "bool"; isReadonly: true; }
+        Property { name: "mainViewSplitRatio"; type: "double"; isReadonly: false; }
+
+        Signal { name: "hostConfigurationChanged" }
+        Signal { name: "showChartThresholdLinesChanged" }
+        Signal { name: "error"; Parameter { name: "message"; type: "string" } }
+
+        Method { name: "isSandboxed"; type: "bool" }
+        Method { name: "isDevBuild"; type: "bool" }
+        Method { name: "getCurrentWorkDir"; type: "string" }
+        Method { name: "getPreferences"; type: "QVariantMap" }
+        Method { name: "setPreferences"; Parameter { name: "preferences"; type: "QVariantMap" } }
+        Method { name: "getCertificateMonitors"; type: "QStringList" }
+        Method { name: "addCertificateMonitor"; Parameter { name: "address"; type: "string" } }
+        Method { name: "removeCertificateMonitor"; Parameter { name: "address"; type: "string" } }
+        Method { name: "addHost"; Parameter { name: "host_name"; type: "string" } }
+        Method { name: "removeHost"; Parameter { name: "host_name"; type: "string" } }
+        Method {
+            name: "getHostSettings"
+            type: "string"
+            Parameter { name: "host_name"; type: "string" }
+        }
+        Method {
+            name: "setHostSettings"
+            Parameter { name: "old_host_name"; type: "string" }
+            Parameter { name: "new_host_name"; type: "string" }
+            Parameter { name: "host_settings_json"; type: "string" }
+        }
+        Method { name: "beginHostConfiguration" }
+        Method { name: "cancelHostConfiguration" }
+        Method { name: "endHostConfiguration" }
+        Method {
+            name: "getSelectedGroups"
+            type: "QStringList"
+            Parameter { name: "host_name"; type: "string" }
+        }
+        Method {
+            name: "getAvailableGroups"
+            type: "QStringList"
+            Parameter { name: "host_name"; type: "string" }
+        }
+        Method {
+            name: "updateHostGroups"
+            Parameter { name: "host_name"; type: "string" }
+            Parameter { name: "groups"; type: "QStringList" }
+        }
+        Method {
+            name: "getSshUsername"
+            type: "string"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method {
+            name: "getCustomCommands"
+            type: "QStringList"
+            Parameter { name: "host_name"; type: "string" }
+        }
+        Method {
+            name: "updateCustomCommands"
+            Parameter { name: "host_name"; type: "string" }
+            Parameter { name: "custom_commands_json"; type: "QStringList" }
+        }
+        Method {
+            name: "updateGroupModules"
+            Parameter { name: "group_id"; type: "string" }
+            Parameter { name: "connector_settings"; type: "string" }
+            Parameter { name: "monitor_settings"; type: "string" }
+            Parameter { name: "command_settings"; type: "string" }
+        }
+        Method { name: "writeGroupConfiguration" }
+        Method { name: "get_all_groups"; type: "QStringList" }
+        Method { name: "addGroup"; Parameter { name: "group_id"; type: "string" } }
+        Method { name: "removeGroup"; Parameter { name: "group_id"; type: "string" } }
+        Method {
+            name: "compareToDefault"
+            type: "QStringList"
+            Parameter { name: "group_name"; type: "string" }
+        }
+        Method {
+            name: "ignoreFromConfigHelper"
+            Parameter { name: "group_name"; type: "string" }
+            Parameter { name: "commands"; type: "QStringList" }
+            Parameter { name: "monitors"; type: "QStringList" }
+            Parameter { name: "connectors"; type: "QStringList" }
+        }
+        Method {
+            name: "getUnselectedModuleIds"
+            type: "QStringList"
+            Parameter { name: "selected_groups"; type: "QStringList" }
+            Parameter { name: "module_type"; type: "string" }
+        }
+        Method {
+            name: "getGroupModuleIds"
+            type: "QStringList"
+            Parameter { name: "group_name"; type: "string" }
+            Parameter { name: "module_type"; type: "string" }
+        }
+        Method {
+            name: "getModuleDescription"
+            type: "string"
+            Parameter { name: "module_id"; type: "string" }
+        }
+        Method {
+            name: "moduleRequiresSudo"
+            type: "bool"
+            Parameter { name: "module_id"; type: "string" }
+        }
+        Method {
+            name: "addGroupModule"
+            Parameter { name: "group_name"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+            Parameter { name: "module_type"; type: "string" }
+        }
+        Method {
+            name: "getGroupModuleSettings"
+            type: "QStringList"
+            Parameter { name: "group_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+        }
+        Method {
+            name: "getEffectiveModuleSettings"
+            type: "string"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "grouplist"; type: "QStringList" }
+            Parameter { name: "module_type"; type: "string" }
+        }
+        Method {
+            name: "storeGroupSecret"
+            type: "string"
+            Parameter { name: "group_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+            Parameter { name: "setting_key"; type: "string" }
+            Parameter { name: "secret_value"; type: "string" }
+        }
+        Method {
+            name: "getGroupSecret"
+            type: "string"
+            Parameter { name: "group_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+            Parameter { name: "setting_key"; type: "string" }
+        }
+        Method {
+            name: "removeGroupSecret"
+            Parameter { name: "group_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+            Parameter { name: "setting_key"; type: "string" }
+        }
+        Method { name: "checkConfigErrors"; type: "QStringList" }
+    }
+
+    Component {
+        name: "HostDataManagerModel"
+        prototype: "QObject"
+
+        Property { name: "monitorCriticalCount"; type: "int"; isReadonly: false; }
+        Property { name: "monitorErrorCount"; type: "int"; isReadonly: false; }
+        Property { name: "monitorWarningCount"; type: "int"; isReadonly: false; }
+        Property { name: "monitorNormalCount"; type: "int"; isReadonly: false; }
+        Property { name: "monitorNoDataCount"; type: "int"; isReadonly: false; }
+
+        Signal { name: "criticalityCountsChanged" }
+        Signal { name: "updateReceived"; Parameter { name: "host_id"; type: "string" } }
+        Signal {
+            name: "monitorStateChanged"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "monitor_id"; type: "string" }
+            Parameter { name: "new_criticality"; type: "string" }
+        }
+        Signal {
+            name: "commandResultReceived"
+            Parameter { name: "command_result"; type: "string" }
+            Parameter { name: "invocation_id"; type: "int" }
+        }
+        Signal {
+            name: "monitoringDataReceived"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+            Parameter { name: "monitoring_data_qv"; type: "QVariant" }
+            Parameter { name: "invocation_id"; type: "int" }
+        }
+        Signal {
+            name: "errorReceived"
+            Parameter { name: "criticality"; type: "string" }
+            Parameter { name: "error"; type: "string" }
+        }
+        Signal {
+            name: "verificationRequested"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "connector_id"; type: "string" }
+            Parameter { name: "message"; type: "string" }
+            Parameter { name: "key_id"; type: "string" }
+        }
+
+        Method {
+            name: "getMonitoringData"
+            type: "QVariant"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "monitor_id"; type: "string" }
+        }
+        Method {
+            name: "getMonitoringDataJson"
+            type: "string"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "monitor_id"; type: "string" }
+        }
+        Method { name: "getDisplayData"; type: "QVariant" }
+        Method {
+            name: "getCategories"
+            type: "QStringList"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "ignore_empty"; type: "bool" }
+        }
+        Method {
+            name: "getCategoryMonitorIds"
+            type: "QStringList"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+        }
+        Method { name: "refresh_hosts_on_start"; type: "bool" }
+        Method {
+            name: "isHostInitialized"
+            type: "bool"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method { name: "removeHost"; Parameter { name: "host_id"; type: "string" } }
+        Method {
+            name: "getPendingMonitorCount"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method {
+            name: "getPendingMonitorCountForCategory"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+        }
+        Method {
+            name: "getPendingCommandCount"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method {
+            name: "getPendingCommandCountForCategory"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+        }
+        Method {
+            name: "getPendingCommandProgress"
+            type: "int"
+            Parameter { name: "invocation_id"; type: "int" }
+        }
+        Method { name: "getCertificateMonitorHostId"; type: "string" }
+        Method {
+            name: "getSummaryMonitorData"
+            type: "QStringList"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method {
+            name: "getHostDataJson"
+            type: "string"
+            Parameter { name: "host_id"; type: "string" }
+        }
+    }
+
+    Component {
+        name: "MetricsManagerModel"
+        prototype: "QObject"
+
+        Method { name: "startService" }
+        Method {
+            name: "refreshCharts"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "monitor_id"; type: "string" }
+            Parameter { name: "start_time_sec"; type: "int" }
+            Parameter { name: "end_time_sec"; type: "int" }
+        }
+        Method {
+            name: "getCategories"
+            type: "QStringList"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method {
+            name: "getCategoryMonitorIds"
+            type: "QStringList"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category_id"; type: "string" }
+        }
+
+        Signal {
+            name: "dataReceived"
+            Parameter { name: "invocation_id"; type: "int" }
+            Parameter { name: "chart_data"; type: "string" }
+        }
+    }
+
+    Component {
         name: "LK"
         prototype: "QObject"
         exports: ["LK 1.0"]
         isSingleton: true
 
-        Property { name: "command"; type: "QObject"; isReadonly: true; }
-        Property { name: "hosts"; type: "QObject"; isReadonly: true; }
-        Property { name: "config"; type: "QObject"; isReadonly: true; }
-        Property { name: "metrics"; type: "QObject"; isReadonly: true; }
+        Property { name: "command"; type: "CommandHandlerModel"; isReadonly: true; }
+        Property { name: "hosts"; type: "HostDataManagerModel"; isReadonly: true; }
+        Property { name: "config"; type: "ConfigManagerModel"; isReadonly: true; }
+        Property { name: "metrics"; type: "MetricsManagerModel"; isReadonly: true; }
 
         Method { name: "receiveUpdates" }
         Method { name: "reload" }
