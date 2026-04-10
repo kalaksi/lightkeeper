@@ -6,7 +6,7 @@
 use std::{env, fs, io, path::Path, path::PathBuf};
 
 use chrono::{DateTime, Utc};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::file_handler;
 use crate::utils::sha256;

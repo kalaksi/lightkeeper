@@ -4,7 +4,7 @@
  */
 
 use std::collections::HashMap;
-use serde_derive::{ Serialize, Deserialize };
+use serde::{Serialize, Deserialize};
 
 use crate::enums::HostStatus;
 use crate::host::Host;

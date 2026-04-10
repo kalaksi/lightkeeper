@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 use ureq;
-use serde_derive::Deserialize;
+use serde::Deserialize;
 use serde_json;
 
 use std::sync::{Arc, Mutex};

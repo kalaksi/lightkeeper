@@ -6,7 +6,7 @@
 
 extern crate qmetaobject;
 use qmetaobject::*;
-use serde_derive::Serialize;
+use serde::Serialize;
 
 use crate::command_handler::CommandButtonData;
 use crate::enums::Criticality;

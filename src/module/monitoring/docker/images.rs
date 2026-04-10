@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 use chrono::TimeZone;
-use serde_derive::Deserialize;
+use serde::Deserialize;
 use serde_json;
 use chrono::Utc;
 

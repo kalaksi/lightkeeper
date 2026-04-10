@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use serde_derive::{Deserialize, Serialize};
-use strum_macros::{Display, EnumString};
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize, Display, EnumString)]
 pub enum Criticality {

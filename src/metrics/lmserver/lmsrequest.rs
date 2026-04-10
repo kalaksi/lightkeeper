@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Metric {

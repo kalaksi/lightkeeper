@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 use chrono::NaiveDateTime;
-use serde_derive::Deserialize;
+use serde::Deserialize;
 use serde_json;
 
 use crate::error::LkError;

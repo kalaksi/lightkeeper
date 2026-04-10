@@ -6,7 +6,7 @@
 use std::error;
 use std::fmt;
 
-use strum_macros::Display;
+use strum::Display;
 
 #[derive(Clone, Debug)]
 pub struct LkError {

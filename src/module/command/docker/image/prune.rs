@@ -4,7 +4,7 @@
  */
 
 use std::collections::HashMap;
-use serde_derive::Deserialize;
+use serde::Deserialize;
 use serde_json;
 use crate::error::LkError;
 use crate::frontend;

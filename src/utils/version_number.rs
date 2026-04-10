@@ -7,7 +7,7 @@ use std::default::Default;
 use std::fmt::Display;
 use std::str::FromStr;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Default, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Clone, Copy)]
 pub struct VersionNumber {

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use serde_derive::{Deserialize, Serialize};
-use strum_macros::Display;
+use serde::{Deserialize, Serialize};
+use strum::Display;
 
 use crate::{enums::Criticality, module::command::UIAction, utils::string_validation};
 

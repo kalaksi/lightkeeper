@@ -5,7 +5,7 @@
 
 use std::{net::IpAddr, net::Ipv4Addr, net::ToSocketAddrs, str::FromStr};
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{error::*, module::PlatformInfo, utils};
 

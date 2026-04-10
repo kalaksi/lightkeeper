@@ -5,7 +5,7 @@
 
 use std::fmt::Display;
 
-use strum_macros::{Display, EnumString};
+use strum::{Display, EnumString};
 
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ModuleSpecification {

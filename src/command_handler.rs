@@ -11,7 +11,7 @@ use std::sync::mpsc;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::thread;
-use serde_derive::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize};
 use std::cell::RefCell;
 use std::rc::Rc;
 

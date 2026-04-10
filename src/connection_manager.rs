@@ -13,7 +13,7 @@ use std::{
     thread,
 };
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::error::LkError;
 use crate::module::monitoring::DataPoint;

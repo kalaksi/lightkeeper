@@ -4,7 +4,7 @@
  */
 
 use std::fmt;
-use serde_derive::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize};
 use crate::enums::Criticality;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

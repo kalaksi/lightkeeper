@@ -10,7 +10,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::sync::{Arc, Mutex};
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::configuration::HostSettings;
 use crate::error::LkError;

@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use super::DataPoint;
 use crate::{

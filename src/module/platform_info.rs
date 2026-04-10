@@ -5,8 +5,8 @@
 
 use std::str::FromStr;
 
-use serde_derive::{Deserialize, Serialize};
-use strum_macros::{Display, EnumString};
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
 
 use crate::utils::VersionNumber;
 

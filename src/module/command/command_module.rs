@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     enums::Criticality,
