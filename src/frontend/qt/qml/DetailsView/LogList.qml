@@ -7,7 +7,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
-import Theme
+import Lightkeeper 1.0
 
 import "../Text"
 import "../js/TextTransform.js" as TextTransform

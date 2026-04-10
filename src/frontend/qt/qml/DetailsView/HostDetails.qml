@@ -7,7 +7,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 
-import Theme
+import Lightkeeper 1.0
 
 import "../ChartsView"
 

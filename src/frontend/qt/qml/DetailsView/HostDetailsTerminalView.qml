@@ -8,7 +8,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 import QMLTermWidget
-import Theme
+import Lightkeeper 1.0
 
 import "../Button"
 

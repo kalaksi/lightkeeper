@@ -7,8 +7,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
 
-import Theme
-import HostTableModel
+import Lightkeeper 1.0
 
 import "./Button"
 import "./DetailsView"

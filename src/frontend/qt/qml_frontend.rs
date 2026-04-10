@@ -78,12 +78,12 @@ impl QmlFrontend {
         host_manager: Rc<RefCell<host_manager::HostManager>>,
         metrics_manager: Option<MetricsManager>,
     ) -> ExitReason {
-        qml_register_type::<PropertyTableModel>(cstr::cstr!("PropertyTableModel"), 1, 0, cstr::cstr!("PropertyTableModel"));
-        qml_register_type::<HostTableModel>(cstr::cstr!("HostTableModel"), 1, 0, cstr::cstr!("HostTableModel"));
+        qml_register_type::<PropertyTableModel>(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("PropertyTableModel"));
+        qml_register_type::<HostTableModel>(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("HostTableModel"));
 
         let display_data = host_manager.borrow().get_display_data();
-        let qt_file_chooser = QObjectBox::new(FileChooserModel::new());
-        let qt_lkbackend = QObjectBox::new(LkBackend::new(
+        let file_chooser = FileChooserModel::new();
+        let lk_backend = LkBackend::new(
             self.update_sender_prototype.clone(),
             self.update_receiver.take().unwrap(),
             host_manager,
@@ -98,10 +98,10 @@ impl QmlFrontend {
                 self.group_config.clone(),
                 self.module_metadatas.clone(),
             ),
-        ));
+        );
 
         let is_flatpak = env::var("FLATPAK_ID").is_ok();
-        let sandboxed_updated = qt_lkbackend.pinned().borrow_mut().config.borrow_mut().setSandboxed(is_flatpak);
+        let sandboxed_updated = lk_backend.config.borrow_mut().setSandboxed(is_flatpak);
         let mut engine = QmlEngine::new();
 
         if sandboxed_updated {
@@ -118,12 +118,20 @@ impl QmlFrontend {
                 engine.add_import_path(QString::from("./third_party/qmltermwidget"));
                 engine.add_import_path(QString::from("./third_party/ChartJs2QML"));
                 engine.add_import_path(QString::from("./third_party/qml-lighthouse-components"));
+                engine.add_import_path(QString::from("./src/frontend/qt/qml_types"));
             }
-            engine.set_object_property(QString::from("LK"), qt_lkbackend.pinned());
-            engine.set_object_property(QString::from("DesktopPortal"), qt_file_chooser.pinned());
+
+            qml_register_singleton_instance(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("LK"), lk_backend);
+            qml_register_singleton_instance(
+                cstr::cstr!("Lightkeeper"),
+                1,
+                0,
+                cstr::cstr!("DesktopPortal"),
+                file_chooser,
+            );
 
             let qt_theme = ThemeModel::new(self.main_config.display_options.clone());
-            qml_register_singleton_instance(cstr::cstr!("Theme"), 1, 0, cstr::cstr!("Theme"), qt_theme);
+            qml_register_singleton_instance(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("Theme"), qt_theme);
 
             ::log::debug!("Temporary log entry 8");
             self.load_qml(&mut engine);

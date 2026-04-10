@@ -8,7 +8,7 @@ import QtQuick.Controls.impl
 import QtQuick.Controls.Fusion
 import QtQuick.Controls.Fusion.impl
 
-import Theme
+import Lightkeeper 1.0
 
 Button {
     id: control

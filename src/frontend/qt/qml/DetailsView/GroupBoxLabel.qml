@@ -7,7 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 
-import Theme
+import Lightkeeper 1.0
 
 import "../Button"
 import "../Misc"

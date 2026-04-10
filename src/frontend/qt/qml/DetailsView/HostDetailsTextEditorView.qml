@@ -7,7 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import org.kde.syntaxhighlighting 1.0
 
-import Theme
+import Lightkeeper 1.0
 
 import ".."
 import "../js/Utils.js" as Utils

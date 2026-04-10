@@ -11,7 +11,7 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 import QtCore
 
-import Theme
+import Lightkeeper 1.0
 
 import ".."
 import Lighthouse.FileBrowser 1.0

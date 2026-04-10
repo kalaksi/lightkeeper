@@ -6,6 +6,8 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 
+import Lightkeeper 1.0
+
 import "./Dialog"
 import "js/Utils.js" as Utils
 

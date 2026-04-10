@@ -26,13 +26,14 @@
 ## QML
 - Always have an empty line before start of a QML element, e.g. `\nText {...`.
 - Component structure should be: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
-- Reference errors to `LK` (and only `LK`) are expected and can be ignored.
 - When adding or removing QML files, resource file has to be updated.
 - Prefer using native components from Qt instead of implementing something custom.
 - Prefer iterating with for..of or for..in instead of using indexes.
 - Avoid overly complicated width or height calculations.
 - When warranted, prefer functional style (map, filter, etc.) instead of imperative.
 - Prefer Columns and Rows instead of manually calculating positions and sizes.
+- `LK`, `DesktopPortal`, and `Theme` are QML singletons in `Lightkeeper`; any QML file that uses them needs `import Lightkeeper 1.0`.
+- Always update and keep in sync Rust-based QML type info (`src/frontend/qt/qml_types/Lightkeeper/plugins.qmltypes`)
 
 ## Icons
 - Icons should be copied from breeze in `vendor/breeze-icons-5.95.0`-dir.

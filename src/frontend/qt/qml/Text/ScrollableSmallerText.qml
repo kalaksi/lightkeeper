@@ -5,7 +5,7 @@
 
 import QtQuick
 
-import Theme
+import Lightkeeper 1.0
 
 
 // TODO: A more generic ScrollAnimation component for Texts.

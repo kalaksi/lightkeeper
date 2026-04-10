@@ -7,6 +7,8 @@ import QtQuick
 import QtQuick.Controls
 import Qt.labs.qmlmodels
 
+import Lightkeeper 1.0
+
 import "Text"
 import "StyleOverride"
 

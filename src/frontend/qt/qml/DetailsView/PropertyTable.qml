@@ -7,8 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import Qt.labs.qmlmodels
 
-import PropertyTableModel
-import Theme
+import Lightkeeper 1.0
 
 import "../Text"
 import "../js/ValueUnit.js" as ValueUnit

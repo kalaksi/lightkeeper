@@ -6,7 +6,7 @@
 import QtQuick
 import QtQuick.Controls
 
-import Theme
+import Lightkeeper 1.0
 
 import "../Text"
 import "../StyleOverride"

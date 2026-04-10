@@ -6,7 +6,7 @@
 import QtQuick.Controls
 import QtQuick.Controls.Fusion
 
-import Theme
+import Lightkeeper 1.0
 
 Label {
     id: control

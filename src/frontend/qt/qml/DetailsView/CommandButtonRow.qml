@@ -6,7 +6,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 
-import Theme
+import Lightkeeper 1.0
 
 import "../Button"
 

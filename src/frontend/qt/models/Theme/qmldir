@@ -1,3 +1,0 @@
-module Theme
-plugin Theme
-typeinfo plugins.qmltypes

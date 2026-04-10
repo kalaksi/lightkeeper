@@ -8,7 +8,7 @@ import QtQuick.Controls
 import QtQuick.Controls.impl
 import QtQuick.Controls.Fusion
 
-import Theme
+import Lightkeeper 1.0
 
 
 TextField {

@@ -8,7 +8,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-import Theme
+import Lightkeeper 1.0
 
 import "../Text"
 

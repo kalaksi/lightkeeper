@@ -1,0 +1,152 @@
+import QtQuick.tooling 1.2
+
+Module {
+    Component {
+        name: "Theme"
+        prototype: "QObject"
+        exports: ["Theme 1.0"]
+        isSingleton: true
+
+        Property { name: "disabledTextColor"; type: "string"; isReadonly: true; }
+        Property { name: "iconColor"; type: "string"; isReadonly: true; }
+        Property { name: "textColor"; type: "string"; isReadonly: true; }
+        Property { name: "textColorDark"; type: "string"; isReadonly: true; }
+        Property { name: "borderColor"; type: "string"; isReadonly: true; }
+        Property { name: "titleBarColor"; type: "string"; isReadonly: true; }
+        Property { name: "highlightColor"; type: "string"; isReadonly: true; }
+        Property { name: "highlightColorLight"; type: "string"; isReadonly: true; }
+        Property { name: "highlightColorBright"; type: "string"; isReadonly: true; }
+        Property { name: "backgroundColorDark"; type: "string"; isReadonly: true; }
+        Property { name: "backgroundColor"; type: "string"; isReadonly: true; }
+        Property { name: "backgroundColorLight"; type: "string"; isReadonly: true; }
+        Property { name: "alternateBaseColor"; type: "string"; isReadonly: true; }
+        Property { name: "baseColor"; type: "string"; isReadonly: true; }
+        Property { name: "categoryBackgroundColor"; type: "string"; isReadonly: true; }
+        Property { name: "categoryRefreshMask"; type: "string"; isReadonly: true; }
+        Property { name: "spacingLoose"; type: "int"; isReadonly: true; }
+        Property { name: "spacingNormal"; type: "int"; isReadonly: true; }
+        Property { name: "spacingTight"; type: "int"; isReadonly: true; }
+        Property { name: "marginScrollbar"; type: "int"; isReadonly: true; }
+        Property { name: "marginDialog"; type: "int"; isReadonly: true; }
+        Property { name: "marginDialogTop"; type: "int"; isReadonly: true; }
+        Property { name: "marginDialogBottom"; type: "int"; isReadonly: true; }
+        Property { name: "animationDuration"; type: "int"; isReadonly: true; }
+        Property { name: "animationDurationFast"; type: "int"; isReadonly: true; }
+        Property { name: "groupboxMinWidth"; type: "int"; isReadonly: true; }
+        Property { name: "groupboxMaxWidth"; type: "int"; isReadonly: true; }
+        Property { name: "commonIndent"; type: "int"; isReadonly: true; }
+        Property { name: "fontSize"; type: "int"; isReadonly: true; }
+        Property { name: "tooltipDelay"; type: "int"; isReadonly: true; }
+        Method { name: "categoryColor"; Parameter { name: "category"; type: "string" } }
+        Method { name: "criticalityColor"; Parameter { name: "criticality"; type: "string" } }
+        Method { name: "categoryIcon"; Parameter { name: "category"; type: "string" } }
+        Method { name: "colorForCriticality"; Parameter { name: "criticality"; type: "string" } }
+        Method { name: "iconForCriticality"; Parameter { name: "alert_level"; type: "string" } }
+        Method { name: "opacity"; Parameter { name: "is_enabled"; type: "bool" } }
+        Method { name: "getDisplayOptions" }
+        Method { name: "allowCollapsingCommand"; Parameter { name: "command_id"; type: "string" } }
+    }
+
+    Component {
+        name: "LK"
+        prototype: "QObject"
+        exports: ["LK 1.0"]
+        isSingleton: true
+
+        Property { name: "command"; type: "QObject"; isReadonly: true; }
+        Property { name: "hosts"; type: "QObject"; isReadonly: true; }
+        Property { name: "config"; type: "QObject"; isReadonly: true; }
+        Property { name: "metrics"; type: "QObject"; isReadonly: true; }
+
+        Method { name: "receiveUpdates" }
+        Method { name: "reload" }
+        Method { name: "stop" }
+
+        Signal {
+            name: "reloaded"
+            Parameter { name: "error"; type: "string" }
+        }
+        Signal { name: "crashed" }
+    }
+
+    Component {
+        name: "DesktopPortal"
+        prototype: "QObject"
+        exports: ["DesktopPortal 1.0"]
+        isSingleton: true
+
+        Signal {
+            name: "error"
+            Parameter { name: "error_message"; type: "string" }
+        }
+        Signal {
+            name: "fileChooserResponse"
+            Parameter { name: "token"; type: "string" }
+            Parameter { name: "file_path"; type: "string" }
+        }
+        Signal {
+            name: "openFileResponse"
+            Parameter { name: "token"; type: "string" }
+        }
+        Signal {
+            name: "openedFileClosed"
+            Parameter { name: "token"; type: "string" }
+        }
+
+        Method { name: "receiveResponses" }
+        Method { name: "stop" }
+        Method {
+            name: "openFile"
+            type: "string"
+            Parameter { name: "file_path"; type: "string" }
+        }
+        Method { name: "openFileChooser"; type: "string" }
+    }
+
+    Component {
+        name: "HostTableModel"
+        prototype: "QAbstractTableModel"
+        exports: ["HostTableModel 1.0"]
+
+        Property { name: "displayData"; type: "QVariant"; isReadonly: false; }
+        Property { name: "selectedRow"; type: "int"; isReadonly: false; }
+        Property { name: "rowCount"; type: "int"; isReadonly: true; }
+
+        Signal { name: "selectedRowChanged" }
+        Signal { name: "selectionActivated" }
+        Signal { name: "selectionDeactivated" }
+
+        Method { name: "dataChangedForHost"; Parameter { name: "host_id"; type: "string" } }
+        Method { name: "toggleRow"; Parameter { name: "row"; type: "int" } }
+        Method { name: "getSelectedHostId"; type: "string" }
+        Method { name: "filter"; Parameter { name: "filter"; type: "string" } }
+    }
+
+    Component {
+        name: "PropertyTableModel"
+        prototype: "QAbstractTableModel"
+        exports: ["PropertyTableModel 1.0"]
+
+        Property { name: "monitoring_datas"; type: "QVariantList"; isReadonly: false; }
+        Property { name: "command_datas"; type: "QVariantList"; isReadonly: false; }
+        Property { name: "display_options"; type: "QVariant"; isReadonly: false; }
+
+        Method { name: "update"; Parameter { name: "monitoring_data"; type: "QVariant" } }
+        Method {
+            name: "get_separator_label"
+            type: "string"
+            Parameter { name: "row"; type: "QVariant" }
+        }
+        Method {
+            name: "getRowHeight"
+            type: "int"
+            Parameter { name: "row"; type: "QVariant" }
+        }
+        Method {
+            name: "get_column_width"
+            type: "double"
+            Parameter { name: "row"; type: "QVariant" }
+            Parameter { name: "column"; type: "QVariant" }
+        }
+    }
+}

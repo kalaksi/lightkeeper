@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import Theme
+import Lightkeeper 1.0
 
 BaseText {
     font.pointSize: Theme.fontSize - 2
