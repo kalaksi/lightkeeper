@@ -38,7 +38,7 @@ Item {
     signal saved(commandId: string, localFilePath: string, content: string)
     signal closed(localFilePath: string)
     signal contentChanged(localFilePath: string, newContent: string)
-    // Currently only emitted when closing the tab from Vim ex-commands (:q / :wq).
+    // When closing the tab from Vim ex-commands (:q / :wq) or Emacs C-x C-c.
     signal closeTabRequested()
 
     onLocalFilePathChanged: {
@@ -260,36 +260,31 @@ Item {
                         if (!rootItem) {
                             return
                         }
-                        if (writeOnlyIfModified) {
-                            if (!rootItem.disableSaveButton) {
+
+                        if (writeChanges) {
+                            if (!writeOnlyIfModified || (writeOnlyIfModified && !rootItem.disableSaveButton)) {
                                 rootItem._vimCloseAfterSave = true
                                 if (!rootItem.save()) {
                                     rootItem._vimCloseAfterSave = false
+                                } else {
+                                    rootItem.closeTabRequested()
                                 }
-                            } else {
+                            }
+                        }
+                        else if (!rootItem.disableSaveButton) {
+                            if (discardUnsaved) {
+                                rootItem._vimCloseAfterSave = false
                                 rootItem.closeTabRequested()
                             }
-                            return
-                        }
-                        if (writeChanges) {
-                            rootItem._vimCloseAfterSave = true
-                            if (!rootItem.save()) {
-                                rootItem._vimCloseAfterSave = false
+                            else {
+                                rootItem._aceEditorObject.showVimNotification(
+                                    "There are unsaved changes",
+                                    Theme.criticalityColor("Warning"))
                             }
-                            return
                         }
-                        if (discardUnsaved) {
-                            rootItem._vimCloseAfterSave = false
+                        else {
                             rootItem.closeTabRequested()
-                            return
                         }
-                        if (!rootItem.disableSaveButton) {
-                            rootItem._aceEditorObject.showVimNotification(
-                                "No write since last change",
-                                Theme.criticalityColor("Warning"))
-                            return
-                        }
-                        rootItem.closeTabRequested()
                     }
                 }`
 
