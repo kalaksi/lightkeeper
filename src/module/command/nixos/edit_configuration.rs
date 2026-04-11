@@ -36,7 +36,7 @@ impl CommandModule for EditConfiguration {
             display_icon: String::from("story-editor"),
             display_text: String::from("Edit configuration.nix"),
             action: UIAction::TextEditor,
-            tab_title: String::from("configuration.nix"),
+            tab_title: String::from("%s"),
             ..Default::default()
         }
     }

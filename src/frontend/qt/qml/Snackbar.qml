@@ -25,7 +25,8 @@ Rectangle {
     property int maximumWidth: 600
 
     visible: getText() !== ""
-    width: Utils.clamp(textContent.implicitWidth + iconBackground.width + root.contentPadding * 3, root.maximumWidth / 3, root.maximumWidth)
+    width: Utils.clamp(textContent.implicitWidth + iconBackground.width + root.contentPadding * 3,
+                       root.maximumWidth / 2, root.maximumWidth)
     height: 120
     radius: 5
     color: Theme.backgroundColor
