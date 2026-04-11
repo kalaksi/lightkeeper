@@ -104,13 +104,23 @@ Item {
 
         // For integrated text editor (not external).
         function onTextEditorViewOpened(headerText, commandId, invocationId, localFilePath) {
+            let editorComponent = textEditorView.createObject(root._tabStacks[root.hostId], {
+                commandId: commandId,
+                localFilePath: localFilePath,
+                pendingInvocation: invocationId,
+            })
+            editorComponent.closeTabRequested.connect(function() {
+                let contents = root._tabContents[root.hostId]
+                for (const [index, tabContent] of contents.entries()) {
+                    if (tabContent.component === editorComponent) {
+                        root.closeTab(index)
+                        return
+                    }
+                }
+            })
             let tabData = {
                 "title": headerText,
-                "component": textEditorView.createObject(root._tabStacks[root.hostId], {
-                    commandId: commandId,
-                    localFilePath: localFilePath,
-                    pendingInvocation: invocationId,
-                })
+                "component": editorComponent,
             }
 
             root.createNewTab(tabData)

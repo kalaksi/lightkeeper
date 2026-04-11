@@ -29,12 +29,17 @@ Item {
     property int fontSize: 12
     property var _aceEditorObject: null
     property bool _useSimpleCodeEditor: false
+    property bool _vimCloseAfterSave: false
     property string _detectedLanguage: Utils.detectLanguageFromPath(root.localFilePath)
     property string _aceMode: Utils.mapLanguageToAceMode(root._detectedLanguage)
+    // First time text was changed in editor.
+    property bool _initialOpen: true
 
     signal saved(commandId: string, localFilePath: string, content: string)
     signal closed(localFilePath: string)
     signal contentChanged(localFilePath: string, newContent: string)
+    // Currently only emitted when closing the tab from Vim ex-commands (:q / :wq).
+    signal closeTabRequested()
 
     onLocalFilePathChanged: {
         root._detectedLanguage = Utils.detectLanguageFromPath(root.localFilePath)
@@ -44,6 +49,10 @@ Item {
     onTextChanged: {
         if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
             root._aceEditorObject.content = root.text
+        }
+        if (root._initialOpen) {
+            root._initialOpen = false
+            root._aceEditorObject.resetCursor()
         }
     }
 
@@ -76,8 +85,24 @@ Item {
             if (root.pendingInvocation === invocationId) {
                 root.pendingInvocation = 0
 
+                let closeAfterSave = root._vimCloseAfterSave
+                root._vimCloseAfterSave = false
+
                 if (commandResult.criticality === "Normal") {
                     root.text = commandResult.message
+                }
+
+                if (commandResult.criticality === "Normal" || commandResult.criticality === "Info") {
+                    if (closeAfterSave) {
+                        root.closeTabRequested()
+                    }
+                }
+                else {
+                    if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
+                        root._aceEditorObject.showVimNotification(
+                            "Operation failed",
+                            Theme.criticalityColor(commandResult.criticality))
+                    }
                 }
 
                 root.activate()
@@ -211,6 +236,7 @@ Item {
             let aceEditorQml = `
                 import QtQuick;
                 import QtWebEngine;
+                import Lightkeeper 1.0;
                 import Lighthouse.AceEditor 1.0;
                 AceEditor {
                     anchors.fill: parent;
@@ -224,18 +250,47 @@ Item {
                         }
                     }
 
-                    // TODO
-                    // onSaved: {
-                    //     if (rootItem) {
-                    //         rootItem.save()
-                    //     }
-                    // }
+                    onWriteRequested: function() {
+                        if (rootItem) {
+                            rootItem.save()
+                        }
+                    }
 
-                    // onClosed: {
-                    //     if (rootItem) {
-                    //         rootItem.close()
-                    //     }
-                    // }
+                    onQuitRequested: function(writeChanges, discardUnsaved, writeOnlyIfModified) {
+                        if (!rootItem) {
+                            return
+                        }
+                        if (writeOnlyIfModified) {
+                            if (!rootItem.disableSaveButton) {
+                                rootItem._vimCloseAfterSave = true
+                                if (!rootItem.save()) {
+                                    rootItem._vimCloseAfterSave = false
+                                }
+                            } else {
+                                rootItem.closeTabRequested()
+                            }
+                            return
+                        }
+                        if (writeChanges) {
+                            rootItem._vimCloseAfterSave = true
+                            if (!rootItem.save()) {
+                                rootItem._vimCloseAfterSave = false
+                            }
+                            return
+                        }
+                        if (discardUnsaved) {
+                            rootItem._vimCloseAfterSave = false
+                            rootItem.closeTabRequested()
+                            return
+                        }
+                        if (!rootItem.disableSaveButton) {
+                            rootItem._aceEditorObject.showVimNotification(
+                                "No write since last change",
+                                Theme.criticalityColor("Warning"))
+                            return
+                        }
+                        rootItem.closeTabRequested()
+                    }
                 }`
 
             let editorObject = Qt.createQmlObject(aceEditorQml, aceEditorContainer, "aceEditor")
@@ -249,6 +304,8 @@ Item {
                     root._aceEditorObject.content = root.text
                     root._aceEditorObject.mode = root._aceMode
                     root._aceEditorObject.theme = "tomorrow_night"
+
+                    root._aceEditorObject.resetCursor()
                 })
             } else {
                 console.log("Ace editor not available: failed to create")
@@ -370,16 +427,29 @@ Item {
 
     function save() {
         if (root.commandId === "" || root.localFilePath === "") {
-            return
+            root._vimCloseAfterSave = false
+            return false
+        }
+
+        if (root.pendingInvocation !== 0) {
+            if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
+                root._aceEditorObject.showVimNotification(
+                    "Save already in progress",
+                    Theme.criticalityColor("Warning"))
+            }
+            return false
         }
 
         if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
             root._aceEditorObject.getContent(function(content) {
                 root.saved(root.commandId, root.localFilePath, content)
             })
+            return true
         } else if (root.textEditorItem) {
             root.textEditorItem.save()
+            return true
         }
+        return false
     }
 
     function activate() {
@@ -390,6 +460,11 @@ Item {
                 root._aceEditorObject.getContent(function(content) {
                     root.contentChanged(root.localFilePath, content)
                     root.disableSaveButton = !LK.command.hasFileChanged(root.localFilePath, content)
+                })
+                Qt.callLater(function() {
+                    if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
+                        root._aceEditorObject.focusEditor()
+                    }
                 })
             } else if (root.textEditorItem) {
                 root.textEditorItem.activate()
