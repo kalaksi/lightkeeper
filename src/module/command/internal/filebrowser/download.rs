@@ -133,10 +133,7 @@ pub fn parse_rsync_skipped_count(message: &str) -> Option<(u32, u32)> {
 }
 
 /// Builds CommandResult for a non-partial rsync response. Use for copy, download, upload.
-pub fn process_rsync_final_response(
-    response: &ResponseMessage,
-    operation: &str,
-) -> CommandResult {
+pub fn process_rsync_final_response(response: &ResponseMessage, operation: &str) -> CommandResult {
     if response.return_code != 0 {
         return CommandResult::new_error(response.message.clone());
     }

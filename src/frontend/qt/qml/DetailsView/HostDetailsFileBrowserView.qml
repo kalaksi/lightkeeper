@@ -167,6 +167,42 @@ Item {
 
             ToolButton {
                 flat: false
+                text: "Back"
+                display: AbstractButton.IconOnly
+                icon.name: "go-previous"
+                icon.height: 24
+                icon.width: 24
+                padding: 4
+                enabled: fileBrowser.canNavigateBack
+                onClicked: fileBrowser.navigateBack()
+
+                ToolTip.visible: hovered
+                ToolTip.delay: Theme.tooltipDelay
+                ToolTip.text: "Back"
+            }
+
+            ToolButton {
+                flat: false
+                text: "Forward"
+                display: AbstractButton.IconOnly
+                icon.name: "go-next"
+                icon.height: 24
+                icon.width: 24
+                padding: 4
+                enabled: fileBrowser.canNavigateForward
+                onClicked: fileBrowser.navigateForward()
+
+                ToolTip.visible: hovered
+                ToolTip.delay: Theme.tooltipDelay
+                ToolTip.text: "Forward"
+            }
+
+            ToolSeparator {
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            ToolButton {
+                flat: false
                 icon.source: "qrc:/main/images/button/download"
                 text: "Download"
                 display: AbstractButton.IconOnly
