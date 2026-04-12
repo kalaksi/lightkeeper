@@ -70,17 +70,33 @@ pub struct Hosts {
     pub certificate_monitors: Vec<String>,
 }
 
-#[derive(Default, Serialize, Debug, Deserialize, Clone)]
+#[derive(Serialize, Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EditorPreferences {
     pub edit_mode: EditMode,
     #[serde(default = "EditorPreferences::default_font_size")]
     pub font_size: u32,
+    #[serde(default = "EditorPreferences::default_word_wrap")]
+    pub word_wrap: bool,
 }
 
 impl EditorPreferences {
     fn default_font_size() -> u32 {
         12
+    }
+
+    fn default_word_wrap() -> bool {
+        true
+    }
+}
+
+impl Default for EditorPreferences {
+    fn default() -> Self {
+        Self {
+            edit_mode: EditMode::default(),
+            font_size: EditorPreferences::default_font_size(),
+            word_wrap: EditorPreferences::default_word_wrap(),
+        }
     }
 }
 

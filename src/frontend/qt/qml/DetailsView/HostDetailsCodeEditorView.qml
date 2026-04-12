@@ -27,6 +27,7 @@ Item {
     property bool disableSaveButton: true
     property string editMode: "regular"
     property int fontSize: 12
+    property bool wordWrap: true
     property var _aceEditorObject: null
     property bool _useSimpleCodeEditor: false
     property bool _vimCloseAfterSave: false
@@ -72,6 +73,13 @@ Item {
     onFontSizeChanged: {
         if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
             root._aceEditorObject.setEditorOption("fontSize", root.fontSize)
+        }
+        root._saveEditorPreferences()
+    }
+
+    onWordWrapChanged: {
+        if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
+            root._aceEditorObject.wordWrap = root.wordWrap
         }
         root._saveEditorPreferences()
     }
@@ -186,6 +194,24 @@ Item {
                 visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
             }
 
+            ToolSeparator {
+                visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
+            }
+
+            Text {
+                text: "Word wrap"
+                color: Theme.textColor
+                Layout.alignment: Qt.AlignVCenter
+                visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
+            }
+
+            CheckBox {
+                checked: root.wordWrap
+                onToggled: root.wordWrap = checked
+                Layout.alignment: Qt.AlignVCenter
+                visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
+            }
+
             Item {
                 Layout.fillWidth: true
             }
@@ -292,7 +318,8 @@ Item {
             if (editorObject !== null) {
                 root._aceEditorObject = editorObject
                 editorObject.rootItem = root
-                
+                editorObject.wordWrap = root.wordWrap
+
                 editorObject.editorReady.connect(function() {
                     root._setEditorKeybindings()
                     root._aceEditorObject.setEditorOption("fontSize", root.fontSize)
@@ -396,6 +423,9 @@ Item {
             if (preferences.editorPreferences.fontSize) {
                 root.fontSize = preferences.editorPreferences.fontSize
             }
+            if (preferences.editorPreferences.wordWrap !== undefined) {
+                root.wordWrap = preferences.editorPreferences.wordWrap
+            }
         }
     }
 
@@ -404,6 +434,7 @@ Item {
         preferences.editorPreferences = preferences.editorPreferences
         preferences.editorPreferences.editMode = root.editMode
         preferences.editorPreferences.fontSize = root.fontSize
+        preferences.editorPreferences.wordWrap = root.wordWrap
         LK.config.setPreferences(preferences)
     }
 

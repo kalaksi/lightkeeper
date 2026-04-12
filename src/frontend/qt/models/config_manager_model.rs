@@ -186,6 +186,7 @@ impl ConfigManagerModel {
         let mut editor_preferences = QVariantMap::default();
         editor_preferences.insert("editMode".into(), QString::from(self.main_config.preferences.editor_preferences.edit_mode.to_string()).into());
         editor_preferences.insert("fontSize".into(), (self.main_config.preferences.editor_preferences.font_size as i32).into());
+        editor_preferences.insert("wordWrap".into(), self.main_config.preferences.editor_preferences.word_wrap.into());
         preferences.insert("editorPreferences".into(), editor_preferences.into());
 
         preferences
@@ -226,6 +227,8 @@ impl ConfigManagerModel {
             if font_size > 0 {
                 self.main_config.preferences.editor_preferences.font_size = font_size as u32;
             }
+            self.main_config.preferences.editor_preferences.word_wrap =
+                editor_prefs_map.value("wordWrap".into(), true.into()).to_bool();
         }
 
         if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
