@@ -17,11 +17,21 @@ import ".."
 import Lighthouse.FileBrowser 1.0
 import "../Dialog"
 import "../Misc"
+import "../StyleOverride" as StyleOverride
 import "../Text"
 
 Item {
     id: root
     required property string initialPath
+
+    Component {
+        id: fileBrowserVerticalScrollBar
+        StyleOverride.ScrollBar {
+            policy: ScrollBar.AsNeeded
+            fadeWhenIdle: false
+            anchors.rightMargin: Theme.spacingNormal
+        }
+    }
 
     property string hostId: ""
     property int pendingInvocation: 0
@@ -352,6 +362,7 @@ Item {
         contextMenu: contextMenu
         directoryIconSource: "qrc:/main/images/button/document-open-folder"
         dimmedPaths: root._fileClipboardIsCut ? root._fileClipboardPaths : []
+        verticalScrollBar: fileBrowserVerticalScrollBar
 
         onRenamed: function(fullPath, newName) {
             let id = LK.command.executePlain(root.hostId,
