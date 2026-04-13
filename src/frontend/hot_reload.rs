@@ -3,12 +3,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+use std::path::PathBuf;
 use std::sync::Arc;
-use std::{path::PathBuf, thread, time::Instant};
 
 use qmetaobject;
 
-#[cfg(debug_assertions)]
+#[cfg(all(debug_assertions, feature = "hot-reload"))]
+use std::{thread, time::Instant};
+
+#[cfg(all(debug_assertions, feature = "hot-reload"))]
 pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
     use notify::{self, Watcher};
 
@@ -54,7 +57,6 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
     });
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(not(all(debug_assertions, feature = "hot-reload")))]
 pub fn watch(_path: PathBuf, _engine: Arc<qmetaobject::QmlEngine>) {
-    // No hot reload in release mode.
 }
