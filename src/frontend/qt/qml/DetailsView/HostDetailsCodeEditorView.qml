@@ -31,6 +31,7 @@ Item {
     property var _aceEditorObject: null
     property bool _useSimpleCodeEditor: false
     property bool _vimCloseAfterSave: false
+    property bool _saveOverlayActive: false
     property string _detectedLanguage: Utils.detectLanguageFromPath(root.localFilePath)
     property string _aceMode: Utils.mapLanguageToAceMode(root._detectedLanguage)
     // First time text was changed in editor.
@@ -92,6 +93,7 @@ Item {
 
             if (root.pendingInvocation === invocationId) {
                 root.pendingInvocation = 0
+                root._saveOverlayActive = false
 
                 let closeAfterSave = root._vimCloseAfterSave
                 root._vimCloseAfterSave = false
@@ -301,8 +303,6 @@ Item {
                                 rootItem._vimCloseAfterSave = true
                                 if (!rootItem.save()) {
                                     rootItem._vimCloseAfterSave = false
-                                } else {
-                                    rootItem.closeTabRequested()
                                 }
                             }
                         }
@@ -410,6 +410,12 @@ Item {
               "You are using a simple text editor instead. To continue using simple editor without this warning, choose \"internal (simple)\" in settings."
     }
 
+    BusyOverlay {
+        anchors.fill: parent
+        visible: root._saveOverlayActive
+        text: "Saving..."
+    }
+
     Shortcut {
         sequence: StandardKey.Save
         onActivated: {
@@ -477,10 +483,16 @@ Item {
 
         if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
             root._aceEditorObject.getContent(function(content) {
+                if (root._vimCloseAfterSave) {
+                    root._saveOverlayActive = true
+                }
                 root.saved(root.commandId, root.localFilePath, content)
             })
             return true
         } else if (root.textEditorItem) {
+            if (root._vimCloseAfterSave) {
+                root._saveOverlayActive = true
+            }
             root.textEditorItem.save()
             return true
         }
