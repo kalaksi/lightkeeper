@@ -267,7 +267,16 @@ Item {
                 AceEditor {
                     anchors.fill: parent;
                     property var rootItem: null;
-                    defaultBackgroundColor: "#1d1f21"
+                    // palette.base
+                    defaultBackgroundColor: Theme.baseColor
+                    customScrollbarStyling: true
+                    // palette.base
+                    scrollbarTrackColor: Theme.baseColor
+                    // palette.light
+                    scrollbarThumbColor: "#474d54"
+                    // palette.midlight
+                    scrollbarThumbHoverColor: "#3a4045"
+                    scrollbarSize: 8
 
                     onEditorContentChanged: function(newContent) {
                         if (rootItem) {
