@@ -205,9 +205,9 @@ Item {
                 visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
             }
 
-            CheckBox {
+            Switch {
                 checked: root.wordWrap
-                onToggled: root.wordWrap = checked
+                onCheckedChanged: root.wordWrap = checked
                 Layout.alignment: Qt.AlignVCenter
                 visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
             }
