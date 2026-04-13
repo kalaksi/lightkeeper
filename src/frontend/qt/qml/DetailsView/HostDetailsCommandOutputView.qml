@@ -133,7 +133,7 @@ Item {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.rightMargin: Theme.marginScrollbar
+            Layout.rightMargin: Theme.spacingNormal
         }
 
         NormalText {

@@ -58,7 +58,10 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Theme.spacingNormal
+        anchors.leftMargin: Theme.spacingNormal
+        anchors.rightMargin: Theme.spacingTight
+        anchors.topMargin: Theme.spacingNormal
+        anchors.bottomMargin: Theme.spacingNormal
 
         Row {
             id: searchBox

@@ -10,6 +10,7 @@ import org.kde.syntaxhighlighting 1.0
 import Lightkeeper 1.0
 
 import ".."
+import "../StyleOverride" as StyleOverride
 import "../js/Utils.js" as Utils
 
 
@@ -47,13 +48,6 @@ Item {
         }
     }
 
-    // ScrollView doesn't have boundsBehavior so this is the workaround.
-    Binding {
-        target: rootScrollView.contentItem
-        property: "boundsBehavior"
-        value: Flickable.StopAtBounds
-    }
-
     Rectangle {
         color: Theme.backgroundColorLight
         anchors.fill: parent
@@ -63,18 +57,29 @@ Item {
         visible: root.text === ""
     }
 
-    ScrollView {
-        id: rootScrollView
+    Flickable {
+        id: editorFlickable
         visible: root.text !== ""
         anchors.fill: parent
-        anchors.margins: Theme.spacingLoose
+        anchors.leftMargin: Theme.spacingLoose
+        anchors.rightMargin: Theme.spacingNormal
+        anchors.topMargin: Theme.spacingLoose
+        anchors.bottomMargin: Theme.spacingLoose
         clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        contentWidth: width
+        contentHeight: Math.max(textEdit.contentHeight, height)
+
+        ScrollBar.vertical: StyleOverride.ScrollBar {
+            policy: ScrollBar.AsNeeded
+        }
 
         TextEdit {
             id: textEdit
             // Enabled only if all data is received.
             enabled: root.pendingInvocation === 0
-            anchors.fill: parent
+            width: editorFlickable.width
+            height: contentHeight
             wrapMode: Text.WordWrap
             color: Theme.textColor
             text: root.text
@@ -96,7 +101,6 @@ Item {
                             return
                         }
                     }
-                    // Fallback to default.
                     syntaxHighlighter.theme = Repository.defaultTheme()
                 }
             }

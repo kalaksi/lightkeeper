@@ -35,7 +35,9 @@ TableView {
     }
 
     ScrollBar.vertical: ScrollBar {
-        id: scrollBar
+        policy: ScrollBar.AsNeeded
+        fadeWhenIdle: false
+        anchors.rightMargin: Theme.spacingNormal
     }
 
     delegate: DelegateChooser {

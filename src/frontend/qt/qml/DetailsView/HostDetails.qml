@@ -233,7 +233,7 @@ Item {
         anchors.right: root.right
         anchors.topMargin: Theme.spacingNormal
         anchors.leftMargin: Theme.spacingNormal
-        anchors.rightMargin: Theme.spacingNormal
+        anchors.rightMargin: Theme.spacingTight
         anchors.bottomMargin: 1
     }
 

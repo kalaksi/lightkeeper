@@ -8,18 +8,26 @@ import QtQuick.Controls.Fusion
 
 ScrollBar {
     id: control
-    
-    contentItem: Rectangle {
-        implicitWidth: control.interactive ? 6 : 2
-        implicitHeight: control.interactive ? 6 : 2
 
-        radius: width / 2
+    property bool fadeWhenIdle: true
+
+    minimumSize: {
+        let track = control.orientation === Qt.Vertical ? control.height : control.width
+        return track > 0 ? Math.min(1, 50 / track) : 0
+    }
+
+    contentItem: Rectangle {
+        implicitWidth: control.interactive ? 8 : 3
+        implicitHeight: control.interactive ? 8 : 3
+
+        radius: width / 1.5
         color: control.pressed ? "#3a4045" : "#474d54"
         opacity: 0.0
 
         states: State {
             name: "active"
-            when: control.policy === ScrollBar.AlwaysOn || (control.active && control.size < 1.0)
+            when: control.policy === ScrollBar.AlwaysOn
+                || (control.size < 1.0 && (control.active || !control.fadeWhenIdle))
             PropertyChanges { control.contentItem.opacity: 0.75 }
         }
 

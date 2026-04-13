@@ -12,7 +12,7 @@ import Lightkeeper 1.0
 
 import ".."
 import "../js/Parse.js" as Parse
-import "../StyleOverride"
+import "../StyleOverride" as StyleOverride
 
 Item {
     id: root
@@ -58,11 +58,19 @@ Item {
         text: "Connecting..."
     }
 
-    ScrollView {
+    StyleOverride.ScrollView {
         id: rootScrollView
         anchors.fill: parent
         contentWidth: availableWidth
         clip: true
+
+        ScrollBar.vertical: StyleOverride.ScrollBar {
+            parent: rootScrollView
+            x: rootScrollView.mirrored ? 0 : rootScrollView.width - width
+            y: rootScrollView.topPadding
+            height: rootScrollView.availableHeight
+            policy: ScrollBar.AsNeeded
+        }
 
         GridLayout {
             id: grid

@@ -51,6 +51,7 @@ TableView {
 
     ScrollBar.vertical: ScrollBar {
         id: scrollBar
+        policy: ScrollBar.AsNeeded
     }
 
     delegate: DelegateChooser {
