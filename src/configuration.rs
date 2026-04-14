@@ -364,6 +364,8 @@ impl Configuration {
             log::error!("Error while setting config directory permissions: {}", error);
         }
 
+        Self::migrate_known_hosts_format(&config_dir);
+
         log::info!("Reading main configuration from {}", main_config_file_path.display());
         let config_contents = fs::read_to_string(main_config_file_path)?;
 
@@ -547,6 +549,42 @@ impl Configuration {
         }
 
         result
+    }
+
+    /// Rewrites `[host]:22` entries in known_hosts to plain `host` format
+    /// to match OpenSSH convention (bracketed format is only for non-standard ports).
+    fn migrate_known_hosts_format(config_dir: &Path) {
+        let known_hosts_path = config_dir.join("known_hosts");
+        let contents = match fs::read_to_string(&known_hosts_path) {
+            Ok(contents) => contents,
+            Err(_) => return,
+        };
+
+        let mut changed = false;
+        let migrated: String = contents.lines().map(|line| {
+            if let Some(rest) = line.strip_prefix('[') {
+                if let Some(pos) = rest.find("]:22 ") {
+                    changed = true;
+                    return format!("{}{}", &rest[..pos], &rest[pos + 4..]);
+                }
+            }
+            line.to_string()
+        }).collect::<Vec<_>>().join("\n");
+
+        if changed {
+            let migrated = if contents.ends_with('\n') {
+                format!("{}\n", migrated)
+            }
+            else {
+                migrated
+            };
+            if let Err(error) = fs::write(&known_hosts_path, migrated) {
+                log::error!("Failed to migrate known_hosts: {}", error);
+            }
+            else {
+                log::info!("Migrated known_hosts entries from [host]:22 to plain host format");
+            }
+        }
     }
 
     pub fn write_initial_config(config_dir: &PathBuf) -> io::Result<()> {
