@@ -4,8 +4,7 @@
  */
 
 use std::collections::HashMap;
-use serde::Deserialize;
-use serde_json;
+
 use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
@@ -50,8 +49,7 @@ impl CommandModule for Prune {
         command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            let socket_path = String::from("/run/podman/podman.sock");
-            command.arguments(vec!["curl", "-s", "--unix-socket", &socket_path, "-X", "POST", "http://localhost/images/prune"]);
+            command.arguments(vec!["podman", "image", "prune", "-f"]);
             Ok(command.to_string())
         }
         else {
@@ -60,15 +58,15 @@ impl CommandModule for Prune {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        let result: PruneResult = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
-        Ok(CommandResult::new_info(format!("Total reclaimed space: {} B", result.space_reclaimed)))
+        if response.return_code != 0 {
+            return Ok(CommandResult::new_error(response.message.trim()));
+        }
+        let text = response.message.trim();
+        if text.is_empty() {
+            Ok(CommandResult::new_info("Prune completed."))
+        }
+        else {
+            Ok(CommandResult::new_info(text))
+        }
     }
-}
-
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct PruneResult {
-    // images_deleted: Option<Vec<String>>,
-    space_reclaimed: i64,
 }

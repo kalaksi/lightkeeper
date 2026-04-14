@@ -5,9 +5,6 @@
 
 use std::collections::HashMap;
 
-use serde::Deserialize;
-use serde_json;
-
 use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
@@ -59,9 +56,7 @@ impl CommandModule for Remove {
             Err(LkError::invalid_parameter("Invalid image ID", target_id))
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
-            let socket_path = String::from("/run/podman/podman.sock");
-            let url = format!("http://localhost/images/{}", target_id);
-            command.arguments(vec!["curl", "-s", "--unix-socket", &socket_path, "-X", "DELETE", &url]);
+            command.arguments(vec!["podman", "rmi", "-f", target_id]);
             Ok(command.to_string())
         }
         else {
@@ -70,29 +65,15 @@ impl CommandModule for Remove {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        if response.message.len() > 0 {
-            if let Ok(deletion_details) = serde_json::from_str::<Vec<DeletionDetails>>(&response.message) {
-                let untagged_count = deletion_details.iter().filter(|details| details.untagged.is_some()).count();
-                let deleted_count = deletion_details.iter().filter(|details| details.deleted.is_some()).count();
-                let response_message = format!("{} layers untagged, {} layers deleted", untagged_count, deleted_count);
-                return Ok(CommandResult::new_info(response_message));
-            }
-            else if let Ok(podman_response) = serde_json::from_str::<ErrorMessage>(&response.message) {
-                return Ok(CommandResult::new_error(podman_response.message));
-            }
+        if response.return_code != 0 {
+            return Ok(CommandResult::new_error(response.message.trim()));
         }
-        Ok(CommandResult::new_info(response.message.clone()))
+        let text = response.message.trim();
+        if text.is_empty() {
+            Ok(CommandResult::new_info("Removed."))
+        }
+        else {
+            Ok(CommandResult::new_info(text))
+        }
     }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct DeletionDetails {
-    untagged: Option<String>,
-    deleted: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct ErrorMessage {
-    message: String,
 }

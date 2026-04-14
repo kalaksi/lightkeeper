@@ -54,10 +54,7 @@ impl CommandModule for Restart {
             Err(LkError::invalid_parameter("Invalid container ID", target_id))
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
-            // Try to get socket path from settings, default to root socket
-            let socket_path = String::from("/run/podman/podman.sock");
-            let url = format!("http://localhost/containers/{}/restart", target_id);
-            command.arguments(vec!["curl", "-s", "--unix-socket", &socket_path, "-X", "POST", &url]);
+            command.arguments(vec!["podman", "restart", target_id]);
             Ok(command.to_string())
         }
         else {
@@ -66,6 +63,15 @@ impl CommandModule for Restart {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        Ok(CommandResult::new_info(response.message.clone()))
+        if response.return_code != 0 {
+            return Ok(CommandResult::new_error(response.message.trim()));
+        }
+        let text = response.message.trim();
+        if text.is_empty() {
+            Ok(CommandResult::new_info("Restarted."))
+        }
+        else {
+            Ok(CommandResult::new_info(text))
+        }
     }
 }

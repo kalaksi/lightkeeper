@@ -8,12 +8,14 @@ use std::{
     path::Path,
 };
 
+use serde::Deserialize;
+use serde_json;
+
 use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::{ Host, frontend };
 use lightkeeper_module::monitoring_module;
-use crate::module::monitoring::podman::containers::ContainerDetails;
 use crate::module::*;
 use crate::module::monitoring::*;
 use crate::utils::ShellCommand;
@@ -27,15 +29,13 @@ use crate::utils::ShellCommand;
         compose_file_name => "Name of the podman-compose file. Default: docker-compose.yml",
         working_dir => "This is only needed with older podman-compose versions that don't include working_dir label on the container,
  so this can be used instead. Should be the parent directory of project directories. Multiple directory paths should be separated with a comma.",
-        local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
-        socket_path => "Path to Podman socket. Default: /run/podman/podman.sock for root, /run/user/{uid}/podman/podman.sock for rootless."
+        local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost"
     }
 )]
 pub struct Compose {
     pub compose_file_name: String,
-    pub working_dir: String, 
+    pub working_dir: String,
     pub local_image_prefix: String,
-    pub socket_path: String,
 }
 
 impl Module for Compose {
@@ -44,7 +44,6 @@ impl Module for Compose {
             compose_file_name: settings.get("compose_file_name").unwrap_or(&String::from("docker-compose.yml")).clone(),
             working_dir: settings.get("working_dir").unwrap_or(&String::new()).clone(),
             local_image_prefix: settings.get("local_image_prefix").unwrap_or(&String::from("localhost")).clone(),
-            socket_path: settings.get("socket_path").unwrap_or(&String::from("/run/podman/podman.sock")).clone(),
         }
     }
 }
@@ -69,9 +68,7 @@ impl MonitoringModule for Compose {
         command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            // Podman API is much better suited for this than using the podman-compose CLI. More effective too.
-            // TODO: find down-status compose-projects with find-command?
-            command.arguments(vec!["curl", "-s", "--unix-socket", &self.socket_path, "http://localhost/containers/json?all=true"]);
+            command.arguments(vec!["podman", "ps", "-a", "--format", "json"]);
             Ok(command.to_string())
         }
         else {
@@ -80,16 +77,18 @@ impl MonitoringModule for Compose {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if response.return_code == 7 {
-            // Coudldn't connect. Daemon is probably not available.
-            let result = DataPoint::value_with_level(String::from("Couldn't connect to Podman daemon."), Criticality::Critical);
+        if response.return_code != 0 {
+            let result = DataPoint::value_with_level(String::from("Couldn't list Podman containers."), Criticality::Critical);
             return Ok(result);
         }
 
-        let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
-        // Support both docker-compose and podman-compose labels
-        containers.retain(|container| container.labels.contains_key("com.docker.compose.config-hash") || 
-                                   container.labels.contains_key("io.podman.compose.config-hash"));
+        let mut rows: Vec<PodmanComposePsJsonRow> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+        rows.retain(|row| {
+            row.labels.as_ref().is_some_and(|labels| {
+                labels.contains_key("com.docker.compose.config-hash")
+                    || labels.contains_key("io.podman.compose.config-hash")
+            })
+        });
 
         // There will be 2 levels of multivalues (services under projects).
         let mut projects_datapoint = DataPoint::empty();
@@ -97,16 +96,23 @@ impl MonitoringModule for Compose {
         // Group containers by project name.
         let mut projects = HashMap::<String, Vec<DataPoint>>::new();
 
-        for container in containers {
+        for row in rows {
+            let labels = match &row.labels {
+                Some(labels) => labels,
+                None => {
+                    log::info!("Container {} has no labels and therefore can't be used", row.id);
+                    continue;
+                }
+            };
+
             // Try docker-compose labels first, then podman-compose labels
-            let project = match container.labels.get("com.docker.compose.project") {
+            let project = match labels.get("com.docker.compose.project") {
                 Some(project) => project.clone(),
                 None => {
-                    match container.labels.get("io.podman.compose.project") {
+                    match labels.get("io.podman.compose.project") {
                         Some(project) => project.clone(),
                         None => {
-                            // Likely a container that is not used with compose.
-                            log::info!("Container {} has no compose project label and therefore can't be used", container.id);
+                            log::info!("Container {} has no compose project label and therefore can't be used", row.id);
                             continue;
                         }
                     }
@@ -115,13 +121,13 @@ impl MonitoringModule for Compose {
 
             let project_datapoints = projects.entry(project.clone()).or_insert(Vec::new());
 
-            let working_dir = match container.labels.get("com.docker.compose.project.working_dir") {
+            let working_dir = match labels.get("com.docker.compose.project.working_dir") {
                 Some(working_dir) => working_dir.clone(),
                 None => {
-                    match container.labels.get("io.podman.compose.project.working_dir") {
+                    match labels.get("io.podman.compose.project.working_dir") {
                         Some(working_dir) => working_dir.clone(),
                         None => {
-                            log::warn!("Container {} has no compose project.working_dir label set.", container.id);
+                            log::warn!("Container {} has no compose project.working_dir label set.", row.id);
                             if !self.working_dir.is_empty() {
                                 let working_dir = format!("{}/{}", self.working_dir, project);
                                 log::warn!("User-defined working_dir \"{}\" is used instead. It isn't guaranteed that this is correct.", working_dir);
@@ -138,10 +144,10 @@ impl MonitoringModule for Compose {
             };
 
             // Try docker-compose service label first, then podman-compose
-            let service = match container.labels.get("com.docker.compose.service") {
+            let service = match labels.get("com.docker.compose.service") {
                 Some(service) => service.clone(),
                 None => {
-                    match container.labels.get("io.podman.compose.service") {
+                    match labels.get("io.podman.compose.service") {
                         Some(service) => service.clone(),
                         None => {
                             return Err(String::from("Container has no compose service label"));
@@ -152,14 +158,14 @@ impl MonitoringModule for Compose {
             let compose_file = Path::new(&working_dir)
                                     .join(&self.compose_file_name).to_string_lossy().to_string();
 
-            let mut data_point = DataPoint::labeled_value_with_level(service.clone(), container.status.to_string(), container.get_criticality());
+            let mut data_point =
+                DataPoint::labeled_value_with_level(service.clone(), row.status.clone(), row.criticality());
 
-            if container.image.starts_with(&self.local_image_prefix) ||
-               container.image.starts_with("sha256:") {
+            if row.image.starts_with(&self.local_image_prefix) || row.image.starts_with("sha256:") {
                 data_point.tags.push(String::from("Local"));
             }
 
-            data_point.description = container.image.clone();
+            data_point.description = row.image.clone();
             data_point.command_params = vec![compose_file, project.clone(), service];
 
             project_datapoints.push(data_point);
@@ -197,5 +203,44 @@ impl MonitoringModule for Compose {
         }
 
         Ok(projects_datapoint)
+    }
+}
+
+/// `podman ps --format json` row for compose monitoring (Podman-specific).
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct PodmanComposePsJsonRow {
+    id: String,
+    image: String,
+    status: String,
+    state: String,
+    exited: bool,
+    #[serde(default)]
+    exit_code: i32,
+    #[serde(default)]
+    labels: Option<HashMap<String, String>>,
+}
+
+impl PodmanComposePsJsonRow {
+    fn criticality(&self) -> Criticality {
+        match self.state.to_lowercase().as_str() {
+            "created" | "running" | "configured" => Criticality::Normal,
+            "paused" => Criticality::Warning,
+            "restarting" => Criticality::Error,
+            "removing" => Criticality::Warning,
+            "exited" | "stopped" => {
+                if self.exited && self.exit_code == 0 {
+                    Criticality::Normal
+                }
+                else if self.status.starts_with("Exited (0)") {
+                    Criticality::Normal
+                }
+                else {
+                    Criticality::Error
+                }
+            },
+            "dead" => Criticality::Error,
+            _ => Criticality::Warning,
+        }
     }
 }

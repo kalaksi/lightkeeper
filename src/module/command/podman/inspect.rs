@@ -55,9 +55,7 @@ impl CommandModule for Inspect {
             Err(LkError::invalid_parameter("Invalid container ID", target_id))
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
-            let socket_path = String::from("/run/podman/podman.sock");
-            let url = format!("http://localhost/containers/{}/json?all=true", target_id);
-            command.arguments(vec!["curl", "-s", "--unix-socket", &socket_path, &url]);
+            command.arguments(vec!["podman", "inspect", target_id]);
             Ok(command.to_string())
         }
         else {
@@ -66,6 +64,9 @@ impl CommandModule for Inspect {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        Ok(CommandResult::new_info(response.message.clone()))
+        if response.return_code != 0 {
+            return Ok(CommandResult::new_error(response.message.trim()));
+        }
+        Ok(CommandResult::new_info(response.message.trim()))
     }
 }

@@ -5,7 +5,6 @@
 
 
 use std::collections::HashMap;
-use std::fmt;
 use serde::Deserialize;
 use serde_json;
 
@@ -23,21 +22,18 @@ use crate::utils::ShellCommand;
     description="Provides information about Podman containers.",
     uses_sudo=true,
     settings={
-      ignore_compose_managed => "Ignore containers that are managed by podman-compose. Default: true.",
-      socket_path => "Path to Podman socket. Default: /run/podman/podman.sock for root, /run/user/{uid}/podman/podman.sock for rootless."
+      ignore_compose_managed => "Ignore containers that are managed by podman-compose. Default: true."
     }
 )]
 pub struct Containers {
     // Ignore containers that are managed by podman-compose.
     ignore_compose_managed: bool,
-    socket_path: String,
 }
 
 impl Module for Containers {
     fn new(settings: &HashMap<String, String>) -> Self {
         Containers {
             ignore_compose_managed: settings.get("ignore_compose_managed").and_then(|value| Some(value == "true")).unwrap_or(true),
-            socket_path: settings.get("socket_path").unwrap_or(&String::from("/run/podman/podman.sock")).clone(),
         }
     }
 }
@@ -62,8 +58,7 @@ impl MonitoringModule for Containers {
         command.use_sudo = true;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            // TODO: somehow connect directly to the unix socket instead of using curl?
-            command.arguments(vec!["curl", "-s", "--unix-socket", &self.socket_path, "http://localhost/containers/json?all=true"]);
+            command.arguments(vec!["podman", "ps", "-a", "--format", "json"]);
             Ok(command.to_string())
         }
         else {
@@ -72,36 +67,90 @@ impl MonitoringModule for Containers {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if response.return_code == 7 {
-            // Coudldn't connect. Daemon is probably not available.
-            let result = DataPoint::value_with_level(String::from("Couldn't connect to Podman daemon."), Criticality::Critical);
+        if response.return_code != 0 {
+            let result = DataPoint::value_with_level(String::from("Couldn't list Podman containers."), Criticality::Critical);
             return Ok(result);
         }
 
-        let mut containers: Vec<ContainerDetails> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
+        let mut rows: Vec<PodmanPsJsonRow> = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
 
         if self.ignore_compose_managed {
-            containers.retain(|container| !container.labels.contains_key("com.docker.compose.config-hash") && 
-                                         !container.labels.contains_key("io.podman.compose.config-hash"));
+            rows.retain(|row| match &row.labels {
+                None => true,
+                Some(labels) => {
+                    !labels.contains_key("com.docker.compose.config-hash")
+                        && !labels.contains_key("io.podman.compose.config-hash")
+                }
+            });
         }
 
         let mut parent_data = DataPoint::empty();
 
-        if !containers.is_empty() {
-            if let Some(most_critical_container) = containers.iter().max_by_key(|container| container.get_criticality()) {
-                parent_data.criticality = most_critical_container.get_criticality();
+        if !rows.is_empty() {
+            if let Some(most_critical) = rows.iter().map(PodmanPsJsonRow::criticality).max() {
+                parent_data.criticality = most_critical;
             }
 
-            parent_data.multivalue = containers.iter().map(|container| {
-                let mut point = DataPoint::value_with_level(container.state.to_string(), container.get_criticality());
-                // Names may still contain a leading slash that can cause issues with podman commands.
-                point.label = container.names.iter().map(|name| cleanup_name(name)).collect::<Vec<String>>().join(", ");
-                point.command_params = vec![cleanup_name(container.names.first().unwrap_or(&container.id))];
-                point
-            }).collect();
+            parent_data.multivalue = rows
+                .iter()
+                .map(|row| {
+                    let mut point = DataPoint::value_with_level(row.state_display(), row.criticality());
+                    point.label = row
+                        .names
+                        .iter()
+                        .map(|name| cleanup_name(name))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    point.command_params = vec![cleanup_name(row.names.first().unwrap_or(&row.id))];
+                    point
+                })
+                .collect();
         }
 
         Ok(parent_data)
+    }
+}
+
+/// `podman ps --format json` row (Podman-specific; not Docker API-shaped).
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct PodmanPsJsonRow {
+    id: String,
+    names: Vec<String>,
+    #[serde(default)]
+    labels: Option<HashMap<String, String>>,
+    state: String,
+    status: String,
+    exited: bool,
+    #[serde(default)]
+    exit_code: i32,
+}
+
+impl PodmanPsJsonRow {
+    fn state_display(&self) -> String {
+        self.state.to_lowercase()
+    }
+
+    fn criticality(&self) -> Criticality {
+        match self.state.to_lowercase().as_str() {
+            "created" | "running" | "configured" => Criticality::Normal,
+            "paused" => Criticality::Warning,
+            "restarting" => Criticality::Error,
+            "removing" => Criticality::Warning,
+            "exited" | "stopped" => {
+                if self.exited && self.exit_code == 0 {
+                    Criticality::Normal
+                }
+                else if self.status.starts_with("Exited (0)") {
+                    Criticality::Normal
+                }
+                else {
+                    Criticality::Error
+                }
+            },
+            "dead" => Criticality::Error,
+            _ => Criticality::Warning,
+        }
     }
 }
 
@@ -114,72 +163,4 @@ pub fn cleanup_name(container_name: &str) -> String {
     }
 
     result
-}
-
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct ContainerDetails {
-    pub id: String,
-    pub names: Vec<String>,
-    pub image: String,
-    pub state: ContainerState,
-    pub status: String,
-    pub ports: Vec<ContainerPort>,
-    pub labels: HashMap<String, String>,
-}
-
-#[derive(Deserialize)]
-pub struct ContainerPort {
-    pub ip: Option<String>,
-    pub private_port: Option<u16>,
-    pub public_port: Option<u16>,
-    pub type_: Option<String>,
-}
-
-#[derive(Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum ContainerState {
-    Created,
-    Running,
-    Paused,
-    Restarting,
-    Removing,
-    Exited,
-    Dead,
-}
-
-impl ContainerDetails {
-    pub fn get_criticality(&self) -> Criticality {
-        match self.state {
-            ContainerState::Created => Criticality::Normal,
-            ContainerState::Running => Criticality::Normal,
-            ContainerState::Paused => Criticality::Warning,
-            ContainerState::Restarting => Criticality::Error,
-            ContainerState::Removing => Criticality::Warning,
-            ContainerState::Exited => {
-                if self.status.starts_with("Exited (0)") {
-                    Criticality::Normal
-                }
-                else {
-                    Criticality::Error
-                }
-            },
-            ContainerState::Dead => Criticality::Error,
-        }
-    }
-}
-
-impl fmt::Display for ContainerState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ContainerState::Created => write!(f, "created"),
-            ContainerState::Running => write!(f, "running"),
-            ContainerState::Paused => write!(f, "paused"),
-            ContainerState::Restarting => write!(f, "restarting"),
-            ContainerState::Removing => write!(f, "removing"),
-            ContainerState::Exited => write!(f, "exited"),
-            ContainerState::Dead => write!(f, "dead"),
-        }
-    }
 }
