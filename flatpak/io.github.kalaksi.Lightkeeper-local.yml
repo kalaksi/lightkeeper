@@ -80,6 +80,15 @@ modules:
         url: https://invent.kde.org/plasma/ksshaskpass.git
         # Plasma/6.6
         commit: 67c43fee0d003e085b34fdeada468a0a5c8cf92e
+  - name: rsync
+    buildsystem: autotools
+    config-opts:
+      - --disable-md2man
+      - --without-included-zlib
+    sources:
+      - type: archive
+        url: https://download.samba.org/pub/rsync/src/rsync-3.4.1.tar.gz
+        sha256: 2924bcb3a1ed8b551fc101f740b9f0fe0a202b115027647cf69850d65fd88c52
   - name: lightkeeper
     buildsystem: simple
     sources:
