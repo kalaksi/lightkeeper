@@ -4,14 +4,16 @@
  */
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use regex::Regex;
 use crate::error::LkError;
+use crate::file_handler;
 use crate::frontend;
 use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::{UIAction, *};
-use crate::utils::ShellCommand;
+use crate::utils::{ShellCommand, sh_single_quoted};
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -21,11 +23,23 @@ use lightkeeper_module::command_module;
     uses_sudo=true,
 )]
 pub struct FileBrowserDownload {
+    username: String,
+    port: u16,
+    private_key_path: Option<String>,
+    verify_host_key: bool,
+    custom_known_hosts_path: Option<PathBuf>,
 }
 
 impl Module for FileBrowserDownload {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         FileBrowserDownload {
+            username: settings.get("username").cloned().unwrap_or_default(),
+            port: settings.get("port").and_then(|v| v.parse().ok()).unwrap_or(22),
+            private_key_path: settings.get("private_key_path").cloned(),
+            verify_host_key: settings.get("verify_host_key")
+                .and_then(|v| v.parse().ok()).unwrap_or(true),
+            custom_known_hosts_path: settings.get("custom_known_hosts_path")
+                .map(PathBuf::from),
         }
     }
 }
@@ -63,24 +77,29 @@ impl CommandModule for FileBrowserDownload {
 
         let remote_path = parameters.first().ok_or(LkError::other("No remote path specified"))?;
         let local_path = parameters.get(1).ok_or(LkError::other("No local path specified"))?;
-        let username = parameters.get(2).ok_or(LkError::other("Remote user is required"))?;
 
-        // If empty username, don't set user at all (defaults to current user)..
-        let remote_spec = match username.is_empty() {
+        let remote_spec = match self.username.is_empty() {
             true => format!("{}:{}", host.get_address(), remote_path),
-            false => format!("{}@{}:{}", username, host.get_address(), remote_path),
+            false => format!("{}@{}:{}", self.username, host.get_address(), remote_path),
         };
 
-        if remote_path.len() == 0 {
+        if remote_path.is_empty() {
             return Err(LkError::other("Remote path is empty"));
         }
-        if local_path.len() == 0 {
+        if local_path.is_empty() {
             return Err(LkError::other("Local path is empty"));
         }
 
         let mut command = ShellCommand::new();
         command.use_sudo = false;
         command.arguments(vec!["env", "LANG=C", "LC_ALL=C", "rsync", "-avz", "--info=progress2", "--stats"]);
+        command.argument("-e");
+        command.argument(build_rsync_ssh_command(
+            self.port,
+            self.private_key_path.as_deref(),
+            self.verify_host_key,
+            self.custom_known_hosts_path.as_deref(),
+        )?);
         if host.settings.contains(&HostSetting::UseSudo) {
             command.argument("--rsync-path=sudo rsync");
         }
@@ -98,6 +117,41 @@ impl CommandModule for FileBrowserDownload {
             Ok(process_rsync_final_response(response, "Download"))
         }
     }
+}
+
+pub fn build_rsync_ssh_command(
+    port: u16,
+    private_key_path: Option<&str>,
+    verify_host_key: bool,
+    custom_known_hosts_path: Option<&std::path::Path>,
+) -> Result<String, LkError> {
+    let known_hosts_path = match custom_known_hosts_path {
+        Some(path) => path.to_path_buf(),
+        None => {
+            let path = file_handler::get_config_dir().join("known_hosts");
+            if !path.exists() {
+                std::fs::File::create(&path)
+                    .map_err(|error| LkError::other(format!("{}", error)))?;
+            }
+            path
+        }
+    };
+
+    let mut parts = vec![String::from("ssh")];
+    parts.push(format!("-p {}", port));
+    if let Some(key_path) = private_key_path {
+        parts.push(format!("-i {}", sh_single_quoted(key_path)));
+    }
+    if verify_host_key {
+        parts.push(format!("-o UserKnownHostsFile={}",
+            sh_single_quoted(&known_hosts_path.to_string_lossy())));
+        parts.push(String::from("-o GlobalKnownHostsFile=/dev/null"));
+    }
+    else {
+        parts.push(String::from("-o StrictHostKeyChecking=no"));
+        parts.push(String::from("-o UserKnownHostsFile=/dev/null"));
+    }
+    Ok(parts.join(" "))
 }
 
 /// Parses rsync --info=progress2 output and returns the last percentage (0-100).
@@ -135,7 +189,13 @@ pub fn parse_rsync_skipped_count(message: &str) -> Option<(u32, u32)> {
 /// Builds CommandResult for a non-partial rsync response. Use for copy, download, upload.
 pub fn process_rsync_final_response(response: &ResponseMessage, operation: &str) -> CommandResult {
     if response.return_code != 0 {
-        return CommandResult::new_error(response.message.clone());
+        let text = if response.message.is_empty() {
+            format!("Command failed with exit code {}.", response.return_code)
+        }
+        else {
+            response.message.clone()
+        };
+        return CommandResult::new_error(text);
     }
     if let Some((skipped, transferred)) = parse_rsync_skipped_count(&response.message) {
         let msg = if transferred == 0 {
@@ -149,5 +209,5 @@ pub fn process_rsync_final_response(response: &ResponseMessage, operation: &str)
         };
         return CommandResult::new_info(msg);
     }
-    CommandResult::new_hidden(response.message_increment.clone())
+    CommandResult::new_hidden(response.message.clone())
 }

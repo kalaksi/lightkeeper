@@ -12,7 +12,7 @@ pub use version_number::VersionNumber;
 pub mod string_validation;
 
 pub mod shell_command;
-pub use shell_command::ShellCommand;
+pub use shell_command::{ShellCommand, sh_single_quoted};
 
 pub mod error_message;
 pub use error_message::ErrorMessage;

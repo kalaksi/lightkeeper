@@ -455,13 +455,12 @@ Item {
                         path = path.substring(7)
                     }
                     let localDir = path
-                    let remoteUser = LK.config.getSshUsername(root.hostId)
                     root._hasActiveTransfer = true
                     root._transferProgressPercent = 0
                     for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
                         let remotePath = fileBrowser.selectedFiles[i]
                         let invocationId = LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
-                            [remotePath, localDir, remoteUser])
+                            [remotePath, localDir])
                         root._transferInvocations[invocationId] = 0
                     }
                     downloadFolderDialogLoader.active = false
@@ -488,7 +487,6 @@ Item {
 
                 onAccepted: {
                     let remoteDir = fileBrowser.selectedDirectory
-                    let remoteUser = LK.config.getSshUsername(root.hostId)
                     root._hasActiveTransfer = true
                     root._transferProgressPercent = 0
                     for (let i = 0; i < selectedFiles.length; i++) {
@@ -501,7 +499,7 @@ Item {
                             continue
                         }
                         let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
-                            [localPath, remoteDir, remoteUser])
+                            [localPath, remoteDir])
                         let invs = root._transferInvocations
                         invs[invId] = 0
                         root._transferInvocations = invs
@@ -539,11 +537,10 @@ Item {
                         return
                     }
                     let remoteDir = fileBrowser.selectedDirectory
-                    let remoteUser = LK.config.getSshUsername(root.hostId)
                     root._hasActiveTransfer = true
                     root._transferProgressPercent = 0
                     let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
-                        [path, remoteDir, remoteUser])
+                        [path, remoteDir])
                     let invs = root._transferInvocations
                     invs[invId] = 0
                     root._transferInvocations = invs

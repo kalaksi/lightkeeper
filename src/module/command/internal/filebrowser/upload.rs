@@ -4,6 +4,7 @@
  */
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use crate::error::LkError;
 use super::download;
 use crate::frontend;
@@ -21,11 +22,23 @@ use lightkeeper_module::command_module;
     uses_sudo=true,
 )]
 pub struct FileBrowserUpload {
+    username: String,
+    port: u16,
+    private_key_path: Option<String>,
+    verify_host_key: bool,
+    custom_known_hosts_path: Option<PathBuf>,
 }
 
 impl Module for FileBrowserUpload {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         FileBrowserUpload {
+            username: settings.get("username").cloned().unwrap_or_default(),
+            port: settings.get("port").and_then(|v| v.parse().ok()).unwrap_or(22),
+            private_key_path: settings.get("private_key_path").cloned(),
+            verify_host_key: settings.get("verify_host_key")
+                .and_then(|v| v.parse().ok()).unwrap_or(true),
+            custom_known_hosts_path: settings.get("custom_known_hosts_path")
+                .map(PathBuf::from),
         }
     }
 }
@@ -54,16 +67,15 @@ impl CommandModule for FileBrowserUpload {
 
         let local_path = parameters.first().ok_or(LkError::other("No local path specified"))?;
         let remote_path = parameters.get(1).ok_or(LkError::other("No remote path specified"))?;
-        let username = parameters.get(2).ok_or(LkError::other("Remote user is required"))?;
 
         let remote_dir = if remote_path.ends_with('/') {
             remote_path.clone()
         } else {
             format!("{}/", remote_path)
         };
-        let remote_spec = match username.is_empty() {
+        let remote_spec = match self.username.is_empty() {
             true => format!("{}:{}", host.get_address(), remote_dir),
-            false => format!("{}@{}:{}", username, host.get_address(), remote_dir),
+            false => format!("{}@{}:{}", self.username, host.get_address(), remote_dir),
         };
 
         if local_path.is_empty() {
@@ -76,6 +88,14 @@ impl CommandModule for FileBrowserUpload {
         let mut command = ShellCommand::new();
         command.use_sudo = false;
         command.arguments(vec!["env", "LANG=C", "LC_ALL=C", "rsync", "-avz", "--info=progress2", "--stats"]);
+        command.argument("-e");
+        command.argument(download::build_rsync_ssh_command(
+            self.port,
+            self.private_key_path.as_deref(),
+            self.verify_host_key,
+            self.custom_known_hosts_path.as_deref(),
+        )?);
+
         if host.settings.contains(&HostSetting::UseSudo) {
             command.argument("--rsync-path=sudo rsync");
         }
