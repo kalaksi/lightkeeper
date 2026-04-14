@@ -86,6 +86,22 @@ impl ShellCommand {
     }
 }
 
+/// Wraps a string in single quotes with proper escaping for use in shell commands.
+pub fn sh_single_quoted(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('\'');
+    for c in s.chars() {
+        if c == '\'' {
+            out.push_str("'\\''");
+        }
+        else {
+            out.push(c);
+        }
+    }
+    out.push('\'');
+    out
+}
+
 impl ToString for ShellCommand {
     fn to_string(&self) -> String {
         if self.arguments.is_empty() {
