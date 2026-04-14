@@ -64,10 +64,10 @@ pub struct Ssh2 {
     verify_host_key: bool,
     custom_known_hosts_path: Option<PathBuf>,
 
-    available_sessions: Arc<Vec<Mutex<SharedSessionData>>>,
+    available_sessions: Arc<Vec<Mutex<SessionData>>>,
 }
 
-pub struct SharedSessionData {
+pub struct SessionData {
     is_initialized: bool,
     session: ssh2::Session,
     open_channel: Option<ssh2::Channel>,
@@ -84,7 +84,7 @@ impl Module for Ssh2 {
         let mut available_sessions = Vec::new();
 
         for _ in 0..parallel_sessions {
-            available_sessions.push(Mutex::new(SharedSessionData {
+            available_sessions.push(Mutex::new(SessionData {
                 is_initialized: false,
                 session: ssh2::Session::new().expect("Unable to initialize SSH sessions."),
                 open_channel: None,
@@ -364,10 +364,15 @@ impl ConnectionModule for Ssh2 {
 
         if let Some((key, key_type)) = session_data.session.host_key() {
             let key_string = Self::get_host_key_id(key_type, key)?;
-            let host_and_port = format!("[{}]:{}", hostname, self_port);
+            let known_hosts_name = if self_port == 22 {
+                hostname.to_string()
+            }
+            else {
+                format!("[{}]:{}", hostname, self_port)
+            };
 
             if key_string == key_id {
-                known_hosts.add(&host_and_port, key, hostname, key_type.into())
+                known_hosts.add(&known_hosts_name, key, hostname, key_type.into())
                            .map_err(|error| LkError::other_p("Failed to add host key to known hosts", error))?;
                 known_hosts.write_file(&known_hosts_path, ssh2::KnownHostFileKind::OpenSSH)
                            .map_err(|error| LkError::other_p("Failed to write known hosts file", error))?;
@@ -384,7 +389,7 @@ impl ConnectionModule for Ssh2 {
 }
 
 impl Ssh2 {
-    fn wait_for_session(&self, invocation_id: u64, connect_automatically: bool) -> Result<MutexGuard<'_, SharedSessionData>, LkError> {
+    fn wait_for_session(&self, invocation_id: u64, connect_automatically: bool) -> Result<MutexGuard<'_, SessionData>, LkError> {
         let mut total_wait = Duration::from_secs(0);
 
         loop {
@@ -420,7 +425,7 @@ impl Ssh2 {
         }
     }
 
-    fn connect(&self, session_data: &mut MutexGuard<'_, SharedSessionData>, address: &str, port: u16) -> Result<(), LkError> {
+    fn connect(&self, session_data: &mut MutexGuard<'_, SessionData>, address: &str, port: u16) -> Result<(), LkError> {
         if session_data.is_initialized {
             return Ok(())
         }
@@ -491,7 +496,7 @@ impl Ssh2 {
         Ok(())
     }
 
-    fn reconnect(&self, session_data: &mut MutexGuard<'_, SharedSessionData>) -> Result<(), LkError> {
+    fn reconnect(&self, session_data: &mut MutexGuard<'_, SessionData>) -> Result<(), LkError> {
         let address = self.address.lock().unwrap().clone();
         let port = *self.port.lock().unwrap();
 
@@ -501,7 +506,7 @@ impl Ssh2 {
         self.connect(session_data, &address, port)
     }
 
-    fn check_known_hosts(&self, session_data: &MutexGuard<'_, SharedSessionData>, hostname: &str, port: u16) -> Result<(), LkError> {
+    fn check_known_hosts(&self, session_data: &MutexGuard<'_, SessionData>, hostname: &str, port: u16) -> Result<(), LkError> {
         let known_hosts_path = self.get_known_hosts_path()?;
 
         let mut known_hosts = session_data.session.known_hosts()
