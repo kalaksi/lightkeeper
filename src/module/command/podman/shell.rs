@@ -19,12 +19,19 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Opens a shell inside a Podman container.",
     uses_sudo=true,
+    settings={
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
+    }
 )]
-pub struct Shell;
+pub struct Shell {
+    as_root: bool,
+}
 
 impl Module for Shell {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Shell { }
+    fn new(settings: &HashMap<String, String>) -> Self {
+        Shell {
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
+        }
     }
 }
 
@@ -54,7 +61,7 @@ impl CommandModule for Shell {
         }
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "exec", "-it", target_id, "/bin/sh"]);

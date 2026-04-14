@@ -19,12 +19,19 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Restarts a Podman container.",
     uses_sudo=true,
+    settings={
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
+    }
 )]
-pub struct Restart;
+pub struct Restart {
+    as_root: bool,
+}
 
 impl Module for Restart {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Restart { }
+    fn new(settings: &HashMap<String, String>) -> Self {
+        Restart {
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
+        }
     }
 }
 
@@ -47,7 +54,7 @@ impl CommandModule for Restart {
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         let target_id = parameters.first().unwrap();
         if !string_validation::is_alphanumeric(target_id) {

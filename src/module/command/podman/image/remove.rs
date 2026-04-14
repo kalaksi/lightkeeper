@@ -20,12 +20,19 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Removes a Podman image.",
     uses_sudo=true,
+    settings={
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
+    }
 )]
-pub struct Remove;
+pub struct Remove {
+    as_root: bool,
+}
 
 impl Module for Remove {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Remove { }
+    fn new(settings: &HashMap<String, String>) -> Self {
+        Remove {
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
+        }
     }
 }
 
@@ -50,7 +57,7 @@ impl CommandModule for Remove {
         let target_id = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if !string_validation::is_alphanumeric_with(target_id, ":-.") {
             Err(LkError::invalid_parameter("Invalid image ID", target_id))

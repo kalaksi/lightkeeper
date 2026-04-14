@@ -19,12 +19,19 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Inspects a Podman container.",
     uses_sudo=true,
+    settings={
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
+    }
 )]
-pub struct Inspect;
+pub struct Inspect {
+    as_root: bool,
+}
 
 impl Module for Inspect {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Inspect { }
+    fn new(settings: &HashMap<String, String>) -> Self {
+        Inspect {
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
+        }
     }
 }
 
@@ -49,7 +56,7 @@ impl CommandModule for Inspect {
         let target_id = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if !string_validation::is_alphanumeric_with(target_id, &"-_") {
             Err(LkError::invalid_parameter("Invalid container ID", target_id))

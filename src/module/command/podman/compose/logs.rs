@@ -17,13 +17,18 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Show podman-compose logs for services.",
     uses_sudo=true,
+    settings={
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
+    }
 )]
 pub struct Logs {
+    as_root: bool,
 }
 
 impl Module for Logs {
-    fn new(_settings: &HashMap<String, String>) -> Logs {
+    fn new(settings: &HashMap<String, String>) -> Logs {
         Logs {
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
         }
     }
 }
@@ -56,7 +61,7 @@ impl CommandModule for Logs {
         let row_count = parameters.get(5).and_then(|s| s.parse::<i32>().ok()).unwrap_or(1000);
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "compose", "-f", compose_file, "logs", "-t"]);

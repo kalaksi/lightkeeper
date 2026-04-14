@@ -18,13 +18,18 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Restarts podman-compose projects or services.",
     uses_sudo=true,
+    settings={
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
+    }
 )]
 pub struct Restart {
+    as_root: bool,
 }
 
 impl Module for Restart {
-    fn new(_settings: &HashMap<String, String>) -> Restart {
+    fn new(settings: &HashMap<String, String>) -> Restart {
         Restart {
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
         }
     }
 }
@@ -52,7 +57,7 @@ impl CommandModule for Restart {
         let compose_file = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "compose", "-f", compose_file, "restart"]);

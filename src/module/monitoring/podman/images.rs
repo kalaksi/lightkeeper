@@ -30,7 +30,8 @@ use crate::utils::ShellCommand;
         age_warning_threshold => "Warning threshold in days. Default: 180",
         age_error_threshold => "Error threshold in days. Default: 365",
         age_critical_threshold => "Critical threshold in days. Default: 730",
-        local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost"
+        local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
     }
 )]
 pub struct Images {
@@ -38,6 +39,7 @@ pub struct Images {
     age_error_threshold: i64,
     age_critical_threshold: i64,
     local_image_prefix: String,
+    as_root: bool,
 }
 
 impl Module for Images {
@@ -47,6 +49,7 @@ impl Module for Images {
             age_error_threshold: settings.get("age_error_threshold").and_then(|value| value.parse().ok()).unwrap_or(365),
             age_critical_threshold: settings.get("age_critical_threshold").and_then(|value| value.parse().ok()).unwrap_or(730),
             local_image_prefix: settings.get("local_image_prefix").unwrap_or(&String::from("localhost")).clone(),
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
         }
     }
 }
@@ -68,7 +71,7 @@ impl MonitoringModule for Images {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "images", "--format", "json"]);

@@ -22,15 +22,20 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Builds local podman-compose service images.",
     uses_sudo=true,
+    settings={
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
+    }
 )]
 pub struct Build {
     regex_step: Regex,
+    as_root: bool,
 }
 
 impl Module for Build {
-    fn new(_settings: &HashMap<String, String>) -> Build {
+    fn new(settings: &HashMap<String, String>) -> Build {
         Build {
             regex_step: Regex::new(r"(?i)\w*step (\d+)/(\d+)").unwrap(),
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
         }
     }
 }
@@ -59,7 +64,7 @@ impl CommandModule for Build {
         let service_name = parameters.get(2).unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec![

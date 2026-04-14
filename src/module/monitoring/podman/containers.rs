@@ -22,18 +22,21 @@ use crate::utils::ShellCommand;
     description="Provides information about Podman containers.",
     uses_sudo=true,
     settings={
-      ignore_compose_managed => "Ignore containers that are managed by podman-compose. Default: true."
+      ignore_compose_managed => "Ignore containers that are managed by podman-compose. Default: true.",
+      as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
     }
 )]
 pub struct Containers {
     // Ignore containers that are managed by podman-compose.
     ignore_compose_managed: bool,
+    as_root: bool,
 }
 
 impl Module for Containers {
     fn new(settings: &HashMap<String, String>) -> Self {
         Containers {
             ignore_compose_managed: settings.get("ignore_compose_managed").and_then(|value| Some(value == "true")).unwrap_or(true),
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
         }
     }
 }
@@ -55,7 +58,7 @@ impl MonitoringModule for Containers {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "ps", "-a", "--format", "json"]);

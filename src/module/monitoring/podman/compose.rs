@@ -29,13 +29,15 @@ use crate::utils::ShellCommand;
         compose_file_name => "Name of the podman-compose file. Default: docker-compose.yml",
         working_dir => "This is only needed with older podman-compose versions that don't include working_dir label on the container,
  so this can be used instead. Should be the parent directory of project directories. Multiple directory paths should be separated with a comma.",
-        local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost"
+        local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
     }
 )]
 pub struct Compose {
     pub compose_file_name: String,
     pub working_dir: String,
     pub local_image_prefix: String,
+    pub as_root: bool,
 }
 
 impl Module for Compose {
@@ -44,6 +46,7 @@ impl Module for Compose {
             compose_file_name: settings.get("compose_file_name").unwrap_or(&String::from("docker-compose.yml")).clone(),
             working_dir: settings.get("working_dir").unwrap_or(&String::new()).clone(),
             local_image_prefix: settings.get("local_image_prefix").unwrap_or(&String::from("localhost")).clone(),
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
         }
     }
 }
@@ -65,7 +68,7 @@ impl MonitoringModule for Compose {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "ps", "-a", "--format", "json"]);

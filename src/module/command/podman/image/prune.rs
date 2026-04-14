@@ -19,12 +19,19 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Prunes all unused Podman images.",
     uses_sudo=true,
+    settings={
+        as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
+    }
 )]
-pub struct Prune;
+pub struct Prune {
+    as_root: bool,
+}
 
 impl Module for Prune {
-    fn new(_settings: &HashMap<String, String>) -> Self {
-        Prune { }
+    fn new(settings: &HashMap<String, String>) -> Self {
+        Prune {
+            as_root: settings.get("as_root").and_then(|value| Some(value == "true")).unwrap_or(true),
+        }
     }
 }
 
@@ -46,7 +53,7 @@ impl CommandModule for Prune {
 
     fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = self.as_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "image", "prune", "-f"]);
