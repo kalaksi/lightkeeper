@@ -47,7 +47,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.38.0" date="2026-04-13">
+    <release version="0.38.1" date="2026-04-14">
       <description>
         <ul>
           <li>Improvements for Fedora CoreOS</li>
