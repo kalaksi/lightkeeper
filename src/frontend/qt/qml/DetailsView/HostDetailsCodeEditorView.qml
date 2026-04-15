@@ -68,21 +68,18 @@ Item {
         if (!root._useSimpleCodeEditor) {
             root._setEditorKeybindings()
         }
-        root._saveEditorPreferences()
     }
 
     onFontSizeChanged: {
         if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
             root._aceEditorObject.setEditorOption("fontSize", root.fontSize)
         }
-        root._saveEditorPreferences()
     }
 
     onWordWrapChanged: {
         if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
             root._aceEditorObject.wordWrap = root.wordWrap
         }
-        root._saveEditorPreferences()
     }
 
     Connections {
@@ -188,8 +185,9 @@ Item {
                     let index = model.indexOf(root.fontSize)
                     return index >= 0 ? index : 2
                 }
-                onCurrentIndexChanged: {
-                    root.fontSize = model[currentIndex]
+                onActivated: function(index) {
+                    root.fontSize = model[index]
+                    root._saveEditorPreferences()
                 }
                 Layout.preferredWidth: 80
                 Layout.alignment: Qt.AlignVCenter
@@ -209,7 +207,10 @@ Item {
 
             Switch {
                 checked: root.wordWrap
-                onCheckedChanged: root.wordWrap = checked
+                onClicked: {
+                    root.wordWrap = checked
+                    root._saveEditorPreferences()
+                }
                 Layout.alignment: Qt.AlignVCenter
                 visible: root._aceEditorObject !== null && !root._useSimpleCodeEditor
             }
@@ -236,8 +237,9 @@ Item {
                         default: return 0
                     }
                 }
-                onCurrentIndexChanged: {
-                    root.editMode = model[currentIndex]
+                onActivated: function(index) {
+                    root.editMode = model[index]
+                    root._saveEditorPreferences()
                 }
                 Layout.preferredWidth: 120
                 Layout.alignment: Qt.AlignVCenter

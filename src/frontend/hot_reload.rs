@@ -5,11 +5,10 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-
-use qmetaobject;
-
 #[cfg(all(debug_assertions, feature = "hot-reload"))]
 use std::{thread, time::Instant};
+
+use qmetaobject;
 
 #[cfg(all(debug_assertions, feature = "hot-reload"))]
 pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
@@ -58,5 +57,4 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
 }
 
 #[cfg(not(all(debug_assertions, feature = "hot-reload")))]
-pub fn watch(_path: PathBuf, _engine: Arc<qmetaobject::QmlEngine>) {
-}
+pub fn watch(_path: PathBuf, _engine: Arc<qmetaobject::QmlEngine>) {}
