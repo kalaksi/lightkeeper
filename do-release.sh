@@ -19,6 +19,13 @@ sed -i 's|^version = ".*|version = "'$version_only'"|' Cargo.toml
 # export QMAKE="/usr/lib/qt6/bin/qmake"
 cargo build --release
 
+echo -e "\n* Updating NOTICES..."
+cargo tree --format '{p} {l}' --prefix none \
+    | grep -v '(\*)$' \
+    | grep -v '^lightkeeper ' \
+    | sed 's/ (proc-macro)//' \
+    | sort -u > NOTICES
+
 # Make sure all QML files are defined in resources
 qml_files=$(find src/frontend/qt/qml \( -name '*.qml' -or -name '*.js' \) | sed 's/^src\/frontend\/qt\/qml\///')
 for f in $qml_files; do
