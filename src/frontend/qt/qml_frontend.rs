@@ -115,6 +115,14 @@ impl QmlFrontend {
                 engine.add_import_path(QString::from("/app/qml-lighthouse-components"));
             }
             else {
+                // System-installed paths (set at compile time for packaged builds).
+                if let Some(path) = option_env!("LIGHTKEEPER_QML_LIB_DIR") {
+                    engine.add_import_path(QString::from(path));
+                }
+                if let Some(path) = option_env!("LIGHTKEEPER_QML_DATA_DIR") {
+                    engine.add_import_path(QString::from(path));
+                }
+
                 engine.add_import_path(QString::from("./third_party/qmltermwidget"));
                 engine.add_import_path(QString::from("./third_party/ChartJs2QML"));
                 engine.add_import_path(QString::from("./third_party/qml-lighthouse-components"));

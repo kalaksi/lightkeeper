@@ -1,5 +1,6 @@
 # Basic project information
 - This is a Rust-project with QML frontend (Qt 6.10).
+- Minimum supported Rust is 1.88 (`rust-version` in `Cargo.toml`).
 - Ignore CLI frontend.
 - When being asked a question, don't implement anything without confirming first.
 - Currently Linux-only, but aims to be multi-platform in the future, so that affects e.g. dependency choices.

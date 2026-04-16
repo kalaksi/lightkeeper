@@ -115,6 +115,8 @@ flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.L
 ## Regular
 ### Dependencies
 - Qt 6.10
+- Rust **1.88** or newer (`rustc` / `cargo`; see `rust-version` in `Cargo.toml`). If your distro
+  ships an older compiler, install a newer toolchain with [rustup](https://rustup.rs/).
 - liboping
 - libdbus
 
@@ -167,6 +169,9 @@ Flatpak manifest `flatpak/io.github.kalaksi.Lightkeeper.yml` can be helpful for 
 QML modules in `third_party/` have to be made available in runtime so that Qt can find and include them appropriately.  
   
 (`qml_frontend.rs` also defines some additional import paths for finding them).
+
+Packaged builds need the same **Rust 1.88+** toolchain as local `cargo build` (`rust-version` in `Cargo.toml`).
+See `packaging/debian/README.md` and `packaging/fedora/README.md` for distro-specific notes and CI setup.
 
 
 ### Post-install

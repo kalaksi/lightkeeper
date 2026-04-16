@@ -4,3 +4,8 @@ build
 .*
 vendor
 android
+
+packaging/debian/build/
+packaging/debian/tarballs/
+packaging/fedora/build/
+packaging/fedora/tarballs/

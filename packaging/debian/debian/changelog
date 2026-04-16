@@ -1,0 +1,5 @@
+lightkeeper (0.38.2-1) trixie; urgency=medium
+
+  * Initial Debian package.
+
+ -- kalaksi <kalaksi@users.noreply.github.com>  Wed, 15 Apr 2026 00:00:00 +0000
