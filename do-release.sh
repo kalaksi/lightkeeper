@@ -15,6 +15,20 @@ fi
 echo -e "\n* Updating Cargo.toml..."
 sed -i 's|^version = ".*|version = "'$version_only'"|' Cargo.toml
 
+echo -e "\n* Updating Fedora spec and Debian changelog..."
+rpm_cl_date=$(LC_TIME=C date +"%a %b %e %Y")
+sed -i 's/^Version:.*/Version:        '"$version_only"'/' packaging/fedora/lightkeeper.spec
+sed -i '/^%changelog$/a\
+* '"${rpm_cl_date}"' kalaksi <kalaksi@users.noreply.github.com> - '"${version_only}"'-1\
+  - New upstream release' packaging/fedora/lightkeeper.spec
+deb_when=$(date -R)
+sed -i "1i\\
+lightkeeper (${version_only}-1) trixie; urgency=medium\\
+\\
+  * New upstream release.\\
+\\
+ -- kalaksi <kalaksi@users.noreply.github.com>  ${deb_when}" packaging/debian/debian/changelog
+
 # Test build and update cargo.lock
 # export QMAKE="/usr/lib/qt6/bin/qmake"
 cargo build --release
