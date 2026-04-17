@@ -23,12 +23,13 @@ sed -i '/^%changelog$/a\
   - New upstream release' packaging/fedora/lightkeeper.spec
 deb_when=$(date -R)
 sed -i "1i\\
-lightkeeper (${version_only}-1) trixie; urgency=medium\\
+lightkeeper (${version_only}-1) forky; urgency=medium\\
 \\
   * New upstream release.\\
 \\
  -- kalaksi <kalaksi@users.noreply.github.com>  ${deb_when}" packaging/debian/debian/changelog
 
+echo "Doing a test build..."
 # Test build and update cargo.lock
 # export QMAKE="/usr/lib/qt6/bin/qmake"
 cargo build --release

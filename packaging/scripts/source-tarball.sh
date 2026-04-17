@@ -14,9 +14,7 @@ OUTDIR="$(mkdir -p "$2" && cd "$2" && pwd)"
 
 cd "${REPO_ROOT}"
 git submodule update --init --recursive >&2
-
-git archive --prefix="lightkeeper-${VERSION}/" HEAD \
-    -o "${OUTDIR}/lightkeeper-base.tar"
+git archive --prefix="lightkeeper-${VERSION}/" HEAD -o "${OUTDIR}/lightkeeper-base.tar"
 
 git submodule foreach --recursive \
     "rel_path=\$(realpath --relative-to=\"${REPO_ROOT}\" \"\$toplevel/\$sm_path\"); \

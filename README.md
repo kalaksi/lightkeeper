@@ -115,8 +115,7 @@ flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.L
 ## Regular
 ### Dependencies
 - Qt 6.10
-- Rust **1.88** or newer (`rustc` / `cargo`; see `rust-version` in `Cargo.toml`). If your distro
-  ships an older compiler, install a newer toolchain with [rustup](https://rustup.rs/).
+- Rust **1.88** or newer (`rustc` / `cargo`; see `rust-version` in `Cargo.toml`).
 - liboping
 - libdbus
 
@@ -132,7 +131,6 @@ you'll need these packages on Ubuntu 24.04:
 - qml6-module-qtqml-workerscript
 - qml6-module-qtquick-controls
 - qml6-module-qtquick-layouts
-- qml6-module-qtquick-nativestyle
 - qml6-module-qtquick-shapes
 - qml6-module-qtquick-templates
 - qml6-module-qtquick-window

@@ -1,34 +1,20 @@
 # Debian Packaging for Lightkeeper
 
-Debian 13 (Trixie) DEB packaging using GitHub Release DEB artifacts as the
-primary distribution channel.
+Debian 14 Forky DEB packaging using GitHub Release DEB artifacts as the primary
+distribution channel.
 
 ## Prerequisites
 
-### Rust
-
 Minimum **rustc 1.88** (see `rust-version` in the repo root `Cargo.toml` and `debian/control`).
-Check with `rustc --version`. If the distro package is older, install a toolchain with
-[rustup](https://rustup.rs/), for example:
 
-```bash
-curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.88 --profile minimal
-. "$HOME/.cargo/env"
-```
+Install build dependencies (Debian 14 Forky):
 
-Put `~/.cargo/bin` on `PATH` when running `dpkg-buildpackage` so `cargo` matches that `rustc`.
-
-### Other build dependencies
-
-Install build dependencies (Debian 13 Trixie):
 ```bash
 sudo apt install rustc cargo gcc g++ make git \
     qt6-base-dev qt6-declarative-dev \
     libdbus-1-dev liboping-dev libssl-dev \
     perl debhelper devscripts dpkg-dev
 ```
-
-Omit `rustc` and `cargo` from `apt` if you use only rustup for the toolchain.
 
 ## Source checkout
 
@@ -90,25 +76,3 @@ After installing, verify:
 4. Charts view works (uses bundled ChartJs).
 5. File browser works (uses bundled Lighthouse components).
 6. Code editor loads (requires `qml6-module-qtwebengine`).
-
-## GitHub Actions
-
-Debian package automation is in `.github/workflows/package-debian.yml`.
-The workflow builds the package inside `debian:trixie` and uploads DEB artifacts.
-It installs **Rust 1.88** via rustup (not `apt` `rustc`), then runs the same build scripts as locally.
-
-## GitHub Release artifacts
-
-Built DEBs are attached to GitHub Releases.
-
-```bash
-gh release upload v${VERSION} "$BUILDDIR"/lightkeeper_${VERSION}-1_amd64.deb
-```
-
-## Release checklist
-
-1. Update version in `packaging/debian/debian/changelog` (use `dch`).
-2. Confirm `rustc --version` is **1.88** or newer on the build host (or use rustup as above).
-3. Regenerate source archive with `source-tarball.sh`.
-4. Build and smoke-test locally.
-5. Tag the release and let CI build and attach the DEB artifact.

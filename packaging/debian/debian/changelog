@@ -1,4 +1,4 @@
-lightkeeper (0.38.2-1) trixie; urgency=medium
+lightkeeper (0.38.2-1) forky; urgency=medium
 
   * Initial Debian package.
 

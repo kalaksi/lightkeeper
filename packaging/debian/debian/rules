@@ -15,45 +15,33 @@ override_dh_auto_build:
 	cargo build --release
 
 override_dh_auto_install:
-	install -Dm755 target/release/lightkeeper \
-	    debian/lightkeeper/usr/bin/lightkeeper
-
-	install -Dm644 NOTICES \
-	    debian/lightkeeper/usr/share/doc/lightkeeper/NOTICES
-
-	install -Dm644 flatpak/$(APP_ID).desktop \
-	    debian/lightkeeper/usr/share/applications/$(APP_ID).desktop
-
-	install -Dm644 flatpak/$(APP_ID).metainfo.xml \
-	    debian/lightkeeper/usr/share/metainfo/$(APP_ID).metainfo.xml
-
-	install -Dm644 flatpak/$(APP_ID)-rounded.png \
-	    debian/lightkeeper/usr/share/icons/hicolor/128x128/apps/$(APP_ID).png
+	install -Dm755 target/release/lightkeeper debian/lightkeeper/usr/bin/lightkeeper
+	install -Dm644 NOTICES debian/lightkeeper/usr/share/doc/lightkeeper/NOTICES
+	install -Dm644 flatpak/$(APP_ID).desktop debian/lightkeeper/usr/share/applications/$(APP_ID).desktop
+	install -Dm644 flatpak/$(APP_ID).metainfo.xml debian/lightkeeper/usr/share/metainfo/$(APP_ID).metainfo.xml
+	install -Dm644 flatpak/$(APP_ID)-rounded.png debian/lightkeeper/usr/share/icons/hicolor/128x128/apps/$(APP_ID).png
 
 	# qmltermwidget (native plugin)
 	tmpdir=$$(mktemp -d) && \
 	$(MAKE) -C third_party/qmltermwidget install INSTALL_ROOT="$$tmpdir" && \
 	mkdir -p debian/lightkeeper/usr/lib/lightkeeper/qml && \
 	test -d "$$tmpdir/usr/lib/$(DEB_HOST_MULTIARCH)/qt6/qml/QMLTermWidget" && \
-	cp -a "$$tmpdir/usr/lib/$(DEB_HOST_MULTIARCH)/qt6/qml/QMLTermWidget" \
-	    debian/lightkeeper/usr/lib/lightkeeper/qml/ && \
+	cp -a "$$tmpdir/usr/lib/$(DEB_HOST_MULTIARCH)/qt6/qml/QMLTermWidget" debian/lightkeeper/usr/lib/lightkeeper/qml/ && \
 	rm -rf "$$tmpdir"
 
 	mkdir -p debian/lightkeeper/usr/share/lightkeeper/qml
-
-	cp -a third_party/ChartJs2QML/ChartJs \
-	    debian/lightkeeper/usr/share/lightkeeper/qml/
-
-	cp -a third_party/qml-lighthouse-components/Lighthouse \
-	    debian/lightkeeper/usr/share/lightkeeper/qml/ && \
-	find debian/lightkeeper/usr/share/lightkeeper/qml/Lighthouse/AceEditor/ace-builds \
-	    -mindepth 1 -maxdepth 1 ! -name LICENSE ! -name src-min-noconflict \
-	    -exec rm -rf {} +
-
-	cp -a src/frontend/qt/qml_types/Lightkeeper \
-	    debian/lightkeeper/usr/share/lightkeeper/qml/
+	cp -a src/frontend/qt/qml_types/Lightkeeper debian/lightkeeper/usr/share/lightkeeper/qml/
+	cp -a third_party/ChartJs2QML/ChartJs debian/lightkeeper/usr/share/lightkeeper/qml/
+	cp -a third_party/qml-lighthouse-components/Lighthouse debian/lightkeeper/usr/share/lightkeeper/qml/ && \
+	    find debian/lightkeeper/usr/share/lightkeeper/qml/Lighthouse/AceEditor/ace-builds \
+	        -mindepth 1 -maxdepth 1 ! -name LICENSE ! -name src-min-noconflict \
+	        -exec rm -rf {} +
 
 override_dh_auto_test:
+
+override_dh_shlibdeps:
+	dh_shlibdeps
+	perl -pi -e 's/ \(>= 6\.10\.2\+dfsg~\)/ (>= 6.10.2~)/g' debian/substvars
 
 override_dh_auto_clean:
 	rm -rf target
