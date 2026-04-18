@@ -1,0 +1,97 @@
+name: Fedora RPM
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build-fedora-43-rpm:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:43@sha256:781b7642e8bf256e9cf75d2aa58d86f5cc695fd2df113517614e181a5eee9138
+
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf -y install \
+            bash \
+            cargo \
+            gcc \
+            gcc-c++ \
+            git \
+            make \
+            perl-File-Compare \
+            perl-File-Copy \
+            perl-FindBin \
+            perl-IPC-Cmd \
+            perl-Time-Piece \
+            qt6-qtbase-devel \
+            qt6-qtdeclarative-devel \
+            dbus-devel \
+            liboping-devel \
+            rpm-build \
+            rpmdevtools
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Build RPMs
+        run: |
+          VERSION="$(packaging/scripts/version.sh)"
+          packaging/fedora/scripts/build-binary.sh "${VERSION}" "packaging/fedora/build" "packaging/fedora/tarballs"
+
+      - name: Collect artifact list
+        id: collect_artifacts
+        run: |
+          mapfile -t files < <(packaging/fedora/scripts/list-artifacts.sh "packaging/fedora/build")
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No RPM artifacts found" >&2
+            exit 1
+          fi
+
+          printf "%s\n" "${files[@]}"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        with:
+          name: fedora-43-rpms
+          path: |
+            packaging/fedora/build/RPMS/**/*.rpm
+            packaging/fedora/build/SRPMS/*.src.rpm
+          if-no-files-found: error
+
+  upload-release-assets:
+    if: github.event_name == 'release'
+    needs: build-fedora-43-rpm
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built RPM artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: fedora-43-rpms
+          path: /tmp/fedora-43-rpms
+
+      - name: Attach binary RPMs to GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob globstar
+          for file in /tmp/fedora-43-rpms/**/*.rpm; do
+            case "${file}" in
+              *.src.rpm)
+                continue
+                ;;
+            esac
+            gh release upload "${{ github.event.release.tag_name }}" "${file}" --clobber
+          done
