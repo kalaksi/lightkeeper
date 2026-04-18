@@ -57,6 +57,7 @@ jobs:
 
           mkdir -p artifacts/deb
           cp -a "${BUILDDIR}"/*.deb artifacts/deb/
+          rm -f artifacts/deb/*-dbgsym_*.deb artifacts/deb/*-dbg_*.deb
           cp -a "${BUILDDIR}"/*.changes artifacts/deb/ || true
           cp -a "${BUILDDIR}"/*.buildinfo artifacts/deb/ || true
 
@@ -87,5 +88,10 @@ jobs:
         run: |
           shopt -s nullglob
           for file in dist/deb/*.deb; do
+            case "${file}" in
+              *-dbgsym_*.deb|*-dbg_*.deb)
+                continue
+                ;;
+            esac
             gh release upload "${{ github.ref_name }}" "${file}" --clobber
           done

@@ -68,9 +68,7 @@ jobs:
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: fedora-43-rpms
-          path: |
-            packaging/fedora/build/RPMS/**/*.rpm
-            packaging/fedora/build/SRPMS/*.src.rpm
+          path: packaging/fedora/build/RPMS/**/*.rpm
           if-no-files-found: error
 
   upload-release-assets:
@@ -94,7 +92,7 @@ jobs:
           shopt -s nullglob globstar
           for file in /tmp/fedora-43-rpms/**/*.rpm; do
             case "${file}" in
-              *.src.rpm)
+              *.src.rpm|*debuginfo*.rpm|*debugsource*.rpm)
                 continue
                 ;;
             esac
