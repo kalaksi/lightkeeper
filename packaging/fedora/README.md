@@ -1,7 +1,4 @@
-# Fedora Packaging for Lightkeeper
-
-Fedora 43+ RPM packaging using COPR as the primary distribution channel
-and GitHub Release RPM artifacts as a secondary download option.
+# Fedora 43 packaging for Lightkeeper
 
 ## Prerequisites
 

@@ -56,13 +56,12 @@ Just press Ctrl-T to open a terminal in a new tab.
 - [Some background](#some-background)
 - [Installing](#installing)
    - [Flatpak](#flatpak)
+   - [Debian](#debian)
+   - [Fedora](#fedora)
 - [Building from source](#building-from-source)
-   - [Flatpak](#flatpak-1)
-   - [Regular](#regular)
-      - [Dependencies](#dependencies)
-      - [Building](#building)
-      - [Post-install](#post-install)
-   - [Packaging tips (other than flatpak)](#packaging-tips-other-than-flatpak)
+    - [Dependencies](#dependencies)
+    - [Building](#building)
+    - [Post-install](#post-install)
 - [Server OS support](#server-os-support)
 - [Configuration](#configuration)
    - [Configuration files](#configuration-files)
@@ -91,61 +90,43 @@ Lightkeeper is an maintenance tool for power users to simplify everything. At th
 
 # Installing
 ## Flatpak
-It is recommended to download the app from Flathub: https://flathub.org/apps/io.github.kalaksi.Lightkeeper  
-It's sandboxed and uses the minimum amount of permissions required.
 
-The alternative is building from source.
+Install from Flathub: https://flathub.org/apps/io.github.kalaksi.Lightkeeper  
+It is sandboxed and uses the minimum amount of permissions required.
+
+To build a Flatpak bundle locally, see [flatpak/README.md](flatpak/README.md).
+
+## Debian
+
+Download `.deb` packages from the [GitHub Releases](https://github.com/kalaksi/lightkeeper/releases) page.
+
+To build `.deb` packages locally, see [packaging/debian/README.md](packaging/debian/README.md).
+
+## Fedora
+
+Download `.rpm` packages from the [GitHub Releases](https://github.com/kalaksi/lightkeeper/releases) page.
+
+To build RPM packages locally, see [packaging/fedora/README.md](packaging/fedora/README.md).
 
 # Building from source
-## Flatpak
-```
-# If you're missing the runtime and rust extension:
-flatpak install --user runtime/org.kde.Sdk/x86_64/6.10
-flatpak install --user org.kde.Platform/x86_64/6.10
-flatpak install --user io.qt.qtwebengine.BaseApp/x86_64/6.10
-flatpak install --user runtime/org.freedesktop.Sdk.Extension.rust-stable/x86_64/25.08
-
-# Test building: 
-flatpak-builder build --user --force-clean flatpak/io.github.kalaksi.Lightkeeper-local.yml
-
-# If you want to install also:
-flatpak-builder --user --install --force-clean build flatpak/io.github.kalaksi.Lightkeeper-local.yml
-```
-
-## Regular
-### Dependencies
+## Dependencies
 - Qt 6.10
 - Rust **1.88** or newer (`rustc` / `cargo`; see `rust-version` in `Cargo.toml`).
-- liboping
-- libdbus
 
-you'll need these packages on Ubuntu 24.04:
-- libssl-dev
-- libdbus-1-3, libdbus-1-dev
-- liboping0, liboping-dev
-- libqt6svg6
-- qt6-declarative-dev
-- qt6-qt5compat-devel
-- qml6-module-qt-labs-qmlmodels
-- qml6-module-qt5compat-graphicaleffects
-- qml6-module-qtqml-workerscript
-- qml6-module-qtquick-controls
-- qml6-module-qtquick-layouts
-- qml6-module-qtquick-shapes
-- qml6-module-qtquick-templates
-- qml6-module-qtquick-window
-- qml6-module-qtquick-dialogs
-- qml6-module-qt-labs-platform
-- qml6-module-qtcharts
-- qml-module-org-kde-syntaxhighlighting
-- qml6-module-qtwebengine
-
-At least on RPM-based distro's, you'll need perl-Time-Piece for building OpenSSL.
-  
+Exact development package names differ by distribution. See
+[packaging/debian/README.md](packaging/debian/README.md) and
+[packaging/fedora/README.md](packaging/fedora/README.md) for lists used on Debian and Fedora.
 
 QtWebEngine is not strictly required, but needed for proper integrated text editor.
 
-### Building
+## Building
+Clone the repository with submodules (needed for bundled QML components and packaging scripts):
+
+```
+git clone --recurse-submodules https://github.com/kalaksi/lightkeeper.git
+cd lightkeeper
+```
+
 For development, run this in repo root:
 ```
 ./build.sh
@@ -162,17 +143,7 @@ If you're getting error about missing qmake, you'll have to point cargo to corre
 QMAKE = "/usr/lib/qt6/bin/qmake"
 ```
 
-## Packaging tips (other than flatpak)
-Flatpak manifest `flatpak/io.github.kalaksi.Lightkeeper.yml` can be helpful for understanding needed build steps.  
-QML modules in `third_party/` have to be made available in runtime so that Qt can find and include them appropriately.  
-  
-(`qml_frontend.rs` also defines some additional import paths for finding them).
-
-Packaged builds need the same **Rust 1.88+** toolchain as local `cargo build` (`rust-version` in `Cargo.toml`).
-See `packaging/debian/README.md` and `packaging/fedora/README.md` for distro-specific notes and CI setup.
-
-
-### Post-install
+## Post-install
 
 If you're using the ping monitor (not used by default), you need to give Lightkeeper binary more networking privileges:
 ```
