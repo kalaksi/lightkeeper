@@ -40,7 +40,8 @@ Depends:
  qml6-module-qtquick-window,
  qml6-module-org-kde-kirigami,
  qml6-module-org-kde-syntaxhighlighting,
- liboping0
+ liboping0,
+ rsync
 Recommends: qml6-module-qtwebengine
 Description: Customizable Linux server management tool that works over SSH
  Lightkeeper is a customizable server management and

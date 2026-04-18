@@ -46,6 +46,7 @@ Requires:       kf6-syntax-highlighting
 # Runtime: native libraries
 Requires:       liboping
 Requires:       dbus-libs
+Requires:       rsync
 
 # Optional but recommended for the integrated code editor
 Recommends:     qt6-qtwebengine
