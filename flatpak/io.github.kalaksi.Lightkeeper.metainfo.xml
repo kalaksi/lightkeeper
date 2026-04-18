@@ -47,6 +47,15 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.39.0" date="2026-04-18">
+      <description>
+        <ul>
+          <li>Use CLI commands with podman instead of unix socket</li>
+          <li>Adds as_root setting for podman modules</li>
+          <li>Adds Fedora and Debian build scripts and packaging files</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.38.2" date="2026-04-14">
       <description>
         <ul>
