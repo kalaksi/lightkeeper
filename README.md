@@ -91,18 +91,18 @@ Lightkeeper is an maintenance tool for power users to simplify everything. At th
 # Installing
 ## Flatpak
 
+This is the recommended install method. Uses sandboxing and minimum amount of permissions required.  
 Install from Flathub: https://flathub.org/apps/io.github.kalaksi.Lightkeeper  
-It is sandboxed and uses the minimum amount of permissions required.
 
 To build a Flatpak bundle locally, see [flatpak/README.md](flatpak/README.md).
 
-## Debian
+## Debian 14
 
 Download `.deb` packages from the [GitHub Releases](https://github.com/kalaksi/lightkeeper/releases) page.
 
 To build `.deb` packages locally, see [packaging/debian/README.md](packaging/debian/README.md).
 
-## Fedora
+## Fedora 43
 
 Download `.rpm` packages from the [GitHub Releases](https://github.com/kalaksi/lightkeeper/releases) page.
 
