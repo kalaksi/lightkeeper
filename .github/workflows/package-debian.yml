@@ -1,4 +1,4 @@
-name: Build Debian package
+name: Build Debian 14 package
 
 on:
   workflow_dispatch:
@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  build-debian-deb:
-    name: Build Debian DEB
+  build-debian-package:
+    name: Build Debian 14 package
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Install build dependencies
         run: |
+          printf '%s\n' 'Acquire::ForceIPv4 "true";' 'Acquire::Retries "5";' \
+            >/etc/apt/apt.conf.d/99github-actions.conf
           apt-get update
           apt-get install -y \
             git ca-certificates \
@@ -37,13 +39,16 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Trust workspace for Git in container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Resolve version
         id: version
         run: |
           VERSION=$(./packaging/scripts/version.sh)
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
 
-      - name: Build DEB package
+      - name: Build .deb package
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TARBALLDIR="packaging/debian/tarballs"
@@ -55,22 +60,22 @@ jobs:
           cp -a "${BUILDDIR}"/*.changes artifacts/deb/ || true
           cp -a "${BUILDDIR}"/*.buildinfo artifacts/deb/ || true
 
-      - name: Upload DEB artifacts
+      - name: Upload .deb artifacts
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: debian-deb
           path: artifacts/deb/*
 
   release-upload:
-    name: Upload artifacts to release
+    name: Upload Debian 14 artifacts to release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build-debian-deb]
+    needs: [build-debian-package]
     permissions:
       contents: write
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download DEB artifacts
+      - name: Download .deb artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
         with:
           name: debian-deb

@@ -1,4 +1,4 @@
-name: Fedora RPM
+name: Build Fedora 43 package
 
 on:
   workflow_dispatch:
@@ -9,7 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  build-fedora-43-rpm:
+  build-fedora-package:
+    name: Build Fedora 43 package
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -44,6 +45,9 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
+      - name: Trust workspace for Git in container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Build RPMs
         run: |
           VERSION="$(packaging/scripts/version.sh)"
@@ -70,8 +74,9 @@ jobs:
           if-no-files-found: error
 
   upload-release-assets:
+    name: Upload Fedora 43 artifacts to release
     if: github.event_name == 'release'
-    needs: build-fedora-43-rpm
+    needs: build-fedora-package
     permissions:
       contents: write
     runs-on: ubuntu-latest
