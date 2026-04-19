@@ -15,16 +15,7 @@ use super::resources;
 use super::resources_qml;
 use crate::frontend::hot_reload;
 use crate::metrics::MetricsManager;
-use crate::{
-    command_handler::CommandHandler,
-    configuration,
-    connection_manager::ConnectionManager,
-    frontend,
-    host_manager,
-    module::Metadata,
-    monitor_manager::MonitorManager,
-    ExitReason,
-};
+use crate::{configuration, connection_manager::ConnectionManager, frontend, host_manager, module::Metadata, ExitReason};
 
 pub struct QmlFrontend {
     config_dir: String,
@@ -72,11 +63,11 @@ impl QmlFrontend {
     /// Takes ownership of most components (excl. HostDataManager).
     pub fn start(
         &mut self,
-        command_handler: CommandHandler,
-        monitor_manager: MonitorManager,
+        command_backend: Box<dyn CommandBackend>,
         connection_manager: ConnectionManager,
         host_manager: Rc<RefCell<host_manager::HostManager>>,
         metrics_manager: Option<MetricsManager>,
+        skip_connection_processing: bool,
     ) -> ExitReason {
         qml_register_type::<PropertyTableModel>(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("HostTableModel"));
@@ -89,7 +80,7 @@ impl QmlFrontend {
             host_manager,
             connection_manager,
             HostDataManagerModel::new(display_data, self.main_config.clone(), self.hosts_config.clone()),
-            CommandHandlerModel::new(command_handler, monitor_manager, self.main_config.clone()),
+            CommandHandlerModel::new(command_backend, self.main_config.clone()),
             MetricsManagerModel::new(metrics_manager, self.hosts_config.clone(), self.main_config.display_options.clone()),
             ConfigManagerModel::new(
                 self.config_dir.clone(),
@@ -98,6 +89,7 @@ impl QmlFrontend {
                 self.group_config.clone(),
                 self.module_metadatas.clone(),
             ),
+            skip_connection_processing,
         );
 
         let is_flatpak = env::var("FLATPAK_ID").is_ok();
@@ -109,25 +101,7 @@ impl QmlFrontend {
             return ExitReason::Restart;
         }
         else {
-            if is_flatpak {
-                engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml"));
-                engine.add_import_path(QString::from("/app/ChartJs2QML"));
-                engine.add_import_path(QString::from("/app/qml-lighthouse-components"));
-            }
-            else {
-                // System-installed paths (set at compile time for packaged builds).
-                if let Some(path) = option_env!("LIGHTKEEPER_QML_LIB_DIR") {
-                    engine.add_import_path(QString::from(path));
-                }
-                if let Some(path) = option_env!("LIGHTKEEPER_QML_DATA_DIR") {
-                    engine.add_import_path(QString::from(path));
-                }
-
-                engine.add_import_path(QString::from("./third_party/qmltermwidget"));
-                engine.add_import_path(QString::from("./third_party/ChartJs2QML"));
-                engine.add_import_path(QString::from("./third_party/qml-lighthouse-components"));
-                engine.add_import_path(QString::from("./src/frontend/qt/qml_types"));
-            }
+            add_qml_import_paths(&mut engine, is_flatpak);
 
             qml_register_singleton_instance(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("LK"), lk_backend);
             qml_register_singleton_instance(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("DesktopPortal"), file_chooser);
@@ -162,5 +136,27 @@ impl QmlFrontend {
     fn load_qml(&self, engine: &mut QmlEngine) {
         resources_qml::init_resources();
         engine.load_url(QUrl::from(QString::from("qrc:/qml/Main.qml")));
+    }
+}
+
+fn add_qml_import_paths(engine: &mut QmlEngine, is_flatpak: bool) {
+    if is_flatpak {
+        engine.add_import_path(QString::from("/app/qmltermwidget/usr/lib/qml"));
+        engine.add_import_path(QString::from("/app/ChartJs2QML"));
+        engine.add_import_path(QString::from("/app/qml-lighthouse-components"));
+    }
+    else {
+        // System-installed paths (set at compile time for packaged builds).
+        if let Some(path) = option_env!("LIGHTKEEPER_QML_LIB_DIR") {
+            engine.add_import_path(QString::from(path));
+        }
+        if let Some(path) = option_env!("LIGHTKEEPER_QML_DATA_DIR") {
+            engine.add_import_path(QString::from(path));
+        }
+
+        engine.add_import_path(QString::from("./third_party/qmltermwidget"));
+        engine.add_import_path(QString::from("./third_party/ChartJs2QML"));
+        engine.add_import_path(QString::from("./third_party/qml-lighthouse-components"));
+        engine.add_import_path(QString::from("./src/frontend/qt/qml_types"));
     }
 }

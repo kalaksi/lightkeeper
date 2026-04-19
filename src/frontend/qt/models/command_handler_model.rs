@@ -10,13 +10,13 @@ use std::sync::mpsc;
 
 use qmetaobject::*;
 
-use crate::command_handler::{CommandHandler, CommandButtonData};
+use crate::command_handler::CommandButtonData;
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
-use crate::frontend::DisplayOptions;
+use crate::frontend::{self, DisplayOptions};
 use crate::host_manager::StateUpdateMessage;
 use crate::module::command::UIAction;
-use crate::monitor_manager::MonitorManager;
+use crate::backend::CommandBackend;
 
 
 // This should probably be renamed to something like RequestHandlerModel.
@@ -81,20 +81,26 @@ pub struct CommandHandlerModel {
     //
     // Private properties
     //
-    command_handler: CommandHandler,
-    monitor_manager: MonitorManager,
+    backend: Option<Box<dyn CommandBackend>>,
     configuration: configuration::Configuration,
 }
 
 #[allow(non_snake_case)]
 impl CommandHandlerModel {
-    pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager, configuration: configuration::Configuration) -> Self {
+    pub fn new(backend: Box<dyn CommandBackend>, configuration: configuration::Configuration) -> Self {
         CommandHandlerModel {
-            command_handler: command_handler,
-            monitor_manager: monitor_manager,
+            backend: Some(backend),
             configuration: configuration,
             ..Default::default()
         }
+    }
+
+    fn backend(&self) -> &dyn CommandBackend {
+        self.backend.as_deref().unwrap()
+    }
+
+    fn backend_mut(&mut self) -> &mut dyn CommandBackend {
+        self.backend.as_deref_mut().unwrap()
     }
 
     pub fn configure(&mut self,
@@ -102,31 +108,28 @@ impl CommandHandlerModel {
         hosts_config: &configuration::Hosts,
         request_sender: mpsc::Sender<ConnectorRequest>,
         update_sender: mpsc::Sender<StateUpdateMessage>,
+        frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
     ) {
         self.configuration = main_config.clone();
-        self.monitor_manager.configure(&hosts_config, request_sender.clone(), update_sender.clone());
-        self.command_handler.configure(
+        self.backend_mut().configure(
             &hosts_config,
             &main_config.preferences,
             request_sender,
             update_sender,
+            frontend_update_sender,
         );
     }
 
     pub fn start_processing_responses(&mut self) {
-        self.monitor_manager.start_processing_responses();
-        self.command_handler.start_processing_responses();
+        self.backend_mut().start_processing_responses();
     }
 
     pub fn stop(&mut self) {
-        self.command_handler.stop();
-        self.monitor_manager.stop();
+        self.backend_mut().stop();
     }
 
     pub fn refresh_host_monitors(&mut self, host_id: String) {
-        for category in self.monitor_manager.get_all_host_categories(&host_id) {
-            let _invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id, &category);
-        }
+        self.backend_mut().refresh_host_monitors(&host_id);
     }
 
     fn build_editor_header_text(&self, display_options: &DisplayOptions, command_id: &str, file_path: &str) -> QString {
@@ -153,9 +156,9 @@ impl CommandHandlerModel {
     fn getCategoryCommands(&self, host_id: QString, category: QString) -> QVariantList {
         let category_string = category.to_string();
 
-        let mut category_commands = self.command_handler.get_commands_for_host(host_id.to_string())
-                                                        .into_values().filter(|data| data.display_options.category == category_string)
-                                                        .collect::<Vec<CommandButtonData>>();
+        let mut category_commands = self.backend().commands_for_host(&host_id.to_string())
+            .into_values().filter(|data| data.display_options.category == category_string)
+            .collect::<Vec<CommandButtonData>>();
 
         let command_order = match self.configuration.display_options.categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
@@ -180,7 +183,7 @@ impl CommandHandlerModel {
     }
 
     fn getCustomCommands(&self, host_id: QString) -> QStringList {
-        let custom_commands = self.command_handler.get_custom_commands_for_host(&host_id.to_string());
+        let custom_commands = self.backend().custom_commands_for_host(&host_id.to_string());
         custom_commands.values().map(|item| {
             match serde_json::to_string(&item) {
                 Ok(json_string) => QString::from(json_string),
@@ -205,12 +208,12 @@ impl CommandHandlerModel {
             }
         };
 
-        let mut all_commands = self.command_handler.get_commands_for_host(host_id.to_string())
-                                   .into_iter().filter(|(_, data)| 
-                                        data.display_options.parent_id == parent_id_string &&
-                                        data.display_options.category == category_string &&
-                                        (data.display_options.multivalue_level == 0 || data.display_options.multivalue_level == multivalue_level))
-                                   .collect::<HashMap<String, CommandButtonData>>();
+        let mut all_commands = self.backend().commands_for_host(&host_id.to_string())
+            .into_iter().filter(|(_, data)|
+                data.display_options.parent_id == parent_id_string &&
+                data.display_options.category == category_string &&
+                (data.display_options.multivalue_level == 0 || data.display_options.multivalue_level == multivalue_level))
+            .collect::<HashMap<String, CommandButtonData>>();
 
         let mut valid_commands_sorted = Vec::<CommandButtonData>::new();
 
@@ -237,7 +240,7 @@ impl CommandHandlerModel {
     }
 
     fn execute(&mut self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList) {
-        let display_options = match self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string()) {
+        let display_options = match self.backend().command_for_host(&host_id.to_string(), &command_id.to_string()) {
             Some(command_data) => command_data.display_options,
             None => return,
         };
@@ -259,21 +262,21 @@ impl CommandHandlerModel {
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
 
-        let display_options = match self.command_handler.get_command_for_host(&host_id, &command_id) {
+        let display_options = match self.backend().command_for_host(&host_id, &command_id) {
             Some(command_data) => command_data.display_options,
             None => return,
         };
 
         match display_options.action {
             UIAction::None => {
-                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
 
                 if invocation_id > 0 {
                     self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_id.into());
                 }
             },
             UIAction::FollowOutput => {
-                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     let title = match display_options.tab_title.is_empty() {
                         true => QString::from(format!("{}: {}", command_id, parameters.first().unwrap_or(&String::new()))),
@@ -285,39 +288,43 @@ impl CommandHandlerModel {
             },
             UIAction::TextView => {
                 let target_id = parameters.first().unwrap().clone();
-                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     self.textViewOpened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id)
                 }
             },
             UIAction::TextDialog => {
-                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     self.textDialogOpened(invocation_id)
                 }
             },
             UIAction::LogView => {
-                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
                     self.logsViewOpened(false, QString::from(display_options.tab_title), QString::from(command_id), parameters_qs, invocation_id);
                 }
             },
             UIAction::LogViewWithTimeControls => {
-                let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
                 if invocation_id > 0 {
                     let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
                     self.logsViewOpened(true, QString::from(display_options.tab_title), QString::from(command_id), parameters_qs, invocation_id);
                 }
             },
             UIAction::Terminal => {
+                let Some(local_backend) = self.backend().local_backend() else {
+                    return;
+                };
+
                 if self.configuration.preferences.terminal == configuration::INTERNAL {
-                    let command = self.command_handler.open_remote_terminal_command(&host_id, &command_id, &parameters);
+                    let command = local_backend.remote_terminal_command(&host_id, &command_id, &parameters);
                     let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
                     self.terminalViewOpened(QString::from(display_options.tab_title), command_qsl)
                 }
                 else {
-                    self.command_handler.open_external_terminal(&host_id, &command_id, parameters);
+                    local_backend.open_external_terminal(&host_id, &command_id, parameters);
                 }
             },
             UIAction::FileBrowser => {
@@ -331,30 +338,35 @@ impl CommandHandlerModel {
             UIAction::TextEditor => {
                 // Commands with parent monitors receive file path as a parameter, but category-level
                 // commands don't. They should return it in `get_connector_message()`.
-                let remote_file_path = if let Some(path) = parameters.first().cloned() {
-                    path
-                } else if let Some(path) = self.command_handler.get_connector_message(&host_id, &command_id) {
+                let remote_file_path = if let Some(path) =
+                    self.backend_mut().resolve_text_editor_path(&host_id, &command_id, &parameters)
+                {
                     path
                 } else {
                     return;
                 };
 
                 if self.configuration.preferences.use_remote_editor {
+                    let Some(local_backend) = self.backend().local_backend() else {
+                        return;
+                    };
+
                     if self.configuration.preferences.terminal == configuration::INTERNAL {
-                        let command = self.command_handler.open_remote_text_editor(&host_id, &remote_file_path);
+                        let command = local_backend.remote_text_editor_command(&host_id, &remote_file_path);
                         let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
                         let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_file_path);
                         self.terminalViewOpened(editor_header_text, command_qsl);
                     }
                     else {
-                        self.command_handler.open_external_terminal(&host_id, &command_id, parameters);
+                        local_backend.open_external_terminal(&host_id, &command_id, parameters);
                     }
                 }
                 else {
                     if self.configuration.preferences.text_editor == configuration::INTERNAL 
                         || self.configuration.preferences.text_editor == configuration::INTERNAL_SIMPLE {
 
-                        let (invocation_id, file_contents) = self.command_handler.download_editable_file(&host_id, &command_id, &remote_file_path); 
+                        let (invocation_id, file_contents) =
+                            self.backend_mut().download_editable_file(&host_id, &command_id, &remote_file_path);
                         let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_file_path);
                         self.textEditorViewOpened(
                             editor_header_text,
@@ -364,8 +376,15 @@ impl CommandHandlerModel {
                         );
                     }
                     else {
-                        let local_file_path = self.command_handler.open_external_text_editor(&host_id, &command_id, &remote_file_path);
-                        let _invocation_id = self.command_handler.upload_file(&host_id, &command_id, &local_file_path);
+                        let Some(local_backend) = self.backend().local_backend() else {
+                            return;
+                        };
+                        let local_file_path = local_backend.open_external_text_editor(
+                            &host_id,
+                            &command_id,
+                            &remote_file_path,
+                        );
+                        let _invocation_id = self.backend_mut().upload_file(&host_id, &command_id, &local_file_path);
                     }
                 }
             },
@@ -376,18 +395,18 @@ impl CommandHandlerModel {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
-        self.command_handler.execute(&host_id, &command_id, &parameters)
+        self.backend_mut().execute_command(&host_id, &command_id, &parameters)
     }
 
     fn interruptInvocation(&self, invocation_id: u64) {
-        self.command_handler.interrupt_invocation(invocation_id);
+        self.backend().interrupt_invocation(invocation_id);
     }
 
     fn listFiles(&mut self, host_id: QString, path: QString) -> u64 {
         let host_id = host_id.to_string();
         let parameters = vec![path.to_string()];
         let command_id = String::from("_internal-filebrowser-ls");
-        let invocation_id = self.command_handler.execute(&host_id, &command_id, &parameters);
+        let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
 
         invocation_id
     }
@@ -396,12 +415,12 @@ impl CommandHandlerModel {
         let host_id = host_id.to_string();
         let remote_path = remote_path.to_string();
         let command_id = String::from("_internal-filebrowser-edit");
-        let display_options = match self.command_handler.get_command_for_host(&host_id, &command_id) {
+        let display_options = match self.backend().command_for_host(&host_id, &command_id) {
             Some(command_data) => command_data.display_options,
             None => return,
         };
         let (invocation_id, local_file_path) =
-            self.command_handler.download_editable_file(&host_id, &command_id, &remote_path);
+            self.backend_mut().download_editable_file(&host_id, &command_id, &remote_path);
         if invocation_id > 0 {
             let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_path);
             self.textEditorViewOpened(
@@ -419,27 +438,31 @@ impl CommandHandlerModel {
         let local_file_path = local_file_path.to_string();
         let contents = contents.to_string().into_bytes();
 
-        self.command_handler.write_file(&local_file_path, contents);
-        let invocation_id = self.command_handler.upload_file(&host_id, &command_id, &local_file_path);
-        invocation_id
+        if self.backend().local_backend().is_some() {
+            self.backend_mut().write_file(&local_file_path, contents);
+            self.backend_mut().upload_file(&host_id, &command_id, &local_file_path)
+        }
+        else {
+            self.backend_mut().upload_file_from_editor(&host_id, &command_id, &local_file_path, contents)
+        }
     }
 
     fn removeFile(&mut self, local_file_path: QString) {
         let local_file_path = local_file_path.to_string();
-        self.command_handler.remove_file(&local_file_path);
+        self.backend_mut().remove_file(&local_file_path);
     }
 
     fn hasFileChanged(&self, local_file_path: QString, contents: QString) -> bool {
         let local_file_path = local_file_path.to_string();
         let contents = contents.to_string().into_bytes();
-        self.command_handler.has_file_changed(&local_file_path, &contents)
+        self.backend().has_file_changed(&local_file_path, &contents)
     }
 
     fn verifyHostKey(&self, host_id: QString, connector_id: QString, key_id: QString) {
         let host_id = host_id.to_string();
         let connector_id = connector_id.to_string();
         let key_id = key_id.to_string();
-        self.command_handler.verify_host_key(&host_id, &connector_id, &key_id);
+        self.backend().verify_host_key(&host_id, &connector_id, &key_id);
     }
 
     fn check_config_errors(&self) -> bool {
@@ -460,7 +483,7 @@ impl CommandHandlerModel {
             return;
         }
 
-        self.monitor_manager.refresh_platform_info(&host_id.to_string());
+        self.backend_mut().initialize_host(&host_id.to_string());
         self.hostInitializing(host_id);
     }
 
@@ -469,7 +492,7 @@ impl CommandHandlerModel {
             return;
         }
 
-        self.monitor_manager.refresh_platform_info(&host_id.to_string());
+        self.backend_mut().initialize_host(&host_id.to_string());
         self.hostInitializing(host_id);
     }
 
@@ -478,7 +501,7 @@ impl CommandHandlerModel {
             return;
         }
 
-        let host_ids = self.monitor_manager.refresh_platform_info_all();
+        let host_ids = self.backend_mut().initialize_hosts();
         for host_id in host_ids {
             self.hostInitializing(QString::from(host_id));
         }
@@ -500,19 +523,12 @@ impl CommandHandlerModel {
 
         ::log::debug!("[{}] Refreshing monitors related to command {}", host_id, command_id);
 
-        let command = match self.command_handler.get_command_for_host(&host_id, &command_id) {
-            Some(command) => command,
+        match self.backend().command_for_host(&host_id, &command_id) {
+            Some(_) => {}
             None => return QVariantList::default(),
-        };
+        }
 
-        let invocation_ids = if command.display_options.parent_id.is_empty() {
-            // Category-level command: refresh all monitors in the category
-            self.monitor_manager.refresh_monitors_of_category(&host_id, &command.display_options.category)
-        } else {
-            // Monitor-specific command: refresh only the related monitor
-            let monitor_id = command.display_options.parent_id;
-            self.monitor_manager.refresh_monitors_by_id(&host_id, &monitor_id)
-        };
+        let invocation_ids = self.backend_mut().refresh_monitors_for_command(&host_id, &command_id);
 
         QVariantList::from_iter(invocation_ids)
     }
@@ -522,7 +538,7 @@ impl CommandHandlerModel {
             return QVariantList::default();
         }
 
-        let invocation_ids = self.monitor_manager.refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
+        let invocation_ids = self.backend_mut().refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
         QVariantList::from_iter(invocation_ids)
     }
 
@@ -531,7 +547,7 @@ impl CommandHandlerModel {
             return QVariantList::default();
         }
 
-        let invocation_ids = self.monitor_manager.refresh_certificate_monitors();
+        let invocation_ids = self.backend_mut().refresh_certificate_monitors();
         QVariantList::from_iter(invocation_ids)
     }
 
@@ -540,7 +556,7 @@ impl CommandHandlerModel {
             return QVariantList::default()
         }
 
-        self.monitor_manager.get_all_host_categories(&host_id.to_string())
+        self.backend().all_host_categories(&host_id.to_string())
                             .iter().map(|category| category.to_qvariant()).collect()
     }
 }

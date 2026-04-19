@@ -358,6 +358,38 @@ impl CommandHandler {
         invocation_id
     }
 
+    pub fn upload_file_from_editor_contents(
+        &mut self,
+        host_id: &String,
+        command_id: &String,
+        remote_file_path: &String,
+        contents: Vec<u8>,
+    ) -> u64 {
+        let host = self.host_manager.borrow().get_host(host_id);
+        let (_, local_file_path) = file_handler::convert_to_local_paths(&host, remote_file_path);
+
+        if let Err(error) = file_handler::write_file(&local_file_path, contents) {
+            log::error!("Error while writing editor file: {}", error);
+            let invocation_id = self.next_invocation_id();
+            let Ok(commands) = self.commands.lock() else {
+                self.send_state_update(StateUpdateMessage::fatal_error());
+                return 0;
+            };
+            let command = &commands[host_id][command_id];
+            self.send_state_update(StateUpdateMessage {
+                host_name: host.name,
+                display_options: command.get_display_options(),
+                module_spec: command.get_module_spec(),
+                command_result: Some(CommandResult::new_critical_error(error)),
+                invocation_id,
+                ..Default::default()
+            });
+            return invocation_id;
+        }
+
+        self.upload_file(host_id, command_id, &local_file_path)
+    }
+
     pub fn verify_host_key(&self, host_id: &String, connector_id: &String, key_id: &String) {
         let host = self.host_manager.borrow().get_host(host_id);
         // Version numbers aren't currently used, so it's hardcoded here.

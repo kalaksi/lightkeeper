@@ -61,6 +61,7 @@ pub struct LkBackend {
 
     connection_manager: ConnectionManager,
     host_manager: Rc<RefCell<host_manager::HostManager>>,
+    skip_connection_processing: bool,
 }
 
 #[allow(non_snake_case)]
@@ -74,6 +75,7 @@ impl LkBackend {
         command_model: CommandHandlerModel,
         metrics_model: MetricsManagerModel,
         config_model: ConfigManagerModel,
+        skip_connection_processing: bool,
     ) -> LkBackend {
 
         LkBackend {
@@ -86,6 +88,7 @@ impl LkBackend {
             update_receiver_thread: None,
             host_manager: host_manager,
             connection_manager: connection_manager,
+            skip_connection_processing,
             ..Default::default()
         }
     }
@@ -184,12 +187,15 @@ impl LkBackend {
                     &hosts_config,
                     self.connection_manager.new_request_sender(),
                     self.host_manager.borrow().new_state_update_sender(),
+                    self.new_update_sender(),
                 );
 
                 // `self.metrics` doesn't have to be reconfigured.
 
                 self.host_manager.borrow_mut().start_receiving_updates();
-                self.connection_manager.start_processing_requests();
+                if !self.skip_connection_processing {
+                    self.connection_manager.start_processing_requests();
+                }
                 self.command.borrow_mut().start_processing_responses();
 
                 self.reloaded(QString::from(""));

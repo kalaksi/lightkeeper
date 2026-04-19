@@ -23,6 +23,7 @@ pub mod frontend;
 pub mod file_handler;
 mod metrics;
 pub mod remote_core;
+pub mod backend;
 
 pub use module::ModuleFactory;
 pub use configuration::Configuration;
@@ -130,6 +131,8 @@ pub fn run(
     } = initialize_core(main_config, hosts_config).map_err(String::from)?;
 
     let module_metadatas = module_factory.get_module_metadatas();
+    let command_backend = backend::new_local_command_backend(command_handler, monitor_manager);
+
     let mut frontend = frontend::qt::QmlFrontend::new(
         config_dir,
         main_config,
@@ -153,7 +156,7 @@ pub fn run(
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if !test {
-        Ok(frontend.start(command_handler, monitor_manager, connection_manager, host_manager, metrics_manager))
+        Ok(frontend.start(command_backend, connection_manager, host_manager, metrics_manager, false))
     }
     else {
         // TODO
