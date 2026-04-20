@@ -29,7 +29,7 @@ impl Default for UIUpdate {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct DisplayData {
     // Key is host name.
     pub hosts: HashMap<String, HostDisplayData>,

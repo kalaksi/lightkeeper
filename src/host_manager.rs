@@ -194,9 +194,16 @@ impl HostManager {
                 }
 
                 if state_update.fatal_error {
-                    for observer in observers.lock().unwrap().iter() {
-                        observer.send(frontend::UIUpdate::FatalError()).unwrap();
-                    }
+                    let mut observers = observers.lock().unwrap();
+                    observers.retain(|observer| {
+                        match observer.send(frontend::UIUpdate::FatalError()) {
+                            Ok(()) => true,
+                            Err(error) => {
+                                log::debug!("Removing closed host observer: {}", error);
+                                false
+                            }
+                        }
+                    });
                     continue;
                 }
 
@@ -315,18 +322,24 @@ impl HostManager {
 
 
                 // Send the state update to the front end.
-                for observer in observers.lock().unwrap().iter() {
-                    observer.send(frontend::UIUpdate::Host(
-                        frontend::HostDisplayData {
-                            host_state: host_state.clone(),
-                            new_monitoring_data: new_monitoring_data.clone(),
-                            new_command_result: new_command_results.clone(),
-                            new_errors: unhandled_errors.iter().cloned().map(ErrorMessage::from).collect(),
-                            verification_requests: verification_requests.clone(),
-                            ..Default::default()
-                        })
-                    ).unwrap();
-                }
+                let update = frontend::UIUpdate::Host(frontend::HostDisplayData {
+                    host_state: host_state.clone(),
+                    new_monitoring_data: new_monitoring_data.clone(),
+                    new_command_result: new_command_results.clone(),
+                    new_errors: unhandled_errors.iter().cloned().map(ErrorMessage::from).collect(),
+                    verification_requests: verification_requests.clone(),
+                    ..Default::default()
+                });
+                let mut observers = observers.lock().unwrap();
+                observers.retain(|observer| {
+                    match observer.send(update.clone()) {
+                        Ok(()) => true,
+                        Err(error) => {
+                            log::debug!("Removing closed host observer: {}", error);
+                            false
+                        }
+                    }
+                });
             }
         })
     }
