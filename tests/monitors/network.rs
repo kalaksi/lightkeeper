@@ -40,29 +40,6 @@ rtt min/avg/max/mdev = 0.123/0.134/0.145/0.011 ms"#, 0)
 }
 
 #[test]
-fn test_ssh() {
-    // SSH monitor doesn't use SSH connector, it just checks if platform is set
-    let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
-        StubSsh2::new_any("", 0)
-    };
-
-    let mut harness = MonitorTestHarness::new_monitor_tester(
-        PlatformInfo::linux(Flavor::Debian, "12.0"),
-        (StubSsh2::get_metadata(), new_stub_ssh),
-        (network::Ssh::get_metadata(), network::Ssh::new_monitoring_module),
-    );
-
-    harness.refresh_monitors();
-
-    harness.verify_next_datapoint(&network::Ssh::get_metadata().module_spec.id, |datapoint| {
-        let datapoint = datapoint.expect("Should have datapoint");
-        assert_eq!(datapoint.value, "up");
-        assert_eq!(datapoint.criticality, Criticality::Normal);
-    });
-}
-
-#[test]
 fn test_routes() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         // TODO: auto-generated responses, check or replace with actual

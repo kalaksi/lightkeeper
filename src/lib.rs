@@ -62,13 +62,12 @@ pub fn initialize_openssl() -> Result<(), error::LkError> {
     Ok(())
 }
 
-pub fn initialize_core(
+pub fn initialize_core_with_module_factory(
     main_config: &Configuration,
     hosts_config: &configuration::Hosts,
+    module_factory: Arc<ModuleFactory>,
 ) -> Result<CoreComponents, error::LkError> {
     initialize_openssl()?;
-
-    let module_factory = Arc::<ModuleFactory>::new(ModuleFactory::new());
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
     host_manager.borrow_mut().configure(hosts_config);
@@ -113,6 +112,17 @@ pub fn initialize_core(
         command_handler,
         monitor_manager,
     })
+}
+
+pub fn initialize_core(
+    main_config: &Configuration,
+    hosts_config: &configuration::Hosts,
+) -> Result<CoreComponents, error::LkError> {
+    initialize_core_with_module_factory(
+        main_config,
+        hosts_config,
+        Arc::new(ModuleFactory::new()),
+    )
 }
 
 pub fn run(

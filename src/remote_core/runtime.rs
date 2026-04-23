@@ -15,7 +15,9 @@ use crate::file_handler;
 use crate::frontend;
 use crate::frontend::DisplayData;
 use crate::CoreComponents;
+use crate::ModuleFactory;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub struct CoreRuntime {
     core: CoreComponents,
@@ -23,7 +25,16 @@ pub struct CoreRuntime {
 
 impl CoreRuntime {
     pub fn new(main_config: &Configuration, hosts_config: &configuration::Hosts) -> Result<Self, LkError> {
-        let mut core = crate::initialize_core(main_config, hosts_config)?;
+        Self::new_with_module_factory(main_config, hosts_config, Arc::new(ModuleFactory::new()))
+    }
+
+    pub fn new_with_module_factory(
+        main_config: &Configuration,
+        hosts_config: &configuration::Hosts,
+        module_factory: Arc<ModuleFactory>,
+    ) -> Result<Self, LkError> {
+        let mut core =
+            crate::initialize_core_with_module_factory(main_config, hosts_config, module_factory)?;
 
         if main_config.preferences.refresh_hosts_on_start {
             let host_ids = core.monitor_manager.refresh_platform_info_all();

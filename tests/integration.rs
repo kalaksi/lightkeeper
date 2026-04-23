@@ -10,6 +10,8 @@ mod other;
 
 mod config;
 
+mod remote_core;
+
 pub use common::*;
 use lightkeeper::enums::Criticality;
 use lightkeeper::frontend::HostDisplayData;

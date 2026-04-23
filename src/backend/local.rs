@@ -6,14 +6,13 @@
 use std::collections::HashMap;
 use std::sync::mpsc;
 
+use super::api::{CommandBackend, LocalBackendApi};
 use crate::command_handler::{CommandButtonData, CommandHandler};
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
 use crate::monitor_manager::MonitorManager;
-
-use super::api::{CommandBackend, LocalBackendApi};
 
 #[derive(Default)]
 pub struct LocalCommandBackend {
@@ -44,8 +43,10 @@ impl CommandBackend for LocalCommandBackend {
         update_sender: mpsc::Sender<StateUpdateMessage>,
         _frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
     ) {
-        self.monitor_manager.configure(hosts_config, request_sender.clone(), update_sender.clone());
-        self.command_handler.configure(hosts_config, preferences, request_sender, update_sender);
+        self.monitor_manager
+            .configure(hosts_config, request_sender.clone(), update_sender.clone());
+        self.command_handler
+            .configure(hosts_config, preferences, request_sender, update_sender);
     }
 
     fn start_processing_responses(&mut self) {
@@ -69,7 +70,8 @@ impl CommandBackend for LocalCommandBackend {
     }
 
     fn command_for_host(&self, host_id: &str, command_id: &str) -> Option<CommandButtonData> {
-        self.command_handler.get_command_for_host(&host_id.to_string(), &command_id.to_string())
+        self.command_handler
+            .get_command_for_host(&host_id.to_string(), &command_id.to_string())
     }
 
     fn custom_commands_for_host(&self, host_id: &str) -> HashMap<String, configuration::CustomCommandConfig> {
@@ -89,7 +91,8 @@ impl CommandBackend for LocalCommandBackend {
     }
 
     fn verify_host_key(&self, host_id: &str, connector_id: &str, key_id: &str) {
-        self.command_handler.verify_host_key(&host_id.to_string(), &connector_id.to_string(), &key_id.to_string());
+        self.command_handler
+            .verify_host_key(&host_id.to_string(), &connector_id.to_string(), &key_id.to_string());
     }
 
     fn initialize_host(&mut self, host_id: &str) {
@@ -107,9 +110,12 @@ impl CommandBackend for LocalCommandBackend {
         };
 
         if command.display_options.parent_id.is_empty() {
-            self.monitor_manager.refresh_monitors_of_category(host_id, &command.display_options.category)
-        } else {
-            self.monitor_manager.refresh_monitors_by_id(&host_id.to_string(), &command.display_options.parent_id)
+            self.monitor_manager
+                .refresh_monitors_of_category(host_id, &command.display_options.category)
+        }
+        else {
+            self.monitor_manager
+                .refresh_monitors_by_id(&host_id.to_string(), &command.display_options.parent_id)
         }
     }
 
@@ -124,25 +130,20 @@ impl CommandBackend for LocalCommandBackend {
     fn resolve_text_editor_path(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Option<String> {
         if let Some(path) = parameters.first().cloned() {
             Some(path)
-        } else {
+        }
+        else {
             self.connector_message(host_id, command_id)
         }
     }
 
     fn download_editable_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> (u64, String) {
-        self.command_handler.download_editable_file(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            &remote_file_path.to_string(),
-        )
+        self.command_handler
+            .download_editable_file(&host_id.to_string(), &command_id.to_string(), &remote_file_path.to_string())
     }
 
     fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> u64 {
-        self.command_handler.upload_file(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            &local_file_path.to_string(),
-        )
+        self.command_handler
+            .upload_file(&host_id.to_string(), &command_id.to_string(), &local_file_path.to_string())
     }
 
     fn upload_file_from_editor(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, contents: Vec<u8>) -> u64 {
@@ -172,32 +173,22 @@ impl CommandBackend for LocalCommandBackend {
 }
 
 impl LocalBackendApi for LocalCommandBackend {
-    fn remote_terminal_command(
-        &self,
-        host_id: &str,
-        command_id: &str,
-        parameters: &[String],
-    ) -> crate::utils::ShellCommand {
-        self.command_handler.open_remote_terminal_command(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            parameters,
-        )
+    fn remote_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> crate::utils::ShellCommand {
+        self.command_handler
+            .open_remote_terminal_command(&host_id.to_string(), &command_id.to_string(), parameters)
     }
 
     fn open_external_terminal(&self, host_id: &str, command_id: &str, parameters: Vec<String>) {
-        self.command_handler.open_external_terminal(&host_id.to_string(), &command_id.to_string(), parameters);
+        self.command_handler
+            .open_external_terminal(&host_id.to_string(), &command_id.to_string(), parameters);
     }
 
-    fn remote_text_editor_command(&self, host_id: &str, remote_file_path: &str,) -> crate::utils::ShellCommand {
+    fn remote_text_editor_command(&self, host_id: &str, remote_file_path: &str) -> crate::utils::ShellCommand {
         self.command_handler.open_remote_text_editor(&host_id.to_string(), remote_file_path)
     }
 
-    fn open_external_text_editor(&self, host_id: &str, command_id: &str, remote_file_path: &str,) -> String {
-        self.command_handler.open_external_text_editor(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            &remote_file_path.to_string(),
-        )
+    fn open_external_text_editor(&self, host_id: &str, command_id: &str, remote_file_path: &str) -> String {
+        self.command_handler
+            .open_external_text_editor(&host_id.to_string(), &command_id.to_string(), &remote_file_path.to_string())
     }
 }

@@ -52,22 +52,8 @@ pub trait CommandBackend {
     }
 }
 pub trait LocalBackendApi {
-    fn remote_terminal_command(
-        &self,
-        host_id: &str,
-        command_id: &str,
-        parameters: &[String],
-    ) -> crate::utils::ShellCommand;
+    fn remote_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> crate::utils::ShellCommand;
     fn open_external_terminal(&self, host_id: &str, command_id: &str, parameters: Vec<String>);
-    fn remote_text_editor_command(
-        &self,
-        host_id: &str,
-        remote_file_path: &str,
-    ) -> crate::utils::ShellCommand;
-    fn open_external_text_editor(
-        &self,
-        host_id: &str,
-        command_id: &str,
-        remote_file_path: &str,
-    ) -> String;
+    fn remote_text_editor_command(&self, host_id: &str, remote_file_path: &str) -> crate::utils::ShellCommand;
+    fn open_external_text_editor(&self, host_id: &str, command_id: &str, remote_file_path: &str) -> String;
 }

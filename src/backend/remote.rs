@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-FileCopyrightText: Copyright (C) 2026 kalaksi@users.noreply.github.com
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -8,77 +8,132 @@ use std::io;
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use super::api::CommandBackend;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
-use crate::remote_core::protocol::{
-    ClientMessage,
-    PROTOCOL_VERSION,
-    ServerMessage,
-    read_message,
-    write_message,
-};
-
-use super::api::CommandBackend;
+use crate::remote_core::protocol::{read_message, write_message, ClientMessage, ServerMessage, PROTOCOL_VERSION};
 
 //
-// Remote backend implementation
+// CommandBackend client for lightkeeper-core (unix socket).
 //
 
 const REMOTE_READ_TIMEOUT: Duration = Duration::from_millis(100);
 const REMOTE_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
-const REMOTE_QUERY_TIMEOUT: Duration = Duration::from_secs(5);
 
-enum PendingRpc {
-    ExecuteCommand(mpsc::Sender<u64>),
-    CommandsForHost(mpsc::Sender<HashMap<String, CommandButtonData>>),
-    CommandForHost(mpsc::Sender<Option<CommandButtonData>>),
-    CustomCommandsForHost(mpsc::Sender<HashMap<String, configuration::CustomCommandConfig>>),
-    AllHostCategories(mpsc::Sender<Vec<String>>),
-    RefreshInvocationIds(mpsc::Sender<Vec<u64>>),
-    InitializeHosts(mpsc::Sender<Vec<String>>),
-    ResolveTextEditorPath(mpsc::Sender<Option<String>>),
-    DownloadEditable(mpsc::Sender<u64>),
-    UploadEdited(mpsc::Sender<u64>),
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PendingRpcKind {
+    ExecuteCommand,
+    CommandsForHost,
+    CommandForHost,
+    CustomCommandsForHost,
+    AllHostCategories,
+    RefreshInvocationIds,
+    InitializeHosts,
+    ResolveTextEditorPath,
+    DownloadEditable,
+    UploadEdited,
 }
 
-fn fail_pending_rpc(pending: PendingRpc) {
+#[allow(clippy::large_enum_variant)]
+enum PendingRpcReply {
+    ExecuteCommand(u64),
+    CommandsForHost(HashMap<String, CommandButtonData>),
+    CommandForHost(Option<CommandButtonData>),
+    CustomCommandsForHost(HashMap<String, configuration::CustomCommandConfig>),
+    AllHostCategories(Vec<String>),
+    RefreshInvocationIds(Vec<u64>),
+    InitializeHosts(Vec<String>),
+    ResolveTextEditorPath(Option<String>),
+    DownloadEditable(u64),
+    UploadEdited(u64),
+}
+
+struct PendingRpc {
+    kind: PendingRpcKind,
+    sender: mpsc::Sender<PendingRpcReply>,
+}
+
+fn default_reply(kind: PendingRpcKind) -> PendingRpcReply {
+    match kind {
+        PendingRpcKind::ExecuteCommand => PendingRpcReply::ExecuteCommand(0),
+        PendingRpcKind::CommandsForHost => PendingRpcReply::CommandsForHost(HashMap::new()),
+        PendingRpcKind::CommandForHost => PendingRpcReply::CommandForHost(None),
+        PendingRpcKind::CustomCommandsForHost => PendingRpcReply::CustomCommandsForHost(HashMap::new()),
+        PendingRpcKind::AllHostCategories => PendingRpcReply::AllHostCategories(Vec::new()),
+        PendingRpcKind::RefreshInvocationIds => PendingRpcReply::RefreshInvocationIds(Vec::new()),
+        PendingRpcKind::InitializeHosts => PendingRpcReply::InitializeHosts(Vec::new()),
+        PendingRpcKind::ResolveTextEditorPath => PendingRpcReply::ResolveTextEditorPath(None),
+        PendingRpcKind::DownloadEditable => PendingRpcReply::DownloadEditable(0),
+        PendingRpcKind::UploadEdited => PendingRpcReply::UploadEdited(0),
+    }
+}
+
+fn completer_send_default(p: PendingRpc) {
+    let _ = p.sender.send(default_reply(p.kind));
+}
+
+fn log_remote_error(detail: &str) {
+    ::log::error!("Request failed: {}", detail);
+}
+
+fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
+    matches!(
+        (kind, reply),
+        (PendingRpcKind::ExecuteCommand, PendingRpcReply::ExecuteCommand(_)) |
+            (PendingRpcKind::CommandsForHost, PendingRpcReply::CommandsForHost(_)) |
+            (PendingRpcKind::CommandForHost, PendingRpcReply::CommandForHost(_)) |
+            (PendingRpcKind::CustomCommandsForHost, PendingRpcReply::CustomCommandsForHost(_)) |
+            (PendingRpcKind::AllHostCategories, PendingRpcReply::AllHostCategories(_)) |
+            (PendingRpcKind::RefreshInvocationIds, PendingRpcReply::RefreshInvocationIds(_)) |
+            (PendingRpcKind::InitializeHosts, PendingRpcReply::InitializeHosts(_)) |
+            (PendingRpcKind::ResolveTextEditorPath, PendingRpcReply::ResolveTextEditorPath(_)) |
+            (PendingRpcKind::DownloadEditable, PendingRpcReply::DownloadEditable(_)) |
+            (PendingRpcKind::UploadEdited, PendingRpcReply::UploadEdited(_))
+    )
+}
+
+fn align_reply(kind: PendingRpcKind, reply: PendingRpcReply) -> PendingRpcReply {
+    if reply_matches(&kind, &reply) {
+        reply
+    }
+    else {
+        log_remote_error("unexpected reply");
+        default_reply(kind)
+    }
+}
+
+fn deliver_response(
+    pending_rpc: &Arc<Mutex<HashMap<u64, PendingRpc>>>,
+    request_id: u64,
+    expected: PendingRpcKind,
+    on_match: impl FnOnce() -> PendingRpcReply,
+) {
+    let pending = match pending_rpc.lock() {
+        Ok(mut map) => map.remove(&request_id),
+        Err(error) => {
+            log_remote_error(&error.to_string());
+            return;
+        }
+    };
     match pending {
-        PendingRpc::ExecuteCommand(sender) => {
-            let _ = sender.send(0);
+        None => {
+            ::log::error!("Received unexpected response");
         }
-        PendingRpc::CommandsForHost(sender) => {
-            let _ = sender.send(HashMap::new());
+        Some(p) if p.kind == expected => {
+            if p.sender.send(on_match()).is_err() {
+                ::log::error!("Receiver dropped");
+            }
         }
-        PendingRpc::CommandForHost(sender) => {
-            let _ = sender.send(None);
-        }
-        PendingRpc::CustomCommandsForHost(sender) => {
-            let _ = sender.send(HashMap::new());
-        }
-        PendingRpc::AllHostCategories(sender) => {
-            let _ = sender.send(Vec::new());
-        }
-        PendingRpc::RefreshInvocationIds(sender) => {
-            let _ = sender.send(Vec::new());
-        }
-        PendingRpc::InitializeHosts(sender) => {
-            let _ = sender.send(Vec::new());
-        }
-        PendingRpc::ResolveTextEditorPath(sender) => {
-            let _ = sender.send(None);
-        }
-        PendingRpc::DownloadEditable(sender) => {
-            let _ = sender.send(0);
-        }
-        PendingRpc::UploadEdited(sender) => {
-            let _ = sender.send(0);
+        Some(p) => {
+            ::log::error!("RPC type mismatch");
+            let _ = p.sender.send(default_reply(p.kind));
         }
     }
 }
@@ -106,8 +161,8 @@ impl RemoteCommandBackend {
         }
     }
 
-    fn allocate_request_id(&self) -> u64 {
-        self.next_request_id.fetch_add(1, Ordering::Relaxed)
+    fn next_request_id(&self) -> u64 {
+        self.next_request_id.fetch_add(1, Ordering::SeqCst)
     }
 
     fn connect(&mut self) -> Result<(), String> {
@@ -115,10 +170,23 @@ impl RemoteCommandBackend {
             return Ok(());
         }
 
-        let frontend_update_sender = self.frontend_update_sender.clone()
-            .ok_or_else(|| String::from("Remote backend is missing UI update sender"))?;
+        let stream = UnixStream::connect(&self.socket_path).map_err(|error| error.to_string())?;
+        self.connect_stream(stream)
+    }
 
-        let mut stream = UnixStream::connect(&self.socket_path).map_err(|error| error.to_string())?;
+    /// Runs the remote client protocol on an already connected stream (Connect message, reader thread).
+    /// [`Self::connect`] uses this after path connect; [`Self::connect_with_frontend_stream`] sets the UI sender
+    /// then calls this (e.g. with a stream from `UnixStream::pair`).
+    pub fn connect_stream(&mut self, mut stream: UnixStream) -> Result<(), String> {
+        if self.writer.is_some() {
+            return Ok(());
+        }
+
+        let frontend_update_sender = self
+            .frontend_update_sender
+            .clone()
+            .ok_or_else(|| String::from("Missing UI update sender"))?;
+
         write_message(
             &mut stream,
             &ClientMessage::Connect {
@@ -135,257 +203,135 @@ impl RemoteCommandBackend {
         let writer = Arc::new(Mutex::new(stream));
         let pending_rpc = self.pending_rpc.clone();
         let (stop_sender, stop_receiver) = mpsc::channel();
-        let response_thread = thread::spawn(move || {
-            loop {
-                match stop_receiver.try_recv() {
-                    Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
-                    Err(mpsc::TryRecvError::Empty) => {}
+        let response_thread = thread::spawn(move || loop {
+            match stop_receiver.try_recv() {
+                Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
+                Err(mpsc::TryRecvError::Empty) => {}
+            }
+
+            let message = match read_message::<ServerMessage, _>(&mut reader) {
+                Ok(message) => message,
+                Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
+                    continue;
                 }
+                Err(error) => {
+                    ::log::error!("Receive failed: {}", error);
+                    return;
+                }
+            };
 
-                let message = match read_message::<ServerMessage, _>(&mut reader) {
-                    Ok(message) => message,
-                    Err(error)
-                        if error.kind() == io::ErrorKind::TimedOut
-                            || error.kind() == io::ErrorKind::WouldBlock =>
-                    {
-                        continue;
+            match message {
+                ServerMessage::Connect { protocol_version } => {
+                    if protocol_version != PROTOCOL_VERSION {
+                        ::log::error!(
+                            "Protocol mismatch: expected {}, got {}",
+                            PROTOCOL_VERSION,
+                            protocol_version,
+                        );
                     }
-                    Err(error) => {
-                        ::log::error!("Remote backend receive failed: {}", error);
-                        return;
-                    }
-                };
-
-                let take_rpc = |request_id: u64| -> Option<PendingRpc> {
-                    match pending_rpc.lock() {
-                        Ok(mut map) => map.remove(&request_id),
-                        Err(error) => {
-                            ::log::error!("Remote backend RPC map lock failed: {}", error);
-                            None
-                        }
-                    }
-                };
-
-                match message {
-                    ServerMessage::Connect { protocol_version } => {
-                        if protocol_version != PROTOCOL_VERSION {
-                            ::log::error!(
-                                "Remote backend protocol mismatch: expected {}, got {}",
-                                PROTOCOL_VERSION,
-                                protocol_version,
-                            );
-                        }
-                    }
-                    ServerMessage::ExecuteCommand {
-                        request_id,
-                        invocation_id,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::ExecuteCommand(sender)) => {
-                            if sender.send(invocation_id).is_err() {
-                                ::log::error!("Remote backend invocation ack receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for execute command");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected command ack");
-                        }
-                    },
-                    ServerMessage::CommandsForHost {
-                        request_id,
-                        host_id: _,
-                        commands,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::CommandsForHost(sender)) => {
-                            if sender.send(commands).is_err() {
-                                ::log::error!("Remote backend commands query receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for commands for host");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected commands response");
-                        }
-                    },
-                    ServerMessage::CommandForHost {
-                        request_id,
-                        host_id: _,
-                        command_id: _,
-                        command,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::CommandForHost(sender)) => {
-                            if sender.send(command).is_err() {
-                                ::log::error!("Remote backend command lookup receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for command for host");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected command lookup response");
-                        }
-                    },
-                    ServerMessage::CustomCommandsForHost {
-                        request_id,
-                        host_id: _,
-                        commands,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::CustomCommandsForHost(sender)) => {
-                            if sender.send(commands).is_err() {
-                                ::log::error!("Remote backend custom command query receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for custom commands");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected custom command response");
-                        }
-                    },
-                    ServerMessage::AllHostCategories {
-                        request_id,
-                        host_id: _,
-                        categories,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::AllHostCategories(sender)) => {
-                            if sender.send(categories).is_err() {
-                                ::log::error!("Remote backend category query receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for host categories");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected category response");
-                        }
-                    },
-                    ServerMessage::InitialState(display_data) => {
-                        for host_display_data in display_data.hosts.into_values() {
-                            if frontend_update_sender
-                                .send(frontend::UIUpdate::Host(host_display_data))
-                                .is_err()
-                            {
-                                ::log::error!("Remote backend failed to deliver initial state update");
-                                return;
-                            }
-                        }
-                    }
-                    ServerMessage::HostUpdate(host_display_data) => {
-                        if frontend_update_sender
-                            .send(frontend::UIUpdate::Host(host_display_data))
-                            .is_err()
-                        {
-                            ::log::error!("Remote backend failed to deliver host update");
+                }
+                ServerMessage::ExecuteCommand { request_id, invocation_id } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::ExecuteCommand, || {
+                        PendingRpcReply::ExecuteCommand(invocation_id)
+                    });
+                }
+                ServerMessage::CommandsForHost {
+                    request_id,
+                    host_id: _,
+                    commands,
+                } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::CommandsForHost, || {
+                        PendingRpcReply::CommandsForHost(commands)
+                    });
+                }
+                ServerMessage::CommandForHost {
+                    request_id,
+                    host_id: _,
+                    command_id: _,
+                    command,
+                } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::CommandForHost, || {
+                        PendingRpcReply::CommandForHost(command)
+                    });
+                }
+                ServerMessage::CustomCommandsForHost {
+                    request_id,
+                    host_id: _,
+                    commands,
+                } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::CustomCommandsForHost, || {
+                        PendingRpcReply::CustomCommandsForHost(commands)
+                    });
+                }
+                ServerMessage::AllHostCategories {
+                    request_id,
+                    host_id: _,
+                    categories,
+                } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::AllHostCategories, || {
+                        PendingRpcReply::AllHostCategories(categories)
+                    });
+                }
+                ServerMessage::InitialState(display_data) => {
+                    for host_display_data in display_data.hosts.into_values() {
+                        if frontend_update_sender.send(frontend::UIUpdate::Host(host_display_data)).is_err() {
+                            ::log::error!("Failed to deliver initial state update");
                             return;
                         }
                     }
-                    ServerMessage::VerificationRequest(request) => {
-                        ::log::warn!(
-                            "Ignoring standalone verification request for {}: {}",
-                            request.source_id,
-                            request.message,
-                        );
+                }
+                ServerMessage::HostUpdate(host_display_data) => {
+                    if frontend_update_sender.send(frontend::UIUpdate::Host(host_display_data)).is_err() {
+                        ::log::error!("Failed to deliver host update");
+                        return;
                     }
-                    ServerMessage::RefreshInvocationIds {
-                        request_id,
-                        invocation_ids,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::RefreshInvocationIds(sender)) => {
-                            if sender.send(invocation_ids).is_err() {
-                                ::log::error!("Remote backend refresh id receiver dropped");
+                }
+                ServerMessage::VerificationRequest(request) => {
+                    ::log::warn!(
+                        "Ignoring standalone verification request for {}: {}",
+                        request.source_id,
+                        request.message,
+                    );
+                }
+                ServerMessage::RefreshInvocationIds {
+                    request_id,
+                    invocation_ids,
+                } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::RefreshInvocationIds, || {
+                        PendingRpcReply::RefreshInvocationIds(invocation_ids)
+                    });
+                }
+                ServerMessage::InitializeHostsResult { request_id, host_ids } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::InitializeHosts, || {
+                        PendingRpcReply::InitializeHosts(host_ids)
+                    });
+                }
+                ServerMessage::ResolveTextEditorPath { request_id, path } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::ResolveTextEditorPath, || {
+                        PendingRpcReply::ResolveTextEditorPath(path)
+                    });
+                }
+                ServerMessage::DownloadEditableFileResult { request_id, invocation_id } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::DownloadEditable, || {
+                        PendingRpcReply::DownloadEditable(invocation_id)
+                    });
+                }
+                ServerMessage::UploadEditedFileResult { request_id, invocation_id } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::UploadEdited, || {
+                        PendingRpcReply::UploadEdited(invocation_id)
+                    });
+                }
+                ServerMessage::Error { request_id, message } => {
+                    ::log::error!("Core server error: {}", message);
+                    if let Some(request_id) = request_id {
+                        match pending_rpc.lock() {
+                            Ok(mut map) => {
+                                if let Some(pending) = map.remove(&request_id) {
+                                    completer_send_default(pending);
+                                }
                             }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for refresh invocation ids");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected refresh id response");
-                        }
-                    },
-                    ServerMessage::InitializeHostsResult {
-                        request_id,
-                        host_ids,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::InitializeHosts(sender)) => {
-                            if sender.send(host_ids).is_err() {
-                                ::log::error!("Remote backend init hosts receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for initialize hosts");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected init hosts response");
-                        }
-                    },
-                    ServerMessage::ResolveTextEditorPath {
-                        request_id,
-                        path,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::ResolveTextEditorPath(sender)) => {
-                            if sender.send(path).is_err() {
-                                ::log::error!("Remote backend resolve path receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for resolve text editor path");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected resolve path response");
-                        }
-                    },
-                    ServerMessage::DownloadEditableFileResult {
-                        request_id,
-                        invocation_id,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::DownloadEditable(sender)) => {
-                            if sender.send(invocation_id).is_err() {
-                                ::log::error!("Remote backend download receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for download editable");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected download response");
-                        }
-                    },
-                    ServerMessage::UploadEditedFileResult {
-                        request_id,
-                        invocation_id,
-                    } => match take_rpc(request_id) {
-                        Some(PendingRpc::UploadEdited(sender)) => {
-                            if sender.send(invocation_id).is_err() {
-                                ::log::error!("Remote backend upload receiver dropped");
-                            }
-                        }
-                        Some(other) => {
-                            ::log::error!("Remote backend RPC type mismatch for upload edited");
-                            fail_pending_rpc(other);
-                        }
-                        None => {
-                            ::log::error!("Remote backend received unexpected upload response");
-                        }
-                    },
-                    ServerMessage::Error {
-                        request_id,
-                        message,
-                    } => {
-                        ::log::error!("Remote backend server error: {}", message);
-                        if let Some(request_id) = request_id {
-                            if let Some(pending) = take_rpc(request_id) {
-                                fail_pending_rpc(pending);
+                            Err(err) => {
+                                log_remote_error(&err.to_string());
                             }
                         }
                     }
@@ -399,40 +345,59 @@ impl RemoteCommandBackend {
         Ok(())
     }
 
-    fn send_message(&self, message: &ClientMessage) -> Result<(), String> {
-        let writer = self.writer.as_ref()
-            .ok_or_else(|| String::from("Remote backend is not connected"))?;
+    fn send_nowait(&self, message: &ClientMessage) -> Result<(), String> {
+        let writer = self
+            .writer
+            .as_ref()
+            .ok_or_else(|| String::from("Not connected to remote core"))?;
         let mut writer = writer.lock().map_err(|error| error.to_string())?;
         write_message(&mut *writer, message).map_err(|error| error.to_string())
     }
 
-    fn send_message_with_response<Response: Send + 'static>(
-        &self,
-        register: impl FnOnce(mpsc::Sender<Response>) -> PendingRpc,
-        build_message: impl FnOnce(u64) -> ClientMessage,
-    ) -> Result<Response, String> {
-        let request_id = self.allocate_request_id();
+    fn send_message(&self, kind: PendingRpcKind, build_message: impl FnOnce(u64) -> ClientMessage) -> PendingRpcReply {
+        let request_id = self.next_request_id();
         let (sender, receiver) = mpsc::channel();
-        match self.pending_rpc.lock() {
-            Ok(mut map) => {
-                map.insert(request_id, register(sender));
+        let mut map = match self.pending_rpc.lock() {
+            Ok(m) => m,
+            Err(err) => {
+                log_remote_error(&err.to_string());
+                return default_reply(kind);
             }
-            Err(error) => return Err(error.to_string()),
-        }
+        };
+        map.insert(request_id, PendingRpc { kind, sender });
+        drop(map);
 
         let message = build_message(request_id);
-        if let Err(error) = self.send_message(&message) {
-            if let Ok(mut map) = self.pending_rpc.lock() {
-                if let Some(pending) = map.remove(&request_id) {
-                    fail_pending_rpc(pending);
+        if let Err(error) = self.send_nowait(&message) {
+            match self.pending_rpc.lock() {
+                Ok(mut map) => {
+                    if let Some(pending) = map.remove(&request_id) {
+                        completer_send_default(pending);
+                    }
+                }
+                Err(err) => {
+                    log_remote_error(&err.to_string());
                 }
             }
-            return Err(error);
+            log_remote_error(&error);
+            return default_reply(kind);
         }
 
-        receiver
-            .recv_timeout(REMOTE_QUERY_TIMEOUT)
-            .map_err(|error| error.to_string())
+        match receiver.recv_timeout(REMOTE_COMMAND_TIMEOUT) {
+            Ok(reply) => align_reply(kind, reply),
+            Err(recv_error) => {
+                match self.pending_rpc.lock() {
+                    Ok(mut map) => {
+                        let _ = map.remove(&request_id);
+                    }
+                    Err(err) => {
+                        log_remote_error(&err.to_string());
+                    }
+                }
+                log_remote_error(&recv_error.to_string());
+                default_reply(kind)
+            }
+        }
     }
 
     fn stop_connection(&mut self) {
@@ -449,11 +414,22 @@ impl RemoteCommandBackend {
 
         if let Some(response_thread) = self.response_thread.take() {
             if let Err(error) = response_thread.join() {
-                ::log::error!("Remote backend response thread failed: {:?}", error);
+                ::log::error!("Response thread failed: {:?}", error);
             }
         }
 
         self.writer = None;
+    }
+
+    /// Sets the UI update sender and runs [`Self::connect_stream`] on `stream` (e.g. from `UnixStream::pair`),
+    /// instead of [`Self::connect`] to the socket path.
+    pub fn connect_with_frontend_stream(
+        &mut self,
+        frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
+        stream: UnixStream,
+    ) -> Result<(), String> {
+        self.frontend_update_sender = Some(frontend_update_sender);
+        self.connect_stream(stream)
     }
 }
 
@@ -467,138 +443,77 @@ impl CommandBackend for RemoteCommandBackend {
         frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
     ) {
         self.frontend_update_sender = Some(frontend_update_sender);
-    }
-
-    fn start_processing_responses(&mut self) {
         if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
+            log_remote_error(&error);
         }
     }
+
+    fn start_processing_responses(&mut self) {}
 
     fn stop(&mut self) {
         self.stop_connection();
     }
 
     fn refresh_host_monitors(&mut self, host_id: &str) {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return;
-        }
-
-        if let Err(error) = self.send_message(&ClientMessage::RefreshHostMonitors {
+        if let Err(error) = self.send_nowait(&ClientMessage::RefreshHostMonitors {
             host_id: host_id.to_string(),
         }) {
-            ::log::error!("Remote backend refresh_host_monitors failed: {}", error);
+            log_remote_error(&error);
         }
     }
 
     fn commands_for_host(&self, host_id: &str) -> HashMap<String, CommandButtonData> {
-        match self.send_message_with_response(
-            |sender| PendingRpc::CommandsForHost(sender),
-            |request_id| ClientMessage::CommandsForHost {
-                request_id,
-                host_id: host_id.to_string(),
-            },
-        ) {
-            Ok(commands) => commands,
-            Err(error) => {
-                ::log::error!("Remote backend commands query failed: {}", error);
-                HashMap::new()
-            }
+        match self.send_message(PendingRpcKind::CommandsForHost, |request_id| ClientMessage::CommandsForHost {
+            request_id,
+            host_id: host_id.to_string(),
+        }) {
+            PendingRpcReply::CommandsForHost(commands) => commands,
+            _ => HashMap::new(),
         }
     }
 
     fn command_for_host(&self, host_id: &str, command_id: &str) -> Option<CommandButtonData> {
-        match self.send_message_with_response(
-            |sender| PendingRpc::CommandForHost(sender),
-            |request_id| ClientMessage::CommandForHost {
-                request_id,
-                host_id: host_id.to_string(),
-                command_id: command_id.to_string(),
-            },
-        ) {
-            Ok(command) => command,
-            Err(error) => {
-                ::log::error!("Remote backend command lookup failed: {}", error);
-                None
-            }
+        match self.send_message(PendingRpcKind::CommandForHost, |request_id| ClientMessage::CommandForHost {
+            request_id,
+            host_id: host_id.to_string(),
+            command_id: command_id.to_string(),
+        }) {
+            PendingRpcReply::CommandForHost(command) => command,
+            _ => None,
         }
     }
 
-    fn custom_commands_for_host(
-        &self,
-        host_id: &str,
-    ) -> HashMap<String, configuration::CustomCommandConfig> {
-        match self.send_message_with_response(
-            |sender| PendingRpc::CustomCommandsForHost(sender),
-            |request_id| ClientMessage::CustomCommandsForHost {
+    fn custom_commands_for_host(&self, host_id: &str) -> HashMap<String, configuration::CustomCommandConfig> {
+        match self.send_message(PendingRpcKind::CustomCommandsForHost, |request_id| {
+            ClientMessage::CustomCommandsForHost {
                 request_id,
                 host_id: host_id.to_string(),
-            },
-        ) {
-            Ok(commands) => commands,
-            Err(error) => {
-                ::log::error!("Remote backend custom commands query failed: {}", error);
-                HashMap::new()
             }
+        }) {
+            PendingRpcReply::CustomCommandsForHost(commands) => commands,
+            _ => HashMap::new(),
         }
     }
 
     fn all_host_categories(&self, host_id: &str) -> Vec<String> {
-        match self.send_message_with_response(
-            |sender| PendingRpc::AllHostCategories(sender),
-            |request_id| ClientMessage::AllHostCategories {
-                request_id,
-                host_id: host_id.to_string(),
-            },
-        ) {
-            Ok(categories) => categories,
-            Err(error) => {
-                ::log::error!("Remote backend category query failed: {}", error);
-                Vec::new()
-            }
+        match self.send_message(PendingRpcKind::AllHostCategories, |request_id| ClientMessage::AllHostCategories {
+            request_id,
+            host_id: host_id.to_string(),
+        }) {
+            PendingRpcReply::AllHostCategories(categories) => categories,
+            _ => Vec::new(),
         }
     }
 
     fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> u64 {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return 0;
-        }
-
-        let request_id = self.allocate_request_id();
-        let (sender, receiver) = mpsc::channel();
-        match self.pending_rpc.lock() {
-            Ok(mut map) => {
-                map.insert(request_id, PendingRpc::ExecuteCommand(sender));
-            }
-            Err(error) => {
-                ::log::error!("Remote backend invocation queue failed: {}", error);
-                return 0;
-            }
-        }
-
-        if let Err(error) = self.send_message(&ClientMessage::ExecuteCommand {
+        match self.send_message(PendingRpcKind::ExecuteCommand, |request_id| ClientMessage::ExecuteCommand {
             request_id,
             host_id: host_id.to_string(),
             command_id: command_id.to_string(),
             parameters: parameters.to_vec(),
         }) {
-            if let Ok(mut map) = self.pending_rpc.lock() {
-                if let Some(pending) = map.remove(&request_id) {
-                    fail_pending_rpc(pending);
-                }
-            }
-            ::log::error!("Remote backend execute failed: {}", error);
-            return 0;
-        }
-
-        match receiver.recv_timeout(REMOTE_COMMAND_TIMEOUT) {
-            Ok(invocation_id) => invocation_id,
-            Err(error) => {
-                ::log::error!("Remote backend execute timed out: {}", error);
-                0
-            }
+            PendingRpcReply::ExecuteCommand(id) => id,
+            _ => 0,
         }
     }
 
@@ -607,197 +522,115 @@ impl CommandBackend for RemoteCommandBackend {
             return;
         }
 
-        if let Err(error) = self.send_message(&ClientMessage::InterruptInvocation { invocation_id }) {
-            ::log::error!("Remote backend interrupt failed: {}", error);
+        if let Err(error) = self.send_nowait(&ClientMessage::InterruptInvocation { invocation_id }) {
+            log_remote_error(&error);
         }
     }
 
     fn verify_host_key(&self, host_id: &str, connector_id: &str, key_id: &str) {
-        if let Err(error) = self.send_message(&ClientMessage::VerifyHostKey {
+        if let Err(error) = self.send_nowait(&ClientMessage::VerifyHostKey {
             host_id: host_id.to_string(),
             connector_id: connector_id.to_string(),
             key_id: key_id.to_string(),
         }) {
-            ::log::error!("Remote backend verify failed: {}", error);
+            log_remote_error(&error);
         }
     }
 
     fn initialize_host(&mut self, host_id: &str) {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return;
-        }
-
-        if let Err(error) = self.send_message(&ClientMessage::RefreshPlatformInfo {
+        if let Err(error) = self.send_nowait(&ClientMessage::RefreshPlatformInfo {
             host_id: host_id.to_string(),
         }) {
-            ::log::error!("Remote backend initialize_host failed: {}", error);
+            log_remote_error(&error);
         }
     }
 
     fn initialize_hosts(&mut self) -> Vec<String> {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return Vec::new();
-        }
-
-        match self.send_message_with_response(
-            |sender| PendingRpc::InitializeHosts(sender),
-            |request_id| ClientMessage::RefreshPlatformInfoAll { request_id },
-        ) {
-            Ok(host_ids) => host_ids,
-            Err(error) => {
-                ::log::error!("Remote backend initialize_hosts failed: {}", error);
-                Vec::new()
-            }
+        match self.send_message(PendingRpcKind::InitializeHosts, |request_id| {
+            ClientMessage::RefreshPlatformInfoAll { request_id }
+        }) {
+            PendingRpcReply::InitializeHosts(host_ids) => host_ids,
+            _ => Vec::new(),
         }
     }
 
     fn refresh_monitors_for_command(&mut self, host_id: &str, command_id: &str) -> Vec<u64> {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return Vec::new();
-        }
-
-        match self.send_message_with_response(
-            |sender| PendingRpc::RefreshInvocationIds(sender),
-            |request_id| ClientMessage::RefreshMonitorsForCommand {
+        match self.send_message(PendingRpcKind::RefreshInvocationIds, |request_id| {
+            ClientMessage::RefreshMonitorsForCommand {
                 request_id,
                 host_id: host_id.to_string(),
                 command_id: command_id.to_string(),
-            },
-        ) {
-            Ok(invocation_ids) => invocation_ids,
-            Err(error) => {
-                ::log::error!("Remote backend refresh_monitors_for_command failed: {}", error);
-                Vec::new()
             }
+        }) {
+            PendingRpcReply::RefreshInvocationIds(invocation_ids) => invocation_ids,
+            _ => Vec::new(),
         }
     }
 
     fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Vec<u64> {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return Vec::new();
-        }
-
-        match self.send_message_with_response(
-            |sender| PendingRpc::RefreshInvocationIds(sender),
-            |request_id| ClientMessage::RefreshMonitorsOfCategory {
+        match self.send_message(PendingRpcKind::RefreshInvocationIds, |request_id| {
+            ClientMessage::RefreshMonitorsOfCategory {
                 request_id,
                 host_id: host_id.to_string(),
                 category: category.to_string(),
-            },
-        ) {
-            Ok(invocation_ids) => invocation_ids,
-            Err(error) => {
-                ::log::error!("Remote backend refresh_monitors_of_category failed: {}", error);
-                Vec::new()
             }
+        }) {
+            PendingRpcReply::RefreshInvocationIds(invocation_ids) => invocation_ids,
+            _ => Vec::new(),
         }
     }
 
     fn refresh_certificate_monitors(&mut self) -> Vec<u64> {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return Vec::new();
-        }
-
-        match self.send_message_with_response(
-            |sender| PendingRpc::RefreshInvocationIds(sender),
-            |request_id| ClientMessage::RefreshCertificateMonitors { request_id },
-        ) {
-            Ok(invocation_ids) => invocation_ids,
-            Err(error) => {
-                ::log::error!("Remote backend refresh_certificate_monitors failed: {}", error);
-                Vec::new()
-            }
+        match self.send_message(PendingRpcKind::RefreshInvocationIds, |request_id| {
+            ClientMessage::RefreshCertificateMonitors { request_id }
+        }) {
+            PendingRpcReply::RefreshInvocationIds(invocation_ids) => invocation_ids,
+            _ => Vec::new(),
         }
     }
 
-    fn resolve_text_editor_path(
-        &mut self,
-        host_id: &str,
-        command_id: &str,
-        parameters: &[String],
-    ) -> Option<String> {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return None;
-        }
-
-        match self.send_message_with_response(
-            |sender| PendingRpc::ResolveTextEditorPath(sender),
-            |request_id| ClientMessage::ResolveTextEditorPath {
+    fn resolve_text_editor_path(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Option<String> {
+        match self.send_message(PendingRpcKind::ResolveTextEditorPath, |request_id| {
+            ClientMessage::ResolveTextEditorPath {
                 request_id,
                 host_id: host_id.to_string(),
                 command_id: command_id.to_string(),
                 parameters: parameters.to_vec(),
-            },
-        ) {
-            Ok(path) => path,
-            Err(error) => {
-                ::log::error!("Remote backend resolve_text_editor_path failed: {}", error);
-                None
             }
+        }) {
+            PendingRpcReply::ResolveTextEditorPath(path) => path,
+            _ => None,
         }
     }
 
-    fn download_editable_file(
-        &mut self,
-        host_id: &str,
-        command_id: &str,
-        remote_file_path: &str,
-    ) -> (u64, String) {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return (0, String::new());
-        }
-
+    fn download_editable_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> (u64, String) {
         let remote_path = remote_file_path.to_string();
-        match self.send_message_with_response(
-            |sender| PendingRpc::DownloadEditable(sender),
-            |request_id| ClientMessage::DownloadEditableFile {
-                request_id,
-                host_id: host_id.to_string(),
-                command_id: command_id.to_string(),
-                remote_file_path: remote_path.clone(),
-            },
-        ) {
-            Ok(invocation_id) => (invocation_id, remote_path),
-            Err(error) => {
-                ::log::error!("Remote backend download_editable_file failed: {}", error);
-                (0, String::new())
-            }
+        match self.send_message(PendingRpcKind::DownloadEditable, |request_id| ClientMessage::DownloadEditableFile {
+            request_id,
+            host_id: host_id.to_string(),
+            command_id: command_id.to_string(),
+            remote_file_path: remote_path.clone(),
+        }) {
+            PendingRpcReply::DownloadEditable(invocation_id) => (invocation_id, remote_path),
+            _ => (0, String::new()),
         }
     }
 
     fn upload_file(&mut self, _host_id: &str, _command_id: &str, _local_file_path: &str) -> u64 {
-        ::log::error!("Remote backend does not support '{}'", "upload_file");
+        ::log::error!("Does not support '{}'", "upload_file");
         0
     }
 
     fn upload_file_from_editor(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, contents: Vec<u8>) -> u64 {
-        if let Err(error) = self.connect() {
-            ::log::error!("Failed to connect remote backend: {}", error);
-            return 0;
-        }
-
-        match self.send_message_with_response(
-            |sender| PendingRpc::UploadEdited(sender),
-            move |request_id| ClientMessage::UploadEditedFile {
-                request_id,
-                host_id: host_id.to_string(),
-                command_id: command_id.to_string(),
-                remote_file_path: remote_file_path.to_string(),
-                contents,
-            },
-        ) {
-            Ok(invocation_id) => invocation_id,
-            Err(error) => {
-                ::log::error!("Remote backend upload_file_from_editor failed: {}", error);
-                0
-            }
+        match self.send_message(PendingRpcKind::UploadEdited, move |request_id| ClientMessage::UploadEditedFile {
+            request_id,
+            host_id: host_id.to_string(),
+            command_id: command_id.to_string(),
+            remote_file_path: remote_file_path.to_string(),
+            contents,
+        }) {
+            PendingRpcReply::UploadEdited(invocation_id) => invocation_id,
+            _ => 0,
         }
     }
 
