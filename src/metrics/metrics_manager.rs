@@ -520,7 +520,10 @@ fn verify_signature(file_path: &std::path::Path, signature_path: &std::path::Pat
         Err(io::Error::new(io::ErrorKind::Other, "Integrity verification failed."))
     }
     else {
-        log::debug!("{} integrity verified.", file_path.file_name().unwrap_or_default().to_string_lossy());
+        log::debug!(
+            "{} integrity verified.",
+            file_path.file_name().unwrap_or_default().to_string_lossy()
+        );
         Ok(())
     }
 }

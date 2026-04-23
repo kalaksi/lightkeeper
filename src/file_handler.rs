@@ -85,7 +85,11 @@ pub fn create_file(host: &Host, remote_file_path: &str, mut metadata: FileMetada
 
     metadata.local_path = Some(file_path.clone());
     let metadata_file_path = convert_to_local_metadata_path(host, remote_file_path);
-    let metadata_file = fs::OpenOptions::new().write(true).create(true).truncate(true).open(metadata_file_path)?;
+    let metadata_file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(metadata_file_path)?;
 
     fs::write(&file_path, contents)?;
     serde_yaml::to_writer(metadata_file, &metadata).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
@@ -97,7 +101,10 @@ pub fn create_file(host: &Host, remote_file_path: &str, mut metadata: FileMetada
 pub fn write_file(local_file_path: &String, contents: Vec<u8>) -> io::Result<()> {
     // Verify, just in case, that path belongs to cache directory.
     let cache_dir = get_cache_dir();
-    if Path::new(local_file_path).ancestors().all(|ancestor| ancestor != cache_dir.as_path()) {
+    if Path::new(local_file_path)
+        .ancestors()
+        .all(|ancestor| ancestor != cache_dir.as_path())
+    {
         Err(io::Error::new(io::ErrorKind::Other, "Path does not belong to cache directory"))
     }
     else {
@@ -148,7 +155,8 @@ pub fn read_file(local_file_path: &str) -> io::Result<(FileMetadata, Vec<u8>)> {
 
     let metadata_path = get_metadata_path(local_file_path);
     let metadata_string = fs::read_to_string(metadata_path)?;
-    let metadata: FileMetadata = serde_yaml::from_str(&metadata_string).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+    let metadata: FileMetadata =
+        serde_yaml::from_str(&metadata_string).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
     Ok((metadata, contents))
 }
@@ -156,7 +164,8 @@ pub fn read_file(local_file_path: &str) -> io::Result<(FileMetadata, Vec<u8>)> {
 pub fn read_file_metadata(local_file_path: &String) -> io::Result<FileMetadata> {
     let metadata_path = get_metadata_path(local_file_path);
     let metadata_string = fs::read_to_string(metadata_path)?;
-    let metadata: FileMetadata = serde_yaml::from_str(&metadata_string).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+    let metadata: FileMetadata =
+        serde_yaml::from_str(&metadata_string).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
     Ok(metadata)
 }

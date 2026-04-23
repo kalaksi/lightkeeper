@@ -31,6 +31,7 @@ if [ ! -z "$(git status -s)" ]; then
         src/frontend/qt/qml_frontend.rs \
         src/frontend/qt/resources.rs \
         src/frontend/qt/resources_qml.rs \
+        src/backend \
         src/file_handler.rs
 fi
 

@@ -7,7 +7,11 @@ use regex::Regex;
 
 pub fn strip_newline<Stringable: ToString>(input: &Stringable) -> String {
     let input = input.to_string();
-    input.strip_suffix("\r\n").or(input.strip_suffix('\n')).unwrap_or(&input).to_string()
+    input
+        .strip_suffix("\r\n")
+        .or(input.strip_suffix('\n'))
+        .unwrap_or(&input)
+        .to_string()
 }
 
 /// For a single line, keep only the content after the last carriage return.

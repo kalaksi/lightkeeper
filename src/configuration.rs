@@ -194,7 +194,10 @@ pub struct ChartCategory {
 pub struct HostSettings {
     #[serde(default)]
     pub groups: Vec<String>,
-    #[serde(default = "HostSettings::default_address", skip_serializing_if = "HostSettings::is_default_address")]
+    #[serde(
+        default = "HostSettings::default_address",
+        skip_serializing_if = "HostSettings::is_default_address"
+    )]
     pub address: String,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub fqdn: String,
@@ -255,7 +258,10 @@ impl HostSettings {
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct MonitorConfig {
-    #[serde(default = "MonitorConfig::default_version", skip_serializing_if = "Configuration::version_is_latest")]
+    #[serde(
+        default = "MonitorConfig::default_version",
+        skip_serializing_if = "Configuration::version_is_latest"
+    )]
     pub version: String,
     #[serde(default = "MonitorConfig::default_enabled", skip_serializing_if = "MonitorConfig::is_enabled")]
     pub enabled: Option<bool>,
@@ -293,7 +299,10 @@ impl Default for MonitorConfig {
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct CommandConfig {
-    #[serde(default = "CommandConfig::default_version", skip_serializing_if = "Configuration::version_is_latest")]
+    #[serde(
+        default = "CommandConfig::default_version",
+        skip_serializing_if = "Configuration::version_is_latest"
+    )]
     pub version: String,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub settings: HashMap<String, String>,

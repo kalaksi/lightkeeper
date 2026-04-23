@@ -29,13 +29,17 @@ pub fn setup_connection(socket_path: &path::Path) -> io::Result<rustls::StreamOw
     let tls_config = setup_client_tls(ca_cert_pem, None, None).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
     let server_name = rustls::pki_types::ServerName::try_from("tms").unwrap();
-    let tls_connection =
-        rustls::ClientConnection::new(Arc::new(tls_config.clone()), server_name).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+    let tls_connection = rustls::ClientConnection::new(Arc::new(tls_config.clone()), server_name)
+        .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
     Ok(rustls::StreamOwned::new(tls_connection, unix_stream))
 }
 
-fn setup_client_tls(ca_cert_pem: &str, client_cert_pem: Option<&str>, client_key_pem: Option<&str>) -> Result<rustls::ClientConfig, String> {
+fn setup_client_tls(
+    ca_cert_pem: &str,
+    client_cert_pem: Option<&str>,
+    client_key_pem: Option<&str>,
+) -> Result<rustls::ClientConfig, String> {
     let mut store = rustls::RootCertStore::empty();
 
     for result in rustls_pemfile::certs(&mut io::Cursor::new(ca_cert_pem)) {
