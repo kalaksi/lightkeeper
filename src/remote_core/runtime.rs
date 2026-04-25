@@ -21,17 +21,28 @@ use std::sync::Arc;
 
 pub struct CoreRuntime {
     pub core: CoreComponents,
+    pub config_dir: String,
 }
 
 impl CoreRuntime {
-    pub fn new(main_config: &Configuration, hosts_config: &configuration::Hosts) -> Result<Self, LkError> {
-        Self::new_with_module_factory(main_config, hosts_config, Arc::new(ModuleFactory::new()))
+    pub fn new(
+        main_config: &Configuration,
+        hosts_config: &configuration::Hosts,
+        config_dir: String,
+    ) -> Result<Self, LkError> {
+        Self::new_with_module_factory(
+            main_config,
+            hosts_config,
+            Arc::new(ModuleFactory::new()),
+            config_dir,
+        )
     }
 
     pub fn new_with_module_factory(
         main_config: &Configuration,
         hosts_config: &configuration::Hosts,
         module_factory: Arc<ModuleFactory>,
+        config_dir: String,
     ) -> Result<Self, LkError> {
         let mut core =
             crate::initialize_core_with_module_factory(main_config, hosts_config, module_factory)?;
@@ -41,7 +52,7 @@ impl CoreRuntime {
             log::info!("Initialized {} host(s)", host_ids.len());
         }
 
-        Ok(CoreRuntime { core })
+        Ok(CoreRuntime { core, config_dir })
     }
 
     pub fn default_socket_path() -> Result<PathBuf, LkError> {

@@ -9,8 +9,11 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use crate::configuration::{Configuration, Groups, Hosts};
 use crate::error::LkError;
-use crate::remote_core::protocol::{ClientMessage, PROTOCOL_VERSION, ServerMessage, read_message};
+use crate::remote_core::protocol::{
+    read_message, ClientMessage, ServerMessage, PROTOCOL_VERSION,
+};
 use crate::remote_core::runtime::CoreRuntime;
 use crate::remote_core::session::RemoteSession;
 
@@ -19,7 +22,6 @@ pub fn run_remote_client_session(
     runtime: &mut CoreRuntime,
     client_session_active: &Arc<Mutex<bool>>,
 ) -> Result<(), LkError> {
-
     let protocol_version = match read_message::<ClientMessage, _>(&mut stream) {
         Ok(ClientMessage::Connect { protocol_version }) => protocol_version,
         Ok(_) => {
@@ -288,6 +290,84 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                         })?;
                     }
                     Err(error) => {
+                        session.send_message(&ServerMessage::Error {
+                            request_id: Some(request_id),
+                            message: error.to_string(),
+                        })?;
+                    }
+                }
+            }
+            ClientMessage::GetConfig { request_id } => {
+                let result: Result<(String, String, String), LkError> = (|| {
+                    let (main, hosts, groups) = Configuration::read(&runtime.config_dir)?;
+                    let main_yml = serde_yaml::to_string(&main)?;
+                    let hosts_yml = serde_yaml::to_string(&hosts)?;
+                    let groups_yml = serde_yaml::to_string(&groups)?;
+                    Ok((main_yml, hosts_yml, groups_yml))
+                })();
+                match result {
+                    Ok((main_yml, hosts_yml, groups_yml)) => {
+                        session.send_message(&ServerMessage::Config {
+                            request_id,
+                            main_yml,
+                            hosts_yml,
+                            groups_yml,
+                        })?;
+                    }
+                    Err(error) => {
+                        session.send_message(&ServerMessage::Error {
+                            request_id: Some(request_id),
+                            message: error.to_string(),
+                        })?;
+                    }
+                }
+            }
+            ClientMessage::UpdateConfig {
+                request_id,
+                main_yml,
+                hosts_yml,
+                groups_yml,
+            } => {
+                session.halt_update_stream();
+                let parsed: Result<(Configuration, Hosts, Groups), LkError> = (|| {
+                    let main: Configuration = serde_yaml::from_str(&main_yml)?;
+                    let hosts: Hosts = serde_yaml::from_str(&hosts_yml)?;
+                    let groups: Groups = serde_yaml::from_str(&groups_yml)?;
+                    Ok((main, hosts, groups))
+                })();
+                match parsed {
+                    Ok((main, hosts, groups)) => {
+                        let update_result: Result<(), LkError> = (|| {
+                            Configuration::write_main_config(&runtime.config_dir, &main)?;
+                            Configuration::write_hosts_config(&runtime.config_dir, &hosts)?;
+                            Configuration::write_groups_config(&runtime.config_dir, &groups)?;
+                            let module_factory = runtime.core.module_factory.clone();
+                            runtime.stop();
+                            let (main_read, hosts_read, _groups) = Configuration::read(&runtime.config_dir)?;
+                            runtime.core = crate::initialize_core_with_module_factory(
+                                &main_read,
+                                &hosts_read,
+                                module_factory,
+                            )?;
+                            Ok(())
+                        })();
+                        match update_result {
+                            Ok(()) => {
+                                session.send_message(&ServerMessage::InitialState(runtime.display_data()))?;
+                                session.start_update_stream(runtime.new_update_receiver());
+                                session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;
+                            }
+                            Err(error) => {
+                                session.start_update_stream(runtime.new_update_receiver());
+                                session.send_message(&ServerMessage::Error {
+                                    request_id: Some(request_id),
+                                    message: error.to_string(),
+                                })?;
+                            }
+                        }
+                    },
+                    Err(error) => {
+                        session.start_update_stream(runtime.new_update_receiver());
                         session.send_message(&ServerMessage::Error {
                             request_id: Some(request_id),
                             message: error.to_string(),

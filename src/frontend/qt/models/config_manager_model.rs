@@ -9,7 +9,8 @@ use qmetaobject::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
-
+use crate::backend::ConfigBackend;
+use crate::error::LkError;
 use crate::secrets_manager;
 use crate::secrets_manager::*;
 use crate::{
@@ -121,15 +122,19 @@ pub struct ConfigManagerModel {
     hosts_config_backup: Option<Hosts>,
     groups_config: Groups,
     module_metadatas: Vec<Metadata>,
+    config_backend: Option<Box<dyn ConfigBackend>>,
 }
 
 #[allow(non_snake_case)]
 impl ConfigManagerModel {
-    pub fn new(config_dir: String,
-               mut main_config: Configuration,
-               hosts_config: Hosts,
-               mut groups_config: Groups,
-               module_metadatas: Vec<Metadata>) -> Self {
+    pub fn new(
+        config_dir: String,
+        mut main_config: Configuration,
+        hosts_config: Hosts,
+        mut groups_config: Groups,
+        module_metadatas: Vec<Metadata>,
+        config_backend: Box<dyn ConfigBackend>,
+    ) -> Self {
         
         if Configuration::is_schema_outdated(main_config.schema_version) {
             Configuration::upgrade_schema(&mut main_config, &mut groups_config);
@@ -149,23 +154,28 @@ impl ConfigManagerModel {
             hosts_config: hosts_config,
             groups_config: groups_config,
             module_metadatas: module_metadatas,
+            config_backend: Some(config_backend),
             ..Default::default()
         }
     }
 
-    pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts), String> {
-        ::log::info!("Reloading configuration...");
-        match Configuration::read(&self.config_dir) {
-            Ok((main_config, hosts_config, groups_config)) => {
-                self.main_config = main_config.clone();
-                self.hosts_config = hosts_config.clone();
-                self.groups_config = groups_config;
-                Ok((main_config, hosts_config))
-            },
-            Err(error) => Err(error.to_string())
-        }
+    pub fn set_config_backend(&mut self, backend: Box<dyn ConfigBackend>) -> Result<(), String> {
+        let (main_config, hosts_config, groups_config) = backend.get_config()?;
+        self.main_config = main_config;
+        self.hosts_config = hosts_config;
+        self.groups_config = groups_config;
+        self.config_backend = Some(backend);
+        Ok(())
     }
 
+    pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts), LkError> {
+        ::log::info!("Reloading configuration...");
+        let (main_config, hosts_config, groups_config) = self.config_backend.as_ref().unwrap().get_config()?;
+        self.main_config = main_config.clone();
+        self.hosts_config = hosts_config.clone();
+        self.groups_config = groups_config;
+        Ok((main_config, hosts_config))
+    }
 
     fn getPreferences(&self) -> QVariantMap {
         let mut preferences = QVariantMap::default();
@@ -231,7 +241,9 @@ impl ConfigManagerModel {
                 editor_prefs_map.value("wordWrap".into(), true.into()).to_bool();
         }
 
-        if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+        if let Err(error) = self.config_backend.as_mut().unwrap()
+            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+        {
             self.error(QString::from(error.to_string()));
         }
     }
@@ -268,7 +280,9 @@ impl ConfigManagerModel {
 
         self.hosts_config.certificate_monitors.push(domain.to_string());
 
-        if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
+        if let Err(error) = self.config_backend.as_mut().unwrap()
+            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+        {
             self.error(QString::from(error.to_string()));
         }
     }
@@ -276,7 +290,9 @@ impl ConfigManagerModel {
     fn removeCertificateMonitor(&mut self, domain: QString) {
         self.hosts_config.certificate_monitors.retain(|monitor_domain| monitor_domain != &domain.to_string());
 
-        if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
+        if let Err(error) = self.config_backend.as_mut().unwrap()
+            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+        {
             self.error(QString::from(error.to_string()));
         }
     }
@@ -293,7 +309,9 @@ impl ConfigManagerModel {
         if self.main_config.preferences.show_charts != show_charts {
             self.main_config.preferences.show_charts = show_charts;
 
-            if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+            if let Err(error) = self.config_backend.as_mut().unwrap()
+                .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+            {
                 self.error(QString::from(error.to_string()));
             }
         }
@@ -308,7 +326,9 @@ impl ConfigManagerModel {
             self.main_config.preferences.show_chart_threshold_lines = show_chart_threshold_lines;
             self.showChartThresholdLinesChanged();
 
-            if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+            if let Err(error) = self.config_backend.as_mut().unwrap()
+                .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+            {
                 self.error(QString::from(error.to_string()));
             }
         }
@@ -321,7 +341,9 @@ impl ConfigManagerModel {
     fn setMainViewSplitRatio(&mut self, value: f64) {
         self.main_config.display_options.main_view_split_ratio = value.clamp(0.2, 0.9);
 
-        if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+        if let Err(error) = self.config_backend.as_mut().unwrap()
+            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+        {
             self.error(QString::from(error.to_string()));
         }
     }
@@ -356,7 +378,9 @@ impl ConfigManagerModel {
                 self.main_config.preferences.terminal_args = Vec::new();
             }
 
-            if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+            if let Err(error) = self.config_backend.as_mut().unwrap()
+                .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+            {
                 self.error(QString::from(error.to_string()));
                 false
             }
@@ -384,14 +408,18 @@ impl ConfigManagerModel {
     // OTOH, doing less in JS is better...
     fn endHostConfiguration(&mut self) {
         self.hosts_config_backup = None;
-        if let Err(error) = Configuration::write_hosts_config(&self.config_dir, &self.hosts_config) {
+        if let Err(error) = self.config_backend.as_mut().unwrap()
+            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+        {
             self.error(QString::from(error.to_string()));
         }
         self.hostConfigurationChanged();
     }
 
     fn writeGroupConfiguration(&mut self) {
-        if let Err(error) = Configuration::write_groups_config(&self.config_dir, &self.groups_config) {
+        if let Err(error) = self.config_backend.as_mut().unwrap()
+            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+        {
             self.error(QString::from(error.to_string()));
         }
     }

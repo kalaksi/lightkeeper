@@ -58,10 +58,23 @@ pub trait CommandBackend {
     fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError>;
     fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) -> Result<(), LkError>;
     fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> Result<bool, LkError>;
+
     fn local_backend(&self) -> Option<&dyn LocalBackendApi> {
         None
     }
 }
+
+pub trait ConfigBackend {
+    fn get_config(&self) -> Result<(configuration::Configuration, configuration::Hosts, configuration::Groups), LkError>;
+
+    fn update_config(
+        &self,
+        main_config: configuration::Configuration,
+        hosts: configuration::Hosts,
+        groups: configuration::Groups,
+    ) -> Result<(), LkError>;
+}
+
 pub trait LocalBackendApi {
     fn remote_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> crate::utils::ShellCommand;
     fn open_external_terminal(&self, host_id: &str, command_id: &str, parameters: Vec<String>);

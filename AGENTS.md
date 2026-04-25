@@ -8,21 +8,26 @@
 # Implementation and style guidelines
 - Never change Cargo.toml without explicit approval.
 - Don't add new trivial comments.
+- Don't add new thin functions that could be inlined (under 5 lines or conceptually 1-2 calls and only called from 1-3 places)
 - Never remove existing comments, only update.
-- Avoid writing lines that are over 120 characters long.
-- Don't add error handling for impossible scenarios.
+- Never write lines that are over 120 characters long.
 - Aim for minimum amount of code.
 - Ask often! For example when there are alternative solutions.
 - Don't use shorthands like "idx" instead of "index".
 - Try to keep QML models (*_model.rs) lean. UI shouldn't handle a lot of logic.
+- Never run tests automatically, ask if you want to run tests.
 
 ## When editing existing code
-- Don't "improve" adjacent code, comments, or formatting.
+- Don't "improve" adjacent code, comments, or formatting, but architectural changes are ok.
 - Match existing style, even if you'd do it differently.
 - Only remove imports/variables/functions that YOUR changes made unused.
 
 ## When adding new modules
 - Read a few similar modules and follow similar patterns with code style.
+
+## When editing tests
+- Use simple unwrap() instead of except("simple message").
+- Never create temp files or dirs without confirmation. Try to operate in-memory instead.
 
 ## QML
 - Always have an empty line before start of a QML element, e.g. `\nText {...`.

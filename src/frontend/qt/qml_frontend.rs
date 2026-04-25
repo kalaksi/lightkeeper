@@ -15,7 +15,15 @@ use super::resources;
 use super::resources_qml;
 use crate::frontend::hot_reload;
 use crate::metrics::MetricsManager;
-use crate::{configuration, connection_manager::ConnectionManager, frontend, host_manager, module::Metadata, ExitReason};
+use crate::{
+    backend::ConfigBackend,
+    configuration,
+    connection_manager::ConnectionManager,
+    frontend,
+    host_manager,
+    module::Metadata,
+    ExitReason,
+};
 
 pub struct QmlFrontend {
     config_dir: String,
@@ -64,6 +72,7 @@ impl QmlFrontend {
     pub fn start(
         &mut self,
         command_backend: Box<dyn CommandBackend>,
+        config_backend: Box<dyn ConfigBackend>,
         connection_manager: ConnectionManager,
         host_manager: Rc<RefCell<host_manager::HostManager>>,
         metrics_manager: Option<MetricsManager>,
@@ -88,6 +97,7 @@ impl QmlFrontend {
                 self.hosts_config.clone(),
                 self.group_config.clone(),
                 self.module_metadatas.clone(),
+                config_backend,
             ),
             skip_connection_processing,
         );

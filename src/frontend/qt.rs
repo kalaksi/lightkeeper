@@ -7,7 +7,13 @@
 mod models;
 
 pub mod qml_frontend;
-pub use models::{CommandBackend, new_local_command_backend, new_remote_command_backend};
+pub use models::{
+    CommandBackend,
+    ConfigBackend,
+    LocalConfigBackend,
+    RemoteConfigBackend,
+    RemoteCoreClient,
+};
 pub use qml_frontend::QmlFrontend;
 mod resources;
 mod resources_qml;

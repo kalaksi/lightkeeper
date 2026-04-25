@@ -379,7 +379,7 @@ impl Configuration {
         let config_contents = fs::read_to_string(main_config_file_path)?;
 
         let mut main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
-                                         .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+            .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
         // Display options are currently defined in the app's defaults and not really user-configurable.
         let mut actual_display_options = get_default_main_config().display_options;
@@ -392,12 +392,12 @@ impl Configuration {
         log::info!("Reading host configuration from {}", hosts_file_path.display());
         let hosts_contents = fs::read_to_string(hosts_file_path)?;
         let mut hosts = serde_yaml::from_str::<Hosts>(hosts_contents.as_str())
-                                   .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+            .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
         log::info!("Reading group configuration from {}", groups_file_path.display());
         let groups_contents = fs::read_to_string(groups_file_path)?;
         let all_groups = serde_yaml::from_str::<Groups>(groups_contents.as_str())
-                                    .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+            .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
         // Check there are no invalid group references.
         let invalid_groups = hosts.hosts.values()

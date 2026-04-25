@@ -88,6 +88,15 @@ impl RemoteSession {
         self.update_thread = Some(thread);
     }
 
+    pub fn replace_update_stream(&mut self, receiver: mpsc::Receiver<frontend::UIUpdate>) {
+        self.stop();
+        self.start_update_stream(receiver);
+    }
+
+    pub(crate) fn halt_update_stream(&mut self) {
+        self.stop();
+    }
+
     fn stop(&mut self) {
         if let Some(stop_sender) = self.stop_sender.take() {
             let _ = stop_sender.send(());

@@ -21,7 +21,13 @@ pub use host_table_model::HostTableModel;
 pub mod command_handler_model;
 pub use command_handler_model::CommandHandlerModel;
 
-pub use crate::backend::{CommandBackend, new_local_command_backend, new_remote_command_backend};
+pub use crate::backend::{
+    CommandBackend,
+    ConfigBackend,
+    LocalConfigBackend,
+    RemoteConfigBackend,
+    RemoteCoreClient,
+};
 
 pub mod host_data_model;
 pub use host_data_model::HostDataModel;

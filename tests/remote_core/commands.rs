@@ -5,13 +5,13 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::os::unix::net::UnixStream;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use lightkeeper::backend::{CommandBackend, RemoteCommandBackend};
-use lightkeeper::configuration::{self, get_default_main_config};
+use lightkeeper::backend::{CommandBackend, ConfigBackend, RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient};
+use lightkeeper::configuration::{self, get_default_main_config, Configuration, Groups};
 use lightkeeper::frontend::{HostDisplayData, UIUpdate};
 use lightkeeper::module::command::internal::custom_command::CustomCommand;
 use lightkeeper::module::command::systemd;
@@ -77,12 +77,13 @@ fn stub_ssh_factory() -> ModuleFactory {
 fn stub_hosts() -> configuration::Hosts {
     let mut host_settings = configuration::HostSettings::default();
     host_settings.address = "127.0.0.1".to_string();
-    host_settings.effective.host_settings = vec![HostSetting::UseSudo];
-    host_settings.effective.connectors.insert(
+    // Use `overrides`, not `effective`: `write_hosts_config` clears `effective` before serializing.
+    host_settings.overrides.host_settings = vec![HostSetting::UseSudo];
+    host_settings.overrides.connectors.insert(
         StubSsh2::get_metadata().module_spec.id.clone(),
         configuration::ConnectorConfig::default(),
     );
-    host_settings.effective.commands.insert(
+    host_settings.overrides.commands.insert(
         systemd::service::Start::get_metadata().module_spec.id.clone(),
         configuration::CommandConfig {
             version: "0.0.1".to_string(),
@@ -90,7 +91,7 @@ fn stub_hosts() -> configuration::Hosts {
             ..Default::default()
         },
     );
-    host_settings.effective.monitors.insert(
+    host_settings.overrides.monitors.insert(
         Os::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
@@ -98,7 +99,7 @@ fn stub_hosts() -> configuration::Hosts {
             ..Default::default()
         },
     );
-    host_settings.effective.monitors.insert(
+    host_settings.overrides.monitors.insert(
         Service::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
@@ -106,7 +107,7 @@ fn stub_hosts() -> configuration::Hosts {
             ..Default::default()
         },
     );
-    host_settings.effective.custom_commands.push(configuration::CustomCommandConfig {
+    host_settings.overrides.custom_commands.push(configuration::CustomCommandConfig {
         name: "custom-1".to_string(),
         description: String::new(),
         command: "echo test-service".to_string(),
@@ -122,33 +123,57 @@ fn stub_hosts() -> configuration::Hosts {
     }
 }
 
-fn with_remote_core_session(
-    hosts: &configuration::Hosts,
-    client_body: impl FnOnce(RemoteCommandBackend, mpsc::Receiver<UIUpdate>) + Send + 'static,
-) {
-    let main_config = get_default_main_config();
-    let factory = Arc::new(stub_ssh_factory());
-    let mut runtime = CoreRuntime::new_with_module_factory(&main_config, hosts, factory).expect("CoreRuntime");
+fn temp_config_dir_for_remote_core() -> (String, configuration::Configuration, configuration::Hosts) {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join(format!("lk-remote-core-test-{}-{}", std::process::id(), nanos));
 
-    let (client_stream, server) = UnixStream::pair().expect("pair");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let dir_str = dir.to_string_lossy().to_string();
+    Configuration::write_initial_config(&dir).unwrap();
+    let groups: Groups = serde_yaml::from_str(lightkeeper::configuration::DEFAULT_GROUPS_CONFIG).unwrap();
+    let hosts_stub = stub_hosts();
+    let main_config = get_default_main_config();
+    Configuration::write_main_config(&dir_str, &main_config).unwrap();
+    Configuration::write_hosts_config(&dir_str, &hosts_stub).unwrap();
+    Configuration::write_groups_config(&dir_str, &groups).unwrap();
+
+    let (main_config, mut hosts, _groups) = Configuration::read(&dir_str).unwrap();
+    hosts.predefined_platforms = hosts_stub.predefined_platforms.clone();
+
+    (dir_str, main_config, hosts)
+}
+
+fn with_remote_core_session(
+    client_body: impl FnOnce(RemoteCommandBackend, RemoteConfigBackend, mpsc::Receiver<UIUpdate>) + Send + 'static,
+) {
+    let (config_dir, main_config, hosts) = temp_config_dir_for_remote_core();
+    let factory = Arc::new(stub_ssh_factory());
+    let mut runtime = CoreRuntime::new_with_module_factory(&main_config, &hosts, factory, config_dir).unwrap();
+
+    let (client_stream, server) = UnixStream::pair().unwrap();
     let session_active = Arc::new(Mutex::new(false));
 
     let client_thread = thread::spawn(move || {
         let (ui_tx, ui_rx) = mpsc::channel();
-        let mut backend = RemoteCommandBackend::new(PathBuf::from("_unused"));
-        backend
-            .connect_with_frontend_stream(ui_tx, client_stream)
-            .expect("connect");
+        let core_client = Arc::new(RemoteCoreClient::new(PathBuf::from("_unused")));
+        let mut backend = RemoteCommandBackend::new(core_client.clone());
+        backend.connect_with_frontend_stream(ui_tx, client_stream).unwrap();
 
-        let _ = ui_rx
-            .recv_timeout(Duration::from_secs(5))
-            .expect("initial host UI update");
+        let _ = ui_rx.recv_timeout(Duration::from_secs(5)).unwrap();
 
-        client_body(backend, ui_rx);
+        let config_backend = RemoteConfigBackend::new(core_client);
+        client_body(backend, config_backend, ui_rx);
     });
 
-    run_remote_client_session(server, &mut runtime, &session_active).expect("core session");
-    client_thread.join().expect("client thread");
+    run_remote_client_session(server, &mut runtime, &session_active).unwrap();
+    client_thread.join().unwrap();
 }
 
 fn recv_host_until(
@@ -162,9 +187,8 @@ fn recv_host_until(
         if remaining.is_zero() {
             panic!("timeout waiting for host UI update");
         }
-        let update = ui_rx
-            .recv_timeout(remaining.min(Duration::from_millis(300)))
-            .expect("ui channel closed");
+
+        let update = ui_rx.recv_timeout(remaining.min(Duration::from_millis(300))).unwrap();
         if let UIUpdate::Host(display) = update {
             if display.host_state.host.name == host_name && pred(&display) {
                 return display;
@@ -177,28 +201,20 @@ fn recv_host_until(
 fn remote_core_commands_for_host() {
     init_log();
 
-    let hosts = stub_hosts();
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
     let custom_id = CustomCommand::get_metadata().module_spec.id.clone();
 
-    with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let commands = backend.commands_for_host(TEST_HOST).expect("commands_for_host");
+    with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
+        let commands = backend.commands_for_host(TEST_HOST).unwrap();
         assert!(commands.contains_key(&systemd_start_id));
         assert!(commands.contains_key(&custom_id));
 
-        let command = backend
-            .command_for_host(TEST_HOST, &systemd_start_id)
-            .expect("command_for_host")
-            .expect("start command");
+        let command = backend.command_for_host(TEST_HOST, &systemd_start_id).unwrap().unwrap();
         assert_eq!(command.command_id, systemd_start_id);
+        assert!(backend.command_for_host(TEST_HOST, "no-such-command").unwrap().is_none());
 
-        assert!(backend
-            .command_for_host(TEST_HOST, "no-such-command")
-            .expect("command_for_host")
-            .is_none());
-
-        let custom = backend.custom_commands_for_host(TEST_HOST).expect("custom_commands_for_host");
-        let entry = custom.get("custom-1").expect("custom-1");
+        let custom = backend.custom_commands_for_host(TEST_HOST).unwrap();
+        let entry = custom.get("custom-1").unwrap();
         assert_eq!(entry.command, "echo test-service");
 
         backend.stop();
@@ -209,17 +225,16 @@ fn remote_core_commands_for_host() {
 fn remote_core_execute_command() {
     init_log();
 
-    let hosts = stub_hosts();
     let custom_id = CustomCommand::get_metadata().module_spec.id.clone();
 
-    with_remote_core_session(&hosts, move |mut backend, ui_rx| {
+    with_remote_core_session(move |mut backend, _cfg, ui_rx| {
         let invocation_id = backend
             .execute_command(
                 TEST_HOST,
                 &custom_id,
                 &["echo test-service".to_string()],
             )
-            .expect("execute_command");
+            .unwrap();
         assert!(invocation_id > 0, "expected invocation id");
 
         let display = recv_host_until(&ui_rx, TEST_HOST, |d| {
@@ -231,7 +246,7 @@ fn remote_core_execute_command() {
                 })
         });
 
-        let result = display.host_state.command_results.get(&custom_id).expect("command result");
+        let result = display.host_state.command_results.get(&custom_id).unwrap();
         assert!(result.message.contains("stub-line-from-fake-ssh"));
 
         backend.stop();
@@ -242,10 +257,8 @@ fn remote_core_execute_command() {
 fn remote_core_all_host_categories() {
     init_log();
 
-    let hosts = stub_hosts();
-
-    with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let mut categories = backend.all_host_categories(TEST_HOST).expect("all_host_categories");
+    with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
+        let mut categories = backend.all_host_categories(TEST_HOST).unwrap();
         categories.sort();
         assert_eq!(categories, vec!["host".to_string(), "systemd".to_string()]);
 
@@ -257,10 +270,8 @@ fn remote_core_all_host_categories() {
 fn remote_core_initialize_hosts() {
     init_log();
 
-    let hosts = stub_hosts();
-
-    with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let mut host_ids = backend.initialize_hosts().expect("initialize_hosts");
+    with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
+        let mut host_ids = backend.initialize_hosts().unwrap();
         host_ids.sort();
         assert!(host_ids.contains(&TEST_HOST.to_string()));
 
@@ -272,23 +283,16 @@ fn remote_core_initialize_hosts() {
 fn remote_core_refresh_invocation_ids() {
     init_log();
 
-    let hosts = stub_hosts();
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
 
-    with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let for_command = backend
-            .refresh_monitors_for_command(TEST_HOST, &systemd_start_id)
-            .expect("refresh_monitors_for_command");
+    with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
+        let for_command = backend.refresh_monitors_for_command(TEST_HOST, &systemd_start_id).unwrap();
         assert!(!for_command.is_empty());
 
-        let for_category = backend
-            .refresh_monitors_of_category(TEST_HOST, "host")
-            .expect("refresh_monitors_of_category");
+        let for_category = backend.refresh_monitors_of_category(TEST_HOST, "host").unwrap();
         assert!(!for_category.is_empty());
 
-        let _for_certs = backend
-            .refresh_certificate_monitors()
-            .expect("refresh_certificate_monitors");
+        let _for_certs = backend.refresh_certificate_monitors().unwrap();
 
         backend.stop();
     });
@@ -298,17 +302,16 @@ fn remote_core_refresh_invocation_ids() {
 fn remote_core_resolve_text_editor_path() {
     init_log();
 
-    let hosts = stub_hosts();
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
 
-    with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
+    with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
         let path = backend
             .resolve_text_editor_path(
                 TEST_HOST,
                 &systemd_start_id,
                 &["/tmp/editor-target".to_string()],
             )
-            .expect("resolve_text_editor_path");
+            .unwrap();
         assert_eq!(path.as_deref(), Some("/tmp/editor-target"));
 
         backend.stop();
@@ -319,13 +322,12 @@ fn remote_core_resolve_text_editor_path() {
 fn remote_core_download_editable_file() {
     init_log();
 
-    let hosts = stub_hosts();
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
 
-    with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
+    with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
         let (invocation_id, path) = backend
             .download_editable_file(TEST_HOST, &systemd_start_id, "test-service")
-            .expect("download_editable_file");
+            .unwrap();
         assert!(invocation_id > 0);
         assert!(!path.is_empty());
 
@@ -337,13 +339,10 @@ fn remote_core_download_editable_file() {
 fn remote_core_write_cache_and_upload() {
     init_log();
 
-    let hosts = stub_hosts();
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
 
-    with_remote_core_session(&hosts, move |mut backend, ui_rx| {
-        backend
-            .download_editable_file(TEST_HOST, &systemd_start_id, "test-service")
-            .expect("download_editable_file");
+    with_remote_core_session(move |mut backend, _cfg, ui_rx| {
+        backend.download_editable_file(TEST_HOST, &systemd_start_id, "test-service").unwrap();
 
         recv_host_until(&ui_rx, TEST_HOST, |d| {
             d.host_state
@@ -352,13 +351,8 @@ fn remote_core_write_cache_and_upload() {
                 .is_some_and(|result| result.progress == 100)
         });
 
-        backend
-            .write_cached_file(TEST_HOST, "test-service", b"new-bytes".to_vec())
-            .expect("write_cached_file");
-
-        let invocation_id = backend
-            .upload_file_from_cache(TEST_HOST, &systemd_start_id, "test-service")
-            .expect("upload_file_from_cache");
+        backend.write_cached_file(TEST_HOST, "test-service", b"new-bytes".to_vec()).unwrap();
+        let invocation_id = backend.upload_file_from_cache(TEST_HOST, &systemd_start_id, "test-service").unwrap();
         assert!(invocation_id > 0);
 
         backend.stop();
@@ -369,13 +363,29 @@ fn remote_core_write_cache_and_upload() {
 fn remote_core_send_nowait_messages() {
     init_log();
 
-    let hosts = stub_hosts();
-
-    with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
+    with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
         backend.refresh_host_monitors(TEST_HOST);
         backend.verify_host_key(TEST_HOST, "ssh", "test-key");
         backend.initialize_host(TEST_HOST);
         backend.interrupt_invocation(99);
+
+        backend.stop();
+    });
+}
+
+#[test]
+fn remote_core_get_update_config() {
+    init_log();
+
+    with_remote_core_session(move |mut backend, config, ui_rx| {
+        let _ = ui_rx.recv_timeout(Duration::from_secs(5));
+        let (mut main0, hosts0, groups0) = config.get_config().unwrap();
+        assert!(!main0.preferences.show_charts);
+
+        main0.preferences.show_charts = true;
+        config.update_config(main0, hosts0, groups0).unwrap();
+        let (main2, _, _) = config.get_config().unwrap();
+        assert!(main2.preferences.show_charts);
 
         backend.stop();
     });

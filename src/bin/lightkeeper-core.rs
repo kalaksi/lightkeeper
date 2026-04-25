@@ -51,7 +51,7 @@ fn main() {
         PathBuf::from(args.socket_path.clone())
     };
 
-    let runtime = match CoreRuntime::new(&main_config, &hosts_config) {
+    let runtime = match CoreRuntime::new(&main_config, &hosts_config, args.config_dir.clone()) {
         Ok(runtime) => runtime,
         Err(error) => {
             log::error!("Failed to start backend runtime: {}", error);

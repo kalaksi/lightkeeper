@@ -141,7 +141,9 @@ pub fn run(
     } = initialize_core(main_config, hosts_config).map_err(String::from)?;
 
     let module_metadatas = module_factory.get_module_metadatas();
-    let command_backend = backend::new_local_command_backend(command_handler, monitor_manager);
+    let command_backend: Box<dyn backend::CommandBackend> =
+        Box::new(backend::LocalCommandBackend::new(command_handler, monitor_manager));
+    let config_backend: Box<dyn backend::ConfigBackend> = Box::new(backend::LocalConfigBackend::new(config_dir.clone()));
 
     let mut frontend = frontend::qt::QmlFrontend::new(
         config_dir,
@@ -166,7 +168,14 @@ pub fn run(
 
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if !test {
-        Ok(frontend.start(command_backend, connection_manager, host_manager, metrics_manager, false))
+        Ok(frontend.start(
+            command_backend,
+            config_backend,
+            connection_manager,
+            host_manager,
+            metrics_manager,
+            false,
+        ))
     }
     else {
         // TODO

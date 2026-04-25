@@ -13,7 +13,7 @@ use crate::configuration::CustomCommandConfig;
 use crate::frontend::frontend::VerificationRequest;
 use crate::frontend::{DisplayData, HostDisplayData};
 
-pub const PROTOCOL_VERSION: u16 = 5;
+pub const PROTOCOL_VERSION: u16 = 8;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -110,6 +110,15 @@ pub enum ClientMessage {
         command_id: String,
         remote_file_path: String,
     },
+    GetConfig {
+        request_id: u64,
+    },
+    UpdateConfig {
+        request_id: u64,
+        main_yml: String,
+        hosts_yml: String,
+        groups_yml: String,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -178,6 +187,15 @@ pub enum ServerMessage {
     UploadFileFromCacheResult {
         request_id: u64,
         invocation_id: u64,
+    },
+    Config {
+        request_id: u64,
+        main_yml: String,
+        hosts_yml: String,
+        groups_yml: String,
+    },
+    UpdateConfigOk {
+        request_id: u64,
     },
 }
 
