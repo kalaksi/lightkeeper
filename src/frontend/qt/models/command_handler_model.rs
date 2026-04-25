@@ -439,7 +439,10 @@ impl CommandHandlerModel {
         let contents = contents.to_string().into_bytes();
 
         if self.backend().local_backend().is_some() {
-            self.backend_mut().write_cached_file(&host_id, &remote_file_path, contents);
+            if let Err(error) = self.backend_mut().write_cached_file(&host_id, &remote_file_path, contents) {
+                self.error(QString::from(error.to_string()));
+                return 0;
+            }
             self.backend_mut().upload_file_from_cache(&host_id, &command_id, &remote_file_path)
         }
         else {
@@ -450,15 +453,22 @@ impl CommandHandlerModel {
     fn removeCachedFile(&mut self, host_id: QString, remote_file_path: QString) {
         let host_id = host_id.to_string();
         let remote_file_path = remote_file_path.to_string();
-        self.backend_mut().remove_cached_file(&host_id, &remote_file_path);
+        if let Err(error) = self.backend_mut().remove_cached_file(&host_id, &remote_file_path) {
+            self.error(QString::from(error.to_string()));
+        }
     }
 
     fn hasFileChanged(&self, host_id: QString, remote_file_path: QString, contents: QString) -> bool {
         let host_id = host_id.to_string();
         let remote_file_path = remote_file_path.to_string();
         let contents = contents.to_string().into_bytes();
-        self.backend()
-            .has_cached_file_changed(&host_id, &remote_file_path, &contents)
+        match self.backend().has_cached_file_changed(&host_id, &remote_file_path, &contents) {
+            Ok(changed) => changed,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                false
+            },
+        }
     }
 
     fn verifyHostKey(&self, host_id: QString, connector_id: QString, key_id: QString) {

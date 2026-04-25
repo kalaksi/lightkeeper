@@ -9,6 +9,7 @@ use std::sync::mpsc;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
+use crate::error::LkError;
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
 
@@ -45,9 +46,9 @@ pub trait CommandBackend {
     fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> u64;
     fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> u64;
     fn upload_file_from_editor(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, contents: Vec<u8>) -> u64;
-    fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>);
-    fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str);
-    fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> bool;
+    fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError>;
+    fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) -> Result<(), LkError>;
+    fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> Result<bool, LkError>;
     fn local_backend(&self) -> Option<&dyn LocalBackendApi> {
         None
     }

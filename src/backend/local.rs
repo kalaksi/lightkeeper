@@ -10,6 +10,8 @@ use super::api::{CommandBackend, LocalBackendApi};
 use crate::command_handler::{CommandButtonData, CommandHandler};
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
+use crate::error::LkError;
+use crate::file_handler;
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
 use crate::monitor_manager::MonitorManager;
@@ -161,17 +163,19 @@ impl CommandBackend for LocalCommandBackend {
         )
     }
 
-    fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) {
+    fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError> {
         let local_path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
-        self.command_handler.write_file(&local_path, new_contents);
+        file_handler::write_file(&local_path, new_contents)?;
+        Ok(())
     }
 
-    fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) {
+    fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) -> Result<(), LkError> {
         let local_path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
-        self.command_handler.remove_file(&local_path);
+        file_handler::remove_file(&local_path)?;
+        Ok(())
     }
 
-    fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> bool {
+    fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> Result<bool, LkError> {
         let content_hash = crate::utils::sha256::hash(new_contents);
         self.command_handler.has_file_changed(host_id, remote_file_path, &content_hash)
     }

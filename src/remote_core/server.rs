@@ -248,7 +248,17 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 remote_file_path,
                 content_hash,
             } => {
-                let changed = runtime.core.command_handler.has_file_changed(&host_id, &remote_file_path, &content_hash);
+                let changed = match runtime.core.command_handler.has_file_changed(
+                    &host_id,
+                    &remote_file_path,
+                    &content_hash,
+                ) {
+                    Ok(changed) => changed,
+                    Err(error) => {
+                        log::error!("{}", error);
+                        false
+                    },
+                };
                 session.send_message(&ServerMessage::HasCachedFileChangedResult {
                     request_id,
                     changed,

@@ -844,16 +844,13 @@ impl CommandHandler {
         }
     }
 
-    pub fn has_file_changed(&self, host_id: &str, remote_file_path: &str, content_hash: &str) -> bool {
+    pub fn has_file_changed(&self, host_id: &str, remote_file_path: &str, content_hash: &str) -> Result<bool, LkError> {
         let local_path = self.cache_file_path_for_remote(host_id, remote_file_path);
         match file_handler::read_file_metadata(&local_path) {
             Ok(metadata) => {
-                content_hash.to_ascii_lowercase() != metadata.remote_file_hash.to_ascii_lowercase()
+                Ok(content_hash.to_ascii_lowercase() != metadata.remote_file_hash.to_ascii_lowercase())
             },
-            Err(error) => {
-                log::error!("Error reading file metadata: {}", error);
-                false
-            }
+            Err(error) => Err(LkError::other(format!("Error reading file metadata: {}", error))),
         }
     }
 

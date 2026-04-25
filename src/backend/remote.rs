@@ -16,6 +16,7 @@ use super::api::CommandBackend;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
+use crate::error::{ErrorKind, LkError};
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
 use crate::remote_core::protocol::{read_message, write_message, ClientMessage, ServerMessage, PROTOCOL_VERSION};
@@ -91,10 +92,6 @@ fn completer_send_default(p: PendingRpc) {
     let _ = p.sender.send(default_reply(p.kind));
 }
 
-fn log_remote_error(detail: &str) {
-    ::log::error!("Request failed: {}", detail);
-}
-
 fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
     matches!(
         (kind, reply),
@@ -120,7 +117,7 @@ fn align_reply(kind: PendingRpcKind, reply: PendingRpcReply) -> PendingRpcReply 
         reply
     }
     else {
-        log_remote_error("unexpected reply");
+        ::log::error!("Request failed: unexpected reply");
         default_reply(kind)
     }
 }
@@ -134,7 +131,7 @@ fn deliver_response(
     let pending = match pending_rpc.lock() {
         Ok(mut map) => map.remove(&request_id),
         Err(error) => {
-            log_remote_error(&error.to_string());
+            ::log::error!("Request failed: {}", error);
             return;
         }
     };
@@ -337,7 +334,7 @@ impl RemoteCommandBackend {
                     let pending = match pending_rpc.lock() {
                         Ok(mut map) => map.remove(&request_id),
                         Err(error) => {
-                            log_remote_error(&error.to_string());
+                            ::log::error!("Request failed: {}", error);
                             continue;
                         }
                     };
@@ -374,7 +371,7 @@ impl RemoteCommandBackend {
                                 }
                             }
                             Err(err) => {
-                                log_remote_error(&err.to_string());
+                                ::log::error!("Request failed: {}", err);
                             }
                         }
                     }
@@ -394,49 +391,53 @@ impl RemoteCommandBackend {
         write_message(&mut *writer, message).map_err(|error| error.to_string())
     }
 
-    fn send_message(&self, kind: PendingRpcKind, build_message: impl FnOnce(u64) -> ClientMessage) -> PendingRpcReply {
+    fn send_message_result(
+        &self,
+        kind: PendingRpcKind,
+        build_message: impl FnOnce(u64) -> ClientMessage,
+    ) -> Result<PendingRpcReply, LkError> {
+
         let request_id = self.next_request_id();
         let (sender, receiver) = mpsc::channel();
-        let mut map = match self.pending_rpc.lock() {
-            Ok(m) => m,
-            Err(err) => {
-                log_remote_error(&err.to_string());
-                return default_reply(kind);
-            }
-        };
+        let mut map = self.pending_rpc.lock().map_err(LkError::from)?;
         map.insert(request_id, PendingRpc { kind, sender });
         drop(map);
 
         let message = build_message(request_id);
         if let Err(error) = self.send_nowait(&message) {
-            match self.pending_rpc.lock() {
-                Ok(mut map) => {
-                    if let Some(pending) = map.remove(&request_id) {
-                        completer_send_default(pending);
-                    }
-                }
-                Err(err) => {
-                    log_remote_error(&err.to_string());
+            if let Ok(mut map) = self.pending_rpc.lock() {
+                if let Some(pending) = map.remove(&request_id) {
+                    completer_send_default(pending);
                 }
             }
-            log_remote_error(&error);
-            return default_reply(kind);
+            return Err(LkError::new(ErrorKind::ConnectionFailed, error));
         }
 
         match receiver.recv_timeout(REMOTE_COMMAND_TIMEOUT) {
-            Ok(reply) => align_reply(kind, reply),
-            Err(recv_error) => {
-                match self.pending_rpc.lock() {
-                    Ok(mut map) => {
-                        let _ = map.remove(&request_id);
-                    }
-                    Err(err) => {
-                        log_remote_error(&err.to_string());
-                    }
+            Ok(reply) => {
+                if reply_matches(&kind, &reply) {
+                    Ok(align_reply(kind, reply))
                 }
-                log_remote_error(&recv_error.to_string());
+                else {
+                    Err(LkError::other("Unexpected response from remote core"))
+                }
+            },
+            Err(recv_error) => {
+                if let Ok(mut map) = self.pending_rpc.lock() {
+                    let _ = map.remove(&request_id);
+                }
+                Err(LkError::new(ErrorKind::ConnectionFailed, recv_error.to_string()))
+            },
+        }
+    }
+
+    fn send_message(&self, kind: PendingRpcKind, build_message: impl FnOnce(u64) -> ClientMessage) -> PendingRpcReply {
+        match self.send_message_result(kind, build_message) {
+            Ok(reply) => reply,
+            Err(err) => {
+                ::log::error!("Request failed: {}", err);
                 default_reply(kind)
-            }
+            },
         }
     }
 
@@ -484,7 +485,7 @@ impl CommandBackend for RemoteCommandBackend {
     ) {
         self.frontend_update_sender = Some(frontend_update_sender);
         if let Err(error) = self.connect() {
-            log_remote_error(&error);
+            ::log::error!("Request failed: {}", error);
         }
     }
 
@@ -498,7 +499,7 @@ impl CommandBackend for RemoteCommandBackend {
         if let Err(error) = self.send_nowait(&ClientMessage::RefreshHostMonitors {
             host_id: host_id.to_string(),
         }) {
-            log_remote_error(&error);
+            ::log::error!("Request failed: {}", error);
         }
     }
 
@@ -563,7 +564,7 @@ impl CommandBackend for RemoteCommandBackend {
         }
 
         if let Err(error) = self.send_nowait(&ClientMessage::InterruptInvocation { invocation_id }) {
-            log_remote_error(&error);
+            ::log::error!("Request failed: {}", error);
         }
     }
 
@@ -573,7 +574,7 @@ impl CommandBackend for RemoteCommandBackend {
             connector_id: connector_id.to_string(),
             key_id: key_id.to_string(),
         }) {
-            log_remote_error(&error);
+            ::log::error!("Request failed: {}", error);
         }
     }
 
@@ -581,7 +582,7 @@ impl CommandBackend for RemoteCommandBackend {
         if let Err(error) = self.send_nowait(&ClientMessage::RefreshPlatformInfo {
             host_id: host_id.to_string(),
         }) {
-            log_remote_error(&error);
+            ::log::error!("Request failed: {}", error);
         }
     }
 
@@ -685,37 +686,39 @@ impl CommandBackend for RemoteCommandBackend {
         }
     }
 
-    fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) {
+    fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError> {
         let host_id = host_id.to_string();
         let remote_file_path = remote_file_path.to_string();
-        let _ = self.send_message(PendingRpcKind::WriteCachedFile, move |request_id| ClientMessage::WriteCachedFile {
+        self.send_message_result(PendingRpcKind::WriteCachedFile, move |request_id| ClientMessage::WriteCachedFile {
             request_id,
             host_id,
             remote_file_path,
             contents: new_contents,
-        });
+        })?;
+        Ok(())
     }
 
-    fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) {
-        let _ = self.send_message(PendingRpcKind::RemoveCachedFile, |request_id| ClientMessage::RemoveCachedFile {
+    fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) -> Result<(), LkError> {
+        self.send_message_result(PendingRpcKind::RemoveCachedFile, |request_id| ClientMessage::RemoveCachedFile {
             request_id,
             host_id: host_id.to_string(),
             remote_file_path: remote_file_path.to_string(),
-        });
+        })?;
+        Ok(())
     }
 
-    fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> bool {
+    fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> Result<bool, LkError> {
         let hex = sha256::hash(new_contents);
-        match self.send_message(PendingRpcKind::HasCachedFileChanged, |request_id| {
+        match self.send_message_result(PendingRpcKind::HasCachedFileChanged, |request_id| {
             ClientMessage::HasCachedFileChanged {
                 request_id,
                 host_id: host_id.to_string(),
                 remote_file_path: remote_file_path.to_string(),
                 content_hash: hex,
             }
-        }) {
-            PendingRpcReply::FileChanged(changed) => changed,
-            _ => false,
+        })? {
+            PendingRpcReply::FileChanged(changed) => Ok(changed),
+            _ => Err(LkError::unexpected()),
         }
     }
 }
