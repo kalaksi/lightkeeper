@@ -80,7 +80,9 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
     session.send_message(&ServerMessage::Connect {
         protocol_version: PROTOCOL_VERSION,
     })?;
-    session.send_message(&ServerMessage::InitialState(runtime.display_data()))?;
+    session.send_message(&ServerMessage::InitialState(
+        runtime.core.host_manager.borrow().get_display_data(),
+    ))?;
     session.start_update_stream(update_receiver);
 
     loop {
@@ -101,7 +103,11 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 command_id,
                 parameters,
             } => {
-                match runtime.execute_command(&host_id, &command_id, &parameters) {
+                match runtime
+                    .core
+                    .command_handler
+                    .execute(&host_id, &command_id, &parameters)
+                {
                     Ok(invocation_id) => {
                         session.send_message(&ServerMessage::ExecuteCommand {
                             request_id,
@@ -120,7 +126,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 session.send_message(&ServerMessage::CommandsForHost {
                     request_id,
                     host_id: host_id.clone(),
-                    commands: runtime.commands_for_host(&host_id),
+                    commands: runtime.core.command_handler.get_commands_for_host(host_id.clone()),
                 })?;
             }
             ClientMessage::CommandForHost {
@@ -132,37 +138,48 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     request_id,
                     host_id: host_id.clone(),
                     command_id: command_id.clone(),
-                    command: runtime.command_for_host(&host_id, &command_id),
+                    command: runtime
+                        .core
+                        .command_handler
+                        .get_command_for_host(&host_id, &command_id),
                 })?;
             }
             ClientMessage::CustomCommandsForHost { request_id, host_id } => {
                 session.send_message(&ServerMessage::CustomCommandsForHost {
                     request_id,
                     host_id: host_id.clone(),
-                    commands: runtime.custom_commands_for_host(&host_id),
+                    commands: runtime
+                        .core
+                        .command_handler
+                        .get_custom_commands_for_host(&host_id),
                 })?;
             }
             ClientMessage::AllHostCategories { request_id, host_id } => {
                 session.send_message(&ServerMessage::AllHostCategories {
                     request_id,
                     host_id: host_id.clone(),
-                    categories: runtime.all_host_categories(&host_id),
+                    categories: runtime.core.monitor_manager.get_all_host_categories(&host_id),
                 })?;
             }
             ClientMessage::VerifyHostKey { host_id, connector_id, key_id } => {
-                runtime.verify_host_key(&host_id, &connector_id, &key_id);
+                runtime.core.command_handler.verify_host_key(&host_id, &connector_id, &key_id);
             }
             ClientMessage::InterruptInvocation { invocation_id } => {
-                runtime.interrupt_invocation(invocation_id);
+                runtime.core.command_handler.interrupt_invocation(invocation_id);
             }
             ClientMessage::RefreshHostMonitors { host_id } => {
-                runtime.refresh_host_monitors(&host_id);
+                for category in runtime.core.monitor_manager.get_all_host_categories(&host_id) {
+                    let _ = runtime
+                        .core
+                        .monitor_manager
+                        .refresh_monitors_of_category(&host_id, &category);
+                }
             }
             ClientMessage::RefreshPlatformInfo { host_id } => {
-                runtime.refresh_platform_info(&host_id);
+                runtime.core.monitor_manager.refresh_platform_info(&host_id);
             }
             ClientMessage::RefreshPlatformInfoAll { request_id } => {
-                let host_ids = runtime.refresh_platform_info_all();
+                let host_ids = runtime.core.monitor_manager.refresh_platform_info_all();
                 session.send_message(&ServerMessage::InitializeHostsResult {
                     request_id,
                     host_ids,
@@ -173,7 +190,27 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 host_id,
                 command_id,
             } => {
-                let invocation_ids = runtime.refresh_monitors_for_command(&host_id, &command_id);
+                let invocation_ids = match runtime
+                    .core
+                    .command_handler
+                    .get_command_for_host(&host_id, &command_id)
+                {
+                    None => Vec::new(),
+                    Some(command) => {
+                        if command.display_options.parent_id.is_empty() {
+                            runtime.core.monitor_manager.refresh_monitors_of_category(
+                                &host_id,
+                                &command.display_options.category,
+                            )
+                        }
+                        else {
+                            runtime.core.monitor_manager.refresh_monitors_by_id(
+                                &host_id,
+                                &command.display_options.parent_id,
+                            )
+                        }
+                    }
+                };
                 session.send_message(&ServerMessage::RefreshInvocationIds {
                     request_id,
                     invocation_ids,
@@ -184,14 +221,17 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 host_id,
                 category,
             } => {
-                let invocation_ids = runtime.refresh_monitors_of_category(&host_id, &category);
+                let invocation_ids = runtime
+                    .core
+                    .monitor_manager
+                    .refresh_monitors_of_category(&host_id, &category);
                 session.send_message(&ServerMessage::RefreshInvocationIds {
                     request_id,
                     invocation_ids,
                 })?;
             }
             ClientMessage::RefreshCertificateMonitors { request_id } => {
-                let invocation_ids = runtime.refresh_certificate_monitors();
+                let invocation_ids = runtime.core.monitor_manager.refresh_certificate_monitors();
                 session.send_message(&ServerMessage::RefreshInvocationIds {
                     request_id,
                     invocation_ids,
@@ -203,7 +243,15 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 command_id,
                 parameters,
             } => {
-                let path = runtime.resolve_text_editor_path(&host_id, &command_id, &parameters);
+                let path = if let Some(path) = parameters.first().cloned() {
+                    Some(path)
+                }
+                else {
+                    runtime
+                        .core
+                        .command_handler
+                        .get_connector_message(&host_id, &command_id)
+                };
                 session.send_message(&ServerMessage::ResolveTextEditorPath {
                     request_id,
                     path,
@@ -215,8 +263,12 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 command_id,
                 remote_file_path,
             } => {
-                match runtime.download_editable_file(&host_id, &command_id, &remote_file_path) {
-                    Ok(invocation_id) => {
+                match runtime.core.command_handler.download_editable_file(
+                    &host_id,
+                    &command_id,
+                    &remote_file_path,
+                ) {
+                    Ok((invocation_id, _)) => {
                         session.send_message(&ServerMessage::DownloadEditableFileResult {
                             request_id,
                             invocation_id,
@@ -344,16 +396,14 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                             let module_factory = runtime.core.module_factory.clone();
                             runtime.stop();
                             let (main_read, hosts_read, _groups) = Configuration::read(&runtime.config_dir)?;
-                            runtime.core = crate::initialize_core_with_module_factory(
-                                &main_read,
-                                &hosts_read,
-                                module_factory,
-                            )?;
+                            runtime.core = crate::initialize_core(&main_read, &hosts_read, module_factory)?;
                             Ok(())
                         })();
                         match update_result {
                             Ok(()) => {
-                                session.send_message(&ServerMessage::InitialState(runtime.display_data()))?;
+                                session.send_message(&ServerMessage::InitialState(
+                                    runtime.core.host_manager.borrow().get_display_data(),
+                                ))?;
                                 session.start_update_stream(runtime.new_update_receiver());
                                 session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;
                             }

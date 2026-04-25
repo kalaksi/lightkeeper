@@ -62,11 +62,12 @@ pub fn initialize_openssl() -> Result<(), error::LkError> {
     Ok(())
 }
 
-pub fn initialize_core_with_module_factory(
+pub fn initialize_core(
     main_config: &Configuration,
     hosts_config: &configuration::Hosts,
     module_factory: Arc<ModuleFactory>,
 ) -> Result<CoreComponents, error::LkError> {
+
     initialize_openssl()?;
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
@@ -114,17 +115,6 @@ pub fn initialize_core_with_module_factory(
     })
 }
 
-pub fn initialize_core(
-    main_config: &Configuration,
-    hosts_config: &configuration::Hosts,
-) -> Result<CoreComponents, error::LkError> {
-    initialize_core_with_module_factory(
-        main_config,
-        hosts_config,
-        Arc::new(ModuleFactory::new()),
-    )
-}
-
 pub fn run(
     config_dir: &String,
     main_config: &Configuration,
@@ -132,13 +122,14 @@ pub fn run(
     group_config: &configuration::Groups,
     test: bool,
 ) -> Result<ExitReason, String> {
+
     let CoreComponents {
         module_factory,
         host_manager,
         connection_manager,
         command_handler,
         monitor_manager,
-    } = initialize_core(main_config, hosts_config).map_err(String::from)?;
+    } = initialize_core(main_config, hosts_config, Arc::new(ModuleFactory::new())).map_err(String::from)?;
 
     let module_metadatas = module_factory.get_module_metadatas();
     let command_backend: Box<dyn backend::CommandBackend> =
