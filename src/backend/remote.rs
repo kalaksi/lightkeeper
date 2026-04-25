@@ -19,6 +19,7 @@ use crate::connection_manager::ConnectorRequest;
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
 use crate::remote_core::protocol::{read_message, write_message, ClientMessage, ServerMessage, PROTOCOL_VERSION};
+use crate::utils::sha256;
 
 //
 // CommandBackend client for lightkeeper-core (unix socket).
@@ -39,6 +40,10 @@ enum PendingRpcKind {
     ResolveTextEditorPath,
     DownloadEditable,
     UploadEdited,
+    WriteCachedFile,
+    RemoveCachedFile,
+    HasCachedFileChanged,
+    UploadFromCache,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -53,6 +58,9 @@ enum PendingRpcReply {
     ResolveTextEditorPath(Option<String>),
     DownloadEditable(u64),
     UploadEdited(u64),
+    FileOpDone,
+    FileChanged(bool),
+    UploadFromCache(u64),
 }
 
 struct PendingRpc {
@@ -72,6 +80,10 @@ fn default_reply(kind: PendingRpcKind) -> PendingRpcReply {
         PendingRpcKind::ResolveTextEditorPath => PendingRpcReply::ResolveTextEditorPath(None),
         PendingRpcKind::DownloadEditable => PendingRpcReply::DownloadEditable(0),
         PendingRpcKind::UploadEdited => PendingRpcReply::UploadEdited(0),
+        PendingRpcKind::WriteCachedFile => PendingRpcReply::FileOpDone,
+        PendingRpcKind::RemoveCachedFile => PendingRpcReply::FileOpDone,
+        PendingRpcKind::HasCachedFileChanged => PendingRpcReply::FileChanged(false),
+        PendingRpcKind::UploadFromCache => PendingRpcReply::UploadFromCache(0),
     }
 }
 
@@ -95,7 +107,11 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::InitializeHosts, PendingRpcReply::InitializeHosts(_)) |
             (PendingRpcKind::ResolveTextEditorPath, PendingRpcReply::ResolveTextEditorPath(_)) |
             (PendingRpcKind::DownloadEditable, PendingRpcReply::DownloadEditable(_)) |
-            (PendingRpcKind::UploadEdited, PendingRpcReply::UploadEdited(_))
+            (PendingRpcKind::UploadEdited, PendingRpcReply::UploadEdited(_)) |
+            (PendingRpcKind::WriteCachedFile, PendingRpcReply::FileOpDone) |
+            (PendingRpcKind::RemoveCachedFile, PendingRpcReply::FileOpDone) |
+            (PendingRpcKind::HasCachedFileChanged, PendingRpcReply::FileChanged(_)) |
+            (PendingRpcKind::UploadFromCache, PendingRpcReply::UploadFromCache(_))
     )
 }
 
@@ -223,11 +239,7 @@ impl RemoteCommandBackend {
             match message {
                 ServerMessage::Connect { protocol_version } => {
                     if protocol_version != PROTOCOL_VERSION {
-                        ::log::error!(
-                            "Protocol mismatch: expected {}, got {}",
-                            PROTOCOL_VERSION,
-                            protocol_version,
-                        );
+                        ::log::error!("Protocol mismatch: expected {}, got {}", PROTOCOL_VERSION, protocol_version,);
                     }
                 }
                 ServerMessage::ExecuteCommand { request_id, invocation_id } => {
@@ -321,6 +333,37 @@ impl RemoteCommandBackend {
                         PendingRpcReply::UploadEdited(invocation_id)
                     });
                 }
+                ServerMessage::WriteCachedFileResult { request_id } | ServerMessage::RemoveCachedFileResult { request_id } => {
+                    let pending = match pending_rpc.lock() {
+                        Ok(mut map) => map.remove(&request_id),
+                        Err(error) => {
+                            log_remote_error(&error.to_string());
+                            continue;
+                        }
+                    };
+                    match pending {
+                        None => {
+                            ::log::error!("Received unexpected response");
+                        }
+                        Some(p) if p.kind == PendingRpcKind::WriteCachedFile || p.kind == PendingRpcKind::RemoveCachedFile => {
+                            let _ = p.sender.send(PendingRpcReply::FileOpDone);
+                        }
+                        Some(p) => {
+                            ::log::error!("RPC type mismatch");
+                            let _ = p.sender.send(default_reply(p.kind));
+                        }
+                    }
+                }
+                ServerMessage::HasCachedFileChangedResult { request_id, changed } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::HasCachedFileChanged, || {
+                        PendingRpcReply::FileChanged(changed)
+                    });
+                }
+                ServerMessage::UploadFileFromCacheResult { request_id, invocation_id } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::UploadFromCache, || {
+                        PendingRpcReply::UploadFromCache(invocation_id)
+                    });
+                }
                 ServerMessage::Error { request_id, message } => {
                     ::log::error!("Core server error: {}", message);
                     if let Some(request_id) = request_id {
@@ -346,10 +389,7 @@ impl RemoteCommandBackend {
     }
 
     fn send_nowait(&self, message: &ClientMessage) -> Result<(), String> {
-        let writer = self
-            .writer
-            .as_ref()
-            .ok_or_else(|| String::from("Not connected to remote core"))?;
+        let writer = self.writer.as_ref().ok_or_else(|| String::from("Not connected to remote core"))?;
         let mut writer = writer.lock().map_err(|error| error.to_string())?;
         write_message(&mut *writer, message).map_err(|error| error.to_string())
     }
@@ -616,9 +656,20 @@ impl CommandBackend for RemoteCommandBackend {
         }
     }
 
-    fn upload_file(&mut self, _host_id: &str, _command_id: &str, _local_file_path: &str) -> u64 {
-        ::log::error!("Does not support '{}'", "upload_file");
-        0
+    fn upload_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> u64 {
+        match self.send_message(PendingRpcKind::UploadFromCache, |request_id| ClientMessage::UploadFileFromCache {
+            request_id,
+            host_id: host_id.to_string(),
+            command_id: command_id.to_string(),
+            remote_file_path: remote_file_path.to_string(),
+        }) {
+            PendingRpcReply::UploadFromCache(id) => id,
+            _ => 0,
+        }
+    }
+
+    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> u64 {
+        self.upload_file(host_id, command_id, remote_file_path)
     }
 
     fn upload_file_from_editor(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, contents: Vec<u8>) -> u64 {
@@ -634,11 +685,37 @@ impl CommandBackend for RemoteCommandBackend {
         }
     }
 
-    fn write_file(&mut self, _local_file_path: &str, _new_contents: Vec<u8>) {}
+    fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) {
+        let host_id = host_id.to_string();
+        let remote_file_path = remote_file_path.to_string();
+        let _ = self.send_message(PendingRpcKind::WriteCachedFile, move |request_id| ClientMessage::WriteCachedFile {
+            request_id,
+            host_id,
+            remote_file_path,
+            contents: new_contents,
+        });
+    }
 
-    fn remove_file(&mut self, _local_file_path: &str) {}
+    fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) {
+        let _ = self.send_message(PendingRpcKind::RemoveCachedFile, |request_id| ClientMessage::RemoveCachedFile {
+            request_id,
+            host_id: host_id.to_string(),
+            remote_file_path: remote_file_path.to_string(),
+        });
+    }
 
-    fn has_file_changed(&self, _local_file_path: &str, new_contents: &[u8]) -> bool {
-        !new_contents.is_empty()
+    fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> bool {
+        let hex = sha256::hash(new_contents);
+        match self.send_message(PendingRpcKind::HasCachedFileChanged, |request_id| {
+            ClientMessage::HasCachedFileChanged {
+                request_id,
+                host_id: host_id.to_string(),
+                remote_file_path: remote_file_path.to_string(),
+                content_hash: hex,
+            }
+        }) {
+            PendingRpcReply::FileChanged(changed) => changed,
+            _ => false,
+        }
     }
 }

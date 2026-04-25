@@ -16,18 +16,19 @@ import "../js/Utils.js" as Utils
 
 Item {
     id: root
-    required property string localFilePath
+    required property string hostId
+    required property string remoteFilePath
     property var text: ""
     property string commandId: ""
     property int pendingInvocation: 0
-    property string _detectedLanguage: Utils.detectLanguageFromPath(root.localFilePath)
+    property string _detectedLanguage: Utils.detectLanguageFromPath(root.remoteFilePath)
 
-    signal saved(commandId: string, localFilePath: string, content: string)
-    signal closed(localFilePath: string)
-    signal contentChanged(localFilePath: string, newContent: string)
+    signal saved(commandId: string, remoteFilePath: string, content: string)
+    signal closed(remoteFilePath: string)
+    signal contentChanged(remoteFilePath: string, newContent: string)
 
-    onLocalFilePathChanged: {
-        root._detectedLanguage = Utils.detectLanguageFromPath(root.localFilePath)
+    onRemoteFilePathChanged: {
+        root._detectedLanguage = Utils.detectLanguageFromPath(root.remoteFilePath)
     }
 
     Connections {
@@ -115,19 +116,19 @@ Item {
     }
 
     function save() {
-        if (root.commandId === "" || root.localFilePath === "") {
+        if (root.commandId === "" || root.remoteFilePath === "") {
             return
         }
 
         let content = textEdit.text
-        root.saved(root.commandId, root.localFilePath, content)
+        root.saved(root.commandId, root.remoteFilePath, content)
     }
 
     function activate() {
         // If still waiting for data, then content can't have changed yet.
         if (root.pendingInvocation === 0) {
             // Update save-button enabled-status.
-            root.contentChanged(root.localFilePath, textEdit.text)
+            root.contentChanged(root.remoteFilePath, textEdit.text)
         }
     }
 
@@ -140,6 +141,6 @@ Item {
     }
 
     function close() {
-        root.closed(root.localFilePath)
+        root.closed(root.remoteFilePath)
     }
 }

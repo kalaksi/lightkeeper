@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct CoreRuntime {
-    core: CoreComponents,
+    pub core: CoreComponents,
 }
 
 impl CoreRuntime {

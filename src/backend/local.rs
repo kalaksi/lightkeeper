@@ -146,6 +146,12 @@ impl CommandBackend for LocalCommandBackend {
             .upload_file(&host_id.to_string(), &command_id.to_string(), &local_file_path.to_string())
     }
 
+    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> u64 {
+        let path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
+        self.command_handler
+            .upload_file(&host_id.to_string(), &command_id.to_string(), &path)
+    }
+
     fn upload_file_from_editor(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, contents: Vec<u8>) -> u64 {
         self.command_handler.upload_file_from_editor_contents(
             &host_id.to_string(),
@@ -155,16 +161,19 @@ impl CommandBackend for LocalCommandBackend {
         )
     }
 
-    fn write_file(&mut self, local_file_path: &str, new_contents: Vec<u8>) {
-        self.command_handler.write_file(&local_file_path.to_string(), new_contents);
+    fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) {
+        let local_path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
+        self.command_handler.write_file(&local_path, new_contents);
     }
 
-    fn remove_file(&mut self, local_file_path: &str) {
-        self.command_handler.remove_file(&local_file_path.to_string());
+    fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) {
+        let local_path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
+        self.command_handler.remove_file(&local_path);
     }
 
-    fn has_file_changed(&self, local_file_path: &str, new_contents: &[u8]) -> bool {
-        self.command_handler.has_file_changed(&local_file_path.to_string(), new_contents)
+    fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> bool {
+        let content_hash = crate::utils::sha256::hash(new_contents);
+        self.command_handler.has_file_changed(host_id, remote_file_path, &content_hash)
     }
 
     fn local_backend(&self) -> Option<&dyn LocalBackendApi> {

@@ -113,14 +113,19 @@ Module {
             type: "int"
             Parameter { name: "host_id"; type: "string" }
             Parameter { name: "command_id"; type: "string" }
-            Parameter { name: "local_file_path"; type: "string" }
+            Parameter { name: "remote_file_path"; type: "string" }
             Parameter { name: "contents"; type: "string" }
         }
-        Method { name: "removeFile"; Parameter { name: "local_file_path"; type: "string" } }
+        Method {
+            name: "removeCachedFile"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "remote_file_path"; type: "string" }
+        }
         Method {
             name: "hasFileChanged"
             type: "bool"
-            Parameter { name: "local_file_path"; type: "string" }
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "remote_file_path"; type: "string" }
             Parameter { name: "contents"; type: "string" }
         }
         Method {
@@ -178,7 +183,7 @@ Module {
             Parameter { name: "header_text"; type: "string" }
             Parameter { name: "command_id"; type: "string" }
             Parameter { name: "invocation_id"; type: "int" }
-            Parameter { name: "local_file_path"; type: "string" }
+            Parameter { name: "remote_file_path"; type: "string" }
         }
         Signal {
             name: "terminalViewOpened"

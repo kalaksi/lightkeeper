@@ -38,9 +38,9 @@ pub struct CommandHandlerModel {
     interruptInvocation: qt_method!(fn(&self, invocation_id: u64)),
     listFiles: qt_method!(fn(&self, host_id: QString, path: QString) -> u64),
     openRemoteFileInEditor: qt_method!(fn(&self, host_id: QString, remote_path: QString)),
-    saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64),
-    removeFile: qt_method!(fn(&self, local_file_path: QString)),
-    hasFileChanged: qt_method!(fn(&self, local_file_path: QString, contents: QString) -> bool),
+    saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, remote_file_path: QString, contents: QString) -> u64),
+    removeCachedFile: qt_method!(fn(&self, host_id: QString, remote_file_path: QString)),
+    hasFileChanged: qt_method!(fn(&self, host_id: QString, remote_file_path: QString, contents: QString) -> bool),
     verifyHostKey: qt_method!(fn(&self, host_id: QString, connector_id: QString, key_id: QString)),
 
     // Host initialization methods.
@@ -67,7 +67,7 @@ pub struct CommandHandlerModel {
         header_text: QString,
         command_id: QString,
         invocation_id: u64,
-        local_file_path: QString
+        remote_file_path: QString
     ),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
     fileBrowserOpened: qt_signal!(directory: QString),
@@ -365,14 +365,14 @@ impl CommandHandlerModel {
                     if self.configuration.preferences.text_editor == configuration::INTERNAL 
                         || self.configuration.preferences.text_editor == configuration::INTERNAL_SIMPLE {
 
-                        let (invocation_id, file_contents) =
+                        let (invocation_id, _) =
                             self.backend_mut().download_editable_file(&host_id, &command_id, &remote_file_path);
                         let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_file_path);
                         self.textEditorViewOpened(
                             editor_header_text,
                             QString::from(command_id.clone()),
                             invocation_id,
-                            QString::from(file_contents)
+                            QString::from(remote_file_path.clone()),
                         );
                     }
                     else {
@@ -419,7 +419,7 @@ impl CommandHandlerModel {
             Some(command_data) => command_data.display_options,
             None => return,
         };
-        let (invocation_id, local_file_path) =
+        let (invocation_id, _) =
             self.backend_mut().download_editable_file(&host_id, &command_id, &remote_path);
         if invocation_id > 0 {
             let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_path);
@@ -427,35 +427,38 @@ impl CommandHandlerModel {
                 editor_header_text,
                 QString::from(command_id.clone()),
                 invocation_id,
-                QString::from(local_file_path)
+                QString::from(remote_path.clone()),
             );
         }
     }
 
-    fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, local_file_path: QString, contents: QString) -> u64 {
+    fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, remote_file_path: QString, contents: QString) -> u64 {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
-        let local_file_path = local_file_path.to_string();
+        let remote_file_path = remote_file_path.to_string();
         let contents = contents.to_string().into_bytes();
 
         if self.backend().local_backend().is_some() {
-            self.backend_mut().write_file(&local_file_path, contents);
-            self.backend_mut().upload_file(&host_id, &command_id, &local_file_path)
+            self.backend_mut().write_cached_file(&host_id, &remote_file_path, contents);
+            self.backend_mut().upload_file_from_cache(&host_id, &command_id, &remote_file_path)
         }
         else {
-            self.backend_mut().upload_file_from_editor(&host_id, &command_id, &local_file_path, contents)
+            self.backend_mut().upload_file_from_editor(&host_id, &command_id, &remote_file_path, contents)
         }
     }
 
-    fn removeFile(&mut self, local_file_path: QString) {
-        let local_file_path = local_file_path.to_string();
-        self.backend_mut().remove_file(&local_file_path);
+    fn removeCachedFile(&mut self, host_id: QString, remote_file_path: QString) {
+        let host_id = host_id.to_string();
+        let remote_file_path = remote_file_path.to_string();
+        self.backend_mut().remove_cached_file(&host_id, &remote_file_path);
     }
 
-    fn hasFileChanged(&self, local_file_path: QString, contents: QString) -> bool {
-        let local_file_path = local_file_path.to_string();
+    fn hasFileChanged(&self, host_id: QString, remote_file_path: QString, contents: QString) -> bool {
+        let host_id = host_id.to_string();
+        let remote_file_path = remote_file_path.to_string();
         let contents = contents.to_string().into_bytes();
-        self.backend().has_file_changed(&local_file_path, &contents)
+        self.backend()
+            .has_cached_file_changed(&host_id, &remote_file_path, &contents)
     }
 
     fn verifyHostKey(&self, host_id: QString, connector_id: QString, key_id: QString) {

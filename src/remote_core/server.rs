@@ -204,8 +204,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 command_id,
                 remote_file_path,
             } => {
-                let invocation_id =
-                    runtime.download_editable_file(&host_id, &command_id, &remote_file_path);
+                let invocation_id = runtime.download_editable_file(&host_id, &command_id, &remote_file_path);
                 session.send_message(&ServerMessage::DownloadEditableFileResult {
                     request_id,
                     invocation_id,
@@ -218,9 +217,53 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 remote_file_path,
                 contents,
             } => {
-                let invocation_id =
-                    runtime.upload_edited_file(&host_id, &command_id, &remote_file_path, contents);
+                let invocation_id = runtime.upload_edited_file(&host_id, &command_id, &remote_file_path, contents);
                 session.send_message(&ServerMessage::UploadEditedFileResult {
+                    request_id,
+                    invocation_id,
+                })?;
+            }
+            ClientMessage::WriteCachedFile {
+                request_id,
+                host_id,
+                remote_file_path,
+                contents,
+            } => {
+                let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
+                runtime.core.command_handler.write_file(&path, contents);
+                session.send_message(&ServerMessage::WriteCachedFileResult { request_id })?;
+            }
+            ClientMessage::RemoveCachedFile {
+                request_id,
+                host_id,
+                remote_file_path,
+            } => {
+                let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
+                runtime.core.command_handler.remove_file(&path);
+                session.send_message(&ServerMessage::RemoveCachedFileResult { request_id })?;
+            }
+            ClientMessage::HasCachedFileChanged {
+                request_id,
+                host_id,
+                remote_file_path,
+                content_hash,
+            } => {
+                let changed = runtime.core.command_handler.has_file_changed(&host_id, &remote_file_path, &content_hash);
+                session.send_message(&ServerMessage::HasCachedFileChangedResult {
+                    request_id,
+                    changed,
+                })?;
+            }
+            ClientMessage::UploadFileFromCache {
+                request_id,
+                host_id,
+                command_id,
+                remote_file_path,
+            } => {
+                let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
+                let invocation_id = runtime.core.command_handler.upload_file(&host_id, &command_id, &path);
+
+                session.send_message(&ServerMessage::UploadFileFromCacheResult {
                     request_id,
                     invocation_id,
                 })?;

@@ -19,7 +19,8 @@ import "../js/Utils.js" as Utils
 
 Item {
     id: root
-    required property string localFilePath
+    required property string hostId
+    required property string remoteFilePath
     property var text: ""
     property string commandId: ""
     property int pendingInvocation: 0
@@ -32,19 +33,19 @@ Item {
     property bool _useSimpleCodeEditor: false
     property bool _vimCloseAfterSave: false
     property bool _saveOverlayActive: false
-    property string _detectedLanguage: Utils.detectLanguageFromPath(root.localFilePath)
+    property string _detectedLanguage: Utils.detectLanguageFromPath(root.remoteFilePath)
     property string _aceMode: Utils.mapLanguageToAceMode(root._detectedLanguage)
     // First time text was changed in editor.
     property bool _initialOpen: true
 
-    signal saved(commandId: string, localFilePath: string, content: string)
-    signal closed(localFilePath: string)
-    signal contentChanged(localFilePath: string, newContent: string)
+    signal saved(commandId: string, remoteFilePath: string, content: string)
+    signal closed(remoteFilePath: string)
+    signal contentChanged(remoteFilePath: string, newContent: string)
     // When closing the tab from Vim ex-commands (:q / :wq) or Emacs C-x C-c.
     signal closeTabRequested()
 
-    onLocalFilePathChanged: {
-        root._detectedLanguage = Utils.detectLanguageFromPath(root.localFilePath)
+    onRemoteFilePathChanged: {
+        root._detectedLanguage = Utils.detectLanguageFromPath(root.remoteFilePath)
         root._aceMode = Utils.mapLanguageToAceMode(root._detectedLanguage)
     }
 
@@ -284,8 +285,8 @@ Item {
 
                     onEditorContentChanged: function(newContent) {
                         if (rootItem) {
-                            rootItem.contentChanged(rootItem.localFilePath, newContent);
-                            rootItem.disableSaveButton = !LK.command.hasFileChanged(rootItem.localFilePath, newContent);
+                            rootItem.contentChanged(rootItem.remoteFilePath, newContent);
+                            rootItem.disableSaveButton = !LK.command.hasFileChanged(rootItem.hostId, rootItem.remoteFilePath, newContent);
                         }
                     }
 
@@ -374,7 +375,8 @@ Item {
 
                 HostDetailsTextEditorView {
                     id: textEditorInstance
-                    localFilePath: root.localFilePath
+                    hostId: root.hostId
+                    remoteFilePath: root.remoteFilePath
                     text: root.text
                     commandId: root.commandId
                     pendingInvocation: root.pendingInvocation
@@ -383,15 +385,15 @@ Item {
                         root.textEditorItem = textEditorInstance
                     }
 
-                    onSaved: function(commandId, localFilePath, content) {
-                        root.saved(commandId, localFilePath, content)
+                    onSaved: function(commandId, remoteFilePath, content) {
+                        root.saved(commandId, remoteFilePath, content)
                     }
-                    onClosed: function(localFilePath) {
-                        root.closed(localFilePath)
+                    onClosed: function(remoteFilePath) {
+                        root.closed(remoteFilePath)
                     }
-                    onContentChanged: function(localFilePath, newContent) {
-                        root.contentChanged(localFilePath, newContent)
-                        root.disableSaveButton = !LK.command.hasFileChanged(localFilePath, newContent)
+                    onContentChanged: function(remoteFilePath, newContent) {
+                        root.contentChanged(remoteFilePath, newContent)
+                        root.disableSaveButton = !LK.command.hasFileChanged(root.hostId, remoteFilePath, newContent)
                     }
                 }
             }
@@ -469,7 +471,7 @@ Item {
     }
 
     function save() {
-        if (root.commandId === "" || root.localFilePath === "") {
+        if (root.commandId === "" || root.remoteFilePath === "") {
             root._vimCloseAfterSave = false
             return false
         }
@@ -488,7 +490,7 @@ Item {
                 if (root._vimCloseAfterSave) {
                     root._saveOverlayActive = true
                 }
-                root.saved(root.commandId, root.localFilePath, content)
+                root.saved(root.commandId, root.remoteFilePath, content)
             })
             return true
         } else if (root.textEditorItem) {
@@ -507,8 +509,8 @@ Item {
         if (root.pendingInvocation === 0) {
             if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
                 root._aceEditorObject.getContent(function(content) {
-                    root.contentChanged(root.localFilePath, content)
-                    root.disableSaveButton = !LK.command.hasFileChanged(root.localFilePath, content)
+                    root.contentChanged(root.remoteFilePath, content)
+                    root.disableSaveButton = !LK.command.hasFileChanged(root.hostId, root.remoteFilePath, content)
                 })
                 Qt.callLater(function() {
                     if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
@@ -528,6 +530,6 @@ Item {
     }
 
     function close() {
-        root.closed(root.localFilePath)
+        root.closed(root.remoteFilePath)
     }
 }

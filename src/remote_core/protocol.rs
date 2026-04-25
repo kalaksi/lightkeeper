@@ -13,7 +13,7 @@ use crate::configuration::CustomCommandConfig;
 use crate::frontend::frontend::VerificationRequest;
 use crate::frontend::{DisplayData, HostDisplayData};
 
-pub const PROTOCOL_VERSION: u16 = 2;
+pub const PROTOCOL_VERSION: u16 = 4;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -94,6 +94,29 @@ pub enum ClientMessage {
         remote_file_path: String,
         contents: Vec<u8>,
     },
+    WriteCachedFile {
+        request_id: u64,
+        host_id: String,
+        remote_file_path: String,
+        contents: Vec<u8>,
+    },
+    RemoveCachedFile {
+        request_id: u64,
+        host_id: String,
+        remote_file_path: String,
+    },
+    HasCachedFileChanged {
+        request_id: u64,
+        host_id: String,
+        remote_file_path: String,
+        content_hash: String,
+    },
+    UploadFileFromCache {
+        request_id: u64,
+        host_id: String,
+        command_id: String,
+        remote_file_path: String,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -150,6 +173,20 @@ pub enum ServerMessage {
         invocation_id: u64,
     },
     UploadEditedFileResult {
+        request_id: u64,
+        invocation_id: u64,
+    },
+    WriteCachedFileResult {
+        request_id: u64,
+    },
+    RemoveCachedFileResult {
+        request_id: u64,
+    },
+    HasCachedFileChangedResult {
+        request_id: u64,
+        changed: bool,
+    },
+    UploadFileFromCacheResult {
         request_id: u64,
         invocation_id: u64,
     },

@@ -103,10 +103,11 @@ Item {
         }
 
         // For integrated text editor (not external).
-        function onTextEditorViewOpened(headerText, commandId, invocationId, localFilePath) {
+        function onTextEditorViewOpened(headerText, commandId, invocationId, remoteFilePath) {
             let editorComponent = textEditorView.createObject(root._tabStacks[root.hostId], {
+                hostId: root.hostId,
                 commandId: commandId,
-                localFilePath: localFilePath,
+                remoteFilePath: remoteFilePath,
                 pendingInvocation: invocationId,
             })
             editorComponent.closeTabRequested.connect(function() {
@@ -273,11 +274,11 @@ Item {
         id: textEditorView
 
         HostDetailsCodeEditorView {
-            onSaved: function(commandId, localFilePath, content) {
-                pendingInvocation = LK.command.saveAndUploadFile(root.hostId, commandId, localFilePath, content)
+            onSaved: function(commandId, remoteFilePath, content) {
+                pendingInvocation = LK.command.saveAndUploadFile(root.hostId, commandId, remoteFilePath, content)
             }
-            onClosed: function(localFilePath) {
-                LK.command.removeFile(localFilePath)
+            onClosed: function(remoteFilePath) {
+                LK.command.removeCachedFile(root.hostId, remoteFilePath)
             }
         }
     }
