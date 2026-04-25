@@ -425,7 +425,10 @@ impl CommandTestHarness {
     }
 
     fn execute_command(&mut self, command_id: &str, parameters: Vec<String>) {
-        let _invocation_id = self.command_manager.execute(&TEST_HOST_ID, &command_id, &parameters);
+        let _invocation_id = self
+            .command_manager
+            .execute(&TEST_HOST_ID, &command_id, &parameters)
+            .expect("execute");
 
         self.wait_for_completion();
     }

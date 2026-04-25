@@ -67,24 +67,25 @@ impl CommandBackend for LocalCommandBackend {
         }
     }
 
-    fn commands_for_host(&self, host_id: &str) -> HashMap<String, CommandButtonData> {
-        self.command_handler.get_commands_for_host(host_id.to_string())
+    fn commands_for_host(&self, host_id: &str) -> Result<HashMap<String, CommandButtonData>, LkError> {
+        Ok(self.command_handler.get_commands_for_host(host_id.to_string()))
     }
 
-    fn command_for_host(&self, host_id: &str, command_id: &str) -> Option<CommandButtonData> {
-        self.command_handler
-            .get_command_for_host(&host_id.to_string(), &command_id.to_string())
+    fn command_for_host(&self, host_id: &str, command_id: &str) -> Result<Option<CommandButtonData>, LkError> {
+        Ok(self
+            .command_handler
+            .get_command_for_host(&host_id.to_string(), &command_id.to_string()))
     }
 
-    fn custom_commands_for_host(&self, host_id: &str) -> HashMap<String, configuration::CustomCommandConfig> {
-        self.command_handler.get_custom_commands_for_host(&host_id.to_string())
+    fn custom_commands_for_host(&self, host_id: &str) -> Result<HashMap<String, configuration::CustomCommandConfig>, LkError> {
+        Ok(self.command_handler.get_custom_commands_for_host(&host_id.to_string()))
     }
 
-    fn all_host_categories(&self, host_id: &str) -> Vec<String> {
-        self.monitor_manager.get_all_host_categories(host_id)
+    fn all_host_categories(&self, host_id: &str) -> Result<Vec<String>, LkError> {
+        Ok(self.monitor_manager.get_all_host_categories(host_id))
     }
 
-    fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> u64 {
+    fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<u64, LkError> {
         self.command_handler.execute(host_id, command_id, parameters)
     }
 
@@ -101,66 +102,72 @@ impl CommandBackend for LocalCommandBackend {
         self.monitor_manager.refresh_platform_info(host_id);
     }
 
-    fn initialize_hosts(&mut self) -> Vec<String> {
-        self.monitor_manager.refresh_platform_info_all()
+    fn initialize_hosts(&mut self) -> Result<Vec<String>, LkError> {
+        Ok(self.monitor_manager.refresh_platform_info_all())
     }
 
-    fn refresh_monitors_for_command(&mut self, host_id: &str, command_id: &str) -> Vec<u64> {
-        let command = match self.command_for_host(host_id, command_id) {
+    fn refresh_monitors_for_command(&mut self, host_id: &str, command_id: &str) -> Result<Vec<u64>, LkError> {
+        let command = match self.command_for_host(host_id, command_id)? {
             Some(command) => command,
-            None => return Vec::new(),
+            None => return Ok(Vec::new()),
         };
 
         if command.display_options.parent_id.is_empty() {
-            self.monitor_manager
-                .refresh_monitors_of_category(host_id, &command.display_options.category)
+            Ok(self
+                .monitor_manager
+                .refresh_monitors_of_category(host_id, &command.display_options.category))
         }
         else {
-            self.monitor_manager
-                .refresh_monitors_by_id(&host_id.to_string(), &command.display_options.parent_id)
+            Ok(self
+                .monitor_manager
+                .refresh_monitors_by_id(&host_id.to_string(), &command.display_options.parent_id))
         }
     }
 
-    fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Vec<u64> {
-        self.monitor_manager.refresh_monitors_of_category(host_id, category)
+    fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Result<Vec<u64>, LkError> {
+        Ok(self.monitor_manager.refresh_monitors_of_category(host_id, category))
     }
 
-    fn refresh_certificate_monitors(&mut self) -> Vec<u64> {
-        self.monitor_manager.refresh_certificate_monitors()
+    fn refresh_certificate_monitors(&mut self) -> Result<Vec<u64>, LkError> {
+        Ok(self.monitor_manager.refresh_certificate_monitors())
     }
 
-    fn resolve_text_editor_path(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Option<String> {
+    fn resolve_text_editor_path(
+        &mut self,
+        host_id: &str,
+        command_id: &str,
+        parameters: &[String],
+    ) -> Result<Option<String>, LkError> {
         if let Some(path) = parameters.first().cloned() {
-            Some(path)
+            Ok(Some(path))
         }
         else {
-            self.connector_message(host_id, command_id)
+            Ok(self.connector_message(host_id, command_id))
         }
     }
 
-    fn download_editable_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> (u64, String) {
-        self.command_handler
-            .download_editable_file(&host_id.to_string(), &command_id.to_string(), &remote_file_path.to_string())
+    fn download_editable_file(
+        &mut self,
+        host_id: &str,
+        command_id: &str,
+        remote_file_path: &str,
+    ) -> Result<(u64, String), LkError> {
+        self.command_handler.download_editable_file(
+            &host_id.to_string(),
+            &command_id.to_string(),
+            &remote_file_path.to_string(),
+        )
     }
 
-    fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> u64 {
+    fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> Result<u64, LkError> {
         self.command_handler
             .upload_file(&host_id.to_string(), &command_id.to_string(), &local_file_path.to_string())
     }
 
-    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> u64 {
+    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError> {
         let path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
         self.command_handler
             .upload_file(&host_id.to_string(), &command_id.to_string(), &path)
-    }
-
-    fn upload_file_from_editor(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, contents: Vec<u8>) -> u64 {
-        self.command_handler.upload_file_from_editor_contents(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            &remote_file_path.to_string(),
-            contents,
-        )
     }
 
     fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError> {

@@ -58,7 +58,7 @@ impl CoreRuntime {
         receiver
     }
 
-    pub fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> u64 {
+    pub fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<u64, LkError> {
         self.core.command_handler.execute(host_id, command_id, parameters)
     }
 
@@ -143,28 +143,13 @@ impl CoreRuntime {
         host_id: &str,
         command_id: &str,
         remote_file_path: &str,
-    ) -> u64 {
+    ) -> Result<u64, LkError> {
         let (invocation_id, _) = self.core.command_handler.download_editable_file(
             &host_id.to_string(),
             &command_id.to_string(),
             &remote_file_path.to_string(),
-        );
-        invocation_id
-    }
-
-    pub fn upload_edited_file(
-        &mut self,
-        host_id: &str,
-        command_id: &str,
-        remote_file_path: &str,
-        contents: Vec<u8>,
-    ) -> u64 {
-        self.core.command_handler.upload_file_from_editor_contents(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            &remote_file_path.to_string(),
-            contents,
-        )
+        )?;
+        Ok(invocation_id)
     }
 
     pub fn stop(&mut self) {

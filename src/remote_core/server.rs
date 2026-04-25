@@ -99,11 +99,20 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 command_id,
                 parameters,
             } => {
-                let invocation_id = runtime.execute_command(&host_id, &command_id, &parameters);
-                session.send_message(&ServerMessage::ExecuteCommand {
-                    request_id,
-                    invocation_id,
-                })?;
+                match runtime.execute_command(&host_id, &command_id, &parameters) {
+                    Ok(invocation_id) => {
+                        session.send_message(&ServerMessage::ExecuteCommand {
+                            request_id,
+                            invocation_id,
+                        })?;
+                    }
+                    Err(error) => {
+                        session.send_message(&ServerMessage::Error {
+                            request_id: Some(request_id),
+                            message: error.to_string(),
+                        })?;
+                    }
+                }
             }
             ClientMessage::CommandsForHost { request_id, host_id } => {
                 session.send_message(&ServerMessage::CommandsForHost {
@@ -204,24 +213,20 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 command_id,
                 remote_file_path,
             } => {
-                let invocation_id = runtime.download_editable_file(&host_id, &command_id, &remote_file_path);
-                session.send_message(&ServerMessage::DownloadEditableFileResult {
-                    request_id,
-                    invocation_id,
-                })?;
-            }
-            ClientMessage::UploadEditedFile {
-                request_id,
-                host_id,
-                command_id,
-                remote_file_path,
-                contents,
-            } => {
-                let invocation_id = runtime.upload_edited_file(&host_id, &command_id, &remote_file_path, contents);
-                session.send_message(&ServerMessage::UploadEditedFileResult {
-                    request_id,
-                    invocation_id,
-                })?;
+                match runtime.download_editable_file(&host_id, &command_id, &remote_file_path) {
+                    Ok(invocation_id) => {
+                        session.send_message(&ServerMessage::DownloadEditableFileResult {
+                            request_id,
+                            invocation_id,
+                        })?;
+                    }
+                    Err(error) => {
+                        session.send_message(&ServerMessage::Error {
+                            request_id: Some(request_id),
+                            message: error.to_string(),
+                        })?;
+                    }
+                }
             }
             ClientMessage::WriteCachedFile {
                 request_id,
@@ -271,12 +276,24 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 remote_file_path,
             } => {
                 let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
-                let invocation_id = runtime.core.command_handler.upload_file(&host_id, &command_id, &path);
-
-                session.send_message(&ServerMessage::UploadFileFromCacheResult {
-                    request_id,
-                    invocation_id,
-                })?;
+                match runtime
+                    .core
+                    .command_handler
+                    .upload_file(&host_id, &command_id, &path)
+                {
+                    Ok(invocation_id) => {
+                        session.send_message(&ServerMessage::UploadFileFromCacheResult {
+                            request_id,
+                            invocation_id,
+                        })?;
+                    }
+                    Err(error) => {
+                        session.send_message(&ServerMessage::Error {
+                            request_id: Some(request_id),
+                            message: error.to_string(),
+                        })?;
+                    }
+                }
             }
         }
     }

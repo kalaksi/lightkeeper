@@ -40,7 +40,6 @@ enum PendingRpcKind {
     InitializeHosts,
     ResolveTextEditorPath,
     DownloadEditable,
-    UploadEdited,
     WriteCachedFile,
     RemoveCachedFile,
     HasCachedFileChanged,
@@ -58,10 +57,10 @@ enum PendingRpcReply {
     InitializeHosts(Vec<String>),
     ResolveTextEditorPath(Option<String>),
     DownloadEditable(u64),
-    UploadEdited(u64),
     FileOpDone,
     FileChanged(bool),
     UploadFromCache(u64),
+    Error(String),
 }
 
 struct PendingRpc {
@@ -80,7 +79,6 @@ fn default_reply(kind: PendingRpcKind) -> PendingRpcReply {
         PendingRpcKind::InitializeHosts => PendingRpcReply::InitializeHosts(Vec::new()),
         PendingRpcKind::ResolveTextEditorPath => PendingRpcReply::ResolveTextEditorPath(None),
         PendingRpcKind::DownloadEditable => PendingRpcReply::DownloadEditable(0),
-        PendingRpcKind::UploadEdited => PendingRpcReply::UploadEdited(0),
         PendingRpcKind::WriteCachedFile => PendingRpcReply::FileOpDone,
         PendingRpcKind::RemoveCachedFile => PendingRpcReply::FileOpDone,
         PendingRpcKind::HasCachedFileChanged => PendingRpcReply::FileChanged(false),
@@ -104,7 +102,6 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::InitializeHosts, PendingRpcReply::InitializeHosts(_)) |
             (PendingRpcKind::ResolveTextEditorPath, PendingRpcReply::ResolveTextEditorPath(_)) |
             (PendingRpcKind::DownloadEditable, PendingRpcReply::DownloadEditable(_)) |
-            (PendingRpcKind::UploadEdited, PendingRpcReply::UploadEdited(_)) |
             (PendingRpcKind::WriteCachedFile, PendingRpcReply::FileOpDone) |
             (PendingRpcKind::RemoveCachedFile, PendingRpcReply::FileOpDone) |
             (PendingRpcKind::HasCachedFileChanged, PendingRpcReply::FileChanged(_)) |
@@ -325,11 +322,6 @@ impl RemoteCommandBackend {
                         PendingRpcReply::DownloadEditable(invocation_id)
                     });
                 }
-                ServerMessage::UploadEditedFileResult { request_id, invocation_id } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::UploadEdited, || {
-                        PendingRpcReply::UploadEdited(invocation_id)
-                    });
-                }
                 ServerMessage::WriteCachedFileResult { request_id } | ServerMessage::RemoveCachedFileResult { request_id } => {
                     let pending = match pending_rpc.lock() {
                         Ok(mut map) => map.remove(&request_id),
@@ -367,7 +359,9 @@ impl RemoteCommandBackend {
                         match pending_rpc.lock() {
                             Ok(mut map) => {
                                 if let Some(pending) = map.remove(&request_id) {
-                                    completer_send_default(pending);
+                                    if pending.sender.send(PendingRpcReply::Error(message)).is_err() {
+                                        ::log::error!("Receiver dropped");
+                                    }
                                 }
                             }
                             Err(err) => {
@@ -414,6 +408,7 @@ impl RemoteCommandBackend {
         }
 
         match receiver.recv_timeout(REMOTE_COMMAND_TIMEOUT) {
+            Ok(PendingRpcReply::Error(message)) => Err(LkError::other(message)),
             Ok(reply) => {
                 if reply_matches(&kind, &reply) {
                     Ok(align_reply(kind, reply))
@@ -427,16 +422,6 @@ impl RemoteCommandBackend {
                     let _ = map.remove(&request_id);
                 }
                 Err(LkError::new(ErrorKind::ConnectionFailed, recv_error.to_string()))
-            },
-        }
-    }
-
-    fn send_message(&self, kind: PendingRpcKind, build_message: impl FnOnce(u64) -> ClientMessage) -> PendingRpcReply {
-        match self.send_message_result(kind, build_message) {
-            Ok(reply) => reply,
-            Err(err) => {
-                ::log::error!("Request failed: {}", err);
-                default_reply(kind)
             },
         }
     }
@@ -503,58 +488,61 @@ impl CommandBackend for RemoteCommandBackend {
         }
     }
 
-    fn commands_for_host(&self, host_id: &str) -> HashMap<String, CommandButtonData> {
-        match self.send_message(PendingRpcKind::CommandsForHost, |request_id| ClientMessage::CommandsForHost {
+    fn commands_for_host(&self, host_id: &str) -> Result<HashMap<String, CommandButtonData>, LkError> {
+        match self.send_message_result(PendingRpcKind::CommandsForHost, |request_id| ClientMessage::CommandsForHost {
             request_id,
             host_id: host_id.to_string(),
-        }) {
-            PendingRpcReply::CommandsForHost(commands) => commands,
-            _ => HashMap::new(),
+        })? {
+            PendingRpcReply::CommandsForHost(commands) => Ok(commands),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn command_for_host(&self, host_id: &str, command_id: &str) -> Option<CommandButtonData> {
-        match self.send_message(PendingRpcKind::CommandForHost, |request_id| ClientMessage::CommandForHost {
+    fn command_for_host(&self, host_id: &str, command_id: &str) -> Result<Option<CommandButtonData>, LkError> {
+        match self.send_message_result(PendingRpcKind::CommandForHost, |request_id| ClientMessage::CommandForHost {
             request_id,
             host_id: host_id.to_string(),
             command_id: command_id.to_string(),
-        }) {
-            PendingRpcReply::CommandForHost(command) => command,
-            _ => None,
+        })? {
+            PendingRpcReply::CommandForHost(command) => Ok(command),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn custom_commands_for_host(&self, host_id: &str) -> HashMap<String, configuration::CustomCommandConfig> {
-        match self.send_message(PendingRpcKind::CustomCommandsForHost, |request_id| {
+    fn custom_commands_for_host(
+        &self,
+        host_id: &str,
+    ) -> Result<HashMap<String, configuration::CustomCommandConfig>, LkError> {
+        match self.send_message_result(PendingRpcKind::CustomCommandsForHost, |request_id| {
             ClientMessage::CustomCommandsForHost {
                 request_id,
                 host_id: host_id.to_string(),
             }
-        }) {
-            PendingRpcReply::CustomCommandsForHost(commands) => commands,
-            _ => HashMap::new(),
+        })? {
+            PendingRpcReply::CustomCommandsForHost(commands) => Ok(commands),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn all_host_categories(&self, host_id: &str) -> Vec<String> {
-        match self.send_message(PendingRpcKind::AllHostCategories, |request_id| ClientMessage::AllHostCategories {
+    fn all_host_categories(&self, host_id: &str) -> Result<Vec<String>, LkError> {
+        match self.send_message_result(PendingRpcKind::AllHostCategories, |request_id| ClientMessage::AllHostCategories {
             request_id,
             host_id: host_id.to_string(),
-        }) {
-            PendingRpcReply::AllHostCategories(categories) => categories,
-            _ => Vec::new(),
+        })? {
+            PendingRpcReply::AllHostCategories(categories) => Ok(categories),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> u64 {
-        match self.send_message(PendingRpcKind::ExecuteCommand, |request_id| ClientMessage::ExecuteCommand {
+    fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<u64, LkError> {
+        match self.send_message_result(PendingRpcKind::ExecuteCommand, |request_id| ClientMessage::ExecuteCommand {
             request_id,
             host_id: host_id.to_string(),
             command_id: command_id.to_string(),
             parameters: parameters.to_vec(),
-        }) {
-            PendingRpcReply::ExecuteCommand(id) => id,
-            _ => 0,
+        })? {
+            PendingRpcReply::ExecuteCommand(id) => Ok(id),
+            _ => Err(LkError::unexpected()),
         }
     }
 
@@ -586,104 +574,101 @@ impl CommandBackend for RemoteCommandBackend {
         }
     }
 
-    fn initialize_hosts(&mut self) -> Vec<String> {
-        match self.send_message(PendingRpcKind::InitializeHosts, |request_id| {
+    fn initialize_hosts(&mut self) -> Result<Vec<String>, LkError> {
+        match self.send_message_result(PendingRpcKind::InitializeHosts, |request_id| {
             ClientMessage::RefreshPlatformInfoAll { request_id }
-        }) {
-            PendingRpcReply::InitializeHosts(host_ids) => host_ids,
-            _ => Vec::new(),
+        })? {
+            PendingRpcReply::InitializeHosts(host_ids) => Ok(host_ids),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn refresh_monitors_for_command(&mut self, host_id: &str, command_id: &str) -> Vec<u64> {
-        match self.send_message(PendingRpcKind::RefreshInvocationIds, |request_id| {
+    fn refresh_monitors_for_command(&mut self, host_id: &str, command_id: &str) -> Result<Vec<u64>, LkError> {
+        match self.send_message_result(PendingRpcKind::RefreshInvocationIds, |request_id| {
             ClientMessage::RefreshMonitorsForCommand {
                 request_id,
                 host_id: host_id.to_string(),
                 command_id: command_id.to_string(),
             }
-        }) {
-            PendingRpcReply::RefreshInvocationIds(invocation_ids) => invocation_ids,
-            _ => Vec::new(),
+        })? {
+            PendingRpcReply::RefreshInvocationIds(invocation_ids) => Ok(invocation_ids),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Vec<u64> {
-        match self.send_message(PendingRpcKind::RefreshInvocationIds, |request_id| {
+    fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Result<Vec<u64>, LkError> {
+        match self.send_message_result(PendingRpcKind::RefreshInvocationIds, |request_id| {
             ClientMessage::RefreshMonitorsOfCategory {
                 request_id,
                 host_id: host_id.to_string(),
                 category: category.to_string(),
             }
-        }) {
-            PendingRpcReply::RefreshInvocationIds(invocation_ids) => invocation_ids,
-            _ => Vec::new(),
+        })? {
+            PendingRpcReply::RefreshInvocationIds(invocation_ids) => Ok(invocation_ids),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn refresh_certificate_monitors(&mut self) -> Vec<u64> {
-        match self.send_message(PendingRpcKind::RefreshInvocationIds, |request_id| {
+    fn refresh_certificate_monitors(&mut self) -> Result<Vec<u64>, LkError> {
+        match self.send_message_result(PendingRpcKind::RefreshInvocationIds, |request_id| {
             ClientMessage::RefreshCertificateMonitors { request_id }
-        }) {
-            PendingRpcReply::RefreshInvocationIds(invocation_ids) => invocation_ids,
-            _ => Vec::new(),
+        })? {
+            PendingRpcReply::RefreshInvocationIds(invocation_ids) => Ok(invocation_ids),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn resolve_text_editor_path(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Option<String> {
-        match self.send_message(PendingRpcKind::ResolveTextEditorPath, |request_id| {
+    fn resolve_text_editor_path(
+        &mut self,
+        host_id: &str,
+        command_id: &str,
+        parameters: &[String],
+    ) -> Result<Option<String>, LkError> {
+        match self.send_message_result(PendingRpcKind::ResolveTextEditorPath, |request_id| {
             ClientMessage::ResolveTextEditorPath {
                 request_id,
                 host_id: host_id.to_string(),
                 command_id: command_id.to_string(),
                 parameters: parameters.to_vec(),
             }
-        }) {
-            PendingRpcReply::ResolveTextEditorPath(path) => path,
-            _ => None,
+        })? {
+            PendingRpcReply::ResolveTextEditorPath(path) => Ok(path),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn download_editable_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> (u64, String) {
+    fn download_editable_file(
+        &mut self,
+        host_id: &str,
+        command_id: &str,
+        remote_file_path: &str,
+    ) -> Result<(u64, String), LkError> {
         let remote_path = remote_file_path.to_string();
-        match self.send_message(PendingRpcKind::DownloadEditable, |request_id| ClientMessage::DownloadEditableFile {
+        match self.send_message_result(PendingRpcKind::DownloadEditable, |request_id| ClientMessage::DownloadEditableFile {
             request_id,
             host_id: host_id.to_string(),
             command_id: command_id.to_string(),
             remote_file_path: remote_path.clone(),
-        }) {
-            PendingRpcReply::DownloadEditable(invocation_id) => (invocation_id, remote_path),
-            _ => (0, String::new()),
+        })? {
+            PendingRpcReply::DownloadEditable(invocation_id) => Ok((invocation_id, remote_path)),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn upload_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> u64 {
-        match self.send_message(PendingRpcKind::UploadFromCache, |request_id| ClientMessage::UploadFileFromCache {
+    fn upload_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError> {
+        match self.send_message_result(PendingRpcKind::UploadFromCache, |request_id| ClientMessage::UploadFileFromCache {
             request_id,
             host_id: host_id.to_string(),
             command_id: command_id.to_string(),
             remote_file_path: remote_file_path.to_string(),
-        }) {
-            PendingRpcReply::UploadFromCache(id) => id,
-            _ => 0,
+        })? {
+            PendingRpcReply::UploadFromCache(id) => Ok(id),
+            _ => Err(LkError::unexpected()),
         }
     }
 
-    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> u64 {
+    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError> {
         self.upload_file(host_id, command_id, remote_file_path)
-    }
-
-    fn upload_file_from_editor(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, contents: Vec<u8>) -> u64 {
-        match self.send_message(PendingRpcKind::UploadEdited, move |request_id| ClientMessage::UploadEditedFile {
-            request_id,
-            host_id: host_id.to_string(),
-            command_id: command_id.to_string(),
-            remote_file_path: remote_file_path.to_string(),
-            contents,
-        }) {
-            PendingRpcReply::UploadEdited(invocation_id) => invocation_id,
-            _ => 0,
-        }
     }
 
     fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError> {

@@ -190,12 +190,11 @@ impl CommandHandler {
         command_collection.entry(module_spec.id).or_insert(command);
     }
 
-    /// Returns invocation ID or 0 on error.
-    pub fn execute(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> u64 {
-        let Ok(commands) = self.commands.lock() else {
+    pub fn execute(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<u64, LkError> {
+        let commands = self.commands.lock().map_err(|error| {
             self.send_state_update(StateUpdateMessage::fatal_error());
-            return 0;
-        };
+            LkError::from(error)
+        })?;
 
         let host = self.host_manager.borrow().get_host(host_id);
 
@@ -214,11 +213,11 @@ impl CommandHandler {
                     host_name: host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
-                    command_result: Some(CommandResult::new_error(error)),
+                    command_result: Some(CommandResult::new_error(error.clone())),
                     ..Default::default()
                 });
 
-                return 0;
+                return Err(error);
             }
         };
 
@@ -229,7 +228,7 @@ impl CommandHandler {
             }) {
 
             log::warn!("[{}][{}] Skipping, sudo required", host_id, command_id);
-            return 0;
+            return Err(LkError::other("Sudo is required for this command but is disabled for this host"));
         }
 
         let invocation_id = self.next_invocation_id();
@@ -259,7 +258,7 @@ impl CommandHandler {
             response_sender: self.new_response_sender(),
         });
 
-        invocation_id
+        Ok(invocation_id)
     }
 
     //
@@ -272,17 +271,34 @@ impl CommandHandler {
         get_command_connector_messages(&host, &commands[host_id][command_id], &[]).ok()?.into_iter().next()
     }
 
-    pub fn download_editable_file(&mut self, host_id: &String, command_id: &String, remote_file_path: &String) -> (u64, String) {
-        let Ok(commands) = self.commands.lock() else {
+    pub fn download_editable_file(
+        &mut self,
+        host_id: &String,
+        command_id: &String,
+        remote_file_path: &String,
+    ) -> Result<(u64, String), LkError> {
+        let commands = self.commands.lock().map_err(|error| {
             self.send_state_update(StateUpdateMessage::fatal_error());
-            // TODO: check this is appropriate
-            return (0, String::new());
-        };
+            LkError::from(error)
+        })?;
 
         let command = &commands[host_id][command_id];
         let host = self.host_manager.borrow().get_host(host_id);
 
-        let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).unwrap();
+        let connector_messages = match get_command_connector_messages(&host, command, &[remote_file_path.clone()]) {
+            Ok(messages) => messages,
+            Err(error) => {
+                log::error!("Command failed: {}", error);
+                self.send_state_update(StateUpdateMessage {
+                    host_name: host.name,
+                    display_options: command.get_display_options(),
+                    module_spec: command.get_module_spec(),
+                    command_result: Some(CommandResult::new_error(error.clone())),
+                    ..Default::default()
+                });
+                return Err(error);
+            }
+        };
 
         let (_, local_file_path) = file_handler::convert_to_local_paths(&host, remote_file_path);
         let invocation_id = self.next_invocation_id();
@@ -298,14 +314,14 @@ impl CommandHandler {
             },
         });
 
-        (invocation_id, local_file_path)
+        Ok((invocation_id, local_file_path))
     }
 
-    pub fn upload_file(&mut self, host_id: &String, command_id: &String, local_file_path: &String) -> u64 {
-        let Ok(commands) = self.commands.lock() else {
+    pub fn upload_file(&mut self, host_id: &String, command_id: &String, local_file_path: &String) -> Result<u64, LkError> {
+        let commands = self.commands.lock().map_err(|error| {
             self.send_state_update(StateUpdateMessage::fatal_error());
-            return 0;
-        };
+            LkError::from(error)
+        })?;
 
         let command = &commands[host_id][command_id];
         let host = self.host_manager.borrow().get_host(host_id);
@@ -341,6 +357,7 @@ impl CommandHandler {
                         },
                     });
                 }
+                Ok(invocation_id)
             },
             Err(error) => {
                 log::error!("Error while reading file: {}", error);
@@ -348,46 +365,13 @@ impl CommandHandler {
                     host_name: host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
-                    command_result: Some(CommandResult::new_critical_error(error)),
+                    command_result: Some(CommandResult::new_critical_error(&error)),
                     invocation_id,
                     ..Default::default()
                 });
+                Err(error.into())
             }
         }
-
-        invocation_id
-    }
-
-    pub fn upload_file_from_editor_contents(
-        &mut self,
-        host_id: &String,
-        command_id: &String,
-        remote_file_path: &String,
-        contents: Vec<u8>,
-    ) -> u64 {
-        let host = self.host_manager.borrow().get_host(host_id);
-        let (_, local_file_path) = file_handler::convert_to_local_paths(&host, remote_file_path);
-
-        if let Err(error) = file_handler::write_file(&local_file_path, contents) {
-            log::error!("Error while writing editor file: {}", error);
-            let invocation_id = self.next_invocation_id();
-            let Ok(commands) = self.commands.lock() else {
-                self.send_state_update(StateUpdateMessage::fatal_error());
-                return 0;
-            };
-            let command = &commands[host_id][command_id];
-            self.send_state_update(StateUpdateMessage {
-                host_name: host.name,
-                display_options: command.get_display_options(),
-                module_spec: command.get_module_spec(),
-                command_result: Some(CommandResult::new_critical_error(error)),
-                invocation_id,
-                ..Default::default()
-            });
-            return invocation_id;
-        }
-
-        self.upload_file(host_id, command_id, &local_file_path)
     }
 
     pub fn verify_host_key(&self, host_id: &String, connector_id: &String, key_id: &String) {

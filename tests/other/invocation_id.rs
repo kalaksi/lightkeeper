@@ -65,9 +65,21 @@ fn invocation_ids_are_globally_unique() {
 
     let command_handler = harness.command_handler.as_mut().unwrap();
     let command_id = systemd::service::Start::get_metadata().module_spec.id.clone();
-    ids.push(command_handler.execute(TEST_HOST_ID, &command_id, &["test-service.service".to_string()]));
-    ids.push(command_handler.execute(TEST_HOST_ID, &command_id, &["other.service".to_string()]));
-    ids.push(command_handler.execute(TEST_HOST_ID, &command_id, &["third.service".to_string()]));
+    ids.push(
+        command_handler
+            .execute(TEST_HOST_ID, &command_id, &["test-service.service".to_string()])
+            .expect("execute"),
+    );
+    ids.push(
+        command_handler
+            .execute(TEST_HOST_ID, &command_id, &["other.service".to_string()])
+            .expect("execute"),
+    );
+    ids.push(
+        command_handler
+            .execute(TEST_HOST_ID, &command_id, &["third.service".to_string()])
+            .expect("execute"),
+    );
 
     for category in harness.monitor_manager.get_all_host_categories(TEST_HOST_ID) {
         ids.extend(

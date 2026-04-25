@@ -182,16 +182,22 @@ fn remote_core_commands_for_host() {
     let custom_id = CustomCommand::get_metadata().module_spec.id.clone();
 
     with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let commands = backend.commands_for_host(TEST_HOST);
+        let commands = backend.commands_for_host(TEST_HOST).expect("commands_for_host");
         assert!(commands.contains_key(&systemd_start_id));
         assert!(commands.contains_key(&custom_id));
 
-        let command = backend.command_for_host(TEST_HOST, &systemd_start_id).unwrap();
+        let command = backend
+            .command_for_host(TEST_HOST, &systemd_start_id)
+            .expect("command_for_host")
+            .expect("start command");
         assert_eq!(command.command_id, systemd_start_id);
 
-        assert!(backend.command_for_host(TEST_HOST, "no-such-command").is_none());
+        assert!(backend
+            .command_for_host(TEST_HOST, "no-such-command")
+            .expect("command_for_host")
+            .is_none());
 
-        let custom = backend.custom_commands_for_host(TEST_HOST);
+        let custom = backend.custom_commands_for_host(TEST_HOST).expect("custom_commands_for_host");
         let entry = custom.get("custom-1").expect("custom-1");
         assert_eq!(entry.command, "echo test-service");
 
@@ -207,11 +213,13 @@ fn remote_core_execute_command() {
     let custom_id = CustomCommand::get_metadata().module_spec.id.clone();
 
     with_remote_core_session(&hosts, move |mut backend, ui_rx| {
-        let invocation_id = backend.execute_command(
-            TEST_HOST,
-            &custom_id,
-            &["echo test-service".to_string()],
-        );
+        let invocation_id = backend
+            .execute_command(
+                TEST_HOST,
+                &custom_id,
+                &["echo test-service".to_string()],
+            )
+            .expect("execute_command");
         assert!(invocation_id > 0, "expected invocation id");
 
         let display = recv_host_until(&ui_rx, TEST_HOST, |d| {
@@ -237,7 +245,7 @@ fn remote_core_all_host_categories() {
     let hosts = stub_hosts();
 
     with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let mut categories = backend.all_host_categories(TEST_HOST);
+        let mut categories = backend.all_host_categories(TEST_HOST).expect("all_host_categories");
         categories.sort();
         assert_eq!(categories, vec!["host".to_string(), "systemd".to_string()]);
 
@@ -252,7 +260,7 @@ fn remote_core_initialize_hosts() {
     let hosts = stub_hosts();
 
     with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let mut host_ids = backend.initialize_hosts();
+        let mut host_ids = backend.initialize_hosts().expect("initialize_hosts");
         host_ids.sort();
         assert!(host_ids.contains(&TEST_HOST.to_string()));
 
@@ -268,13 +276,19 @@ fn remote_core_refresh_invocation_ids() {
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
 
     with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let for_command = backend.refresh_monitors_for_command(TEST_HOST, &systemd_start_id);
+        let for_command = backend
+            .refresh_monitors_for_command(TEST_HOST, &systemd_start_id)
+            .expect("refresh_monitors_for_command");
         assert!(!for_command.is_empty());
 
-        let for_category = backend.refresh_monitors_of_category(TEST_HOST, "host");
+        let for_category = backend
+            .refresh_monitors_of_category(TEST_HOST, "host")
+            .expect("refresh_monitors_of_category");
         assert!(!for_category.is_empty());
 
-        let _for_certs = backend.refresh_certificate_monitors();
+        let _for_certs = backend
+            .refresh_certificate_monitors()
+            .expect("refresh_certificate_monitors");
 
         backend.stop();
     });
@@ -288,11 +302,13 @@ fn remote_core_resolve_text_editor_path() {
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
 
     with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let path = backend.resolve_text_editor_path(
-            TEST_HOST,
-            &systemd_start_id,
-            &["/tmp/editor-target".to_string()],
-        );
+        let path = backend
+            .resolve_text_editor_path(
+                TEST_HOST,
+                &systemd_start_id,
+                &["/tmp/editor-target".to_string()],
+            )
+            .expect("resolve_text_editor_path");
         assert_eq!(path.as_deref(), Some("/tmp/editor-target"));
 
         backend.stop();
@@ -307,8 +323,9 @@ fn remote_core_download_editable_file() {
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
 
     with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let (invocation_id, path) =
-            backend.download_editable_file(TEST_HOST, &systemd_start_id, "test-service");
+        let (invocation_id, path) = backend
+            .download_editable_file(TEST_HOST, &systemd_start_id, "test-service")
+            .expect("download_editable_file");
         assert!(invocation_id > 0);
         assert!(!path.is_empty());
 
@@ -317,19 +334,31 @@ fn remote_core_download_editable_file() {
 }
 
 #[test]
-fn remote_core_upload_file_from_editor() {
+fn remote_core_write_cache_and_upload() {
     init_log();
 
     let hosts = stub_hosts();
     let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
 
-    with_remote_core_session(&hosts, move |mut backend, _ui_rx| {
-        let invocation_id = backend.upload_file_from_editor(
-            TEST_HOST,
-            &systemd_start_id,
-            "test-service",
-            b"new-bytes".to_vec(),
-        );
+    with_remote_core_session(&hosts, move |mut backend, ui_rx| {
+        backend
+            .download_editable_file(TEST_HOST, &systemd_start_id, "test-service")
+            .expect("download_editable_file");
+
+        recv_host_until(&ui_rx, TEST_HOST, |d| {
+            d.host_state
+                .command_results
+                .get(&systemd_start_id)
+                .is_some_and(|result| result.progress == 100)
+        });
+
+        backend
+            .write_cached_file(TEST_HOST, "test-service", b"new-bytes".to_vec())
+            .expect("write_cached_file");
+
+        let invocation_id = backend
+            .upload_file_from_cache(TEST_HOST, &systemd_start_id, "test-service")
+            .expect("upload_file_from_cache");
         assert!(invocation_id > 0);
 
         backend.stop();

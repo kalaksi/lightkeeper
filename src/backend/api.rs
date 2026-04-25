@@ -29,23 +29,32 @@ pub trait CommandBackend {
     fn start_processing_responses(&mut self);
     fn stop(&mut self);
     fn refresh_host_monitors(&mut self, host_id: &str);
-    fn commands_for_host(&self, host_id: &str) -> HashMap<String, CommandButtonData>;
-    fn command_for_host(&self, host_id: &str, command_id: &str) -> Option<CommandButtonData>;
-    fn custom_commands_for_host(&self, host_id: &str) -> HashMap<String, configuration::CustomCommandConfig>;
-    fn all_host_categories(&self, host_id: &str) -> Vec<String>;
-    fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> u64;
+    fn commands_for_host(&self, host_id: &str) -> Result<HashMap<String, CommandButtonData>, LkError>;
+    fn command_for_host(&self, host_id: &str, command_id: &str) -> Result<Option<CommandButtonData>, LkError>;
+    fn custom_commands_for_host(&self, host_id: &str) -> Result<HashMap<String, configuration::CustomCommandConfig>, LkError>;
+    fn all_host_categories(&self, host_id: &str) -> Result<Vec<String>, LkError>;
+    fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<u64, LkError>;
     fn interrupt_invocation(&self, invocation_id: u64);
     fn verify_host_key(&self, host_id: &str, connector_id: &str, key_id: &str);
     fn initialize_host(&mut self, host_id: &str);
-    fn initialize_hosts(&mut self) -> Vec<String>;
-    fn refresh_monitors_for_command(&mut self, host_id: &str, command_id: &str) -> Vec<u64>;
-    fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Vec<u64>;
-    fn refresh_certificate_monitors(&mut self) -> Vec<u64>;
-    fn resolve_text_editor_path(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Option<String>;
-    fn download_editable_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> (u64, String);
-    fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> u64;
-    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> u64;
-    fn upload_file_from_editor(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, contents: Vec<u8>) -> u64;
+    fn initialize_hosts(&mut self) -> Result<Vec<String>, LkError>;
+    fn refresh_monitors_for_command(&mut self, host_id: &str, command_id: &str) -> Result<Vec<u64>, LkError>;
+    fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Result<Vec<u64>, LkError>;
+    fn refresh_certificate_monitors(&mut self) -> Result<Vec<u64>, LkError>;
+    fn resolve_text_editor_path(
+        &mut self,
+        host_id: &str,
+        command_id: &str,
+        parameters: &[String],
+    ) -> Result<Option<String>, LkError>;
+    fn download_editable_file(
+        &mut self,
+        host_id: &str,
+        command_id: &str,
+        remote_file_path: &str,
+    ) -> Result<(u64, String), LkError>;
+    fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> Result<u64, LkError>;
+    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError>;
     fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError>;
     fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) -> Result<(), LkError>;
     fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> Result<bool, LkError>;

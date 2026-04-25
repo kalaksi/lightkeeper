@@ -156,9 +156,16 @@ impl CommandHandlerModel {
     fn getCategoryCommands(&self, host_id: QString, category: QString) -> QVariantList {
         let category_string = category.to_string();
 
-        let mut category_commands = self.backend().commands_for_host(&host_id.to_string())
-            .into_values().filter(|data| data.display_options.category == category_string)
-            .collect::<Vec<CommandButtonData>>();
+        let mut category_commands = match self.backend().commands_for_host(&host_id.to_string()) {
+            Ok(commands) => commands
+                .into_values()
+                .filter(|data| data.display_options.category == category_string)
+                .collect::<Vec<CommandButtonData>>(),
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                return QVariantList::default();
+            },
+        };
 
         let command_order = match self.configuration.display_options.categories.get(&category_string) {
             Some(category_data) => category_data.command_order.clone().unwrap_or_default(),
@@ -183,7 +190,13 @@ impl CommandHandlerModel {
     }
 
     fn getCustomCommands(&self, host_id: QString) -> QStringList {
-        let custom_commands = self.backend().custom_commands_for_host(&host_id.to_string());
+        let custom_commands = match self.backend().custom_commands_for_host(&host_id.to_string()) {
+            Ok(commands) => commands,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                return QStringList::default();
+            },
+        };
         custom_commands.values().map(|item| {
             match serde_json::to_string(&item) {
                 Ok(json_string) => QString::from(json_string),
@@ -208,12 +221,21 @@ impl CommandHandlerModel {
             }
         };
 
-        let mut all_commands = self.backend().commands_for_host(&host_id.to_string())
-            .into_iter().filter(|(_, data)|
-                data.display_options.parent_id == parent_id_string &&
-                data.display_options.category == category_string &&
-                (data.display_options.multivalue_level == 0 || data.display_options.multivalue_level == multivalue_level))
-            .collect::<HashMap<String, CommandButtonData>>();
+        let mut all_commands = match self.backend().commands_for_host(&host_id.to_string()) {
+            Ok(commands) => commands
+                .into_iter()
+                .filter(|(_, data)| {
+                    data.display_options.parent_id == parent_id_string &&
+                    data.display_options.category == category_string &&
+                    (data.display_options.multivalue_level == 0 ||
+                        data.display_options.multivalue_level == multivalue_level)
+                })
+                .collect::<HashMap<String, CommandButtonData>>(),
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                return QVariantList::default();
+            },
+        };
 
         let mut valid_commands_sorted = Vec::<CommandButtonData>::new();
 
@@ -241,8 +263,12 @@ impl CommandHandlerModel {
 
     fn execute(&mut self, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList) {
         let display_options = match self.backend().command_for_host(&host_id.to_string(), &command_id.to_string()) {
-            Some(command_data) => command_data.display_options,
-            None => return,
+            Ok(Some(command_data)) => command_data.display_options,
+            Ok(None) => return,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                return;
+            },
         };
 
         if !display_options.user_parameters.is_empty() {
@@ -263,54 +289,97 @@ impl CommandHandlerModel {
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
 
         let display_options = match self.backend().command_for_host(&host_id, &command_id) {
-            Some(command_data) => command_data.display_options,
-            None => return,
+            Ok(Some(command_data)) => command_data.display_options,
+            Ok(None) => return,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                return;
+            },
         };
 
         match display_options.action {
             UIAction::None => {
-                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
-
-                if invocation_id > 0 {
-                    self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_id.into());
+                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
+                    Ok(invocation_id) => {
+                        self.commandExecuted(
+                            invocation_id,
+                            host_id.into(),
+                            command_id.into(),
+                            display_options.category.into(),
+                            button_id.into(),
+                        );
+                    },
+                    Err(error) => {
+                        self.error(QString::from(error.to_string()));
+                    },
                 }
             },
             UIAction::FollowOutput => {
-                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
-                if invocation_id > 0 {
-                    let title = match display_options.tab_title.is_empty() {
-                        true => QString::from(format!("{}: {}", command_id, parameters.first().unwrap_or(&String::new()))),
-                        false => QString::from(display_options.tab_title)
-                    };
-                    self.commandOutputDialogOpened(title, invocation_id);
-                    self.commandExecuted(invocation_id, host_id.into(), command_id.into(), display_options.category.into(), button_id.into());
+                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
+                    Ok(invocation_id) => {
+                        let title = match display_options.tab_title.is_empty() {
+                            true => QString::from(format!("{}: {}", command_id, parameters.first().unwrap_or(&String::new()))),
+                            false => QString::from(display_options.tab_title)
+                        };
+                        self.commandOutputDialogOpened(title, invocation_id);
+                        self.commandExecuted(
+                            invocation_id,
+                            host_id.into(),
+                            command_id.into(),
+                            display_options.category.into(),
+                            button_id.into(),
+                        );
+                    },
+                    Err(error) => {
+                        self.error(QString::from(error.to_string()));
+                    },
                 }
             },
             UIAction::TextView => {
                 let target_id = parameters.first().unwrap().clone();
-                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
-                if invocation_id > 0 {
-                    self.textViewOpened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id)
+                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
+                    Ok(invocation_id) => {
+                        self.textViewOpened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id);
+                    },
+                    Err(error) => {
+                        self.error(QString::from(error.to_string()));
+                    },
                 }
             },
             UIAction::TextDialog => {
-                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
-                if invocation_id > 0 {
-                    self.textDialogOpened(invocation_id)
+                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
+                    Ok(invocation_id) => {
+                        self.textDialogOpened(invocation_id);
+                    },
+                    Err(error) => {
+                        self.error(QString::from(error.to_string()));
+                    },
                 }
             },
             UIAction::LogView => {
-                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
-                if invocation_id > 0 {
-                    let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
-                    self.logsViewOpened(false, QString::from(display_options.tab_title), QString::from(command_id), parameters_qs, invocation_id);
+                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
+                    Ok(invocation_id) => {
+                        let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
+                        let tab_title_qs = QString::from(display_options.tab_title);
+                        let command_id_qs = QString::from(command_id);
+                        self.logsViewOpened(false, tab_title_qs, command_id_qs, parameters_qs, invocation_id);
+                    },
+                    Err(error) => {
+                        self.error(QString::from(error.to_string()));
+                    },
                 }
             },
             UIAction::LogViewWithTimeControls => {
-                let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
-                if invocation_id > 0 {
-                    let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
-                    self.logsViewOpened(true, QString::from(display_options.tab_title), QString::from(command_id), parameters_qs, invocation_id);
+                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
+                    Ok(invocation_id) => {
+                        let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
+                        let tab_title_qs = QString::from(display_options.tab_title);
+                        let command_id_qs = QString::from(command_id);
+                        self.logsViewOpened(true, tab_title_qs, command_id_qs, parameters_qs, invocation_id);
+                    },
+                    Err(error) => {
+                        self.error(QString::from(error.to_string()));
+                    },
                 }
             },
             UIAction::Terminal => {
@@ -338,12 +407,14 @@ impl CommandHandlerModel {
             UIAction::TextEditor => {
                 // Commands with parent monitors receive file path as a parameter, but category-level
                 // commands don't. They should return it in `get_connector_message()`.
-                let remote_file_path = if let Some(path) =
-                    self.backend_mut().resolve_text_editor_path(&host_id, &command_id, &parameters)
+                let remote_file_path = match self.backend_mut().resolve_text_editor_path(&host_id, &command_id, &parameters)
                 {
-                    path
-                } else {
-                    return;
+                    Ok(Some(path)) => path,
+                    Ok(None) => return,
+                    Err(error) => {
+                        self.error(QString::from(error.to_string()));
+                        return;
+                    },
                 };
 
                 if self.configuration.preferences.use_remote_editor {
@@ -365,15 +436,21 @@ impl CommandHandlerModel {
                     if self.configuration.preferences.text_editor == configuration::INTERNAL 
                         || self.configuration.preferences.text_editor == configuration::INTERNAL_SIMPLE {
 
-                        let (invocation_id, _) =
-                            self.backend_mut().download_editable_file(&host_id, &command_id, &remote_file_path);
-                        let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_file_path);
-                        self.textEditorViewOpened(
-                            editor_header_text,
-                            QString::from(command_id.clone()),
-                            invocation_id,
-                            QString::from(remote_file_path.clone()),
-                        );
+                        match self.backend_mut().download_editable_file(&host_id, &command_id, &remote_file_path) {
+                            Ok((invocation_id, _)) => {
+                                let editor_header_text = self
+                                    .build_editor_header_text(&display_options, &command_id, &remote_file_path);
+                                self.textEditorViewOpened(
+                                    editor_header_text,
+                                    QString::from(command_id.clone()),
+                                    invocation_id,
+                                    QString::from(remote_file_path.clone()),
+                                );
+                            },
+                            Err(error) => {
+                                self.error(QString::from(error.to_string()));
+                            },
+                        }
                     }
                     else {
                         let Some(local_backend) = self.backend().local_backend() else {
@@ -384,7 +461,11 @@ impl CommandHandlerModel {
                             &command_id,
                             &remote_file_path,
                         );
-                        let _invocation_id = self.backend_mut().upload_file(&host_id, &command_id, &local_file_path);
+                        if let Err(error) =
+                            self.backend_mut().upload_file(&host_id, &command_id, &local_file_path)
+                        {
+                            self.error(QString::from(error.to_string()));
+                        }
                     }
                 }
             },
@@ -395,7 +476,13 @@ impl CommandHandlerModel {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
         let parameters: Vec<String> = parameters.into_iter().map(|qvar| qvar.to_string()).collect();
-        self.backend_mut().execute_command(&host_id, &command_id, &parameters)
+        match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
+            Ok(id) => id,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                0
+            },
+        }
     }
 
     fn interruptInvocation(&self, invocation_id: u64) {
@@ -406,9 +493,13 @@ impl CommandHandlerModel {
         let host_id = host_id.to_string();
         let parameters = vec![path.to_string()];
         let command_id = String::from("_internal-filebrowser-ls");
-        let invocation_id = self.backend_mut().execute_command(&host_id, &command_id, &parameters);
-
-        invocation_id
+        match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
+            Ok(id) => id,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                0
+            },
+        }
     }
 
     fn openRemoteFileInEditor(&mut self, host_id: QString, remote_path: QString) {
@@ -416,19 +507,26 @@ impl CommandHandlerModel {
         let remote_path = remote_path.to_string();
         let command_id = String::from("_internal-filebrowser-edit");
         let display_options = match self.backend().command_for_host(&host_id, &command_id) {
-            Some(command_data) => command_data.display_options,
-            None => return,
+            Ok(Some(command_data)) => command_data.display_options,
+            Ok(None) => return,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                return;
+            },
         };
-        let (invocation_id, _) =
-            self.backend_mut().download_editable_file(&host_id, &command_id, &remote_path);
-        if invocation_id > 0 {
-            let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_path);
-            self.textEditorViewOpened(
-                editor_header_text,
-                QString::from(command_id.clone()),
-                invocation_id,
-                QString::from(remote_path.clone()),
-            );
+        match self.backend_mut().download_editable_file(&host_id, &command_id, &remote_path) {
+            Ok((invocation_id, _)) => {
+                let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_path);
+                self.textEditorViewOpened(
+                    editor_header_text,
+                    QString::from(command_id.clone()),
+                    invocation_id,
+                    QString::from(remote_path.clone()),
+                );
+            },
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+            },
         }
     }
 
@@ -438,15 +536,16 @@ impl CommandHandlerModel {
         let remote_file_path = remote_file_path.to_string();
         let contents = contents.to_string().into_bytes();
 
-        if self.backend().local_backend().is_some() {
-            if let Err(error) = self.backend_mut().write_cached_file(&host_id, &remote_file_path, contents) {
-                self.error(QString::from(error.to_string()));
-                return 0;
-            }
-            self.backend_mut().upload_file_from_cache(&host_id, &command_id, &remote_file_path)
+        if let Err(error) = self.backend_mut().write_cached_file(&host_id, &remote_file_path, contents) {
+            self.error(QString::from(error.to_string()));
+            return 0;
         }
-        else {
-            self.backend_mut().upload_file_from_editor(&host_id, &command_id, &remote_file_path, contents)
+        match self.backend_mut().upload_file_from_cache(&host_id, &command_id, &remote_file_path) {
+            Ok(id) => id,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                0
+            },
         }
     }
 
@@ -514,9 +613,15 @@ impl CommandHandlerModel {
             return;
         }
 
-        let host_ids = self.backend_mut().initialize_hosts();
-        for host_id in host_ids {
-            self.hostInitializing(QString::from(host_id));
+        match self.backend_mut().initialize_hosts() {
+            Ok(host_ids) => {
+                for host_id in host_ids {
+                    self.hostInitializing(QString::from(host_id));
+                }
+            },
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+            },
         }
     }
 
@@ -537,13 +642,21 @@ impl CommandHandlerModel {
         ::log::debug!("[{}] Refreshing monitors related to command {}", host_id, command_id);
 
         match self.backend().command_for_host(&host_id, &command_id) {
-            Some(_) => {}
-            None => return QVariantList::default(),
+            Ok(Some(_)) => {}
+            Ok(None) => return QVariantList::default(),
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                return QVariantList::default();
+            },
         }
 
-        let invocation_ids = self.backend_mut().refresh_monitors_for_command(&host_id, &command_id);
-
-        QVariantList::from_iter(invocation_ids)
+        match self.backend_mut().refresh_monitors_for_command(&host_id, &command_id) {
+            Ok(invocation_ids) => QVariantList::from_iter(invocation_ids),
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                QVariantList::default()
+            },
+        }
     }
 
     fn refreshMonitorsOfCategory(&mut self, host_id: QString, category: QString) -> QVariantList {
@@ -551,8 +664,16 @@ impl CommandHandlerModel {
             return QVariantList::default();
         }
 
-        let invocation_ids = self.backend_mut().refresh_monitors_of_category(&host_id.to_string(), &category.to_string());
-        QVariantList::from_iter(invocation_ids)
+        match self
+            .backend_mut()
+            .refresh_monitors_of_category(&host_id.to_string(), &category.to_string())
+        {
+            Ok(invocation_ids) => QVariantList::from_iter(invocation_ids),
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                QVariantList::default()
+            },
+        }
     }
 
     fn refreshCertificateMonitors(&mut self) -> QVariantList {
@@ -560,8 +681,13 @@ impl CommandHandlerModel {
             return QVariantList::default();
         }
 
-        let invocation_ids = self.backend_mut().refresh_certificate_monitors();
-        QVariantList::from_iter(invocation_ids)
+        match self.backend_mut().refresh_certificate_monitors() {
+            Ok(invocation_ids) => QVariantList::from_iter(invocation_ids),
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                QVariantList::default()
+            },
+        }
     }
 
     fn getAllHostCategories(&self, host_id: QString) -> QVariantList {
@@ -569,7 +695,13 @@ impl CommandHandlerModel {
             return QVariantList::default()
         }
 
-        self.backend().all_host_categories(&host_id.to_string())
-                            .iter().map(|category| category.to_qvariant()).collect()
+        let categories = match self.backend().all_host_categories(&host_id.to_string()) {
+            Ok(c) => c,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                return QVariantList::default();
+            },
+        };
+        categories.iter().map(|category| category.to_qvariant()).collect()
     }
 }
