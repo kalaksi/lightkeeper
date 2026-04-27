@@ -32,6 +32,11 @@ Item {
         bottomMargin: 0.15 * parent.height
     }
 
+    CoreConnectionDialog {
+        id: coreConnectionDialog
+        bottomMargin: 0.12 * parent.height
+    }
+
     PreferencesDialog {
         id: preferencesDialog
         bottomMargin: 0.10 * parent.height
@@ -149,6 +154,10 @@ Item {
 
     function openCertificateMonitor() {
         certificateMonitorDialog.open()
+    }
+
+    function openCoreConnection() {
+        coreConnectionDialog.open()
     }
 
     function openPreferences() {

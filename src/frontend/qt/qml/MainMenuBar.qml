@@ -30,6 +30,7 @@ ToolBar {
     signal clickedPreferences()
     signal clickedHotkeyHelp()
     signal clickedCertificateMonitor()
+    signal clickedCoreConnection()
     signal clickedAutoRefresh()
     signal filterChanged(string search)
     signal hotReload()
@@ -44,6 +45,19 @@ ToolBar {
         width: parent.width
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacingNormal
+
+        ToolButton {
+            icon.source: "qrc:/main/images/button/network-connect"
+            text: "Lightkeeper Core"
+            display: AbstractButton.IconOnly
+            onClicked: root.clickedCoreConnection()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
+        }
+
+        ToolSeparator {
+        }
 
         ToolButton {
             icon.source: "qrc:/main/images/button/add"
@@ -111,7 +125,6 @@ ToolBar {
                 }
             }
         }
-
 
         ToolButton {
             id: certMonitorButton

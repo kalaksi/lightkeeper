@@ -60,6 +60,9 @@ pub struct ConfigManagerModel {
     addCertificateMonitor: qt_method!(fn(&self, address: QString)),
     removeCertificateMonitor: qt_method!(fn(&self, address: QString)),
 
+    getSavedCoreAddresses: qt_method!(fn(&self) -> QStringList),
+    addSavedCoreAddress: qt_method!(fn(&self, address: QString)),
+
     //
     // Host configuration
     //
@@ -289,6 +292,30 @@ impl ConfigManagerModel {
 
     fn removeCertificateMonitor(&mut self, domain: QString) {
         self.hosts_config.certificate_monitors.retain(|monitor_domain| monitor_domain != &domain.to_string());
+
+        if let Err(error) = self.config_backend.as_mut().unwrap()
+            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+        {
+            self.error(QString::from(error.to_string()));
+        }
+    }
+
+    fn getSavedCoreAddresses(&self) -> QStringList {
+        QStringList::from_iter(self.main_config.preferences.saved_core_addresses.clone())
+    }
+
+    fn addSavedCoreAddress(&mut self, address: QString) {
+        let address = address.to_string();
+        if address.is_empty() {
+            return;
+        }
+
+        if self.main_config.preferences.saved_core_addresses.iter().any(|existing| existing == &address)
+        {
+            return;
+        }
+
+        self.main_config.preferences.saved_core_addresses.push(address);
 
         if let Err(error) = self.config_backend.as_mut().unwrap()
             .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())

@@ -22,13 +22,7 @@ impl ConfigBackend for LocalConfigBackend {
         Ok(Configuration::read(&self.config_dir)?)
     }
 
-    fn update_config(
-        &self,
-        main_config: Configuration,
-        hosts: configuration::Hosts,
-        groups: configuration::Groups,
-    ) -> Result<(), LkError> {
-
+    fn update_config(&self, main_config: Configuration, hosts: configuration::Hosts, groups: configuration::Groups) -> Result<(), LkError> {
         Configuration::write_main_config(&self.config_dir, &main_config)?;
         Configuration::write_hosts_config(&self.config_dir, &hosts)?;
         Configuration::write_groups_config(&self.config_dir, &groups)?;

@@ -132,12 +132,7 @@ impl CommandBackend for LocalCommandBackend {
         Ok(self.monitor_manager.refresh_certificate_monitors())
     }
 
-    fn resolve_text_editor_path(
-        &mut self,
-        host_id: &str,
-        command_id: &str,
-        parameters: &[String],
-    ) -> Result<Option<String>, LkError> {
+    fn resolve_text_editor_path(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<Option<String>, LkError> {
         if let Some(path) = parameters.first().cloned() {
             Ok(Some(path))
         }
@@ -146,17 +141,9 @@ impl CommandBackend for LocalCommandBackend {
         }
     }
 
-    fn download_editable_file(
-        &mut self,
-        host_id: &str,
-        command_id: &str,
-        remote_file_path: &str,
-    ) -> Result<(u64, String), LkError> {
-        self.command_handler.download_editable_file(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            &remote_file_path.to_string(),
-        )
+    fn download_editable_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<(u64, String), LkError> {
+        self.command_handler
+            .download_editable_file(&host_id.to_string(), &command_id.to_string(), &remote_file_path.to_string())
     }
 
     fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> Result<u64, LkError> {

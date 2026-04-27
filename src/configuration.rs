@@ -124,6 +124,8 @@ pub struct Preferences {
     pub show_chart_threshold_lines: bool,
     #[serde(default)]
     pub editor_preferences: EditorPreferences,
+    #[serde(default)]
+    pub saved_core_addresses: Vec<String>,
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone)]

@@ -88,6 +88,9 @@ ApplicationWindow {
         onClickedCertificateMonitor: {
             root.dialogHandler.openCertificateMonitor()
         }
+        onClickedCoreConnection: {
+            root.dialogHandler.openCoreConnection()
+        }
         onClickedPreferences: {
             root.dialogHandler.openPreferences()
         }

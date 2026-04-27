@@ -241,6 +241,8 @@ Module {
         Method { name: "getCertificateMonitors"; type: "QStringList" }
         Method { name: "addCertificateMonitor"; Parameter { name: "address"; type: "string" } }
         Method { name: "removeCertificateMonitor"; Parameter { name: "address"; type: "string" } }
+        Method { name: "getSavedCoreAddresses"; type: "QStringList" }
+        Method { name: "addSavedCoreAddress"; Parameter { name: "address"; type: "string" } }
         Method { name: "addHost"; Parameter { name: "host_name"; type: "string" } }
         Method { name: "removeHost"; Parameter { name: "host_name"; type: "string" } }
         Method {
