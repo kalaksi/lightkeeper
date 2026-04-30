@@ -422,18 +422,17 @@ impl CommandHandler {
         command
     }
 
-    // TODO: this will block the UI thread. Improve!
     pub fn open_external_terminal(&self, host_id: &String, command_id: &String, parameters: Vec<String>) {
         let command_args = self.open_remote_terminal_command(host_id, command_id, &parameters);
 
         log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.to_string());
-        let result = ShellCommand::new()
+        let spawn_result = ShellCommand::new()
             .arguments(vec![self.preferences.terminal.clone()])
             .arguments(self.preferences.terminal_args.clone())
             .arguments(command_args.to_vec())
-            .execute();
+            .spawn();
 
-        if let Err(error) = result {
+        if let Err(error) = spawn_result {
             log::error!("Couldn't start terminal: {}", error);
         }
     }

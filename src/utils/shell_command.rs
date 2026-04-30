@@ -81,6 +81,22 @@ impl ShellCommand {
         }
     }
 
+    pub fn spawn(&self) -> std::io::Result<process::Child> {
+        if self.arguments.is_empty() {
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "No command specified"));
+        }
+
+        let command = self.arguments.get(0).unwrap();
+        let arguments = self.arguments.iter().skip(1).collect::<Vec<&String>>();
+
+        if arguments.is_empty() {
+            process::Command::new(command).spawn()
+        }
+        else {
+            process::Command::new(command).args(arguments).spawn()
+        }
+    }
+
     pub fn to_vec(&self) -> Vec<String> {
         self.arguments.iter().cloned().collect::<_>()
     }
