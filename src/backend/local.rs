@@ -24,10 +24,7 @@ pub struct LocalCommandBackend {
 
 impl LocalCommandBackend {
     pub fn new(command_handler: CommandHandler, monitor_manager: MonitorManager) -> Self {
-        LocalCommandBackend {
-            command_handler,
-            monitor_manager,
-        }
+        LocalCommandBackend { command_handler, monitor_manager }
     }
 
     fn connector_message(&self, host_id: &str, command_id: &str) -> Option<String> {

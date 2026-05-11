@@ -5,15 +5,15 @@
 
 use std::path::PathBuf;
 use std::sync::mpsc;
+use std::sync::Arc;
 
-use crate::Configuration;
 use crate::configuration;
 use crate::error::LkError;
 use crate::file_handler;
 use crate::frontend;
+use crate::Configuration;
 use crate::CoreComponents;
 use crate::ModuleFactory;
-use std::sync::Arc;
 
 pub struct CoreRuntime {
     pub core: CoreComponents,
@@ -21,17 +21,8 @@ pub struct CoreRuntime {
 }
 
 impl CoreRuntime {
-    pub fn new(
-        main_config: &Configuration,
-        hosts_config: &configuration::Hosts,
-        config_dir: String,
-    ) -> Result<Self, LkError> {
-        Self::new_with_module_factory(
-            main_config,
-            hosts_config,
-            Arc::new(ModuleFactory::new()),
-            config_dir,
-        )
+    pub fn new(main_config: &Configuration, hosts_config: &configuration::Hosts, config_dir: String) -> Result<Self, LkError> {
+        Self::new_with_module_factory(main_config, hosts_config, Arc::new(ModuleFactory::new()), config_dir)
     }
 
     pub fn new_with_module_factory(
@@ -40,7 +31,6 @@ impl CoreRuntime {
         module_factory: Arc<ModuleFactory>,
         config_dir: String,
     ) -> Result<Self, LkError> {
-
         let mut core = crate::initialize_core(main_config, hosts_config, module_factory)?;
 
         if main_config.preferences.refresh_hosts_on_start {

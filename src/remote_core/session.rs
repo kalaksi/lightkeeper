@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use crate::error::LkError;
 use crate::frontend;
-use crate::remote_core::protocol::{ServerMessage, write_message};
+use crate::remote_core::protocol::{write_message, ServerMessage};
 
 const STOP_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
@@ -46,40 +46,36 @@ impl RemoteSession {
     pub fn start_update_stream(&mut self, receiver: mpsc::Receiver<frontend::UIUpdate>) {
         let (stop_sender, stop_receiver) = mpsc::channel();
         let writer = self.writer.clone();
-        let thread = thread::spawn(move || {
-            loop {
-                match stop_receiver.try_recv() {
-                    Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
-                    Err(mpsc::TryRecvError::Empty) => {}
+        let thread = thread::spawn(move || loop {
+            match stop_receiver.try_recv() {
+                Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
+                Err(mpsc::TryRecvError::Empty) => {}
+            }
+
+            let update = match receiver.recv_timeout(STOP_POLL_INTERVAL) {
+                Ok(update) => update,
+                Err(mpsc::RecvTimeoutError::Timeout) => continue,
+                Err(mpsc::RecvTimeoutError::Disconnected) => return,
+            };
+
+            let result = match update {
+                frontend::UIUpdate::Host(host_update) => Self::send_message_internal(&writer, &ServerMessage::HostUpdate(host_update)),
+                frontend::UIUpdate::FatalError() => {
+                    let result = Self::send_error_internal(&writer, "Core runtime crashed");
+                    if result.is_ok() {
+                        log::error!("Stopping client session after a fatal core error");
+                    }
+                    result
                 }
+                frontend::UIUpdate::Stop() => return,
+                frontend::UIUpdate::Chart(_) => continue,
+            };
 
-                let update = match receiver.recv_timeout(STOP_POLL_INTERVAL) {
-                    Ok(update) => update,
-                    Err(mpsc::RecvTimeoutError::Timeout) => continue,
-                    Err(mpsc::RecvTimeoutError::Disconnected) => return,
-                };
-
-                let result = match update {
-                    frontend::UIUpdate::Host(host_update) => {
-                        Self::send_message_internal(&writer, &ServerMessage::HostUpdate(host_update))
-                    }
-                    frontend::UIUpdate::FatalError() => {
-                        let result = Self::send_error_internal(&writer, "Core runtime crashed");
-                        if result.is_ok() {
-                            log::error!("Stopping client session after a fatal core error");
-                        }
-                        result
-                    }
-                    frontend::UIUpdate::Stop() => return,
-                    frontend::UIUpdate::Chart(_) => continue,
-                };
-
-                match result {
-                    Ok(()) => {}
-                    Err(error) => {
-                        log::debug!("Stopping remote session update stream: {}", error);
-                        return;
-                    }
+            match result {
+                Ok(()) => {}
+                Err(error) => {
+                    log::debug!("Stopping remote session update stream: {}", error);
+                    return;
                 }
             }
         });
@@ -109,19 +105,13 @@ impl RemoteSession {
         }
     }
 
-    fn send_message_internal(
-        writer: &Arc<Mutex<UnixStream>>,
-        message: &ServerMessage,
-    ) -> Result<(), LkError> {
+    fn send_message_internal(writer: &Arc<Mutex<UnixStream>>, message: &ServerMessage) -> Result<(), LkError> {
         let mut writer = writer.lock()?;
         write_message(&mut *writer, message)?;
         Ok(())
     }
 
-    fn send_error_internal<Stringable: ToString>(
-        writer: &Arc<Mutex<UnixStream>>,
-        message: Stringable,
-    ) -> Result<(), LkError> {
+    fn send_error_internal<Stringable: ToString>(writer: &Arc<Mutex<UnixStream>>, message: Stringable) -> Result<(), LkError> {
         Self::send_message_internal(
             writer,
             &ServerMessage::Error {

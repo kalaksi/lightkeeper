@@ -221,7 +221,8 @@ impl MetricsManager {
             // Simple read-only token is used to try to limit metrics server downloads to Lightkeeper and
             // to keep the repo less public.
             // Date suffix in filename, so old tokens can be kept available without overwriting.
-            let token_b64 = download_string("https://github.com/kalaksi/lightkeeper/raw/refs/heads/develop/src/metrics/token-2602.txt")?;
+            let token_b64 =
+                download_string("https://github.com/kalaksi/lightkeeper/raw/refs/heads/develop/src/metrics/token-2602.txt")?;
             let token = general_purpose::STANDARD
                 .decode(token_b64.as_str())
                 .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?

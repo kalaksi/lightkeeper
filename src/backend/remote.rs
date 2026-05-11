@@ -224,13 +224,8 @@ impl RemoteCoreClient {
             .clone()
             .ok_or_else(|| String::from("Missing UI update sender"))?;
 
-        write_message(
-            &mut stream,
-            &ClientMessage::Connect {
-                protocol_version: PROTOCOL_VERSION,
-            },
-        )
-        .map_err(|error| error.to_string())?;
+        write_message(&mut stream, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION })
+            .map_err(|error| error.to_string())?;
 
         let mut reader = stream.try_clone().map_err(|error| error.to_string())?;
         reader
@@ -269,11 +264,7 @@ impl RemoteCoreClient {
                         PendingRpcReply::ExecuteCommand(invocation_id)
                     });
                 }
-                ServerMessage::CommandsForHost {
-                    request_id,
-                    host_id: _,
-                    commands,
-                } => {
+                ServerMessage::CommandsForHost { request_id, host_id: _, commands } => {
                     deliver_response(&pending_rpc, request_id, PendingRpcKind::CommandsForHost, || {
                         PendingRpcReply::CommandsForHost(commands)
                     });
@@ -288,20 +279,12 @@ impl RemoteCoreClient {
                         PendingRpcReply::CommandForHost(command)
                     });
                 }
-                ServerMessage::CustomCommandsForHost {
-                    request_id,
-                    host_id: _,
-                    commands,
-                } => {
+                ServerMessage::CustomCommandsForHost { request_id, host_id: _, commands } => {
                     deliver_response(&pending_rpc, request_id, PendingRpcKind::CustomCommandsForHost, || {
                         PendingRpcReply::CustomCommandsForHost(commands)
                     });
                 }
-                ServerMessage::AllHostCategories {
-                    request_id,
-                    host_id: _,
-                    categories,
-                } => {
+                ServerMessage::AllHostCategories { request_id, host_id: _, categories } => {
                     deliver_response(&pending_rpc, request_id, PendingRpcKind::AllHostCategories, || {
                         PendingRpcReply::AllHostCategories(categories)
                     });
@@ -327,10 +310,7 @@ impl RemoteCoreClient {
                         request.message,
                     );
                 }
-                ServerMessage::RefreshInvocationIds {
-                    request_id,
-                    invocation_ids,
-                } => {
+                ServerMessage::RefreshInvocationIds { request_id, invocation_ids } => {
                     deliver_response(&pending_rpc, request_id, PendingRpcKind::RefreshInvocationIds, || {
                         PendingRpcReply::RefreshInvocationIds(invocation_ids)
                     });
@@ -557,9 +537,10 @@ impl CommandBackend for RemoteCommandBackend {
     }
 
     fn refresh_host_monitors(&mut self, host_id: &str) {
-        if let Err(error) = self.client.send_nowait(&ClientMessage::RefreshHostMonitors {
-            host_id: host_id.to_string(),
-        }) {
+        if let Err(error) = self
+            .client
+            .send_nowait(&ClientMessage::RefreshHostMonitors { host_id: host_id.to_string() })
+        {
             ::log::error!("Request failed: {}", error);
         }
     }
@@ -593,10 +574,7 @@ impl CommandBackend for RemoteCommandBackend {
         match self
             .client
             .send_message_result(PendingRpcKind::CustomCommandsForHost, |request_id| {
-                ClientMessage::CustomCommandsForHost {
-                    request_id,
-                    host_id: host_id.to_string(),
-                }
+                ClientMessage::CustomCommandsForHost { request_id, host_id: host_id.to_string() }
             })? {
             PendingRpcReply::CustomCommandsForHost(commands) => Ok(commands),
             _ => Err(LkError::unexpected()),
@@ -650,9 +628,10 @@ impl CommandBackend for RemoteCommandBackend {
     }
 
     fn initialize_host(&mut self, host_id: &str) {
-        if let Err(error) = self.client.send_nowait(&ClientMessage::RefreshPlatformInfo {
-            host_id: host_id.to_string(),
-        }) {
+        if let Err(error) = self
+            .client
+            .send_nowait(&ClientMessage::RefreshPlatformInfo { host_id: host_id.to_string() })
+        {
             ::log::error!("Request failed: {}", error);
         }
     }
@@ -803,11 +782,7 @@ impl ConfigBackend for RemoteConfigBackend {
             .client
             .send_message_result(PendingRpcKind::Config, |request_id| ClientMessage::GetConfig { request_id })?
         {
-            PendingRpcReply::Config {
-                main_yml,
-                hosts_yml,
-                groups_yml,
-            } => (main_yml, hosts_yml, groups_yml),
+            PendingRpcReply::Config { main_yml, hosts_yml, groups_yml } => (main_yml, hosts_yml, groups_yml),
             _ => return Err(LkError::unexpected()),
         };
         let main_config: configuration::Configuration = serde_yaml::from_str(&main_yml)?;

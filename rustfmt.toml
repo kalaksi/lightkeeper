@@ -1,11 +1,12 @@
 unstable_features = true
 reorder_imports = true
 imports_layout = "HorizontalVertical"
-max_width = 140
+max_width = 135
 newline_style = "Unix"
 group_imports = "StdExternalCrate"
 control_brace_style = "ClosingNextLine"
 binop_separator = "Back"
+struct_lit_width = 40
 # attr_fn_like_width = 120
 # indent_style = "Visual"
 # wrap_comments = true

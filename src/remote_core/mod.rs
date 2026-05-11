@@ -5,5 +5,5 @@
 
 pub mod protocol;
 pub mod runtime;
-pub mod session;
 pub mod server;
+pub mod session;
