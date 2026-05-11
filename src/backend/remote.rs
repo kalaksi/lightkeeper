@@ -211,18 +211,16 @@ impl RemoteCoreClient {
     }
 
     pub fn connect_stream(&self, mut stream: UnixStream) -> Result<(), String> {
-        let connection = self.connection.lock().map_err(|error| error.to_string())?;
-        if connection.writer.is_some() {
-            return Ok(());
-        }
-
-        let frontend_update_sender = self
-            .connection
-            .lock()
-            .unwrap()
-            .frontend_update_sender
-            .clone()
-            .ok_or_else(|| String::from("Missing UI update sender"))?;
+        let frontend_update_sender = {
+            let connection = self.connection.lock().map_err(|error| error.to_string())?;
+            if connection.writer.is_some() {
+                return Ok(());
+            }
+            connection
+                .frontend_update_sender
+                .clone()
+                .ok_or_else(|| String::from("Missing UI update sender"))?
+        };
 
         write_message(&mut stream, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION })
             .map_err(|error| error.to_string())?;

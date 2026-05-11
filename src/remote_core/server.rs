@@ -142,7 +142,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
             }
             ClientMessage::RefreshHostMonitors { host_id } => {
                 for category in runtime.core.monitor_manager.get_all_host_categories(&host_id) {
-                    let invocation_ids = runtime.core.monitor_manager.refresh_monitors_of_category(&host_id, &category);
+                    let _invocation_ids = runtime.core.monitor_manager.refresh_monitors_of_category(&host_id, &category);
                 }
             }
             ClientMessage::RefreshPlatformInfo { host_id } => {

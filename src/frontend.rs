@@ -13,6 +13,8 @@ pub use display_options::DisplayOptions;
 pub use display_options::DisplayStyle;
 pub use display_options::UserInputField;
 
+#[cfg(feature = "gui")]
 pub mod qt;
 
+#[cfg(feature = "gui")]
 pub mod hot_reload;

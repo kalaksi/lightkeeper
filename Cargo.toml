@@ -7,6 +7,7 @@ rust-version = "1.88"
 [[bin]]
 name = "lightkeeper"
 path = "src/main.rs"
+required-features = ["gui"]
 
 [dependencies]
 lightkeeper_module = { path = "macros/lightkeeper_module" }
@@ -20,7 +21,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_yaml = "0.9.33"
 serde_json = "1.0.140"
 chrono = { version = "0.4.41", features = ["serde", "unstable-locales"]}
-qmetaobject = "0.2.10"
+qmetaobject = { version = "0.2.10", optional = true }
 cstr = "0.2.12"
 sha2 = "0.10.9"
 strum = { version = "0.27.2", features = ["derive"] }
@@ -49,8 +50,10 @@ oo7 = { version = "0.6", optional = true }
 tokio = { version = "1", optional = true, features = ["rt"] }
 
 [features]
-default = ["native", "oping"]
+default = ["native", "oping", "gui"]
 native = ["dep:keyring"]
 flatpak = ["dep:oo7", "dep:tokio"]
-hot-reload = ["dep:notify"]
+hot-reload = ["dep:notify", "gui"]
+gui = ["dep:qmetaobject"]
+headless = ["native", "oping"]
 

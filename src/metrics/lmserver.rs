@@ -6,5 +6,7 @@
 pub mod lmsrequest;
 pub use lmsrequest::*;
 
+#[cfg(feature = "gui")]
 pub mod connection;
+#[cfg(feature = "gui")]
 pub use connection::*;

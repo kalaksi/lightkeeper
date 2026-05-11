@@ -8,6 +8,7 @@
 /// Protocol version 1.0
 ///
 use std::collections::HashMap;
+#[cfg(feature = "gui")]
 use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
@@ -19,6 +20,7 @@ pub struct Metric {
     pub value: f32,
 }
 
+#[cfg(feature = "gui")]
 #[derive(Serialize, Deserialize)]
 pub struct LMSRequest {
     pub request_id: u64,
@@ -27,6 +29,7 @@ pub struct LMSRequest {
     pub request_type: RequestType,
 }
 
+#[cfg(feature = "gui")]
 #[derive(Serialize, Deserialize)]
 pub enum RequestType {
     Healthcheck,
@@ -46,6 +49,7 @@ pub enum RequestType {
     },
 }
 
+#[cfg(feature = "gui")]
 impl LMSRequest {
     pub fn exit() -> Self {
         LMSRequest {
@@ -56,6 +60,7 @@ impl LMSRequest {
     }
 }
 
+#[cfg(feature = "gui")]
 impl Debug for LMSRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "ServiceRequest({})", self.request_id)

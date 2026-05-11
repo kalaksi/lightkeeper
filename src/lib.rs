@@ -115,6 +115,7 @@ pub fn initialize_core(
     })
 }
 
+#[cfg(feature = "gui")]
 pub fn run(
     config_dir: &String,
     main_config: &Configuration,
