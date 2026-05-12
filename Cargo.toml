@@ -29,14 +29,14 @@ ureq = "3.3.0"
 rayon = "1.10.0"
 rand = "0.9.4"
 regex = "1.11.1"
-rustls = { version = "0.23.31", default-features = false, features = ["ring"] }
+rustls = { version = "0.23.40", default-features = false, features = ["ring"] }
 rustls-native-certs = "0.8.1"
 rustls-pemfile = "2.2.0"
 x509-parser = "0.18.1"
 base64 = "0.22.1"
 hex = "0.4.3"
 bincode = "1.3.3"
-openssl = { version = "0.10.78", features = ["vendored"] }
+openssl = { version = "0.10.79", features = ["vendored"] }
 notify = { version = "7.0.0", optional = true }
 ssh2 = { version = "0.9.5", features = ["vendored-openssl"] }
 
