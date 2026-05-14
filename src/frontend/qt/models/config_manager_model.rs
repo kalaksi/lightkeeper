@@ -116,6 +116,9 @@ pub struct ConfigManagerModel {
     storeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
     getGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString),
     removeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString)),
+    storeHostSecret: qt_method!(fn(&self, host_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
+    getHostSecret: qt_method!(fn(&self, host_id: QString, module_id: QString, setting_key: QString) -> QString),
+    removeHostSecret: qt_method!(fn(&self, host_id: QString, module_id: QString, setting_key: QString)),
     checkConfigErrors: qt_method!(fn(&self) -> QStringList),
 
 
@@ -726,26 +729,18 @@ impl ConfigManagerModel {
         QString::from(serde_json::to_string(&modules_settings).unwrap())
     }
 
-    fn storeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString {
-        let group_id = group_id.to_string();
-        let module_id = module_id.to_string();
-        let setting_key = setting_key.to_string();
-        let secret_value = secret_value.to_string();
-        let source_id = format!("group:{}", group_id);
-        let lookup_key = secret_lookup_key(&module_id, &source_id, &setting_key);
-
-        if let Err(e) = secrets_manager::set(&lookup_key, &secret_value) {
+    fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> QString {
+        let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
+        if let Err(e) = secrets_manager::set(&lookup_key, secret_value) {
             ::log::warn!("Failed to store secret for {} {}: {}", module_id, setting_key, e);
             self.error(QString::from(format!("Failed to store secret: {}", e)));
             return QString::default();
         }
-
         QString::from(format!("{}{}", KEYRING_PREFIX, lookup_key))
     }
 
-    fn getGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString {
-        let source_id = format!("group:{}", group_id.to_string());
-        let lookup_key = secret_lookup_key(&module_id.to_string(), &source_id, &setting_key.to_string());
+    fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> QString {
+        let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
         match secrets_manager::get(&lookup_key) {
             Ok(Some(value)) => QString::from(value),
             Ok(None) => QString::default(),
@@ -756,11 +751,40 @@ impl ConfigManagerModel {
         }
     }
 
-    fn removeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) {
-        let source_id = format!("group:{}", group_id.to_string());
-        let lookup_key = secret_lookup_key(&module_id.to_string(), &source_id, &setting_key.to_string());
+    fn remove_secret(&self, source_id: &str, module_id: &str, setting_key: &str) {
+        let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
         // Currently, error gets only logged in secrets manager.
         let _ = secrets_manager::delete(&lookup_key);
+    }
+
+    fn storeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString {
+        let source_id = format!("group:{}", group_id.to_string());
+        self.store_secret(&source_id, &module_id.to_string(), &setting_key.to_string(), &secret_value.to_string())
+    }
+
+    fn getGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString {
+        let source_id = format!("group:{}", group_id.to_string());
+        self.get_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
+    }
+
+    fn removeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) {
+        let source_id = format!("group:{}", group_id.to_string());
+        self.remove_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
+    }
+
+    fn storeHostSecret(&self, host_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString {
+        let source_id = format!("host:{}", host_id.to_string());
+        self.store_secret(&source_id, &module_id.to_string(), &setting_key.to_string(), &secret_value.to_string())
+    }
+
+    fn getHostSecret(&self, host_id: QString, module_id: QString, setting_key: QString) -> QString {
+        let source_id = format!("host:{}", host_id.to_string());
+        self.get_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
+    }
+
+    fn removeHostSecret(&self, host_id: QString, module_id: QString, setting_key: QString) {
+        let source_id = format!("host:{}", host_id.to_string());
+        self.remove_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
     }
 
     /// Returns a list of configuration errors, if any.
