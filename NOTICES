@@ -95,8 +95,8 @@ once_cell v1.21.3 MIT OR Apache-2.0
 openssl-macros v0.1.1 MIT/Apache-2.0
 openssl-probe v0.2.1 MIT OR Apache-2.0
 openssl-src v300.5.5+3.5.5 MIT/Apache-2.0
-openssl-sys v0.9.111 MIT
-openssl v0.10.75 Apache-2.0
+openssl-sys v0.9.115 MIT
+openssl v0.10.79 Apache-2.0
 oping v0.4.0 MIT
 parking_lot_core v0.9.12 MIT OR Apache-2.0
 parking_lot v0.12.5 MIT OR Apache-2.0
@@ -112,7 +112,7 @@ qttypes v0.2.12 MIT
 quote v1.0.44 MIT OR Apache-2.0
 rand_chacha v0.9.0 MIT OR Apache-2.0
 rand_core v0.9.5 MIT OR Apache-2.0
-rand v0.9.2 MIT OR Apache-2.0
+rand v0.9.4 MIT OR Apache-2.0
 rayon-core v1.13.0 MIT OR Apache-2.0
 rayon v1.11.0 MIT OR Apache-2.0
 regex-automata v0.4.14 MIT OR Apache-2.0
@@ -123,8 +123,8 @@ rusticata-macros v4.1.0 MIT/Apache-2.0
 rustls-native-certs v0.8.3 Apache-2.0 OR ISC OR MIT
 rustls-pemfile v2.2.0 Apache-2.0 OR ISC OR MIT
 rustls-pki-types v1.14.0 MIT OR Apache-2.0
-rustls v0.23.37 Apache-2.0 OR ISC OR MIT
-rustls-webpki v0.103.11 ISC
+rustls v0.23.40 Apache-2.0 OR ISC OR MIT
+rustls-webpki v0.103.13 ISC
 ryu v1.0.23 Apache-2.0 OR BSL-1.0
 scopeguard v1.2.0 MIT OR Apache-2.0
 semver v1.0.27 MIT OR Apache-2.0

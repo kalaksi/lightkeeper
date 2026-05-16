@@ -47,6 +47,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.40.0" date="2026-05-16">
+      <description>
+        <ul>
+          <li>Update dependencies</li>
+          <li>Improvements to error handling and some internal changes</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.39.0" date="2026-04-18">
       <description>
         <ul>
