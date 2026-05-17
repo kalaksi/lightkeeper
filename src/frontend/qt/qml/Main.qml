@@ -24,7 +24,7 @@ ApplicationWindow {
     id: root
     visible: true
     minimumWidth: 1400
-    minimumHeight: 810
+    minimumHeight: 840
     width: minimumWidth + 100
     height: minimumHeight
     font.pointSize: Theme.fontSize

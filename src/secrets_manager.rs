@@ -145,6 +145,18 @@ pub fn delete(key: &str) -> Result<(), LkError> {
     Ok(())
 }
 
+/// Returns `"keyring"` or `"plaintext"` for a stored secret value or placeholder.
+pub fn detect_secret_backend(value: &str) -> &'static str {
+    if value.is_empty()
+        || value.starts_with(NATIVE_KEYRING_PREFIX)
+        || value.starts_with(PORTAL_KEYRING_PREFIX)
+    {
+        "keyring"
+    } else {
+        "plaintext"
+    }
+}
+
 /// Keyring key for placeholder "keyring:SOURCE_ID". Works for any module and setting.
 /// source_id is "group:<id>" or "host:<id>".
 pub fn secret_lookup_key(connector_id: &str, source_id: &str, setting_key: &str) -> String {
@@ -162,5 +174,30 @@ impl From<KeyringError> for LkError {
 impl From<oo7::Error> for LkError {
     fn from(e: oo7::Error) -> Self {
         LkError::other(e.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detect_secret_backend_empty_is_keyring() {
+        assert_eq!(detect_secret_backend(""), "keyring");
+    }
+
+    #[test]
+    fn detect_secret_backend_native_placeholder_is_keyring() {
+        assert_eq!(detect_secret_backend("keyring:abc"), "keyring");
+    }
+
+    #[test]
+    fn detect_secret_backend_portal_placeholder_is_keyring() {
+        assert_eq!(detect_secret_backend("pkeyring:abc"), "keyring");
+    }
+
+    #[test]
+    fn detect_secret_backend_plaintext_value() {
+        assert_eq!(detect_secret_backend("hunter2"), "plaintext");
     }
 }

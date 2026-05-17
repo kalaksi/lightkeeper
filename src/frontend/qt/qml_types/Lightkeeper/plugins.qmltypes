@@ -275,11 +275,6 @@ Module {
             Parameter { name: "groups"; type: "QStringList" }
         }
         Method {
-            name: "getSshUsername"
-            type: "string"
-            Parameter { name: "host_id"; type: "string" }
-        }
-        Method {
             name: "getCustomCommands"
             type: "QStringList"
             Parameter { name: "host_name"; type: "string" }
@@ -347,6 +342,17 @@ Module {
             Parameter { name: "module_id"; type: "string" }
         }
         Method {
+            name: "getHostConnectorModuleSettings"
+            type: "QStringList"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+        }
+        Method {
+            name: "detectSecretBackend"
+            type: "string"
+            Parameter { name: "value"; type: "string" }
+        }
+        Method {
             name: "getEffectiveModuleSettings"
             type: "string"
             Parameter { name: "host_id"; type: "string" }
@@ -371,6 +377,27 @@ Module {
         Method {
             name: "removeGroupSecret"
             Parameter { name: "group_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+            Parameter { name: "setting_key"; type: "string" }
+        }
+        Method {
+            name: "storeHostSecret"
+            type: "string"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+            Parameter { name: "setting_key"; type: "string" }
+            Parameter { name: "secret_value"; type: "string" }
+        }
+        Method {
+            name: "getHostSecret"
+            type: "string"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+            Parameter { name: "setting_key"; type: "string" }
+        }
+        Method {
+            name: "removeHostSecret"
+            Parameter { name: "host_id"; type: "string" }
             Parameter { name: "module_id"; type: "string" }
             Parameter { name: "setting_key"; type: "string" }
         }

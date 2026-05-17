@@ -78,7 +78,6 @@ pub struct ConfigManagerModel {
     getSelectedGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     getAvailableGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     updateHostGroups: qt_method!(fn(&self, host_name: QString, groups: QStringList)),
-    getSshUsername: qt_method!(fn(&self, host_id: QString) -> QString),
 
     //
     // Custom commands
@@ -112,6 +111,8 @@ pub struct ConfigManagerModel {
     moduleRequiresSudo: qt_method!(fn(&self, module_id: QString) -> bool),
     addGroupModule: qt_method!(fn(&self, group_name: QString, module_id: QString, module_type: QString)),
     getGroupModuleSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
+    getHostConnectorModuleSettings: qt_method!(fn(&self, host_id: QString, module_id: QString) -> QStringList),
+    detectSecretBackend: qt_method!(fn(&self, value: QString) -> QString),
     getEffectiveModuleSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList, module_type: QString) -> QString),
     storeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
     getGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString),
@@ -529,15 +530,6 @@ impl ConfigManagerModel {
         host_settings.groups = groups;
     }
 
-    fn getSshUsername(&self, host_id: QString) -> QString {
-        let host_id = host_id.to_string();
-        let host_settings = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
-        let ssh_settings = host_settings.effective.connectors.get("ssh").cloned().unwrap_or_default();
-        let username = ssh_settings.settings.get("username").cloned().unwrap_or_else(|| "".to_string());
-
-        QString::from(username)
-    }
-
     /// Returns list of JSON strings representing CustomCommandConfig.
     fn getCustomCommands(&self, host_name: QString) -> QStringList {
         let host_name = host_name.to_string();
@@ -648,33 +640,45 @@ impl ConfigManagerModel {
             _ => return QStringList::default(),
         };
 
-        let mut full_settings: Vec<(&String, &String)> = metadata.settings
-            .iter()
-            .chain(metadata.secrets.iter())
-            .collect::<Vec<_>>();
-        full_settings.sort_by_key(|(key, _)| key.to_lowercase());
+        QStringList::from_iter(
+            Self::build_module_settings(metadata, &group_settings)
+                .into_iter()
+                .map(|setting| serde_json::to_string(&setting).unwrap()),
+        )
+    }
 
-        let module_settings = full_settings.into_iter().map(|(setting_key, description)| {
-            let value = group_settings.get(setting_key).cloned().unwrap_or_default();
-            let secret_backend = if value.is_empty()
-                || value.starts_with(PORTAL_KEYRING_PREFIX)
-                || value.starts_with(NATIVE_KEYRING_PREFIX) {
-                "keyring"
-            } else {
-                "plaintext"
-            };
+    /// Host-level connector overrides: same `ModuleSetting` view as `getGroupModuleSettings`.
+    fn getHostConnectorModuleSettings(&self, host_id: QString, module_id: QString) -> QStringList {
+        let host_id = host_id.to_string();
+        let module_id = module_id.to_string();
 
-            ModuleSetting {
-                key: setting_key.clone(),
-                value,
-                description: description.clone(),
-                enabled: group_settings.get(setting_key).is_some(),
-                is_secret: metadata.secrets.contains_key(setting_key),
-                secret_backend: secret_backend.to_string(),
-            }
-        });
+        let metadata = match self.module_metadatas.iter().find(|m| m.module_spec.id == module_id) {
+            Some(metadata) => metadata,
+            None => return QStringList::default(),
+        };
 
-        QStringList::from_iter(module_settings.map(|setting| serde_json::to_string(&setting).unwrap()))
+        if metadata.module_spec.module_type != ModuleType::Connector {
+            return QStringList::default();
+        }
+
+        let host = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
+        let host_settings = host
+            .overrides
+            .connectors
+            .get(&module_id)
+            .cloned()
+            .unwrap_or_default()
+            .settings;
+
+        QStringList::from_iter(
+            Self::build_module_settings(metadata, &host_settings)
+                .into_iter()
+                .map(|setting| serde_json::to_string(&setting).unwrap()),
+        )
+    }
+
+    fn detectSecretBackend(&self, value: QString) -> QString {
+        QString::from(secrets_manager::detect_secret_backend(&value.to_string()))
     }
 
     /// Returns a map with module IDs as keys and array of ModuleSettings as values.
@@ -887,6 +891,30 @@ impl ConfigManagerModel {
             group_settings.config_helper.ignored_monitors = monitors.into_iter().map(ToString::to_string).collect();
             group_settings.config_helper.ignored_connectors = connectors.into_iter().map(ToString::to_string).collect();
         }
+    }
+
+    fn build_module_settings(metadata: &Metadata, settings: &HashMap<String, String>) -> Vec<ModuleSetting> {
+        let mut full_settings: Vec<(&String, &String)> = metadata
+            .settings
+            .iter()
+            .chain(metadata.secrets.iter())
+            .collect();
+        full_settings.sort_by_key(|(key, _)| key.to_lowercase());
+
+        full_settings
+            .into_iter()
+            .map(|(setting_key, description)| {
+                let value = settings.get(setting_key).cloned().unwrap_or_default();
+                ModuleSetting {
+                    key: setting_key.clone(),
+                    value: value.clone(),
+                    description: description.clone(),
+                    enabled: settings.contains_key(setting_key),
+                    is_secret: metadata.secrets.contains_key(setting_key),
+                    secret_backend: secrets_manager::detect_secret_backend(&value).to_string(),
+                }
+            })
+            .collect()
     }
 }
 

@@ -8,7 +8,7 @@
 # Implementation and style guidelines
 - Never change Cargo.toml without explicit approval.
 - Don't add new trivial comments.
-- Don't add new thin functions that could be inlined (under 5 lines or conceptually 1-2 calls and only called from 1-3 places)
+- Don't add new small functions that could be inlined (under 5 lines or conceptually 1-2 calls and only called from 1-3 places)
 - Never remove existing comments, only update.
 - Never write lines that are over 120 characters long.
 - Aim for minimum amount of code.
@@ -34,10 +34,11 @@
 - Component structure should be: "id: root", public properties, private properties, signals, handlers/slots, contents/children, private functions, public functions
 - When adding or removing QML files, resource file has to be updated.
 - Prefer using native components from Qt instead of implementing something custom.
-- Prefer iterating with for..of or for..in instead of using indexes.
+- Prefer to use functional style (filter(), map() etc.) instead of iterating using loops.
+- Prefer iterating with for..of or for..in instead of using for-loop and indexes.
 - Avoid overly complicated width or height calculations.
 - When warranted, prefer functional style (map, filter, etc.) instead of imperative.
-- Prefer Columns and Rows instead of manually calculating positions and sizes.
+- Prefer native components, e.g. Column and Row, instead of manually calculating positions and sizes.
 - `LK`, `DesktopPortal`, and `Theme` are QML singletons in `Lightkeeper`; any QML file that uses them needs `import Lightkeeper 1.0`.
 - Always update and keep in sync Rust-based QML type info (`src/frontend/qt/qml_types/Lightkeeper/plugins.qmltypes`)
 

@@ -20,15 +20,20 @@ LightkeeperDialog {
     id: root
     property string hostId: ""
     property int buttonSize: 38
-    property var hostSettings: JSON.parse(LK.config.getHostSettings(hostId))
-    property var _selectedGroups: LK.config.getSelectedGroups(hostId)
-    property var _availableGroups: LK.config.getAvailableGroups(hostId)
-    property int _contentWidth: 360
+    property var hostSettings: ({})
+    property var _selectedGroups: []
+    property var _availableGroups: []
+    property int _contentWidth: 380
+    property int _formLeftColumnWidth: 320
+    property int _formRightColumnWidth: 128
     property bool _loading: true
+    // Refreshed on every dialog open so reopens pick up the latest config.
+    property var _effectiveSettings: ({})
+    property var _sshModuleSettings: []
     title: "Host details"
 
-    implicitWidth: 630
-    implicitHeight: 700
+    implicitWidth: 660
+    implicitHeight: 800
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     signal configurationChanged()
@@ -41,6 +46,10 @@ LightkeeperDialog {
         }
         root._selectedGroups = LK.config.getSelectedGroups(root.hostId)
         root._availableGroups = LK.config.getAvailableGroups(root.hostId)
+        root.hostSettings = JSON.parse(LK.config.getHostSettings(root.hostId))
+        root._effectiveSettings = JSON.parse(
+            LK.config.getEffectiveModuleSettings(root.hostId, root._selectedGroups, "connector"))
+        root._sshModuleSettings = LK.config.getHostConnectorModuleSettings(root.hostId, "ssh").map(JSON.parse)
         root._loading = false
         updateOkButton()
     }
@@ -60,16 +69,6 @@ LightkeeperDialog {
             newSettings.fqdn = hostAddressField.text
         }
 
-        if (sshPortField.text !== "" && sshPortField.acceptableInput) {
-            newSettings.overrides.connectors = {
-                ssh: {
-                    settings: {
-                        port: sshPortField.text
-                    }
-                }
-            }
-        }
-
         if (useSudoCheckbox.checked) {
             newSettings.overrides.host_settings = ["use_sudo"]
         }
@@ -77,11 +76,42 @@ LightkeeperDialog {
             newSettings.overrides.host_settings = []
         }
 
+        let sshSettings = Object.fromEntries(root._sshModuleSettings
+            .filter(setting => setting.enabled)
+            .map(setting => [setting.key, setting.value]))
+        for (let key of sshAuthOverride.ownedSshKeys) {
+            delete sshSettings[key]
+        }
+        Object.assign(sshSettings, sshAuthOverride.buildAuthFields())
+
+        if (sshPortField.text !== "" && sshPortField.acceptableInput) {
+            sshSettings.port = sshPortField.text
+        }
+        else {
+            delete sshSettings.port
+        }
+
+        // First write: ensure host gets renamed (so commitSecrets uses the final id).
+        // Secrets/placeholders are filled in by commitSecrets and a second write follows.
+        if (Object.keys(sshSettings).length > 0) {
+            newSettings.overrides.connectors = { ssh: { settings: sshSettings } }
+        }
         LK.config.setHostSettings(root.hostId, hostIdField.text, JSON.stringify(newSettings))
+
+        sshAuthOverride.commitSecrets(hostIdField.text, sshSettings)
+
+        if (Object.keys(sshSettings).length > 0) {
+            newSettings.overrides.connectors = { ssh: { settings: sshSettings } }
+        }
+        else {
+            newSettings.overrides.connectors = {}
+        }
+        LK.config.setHostSettings(hostIdField.text, hostIdField.text, JSON.stringify(newSettings))
+
         LK.config.updateHostGroups(hostIdField.text, root._selectedGroups)
         LK.config.endHostConfiguration()
         root._loading = true
-        
+
         root.configurationChanged()
     }
 
@@ -103,115 +133,159 @@ LightkeeperDialog {
         id: content
         visible: !root._loading
         anchors.fill: parent
-        anchors.margins: 100
+        anchors.leftMargin: 90
+        anchors.rightMargin: 90
         anchors.topMargin: Theme.marginDialogTop
         anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
 
-        Column {
-            spacing: Theme.spacingTight
+        GridLayout {
             Layout.fillWidth: true
+            columns: 2
+            rowSpacing: Theme.spacingLoose
+            columnSpacing: Theme.spacingLoose
 
-            Label {
-                text: "Name"
-            }
+            ColumnLayout {
+                spacing: Theme.spacingTight
 
-            TextField {
-                id: hostIdField
-                width: parent.width
-                placeholderText: "Unique name for host..."
-                placeholderTextColor: Theme.textColorDark
-                text: root.hostId === "new-host-id" ? "" : root.hostId
-                validator: RegularExpressionValidator {
-                    regularExpression: /[a-zA-Z\d\-\.]+/
+                Layout.row: 0
+                Layout.column: 0
+                Layout.preferredWidth: root._formLeftColumnWidth
+                Layout.maximumWidth: root._formLeftColumnWidth
+                Layout.alignment: Qt.AlignBottom
+
+                Label {
+                    text: "Name"
                 }
-                onTextChanged: root.updateOkButton()
-            }
-        }
 
-        Column {
-            spacing: Theme.spacingTight
-            Layout.fillWidth: true
-
-            Label {
-                text: "IP Address or domain name"
-            }
-
-            TextField {
-                id: hostAddressField
-                width: parent.width
-                placeholderText: ""
-                placeholderTextColor: Theme.textColorDark
-                text: root.hostSettings.address === undefined ? root.hostSettings.fqdn : root.hostSettings.address 
-                validator: RegularExpressionValidator {
-                    regularExpression: /[\.\:a-zA-Z\d\-]+/
-                }
-                onTextChanged: root.updateOkButton()
-            }
-        }
-
-        Column {
-            spacing: Theme.spacingTight
-            Layout.fillWidth: true
-
-            Label {
-                text: "SSH port override"
-            }
-
-            SmallText {
-                text: "Allows overriding on host-level.\nUsually port is configured in a group, e.g. in defaults-group."
-                color: Theme.textColorDark
-            }
-
-            TextField {
-                id: sshPortField
-                width: parent.width
-                text: {
-                    if (root.hostSettings.overrides !== undefined &&
-                        root.hostSettings.overrides.connectors !== undefined &&
-                        root.hostSettings.overrides.connectors["ssh"] !== undefined &&
-                        root.hostSettings.overrides.connectors["ssh"].settings["port"] !== undefined) {
-
-                        return root.hostSettings.overrides.connectors["ssh"].settings["port"]
+                TextField {
+                    id: hostIdField
+                    Layout.fillWidth: true
+                    placeholderText: "Unique name for host..."
+                    placeholderTextColor: Theme.textColorDark
+                    text: root.hostId === "new-host-id" ? "" : root.hostId
+                    readOnly: root.hostId !== "" && root.hostId !== "new-host-id"
+                    validator: RegularExpressionValidator {
+                        regularExpression: /[a-zA-Z\d\-\.]+/
                     }
-                    return ""
+                    onTextChanged: root.updateOkButton()
                 }
-                validator: RegularExpressionValidator {
-                    regularExpression: /[1-9][0-9]{0,4}/
+            }
+
+            ColumnLayout {
+                spacing: Theme.spacingTight
+
+                Layout.row: 0
+                Layout.column: 1
+                Layout.preferredWidth: root._formRightColumnWidth
+                Layout.minimumWidth: root._formRightColumnWidth
+                Layout.maximumWidth: root._formRightColumnWidth
+                Layout.alignment: Qt.AlignBottom
+
+                Label {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "Allow sudo"
                 }
-                onTextChanged: root.updateOkButton()
+
+                Switch {
+                    id: useSudoCheckbox
+                    Layout.alignment: Qt.AlignHCenter
+                    checked: {
+                        if (root.hostSettings.overrides !== undefined &&
+                            root.hostSettings.overrides.host_settings !== undefined) {
+                            return root.hostSettings.overrides.host_settings.indexOf("use_sudo") !== -1
+                        }
+                        if (root.hostSettings.effective !== undefined &&
+                            root.hostSettings.effective.host_settings !== undefined) {
+                            return root.hostSettings.effective.host_settings.indexOf("use_sudo") !== -1
+                        }
+                        return true
+                    }
+                    onCheckedChanged: root.updateOkButton()
+                }
+            }
+
+            ColumnLayout {
+                spacing: Theme.spacingTight
+
+                Layout.row: 1
+                Layout.column: 0
+                Layout.preferredWidth: root._formLeftColumnWidth
+                Layout.maximumWidth: root._formLeftColumnWidth
+                Layout.alignment: Qt.AlignBottom
+
+                Label {
+                    text: "Domain name"
+                }
+
+                SmallText {
+                    Layout.fillWidth: true
+                    text: "or IP address"
+                    color: Theme.textColorDark
+                    wrapMode: Text.WordWrap
+                }
+
+                TextField {
+                    id: hostAddressField
+                    Layout.fillWidth: true
+                    placeholderText: ""
+                    placeholderTextColor: Theme.textColorDark
+                    text: root.hostSettings.address === undefined ? root.hostSettings.fqdn : root.hostSettings.address
+                    validator: RegularExpressionValidator {
+                        regularExpression: /[\.\:a-zA-Z\d\-]+/
+                    }
+                    onTextChanged: root.updateOkButton()
+                }
+            }
+
+            ColumnLayout {
+                spacing: Theme.spacingTight
+
+                Layout.row: 1
+                Layout.column: 1
+                Layout.preferredWidth: root._formRightColumnWidth
+                Layout.minimumWidth: root._formRightColumnWidth
+                Layout.maximumWidth: root._formRightColumnWidth
+                Layout.alignment: Qt.AlignBottom
+
+                Label {
+                    Layout.fillWidth: true
+                    text: "SSH port override"
+                }
+
+                SmallText {
+                    Layout.fillWidth: true
+                    text: "Host-level override"
+                    color: Theme.textColorDark
+                    wrapMode: Text.WordWrap
+                }
+
+                TextField {
+                    id: sshPortField
+                    Layout.fillWidth: true
+                    placeholderText: root.effectiveSshSetting("port")
+                    placeholderTextColor: Theme.textColorDark
+                    text: {
+                        let port = root._sshModuleSettings.find(setting => setting.key === "port")
+                        return port?.enabled ? port.value : ""
+                    }
+                    validator: RegularExpressionValidator {
+                        regularExpression: /[1-9][0-9]{0,4}/
+                    }
+                    onTextChanged: root.updateOkButton()
+                }
             }
         }
 
-        Row {
+        SshAuthOverride {
+            id: sshAuthOverride
+            hostId: root.hostId
+            inheritedUsername: root.effectiveSshSetting("username")
+            moduleSettings: root._sshModuleSettings.filter(
+                setting => sshAuthOverride.ownedSshKeys.indexOf(setting.key) !== -1)
+
             Layout.fillWidth: true
-
-            Switch {
-                id: useSudoCheckbox
-                checked: {
-                    if (root.hostSettings.overrides !== undefined &&
-                        root.hostSettings.overrides.host_settings !== undefined) {
-                        return root.hostSettings.overrides.host_settings.indexOf("use_sudo") !== -1
-                    }
-                    if (root.hostSettings.effective !== undefined &&
-                        root.hostSettings.effective.host_settings !== undefined) {
-                        return root.hostSettings.effective.host_settings.indexOf("use_sudo") !== -1
-                    }
-                    return true
-                }
-                onCheckedChanged: root.updateOkButton()
-            }
-
-            Label {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Allow sudo"
-            }
-        }
-
-        // Just for extra spacing
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
         }
 
         BigText {
@@ -222,7 +296,7 @@ LightkeeperDialog {
 
         RowLayout {
             SmallText {
-                text: "Group order is significant.\nLater groups may override settings from earlier ones."
+                text: "Config groups should provide bulk of the configuration.\nOrder is significant. Later groups can override settings from earlier ones."
                 color: Theme.textColorDark
 
                 Layout.fillWidth: true
@@ -276,6 +350,7 @@ LightkeeperDialog {
 
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.minimumHeight: 220
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -440,7 +515,8 @@ LightkeeperDialog {
                     }
                 }
             }
-        }    }
+        }
+    }
 
     GroupConfigurationDialog {
         id: groupConfigDialog
@@ -488,12 +564,14 @@ LightkeeperDialog {
     }
 
 
-    function fieldsAreValid() {
-        return hostIdField.acceptableInput &&
-               hostAddressField.acceptableInput
+    function effectiveSshSetting(key) {
+        return root._effectiveSettings["ssh"]
+            ?.find(setting => setting.key === key)
+            ?.value ?? ""
     }
 
     function updateOkButton() {
-        root.standardButton(Dialog.Ok).enabled = fieldsAreValid()
+        let fieldsAreValid = hostIdField.acceptableInput && hostAddressField.acceptableInput
+        root.standardButton(Dialog.Ok).enabled = fieldsAreValid
     }
 }

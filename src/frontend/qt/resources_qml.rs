@@ -83,6 +83,7 @@ pub fn init_resources() {
             "Misc/LKTabButton.qml",
             "Misc/SemiCircle.qml",
             "Misc/SecretValueField.qml",
+            "Misc/SshAuthOverride.qml",
             "Misc/Trapezoid.qml",
             "Misc/OverlayImage.qml",
             "StyleOverride/Button.qml",
