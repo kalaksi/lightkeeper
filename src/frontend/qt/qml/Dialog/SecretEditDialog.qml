@@ -18,7 +18,6 @@ LightkeeperDialog {
     id: root
     property string settingKey: ""
     property string description: ""
-    property bool showBackendSelector: false
     property string initialBackend: "keyring"
     property string initialValue: ""
     property bool _passwordVisible: false
@@ -95,7 +94,6 @@ LightkeeperDialog {
         }
 
         RowLayout {
-            visible: root.showBackendSelector
             width: parent.width - parent.anchors.leftMargin - parent.anchors.rightMargin
             spacing: Theme.spacingNormal
 
@@ -137,7 +135,6 @@ LightkeeperDialog {
         root.selectedBackend = "keyring"
         root.settingKey = ""
         root.description = ""
-        root.showBackendSelector = false
         root.initialBackend = "keyring"
         root.initialValue = ""
     }

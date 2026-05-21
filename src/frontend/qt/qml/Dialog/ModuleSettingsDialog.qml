@@ -11,6 +11,7 @@ import Lightkeeper 1.0
 
 import "../Text"
 import "../Button"
+import "../Misc"
 import ".."
 import "../StyleOverride"
 
@@ -21,7 +22,6 @@ LightkeeperDialog {
     property string groupName: ""
     property alias moduleSettings: repeater.model
     property bool _loading: moduleId === ""
-    property var _secretTarget: null
 
     title: `Module settings: ${root.moduleId}`
     implicitWidth: 680
@@ -34,17 +34,16 @@ LightkeeperDialog {
         let moduleSettings = []
         for (let i = 0; i < repeater.model.length; i++) {
             let nextItem = repeater.itemAt(i)
-            let value = nextItem._secretSaveValue !== "" ? nextItem._secretSaveValue : nextItem.children[2].children[0].text
             // See `ModuleSetting` in ConfigManagerModel for the model.
             let moduleSetting = {
-                "key": nextItem.children[0].children[0].text,
-                "value": value,
-                "enabled": nextItem.children[1].checked,
-                "isSecret": nextItem._isSecret,
+                "key": nextItem["_settingKey"],
+                "value": nextItem["settingValue"](),
+                "enabled": nextItem["_enabled"],
+                "isSecret": nextItem["_isSecret"],
             }
             moduleSettings.push(moduleSetting)
 
-            if (!moduleSetting.enabled && nextItem._isSecret && root.groupName !== "") {
+            if (!moduleSetting.enabled && nextItem["_isSecret"] && root.groupName !== "") {
                 LK.config.removeGroupSecret(root.groupName, root.moduleId, moduleSetting.key)
             }
         }
@@ -90,11 +89,12 @@ LightkeeperDialog {
 
                 RowLayout {
                     id: rowLayout
+                    property string _settingKey: modelData.key
                     property string _secretSaveValue: modelData.isSecret === true ? modelData.value : ""
                     property string _lastSecretBackend: ""
                     property string _effectiveSecretBackend: _lastSecretBackend !== ""
                         ? _lastSecretBackend : (modelData.secretBackend === "keyring" ? "keyring" : "plaintext")
-                    property string _revealedSecret: ""
+                    property bool _enabled: toggleSwitch.checked
                     property bool _isSecret: modelData.isSecret === true
                     width: parent.width
                     height: textContainer.implicitHeight
@@ -132,118 +132,83 @@ LightkeeperDialog {
 
                         TextField {
                             id: textField
-                            visible: !(modelData.isSecret === true && rowLayout._revealedSecret !== "")
-                            enabled: toggleSwitch.checked && modelData.isSecret !== true
-                            readOnly: modelData.isSecret === true
-                            selectByMouse: modelData.isSecret !== true
+                            visible: modelData.isSecret !== true && !modelData.key.endsWith("_path")
+                            enabled: toggleSwitch.checked
+                            selectByMouse: true
                             placeholderText: toggleSwitch.checked ? "" : "unset"
                             placeholderTextColor: Theme.textColorDark
-                            text: toggleSwitch.checked
-                                ? (modelData.isSecret && rowLayout._secretSaveValue !== ""
-                                    ? rowLayout._secretSaveValue : modelData.value)
-                                : ""
-                            echoMode: modelData.isSecret === true ? TextInput.Password : TextInput.Normal
-
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
-
-                            Connections {
-                                target: DesktopPortal
-                                function onFileChooserResponse(token, filePath) {
-                                    if (fileChooserButton.visible && token === fileChooserButton._fileChooserToken) {
-                                        textField.text = filePath
-                                    }
-                                }
-                            }
-                        }
-
-                        TextField {
-                            id: resolvedSecretField
-                            visible: modelData.isSecret === true && rowLayout._revealedSecret !== ""
-                            readOnly: true
-                            selectByMouse: false
-                            text: rowLayout._revealedSecret
-                            placeholderText: ""
+                            text: toggleSwitch.checked ? modelData.value : ""
 
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
                         }
 
-                        ImageButton {
-                            id: fileChooserButton
-                            property string _fileChooserToken: ""
-
-                            // TODO: this is quick and hacky, refactor.
-                            visible: modelData.key.endsWith("_path")
+                        FilePathField {
+                            id: filePathField
+                            visible: modelData.isSecret !== true && modelData.key.endsWith("_path")
                             enabled: toggleSwitch.checked
-                            imageSource: "qrc:/main/images/button/document-open-folder"
-                            size: textField.implicitHeight * 0.8
-                            onClicked: {
-                                _fileChooserToken = DesktopPortal.openFileChooser()
-                            }
+                            placeholderText: toggleSwitch.checked ? "" : "unset"
+                            placeholderTextColor: Theme.textColorDark
+                            text: toggleSwitch.checked ? modelData.value : ""
 
-                            Layout.preferredWidth: textField.implicitHeight
+                            Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
                         }
 
-                        ImageButton {
-                            id: revealButton
+                        SecretValueField {
+                            id: secretField
                             visible: modelData.isSecret === true
                             enabled: toggleSwitch.checked
-                            imageSource: "qrc:/main/images/button/view-visible"
-                            size: textField.implicitHeight * 0.8
-                            tooltip: rowLayout._revealedSecret !== "" ? "Hide password" : "Show password"
-                            onClicked: {
-                                if (rowLayout._revealedSecret !== "") {
-                                    rowLayout._revealedSecret = ""
-                                }
-                                else {
-                                    if (rowLayout._effectiveSecretBackend === "keyring" && root.groupName !== "") {
-                                        let secret = LK.config.getGroupSecret(root.groupName, root.moduleId, modelData.key)
-                                        rowLayout._revealedSecret = secret
-                                    }
-                                    else {
-                                        rowLayout._revealedSecret = rowLayout._secretSaveValue !== ""
-                                            ? rowLayout._secretSaveValue : (modelData.value ?? "")
+                            settingKey: modelData.key
+                            description: modelData.description ?? ""
+                            saveValue: toggleSwitch.checked ? rowLayout._secretSaveValue : ""
+                            backend: rowLayout._effectiveSecretBackend
+                            onRevealRequested: secretField.revealSecret(rowLayout.secretValue())
+                            onEditRequested: secretField.openEditor(rowLayout.secretValue())
+                            onSecretSubmitted: function(value, backend) {
+                                let wasSecretBackend = rowLayout._effectiveSecretBackend
+
+                                if (root.groupName !== "") {
+                                    if (value === "" || (backend === "plaintext" && wasSecretBackend === "keyring")) {
+                                        LK.config.removeGroupSecret(root.groupName, root.moduleId, modelData.key)
                                     }
                                 }
-                            }
 
-                            Layout.preferredWidth: textField.implicitHeight
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-
-                        ImageButton {
-                            id: keyringButton
-                            visible: modelData.isSecret === true && root.groupName !== ""
-                            enabled: toggleSwitch.checked
-                            imageSource: "qrc:/main/images/button/entry-edit"
-                            size: textField.implicitHeight * 0.8
-                            tooltip: "Edit secret"
-                            onClicked: {
-                                root._secretTarget = {
-                                    row: rowLayout,
-                                    key: modelData.key,
-                                    wasSecretBackend: rowLayout._effectiveSecretBackend
-                                }
-                                secretDialog.settingKey = modelData.key
-                                secretDialog.description = modelData.description ?? ""
-                                secretDialog.showBackendSelector = true
-                                secretDialog.initialBackend = rowLayout._effectiveSecretBackend
-                                if (rowLayout._effectiveSecretBackend === "keyring" && root.groupName !== "") {
-                                    secretDialog.initialValue = LK.config.getGroupSecret(root.groupName, root.moduleId, modelData.key) || ""
+                                if (backend === "keyring" && value !== "") {
+                                    let placeholder = LK.config.storeGroupSecret(
+                                        root.groupName, root.moduleId, modelData.key, value)
+                                    // Errors also result in empty string.
+                                    if (placeholder !== "") {
+                                        rowLayout._secretSaveValue = placeholder
+                                    }
                                 }
                                 else {
-                                    secretDialog.initialValue = textField.text
+                                    rowLayout._secretSaveValue = value
                                 }
-                                secretDialog.open()
+                                rowLayout._lastSecretBackend = backend
                             }
 
-                            Layout.preferredWidth: textField.implicitHeight
+                            Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
                         }
                     }
 
+                    function settingValue() {
+                        if (rowLayout._isSecret) {
+                            return rowLayout._secretSaveValue
+                        }
+                        if (modelData.key.endsWith("_path")) {
+                            return filePathField.text
+                        }
+                        return textField.text
+                    }
+
+                    function secretValue() {
+                        if (rowLayout._effectiveSecretBackend === "keyring" && root.groupName !== "") {
+                            return LK.config.getGroupSecret(root.groupName, root.moduleId, modelData.key) || ""
+                        }
+                        return rowLayout._secretSaveValue !== "" ? rowLayout._secretSaveValue : (modelData.value ?? "")
+                    }
                 }
             }
         }
@@ -251,41 +216,5 @@ LightkeeperDialog {
 
     function resetModel() {
         root.moduleSettings = []
-    }
-
-    SecretEditDialog {
-        id: secretDialog
-
-        onSecretSubmitted: function(value, backend) {
-            if (root._secretTarget && value !== undefined) {
-                let row = root._secretTarget.row
-                let key = root._secretTarget.key
-                let wasSecretBackend = root._secretTarget.wasSecretBackend
-                root._secretTarget = null
-
-                if (root.groupName !== "") {
-                    if (value === "" || (backend === "plaintext" && wasSecretBackend === "keyring")) {
-                        LK.config.removeGroupSecret(root.groupName, root.moduleId, key)
-                    }
-                }
-
-                if (backend === "keyring" && value !== "") {
-                    let placeholder = LK.config.storeGroupSecret(root.groupName, root.moduleId, key, value)
-                    // Errors also result in empty string.
-                    if (placeholder !== "") {
-                        row._secretSaveValue = placeholder
-                    }
-                }
-                else {
-                    row._secretSaveValue = value
-                }
-                row._lastSecretBackend = backend
-                row._revealedSecret = ""
-            }
-        }
-
-        onRejected: {
-            root._secretTarget = null
-        }
     }
 }
