@@ -76,9 +76,12 @@ LightkeeperDialog {
             newSettings.overrides.host_settings = []
         }
 
-        let sshSettings = Object.fromEntries(root._sshModuleSettings
-            .filter(setting => setting.enabled)
-            .map(setting => [setting.key, setting.value]))
+        let sshSettings = {}
+        for (let setting of root._sshModuleSettings) {
+            if (setting.enabled) {
+                sshSettings[setting.key] = setting.value
+            }
+        }
         for (let key of sshAuthOverride.ownedSshKeys) {
             delete sshSettings[key]
         }
@@ -231,7 +234,9 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     placeholderText: ""
                     placeholderTextColor: Theme.textColorDark
-                    text: root.hostSettings.address === undefined ? root.hostSettings.fqdn : root.hostSettings.address
+                    text: root.hostSettings.address === undefined ?
+                        (root.hostSettings.fqdn ?? "") :
+                        (root.hostSettings.address ?? "")
                     validator: RegularExpressionValidator {
                         regularExpression: /[\.\:a-zA-Z\d\-]+/
                     }

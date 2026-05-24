@@ -200,10 +200,11 @@ Item {
                         TextField {
                             id: agentIdField
                             visible: methodCombo.currentValue === "agent"
-                            Layout.fillWidth: true
                             placeholderText: "Optional key identifier"
                             placeholderTextColor: Theme.textColorDark
                             selectByMouse: true
+
+                            Layout.fillWidth: true
                         }
                     }
                 }
@@ -252,44 +253,34 @@ Item {
     }
 
     function _commitOneSecret(finalHostId, sshSettings, field, methodActive) {
-        let key = field.settingKey
-        let pending = field._pending
-        let initialBackend = field._initialBackend
-        let initialValue = field._initialValue
-        let hadKeyringSecret = initialBackend === "keyring" && initialValue !== ""
+        let hadKeyringSecret = field._initialBackend === "keyring" && field._initialValue !== ""
 
         if (!methodActive) {
             if (hadKeyringSecret) {
-                LK.config.removeHostSecret(finalHostId, "ssh", key)
+                LK.config.removeHostSecret(finalHostId, "ssh", field.settingKey)
             }
-            return
         }
-
-        if (pending === null) {
+        else if (field._pending === null) {
             // Untouched: keep original value (plaintext or keyring placeholder).
-            if (initialValue !== "") {
-                sshSettings[key] = initialValue
+            if (field._initialValue !== "") {
+                sshSettings[field.settingKey] = field._initialValue
             }
-            return
         }
-
-        if (pending.value === "") {
+        else if (field._pending.value === "") {
             if (hadKeyringSecret) {
-                LK.config.removeHostSecret(finalHostId, "ssh", key)
+                LK.config.removeHostSecret(finalHostId, "ssh", field.settingKey)
             }
-            return
         }
-
-        if (pending.backend === "keyring") {
-            let placeholder = LK.config.storeHostSecret(finalHostId, "ssh", key, pending.value)
+        else if (field._pending.backend === "keyring") {
+            let placeholder = LK.config.storeHostSecret(finalHostId, "ssh", field.settingKey, field._pending.value)
             if (placeholder !== "") {
-                sshSettings[key] = placeholder
+                sshSettings[field.settingKey] = placeholder
             }
         }
         else {
-            sshSettings[key] = pending.value
+            sshSettings[field.settingKey] = field._pending.value
             if (hadKeyringSecret) {
-                LK.config.removeHostSecret(finalHostId, "ssh", key)
+                LK.config.removeHostSecret(finalHostId, "ssh", field.settingKey)
             }
         }
     }
@@ -297,15 +288,20 @@ Item {
     function _initFields() {
         let username = root._setting("username")
         usernameField.text = username.enabled ? username.value : ""
+
         let keyPath = root._setting("private_key_path")
         keyPathField.text = keyPath.enabled ? keyPath.value : ""
+
         let agentId = root._setting("agent_key_identifier")
         agentIdField.text = agentId.enabled ? agentId.value : ""
+
         methodCombo.currentIndex = root._detectInitialMethodIndex()
+
         let password = root._setting("password")
         passwordField._pending = null
         passwordField._initialValue = password.value
         passwordField._initialBackend = password.secretBackend
+
         let passphrase = root._setting("private_key_passphrase")
         passphraseField._pending = null
         passphraseField._initialValue = passphrase.value
