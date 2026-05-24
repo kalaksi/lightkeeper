@@ -1,6 +1,6 @@
 [package]
 name = "lightkeeper"
-version = "0.40.1"
+version = "0.41.0"
 edition = "2021"
 rust-version = "1.88"
 

@@ -47,6 +47,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.41.0" date="2026-05-24">
+      <description>
+        <ul>
+          <li>Add host-level overrides for SSH login settings</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.40.1" date="2026-05-16">
       <description>
         <ul>
