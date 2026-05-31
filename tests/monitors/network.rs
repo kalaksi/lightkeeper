@@ -13,7 +13,6 @@ use crate::{MonitorTestHarness, StubLocalCommand, StubSsh2, StubTcp, TEST_HOST_I
 #[test]
 fn test_ping() {
     let new_stub_local = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubLocalCommand::new(r#""ping" "-c" "2" "-W" "10" "127.0.0.1""#,
 r#"PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 64 bytes from 127.0.0.1: icmp_seq=1 time=0.123 ms
@@ -42,7 +41,6 @@ rtt min/avg/max/mdev = 0.123/0.134/0.145/0.011 ms"#, 0)
 #[test]
 fn test_routes() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new("ip route ls",
 r#"default via 192.168.1.1 dev eth0 proto static
 10.0.0.0/8 dev eth1 proto kernel scope link src 10.0.0.1
@@ -97,7 +95,6 @@ fn test_dns() {
 /// Test handling of invalid responses of all network-category monitors.
 fn test_invalid_responses() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new_any("invalid-response", 1)
     };
 

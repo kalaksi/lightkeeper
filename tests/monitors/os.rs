@@ -12,7 +12,6 @@ use crate::{MonitorTestHarness, StubSsh2};
 fn test_os() {
     // OS module doesn't use SSH, it uses platform info directly
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new_any("", 0)
     };
 

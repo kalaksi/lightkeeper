@@ -13,7 +13,6 @@ use crate::{MonitorTestHarness, StubSsh2, StubHttp, TEST_HOST_ID};
 #[test]
 fn test_compose() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/containers/json?all=true""#,
 r#"[{
   "Id": "abc123",
@@ -52,7 +51,6 @@ r#"[{
 #[test]
 fn test_containers() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/containers/json?all=true""#,
 r#"[{
   "Id": "abc123",
@@ -96,7 +94,6 @@ r#"[{
 #[test]
 fn test_images() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         // Using a timestamp from about 100 days ago
         StubSsh2::new(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/images/json""#,
 r#"[{
@@ -133,7 +130,6 @@ r#"[{
 /// Test handling of invalid responses of all docker-category monitors.
 fn test_invalid_responses() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new_any("invalid-json-response", 1)
     };
 
@@ -224,7 +220,6 @@ r#"{
         vec![
             (StubSsh2::get_metadata(), |_settings: &HashMap<String, String>| {
                 let mut ssh = StubSsh2::default();
-                // TODO: auto-generated, check or replace.
                 ssh.add_response(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/images/json""#,
 r#"[{
   "Id": "sha256:abc123",
@@ -235,7 +230,6 @@ r#"[{
                 Box::new(ssh) as connection::Connector
             }),
             (StubHttp::get_metadata(), |_settings: &HashMap<String, String>| {
-                // TODO: auto-generated, check or replace.
                 StubHttp::new("https://registry.hub.docker.com/v2/repositories/library/test-service/tags/latest",
 r#"{
   "name": "latest",

@@ -21,15 +21,12 @@ fn test_platform_info_ssh_refresh() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         let mut ssh = StubSsh2::default();
         // Platform info requires two commands: cat /etc/os-release and uname -m
-        // TODO: auto-generated, check or replace.
         ssh.add_response("cat /etc/os-release",
 r#"ID=debian
 VERSION_ID="12.0"
 PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
 "#, 0);
-        // TODO: auto-generated, check or replace.
         ssh.add_response("uname -m", "x86_64", 0);
-        // TODO: auto-generated, check or replace.
         ssh.add_response("uname -r -m", "6.1.0-41-amd64 x86_64", 0);
         
         Box::new(ssh) as connection::Connector
@@ -93,15 +90,12 @@ fn test_platform_info_refresh_all() {
     // Test refresh_platform_info_all functionality
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         let mut ssh = StubSsh2::default();
-        // TODO: auto-generated, check or replace.
         ssh.add_response("cat /etc/os-release",
 r#"ID=ubuntu
 VERSION_ID="22.04"
 PRETTY_NAME="Ubuntu 22.04 LTS"
 "#, 0);
-        // TODO: auto-generated, check or replace.
         ssh.add_response("uname -m", "arm64", 0);
-        // TODO: auto-generated, check or replace.
         ssh.add_response("uname -r -m", "6.1.0-41-amd64 aarch64", 0);
         
         Box::new(ssh) as connection::Connector

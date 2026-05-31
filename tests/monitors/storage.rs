@@ -12,7 +12,6 @@ use crate::{MonitorTestHarness, StubSsh2};
 #[test]
 fn test_filesystem() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new("df -hPT",
 r#"Filesystem     Type      Size  Used Avail Use% Mounted on
 /dev/sda1       ext4       20G   8.0G   11G  43% /
@@ -43,7 +42,6 @@ tmpfs           tmpfs      2.0G     0  2.0G   0% /dev/shm"#, 0)
 #[test]
 fn test_cryptsetup() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new("lsblk -b -p -o NAME,SIZE,FSTYPE,MOUNTPOINT --json",
 r#"{
   "blockdevices": [
@@ -77,7 +75,6 @@ r#"{
 #[test]
 fn test_lvm_logical_volume() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new(r#""sudo" "lvs" "--separator" "|" "--options" "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent" "--units" "h""#,
 r#"  LV Path|LV|VG|LSize|Attr|Sync%|#Mis|Snap%  
   /dev/vg0/lv0|lv0|vg0|10.00h|-wi-ao----|100.00|0|"#, 0)
@@ -103,7 +100,6 @@ r#"  LV Path|LV|VG|LSize|Attr|Sync%|#Mis|Snap%
 #[test]
 fn test_lvm_volume_group() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new(r#""sudo" "vgs" "--separator" "|" "--options" "vg_name,vg_attr,vg_size,vg_free" "--units" "h""#,
 r#"  VG|Attr|VSize|VFree  
   vg0|wz--n-|20.00h|10.00h"#, 0)
@@ -129,7 +125,6 @@ r#"  VG|Attr|VSize|VFree
 #[test]
 fn test_lvm_physical_volume() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new(r#""sudo" "pvs" "--separator" "|" "--options" "pv_name,pv_attr,pv_size,pv_free" "--units" "h""#,
 r#"  PV|Attr|PSize|PFree  
   /dev/sda1|a--|20.00h|10.00h"#, 0)
@@ -156,7 +151,6 @@ r#"  PV|Attr|PSize|PFree
 /// Test handling of invalid responses of all storage-category monitors.
 fn test_invalid_responses() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new_any("invalid-response", 1)
     };
 

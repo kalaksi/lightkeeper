@@ -11,7 +11,6 @@ use crate::{MonitorTestHarness, StubSsh2};
 #[test]
 fn test_rebuild_generations() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new(r#""sudo" "nixos-rebuild" "list-generations" "--json" 2>/dev/null"#, 
 r#"[{"generation":3,"date":"2024-01-15T10:30:00Z","nixosVersion":"23.11","kernelVersion":"6.1.0","current":true},
 {"generation":2,"date":"2024-01-10T08:15:00Z","nixosVersion":"23.11","kernelVersion":"6.1.0","current":false},
@@ -40,7 +39,6 @@ r#"[{"generation":3,"date":"2024-01-15T10:30:00Z","nixosVersion":"23.11","kernel
 /// Test handling of invalid responses of all nixos-category monitors.
 fn test_invalid_responses() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new_any("invalid-json-response", 1)
     };
 

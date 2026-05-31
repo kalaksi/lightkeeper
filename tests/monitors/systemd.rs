@@ -12,7 +12,6 @@ use crate::{MonitorTestHarness, StubSsh2};
 #[test]
 fn test_service() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new(r#""busctl" "--no-pager" "--json=short" "call" "org.freedesktop.systemd1" "/org/freedesktop/systemd1" "org.freedesktop.systemd1.Manager" "ListUnits""#,
 r#"{
   "type": "a(ssssssouso)",
@@ -52,7 +51,6 @@ r#"{
 /// Test handling of invalid responses of all systemd-category monitors.
 fn test_invalid_responses() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        // TODO: auto-generated responses, check or replace with actual
         StubSsh2::new_any("invalid-response", 1)
     };
 
