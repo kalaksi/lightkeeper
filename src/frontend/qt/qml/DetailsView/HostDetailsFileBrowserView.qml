@@ -363,6 +363,7 @@ Item {
         directoryIconSource: "qrc:/main/images/button/document-open-folder"
         dimmedPaths: root._fileClipboardIsCut ? root._fileClipboardPaths : []
         verticalScrollBar: fileBrowserVerticalScrollBar
+        enableShortcuts: root.enableShortcuts
 
         onRenamed: function(fullPath, newName) {
             let id = LK.command.executePlain(root.hostId,
@@ -684,6 +685,7 @@ Item {
 
     function deactivate() {
         root.enableShortcuts = false
+        fileBrowser.closeFilterBar()
     }
 
     function refresh() {

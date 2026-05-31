@@ -77,7 +77,8 @@ LightkeeperDialog {
                 model: [
                     ["Ctrl + C", "Copy selected files"],
                     ["Ctrl + X", "Cut selected files"],
-                    ["Ctrl + V", "Paste"]
+                    ["Ctrl + V", "Paste"],
+                    ["Ctrl + F", "Filter file list"],
                 ]
 
                 Row {

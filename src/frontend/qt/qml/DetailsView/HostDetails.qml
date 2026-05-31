@@ -220,9 +220,7 @@ Item {
                 oldComponent.component.deactivate()
             }
 
-            root._tabStacks[root.hostId].currentIndex = newIndex
-            root._tabIndexByHost[root.hostId] = newIndex
-            root._tabContents[root.hostId][newIndex].component.activate()
+            root.activateCurrentTab()
         }
     }
 
@@ -418,6 +416,23 @@ Item {
         mainViewHeader.tabs = getTabTitles()
         tabStackContainer.currentIndex = root._tabStacks[root.hostId].parentStackIndex
         mainViewHeader.selectTab(savedIdx)
+        root.activateCurrentTab()
+    }
+
+    function activateCurrentTab() {
+        if (!(root.hostId in root._tabContents)) {
+            return
+        }
+        let tabIndex = mainViewHeader.tabIndex
+        if (root._tabContents[root.hostId][tabIndex] === undefined) {
+            return
+        }
+        root._tabStacks[root.hostId].currentIndex = tabIndex
+        root._tabIndexByHost[root.hostId] = tabIndex
+        let content = root._tabContents[root.hostId][tabIndex].component
+        if (content.activate !== undefined) {
+            content.activate()
+        }
     }
 
     function getLastTabIndex() {
