@@ -28,7 +28,7 @@ ApplicationWindow {
     width: minimumWidth + 100
     height: minimumHeight
     font.pointSize: Theme.fontSize
-    title: "Lightkeeper (beta)"
+    title: "Lightkeeper"
 
     palette.alternateBase: Theme.alternateBaseColor
     palette.base: Theme.baseColor

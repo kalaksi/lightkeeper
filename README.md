@@ -15,8 +15,6 @@ Just press Ctrl-T to open a terminal in a new tab.
 **LightkeeperRM is customizable**, modular and easily extendable, so that it can be modified for different needs.  
   
   
-*NOTE: Lightkeeper is currently in beta and is missing some features. Documentation is also not yet complete.*
-
 <br />
 <br />
 <p align="center">
