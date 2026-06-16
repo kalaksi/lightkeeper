@@ -595,17 +595,17 @@ Item {
 
     Shortcut {
         enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
-        sequence: StandardKey.Copy
+        sequences: [StandardKey.Copy]
         onActivated: root.copySelected()
     }
     Shortcut {
         enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
-        sequence: StandardKey.Cut
+        sequences: [StandardKey.Cut]
         onActivated: root.cutSelected()
     }
     Shortcut {
         enabled: root.enableShortcuts && root._fileClipboardPaths.length > 0
-        sequence: StandardKey.Paste
+        sequences: [StandardKey.Paste]
         onActivated: root.paste()
     }
     Shortcut {
@@ -615,7 +615,7 @@ Item {
     }
     Shortcut {
         enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
-        sequence: StandardKey.Delete
+        sequences: [StandardKey.Delete]
         onActivated: root.requestDeleteSelectedFiles()
     }
 
