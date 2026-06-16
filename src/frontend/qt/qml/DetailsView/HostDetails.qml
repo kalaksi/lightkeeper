@@ -466,7 +466,15 @@ Item {
         }
 
         tabData.component.close()
-        tabData.component.destroy()
+        // Destruction can be expensive (signal cleanup, model teardown, backend shutdown).
+        // Defer it so the tab UI updates immediately.
+        let componentToDestroy = tabData.component
+        Qt.callLater(function() {
+            // Component might have been destroyed already if something else closed it.
+            if (componentToDestroy !== null && componentToDestroy !== undefined) {
+                componentToDestroy.destroy()
+            }
+        })
         root._tabContents[root.hostId].splice(tabIndex, 1)
         mainViewHeader.tabs = getTabTitles()
 
