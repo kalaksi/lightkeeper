@@ -349,7 +349,6 @@ Item {
     }
 
     function activate() {
-        // TODO: this tab gets activated initially for a short while even if main view is the active view so this might impact performance.
         root.enableShortcuts = true
         root.refreshContent()
     }
