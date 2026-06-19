@@ -22,6 +22,7 @@ Dialog {
 
     property int borderRadius: 6
     property color headerBackground: Theme.titleBarColor
+    property bool showCloseButton: true
 
     background: Rectangle {
         width: root.width
@@ -60,6 +61,43 @@ Dialog {
         NormalText {
             anchors.centerIn: parent
             text: root.title
+        }
+
+        Rectangle {
+            id: closeButton
+            visible: root.showCloseButton
+            height: parent.height - Theme.spacingNormal
+            width: height
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.spacingTight * 2
+            anchors.topMargin: Theme.spacingNormal
+            anchors.verticalCenter: parent.verticalCenter
+            radius: root.borderRadius
+            color: closeMouseArea.containsMouse ? Theme.highlightColorBright : "transparent"
+
+            OverlayImage {
+                anchors.centerIn: parent
+                width: Math.floor(parent.height * 0.6)
+                height: width + 2
+                source: "qrc:/main/images/button/close"
+                color: Theme.iconColor
+                scale: closeMouseArea.pressed ? 0.75 : 1.0
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Theme.animationDurationFast
+                        easing.type: Easing.OutQuad
+                    }
+                }
+            }
+
+            MouseArea {
+                id: closeMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.reject()
+            }
         }
     }
 
