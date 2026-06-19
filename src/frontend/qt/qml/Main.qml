@@ -129,12 +129,20 @@ ApplicationWindow {
             )
         }
 
-        function onReloaded(error) {
+        function onReloaded(error, resetHosts) {
             hostTableModel.displayData = LK.hosts.getDisplayData()
 
             if (error !== "") {
                 root.errorCount += 1;
                 snackbarContainer.addSnackbar("Critical", error)
+            }
+            else {
+                // resetHosts are previously initialized hosts whose configuration changed.
+                // Re-initialize only the currently shown host.
+                let shownHostId = hostTableModel.getSelectedHostId()
+                if (shownHostId !== "" && resetHosts.indexOf(shownHostId) !== -1) {
+                    LK.command.initializeHost(shownHostId)
+                }
             }
         }
     }

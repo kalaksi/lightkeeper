@@ -64,7 +64,7 @@ impl HostManager {
         }
     }
 
-    /// Returns the IDs of hosts whose state was reset due to a configuration change.
+    /// Returns the IDs of previously initialized hosts whose configuration changed.
     pub fn configure(&mut self, hosts_config: &configuration::Hosts) -> Vec<String> {
         self.stop();
 

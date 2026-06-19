@@ -47,7 +47,7 @@ pub struct LkBackend {
     // Signals
     //
 
-    reloaded: qt_signal!(error: QString),
+    reloaded: qt_signal!(error: QString, reset_hosts: QStringList),
     // Somewhere, a panic has occurred and app needs to be reloaded.
     crashed: qt_signal!(),
 
@@ -198,17 +198,13 @@ impl LkBackend {
                 }
                 self.command.borrow_mut().start_processing_responses();
 
-                // Re-initialize hosts whose configuration changed and need to be refreshed.
-                for host_id in reset_hosts {
-                    self.command.borrow_mut().initialize_host(host_id);
-                }
-
-                self.reloaded(QString::from(""));
+                let reset_hosts = reset_hosts.into_iter().map(QString::from).collect::<QStringList>();
+                self.reloaded(QString::from(""), reset_hosts);
             },
             Err(error) => {
                 let error = format!("Failed to reload configuration: {}", error);
                 ::log::error!("{}", error);
-                self.reloaded(QString::from(error));
+                self.reloaded(QString::from(error), QStringList::default());
             }
         }
     }
