@@ -64,10 +64,12 @@ impl HostManager {
         }
     }
 
-    pub fn configure(&mut self, hosts_config: &configuration::Hosts) {
+    /// Returns the IDs of hosts whose state was reset due to a configuration change.
+    pub fn configure(&mut self, hosts_config: &configuration::Hosts) -> Vec<String> {
         self.stop();
 
         let mut host_states = self.hosts.lock().unwrap();
+        let mut reset_hosts = Vec::new();
 
         let new_host_configs = if host_states.hosts.is_empty() {
             // For certificate monitoring.
@@ -83,6 +85,13 @@ impl HostManager {
             for (host_id, new_host_settings) in hosts_config.hosts.iter() {
                 if let Some(current_host_settings) = self.current_config.get(host_id) {
                     if current_host_settings != new_host_settings {
+                        // Only flag hosts that were already initialized, so we don't trigger
+                        // connections to hosts the user never connected to.
+                        if let Some(old_state) = host_states.hosts.get(host_id) {
+                            if old_state.is_initialized {
+                                reset_hosts.push(host_id.clone());
+                            }
+                        }
                         host_states.hosts.remove(host_id);
                     }
                 }
@@ -131,6 +140,8 @@ impl HostManager {
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
         self.data_sender_prototype = Some(sender);
         self.data_receiver = Some(receiver);
+
+        reset_hosts
     }
 
     pub fn stop(&mut self) {

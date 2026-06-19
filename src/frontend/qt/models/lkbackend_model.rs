@@ -181,7 +181,7 @@ impl LkBackend {
         match self.config.borrow_mut().reload_configuration() {
             Ok((main_config, hosts_config)) => {
                 self.connection_manager.configure(&hosts_config);
-                self.host_manager.borrow_mut().configure(&hosts_config);
+                let reset_hosts = self.host_manager.borrow_mut().configure(&hosts_config);
                 self.command.borrow_mut().configure(
                     &main_config,
                     &hosts_config,
@@ -197,6 +197,11 @@ impl LkBackend {
                     self.connection_manager.start_processing_requests();
                 }
                 self.command.borrow_mut().start_processing_responses();
+
+                // Re-initialize hosts whose configuration changed and need to be refreshed.
+                for host_id in reset_hosts {
+                    self.command.borrow_mut().initialize_host(host_id);
+                }
 
                 self.reloaded(QString::from(""));
             },
