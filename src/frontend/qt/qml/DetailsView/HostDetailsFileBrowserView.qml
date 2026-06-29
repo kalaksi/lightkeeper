@@ -43,6 +43,8 @@ Item {
     property int _transferProgressPercent: 0
     property bool _hasActiveTransfer: false
     property var _transferInvocations: ({})
+    // Status text shown above the progress bar, e.g. "Copying file123".
+    property string _transferStatusText: ""
 
     // Invocation ids for which we refresh the file list when they complete (rename, copy, move).
     property var _pendingRefreshInvocationIds: []
@@ -99,6 +101,9 @@ Item {
             if (invocationId in root._transferInvocations) {
                 let commandResult = JSON.parse(commandResultJson)
                 root._transferInvocations[invocationId] = commandResult.progress
+                if (commandResult.progress < 100 && commandResult.message) {
+                    root._transferStatusText = commandResult.message
+                }
                 if (commandResult.progress >= 100) {
                     delete root._transferInvocations[invocationId]
                     if (root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
@@ -109,6 +114,7 @@ Item {
                 root._transferProgressPercent = root._minTransferProgress()
                 if (Object.keys(root._transferInvocations).length === 0) {
                     root._hasActiveTransfer = false
+                    root._transferStatusText = ""
                 }
             }
             if (root.pendingInvocation === invocationId) {
@@ -388,51 +394,64 @@ Item {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        height: visible ? 28 : 0
+        height: visible ? 48 : 0
         color: Theme.backgroundColor
         border.width: 1
         border.color: Theme.borderColor
 
-        RowLayout {
+        ColumnLayout {
             anchors.fill: parent
             anchors.margins: 4
-            spacing: Theme.spacingNormal
+            spacing: Theme.spacingTight
 
-            ProgressBar {
-                id: progressBar
+            SmallText {
+                id: statusLabel
+                visible: root._transferStatusText !== ""
+                text: root._transferStatusText
+                elide: Text.ElideMiddle
                 Layout.fillWidth: true
-                Layout.fillHeight: false
-                Layout.preferredHeight: 18
-                Layout.alignment: Qt.AlignVCenter
-                value: root._transferProgressPercent / 100.0
+            }
 
-                contentItem: Rectangle {
-                    implicitHeight: progressBar.height
-                    implicitWidth: progressBar.width
-                    color: "#202020"
-                    radius: 4
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spacingNormal
 
-                    Rectangle {
-                        height: parent.height
-                        width: progressBar.visualPosition * parent.width
-                        color: palette.highlight
-                        radius: parent.radius
+                ProgressBar {
+                    id: progressBar
+                    Layout.fillWidth: true
+                    Layout.fillHeight: false
+                    Layout.preferredHeight: 18
+                    Layout.alignment: Qt.AlignVCenter
+                    value: root._transferProgressPercent / 100.0
 
-                        Behavior on width {
-                            NumberAnimation {
-                                duration: 200
-                                easing.type: Easing.OutQuad
+                    contentItem: Rectangle {
+                        implicitHeight: progressBar.height
+                        implicitWidth: progressBar.width
+                        color: "#202020"
+                        radius: 4
+
+                        Rectangle {
+                            height: parent.height
+                            width: progressBar.visualPosition * parent.width
+                            color: palette.highlight
+                            radius: parent.radius
+
+                            Behavior on width {
+                                NumberAnimation {
+                                    duration: 200
+                                    easing.type: Easing.OutQuad
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            NormalText {
-                id: label
-                lineHeight: 0.9
-                text: root._transferProgressPercent + " %"
-                Layout.alignment: Qt.AlignVCenter
+                NormalText {
+                    id: label
+                    lineHeight: 0.9
+                    text: root._transferProgressPercent + " %"
+                    Layout.alignment: Qt.AlignVCenter
+                }
             }
         }
     }

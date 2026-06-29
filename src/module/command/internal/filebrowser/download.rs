@@ -92,7 +92,7 @@ impl CommandModule for FileBrowserDownload {
 
         let mut command = ShellCommand::new();
         command.use_sudo = false;
-        command.arguments(vec!["env", "LANG=C", "LC_ALL=C", "rsync", "-avz", "--info=progress2", "--stats"]);
+        command.arguments(vec!["env", "LANG=C", "LC_ALL=C", "rsync", "-avz", "--info=progress2", "--stats", RSYNC_OUT_FORMAT]);
         command.argument("-e");
         command.argument(build_rsync_ssh_command(
             self.port,
@@ -110,8 +110,7 @@ impl CommandModule for FileBrowserDownload {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_partial {
-            let progress = parse_rsync_progress(&response.message);
-            Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
+            Ok(process_rsync_partial_response(response, "Downloading"))
         }
         else {
             Ok(process_rsync_final_response(response, "Download"))
@@ -163,6 +162,51 @@ pub fn parse_rsync_progress(message: &str) -> u8 {
         .filter(|&p| p <= 100)
         .last()
         .unwrap_or(10)
+}
+
+/// Marker prepended to each transferred path via rsync's --out-format, so we can reliably
+/// pick out the current file name from output that is otherwise interleaved with progress
+/// lines and summary stats. Keep in sync with RSYNC_OUT_FORMAT.
+pub const RSYNC_FILE_MARKER: &str = "@@LKFILE@@";
+/// rsync --out-format value that prepends RSYNC_FILE_MARKER to each transferred path.
+pub const RSYNC_OUT_FORMAT: &str = "--out-format=@@LKFILE@@%f";
+
+/// Returns the base name of the file currently being transferred, parsed from the marker
+/// emitted by RSYNC_OUT_FORMAT. Returns None when no file name is present (e.g. progress-only
+/// or summary output), so callers can keep showing the previously parsed file.
+pub fn parse_rsync_current_file(message: &str) -> Option<String> {
+    let start = message.rfind(RSYNC_FILE_MARKER)? + RSYNC_FILE_MARKER.len();
+    // Take everything after the last marker up to the next line boundary.
+    let rest = message[start..].split(['\r', '\n']).next().unwrap_or("");
+    // A progress line can be glued onto the same line, e.g. "dir/file   1,234 100% ...".
+    // Cut it off at the start of the progress numbers.
+    let progress_re = Regex::new(r"\s+[\d,]+\s+\d+%").unwrap();
+    let name = match progress_re.find(rest) {
+        Some(m) => &rest[..m.start()],
+        None => rest,
+    }
+    .trim();
+
+    // Skip directory entries (rsync lists e.g. "dir/." and "dir/").
+    if name.is_empty() || name == "." || name.ends_with('/') || name.ends_with("/.") {
+        return None;
+    }
+    let base = name.rsplit('/').next().unwrap_or(name);
+    if base.is_empty() {
+        None
+    }
+    else {
+        Some(base.to_string())
+    }
+}
+
+pub fn process_rsync_partial_response(response: &ResponseMessage, operation: &str) -> CommandResult {
+    let progress = parse_rsync_progress(&response.message);
+    let message = match parse_rsync_current_file(&response.message) {
+        Some(file) => format!("{} {}", operation, file),
+        None => String::new(),
+    };
+    CommandResult::new_partial(message, progress)
 }
 
 /// Parses rsync summary. Returns (skipped_count, transferred_count) when some files were skipped.

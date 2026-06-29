@@ -73,7 +73,7 @@ impl CommandModule for FileBrowserCopy {
             let mut args: Vec<&str> = vec![
                 // Try to keep output format more stable.
                 "env", "LANG=C", "LC_ALL=C",
-                "rsync", "-av", "--info=progress2", "--stats", "--ignore-existing",
+                "rsync", "-av", "--info=progress2", "--stats", "--ignore-existing", download::RSYNC_OUT_FORMAT,
             ];
             args.extend(sources.iter().map(String::as_str));
             args.push(dest.as_str());
@@ -87,8 +87,7 @@ impl CommandModule for FileBrowserCopy {
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
         if response.is_partial {
-            let progress = download::parse_rsync_progress(&response.message);
-            Ok(CommandResult::new_partial(response.message_increment.clone(), progress))
+            Ok(download::process_rsync_partial_response(response, "Copying"))
         }
         else {
             Ok(download::process_rsync_final_response(response, "Copy"))
