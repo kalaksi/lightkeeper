@@ -666,9 +666,11 @@ Item {
         let dest = fileBrowser.selectedDirectory
         let params = [dest].concat(root._fileClipboardPaths)
         if (root._fileClipboardIsCut) {
-            let id = LK.command.executePlain(root.hostId,
+            let invocationId = LK.command.executePlain(root.hostId,
                 "_internal-filebrowser-move", params)
-            root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
+            root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invocationId])
+            root._hasActiveTransfer = true
+            root._transferInvocations[invocationId] = 0
             root._fileClipboardPaths = []
             root._fileClipboardIsCut = false
         }
