@@ -55,7 +55,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/kalaksi/qml-lighthouse-components.git
-        commit: ed27d983d1927dc45d18cdb74a255f4e42a5d27f
+        commit: 4d6dbd6b4bc22be40e0c16264f701b97d89afba0
         dest: 'qml-lighthouse-components'
     build-commands:
       - cd qml-lighthouse-components/Lighthouse/AceEditor/ace-builds

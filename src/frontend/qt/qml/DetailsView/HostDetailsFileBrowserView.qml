@@ -372,6 +372,7 @@ Item {
         enableShortcuts: root.enableShortcuts
 
         onRenamed: function(fullPath, newName) {
+            // The file browser re-selects the renamed entry once this refresh completes.
             let id = LK.command.executePlain(root.hostId,
                 "_internal-filebrowser-rename", [fullPath, newName])
             root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
@@ -710,10 +711,13 @@ Item {
     }
 
     function refresh() {
-        // Clear cache and reload current directory.
+        // Clear cache and reopen at the previously selected directory (falling back to the
+        // initial path), re-expanding the directory tree segment by segment to reach it.
+        let targetPath = fileBrowser.selectedDirectory !== ""
+            ? fileBrowser.selectedDirectory
+            : fileBrowser.rootPath
         fileBrowser.clearCache()
-        root.pendingPath = fileBrowser.rootPath
-        root.pendingInvocation = LK.command.listFiles(root.hostId, fileBrowser.rootPath)
+        fileBrowser.openInitialDirectory(targetPath)
     }
 
     function refreshCurrentDirectory() {
