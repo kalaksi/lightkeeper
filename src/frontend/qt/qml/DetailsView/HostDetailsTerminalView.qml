@@ -36,6 +36,9 @@ Item {
         font.pointSize: 10
         colorScheme: "cool-retro-term"
         smooth: true
+        // Use CPU-based Image rendering instead of GPU-based FramebufferObject rendering.
+        // FBO rendering has been causing visual glitches with Qt6.10. Image rendering is more reliable.
+        useFBORendering: false
         session: QMLTermSession {
             id: terminalSession
             initialWorkingDirectory: root.workDir
