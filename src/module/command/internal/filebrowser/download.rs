@@ -232,6 +232,10 @@ pub fn parse_rsync_skipped_count(message: &str) -> Option<(u32, u32)> {
 
 /// Builds CommandResult for a non-partial rsync response. Use for copy, download, upload.
 pub fn process_rsync_final_response(response: &ResponseMessage, operation: &str) -> CommandResult {
+    // User cancelled the transfer, so don't surface it as an error notification.
+    if response.return_code == 20 {
+        return CommandResult::new_hidden(format!("{} cancelled", operation));
+    }
     if response.return_code != 0 {
         let text = if response.message.is_empty() {
             format!("Command failed with exit code {}.", response.return_code)

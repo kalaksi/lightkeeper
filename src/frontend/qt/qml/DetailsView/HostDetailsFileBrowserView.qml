@@ -42,6 +42,7 @@ Item {
     // Related to downloads.
     property int _transferProgressPercent: 0
     property bool _hasActiveTransfer: false
+    property bool _transferCancelling: false
     property var _transferInvocations: ({})
     // Status text shown above the progress bar, e.g. "Copying file123".
     property string _transferStatusText: ""
@@ -114,6 +115,7 @@ Item {
                 root._transferProgressPercent = root._minTransferProgress()
                 if (Object.keys(root._transferInvocations).length === 0) {
                     root._hasActiveTransfer = false
+                    root._transferCancelling = false
                     root._transferStatusText = ""
                 }
             }
@@ -453,6 +455,23 @@ Item {
                     text: root._transferProgressPercent + " %"
                     Layout.alignment: Qt.AlignVCenter
                 }
+
+                ToolButton {
+                    id: stopTransferButton
+                    flat: false
+                    display: AbstractButton.IconOnly
+                    icon.source: "qrc:/main/images/button/stop"
+                    icon.height: 18
+                    icon.width: 18
+                    padding: 2
+                    enabled: !root._transferCancelling
+                    Layout.alignment: Qt.AlignVCenter
+                    onClicked: root.stopTransfers()
+
+                    ToolTip.visible: hovered
+                    ToolTip.delay: Theme.tooltipDelay
+                    ToolTip.text: "Stop transfer"
+                }
             }
         }
     }
@@ -681,6 +700,15 @@ Item {
             root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invocationId])
             root._hasActiveTransfer = true
             root._transferInvocations[invocationId] = 0
+        }
+    }
+
+    function stopTransfers() {
+        root._transferCancelling = true
+        root._transferStatusText = "Cancelling…"
+        let ids = Object.keys(root._transferInvocations)
+        for (let i = 0; i < ids.length; i++) {
+            LK.command.interruptInvocation(parseInt(ids[i]))
         }
     }
 
