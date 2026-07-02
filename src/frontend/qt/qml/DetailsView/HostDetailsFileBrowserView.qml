@@ -152,7 +152,11 @@ Item {
                     })
                 }
             }
-            if (root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
+            // Non-transfer refreshes (rename, mkdir, delete, chmod, chown). Transfer refreshes
+            // are handled above on completion, so don't consume the id while a transfer is
+            // still running (partial results would otherwise refresh prematurely).
+            if (!(invocationId in root._transferInvocations) &&
+                root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
                 root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.filter(id => id !== invocationId)
                 root.refreshCurrentDirectory()
             }
