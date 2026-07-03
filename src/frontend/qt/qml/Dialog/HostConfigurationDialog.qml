@@ -25,7 +25,7 @@ LightkeeperDialog {
     property var _availableGroups: []
     property int _contentWidth: 380
     property int _formLeftColumnWidth: 320
-    property int _formRightColumnWidth: 128
+    property int _formRightColumnWidth: 140
     property bool _loading: true
     // Refreshed on every dialog open so reopens pick up the latest config.
     property var _effectiveSettings: ({})
@@ -188,7 +188,7 @@ LightkeeperDialog {
                 Label {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: "Allow sudo"
+                    text: "Allow sudo (no pw)"
                 }
 
                 Switch {
