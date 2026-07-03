@@ -95,8 +95,8 @@ once_cell v1.21.3 MIT OR Apache-2.0
 openssl-macros v0.1.1 MIT/Apache-2.0
 openssl-probe v0.2.1 MIT OR Apache-2.0
 openssl-src v300.5.5+3.5.5 MIT/Apache-2.0
-openssl-sys v0.9.115 MIT
-openssl v0.10.79 Apache-2.0
+openssl-sys v0.9.117 MIT
+openssl v0.10.81 Apache-2.0
 oping v0.4.0 MIT
 parking_lot_core v0.9.12 MIT OR Apache-2.0
 parking_lot v0.12.5 MIT OR Apache-2.0

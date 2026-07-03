@@ -45,6 +45,21 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.42.0" date="2026-07-03">
+      <description>
+        <ul>
+          <li>File browser: Show name of file being copied</li>
+          <li>File browser: Stop-button for file transfers</li>
+          <li>File browser: Remember previously active dir when refreshing file browser</li>
+          <li>File browser: Use rsync on move if target is on a different filesystem</li>
+          <li>File browser: Add file filter/search bar</li>
+          <li>Automatically refresh host info after config change</li>
+          <li>Add top-right corner close button to dialogs</li>
+          <li>Performance optimizations to GUI</li>
+          <li>Fix hotkeys not always activating</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.41.0" date="2026-05-24">
       <description>
         <ul>
