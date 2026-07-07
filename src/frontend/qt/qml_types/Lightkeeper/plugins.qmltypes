@@ -205,7 +205,6 @@ Module {
             Parameter { name: "title"; type: "string" }
             Parameter { name: "command_id"; type: "string" }
             Parameter { name: "parameters"; type: "QStringList" }
-            Parameter { name: "invocation_id"; type: "int" }
         }
         Signal {
             name: "commandExecuted"

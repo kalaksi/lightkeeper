@@ -72,7 +72,7 @@ pub struct CommandHandlerModel {
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
     fileBrowserOpened: qt_signal!(directory: QString),
     commandOutputViewOpened: qt_signal!(invocation_id: u64, title: QString, text: QString, error_text: QString, progress: u32),
-    logsViewOpened: qt_signal!(time_controls: bool, title: QString, command_id: QString, parameters: QStringList, invocation_id: u64),
+    logsViewOpened: qt_signal!(time_controls: bool, title: QString, command_id: QString, parameters: QStringList),
     commandExecuted: qt_signal!(invocation_id: u64, host_id: QString, command_id: QString, category: QString, button_identifier: QString),
     // Platform info refresh was just triggered.
     hostInitializing: qt_signal!(host_id: QString),
@@ -356,31 +356,13 @@ impl CommandHandlerModel {
                     },
                 }
             },
-            UIAction::LogView => {
-                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
-                    Ok(invocation_id) => {
-                        let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
-                        let tab_title_qs = QString::from(display_options.tab_title);
-                        let command_id_qs = QString::from(command_id);
-                        self.logsViewOpened(false, tab_title_qs, command_id_qs, parameters_qs, invocation_id);
-                    },
-                    Err(error) => {
-                        self.error(QString::from(error.to_string()));
-                    },
-                }
-            },
+            UIAction::LogView |
             UIAction::LogViewWithTimeControls => {
-                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
-                    Ok(invocation_id) => {
-                        let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
-                        let tab_title_qs = QString::from(display_options.tab_title);
-                        let command_id_qs = QString::from(command_id);
-                        self.logsViewOpened(true, tab_title_qs, command_id_qs, parameters_qs, invocation_id);
-                    },
-                    Err(error) => {
-                        self.error(QString::from(error.to_string()));
-                    },
-                }
+                let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
+                let tab_title_qs = QString::from(display_options.tab_title);
+                let command_id_qs = QString::from(command_id);
+                let time_controls = display_options.action == UIAction::LogViewWithTimeControls;
+                self.logsViewOpened(time_controls, tab_title_qs, command_id_qs, parameters_qs);
             },
             UIAction::Terminal => {
                 let Some(local_backend) = self.backend().local_backend() else {

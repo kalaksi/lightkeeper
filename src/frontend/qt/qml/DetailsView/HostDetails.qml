@@ -96,12 +96,11 @@ Item {
             })
         }
 
-        function onLogsViewOpened(showTimeControls, title, commandId, commandParams, invocationId) {
+        function onLogsViewOpened(showTimeControls, title, commandId, commandParams) {
             let tabHostId = root.hostId
             root.createLazyTab(title, function(container) {
                 let component = logView.createObject(container, {
                     hostId: tabHostId,
-                    pendingInvocation: invocationId,
                     commandId: commandId,
                     commandParams: commandParams,
                     showTimeControls: showTimeControls,
