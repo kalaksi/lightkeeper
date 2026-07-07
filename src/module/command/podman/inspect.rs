@@ -74,6 +74,6 @@ impl CommandModule for Inspect {
         if response.return_code != 0 {
             return Ok(CommandResult::new_error(response.message.trim()));
         }
-        Ok(CommandResult::new_info(response.message.trim()))
+        Ok(CommandResult::new_hidden(response.message.trim()))
     }
 }

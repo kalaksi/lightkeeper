@@ -65,6 +65,11 @@ impl CommandModule for Inspect {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        Ok(CommandResult::new_info(response.message.clone()))
+        if response.is_error() {
+            Ok(CommandResult::new_error(response.message.clone()))
+        }
+        else {
+            Ok(CommandResult::new_hidden(response.message.clone()))
+        }
     }
 }

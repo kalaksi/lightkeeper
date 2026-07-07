@@ -292,7 +292,8 @@ r#"{
 
     harness.execute_command(&module_id, vec!["test-container".to_string()]);
     harness.verify_next_command_result(&module_id, |result| {
-        assert_eq!(result.criticality, Criticality::Info);
+        assert_eq!(result.criticality, Criticality::Normal);
+        assert!(!result.show_in_notification);
     });
 }
 
