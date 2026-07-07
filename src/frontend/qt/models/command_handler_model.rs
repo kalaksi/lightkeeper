@@ -37,6 +37,7 @@ pub struct CommandHandlerModel {
     executePlain: qt_method!(fn(&self, host_id: QString, command_id: QString, parameters: QStringList) -> u64),
     interruptInvocation: qt_method!(fn(&self, invocation_id: u64)),
     listFiles: qt_method!(fn(&self, host_id: QString, path: QString) -> u64),
+    downloadEditableFile: qt_method!(fn(&mut self, host_id: QString, command_id: QString, remote_file_path: QString) -> u64),
     openRemoteFileInEditor: qt_method!(fn(&self, host_id: QString, remote_path: QString)),
     saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, remote_file_path: QString, contents: QString) -> u64),
     removeCachedFile: qt_method!(fn(&self, host_id: QString, remote_file_path: QString)),
@@ -66,7 +67,6 @@ pub struct CommandHandlerModel {
     textEditorViewOpened: qt_signal!(
         header_text: QString,
         command_id: QString,
-        invocation_id: u64,
         remote_file_path: QString
     ),
     terminalViewOpened: qt_signal!(header_text: QString, command: QStringList),
@@ -413,22 +413,13 @@ impl CommandHandlerModel {
                 else {
                     if self.configuration.preferences.text_editor == configuration::INTERNAL 
                         || self.configuration.preferences.text_editor == configuration::INTERNAL_SIMPLE {
-
-                        match self.backend_mut().download_editable_file(&host_id, &command_id, &remote_file_path) {
-                            Ok((invocation_id, _)) => {
-                                let editor_header_text = self
-                                    .build_editor_header_text(&display_options, &command_id, &remote_file_path);
-                                self.textEditorViewOpened(
-                                    editor_header_text,
-                                    QString::from(command_id.clone()),
-                                    invocation_id,
-                                    QString::from(remote_file_path.clone()),
-                                );
-                            },
-                            Err(error) => {
-                                self.error(QString::from(error.to_string()));
-                            },
-                        }
+                        let editor_header_text = self
+                            .build_editor_header_text(&display_options, &command_id, &remote_file_path);
+                        self.textEditorViewOpened(
+                            editor_header_text,
+                            QString::from(command_id.clone()),
+                            QString::from(remote_file_path.clone()),
+                        );
                     }
                     else {
                         let Some(local_backend) = self.backend().local_backend() else {
@@ -480,6 +471,19 @@ impl CommandHandlerModel {
         }
     }
 
+    fn downloadEditableFile(&mut self, host_id: QString, command_id: QString, remote_file_path: QString) -> u64 {
+        let host_id = host_id.to_string();
+        let command_id = command_id.to_string();
+        let remote_file_path = remote_file_path.to_string();
+        match self.backend_mut().download_editable_file(&host_id, &command_id, &remote_file_path) {
+            Ok((invocation_id, _)) => invocation_id,
+            Err(error) => {
+                self.error(QString::from(error.to_string()));
+                0
+            },
+        }
+    }
+
     fn openRemoteFileInEditor(&mut self, host_id: QString, remote_path: QString) {
         let host_id = host_id.to_string();
         let remote_path = remote_path.to_string();
@@ -492,20 +496,12 @@ impl CommandHandlerModel {
                 return;
             },
         };
-        match self.backend_mut().download_editable_file(&host_id, &command_id, &remote_path) {
-            Ok((invocation_id, _)) => {
-                let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_path);
-                self.textEditorViewOpened(
-                    editor_header_text,
-                    QString::from(command_id.clone()),
-                    invocation_id,
-                    QString::from(remote_path.clone()),
-                );
-            },
-            Err(error) => {
-                self.error(QString::from(error.to_string()));
-            },
-        }
+        let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_path);
+        self.textEditorViewOpened(
+            editor_header_text,
+            QString::from(command_id.clone()),
+            QString::from(remote_path.clone()),
+        );
     }
 
     fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, remote_file_path: QString, contents: QString) -> u64 {

@@ -114,14 +114,13 @@ Item {
         }
 
         // For integrated text editor (not external).
-        function onTextEditorViewOpened(headerText, commandId, invocationId, remoteFilePath) {
+        function onTextEditorViewOpened(headerText, commandId, remoteFilePath) {
             let tabHostId = root.hostId
             root.createLazyTab(headerText, function(container) {
                 let editorComponent = textEditorView.createObject(container, {
                     hostId: tabHostId,
                     commandId: commandId,
                     remoteFilePath: remoteFilePath,
-                    pendingInvocation: invocationId,
                 })
                 editorComponent.anchors.fill = container
                 editorComponent.closeTabRequested.connect(function() {

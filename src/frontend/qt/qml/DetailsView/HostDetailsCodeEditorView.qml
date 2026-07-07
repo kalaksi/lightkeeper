@@ -24,6 +24,9 @@ Item {
     property var text: ""
     property string commandId: ""
     property int pendingInvocation: 0
+    property bool _initialFetchDone: false
+    property bool _fileReady: false
+    property bool _loading: pendingInvocation > 0
     property var textEditorItem: null
     property bool disableSaveButton: true
     property string editMode: "regular"
@@ -98,6 +101,7 @@ Item {
 
                 if (commandResult.criticality === "Normal") {
                     root.text = commandResult.message
+                    root._fileReady = true
                 }
 
                 if (commandResult.criticality === "Normal" || commandResult.criticality === "Info") {
@@ -133,7 +137,7 @@ Item {
     }
 
     WorkingSprite {
-        visible: root.text === ""
+        visible: root._loading
     }
 
     ToolBar {
@@ -286,7 +290,9 @@ Item {
                     onEditorContentChanged: function(newContent) {
                         if (rootItem) {
                             rootItem.contentChanged(rootItem.remoteFilePath, newContent);
-                            rootItem.disableSaveButton = !LK.command.hasFileChanged(rootItem.hostId, rootItem.remoteFilePath, newContent);
+                            if (rootItem._fileReady) {
+                                rootItem.disableSaveButton = !LK.command.hasFileChanged(rootItem.hostId, rootItem.remoteFilePath, newContent);
+                            }
                         }
                     }
 
@@ -393,7 +399,9 @@ Item {
                     }
                     onContentChanged: function(remoteFilePath, newContent) {
                         root.contentChanged(remoteFilePath, newContent)
-                        root.disableSaveButton = !LK.command.hasFileChanged(root.hostId, remoteFilePath, newContent)
+                        if (root._fileReady) {
+                            root.disableSaveButton = !LK.command.hasFileChanged(root.hostId, remoteFilePath, newContent)
+                        }
                     }
                 }
             }
@@ -503,14 +511,30 @@ Item {
         return false
     }
 
+    function refresh() {
+        root.pendingInvocation = LK.command.downloadEditableFile(
+            root.hostId,
+            root.commandId,
+            root.remoteFilePath
+        )
+    }
+
     function activate() {
         root._updateUseSimpleCodeEditor()
-        
+
+        if (!root._initialFetchDone) {
+            root._initialFetchDone = true
+            root.refresh()
+            return
+        }
+
         if (root.pendingInvocation === 0) {
             if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
                 root._aceEditorObject.getContent(function(content) {
                     root.contentChanged(root.remoteFilePath, content)
-                    root.disableSaveButton = !LK.command.hasFileChanged(root.hostId, root.remoteFilePath, content)
+                    if (root._fileReady) {
+                        root.disableSaveButton = !LK.command.hasFileChanged(root.hostId, root.remoteFilePath, content)
+                    }
                 })
                 Qt.callLater(function() {
                     if (root._aceEditorObject !== null && !root._useSimpleCodeEditor) {
@@ -524,9 +548,6 @@ Item {
     }
 
     function deactivate() {
-    }
-
-    function refresh() {
     }
 
     function close() {

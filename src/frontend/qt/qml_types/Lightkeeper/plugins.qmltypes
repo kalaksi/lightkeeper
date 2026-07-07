@@ -104,6 +104,13 @@ Module {
             Parameter { name: "path"; type: "string" }
         }
         Method {
+            name: "downloadEditableFile"
+            type: "int"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "remote_file_path"; type: "string" }
+        }
+        Method {
             name: "openRemoteFileInEditor"
             Parameter { name: "host_id"; type: "string" }
             Parameter { name: "remote_path"; type: "string" }
@@ -183,7 +190,6 @@ Module {
             name: "textEditorViewOpened"
             Parameter { name: "header_text"; type: "string" }
             Parameter { name: "command_id"; type: "string" }
-            Parameter { name: "invocation_id"; type: "int" }
             Parameter { name: "remote_file_path"; type: "string" }
         }
         Signal {
