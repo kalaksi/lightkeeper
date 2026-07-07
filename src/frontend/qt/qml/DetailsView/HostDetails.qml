@@ -86,10 +86,13 @@ Item {
     Connections {
         target: LK.command
 
-        function onTextViewOpened(title, invocationId) {
+        function onTextViewOpened(title, commandId, commandParams) {
+            let tabHostId = root.hostId
             root.createLazyTab(title, function(container) {
                 let component = textView.createObject(container, {
-                    pendingInvocation: invocationId,
+                    hostId: tabHostId,
+                    commandId: commandId,
+                    commandParams: commandParams,
                 })
                 component.anchors.fill = container
                 return component

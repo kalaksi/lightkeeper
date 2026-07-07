@@ -13,11 +13,16 @@ import "../Text"
 
 Item {
     id: root
+    required property string hostId
+    property string commandId: ""
+    property var commandParams: []
     property var text: ""
     property var jsonText: ""
     property var errorText: ""
     property var criticality: ""
-    property var pendingInvocation: -1
+    property var pendingInvocation: 0
+    property bool _initialFetchDone: false
+    property bool _loading: pendingInvocation > 0
 
 
     Connections {
@@ -27,14 +32,16 @@ Item {
             let commandResult = JSON.parse(commandResultJson)
 
             if (root.pendingInvocation === invocationId) {
-                root.pendingInvocations = -1
+                root.pendingInvocation = 0
 
                 // If message seems to contain JSON...
                 if (commandResult.message.startsWith("{")) {
                     root.jsonText = commandResult.message
+                    root.text = ""
                 }
                 else {
                     root.text = commandResult.message
+                    root.jsonText = ""
                 }
 
                 root.errorText = commandResult.error
@@ -49,11 +56,11 @@ Item {
     }
 
     WorkingSprite {
-        visible: root.text === "" && root.errorText === ""
+        visible: root._loading
     }
 
     ScrollView {
-        visible: root.jsonText !== ""
+        visible: !root._loading && root.jsonText !== ""
         anchors.fill: parent
 
         JsonTextFormat {
@@ -64,7 +71,7 @@ Item {
     }
 
     ScrollView {
-        visible: root.text !== ""
+        visible: !root._loading && root.text !== ""
         anchors.fill: parent
 
         NormalText {
@@ -79,18 +86,25 @@ Item {
     AlertText {
         text: root.errorText
         criticality: root.criticality
-        visible: root.errorText !== ""
-    }
-
-    function activate() {
-        // Do nothing.
-    }
-
-    function deactivate() {
-        // Do nothing.
+        visible: !root._loading && root.errorText !== ""
     }
 
     function refresh() {
+        root.pendingInvocation = LK.command.executePlain(
+            root.hostId,
+            root.commandId,
+            root.commandParams
+        )
+    }
+
+    function activate() {
+        if (!root._initialFetchDone) {
+            root._initialFetchDone = true
+            root.refresh()
+        }
+    }
+
+    function deactivate() {
         // Do nothing.
     }
 

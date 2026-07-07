@@ -62,7 +62,7 @@ pub struct CommandHandlerModel {
     textDialogOpened: qt_signal!(invocation_id: u64),
     confirmationDialogOpened: qt_signal!(text: QString, button_id: QString, host_id: QString, command_id: QString, parameters: QStringList),
     commandOutputDialogOpened: qt_signal!(title: QString, invocation_id: u64),
-    textViewOpened: qt_signal!(title: QString, invocation_id: u64),
+    textViewOpened: qt_signal!(title: QString, command_id: QString, parameters: QStringList),
     textEditorViewOpened: qt_signal!(
         header_text: QString,
         command_id: QString,
@@ -337,14 +337,10 @@ impl CommandHandlerModel {
             },
             UIAction::TextView => {
                 let target_id = parameters.first().unwrap().clone();
-                match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {
-                    Ok(invocation_id) => {
-                        self.textViewOpened(QString::from(format!("{}: {}", command_id, target_id)), invocation_id);
-                    },
-                    Err(error) => {
-                        self.error(QString::from(error.to_string()));
-                    },
-                }
+                let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
+                let title = QString::from(format!("{}: {}", command_id, target_id));
+                let command_id_qs = QString::from(command_id);
+                self.textViewOpened(title, command_id_qs, parameters_qs);
             },
             UIAction::TextDialog => {
                 match self.backend_mut().execute_command(&host_id, &command_id, &parameters) {

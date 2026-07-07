@@ -176,7 +176,8 @@ Module {
         Signal {
             name: "textViewOpened"
             Parameter { name: "title"; type: "string" }
-            Parameter { name: "invocation_id"; type: "int" }
+            Parameter { name: "command_id"; type: "string" }
+            Parameter { name: "parameters"; type: "QStringList" }
         }
         Signal {
             name: "textEditorViewOpened"
