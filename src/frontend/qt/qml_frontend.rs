@@ -119,14 +119,11 @@ impl QmlFrontend {
             let qt_theme = ThemeModel::new(self.main_config.display_options.clone());
             qml_register_singleton_instance(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("Theme"), qt_theme);
 
-            ::log::debug!("Temporary log entry 8");
             self.load_qml(&mut engine);
-            ::log::debug!("Temporary log entry 9");
 
             let arc_engine = std::sync::Arc::new(engine);
             hot_reload::watch(std::path::PathBuf::from("./src/frontend/qt/qml"), arc_engine.clone());
             arc_engine.exec();
-            ::log::debug!("Temporary log entry 10");
         }
 
         ExitReason::Quit
