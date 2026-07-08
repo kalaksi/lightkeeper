@@ -1235,7 +1235,7 @@ dependencies = [
 
 [[package]]
 name = "lightkeeper"
-version = "0.42.0"
+version = "0.42.1"
 dependencies = [
  "base64",
  "bincode",

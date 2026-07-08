@@ -45,6 +45,15 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.42.1" date="2026-07-08">
+      <description>
+        <ul>
+          <li>Fix some races in initial view loads after GUI optimizations</li>
+          <li>Fix docker and podman image inspect</li>
+          <li>Add note that sudo should be passwordless</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.42.0" date="2026-07-03">
       <description>
         <ul>
