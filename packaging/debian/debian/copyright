@@ -27,6 +27,14 @@ Files: third_party/qml-lighthouse-components/Lighthouse/FilePermissionsDialog/*
 Copyright: 2026 kalaksi@users.noreply.github.com
 License: GPL-3.0-or-later
 
+Files: third_party/qml-lighthouse-components/Lighthouse/LazyContent/*
+Copyright: 2026 kalaksi@users.noreply.github.com
+License: GPL-3.0-or-later
+
+Files: third_party/qml-lighthouse-components/Lighthouse/LazyTabStack/*
+Copyright: 2026 kalaksi@users.noreply.github.com
+License: GPL-3.0-or-later
+
 Files: third_party/qmltermwidget/*
 Copyright: Various authors
 License: GPL-2.0-only and LGPL-2.0-or-later and BSD-3-clause

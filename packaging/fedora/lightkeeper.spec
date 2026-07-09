@@ -104,7 +104,7 @@ mkdir -p %{buildroot}%{_datadir}/lightkeeper/qml
 # ChartJs2QML
 cp -a third_party/ChartJs2QML/ChartJs %{buildroot}%{_datadir}/lightkeeper/qml/
 
-# Lighthouse components (FileBrowser, AceEditor, FilePermissionsDialog)
+# Lighthouse components (FileBrowser, AceEditor, FilePermissionsDialog, LazyContent, LazyTabStack)
 cp -a third_party/qml-lighthouse-components/Lighthouse %{buildroot}%{_datadir}/lightkeeper/qml/
 find %{buildroot}%{_datadir}/lightkeeper/qml/Lighthouse/AceEditor/ace-builds \
     -mindepth 1 -maxdepth 1 ! -name LICENSE ! -name src-min-noconflict -exec rm -rf {} +
@@ -127,6 +127,12 @@ install -Dpm644 \
 install -Dpm644 \
     third_party/qml-lighthouse-components/Lighthouse/FilePermissionsDialog/LICENSE \
     %{buildroot}%{licdir}/third_party/qml-lighthouse-components/Lighthouse/FilePermissionsDialog/LICENSE
+install -Dpm644 \
+    third_party/qml-lighthouse-components/Lighthouse/LazyContent/LICENSE \
+    %{buildroot}%{licdir}/third_party/qml-lighthouse-components/Lighthouse/LazyContent/LICENSE
+install -Dpm644 \
+    third_party/qml-lighthouse-components/Lighthouse/LazyTabStack/LICENSE \
+    %{buildroot}%{licdir}/third_party/qml-lighthouse-components/Lighthouse/LazyTabStack/LICENSE
 install -Dpm644 third_party/qmltermwidget/LICENSE \
     %{buildroot}%{licdir}/third_party/qmltermwidget/LICENSE
 install -Dpm644 third_party/qmltermwidget/LICENSE.BSD-3-clause \
@@ -141,6 +147,8 @@ install -Dpm644 third_party/qmltermwidget/LICENSE.LGPL2+ \
 %license %{licdir}/third_party/qml-lighthouse-components/Lighthouse/AceEditor/ace-builds/LICENSE
 %license %{licdir}/third_party/qml-lighthouse-components/Lighthouse/FileBrowser/LICENSE
 %license %{licdir}/third_party/qml-lighthouse-components/Lighthouse/FilePermissionsDialog/LICENSE
+%license %{licdir}/third_party/qml-lighthouse-components/Lighthouse/LazyContent/LICENSE
+%license %{licdir}/third_party/qml-lighthouse-components/Lighthouse/LazyTabStack/LICENSE
 %license %{licdir}/third_party/qmltermwidget/LICENSE
 %license %{licdir}/third_party/qmltermwidget/LICENSE.BSD-3-clause
 %license %{licdir}/third_party/qmltermwidget/LICENSE.LGPL2+

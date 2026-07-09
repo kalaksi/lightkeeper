@@ -26,6 +26,7 @@ Item {
     property alias tabIndex: tabBar.currentIndex
     property bool _maximized: false
     property int _oldTabIndex: -1
+    property bool _blockTabChanged: false
 
     implicitWidth: parent.width
     implicitHeight: 34
@@ -55,6 +56,10 @@ Item {
             contentHeight: parent.height * 0.85
 
             onCurrentIndexChanged: {
+                if (root._blockTabChanged) {
+                    root._oldTabIndex = currentIndex
+                    return
+                }
                 root.tabChanged(root._oldTabIndex, currentIndex)
                 root._oldTabIndex = currentIndex
             }
@@ -150,6 +155,14 @@ Item {
 
     function selectTab(index) {
         tabBar.setCurrentIndex(index)
+    }
+
+    function setTabs(titles, index) {
+        root._blockTabChanged = true
+        root.tabs = titles
+        tabBar.setCurrentIndex(index)
+        root._oldTabIndex = index
+        root._blockTabChanged = false
     }
 
     function selectDefaultTab() {
