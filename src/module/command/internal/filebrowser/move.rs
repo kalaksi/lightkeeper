@@ -71,8 +71,14 @@ impl CommandModule for FileBrowserMove {
             false => format!("{}/", destination),
         };
 
+        // Directory paths from the file browser end with '/'. 
+        // Strip it so rsync copies whole directories instead of just their contents.
         let quoted_sources = sources.iter()
-            .map(|source| sh_single_quoted(source))
+            .map(|source| {
+                let trimmed = source.trim_end_matches('/');
+                let source = if trimmed.is_empty() { source.as_str() } else { trimmed };
+                sh_single_quoted(source)
+            })
             .collect::<Vec<_>>()
             .join(" ");
 

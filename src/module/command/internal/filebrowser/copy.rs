@@ -70,12 +70,22 @@ impl CommandModule for FileBrowserCopy {
             else {
                 format!("{}/", destination)
             };
+
+            // Directory paths from the file browser end with '/'. 
+            // Strip it so rsync copies whole directories instead of just their contents.
+            let trimmed_sources: Vec<String> = sources.iter()
+                .map(|source| {
+                    let trimmed = source.trim_end_matches('/');
+                    if trimmed.is_empty() { source.clone() } else { trimmed.to_string() }
+                })
+                .collect();
+
             let mut args: Vec<&str> = vec![
                 // Try to keep output format more stable.
                 "env", "LANG=C", "LC_ALL=C",
                 "rsync", "-av", "--info=progress2", "--stats", "--ignore-existing", download::RSYNC_OUT_FORMAT,
             ];
-            args.extend(sources.iter().map(String::as_str));
+            args.extend(trimmed_sources.iter().map(String::as_str));
             args.push(dest.as_str());
             command.arguments(args);
             Ok(command.to_string())
