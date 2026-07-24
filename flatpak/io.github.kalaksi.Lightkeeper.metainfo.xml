@@ -45,6 +45,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.42.2" date="2026-07-24">
+      <description>
+        <ul>
+         <li>Fix directory not being moved with its contents</li>
+         <li>Fix file move progress reporting</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.42.1" date="2026-07-08">
       <description>
         <ul>
