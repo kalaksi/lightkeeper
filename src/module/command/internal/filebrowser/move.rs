@@ -82,31 +82,30 @@ impl CommandModule for FileBrowserMove {
             .collect::<Vec<_>>()
             .join(" ");
 
-        // Detect-and-branch per source: when the source is on the same filesystem as the
-        // destination, mv is an instant atomic rename, so use it. When they're on different
-        // filesystems, mv would silently copy without progress, so use rsync instead.
-        //
-        // Identifies the filesystem with `stat -c %d`, equal ids mean the same filesystem.
+        // If every source is on the same filesystem as the destination, use a single mv.
+        // If any source is on a different filesystem, use a single rsync instead.
         let out_format = sh_single_quoted(download::RSYNC_OUT_FORMAT);
         let script = format!(
             concat!(
                 "dst={dest} && ",
                 "dst_dev=$({sudo}stat -c %d -- \"$dst\") && ",
+                "need_rsync=0 && ",
                 "for src in {quoted_sources}; do ",
                     "src_dev=$({sudo}stat -c %d -- \"$src\") || exit 1; ",
-                    "if [ \"$src_dev\" = \"$dst_dev\" ]; then ",
-                        "{sudo}mv -n -- \"$src\" \"$dst\" || exit $?; ",
-                    "else ",
-                        // `--` stops option parsing so a path starting with '-' can never be
-                        // treated as an rsync flag. Paths are absolute, so the ':' in any name
-                        // always follows a '/' and is never mistaken for a host:path remote spec.
-                        "{sudo}env LANG=C LC_ALL=C rsync -av --info=progress2 --stats ",
-                        "--ignore-existing --remove-source-files {out_format} -- \"$src\" \"$dst\" || exit $?; ",
-                        // --remove-source-files only removes files, leaving empty source
-                        // directories behind, so clean those up to complete the move.
-                        "{sudo}find -- \"$src\" -depth -type d -empty -delete 2>/dev/null || true; ",
-                    "fi; ",
-                "done"
+                    "if [ \"$src_dev\" != \"$dst_dev\" ]; then need_rsync=1; break; fi; ",
+                "done && ",
+                "if [ \"$need_rsync\" = 0 ]; then ",
+                    "{sudo}mv -n -- {quoted_sources} \"$dst\" || exit $?; ",
+                "else ",
+                    // `--` stops option parsing so a path starting with '-' can never be
+                    // treated as an rsync flag. Paths are absolute, so the ':' in any name
+                    // always follows a '/' and is never mistaken for a host:path remote spec.
+                    "{sudo}env LANG=C LC_ALL=C rsync -av --info=progress2 --stats ",
+                    "--ignore-existing --remove-source-files {out_format} -- {quoted_sources} \"$dst\" || exit $?; ",
+                    // --remove-source-files only removes files, leaving empty source
+                    // directories behind, so clean those up to complete the move.
+                    "{sudo}find -- {quoted_sources} -depth -type d -empty -delete 2>/dev/null || true; ",
+                "fi"
             ),
             dest = sh_single_quoted(&dest),
             sudo = sudo,
