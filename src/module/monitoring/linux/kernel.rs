@@ -58,6 +58,10 @@ impl MonitoringModule for Kernel {
             return Err(response.message);
         }
 
-        Ok(DataPoint::new(response.message.replace(" ", " (") + ")"))
+        let message = response.message.trim();
+        match message.split_once(' ') {
+            Some((version, arch)) => Ok(DataPoint::new(format!("{} ({})", version, arch.trim()))),
+            None => Ok(DataPoint::new(message.to_string())),
+        }
     }
 }
