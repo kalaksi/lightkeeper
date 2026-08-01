@@ -78,17 +78,22 @@ impl CommandModule for FileBrowserDownload {
         let remote_path = parameters.first().ok_or(LkError::other("No remote path specified"))?;
         let local_path = parameters.get(1).ok_or(LkError::other("No local path specified"))?;
 
-        let remote_spec = match self.username.is_empty() {
-            true => format!("{}:{}", host.get_address(), remote_path),
-            false => format!("{}@{}:{}", self.username, host.get_address(), remote_path),
-        };
-
         if remote_path.is_empty() {
             return Err(LkError::other("Remote path is empty"));
         }
         if local_path.is_empty() {
             return Err(LkError::other("Local path is empty"));
         }
+
+        // Directory paths from the file browser end with '/'.
+        // Strip it so rsync copies whole directories instead of just their contents.
+        let trimmed_remote = remote_path.trim_end_matches('/');
+        let remote_path = if trimmed_remote.is_empty() { remote_path.as_str() } else { trimmed_remote };
+
+        let remote_spec = match self.username.is_empty() {
+            true => format!("{}:{}", host.get_address(), remote_path),
+            false => format!("{}@{}:{}", self.username, host.get_address(), remote_path),
+        };
 
         let mut command = ShellCommand::new();
         command.use_sudo = false;
