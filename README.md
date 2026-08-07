@@ -55,7 +55,7 @@ Just press Ctrl-T to open a terminal in a new tab.
 - [Installing](#installing)
    - [Flatpak](#flatpak)
    - [Debian 14](#debian-14)
-   - [Fedora 43](#fedora-43)
+   - [Fedora 43/44](#fedora-4344)
 - [Building from source](#building-from-source)
    - [Dependencies](#dependencies)
    - [Building](#building)
@@ -100,7 +100,7 @@ Download `.deb` packages from the [GitHub Releases](https://github.com/kalaksi/l
 
 To build `.deb` packages locally, see [packaging/debian/README.md](packaging/debian/README.md).
 
-## Fedora 43
+## Fedora 43/44
 
 Download `.rpm` packages from the [GitHub Releases](https://github.com/kalaksi/lightkeeper/releases) page.
 

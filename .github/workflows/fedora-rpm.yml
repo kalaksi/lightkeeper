@@ -1,4 +1,4 @@
-name: Build Fedora 43 package
+name: Build Fedora packages
 
 on:
   workflow_dispatch:
@@ -10,12 +10,20 @@ permissions:
 
 jobs:
   build-fedora-package:
-    name: Build Fedora 43 package
+    name: Build Fedora ${{ matrix.fedora }} package
     permissions:
       contents: read
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - fedora: "43"
+            image: fedora:43@sha256:762d73ba1c455232b0272c5d445a34f36c4b9f421cbc05ce8102552325b6a222
+          - fedora: "44"
+            image: fedora:44@sha256:6c75d5bf57cb0fa5aa4b92c6a83c86c791644496d9ac230de7711f5b8ec3b898
     container:
-      image: fedora:43@sha256:781b7642e8bf256e9cf75d2aa58d86f5cc695fd2df113517614e181a5eee9138
+      image: ${{ matrix.image }}
 
     steps:
       - name: Install dependencies
@@ -67,34 +75,6 @@ jobs:
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
-          name: fedora-43-rpms
+          name: fedora-${{ matrix.fedora }}-rpms
           path: packaging/fedora/build/RPMS/**/*.rpm
           if-no-files-found: error
-
-  upload-release-assets:
-    name: Upload Fedora 43 artifacts to release
-    if: github.event_name == 'release'
-    needs: build-fedora-package
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download built RPM artifacts
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
-        with:
-          name: fedora-43-rpms
-          path: /tmp/fedora-43-rpms
-
-      - name: Attach binary RPMs to GitHub release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          shopt -s nullglob globstar
-          for file in /tmp/fedora-43-rpms/**/*.rpm; do
-            case "${file}" in
-              *.src.rpm|*debuginfo*.rpm|*debugsource*.rpm)
-                continue
-                ;;
-            esac
-            gh release upload "${{ github.event.release.tag_name }}" "${file}" --clobber
-          done

@@ -1,12 +1,12 @@
-# Fedora 43 packaging for Lightkeeper
+# Fedora 43/44 packaging for Lightkeeper
 
 ## Prerequisites
 
 Minimum **rustc 1.88** (see `rust-version` in the repo root `Cargo.toml` and `lightkeeper.spec`).
-Check with `rustc --version`; Fedora 43 `rust` packages should meet this. If not, use
+Check with `rustc --version`; Fedora 43 and 44 `rust` packages should meet this. If not, use
 [rustup](https://rustup.rs/) and put `~/.cargo/bin` first on `PATH` for `rpmbuild`.
 
-Install build dependencies (Fedora 43):
+Install build dependencies (Fedora 43 or 44):
 
 Either match everything in `packaging/fedora/lightkeeper.spec` in one step (recommended):
 
