@@ -222,12 +222,12 @@ impl MetricsManager {
             // to keep the repo less public.
             // Date suffix in filename, so old tokens can be kept available without overwriting.
             let token_b64 =
-                download_string("https://github.com/kalaksi/lightkeeper/raw/refs/heads/develop/src/metrics/token-2602.txt")?;
+                download_string("https://github.com/kalaksi/lightkeeper/raw/refs/heads/develop/src/metrics/token-2608.txt")?;
             let token = general_purpose::STANDARD
-                .decode(token_b64.as_str())
+                .decode(token_b64.trim())
                 .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?
                 .iter()
-                .zip("LoremipsumdolorsitametconsecteturadipiscingelitCurabitura".bytes())
+                .zip("LoremipsumdolorsitametconsecteturadipiscingelitCurabiturauctornislut".bytes())
                 .map(|(b, k)| (b ^ k) as char)
                 .collect::<String>();
 
