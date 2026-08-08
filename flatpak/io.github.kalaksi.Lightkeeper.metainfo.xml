@@ -45,6 +45,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.42.3" date="2026-08-08">
+      <description>
+        <ul>
+         <li>Fix stray newline in kernel version</li>
+         <li>Fix dir download not including dir itself</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.42.2" date="2026-07-24">
       <description>
         <ul>
