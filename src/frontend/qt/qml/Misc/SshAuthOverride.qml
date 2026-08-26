@@ -100,13 +100,18 @@ Item {
                         ComboBox {
                             id: methodCombo
                             textRole: "label"
-                            valueRole: "id"
-                            model: [
-                                { id: "inherit",  label: "From config groups" },
-                                { id: "password", label: "Password" },
-                                { id: "key",      label: "Private key" },
-                                { id: "agent",    label: "SSH agent" },
-                            ]
+                            valueRole: "methodId"
+                            model: ListModel {
+                                ListElement { methodId: "inherit"; label: "From config groups" }
+                                ListElement { methodId: "password"; label: "Password" }
+                                ListElement { methodId: "key"; label: "Private key" }
+                                ListElement { methodId: "agent"; label: "SSH agent" }
+                            }
+                            delegate: ItemDelegate {
+                                required property string label
+                                width: ListView.view ? ListView.view.width : implicitWidth
+                                text: label
+                            }
                             Layout.preferredWidth: 150
                             onCurrentValueChanged: {
                                 passwordField._revealedSecret = ""

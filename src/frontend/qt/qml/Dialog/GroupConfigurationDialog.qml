@@ -543,8 +543,8 @@ LightkeeperDialog {
         inputSpecs: [{
             label: "Connector module",
             field_type: "Option",
-            options: {},
-            option_descriptions: {}
+            options: [],
+            option_descriptions: []
         }]
         onInputValuesGiven: function(inputValues) {
             root.groupConnectorSettings[inputValues[0]] = LK.config.getGroupModuleSettings(root.groupName, inputValues[0]).map(JSON.parse)
@@ -579,8 +579,8 @@ LightkeeperDialog {
         inputSpecs: [{
             label: "Monitoring module",
             field_type: "Option",
-            options: {},
-            option_descriptions: {}
+            options: [],
+            option_descriptions: []
         }]
         onInputValuesGiven: function(inputValues) {
             root.groupMonitorSettings[inputValues[0]] = LK.config.getGroupModuleSettings(root.groupName, inputValues[0]).map(JSON.parse)
@@ -615,8 +615,8 @@ LightkeeperDialog {
         inputSpecs: [{
             label: "Command module",
             field_type: "Option",
-            options: {},
-            option_descriptions: {}
+            options: [],
+            option_descriptions: []
         }]
         onInputValuesGiven: function(inputValues) {
             root.groupCommandSettings[inputValues[0]] = LK.config.getGroupModuleSettings(root.groupName, inputValues[0]).map(JSON.parse)
