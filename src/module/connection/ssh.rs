@@ -159,6 +159,7 @@ impl ConnectionModule for Ssh2 {
         let output = match read_result {
             Ok(bytes_read) => String::from_utf8_lossy(&buffer[..bytes_read]).to_string(),
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                session_data.invocation_id = invocation_id;
                 session_data.open_channel = Some(channel);
                 return Ok(ResponseMessage::new_partial(String::new()));
             },
@@ -395,8 +396,15 @@ impl Ssh2 {
         loop {
             for (index, session) in self.available_sessions.iter().enumerate() {
                 if let Ok(mut session_data) = session.try_lock() {
-                    // Incomplete commands will want a specific invocation. ID 0 means not used.
-                    if session_data.invocation_id > 0 && session_data.invocation_id != invocation_id {
+                    // New commands need a free session. Partial responses and interrupts must
+                    // resume the session that owns their invocation.
+                    let is_matching_session = if invocation_id == 0 {
+                        session_data.invocation_id == 0
+                    }
+                    else {
+                        session_data.invocation_id == invocation_id
+                    };
+                    if !is_matching_session {
                         continue;
                     }
 
