@@ -39,14 +39,6 @@ Item {
     property bool enableShortcuts: false
     property bool _loading: pendingInvocation > 0
 
-    // Related to downloads.
-    property int _transferProgressPercent: 0
-    property bool _hasActiveTransfer: false
-    property bool _transferCancelling: false
-    property var _transferInvocations: ({})
-    // Status text shown above the progress bar, e.g. "Copying file123".
-    property string _transferStatusText: ""
-
     // Invocation ids for which we refresh the file list when they complete (rename, copy, move).
     property var _pendingRefreshInvocationIds: []
 
@@ -64,20 +56,33 @@ Item {
     property int _pendingCreateFolderInvocationId: 0
     property string _pendingRenameAfterRefreshPath: ""
 
-    function _minTransferProgress() {
-        let invs = root._transferInvocations
-        let keys = Object.keys(invs)
-        if (keys.length === 0) {
-            return 100
-        }
-        let minP = 100
-        for (let i = 0; i < keys.length; i++) {
-            let p = invs[keys[i]]
-            if (p < minP) {
-                minP = p
+    // Active transfers, ordered newest first.
+    ListModel {
+        id: transfers
+    }
+
+    function _transferIndex(invocationId) {
+        for (let i = 0; i < transfers.count; i++) {
+            if (transfers.get(i).invocationId === invocationId) {
+                return i
             }
         }
-        return minP
+        return -1
+    }
+
+    function _addTransfer(invocationId) {
+        transfers.insert(0, {
+            invocationId: invocationId,
+            progress: 0,
+            statusText: "",
+            cancelling: false
+        })
+    }
+
+    function _updateTransfer(index, progress, statusText, cancelling) {
+        transfers.setProperty(index, "progress", progress)
+        transfers.setProperty(index, "statusText", statusText)
+        transfers.setProperty(index, "cancelling", cancelling)
     }
 
     Component.onCompleted: {
@@ -99,24 +104,23 @@ Item {
                     root.refreshCurrentDirectory()
                 }
             }
-            if (invocationId in root._transferInvocations) {
+            let transferIndex = root._transferIndex(invocationId)
+            if (transferIndex >= 0) {
                 let commandResult = JSON.parse(commandResultJson)
-                root._transferInvocations[invocationId] = commandResult.progress
-                if (commandResult.progress < 100 && commandResult.message) {
-                    root._transferStatusText = commandResult.message
-                }
+                let transfer = transfers.get(transferIndex)
+                let statusText = commandResult.progress < 100 && commandResult.message
+                    ? commandResult.message
+                    : transfer.statusText
                 if (commandResult.progress >= 100) {
-                    delete root._transferInvocations[invocationId]
+                    transfers.remove(transferIndex)
                     if (root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
                         root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.filter(id => id !== invocationId)
                         root.refreshCurrentDirectory()
                     }
                 }
-                root._transferProgressPercent = root._minTransferProgress()
-                if (Object.keys(root._transferInvocations).length === 0) {
-                    root._hasActiveTransfer = false
-                    root._transferCancelling = false
-                    root._transferStatusText = ""
+                else {
+                    root._updateTransfer(transferIndex, commandResult.progress,
+                        statusText, transfer.cancelling)
                 }
             }
             if (root.pendingInvocation === invocationId) {
@@ -155,7 +159,7 @@ Item {
             // Non-transfer refreshes (rename, mkdir, delete, chmod, chown). Transfer refreshes
             // are handled above on completion, so don't consume the id while a transfer is
             // still running (partial results would otherwise refresh prematurely).
-            if (!(invocationId in root._transferInvocations) &&
+            if (root._transferIndex(invocationId) < 0 &&
                 root._pendingRefreshInvocationIds.indexOf(invocationId) >= 0) {
                 root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.filter(id => id !== invocationId)
                 root.refreshCurrentDirectory()
@@ -275,7 +279,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 28
                 Layout.leftMargin: Theme.spacingTight
-                Layout.rightMargin: Theme.spacingTight
+                Layout.rightMargin: Theme.spacingNormal
                 Layout.alignment: Qt.AlignVCenter
                 selectByMouse: true
                 readOnly: root._loading
@@ -410,7 +414,7 @@ Item {
     FileBrowser {
         id: fileBrowser
         anchors.top: topBar.bottom
-        anchors.bottom: transferProgressBar.top
+        anchors.bottom: transferProgressArea.top
         anchors.left: parent.left
         anchors.right: parent.right
         rootPath: root.initialPath
@@ -445,86 +449,23 @@ Item {
         }
     }
 
-    Rectangle {
-        id: transferProgressBar
-        visible: root._hasActiveTransfer
+    Item {
+        id: transferProgressArea
+        visible: transfers.count > 0
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        height: visible ? 48 : 0
-        color: Theme.backgroundColor
-        border.width: 1
-        border.color: Theme.borderColor
+        height: visible ? transfers.count * 48 : 0
 
-        ColumnLayout {
+        Column {
             anchors.fill: parent
-            anchors.margins: 4
-            spacing: Theme.spacingTight
 
-            SmallText {
-                id: statusLabel
-                visible: root._transferStatusText !== ""
-                text: root._transferStatusText
-                elide: Text.ElideMiddle
-                Layout.fillWidth: true
-            }
+            Repeater {
+                model: transfers
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.spacingNormal
-
-                ProgressBar {
-                    id: progressBar
-                    Layout.fillWidth: true
-                    Layout.fillHeight: false
-                    Layout.preferredHeight: 18
-                    Layout.alignment: Qt.AlignVCenter
-                    value: root._transferProgressPercent / 100.0
-
-                    contentItem: Rectangle {
-                        implicitHeight: progressBar.height
-                        implicitWidth: progressBar.width
-                        color: "#202020"
-                        radius: 4
-
-                        Rectangle {
-                            height: parent.height
-                            width: progressBar.visualPosition * parent.width
-                            color: palette.highlight
-                            radius: parent.radius
-
-                            Behavior on width {
-                                NumberAnimation {
-                                    duration: 200
-                                    easing.type: Easing.OutQuad
-                                }
-                            }
-                        }
-                    }
-                }
-
-                NormalText {
-                    id: label
-                    lineHeight: 0.9
-                    text: root._transferProgressPercent + " %"
-                    Layout.alignment: Qt.AlignVCenter
-                }
-
-                ToolButton {
-                    id: stopTransferButton
-                    flat: false
-                    display: AbstractButton.IconOnly
-                    icon.source: "qrc:/main/images/button/stop"
-                    icon.height: 18
-                    icon.width: 18
-                    padding: 2
-                    enabled: !root._transferCancelling
-                    Layout.alignment: Qt.AlignVCenter
-                    onClicked: root.stopTransfers()
-
-                    ToolTip.visible: hovered
-                    ToolTip.delay: Theme.tooltipDelay
-                    ToolTip.text: "Stop transfer"
+                FileTransferProgress {
+                    width: transferProgressArea.width
+                    onStopRequested: root.stopTransfer(invocationId)
                 }
             }
         }
@@ -549,13 +490,11 @@ Item {
                         path = path.substring(7)
                     }
                     let localDir = path
-                    root._hasActiveTransfer = true
-                    root._transferProgressPercent = 0
                     for (let i = 0; i < fileBrowser.selectedFiles.length; i++) {
                         let remotePath = fileBrowser.selectedFiles[i]
                         let invocationId = LK.command.executePlain(root.hostId, "_internal-filebrowser-download",
                             [remotePath, localDir])
-                        root._transferInvocations[invocationId] = 0
+                        root._addTransfer(invocationId)
                     }
                     downloadFolderDialogLoader.active = false
                 }
@@ -581,8 +520,6 @@ Item {
 
                 onAccepted: {
                     let remoteDir = fileBrowser.selectedDirectory
-                    root._hasActiveTransfer = true
-                    root._transferProgressPercent = 0
                     for (let i = 0; i < selectedFiles.length; i++) {
                         let url = selectedFiles[i]
                         let localPath = url.toString()
@@ -592,12 +529,11 @@ Item {
                         if (localPath.length === 0) {
                             continue
                         }
-                        let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
+                        let invocationId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
                             [localPath, remoteDir])
-                        let invs = root._transferInvocations
-                        invs[invId] = 0
-                        root._transferInvocations = invs
-                        root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invId])
+                        root._addTransfer(invocationId)
+                        root._pendingRefreshInvocationIds =
+                            root._pendingRefreshInvocationIds.concat([invocationId])
                     }
                     uploadFileDialogLoader.active = false
                 }
@@ -631,14 +567,11 @@ Item {
                         return
                     }
                     let remoteDir = fileBrowser.selectedDirectory
-                    root._hasActiveTransfer = true
-                    root._transferProgressPercent = 0
-                    let invId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
+                    let invocationId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
                         [path, remoteDir])
-                    let invs = root._transferInvocations
-                    invs[invId] = 0
-                    root._transferInvocations = invs
-                    root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invId])
+                    root._addTransfer(invocationId)
+                    root._pendingRefreshInvocationIds =
+                        root._pendingRefreshInvocationIds.concat([invocationId])
                     uploadFolderDialogLoader.active = false
                 }
 
@@ -751,8 +684,7 @@ Item {
             let invocationId = LK.command.executePlain(root.hostId,
                 "_internal-filebrowser-move", params)
             root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invocationId])
-            root._hasActiveTransfer = true
-            root._transferInvocations[invocationId] = 0
+            root._addTransfer(invocationId)
             root._fileClipboardPaths = []
             root._fileClipboardIsCut = false
         }
@@ -760,17 +692,16 @@ Item {
             let invocationId = LK.command.executePlain(root.hostId,
                 "_internal-filebrowser-copy", params)
             root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([invocationId])
-            root._hasActiveTransfer = true
-            root._transferInvocations[invocationId] = 0
+            root._addTransfer(invocationId)
         }
     }
 
-    function stopTransfers() {
-        root._transferCancelling = true
-        root._transferStatusText = "Cancelling…"
-        let ids = Object.keys(root._transferInvocations)
-        for (let i = 0; i < ids.length; i++) {
-            LK.command.interruptInvocation(parseInt(ids[i]))
+    function stopTransfer(invocationId) {
+        let index = root._transferIndex(invocationId)
+        if (index >= 0) {
+            let transfer = transfers.get(index)
+            root._updateTransfer(index, transfer.progress, "Cancelling…", true)
+            LK.command.interruptInvocation(invocationId)
         }
     }
 
