@@ -45,6 +45,16 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.43.0" date="2026-08-26">
+      <description>
+        <ul>
+          <li>Show multiple transfers in file browser</li>
+          <li>Add path bar to file browser</li>
+          <li>Fix file browser tooltip and split view handle areas</li>
+          <li>Fix a race in SSH session resume</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.42.3" date="2026-08-08">
       <description>
         <ul>
