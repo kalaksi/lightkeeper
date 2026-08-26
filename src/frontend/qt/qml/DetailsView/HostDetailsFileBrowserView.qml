@@ -269,8 +269,58 @@ Item {
                 ToolTip.text: "Upload a folder to selected directory"
             }
 
-            Item {
+            StyleOverride.TextField {
+                id: pathBar
+
                 Layout.fillWidth: true
+                Layout.preferredHeight: 28
+                Layout.leftMargin: Theme.spacingTight
+                Layout.rightMargin: Theme.spacingTight
+                Layout.alignment: Qt.AlignVCenter
+                selectByMouse: true
+                readOnly: root._loading
+                placeholderText: "Path"
+                placeholderTextColor: Theme.textColorDark
+                Accessible.name: "Current directory path"
+
+                Component.onCompleted: text = fileBrowser.selectedDirectory
+
+                Connections {
+                    target: fileBrowser
+                    function onSelectedDirectoryChanged() {
+                        pathBar.text = fileBrowser.selectedDirectory
+                    }
+                }
+
+                onActiveFocusChanged: {
+                    if (activeFocus) {
+                        selectAll()
+                    }
+                    else {
+                        text = fileBrowser.selectedDirectory
+                    }
+                }
+
+                Keys.onShortcutOverride: function(event) {
+                    if (event.key === Qt.Key_Escape) {
+                        event.accepted = true
+                    }
+                }
+
+                Keys.onEscapePressed: function(event) {
+                    text = fileBrowser.selectedDirectory
+                    focus = false
+                    event.accepted = true
+                }
+
+                onAccepted: {
+                    let path = text.trim()
+                    if (path.length === 0) {
+                        path = "/"
+                    }
+                    fileBrowser.navigateToDirectory(path)
+                    focus = false
+                }
             }
 
             Row {
@@ -640,6 +690,14 @@ Item {
         enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
         sequences: [StandardKey.Copy]
         onActivated: root.copySelected()
+    }
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequence: "Ctrl+L"
+        onActivated: {
+            pathBar.forceActiveFocus()
+            pathBar.selectAll()
+        }
     }
     Shortcut {
         enabled: root.enableShortcuts && fileBrowser.selectedFiles.length > 0
