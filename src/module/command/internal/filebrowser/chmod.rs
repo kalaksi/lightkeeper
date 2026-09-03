@@ -71,8 +71,7 @@ impl CommandModule for FileBrowserChmod {
             Ok(CommandResult::new_hidden(response.message_increment.clone()))
         }
         else {
-            Ok(CommandResult::new_hidden(response.message_increment.clone())
-                .with_criticality(crate::enums::Criticality::Error))
+            Ok(CommandResult::new_error(response.message_increment.clone()))
         }
     }
 }
