@@ -27,9 +27,11 @@ Item {
     property string text: ""
     property string errorText: ""
     property var pendingInvocation: 0
-    property bool _initialFetchDone: false
     property bool _loading: pendingInvocation > 0
 
+    Component.onCompleted: {
+        root.refresh()
+    }
 
     Connections {
         target: LK.hosts
@@ -334,11 +336,6 @@ Item {
     function activate() {
         searchField.focus = true
         root.enableShortcuts = true
-
-        if (!root._initialFetchDone) {
-            root._initialFetchDone = true
-            root.refresh()
-        }
     }
 
     function deactivate() {

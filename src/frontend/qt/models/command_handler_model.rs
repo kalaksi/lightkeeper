@@ -357,8 +357,8 @@ impl CommandHandlerModel {
                 let parameters_qs = parameters.into_iter().map(QString::from).collect::<QStringList>();
                 let tab_title_qs = QString::from(display_options.tab_title);
                 let command_id_qs = QString::from(command_id);
-                let time_controls = display_options.action == UIAction::LogViewWithTimeControls;
-                self.logsViewOpened(time_controls, tab_title_qs, command_id_qs, parameters_qs);
+                let show_time_controls = display_options.action == UIAction::LogViewWithTimeControls;
+                self.logsViewOpened(show_time_controls, tab_title_qs, command_id_qs, parameters_qs);
             },
             UIAction::Terminal => {
                 let Some(local_backend) = self.backend().local_backend() else {
