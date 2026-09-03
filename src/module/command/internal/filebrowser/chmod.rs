@@ -51,6 +51,9 @@ impl CommandModule for FileBrowserChmod {
 
         let path = parameters.first().ok_or(LkError::other("No path specified"))?;
         let mode = parameters.get(1).ok_or(LkError::other("No mode specified"))?;
+        let owner = parameters.get(2).map(|value| value.as_str()).unwrap_or("");
+        let group = parameters.get(3).map(|value| value.as_str()).unwrap_or("");
+        let ownership_requested = parameters.len() >= 4;
 
         if path.is_empty() {
             return Err(LkError::other("Path is empty"));
@@ -59,9 +62,44 @@ impl CommandModule for FileBrowserChmod {
             return Err(LkError::other("Mode is empty"));
         }
 
+        // GNU chmod keeps directory setuid/setgid unless a 4-digit mode that
+        // clears them (0775) is written as 00775. Non-zero special bits (2775)
+        // and 3-digit modes (775) are left unchanged.
+        let chmod_mode = if mode.chars().all(|c| c.is_ascii_digit())
+            && mode.len() == 4
+            && mode.starts_with('0') {
+
+            format!("0{mode}")
+        }
+        else {
+            mode.clone()
+        };
+
         let mut command = ShellCommand::new();
         command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
-        command.arguments(vec!["chmod", mode, path]);
+        command.arguments(vec!["chmod", &chmod_mode, path]);
+
+        // chown can overwrite special bits that were set with chmod, so need to guarantee order here.
+        if ownership_requested {
+            let owner_group = if !owner.is_empty() && !group.is_empty() {
+                format!("{}:{}", owner, group)
+            }
+            else if !owner.is_empty() {
+                owner.to_string()
+            }
+            else if !group.is_empty() {
+                format!(":{}", group)
+            }
+            else {
+                return Err(LkError::other("Either owner or group must be specified"));
+            };
+
+            let mut chown_command = ShellCommand::new();
+            chown_command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+            chown_command.arguments(vec!["chown", &owner_group, path]);
+
+            return Ok(format!("{} && {}", chown_command.to_string(), command.to_string()));
+        }
 
         Ok(command.to_string())
     }

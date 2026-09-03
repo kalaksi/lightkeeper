@@ -18,12 +18,17 @@ LightkeeperDialog {
     property alias permissions: permissionsContent.permissions
     property alias owner: permissionsContent.owner
     property alias group: permissionsContent.group
+    property alias warningText: permissionsContent.warningText
+    property alias showOctal: permissionsContent.showOctal
+    property alias showSpecialBits: permissionsContent.showSpecialBits
 
-    signal permissionsApplied(string ownerRwx, string groupRwx, string othersRwx, string newOwner, string newGroup)
+    signal permissionsApplied(string mode, string changedOwner, string changedGroup)
 
     title: "Permissions and ownership"
     modal: true
-    implicitWidth: permissionsContent.implicitWidth + Theme.marginDialog * 2
+    leftPadding: Theme.marginDialog + Theme.spacingLoose
+    rightPadding: Theme.marginDialog
+    implicitWidth: Math.max(400, permissionsContent.implicitWidth + leftPadding + rightPadding)
     // implicitHeight: permissionsContent.implicitHeight + Theme.marginDialogTop + Theme.marginDialogBottom
     standardButtons: Dialog.Ok | Dialog.Cancel
 
@@ -41,20 +46,23 @@ LightkeeperDialog {
 
     contentItem: FilePermissionsDialogContent {
         id: permissionsContent
-        contentMargin: Theme.marginDialog
+        contentMargin: 0
         sectionSpacing: Theme.spacingLoose
         rowSpacing: 4
         marginTop: Theme.marginDialogTop
-        marginBottom: Theme.marginDialogBottom
+        marginBottom: root.warningText.length > 0 ? Theme.spacingLoose : Theme.marginDialogBottom
         comboMinWidth: 200
         fontSize: Theme.fontSize
+        optionSpacing: Theme.spacingNormal * 2
+        showSpecialBits: true
+        tooltipDelay: Theme.tooltipDelay
+        warningTextColor: Theme.textColorDark
     }
 
     onAccepted: {
-        if (permissionsContent.canAccept)
-            root.permissionsApplied(permissionsContent.resultOwnerRwx, permissionsContent.resultGroupRwx,
-                permissionsContent.resultOthersRwx, permissionsContent.resultOwner,
-                permissionsContent.resultGroup)
+        if (permissionsContent.canAccept && permissionsContent.hasChanges) {
+            root.permissionsApplied(permissionsContent.resultMode, permissionsContent.changedOwner, permissionsContent.changedGroup)
+        }
     }
 
     function _updateOkButton() {

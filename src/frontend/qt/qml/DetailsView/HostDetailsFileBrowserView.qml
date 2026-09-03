@@ -430,6 +430,7 @@ Item {
         dimmedPaths: root._fileClipboardIsCut ? root._fileClipboardPaths : []
         verticalScrollBar: fileBrowserVerticalScrollBar
         enableShortcuts: root.enableShortcuts
+        tooltipDelay: Theme.tooltipDelay
 
         onRenamed: function(fullPath, newName) {
             // The file browser re-selects the renamed entry once this refresh completes.
@@ -596,25 +597,19 @@ Item {
     FilePermissionsDialog {
         id: permissionsDialog
         contextLabel: "Path"
-        onPermissionsApplied: function(ownerRwx, groupRwx, othersRwx, newOwner, newGroup) {
-            let modeStr = "u=" + ownerRwx + ",g=" + groupRwx + ",o=" + othersRwx
-            let initial = root._tripletsFromPermissions(permissionsDialog.permissions)
-            let permissionsChanged = root._permissionsDialogPaths.length > 1 ||
-                ownerRwx !== initial[0] || groupRwx !== initial[1] || othersRwx !== initial[2]
-            let ownershipChanged = newOwner !== permissionsDialog.owner || newGroup !== permissionsDialog.group
+        warningText: root._permissionsDialogPaths.length > 1
+            ? `Permission and ownership changes will affect ${root._permissionsDialogPaths.length} files.`
+            : ""
 
+        onPermissionsApplied: function(mode, changedOwner, changedGroup) {
             for (let i = 0; i < root._permissionsDialogPaths.length; i++) {
                 let path = root._permissionsDialogPaths[i]
-                if (permissionsChanged) {
-                    let id = LK.command.executePlain(root.hostId,
-                        "_internal-filebrowser-chmod", [path, modeStr])
-                    root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
+                let parameters = [path, mode]
+                if (changedOwner.length > 0 || changedGroup.length > 0) {
+                    parameters.push(changedOwner, changedGroup)
                 }
-                if (ownershipChanged) {
-                    let id = LK.command.executePlain(root.hostId,
-                        "_internal-filebrowser-chown", [path, newOwner, newGroup])
-                    root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
-                }
+                let id = LK.command.executePlain(root.hostId, "_internal-filebrowser-chmod", parameters)
+                root._pendingRefreshInvocationIds = root._pendingRefreshInvocationIds.concat([id])
             }
         }
     }
@@ -763,18 +758,6 @@ Item {
             permissionsDialog.group = ""
         }
         permissionsDialog.open()
-    }
-
-    function _tripletsFromPermissions(permStr) {
-        if (permStr.length < 9) {
-            return ["---", "---", "---"]
-        }
-        let start = permStr.length === 10 ? 1 : 0
-        return [
-            permStr.substring(start, start + 3),
-            permStr.substring(start + 3, start + 6),
-            permStr.substring(start + 6, start + 9)
-        ]
     }
 
     function refreshContent() {
