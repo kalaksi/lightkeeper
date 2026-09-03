@@ -94,3 +94,8 @@ groups:
       systemd-service-start: {}
       systemd-service-stop: {}
       systemd-service-unmask: {}
+  haproxy:
+    monitors:
+      haproxy:
+        settings:
+          socket_file: /run/haproxy/admin.sock

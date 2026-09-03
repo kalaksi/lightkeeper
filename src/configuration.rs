@@ -26,7 +26,7 @@ pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
-pub const MIGRATION_VERSION: u16 = 5;
+pub const MIGRATION_VERSION: u16 = 7;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -854,6 +854,27 @@ impl Configuration {
                         }
                         else {
                             return;
+                        }
+                    }
+                }
+                5 => {
+                    if let Some(default_group) = default_groups.groups.get("haproxy") {
+                        groups_config
+                            .groups
+                            .entry(String::from("haproxy"))
+                            .or_insert_with(|| default_group.clone());
+                    }
+                    else {
+                        return;
+                    }
+                }
+                6 => {
+                    // Avoid UI file-picker heuristic for settings ending in "_path".
+                    if let Some(group) = groups_config.groups.get_mut("haproxy") {
+                        if let Some(monitor) = group.monitors.get_mut("haproxy") {
+                            if let Some(value) = monitor.settings.remove("socket_path") {
+                                monitor.settings.entry(String::from("socket_file")).or_insert(value);
+                            }
                         }
                     }
                 }

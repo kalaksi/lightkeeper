@@ -91,6 +91,10 @@ display_options:
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
       command_order: ["podman-inspect", "podman-restart", "podman-shell", "podman-image-remote-tags", "podman-image-remove"]
+    haproxy:
+      priority: 13
+      color: "#80c47a3a"
+      monitor_order: ["haproxy"]
   chart_categories:
     - name: host
       monitors: ["load", "ram"]
@@ -104,3 +108,5 @@ display_options:
       monitors: ["docker-compose"]
     - name: docker-containers
       monitors: ["docker-containers"]
+    - name: haproxy
+      monitors: ["haproxy"]

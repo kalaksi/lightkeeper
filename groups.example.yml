@@ -118,6 +118,13 @@ groups:
       podman-compose-logs: {}
       podman-compose-build: {}
 
+  # Monitors for HAProxy (runtime stats socket via nc).
+  haproxy:
+    monitors:
+      haproxy:
+        settings:
+          socket_file: "/run/haproxy/admin.sock"
+
   # Monitors and commands for SystemD services.
   systemd-service:
     monitors:

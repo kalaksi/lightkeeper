@@ -5,5 +5,6 @@ pub mod storage;
 pub mod systemd;
 pub mod network;
 pub mod docker;
+pub mod haproxy;
 pub mod certificate;
 pub mod platform_info;

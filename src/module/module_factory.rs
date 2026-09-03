@@ -354,6 +354,7 @@ impl ModuleFactory {
             (monitoring::podman::Compose::get_metadata(), monitoring::podman::Compose::new_monitoring_module),
             (monitoring::podman::Containers::get_metadata(), monitoring::podman::Containers::new_monitoring_module),
             (monitoring::podman::Images::get_metadata(), monitoring::podman::Images::new_monitoring_module),
+            (monitoring::haproxy::Haproxy::get_metadata(), monitoring::haproxy::Haproxy::new_monitoring_module),
 
             // Monitoring extension modules.
             (monitoring::docker::ImageUpdates::get_metadata(), monitoring::docker::ImageUpdates::new_monitoring_module),

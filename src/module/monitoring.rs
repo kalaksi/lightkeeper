@@ -29,3 +29,6 @@ pub mod podman;
 pub mod storage;
 
 pub mod nixos;
+
+pub mod haproxy;
+pub use haproxy::Haproxy;
