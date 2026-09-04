@@ -7,8 +7,61 @@ groups:
       tcp-connect:
         is_critical: true
 
-  # Monitors and commands for Linux hosts. You usually want at least this for your hosts.
+  # Host and package monitors/commands for Linux systems.
+  host:
+    description: Host and package monitoring for Linux systems.
+    monitors:
+      os: {}
+      kernel: {}
+      uptime: {}
+      load: {}
+      ram: {}
+      package: {}
+      who: {}
+    commands:
+      logs: {}
+      linux-shell: {}
+      shutdown: {}
+      reboot: {}
+      linux-packages-clean: {}
+      linux-packages-update: {}
+      linux-packages-update-all: {}
+      linux-packages-refresh: {}
+      linux-packages-logs: {}
+
+  # Storage monitors and commands. Prefer this over the bundled modules in "linux".
+  storage:
+    description: Storage monitors and commands.
+    monitors:
+      filesystem: {}
+      storage-lvm-logical-volume: {}
+      storage-lvm-volume-group: {}
+      storage-lvm-physical-volume: {}
+      storage-cryptsetup: {}
+    commands:
+      storage-file-space-usage: {}
+      storage-filebrowser: {}
+      storage-lvm-snapshot: {}
+      storage-lvm-lvresize: {}
+      storage-lvm-lvremove: {}
+      storage-lvm-lvrefresh: {}
+
+  # Network monitors and commands. Prefer this over the bundled modules in "linux".
+  network:
+    description: Network monitors and commands.
+    monitors:
+      interface:
+        settings:
+          ignored_interfaces: "br-,docker,lo,veth"
+      network-dns: {}
+      network-routes: {}
+    commands:
+      network-socket-listen: {}
+      network-socket-tcp: {}
+
+  # Legacy bundle of host, storage, and network modules. Prefer host + storage + network.
   linux:
+    description: Deprecated. Prefer host, storage, and network groups instead.
     monitors:
       os: {}
       kernel: {}
@@ -43,34 +96,6 @@ groups:
       storage-lvm-lvresize: {}
       storage-lvm-lvremove: {}
       storage-lvm-lvrefresh: {}
-      network-socket-listen: {}
-      network-socket-tcp: {}
-
-  # Storage monitors and commands. Prefer this over the bundled modules in "linux".
-  storage:
-    monitors:
-      filesystem: {}
-      storage-lvm-logical-volume: {}
-      storage-lvm-volume-group: {}
-      storage-lvm-physical-volume: {}
-      storage-cryptsetup: {}
-    commands:
-      storage-file-space-usage: {}
-      storage-filebrowser: {}
-      storage-lvm-snapshot: {}
-      storage-lvm-lvresize: {}
-      storage-lvm-lvremove: {}
-      storage-lvm-lvrefresh: {}
-
-  # Network monitors and commands. Prefer this over the bundled modules in "linux".
-  network:
-    monitors:
-      interface:
-        settings:
-          ignored_interfaces: "br-,docker,lo,veth"
-      network-dns: {}
-      network-routes: {}
-    commands:
       network-socket-listen: {}
       network-socket-tcp: {}
 
@@ -166,4 +191,3 @@ groups:
       systemd-service-mask: {}
       systemd-service-unmask: {}
       systemd-service-logs: {}
-

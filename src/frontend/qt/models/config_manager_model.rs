@@ -77,6 +77,7 @@ pub struct ConfigManagerModel {
 
     getSelectedGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
     getAvailableGroups: qt_method!(fn(&self, host_name: QString) -> QStringList),
+    getGroupDescription: qt_method!(fn(&self, group_name: QString) -> QString),
     updateHostGroups: qt_method!(fn(&self, host_name: QString, groups: QStringList)),
 
     //
@@ -520,6 +521,13 @@ impl ConfigManagerModel {
 
         available_groups.sort();
         available_groups.into_iter().map(QString::from).collect()
+    }
+
+    fn getGroupDescription(&self, group_name: QString) -> QString {
+        let group_name = group_name.to_string();
+        self.groups_config.groups.get(&group_name)
+            .map(|group| QString::from(group.description.as_str()))
+            .unwrap_or_default()
     }
 
     fn updateHostGroups(&mut self, host_id: QString, groups: QStringList) {

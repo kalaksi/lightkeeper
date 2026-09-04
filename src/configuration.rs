@@ -26,7 +26,7 @@ pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
-pub const MIGRATION_VERSION: u16 = 8;
+pub const MIGRATION_VERSION: u16 = 9;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -226,6 +226,8 @@ pub struct HostSettings {
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct ConfigGroup {
     // Hashmap keys are always names/ids.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub monitors: BTreeMap<String, MonitorConfig>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
@@ -424,7 +426,7 @@ impl Configuration {
                 connectors: host_config.connectors.clone(),
                 custom_commands: Vec::new(),
                 host_settings: host_config.settings.clone(),
-                config_helper: Default::default(),
+                ..Default::default()
             };
 
             // New host overrides.
@@ -517,7 +519,7 @@ impl Configuration {
             connectors: host_config.connectors.clone(),
             custom_commands: Vec::new(),
             host_settings: host_config.settings.clone(),
-            config_helper: Default::default(),
+            ..Default::default()
         };
 
         let all_overrides = Self::merge_group_config(&old_overrides, &host_config.overrides);
@@ -889,6 +891,30 @@ impl Configuration {
                         }
                         else {
                             return;
+                        }
+                    }
+                }
+                8 => {
+                    // Prefer host + storage + network over the legacy linux bundle (no host membership changes).
+                    if let Some(default_group) = default_groups.groups.get("host") {
+                        groups_config
+                            .groups
+                            .entry(String::from("host"))
+                            .or_insert_with(|| default_group.clone());
+                    }
+                    else {
+                        return;
+                    }
+
+                    // Surface default descriptions (e.g. linux deprecation) when unset.
+                    for (name, default_group) in default_groups.groups.iter() {
+                        if default_group.description.is_empty() {
+                            continue;
+                        }
+                        if let Some(group) = groups_config.groups.get_mut(name) {
+                            if group.description.is_empty() {
+                                group.description = default_group.description.clone();
+                            }
                         }
                     }
                 }

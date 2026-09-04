@@ -103,6 +103,12 @@ Item {
 
     ConfigHelperDialog {
         parent: root
+        groupName: "host"
+        onConfigurationChanged: LK.reload()
+    }
+
+    ConfigHelperDialog {
+        parent: root
         groupName: "storage"
         onConfigurationChanged: LK.reload()
     }

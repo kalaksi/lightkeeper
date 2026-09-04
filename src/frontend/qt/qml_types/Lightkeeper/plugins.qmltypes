@@ -276,6 +276,11 @@ Module {
             Parameter { name: "host_name"; type: "string" }
         }
         Method {
+            name: "getGroupDescription"
+            type: "string"
+            Parameter { name: "group_name"; type: "string" }
+        }
+        Method {
             name: "updateHostGroups"
             Parameter { name: "host_name"; type: "string" }
             Parameter { name: "groups"; type: "QStringList" }

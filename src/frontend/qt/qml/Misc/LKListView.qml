@@ -52,9 +52,9 @@ Rectangle {
                     text: root.labelPropertyName !== "" ? modelData[root.labelPropertyName] : modelData
                 }
 
-                SmallerText {
+                SmallText {
                     id: descriptionText
-                    visible: root.descriptionPropertyName !== ""
+                    visible: root.descriptionPropertyName !== "" && text.length > 0
                     opacity: 0.7
                     text: modelData[root.descriptionPropertyName] !== undefined ? modelData[root.descriptionPropertyName] : ""
                 }

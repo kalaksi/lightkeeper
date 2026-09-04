@@ -44,11 +44,11 @@ LightkeeperDialog {
             LK.config.addHost("new-host-id")
             root.hostId = "new-host-id"
         }
-        root._selectedGroups = LK.config.getSelectedGroups(root.hostId)
-        root._availableGroups = LK.config.getAvailableGroups(root.hostId)
+        root._selectedGroups = root.toGroupItems(LK.config.getSelectedGroups(root.hostId))
+        root._availableGroups = root.toGroupItems(LK.config.getAvailableGroups(root.hostId))
         root.hostSettings = JSON.parse(LK.config.getHostSettings(root.hostId))
         root._effectiveSettings = JSON.parse(
-            LK.config.getEffectiveModuleSettings(root.hostId, root._selectedGroups, "connector"))
+            LK.config.getEffectiveModuleSettings(root.hostId, root.groupNames(root._selectedGroups), "connector"))
         root._sshModuleSettings = LK.config.getHostConnectorModuleSettings(root.hostId, "ssh").map(JSON.parse)
         root._loading = false
         updateOkButton()
@@ -111,7 +111,7 @@ LightkeeperDialog {
         }
         LK.config.setHostSettings(hostIdField.text, hostIdField.text, JSON.stringify(newSettings))
 
-        LK.config.updateHostGroups(hostIdField.text, root._selectedGroups)
+        LK.config.updateHostGroups(hostIdField.text, root.groupNames(root._selectedGroups))
         LK.config.endHostConfiguration()
         root._loading = true
 
@@ -313,9 +313,10 @@ LightkeeperDialog {
                 size: root.buttonSize
                 tooltip: "Show effective configuration"
                 onClicked: {
-                    let connectorsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, root._selectedGroups, "connector"))
-                    let monitorsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, root._selectedGroups, "monitor"))
-                    let commandsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, root._selectedGroups, "command"))
+                    let groupNames = root.groupNames(root._selectedGroups)
+                    let connectorsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, groupNames, "connector"))
+                    let monitorsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, groupNames, "monitor"))
+                    let commandsAndSettings = JSON.parse(LK.config.getEffectiveModuleSettings(root.hostId, groupNames, "command"))
                     effectiveConfigDialog.groupConnectorSettings = connectorsAndSettings
                     effectiveConfigDialog.groupMonitorSettings = monitorsAndSettings
                     effectiveConfigDialog.groupCommandSettings = commandsAndSettings
@@ -365,6 +366,8 @@ LightkeeperDialog {
                     LKListView {
                         id: selectedGroupsList
                         model: root._selectedGroups
+                        labelPropertyName: "name"
+                        descriptionPropertyName: "description"
 
                         Layout.fillHeight: true
                         Layout.fillWidth: true
@@ -385,8 +388,8 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._selectedGroups[selectedGroupsList.currentIndex]
-                                root._selectedGroups = root._selectedGroups.filter(group => group !== selectedGroup)
-                                root._availableGroups = root._availableGroups.concat(selectedGroup).sort()
+                                root._selectedGroups = root._selectedGroups.filter(group => group.name !== selectedGroup.name)
+                                root._availableGroups = root._availableGroups.concat(selectedGroup).sort(root.compareGroupItems)
                             }
                         }
 
@@ -395,7 +398,7 @@ LightkeeperDialog {
                             imageSource: "qrc:/main/images/button/configure"
                             size: root.buttonSize
                             onClicked: {
-                                groupConfigDialog.groupName = root._selectedGroups[selectedGroupsList.currentIndex]
+                                groupConfigDialog.groupName = root._selectedGroups[selectedGroupsList.currentIndex].name
                                 groupConfigDialog.open()
                             }
                         }
@@ -449,6 +452,8 @@ LightkeeperDialog {
                     LKListView {
                         id: availableGroupsList
                         model: root._availableGroups
+                        labelPropertyName: "name"
+                        descriptionPropertyName: "description"
 
                         Layout.fillHeight: true
                         Layout.fillWidth: true
@@ -468,7 +473,7 @@ LightkeeperDialog {
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
                                 root._selectedGroups = root._selectedGroups.concat(selectedGroup)
-                                root._availableGroups = root._availableGroups.filter(group => group !== selectedGroup)
+                                root._availableGroups = root._availableGroups.filter(group => group.name !== selectedGroup.name)
                             }
                         }
 
@@ -478,7 +483,7 @@ LightkeeperDialog {
                             size: root.buttonSize
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                groupConfigDialog.groupName = selectedGroup
+                                groupConfigDialog.groupName = selectedGroup.name
                                 groupConfigDialog.open()
                             }
                         }
@@ -512,9 +517,9 @@ LightkeeperDialog {
 
                             onClicked: {
                                 let selectedGroup = root._availableGroups[availableGroupsList.currentIndex]
-                                LK.config.removeGroup(selectedGroup)
+                                LK.config.removeGroup(selectedGroup.name)
                                 LK.config.writeGroupConfiguration()
-                                root._availableGroups = root._availableGroups.filter(group => group !== selectedGroup)
+                                root._availableGroups = root._availableGroups.filter(group => group.name !== selectedGroup.name)
                             }
                         }
                     }
@@ -525,7 +530,7 @@ LightkeeperDialog {
 
     GroupConfigurationDialog {
         id: groupConfigDialog
-        groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex]
+        groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex].name
         topMargin: 100
 
         // TODO
@@ -564,10 +569,27 @@ LightkeeperDialog {
         onInputValuesGiven: function(inputValues) {
             LK.config.addGroup(inputValues[0])
             LK.config.writeGroupConfiguration()
-            root._availableGroups = root._availableGroups.concat(inputValues[0]).sort()
+            root._availableGroups = root._availableGroups.concat({
+                name: inputValues[0],
+                description: ""
+            }).sort(root.compareGroupItems)
         }
     }
 
+    function toGroupItems(names) {
+        return names.map((name) => ({
+            name: name,
+            description: LK.config.getGroupDescription(name)
+        }))
+    }
+
+    function groupNames(items) {
+        return items.map((item) => item.name)
+    }
+
+    function compareGroupItems(a, b) {
+        return a.name.localeCompare(b.name)
+    }
 
     function effectiveSshSetting(key) {
         return root._effectiveSettings["ssh"]
