@@ -77,22 +77,34 @@ impl MetricsManagerModel {
                 return;
             };
 
-            let mut metrics = vec![metrics::Metric {
-                label: data_point.label.clone(),
-                value: data_point.value_float,
-                time: current_unix_ms
-            }];
-
-            for child in data_point.multivalue.iter() {
-                metrics.push(metrics::Metric {
-                    label: child.label.clone(),
-                    value: child.value_float,
-                    time: current_unix_ms
-                });
-            }
+            let mut metrics = Vec::new();
+            Self::collect_metrics(&data_point, "", current_unix_ms, &mut metrics);
 
             if let Err(error) = metrics_manager.insert_metrics(host_id, monitor_id, &metrics) {
                 ::log::error!("Error inserting data point: {}", error);
+            }
+        }
+    }
+
+    fn collect_metrics(data_point: &DataPoint, parent_label: &str, time: i64, metrics: &mut Vec<metrics::Metric>) {
+        let label = if parent_label.is_empty() || data_point.label.is_empty() {
+            data_point.label.clone()
+        }
+        else {
+            format!("{}/{}", parent_label, data_point.label)
+        };
+
+        // Prefer leaf series for nested multivalue (e.g. HAProxy proxy → FRONTEND/BACKEND/server).
+        if data_point.multivalue.is_empty() {
+            metrics.push(metrics::Metric {
+                label,
+                value: data_point.value_float,
+                time,
+            });
+        }
+        else {
+            for child in data_point.multivalue.iter() {
+                Self::collect_metrics(child, &label, time, metrics);
             }
         }
     }

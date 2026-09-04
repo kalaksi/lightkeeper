@@ -29,6 +29,9 @@ Item {
     property int _periodSeconds: 7 * 24 * 60 * 60
     property int _chartStartTimeSec: 0
     property int _chartEndTimeSec: 0
+    // Extra lookback so charts can continue the line toward samples just
+    // outside the selected period.
+    property int _chartLookbackSeconds: 7 * 24 * 60 * 60
 
     signal refreshRequested()
 
@@ -253,9 +256,12 @@ Item {
                                     target: root
 
                                     function onRefreshRequested() {
+                                        let startTimeSec = Math.max(0, root._chartStartTimeSec - root._chartLookbackSeconds)
                                         chart.invocationId = LK.metrics.refreshCharts(
-                                            root.hostId, chart.monitoringData.monitor_id,
-                                            root._chartStartTimeSec, root._chartEndTimeSec)
+                                            root.hostId,
+                                            chart.monitoringData.monitor_id,
+                                            startTimeSec,
+                                            root._chartEndTimeSec)
                                     }
                                 }
 

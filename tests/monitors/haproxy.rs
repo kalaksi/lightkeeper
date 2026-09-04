@@ -38,34 +38,49 @@ fn test_haproxy() {
 
     harness.verify_next_datapoint(&Haproxy::get_metadata().module_spec.id, |datapoint| {
         let datapoint = datapoint.expect("Should have datapoint");
-        assert_eq!(datapoint.multivalue.len(), 5);
+        assert_eq!(datapoint.multivalue.len(), 2);
         assert_eq!(datapoint.criticality, Criticality::Critical);
 
-        assert_eq!(datapoint.multivalue[0].label, "serviceA/server1");
-        assert_eq!(datapoint.multivalue[0].value, "Up");
-        assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
-        assert_eq!(datapoint.multivalue[0].value_float, 19.0);
-        assert!(datapoint.multivalue[0].tags.contains(&String::from("Server")));
-        assert!(!datapoint.multivalue[0].tags.iter().any(|tag| tag == "TCP" || tag == "HTTP"));
-        assert_eq!(datapoint.multivalue[0].command_params, vec!["serviceA", "server1"]);
-        assert!(datapoint.multivalue[0].description.starts_with("TCP | sessions 19"));
-        assert!(datapoint.multivalue[0].description.contains("L4OK"));
+        let service_a = &datapoint.multivalue[0];
+        assert_eq!(service_a.label, "serviceA");
+        assert_eq!(service_a.value, "Up");
+        assert_eq!(service_a.criticality, Criticality::Normal);
+        assert_eq!(service_a.command_params, vec!["serviceA"]);
+        assert_eq!(service_a.multivalue.len(), 3);
 
-        assert_eq!(datapoint.multivalue[1].label, "serviceA/BACKEND");
-        assert!((datapoint.multivalue[1].value_float - (19.0 / 26213.0 * 100.0)).abs() < 0.01);
+        assert_eq!(service_a.multivalue[0].label, "FRONTEND");
+        assert_eq!(service_a.multivalue[0].value, "Open");
+        assert!(service_a.multivalue[0].tags.is_empty());
+        assert!((service_a.multivalue[0].value_float - (19.0 / 262122.0 * 100.0)).abs() < 0.01);
+        assert_eq!(service_a.multivalue[0].command_params, vec!["serviceA", "FRONTEND"]);
 
-        assert_eq!(datapoint.multivalue[2].label, "serviceB/server1");
-        assert_eq!(datapoint.multivalue[2].value, "Down");
-        assert_eq!(datapoint.multivalue[2].criticality, Criticality::Critical);
-        assert!(datapoint.multivalue[2].description.contains("L4TOUT"));
+        assert_eq!(service_a.multivalue[1].label, "BACKEND");
+        assert!(service_a.multivalue[1].tags.is_empty());
+        assert!((service_a.multivalue[1].value_float - (19.0 / 26213.0 * 100.0)).abs() < 0.01);
 
-        assert_eq!(datapoint.multivalue[3].label, "serviceB/BACKEND");
-        assert_eq!(datapoint.multivalue[3].criticality, Criticality::Critical);
+        assert_eq!(service_a.multivalue[2].label, "server1");
+        assert_eq!(service_a.multivalue[2].value, "Up");
+        assert_eq!(service_a.multivalue[2].criticality, Criticality::Normal);
+        assert_eq!(service_a.multivalue[2].value_float, 19.0);
+        assert_eq!(service_a.multivalue[2].tags, vec!["L4OK"]);
+        assert_eq!(service_a.multivalue[2].command_params, vec!["serviceA", "server1"]);
+        assert!(service_a.multivalue[2].description.starts_with("TCP | sessions 19"));
+        assert!(service_a.multivalue[2].description.contains("Layer4 check passed"));
 
-        assert_eq!(datapoint.multivalue[4].label, "serviceA/FRONTEND");
-        assert_eq!(datapoint.multivalue[4].value, "Open");
-        assert!(datapoint.multivalue[4].tags.contains(&String::from("Frontend")));
-        assert!((datapoint.multivalue[4].value_float - (19.0 / 262122.0 * 100.0)).abs() < 0.01);
+        let service_b = &datapoint.multivalue[1];
+        assert_eq!(service_b.label, "serviceB");
+        assert_eq!(service_b.value, "Down");
+        assert_eq!(service_b.criticality, Criticality::Critical);
+        assert_eq!(service_b.multivalue.len(), 2);
+
+        assert_eq!(service_b.multivalue[0].label, "BACKEND");
+        assert_eq!(service_b.multivalue[0].criticality, Criticality::Critical);
+
+        assert_eq!(service_b.multivalue[1].label, "server1");
+        assert_eq!(service_b.multivalue[1].value, "Down");
+        assert_eq!(service_b.multivalue[1].criticality, Criticality::Critical);
+        assert_eq!(service_b.multivalue[1].tags, vec!["L4TOUT"]);
+        assert!(service_b.multivalue[1].description.contains("Layer4 timeout"));
     });
 }
 
@@ -113,7 +128,17 @@ fn test_haproxy_without_servers() {
     harness.verify_next_datapoint(&Haproxy::get_metadata().module_spec.id, |datapoint| {
         let datapoint = datapoint.expect("Should have datapoint");
         let labels: Vec<&str> = datapoint.multivalue.iter().map(|point| point.label.as_str()).collect();
-        assert_eq!(labels, vec!["serviceA/BACKEND", "serviceB/BACKEND", "serviceA/FRONTEND"]);
+        assert_eq!(labels, vec!["serviceA", "serviceB"]);
+
+        let service_a_children: Vec<&str> = datapoint.multivalue[0].multivalue.iter()
+            .map(|point| point.label.as_str())
+            .collect();
+        assert_eq!(service_a_children, vec!["FRONTEND", "BACKEND"]);
+
+        let service_b_children: Vec<&str> = datapoint.multivalue[1].multivalue.iter()
+            .map(|point| point.label.as_str())
+            .collect();
+        assert_eq!(service_b_children, vec!["BACKEND"]);
         assert_eq!(datapoint.criticality, Criticality::Critical);
     });
 }
