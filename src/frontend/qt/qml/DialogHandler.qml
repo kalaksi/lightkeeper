@@ -103,6 +103,18 @@ Item {
 
     ConfigHelperDialog {
         parent: root
+        groupName: "storage"
+        onConfigurationChanged: LK.reload()
+    }
+
+    ConfigHelperDialog {
+        parent: root
+        groupName: "network"
+        onConfigurationChanged: LK.reload()
+    }
+
+    ConfigHelperDialog {
+        parent: root
         groupName: "docker"
         onConfigurationChanged: LK.reload()
     }

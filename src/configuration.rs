@@ -26,7 +26,7 @@ pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
-pub const MIGRATION_VERSION: u16 = 7;
+pub const MIGRATION_VERSION: u16 = 8;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -875,6 +875,20 @@ impl Configuration {
                             if let Some(value) = monitor.settings.remove("socket_path") {
                                 monitor.settings.entry(String::from("socket_file")).or_insert(value);
                             }
+                        }
+                    }
+                }
+                7 => {
+                    // Add category-based groups. Leave "linux" unchanged so existing hosts keep working.
+                    for name in ["storage", "network"] {
+                        if let Some(default_group) = default_groups.groups.get(name) {
+                            groups_config
+                                .groups
+                                .entry((*name).to_string())
+                                .or_insert_with(|| default_group.clone());
+                        }
+                        else {
+                            return;
                         }
                     }
                 }
