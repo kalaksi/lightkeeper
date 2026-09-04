@@ -28,6 +28,7 @@ Item {
     property int columnSpacing: Theme.spacingNormal
 
     signal customCommandsDialogOpened()
+    signal categoryConfigDialogOpened(string categoryName)
 
     Component.onCompleted: {
         root._categories = []
@@ -98,6 +99,10 @@ Item {
                     LK.command.refreshMonitorsOfCategory(root.hostId, hostGroupBox.categoryName)
                     hostGroupBox.refreshProgress = 0
                 }
+
+                onConfigClicked: {
+                    root.categoryConfigDialogOpened(hostGroupBox.categoryName)
+                }
             }
 
             CustomCommandGroupBox {
@@ -142,6 +147,10 @@ Item {
                     onRefreshClicked: {
                         LK.command.refreshMonitorsOfCategory(root.hostId, groupBox.categoryName)
                         groupBox.refreshProgress = 0
+                    }
+
+                    onConfigClicked: {
+                        root.categoryConfigDialogOpened(groupBox.categoryName)
                     }
 
                     Component.onCompleted: {

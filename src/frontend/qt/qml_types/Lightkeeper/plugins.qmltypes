@@ -371,6 +371,19 @@ Module {
             Parameter { name: "module_type"; type: "string" }
         }
         Method {
+            name: "getHostCategoryModuleSettings"
+            type: "string"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "category"; type: "string" }
+            Parameter { name: "module_type"; type: "string" }
+        }
+        Method {
+            name: "updateHostCategoryModuleSettings"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "monitor_settings"; type: "string" }
+            Parameter { name: "command_settings"; type: "string" }
+        }
+        Method {
             name: "storeGroupSecret"
             type: "string"
             Parameter { name: "group_id"; type: "string" }

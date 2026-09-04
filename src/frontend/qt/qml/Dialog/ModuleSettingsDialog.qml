@@ -20,8 +20,11 @@ LightkeeperDialog {
     id: root
     property string moduleId: ""
     property string groupName: ""
+    property string hostId: ""
     property alias moduleSettings: repeater.model
     property bool _loading: moduleId === ""
+    /// Host overrides: switch = override this key; off = inherit group value. Also scopes secrets to the host.
+    property bool _hostScoped: root.hostId !== ""
 
     title: `Module settings: ${root.moduleId}`
     implicitWidth: 680
@@ -43,8 +46,13 @@ LightkeeperDialog {
             }
             moduleSettings.push(moduleSetting)
 
-            if (!moduleSetting.enabled && nextItem["_isSecret"] && root.groupName !== "") {
-                LK.config.removeGroupSecret(root.groupName, root.moduleId, moduleSetting.key)
+            if (!moduleSetting.enabled && nextItem["_isSecret"]) {
+                if (root._hostScoped) {
+                    LK.config.removeHostSecret(root.hostId, root.moduleId, moduleSetting.key)
+                }
+                else if (root.groupName !== "") {
+                    LK.config.removeGroupSecret(root.groupName, root.moduleId, moduleSetting.key)
+                }
             }
         }
 
@@ -90,6 +98,8 @@ LightkeeperDialog {
                 RowLayout {
                     id: rowLayout
                     property string _settingKey: modelData.key
+                    property string _inheritedValue: modelData.inheritedValue ?? ""
+                    property bool _inheritedEnabled: modelData.inheritedEnabled === true
                     property string _secretSaveValue: modelData.isSecret === true ? modelData.value : ""
                     property string _lastSecretBackend: ""
                     property string _effectiveSecretBackend: _lastSecretBackend !== ""
@@ -121,8 +131,35 @@ LightkeeperDialog {
                     Switch {
                         id: toggleSwitch
                         checked: modelData.enabled
+                        ToolTip.visible: root._hostScoped && hovered
+                        ToolTip.delay: Theme.tooltipDelay
+                        ToolTip.text: "Override on this host"
 
                         Layout.alignment: Qt.AlignVCenter
+
+                        onToggled: {
+                            if (!root._hostScoped) {
+                                return
+                            }
+                            if (rowLayout._isSecret) {
+                                if (toggleSwitch.checked
+                                    && LK.config.detectSecretBackend(rowLayout._inheritedValue) === "keyring") {
+                                    // Don't reuse a group keyring placeholder as a host override.
+                                    rowLayout._secretSaveValue = ""
+                                    rowLayout._lastSecretBackend = "plaintext"
+                                }
+                                else {
+                                    rowLayout._secretSaveValue = rowLayout._inheritedValue
+                                    if (!toggleSwitch.checked) {
+                                        rowLayout._lastSecretBackend = ""
+                                    }
+                                }
+                            }
+                            else {
+                                // Enabling: start from inherited. Disabling: show inherited again.
+                                rowLayout.setFieldText(rowLayout._inheritedValue)
+                            }
+                        }
                     }
 
                     RowLayout {
@@ -135,9 +172,10 @@ LightkeeperDialog {
                             visible: modelData.isSecret !== true && !modelData.key.endsWith("_path")
                             enabled: toggleSwitch.checked
                             selectByMouse: true
-                            placeholderText: toggleSwitch.checked ? "" : "unset"
+                            placeholderText: rowLayout.unsetPlaceholder()
                             placeholderTextColor: Theme.textColorDark
-                            text: toggleSwitch.checked ? modelData.value : ""
+                            // Host mode: model value is override or inherited. Group mode: blank when unset.
+                            text: toggleSwitch.checked || root._hostScoped ? modelData.value : ""
 
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
@@ -147,9 +185,9 @@ LightkeeperDialog {
                             id: filePathField
                             visible: modelData.isSecret !== true && modelData.key.endsWith("_path")
                             enabled: toggleSwitch.checked
-                            placeholderText: toggleSwitch.checked ? "" : "unset"
+                            placeholderText: rowLayout.unsetPlaceholder()
                             placeholderTextColor: Theme.textColorDark
-                            text: toggleSwitch.checked ? modelData.value : ""
+                            text: toggleSwitch.checked || root._hostScoped ? modelData.value : ""
 
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
@@ -161,22 +199,30 @@ LightkeeperDialog {
                             enabled: toggleSwitch.checked
                             settingKey: modelData.key
                             description: modelData.description ?? ""
-                            saveValue: toggleSwitch.checked ? rowLayout._secretSaveValue : ""
+                            saveValue: toggleSwitch.checked || root._hostScoped
+                                ? rowLayout._secretSaveValue
+                                : ""
                             backend: rowLayout._effectiveSecretBackend
                             onRevealRequested: secretField.revealSecret(rowLayout.secretValue())
                             onEditRequested: secretField.openEditor(rowLayout.secretValue())
                             onSecretSubmitted: function(value, backend) {
                                 let wasSecretBackend = rowLayout._effectiveSecretBackend
 
-                                if (root.groupName !== "") {
+                                if (root._hostScoped) {
+                                    if (value === "" || (backend === "plaintext" && wasSecretBackend === "keyring")) {
+                                        LK.config.removeHostSecret(root.hostId, root.moduleId, modelData.key)
+                                    }
+                                }
+                                else if (root.groupName !== "") {
                                     if (value === "" || (backend === "plaintext" && wasSecretBackend === "keyring")) {
                                         LK.config.removeGroupSecret(root.groupName, root.moduleId, modelData.key)
                                     }
                                 }
 
                                 if (backend === "keyring" && value !== "") {
-                                    let placeholder = LK.config.storeGroupSecret(
-                                        root.groupName, root.moduleId, modelData.key, value)
+                                    let placeholder = root._hostScoped
+                                        ? LK.config.storeHostSecret(root.hostId, root.moduleId, modelData.key, value)
+                                        : LK.config.storeGroupSecret(root.groupName, root.moduleId, modelData.key, value)
                                     // Errors also result in empty string.
                                     if (placeholder !== "") {
                                         rowLayout._secretSaveValue = placeholder
@@ -193,6 +239,29 @@ LightkeeperDialog {
                         }
                     }
 
+                    function unsetPlaceholder() {
+                        if (toggleSwitch.checked) {
+                            return ""
+                        }
+                        if (root._hostScoped) {
+                            // Inherited empty string is a real value; only absent group keys are unset.
+                            return rowLayout._inheritedEnabled ? "" : "(unset)"
+                        }
+                        return "(unset)"
+                    }
+
+                    function setFieldText(value) {
+                        if (modelData.isSecret === true) {
+                            return
+                        }
+                        if (modelData.key.endsWith("_path")) {
+                            filePathField.text = value
+                        }
+                        else {
+                            textField.text = value
+                        }
+                    }
+
                     function settingValue() {
                         if (rowLayout._isSecret) {
                             return rowLayout._secretSaveValue
@@ -204,8 +273,17 @@ LightkeeperDialog {
                     }
 
                     function secretValue() {
-                        if (rowLayout._effectiveSecretBackend === "keyring" && root.groupName !== "") {
-                            return LK.config.getGroupSecret(root.groupName, root.moduleId, modelData.key) || ""
+                        // Inherited host row: do not look up host keyring (secret lives on the group).
+                        if (!toggleSwitch.checked && root._hostScoped) {
+                            return rowLayout._inheritedValue
+                        }
+                        if (rowLayout._effectiveSecretBackend === "keyring") {
+                            if (root._hostScoped) {
+                                return LK.config.getHostSecret(root.hostId, root.moduleId, modelData.key) || ""
+                            }
+                            if (root.groupName !== "") {
+                                return LK.config.getGroupSecret(root.groupName, root.moduleId, modelData.key) || ""
+                            }
                         }
                         return rowLayout._secretSaveValue !== "" ? rowLayout._secretSaveValue : (modelData.value ?? "")
                     }

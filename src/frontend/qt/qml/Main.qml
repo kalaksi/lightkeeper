@@ -388,6 +388,10 @@ ApplicationWindow {
                 function onCustomCommandsDialogOpened() {
                     root.dialogHandler.openCustomCommandsDialog(hostDetailsLoader.item.hostId)
                 }
+
+                function onCategoryConfigDialogOpened(categoryName) {
+                    root.dialogHandler.openCategoryConfigDialog(hostDetailsLoader.item.hostId, categoryName)
+                }
             }
         }
 

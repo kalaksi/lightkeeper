@@ -37,10 +37,13 @@ GroupBox {
         color: Theme.categoryColor(root.categoryName)
 
         showRefreshButton: true
+        showConfigButton: true
         onRefreshClicked: root.refreshClicked()
+        onConfigClicked: root.configClicked()
     }
 
     signal refreshClicked()
+    signal configClicked()
 
 
     // Child components get put here.

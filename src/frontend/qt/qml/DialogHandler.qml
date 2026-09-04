@@ -57,6 +57,14 @@ Item {
         onConfigurationChanged: LK.reload()
     }
 
+    HostCategoryOverridesDialog {
+        id: categoryConfigDialog
+        bottomMargin: 0.13 * parent.height
+
+        // TODO: don't force full reload
+        onConfigurationChanged: LK.reload()
+    }
+
     DynamicObjectManager {
         id: confirmationDialogManager
 
@@ -248,5 +256,11 @@ Item {
     function openCustomCommandsDialog(hostId) {
         customCommandsDialog.hostId = hostId
         customCommandsDialog.open()
+    }
+
+    function openCategoryConfigDialog(hostId, categoryName) {
+        categoryConfigDialog.hostId = hostId
+        categoryConfigDialog.categoryName = categoryName
+        categoryConfigDialog.open()
     }
 }

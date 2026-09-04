@@ -38,8 +38,6 @@ CategoryGroupBox {
         }
     }
 
-    signal configClicked()
-
     ListView {
         id: commandList
         anchors.fill: parent

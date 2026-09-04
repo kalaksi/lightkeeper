@@ -29,6 +29,7 @@ Item {
     signal maximizeClicked()
     signal minimizeClicked()
     signal customCommandsDialogOpened()
+    signal categoryConfigDialogOpened(string categoryName)
 
 
     onHostIdChanged: {
@@ -292,6 +293,9 @@ Item {
         HostDetailsMainView {
             onCustomCommandsDialogOpened: {
                 root.customCommandsDialogOpened()
+            }
+            onCategoryConfigDialogOpened: function(categoryName) {
+                root.categoryConfigDialogOpened(categoryName)
             }
         }
     }

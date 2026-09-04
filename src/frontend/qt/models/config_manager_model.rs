@@ -14,9 +14,9 @@ use crate::error::LkError;
 use crate::secrets_manager;
 use crate::secrets_manager::*;
 use crate::{
-    configuration::{self, Configuration, Groups, HostSettings, Hosts},
+    configuration::{self, ConfigGroup, Configuration, Groups, HostSettings, Hosts},
     enums::EditMode,
-    module::{Metadata, ModuleType}
+    module::{Metadata, ModuleFactory, ModuleSpecification, ModuleType}
 };
 
 
@@ -115,6 +115,8 @@ pub struct ConfigManagerModel {
     getHostConnectorModuleSettings: qt_method!(fn(&self, host_id: QString, module_id: QString) -> QStringList),
     detectSecretBackend: qt_method!(fn(&self, value: QString) -> QString),
     getEffectiveModuleSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList, module_type: QString) -> QString),
+    getHostCategoryModuleSettings: qt_method!(fn(&self, host_id: QString, category: QString, module_type: QString) -> QString),
+    updateHostCategoryModuleSettings: qt_method!(fn(&self, host_id: QString, monitor_settings: QString, command_settings: QString)),
     storeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
     getGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString),
     removeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString)),
@@ -130,6 +132,7 @@ pub struct ConfigManagerModel {
     hosts_config_backup: Option<Hosts>,
     groups_config: Groups,
     module_metadatas: Vec<Metadata>,
+    module_factory: ModuleFactory,
     config_backend: Option<Box<dyn ConfigBackend>>,
 }
 
@@ -162,6 +165,7 @@ impl ConfigManagerModel {
             hosts_config: hosts_config,
             groups_config: groups_config,
             module_metadatas: module_metadatas,
+            module_factory: ModuleFactory::new(),
             config_backend: Some(config_backend),
             ..Default::default()
         }
@@ -649,7 +653,7 @@ impl ConfigManagerModel {
         };
 
         QStringList::from_iter(
-            Self::build_module_settings(metadata, &group_settings)
+            Self::build_module_settings(metadata, &group_settings, None)
                 .into_iter()
                 .map(|setting| serde_json::to_string(&setting).unwrap()),
         )
@@ -679,7 +683,7 @@ impl ConfigManagerModel {
             .settings;
 
         QStringList::from_iter(
-            Self::build_module_settings(metadata, &host_settings)
+            Self::build_module_settings(metadata, &host_settings, None)
                 .into_iter()
                 .map(|setting| serde_json::to_string(&setting).unwrap()),
         )
@@ -708,6 +712,8 @@ impl ConfigManagerModel {
                         enabled: true,
                         is_secret: false,
                         secret_backend: "plaintext".into(),
+                        inherited_value: String::new(),
+                        inherited_enabled: false,
                     }
                 }).collect::<Vec<ModuleSetting>>())
             }).collect(),
@@ -720,6 +726,8 @@ impl ConfigManagerModel {
                         enabled: true,
                         is_secret: false,
                         secret_backend: "plaintext".into(),
+                        inherited_value: String::new(),
+                        inherited_enabled: false,
                     }
                 }).collect::<Vec<ModuleSetting>>())
             }).collect(),
@@ -732,6 +740,8 @@ impl ConfigManagerModel {
                         enabled: true,
                         is_secret: false,
                         secret_backend: "plaintext".into(),
+                        inherited_value: String::new(),
+                        inherited_enabled: false,
                     }
                 }).collect::<Vec<ModuleSetting>>())
             }).collect(),
@@ -739,6 +749,138 @@ impl ConfigManagerModel {
         };
 
         QString::from(serde_json::to_string(&modules_settings).unwrap())
+    }
+
+    /// Monitor/command settings for modules in `category`, for host-override editing.
+    /// `enabled` means the key is overridden on the host; `inheritedValue` is the group-derived value.
+    fn getHostCategoryModuleSettings(&self, host_id: QString, category: QString, module_type: QString) -> QString {
+        let host_id = host_id.to_string();
+        let category = category.to_string();
+        let host = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
+        let baseline = Self::group_baseline_for_host(&host, &self.groups_config);
+        let effective = Configuration::get_effective_group_config(&host, &self.groups_config.groups);
+        let empty_settings = HashMap::new();
+
+        let modules_settings: HashMap<String, Vec<ModuleSetting>> = match Self::parse_module_type(&module_type) {
+            ModuleType::Monitor => effective.monitors.iter()
+                .filter(|(module_id, _)| self.module_category(module_id, ModuleType::Monitor).as_deref() == Some(category.as_str()))
+                .filter_map(|(module_id, _)| {
+                    let metadata = self.module_metadatas.iter().find(|m| m.module_spec.id == *module_id)?;
+                    let override_settings = host.overrides.monitors.get(module_id)
+                        .map(|c| &c.settings)
+                        .unwrap_or(&empty_settings);
+                    let baseline_settings = baseline.monitors.get(module_id).map(|c| &c.settings);
+                    Some((module_id.clone(), Self::build_module_settings(
+                        metadata,
+                        override_settings,
+                        baseline_settings,
+                    )))
+                })
+                .collect(),
+            ModuleType::Command => effective.commands.iter()
+                .filter(|(module_id, _)| self.module_category(module_id, ModuleType::Command).as_deref() == Some(category.as_str()))
+                .filter_map(|(module_id, _)| {
+                    let metadata = self.module_metadatas.iter().find(|m| m.module_spec.id == *module_id)?;
+                    let override_settings = host.overrides.commands.get(module_id)
+                        .map(|c| &c.settings)
+                        .unwrap_or(&empty_settings);
+                    let baseline_settings = baseline.commands.get(module_id).map(|c| &c.settings);
+                    Some((module_id.clone(), Self::build_module_settings(
+                        metadata,
+                        override_settings,
+                        baseline_settings,
+                    )))
+                })
+                .collect(),
+            _ => HashMap::new(),
+        };
+
+        QString::from(serde_json::to_string(&modules_settings).unwrap())
+    }
+
+    /// Updates host-level override settings for the given modules. Does not add/remove modules from groups.
+    /// Every enabled setting is stored as an override (switch = override intent).
+    fn updateHostCategoryModuleSettings(&mut self, host_id: QString, monitor_settings_json: QString, command_settings_json: QString) {
+        let host_id = host_id.to_string();
+        let monitor_settings = serde_json::from_str::<HashMap<String, Vec<ModuleSetting>>>(&monitor_settings_json.to_string()).unwrap_or_default();
+        let command_settings = serde_json::from_str::<HashMap<String, Vec<ModuleSetting>>>(&command_settings_json.to_string()).unwrap_or_default();
+
+        {
+            let Some(host_config) = self.hosts_config.hosts.get_mut(&host_id) else {
+                return;
+            };
+
+            for (module_id, settings) in monitor_settings {
+                let enabled_settings: HashMap<String, String> = settings.into_iter()
+                    .filter(|setting| setting.enabled)
+                    .map(|setting| (setting.key, setting.value))
+                    .collect();
+
+                if enabled_settings.is_empty() {
+                    let removable = host_config.overrides.monitors.get(&module_id)
+                        .map(|monitor| {
+                            monitor.is_critical.is_none()
+                            && configuration::MonitorConfig::is_enabled(&monitor.enabled)
+                        })
+                        .unwrap_or(true);
+
+                    if removable {
+                        host_config.overrides.monitors.remove(&module_id);
+                    }
+                    else if let Some(monitor) = host_config.overrides.monitors.get_mut(&module_id) {
+                        monitor.settings.clear();
+                    }
+                }
+                else {
+                    host_config.overrides.monitors.entry(module_id).or_default().settings = enabled_settings;
+                }
+            }
+
+            for (module_id, settings) in command_settings {
+                let enabled_settings: HashMap<String, String> = settings.into_iter()
+                    .filter(|setting| setting.enabled)
+                    .map(|setting| (setting.key, setting.value))
+                    .collect();
+
+                if enabled_settings.is_empty() {
+                    host_config.overrides.commands.remove(&module_id);
+                }
+                else {
+                    host_config.overrides.commands.entry(module_id).or_default().settings = enabled_settings;
+                }
+            }
+        }
+
+        if let Some(host_config) = self.hosts_config.hosts.get(&host_id) {
+            let effective = Configuration::get_effective_group_config(host_config, &self.groups_config.groups);
+            self.hosts_config.hosts.get_mut(&host_id).unwrap().effective = effective;
+        }
+    }
+
+    /// Effective config from the host's groups only (no host monitor/command overrides).
+    fn group_baseline_for_host(host: &HostSettings, groups: &Groups) -> ConfigGroup {
+        let mut baseline_host = host.clone();
+        baseline_host.overrides.monitors.clear();
+        baseline_host.overrides.commands.clear();
+        Configuration::get_effective_group_config(&baseline_host, &groups.groups)
+    }
+
+    fn module_category(&self, module_id: &str, module_type: ModuleType) -> Option<String> {
+        match module_type {
+            ModuleType::Monitor => {
+                let spec = ModuleSpecification::monitor(module_id, "latest");
+                self.module_factory
+                    .new_monitor(&spec, &HashMap::new())
+                    .map(|monitor| monitor.get_display_options().category)
+            },
+            ModuleType::Command => {
+                let spec = ModuleSpecification::command(module_id, "latest");
+                self.module_factory
+                    .new_command(&spec, &HashMap::new())
+                    .map(|command| command.get_display_options().category)
+            },
+            _ => None,
+        }
     }
 
     fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> QString {
@@ -901,7 +1043,15 @@ impl ConfigManagerModel {
         }
     }
 
-    fn build_module_settings(metadata: &Metadata, settings: &HashMap<String, String>) -> Vec<ModuleSetting> {
+    fn build_module_settings(
+        metadata: &Metadata,
+        settings: &HashMap<String, String>,
+        inherited: Option<&HashMap<String, String>>,
+    ) -> Vec<ModuleSetting> {
+
+        let empty = HashMap::new();
+        let inherited_map = inherited.unwrap_or(&empty);
+
         let mut full_settings: Vec<(&String, &String)> = metadata
             .settings
             .iter()
@@ -912,12 +1062,29 @@ impl ConfigManagerModel {
         full_settings
             .into_iter()
             .map(|(setting_key, description)| {
-                let value = settings.get(setting_key).cloned().unwrap_or_default();
+                let inherited_enabled = inherited
+                    .map(|m| m.contains_key(setting_key))
+                    .unwrap_or(false);
+                let inherited_value = if inherited_enabled {
+                    inherited_map.get(setting_key).cloned().unwrap_or_default()
+                } else {
+                    String::new()
+                };
+                let enabled = settings.contains_key(setting_key);
+                let value = if enabled {
+                    settings.get(setting_key).cloned().unwrap_or_default()
+                } else if inherited_enabled {
+                    inherited_value.clone()
+                } else {
+                    String::new()
+                };
                 ModuleSetting {
                     key: setting_key.clone(),
                     value: value.clone(),
+                    inherited_value,
+                    inherited_enabled,
                     description: description.clone(),
-                    enabled: settings.contains_key(setting_key),
+                    enabled,
                     is_secret: metadata.secrets.contains_key(setting_key),
                     secret_backend: secrets_manager::detect_secret_backend(&value).to_string(),
                 }
@@ -939,4 +1106,10 @@ struct ModuleSetting {
     pub is_secret: bool,
     #[serde(rename = "secretBackend", default)]
     pub secret_backend: String,
+    /// Group-derived value for host-override editing (ignored when deserializing saves).
+    #[serde(rename = "inheritedValue", default)]
+    pub inherited_value: String,
+    /// Whether the setting is enabled in the group baseline.
+    #[serde(rename = "inheritedEnabled", default)]
+    pub inherited_enabled: bool,
 }
