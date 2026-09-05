@@ -28,6 +28,10 @@ Item {
     property bool enabled: true
     property bool checkable: false
     property real size: 0.8 * parent.height
+    /// Optional soft hover overlay color. Null/empty keeps the default style hover.
+    property var hoverColor: null
+
+    readonly property bool _useSoftHover: root.hoverColor !== null && root.hoverColor !== undefined && root.hoverColor !== ""
 
     height: root.size
     width: root.size + (buttonText.text !== "" ? buttonText.implicitWidth + Theme.spacingNormal * 3 : 0)
@@ -35,6 +39,7 @@ Item {
     signal clicked()
 
     Button {
+        id: button
         flat: root.flatButton
         anchors.fill: parent
         visible: root.roundButton === false
@@ -67,6 +72,24 @@ Item {
                 text: root.text
             }
         }
+    }
+
+    // Replaces the style background only when hoverColor is set; otherwise default behavior is kept.
+    Binding {
+        target: button
+        property: "background"
+        when: root._useSoftHover && !root.roundButton
+        restoreMode: Binding.RestoreBindingOrValue
+        value: softHoverBackground
+    }
+
+    Rectangle {
+        id: softHoverBackground
+        radius: 3
+        color: button.down || button.checked || (button.enabled && button.hovered)
+               ? root.hoverColor : "transparent"
+        visible: root._useSoftHover && (!button.flat || button.down || button.checked || button.highlighted
+                 || button.visualFocus || (button.enabled && button.hovered))
     }
 
     RoundButton {

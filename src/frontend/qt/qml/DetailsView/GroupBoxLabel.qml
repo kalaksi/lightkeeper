@@ -82,6 +82,7 @@ Rectangle {
             imageRelativeHeight: 0.8
             imageSource: "qrc:/main/images/button/configure"
             flatButton: true
+            hoverColor: Theme.highlightColorLight
             tooltip: "Configure"
             onClicked: root.configClicked()
         }
@@ -89,6 +90,7 @@ Rectangle {
         RefreshButton {
             visible: root.showRefreshButton
             size: 0.8 * root.height
+            hoverColor: Theme.highlightColorLight
             onClicked: root.refreshClicked()
             spinning: root.refreshProgress < 100
         }

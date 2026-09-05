@@ -22,6 +22,10 @@ Item {
     property real size: 0.8 * parent.height
     property int iconWidth: Math.floor(imageRelativeWidth * size)
     property int iconHeight: Math.floor(imageRelativeHeight * size)
+    /// Optional soft hover overlay color. Null/empty keeps the default style hover.
+    property var hoverColor: null
+
+    readonly property bool _useSoftHover: root.hoverColor !== null && root.hoverColor !== undefined && root.hoverColor !== ""
 
     width: root.size
     height: root.size
@@ -29,6 +33,7 @@ Item {
     signal clicked()
 
     Button {
+        id: button
         flat: root.flatButton
         anchors.fill: parent
         anchors.centerIn: parent
@@ -106,5 +111,23 @@ Item {
                 duration: Theme.animationDuration
             }
         }
+    }
+
+    // Replaces the style background only when hoverColor is set; otherwise default behavior is kept.
+    Binding {
+        target: button
+        property: "background"
+        when: root._useSoftHover
+        restoreMode: Binding.RestoreBindingOrValue
+        value: softHoverBackground
+    }
+
+    Rectangle {
+        id: softHoverBackground
+        radius: 3
+        color: button.down || button.checked || (button.enabled && button.hovered)
+               ? root.hoverColor : "transparent"
+        visible: root._useSoftHover && (!button.flat || button.down || button.checked || button.highlighted
+                 || button.visualFocus || (button.enabled && button.hovered))
     }
 }
