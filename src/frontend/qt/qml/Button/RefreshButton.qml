@@ -8,6 +8,8 @@ import QtQuick.Controls
 
 import Lightkeeper 1.0
 
+import "../StyleOverride"
+
 Item {
     id: root
     property bool spinOnClick: false
@@ -16,6 +18,7 @@ Item {
     property real imageRelativeWidth: 0.8
     property real imageRelativeHeight: 0.8
     property bool flatButton: true
+    property bool hoverEnabled: true
     property real size: 0.8 * parent.height
     property int iconWidth: Math.floor(imageRelativeWidth * size)
     property int iconHeight: Math.floor(imageRelativeHeight * size)
@@ -29,6 +32,8 @@ Item {
         flat: root.flatButton
         anchors.fill: parent
         anchors.centerIn: parent
+        hoverEnabled: root.hoverEnabled
+        focusPolicy: Qt.NoFocus
 
         ToolTip.visible: hovered
         ToolTip.delay: Theme.tooltipDelay
