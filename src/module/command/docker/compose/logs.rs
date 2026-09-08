@@ -53,7 +53,8 @@ impl CommandModule for Logs {
         let service_name = parameters.get(2).unwrap();
         // let start_time = parameters.get(3).cloned().unwrap_or(String::from(""));
         // let end_time = parameters.get(4).cloned().unwrap_or(String::from(""));
-        let row_count = parameters.get(5).and_then(|s| s.parse::<i32>().ok()).unwrap_or(1000);
+        // let page_number = parameters.get(5).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1);
+        let row_count = parameters.get(6).and_then(|s| s.parse::<i32>().ok()).unwrap_or(1000);
 
         let mut command = ShellCommand::new();
         command.use_sudo = true;

@@ -556,6 +556,7 @@ project1-service1-1  | 2025-12-01T10:00:01.000Z Service started successfully"#, 
         "service1".to_string(),
         "".to_string(),
         "".to_string(),
+        "1".to_string(),
         "1000".to_string(),
     ]);
 
@@ -588,6 +589,7 @@ fn test_compose_logs_error() {
         "nonexistent".to_string(),
         "".to_string(),
         "".to_string(),
+        "1".to_string(),
         "1000".to_string(),
     ]);
 

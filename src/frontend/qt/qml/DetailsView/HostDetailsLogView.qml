@@ -328,7 +328,7 @@ Item {
             root.pendingInvocation = LK.command.executePlain(
                 root.hostId,
                 root.commandId,
-                [...root.commandParams, "", "", numberOfLines.text]
+                [...root.commandParams, "", "", "1", numberOfLines.text]
             )
         }
     }
