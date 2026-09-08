@@ -289,6 +289,11 @@ impl MonitorConfig {
     pub fn is_enabled(enabled: &Option<bool>) -> bool {
         (*enabled).unwrap_or(true)
     }
+
+    /// True when this override has nothing beyond defaults and can be dropped.
+    pub fn is_empty_override(&self) -> bool {
+        self.acknowledged.is_empty() && self.is_critical.is_none() && Self::is_enabled(&self.enabled) && self.settings.is_empty()
+    }
 }
 
 impl Default for MonitorConfig {

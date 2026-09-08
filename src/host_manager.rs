@@ -4,7 +4,7 @@
  */
 
 
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::str::FromStr;
 use std::sync::mpsc;
 use std::thread;
@@ -40,7 +40,7 @@ const DATA_POINT_BUFFER_SIZE: usize = 4;
 pub struct HostManager {
     hosts: Arc<Mutex<HostStateCollection>>,
     /// Only meant for tracking config changes in re-configuration.
-    current_config: BTreeMap<String, HostSettings>,
+    current_config: Arc<Mutex<BTreeMap<String, HostSettings>>>,
 
     /// Provides sender handles for sending StateUpdateMessages to this instance.
     data_sender_prototype: Option<mpsc::Sender<StateUpdateMessage>>,
@@ -56,7 +56,7 @@ impl HostManager {
 
         HostManager {
             hosts: hosts,
-            current_config: BTreeMap::new(),
+            current_config: Arc::new(Mutex::new(BTreeMap::new())),
             frontend_state_sender: frontend_state_sender,
             data_receiver: None,
             data_sender_prototype: None,
@@ -83,7 +83,7 @@ impl HostManager {
         else {
             // Reinitialize hosts that had their monitor config changed.
             for (host_id, new_host_settings) in hosts_config.hosts.iter() {
-                if let Some(current_host_settings) = self.current_config.get(host_id) {
+                if let Some(current_host_settings) = self.current_config.lock().unwrap().get(host_id) {
                     if current_host_settings != new_host_settings {
                         // Only flag hosts that were already initialized, so we don't trigger
                         // connections to hosts the user never connected to.
@@ -135,7 +135,7 @@ impl HostManager {
             }
         }
 
-        self.current_config = hosts_config.hosts.clone();
+        *self.current_config.lock().unwrap() = hosts_config.hosts.clone();
 
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
         self.data_sender_prototype = Some(sender);
@@ -175,6 +175,7 @@ impl HostManager {
     pub fn start_receiving_updates(&mut self) {
         let thread = Self::_start_receiving_updates(
             self.hosts.clone(),
+            self.current_config.clone(),
             self.data_receiver.take().unwrap(),
             self.frontend_state_sender.clone(),
         );
@@ -182,8 +183,15 @@ impl HostManager {
         self.receiver_thread = Some(thread);
     }
 
+    fn get_acknowledged_entries(host_config: &HostSettings, monitor_id: &str) -> HashSet<String> {
+        host_config.effective.monitors.get(monitor_id)
+            .map(|config| config.acknowledged.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
     fn _start_receiving_updates(
         hosts: Arc<Mutex<HostStateCollection>>,
+        current_config: Arc<Mutex<BTreeMap<String, HostSettings>>>,
         receiver: mpsc::Receiver<StateUpdateMessage>,
         observers: Arc<Mutex<Vec<mpsc::Sender<frontend::UIUpdate>>>>) -> thread::JoinHandle<()> {
 
@@ -232,7 +240,25 @@ impl HostManager {
                 let mut new_monitoring_data: Option<(u64, MonitoringData)> = None;
                 let mut new_command_results: Option<(u64, CommandResult)> = None;
 
-                if let Some(message_data_point) = state_update.data_point {
+                if let Some(mut message_data_point) = state_update.data_point {
+                    let host_config = current_config.lock().unwrap()
+                        .get(&state_update.host_name)
+                        .cloned();
+
+                    if let Some(ref host_config) = host_config {
+                        if state_update.module_spec.module_type == crate::module::ModuleType::Monitor &&
+                           !message_data_point.is_platform_info()
+                        {
+                            let acknowledged = Self::get_acknowledged_entries(
+                                host_config,
+                                &state_update.module_spec.id,
+                            );
+                            if !acknowledged.is_empty() {
+                                message_data_point.apply_acknowledged_entries(&acknowledged);
+                            }
+                        }
+                    }
+
                     // Specially structured data point for passing platform info here.
                     if message_data_point.is_platform_info() {
                         host_state.monitor_invocations.remove(&state_update.invocation_id);
@@ -353,6 +379,51 @@ impl HostManager {
                 });
             }
         })
+    }
+
+    pub fn apply_monitor_acknowledged(&self, host_id: &str, monitor_id: &str, host_settings: HostSettings) {
+        let acknowledged = Self::get_acknowledged_entries(&host_settings, monitor_id);
+
+        let mut hosts = self.hosts.lock().unwrap();
+        {
+            let mut config = self.current_config.lock().unwrap();
+            config.insert(host_id.to_string(), host_settings);
+        }
+
+        let Some(host_state) = hosts.hosts.get_mut(host_id) else {
+            return;
+        };
+
+        let mut new_monitoring_data = None;
+        if let Some(monitoring_data) = host_state.monitor_data.get_mut(monitor_id) {
+            for point in monitoring_data.values.iter_mut() {
+                point.apply_acknowledged_entries(&acknowledged);
+            }
+
+            let mut updated = monitoring_data.clone();
+            if let Some(last) = updated.values.back().cloned() {
+                updated.values = VecDeque::from(vec![last]);
+            }
+            new_monitoring_data = Some((0, updated));
+        }
+
+        host_state.update_status();
+
+        let update = frontend::UIUpdate::Host(frontend::HostDisplayData {
+            host_state: host_state.clone(),
+            new_monitoring_data,
+            ..Default::default()
+        });
+        let mut observers = self.frontend_state_sender.lock().unwrap();
+        observers.retain(|observer| {
+            match observer.send(update.clone()) {
+                Ok(()) => true,
+                Err(error) => {
+                    log::debug!("Removing closed host observer: {}", error);
+                    false
+                }
+            }
+        });
     }
 
     pub fn get_display_data(&self) -> frontend::DisplayData {

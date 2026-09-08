@@ -12,6 +12,7 @@ pub fn init_resources() {
     qrc!(resources_qml,
         "src/frontend/qt/qml" as "qml" {
             "Main.qml",
+            "AlertDrawer.qml",
             "DebugRectangle.qml",
             "DialogHandler.qml",
             "DynamicObjectManager.qml",

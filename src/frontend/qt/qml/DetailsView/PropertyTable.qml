@@ -63,6 +63,7 @@ TableView {
             delegate: PropertyTableCell {
                 firstItem: true
                 selected: root.selectedRow === row && !isSeparator
+                rowAcknowledged: !isSeparator && root.model.get_row_acknowledged(row)
                 onClicked: toggleRow(row)
                 implicitWidth: root.width * root.model.get_column_width(row, column)
 
@@ -136,6 +137,7 @@ TableView {
             delegate: PropertyTableCell {
                 gradient: true
                 selected: root.selectedRow === row && !isSeparator
+                rowAcknowledged: !isSeparator && root.model.get_row_acknowledged(row)
                 onClicked: toggleRow(row)
 
                 property bool isSeparator: root.model.get_separator_label(row) !== ""

@@ -16,7 +16,6 @@ import "../Text"
 CategoryGroupBox {
     id: root
 
-    required property string hostId
     property int rowHeight: 45
     property string selectionColor: "transparent"
     property bool isBlocked: !LK.hosts.isHostInitialized(root.hostId)

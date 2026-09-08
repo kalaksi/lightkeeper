@@ -16,6 +16,7 @@ GroupBox {
 
     default property alias content: contentItem.data
     property string categoryName: ""
+    property string hostId: ""
     property alias refreshProgress: groupBoxLabel.refreshProgress
     property bool isBlocked: refreshProgress < 100
 
@@ -56,6 +57,7 @@ GroupBox {
         anchors.fill: parent
         color: Theme.categoryRefreshMask
         visible: root.isBlocked
+        z: 10
 
         MouseArea {
             anchors.fill: parent

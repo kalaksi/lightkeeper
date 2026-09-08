@@ -20,6 +20,8 @@ ToolBar {
     property bool enableEditButtons: false
     property int refreshProgress: 100
     property int iconSize: 24
+    property int alertCount: 0
+    property string alertCriticality: "Error"
 
     focus: true
     height: 42
@@ -29,6 +31,7 @@ ToolBar {
     signal clickedEdit()
     signal clickedPreferences()
     signal clickedHotkeyHelp()
+    signal clickedAlerts()
     signal clickedCertificateMonitor()
     signal clickedCoreConnection()
     signal clickedAutoRefresh()
@@ -161,6 +164,50 @@ ToolBar {
             icon.height: root.iconSize
             icon.width: root.iconSize
             padding: 4
+        }
+
+        ToolSeparator { }
+
+        ToolButton {
+            id: alertsButton
+            icon.source: "qrc:/main/images/button/alerts"
+            text: root.alertCount > 0
+                ? (root.alertCount === 1 ? "1 alert" : root.alertCount + " alerts")
+                : "Alerts"
+            display: AbstractButton.IconOnly
+            onClicked: root.clickedAlerts()
+            icon.height: root.iconSize
+            icon.width: root.iconSize
+            padding: 4
+            // Extra right padding so the count badge sits beside the icon instead of over it.
+            rightPadding: 12
+            Layout.rightMargin: Theme.spacingNormal
+
+            ToolTip.visible: hovered
+            ToolTip.delay: Theme.tooltipDelay
+            ToolTip.text: text
+
+            Rectangle {
+                visible: root.alertCount > 0
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.rightMargin: 2
+                anchors.topMargin: 2
+                width: Math.max(16, badgeLabel.implicitWidth + 6)
+                height: 16
+                radius: 8
+                color: Theme.colorForCriticality(root.alertCriticality)
+                z: 2
+
+                Label {
+                    id: badgeLabel
+                    anchors.centerIn: parent
+                    text: root.alertCount > 99 ? "99+" : String(root.alertCount)
+                    color: Theme.textColor
+                    font.pixelSize: 10
+                    font.bold: true
+                }
+            }
         }
     }
 

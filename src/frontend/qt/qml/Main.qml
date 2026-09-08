@@ -11,6 +11,7 @@ import Lightkeeper 1.0
 
 import "./Button"
 import "./DetailsView"
+import "js/Parse.js" as Parse
 import "js/Test.js" as Test 
 
 
@@ -97,6 +98,12 @@ ApplicationWindow {
         onClickedHotkeyHelp: {
             root.dialogHandler.openHotkeyHelp()
         }
+        onClickedAlerts: {
+            alertDrawer.open = !alertDrawer.open
+            if (alertDrawer.open) {
+                root.refreshAlerts()
+            }
+        }
         onClickedAutoRefresh: {
             LK.command.forceInitializeHosts()
         }
@@ -153,6 +160,7 @@ ApplicationWindow {
         function onUpdateReceived(hostId) {
             hostTableModel.dataChangedForHost(hostId)
             hostTableModel.displayData = LK.hosts.getDisplayData()
+            root.refreshAlerts()
 
             if (hostId === hostTableModel.getSelectedHostId()) {
                 let jobsLeft = LK.hosts.getPendingCommandCount(hostId) + LK.hosts.getPendingMonitorCount(hostId)
@@ -286,6 +294,8 @@ ApplicationWindow {
         // Starts the thread that receives portal responses from D-Bus.
         DesktopPortal.receiveResponses()
 
+        root.refreshAlerts()
+
         for (let error of LK.config.checkConfigErrors()) {
             snackbarContainer.addSnackbar("Error", "Configuration error: " + error)
         }
@@ -410,6 +420,19 @@ ApplicationWindow {
         anchors.margins: 20
     }
 
+    AlertDrawer {
+        id: alertDrawer
+        anchors.fill: parent
+        z: 60
+        open: false
+        alerts: []
+
+        onCloseRequested: open = false
+        onAlertActivated: function(alert) {
+            hostTableModel.selectHostById(alert.host_id)
+        }
+    }
+
     ImageButton {
         visible: LK.config.isDevBuild()
         imageSource: "qrc:/main/images/button/refresh"
@@ -459,6 +482,22 @@ ApplicationWindow {
 
     function reload() {
         // todo
+    }
+
+    function refreshAlerts() {
+        let alerts = Parse.TryParseJson(LK.hosts.getAlerts()) || []
+        let active = alerts.filter(alert => !alert.acknowledged)
+        // getAlerts() sorts by criticality desc; first active entry is the badge color.
+        let worst = active.length > 0 ? active[0].criticality : "Warning"
+
+        if (root.menuBar.alertCount !== active.length)
+            root.menuBar.alertCount = active.length
+        if (root.menuBar.alertCriticality !== worst)
+            root.menuBar.alertCriticality = worst
+
+        // Avoid rewriting the drawer model on every host tick while closed.
+        if (alertDrawer.open)
+            alertDrawer.alerts = alerts
     }
 
     function hotReload() {

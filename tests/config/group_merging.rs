@@ -267,3 +267,74 @@ fn test_monitor_enabled_flag_merging() {
     // Later group should win
     assert_eq!(effective.monitors["monitor1"].enabled, Some(false));
 }
+
+#[test]
+fn test_acknowledged_merging() {
+    let mut groups = BTreeMap::new();
+
+    let mut group1 = ConfigGroup::default();
+    let mut monitor_config = MonitorConfig::default();
+    monitor_config.acknowledged.push("cron.service".to_string());
+    group1.monitors.insert("systemd-service".to_string(), monitor_config);
+    groups.insert("group1".to_string(), group1);
+
+    let mut group2 = ConfigGroup::default();
+    let mut monitor_config2 = MonitorConfig::default();
+    monitor_config2.acknowledged.push("dbus.service".to_string());
+    group2.monitors.insert("systemd-service".to_string(), monitor_config2);
+    groups.insert("group2".to_string(), group2);
+
+    let mut host_settings = HostSettings::default();
+    host_settings.groups.push("group1".to_string());
+    host_settings.groups.push("group2".to_string());
+
+    let effective = Configuration::get_effective_group_config(&host_settings, &groups);
+
+    assert_eq!(effective.monitors["systemd-service"].acknowledged.len(), 2);
+    assert!(effective.monitors["systemd-service"].acknowledged.contains(&"cron.service".to_string()));
+    assert!(effective.monitors["systemd-service"].acknowledged.contains(&"dbus.service".to_string()));
+}
+
+#[test]
+fn test_host_override_acknowledged() {
+    let mut groups = BTreeMap::new();
+
+    let mut group1 = ConfigGroup::default();
+    let mut monitor_config = MonitorConfig::default();
+    monitor_config.acknowledged.push("cron.service".to_string());
+    monitor_config.is_critical = Some(true);
+    group1.monitors.insert("systemd-service".to_string(), monitor_config);
+    groups.insert("group1".to_string(), group1);
+
+    let mut host_settings = HostSettings::default();
+    host_settings.groups.push("group1".to_string());
+
+    let mut override_config = ConfigGroup::default();
+    let mut monitor_override = MonitorConfig::default();
+    monitor_override.acknowledged.push("ssh.service".to_string());
+    override_config.monitors.insert("systemd-service".to_string(), monitor_override);
+    host_settings.overrides = override_config;
+
+    let effective = Configuration::get_effective_group_config(&host_settings, &groups);
+
+    assert_eq!(effective.monitors["systemd-service"].acknowledged.len(), 2);
+    assert!(effective.monitors["systemd-service"].acknowledged.contains(&"cron.service".to_string()));
+    assert!(effective.monitors["systemd-service"].acknowledged.contains(&"ssh.service".to_string()));
+    assert_eq!(effective.monitors["systemd-service"].is_critical, Some(true));
+}
+
+#[test]
+fn test_acknowledged_defaults_to_empty() {
+    let mut groups = BTreeMap::new();
+
+    let mut group1 = ConfigGroup::default();
+    group1.monitors.insert("monitor1".to_string(), MonitorConfig::default());
+    groups.insert("group1".to_string(), group1);
+
+    let mut host_settings = HostSettings::default();
+    host_settings.groups.push("group1".to_string());
+
+    let effective = Configuration::get_effective_group_config(&host_settings, &groups);
+
+    assert!(effective.monitors["monitor1"].acknowledged.is_empty());
+}

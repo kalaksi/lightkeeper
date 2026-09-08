@@ -567,6 +567,52 @@ impl ConfigManagerModel {
         host_settings.effective.custom_commands = custom_commands;
     }
 
+    /// Persists acknowledgment and returns the updated host settings on success.
+    pub fn set_monitor_entry_acknowledged(
+        &mut self,
+        host_id: &str,
+        monitor_id: &str,
+        entry_id: &str,
+        acknowledged: bool,
+    ) -> Option<configuration::HostSettings> {
+        {
+            let Some(host_settings) = self.hosts_config.hosts.get_mut(host_id) else {
+                return None;
+            };
+
+            let monitor_config = host_settings.overrides.monitors
+                .entry(monitor_id.to_string())
+                .or_insert_with(configuration::MonitorConfig::default);
+
+            if acknowledged {
+                if !monitor_config.acknowledged.iter().any(|entry| entry == entry_id) {
+                    monitor_config.acknowledged.push(entry_id.to_string());
+                }
+            }
+            else {
+                monitor_config.acknowledged.retain(|entry| entry != entry_id);
+            }
+
+            if monitor_config.is_empty_override() {
+                host_settings.overrides.monitors.remove(monitor_id);
+            }
+
+            host_settings.effective = Configuration::get_effective_group_config(
+                host_settings,
+                &self.groups_config.groups,
+            );
+        }
+
+        if let Err(error) = self.config_backend.as_mut().unwrap()
+            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+        {
+            self.error(QString::from(error.to_string()));
+            return None;
+        }
+
+        self.hosts_config.hosts.get(host_id).cloned()
+    }
+
     fn parse_module_type(q: &QString) -> ModuleType {
         ModuleType::from_str(&q.to_string())
             .expect("invalid module type: must be connector, monitor, or command")
@@ -819,8 +865,10 @@ impl ConfigManagerModel {
                 if enabled_settings.is_empty() {
                     let removable = host_config.overrides.monitors.get(&module_id)
                         .map(|monitor| {
-                            monitor.is_critical.is_none()
-                            && configuration::MonitorConfig::is_enabled(&monitor.enabled)
+                            // Settings are being cleared; removable if nothing else remains.
+                            let mut cleared = monitor.clone();
+                            cleared.settings.clear();
+                            cleared.is_empty_override()
                         })
                         .unwrap_or(true);
 

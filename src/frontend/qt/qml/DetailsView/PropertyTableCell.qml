@@ -13,13 +13,17 @@ import "../Misc"
 Item {
     id: root
     property bool selected: false
+    property bool hovered: false
+    property bool rowAcknowledged: false
     property bool gradient: false
     property bool firstItem: false
     property bool lastItem: false
     property int radius: 9
 
+    opacity: rowAcknowledged ? 0.45 : 1.0
 
     signal clicked()
+    signal cellHovered(bool inside)
 
     // Background for semicircle.
     Rectangle {
@@ -46,8 +50,12 @@ Item {
         color: root.getBackgroundColor(root.selected)
 
         MouseArea {
+            id: mouseArea
             anchors.fill: parent
+            hoverEnabled: true
             onClicked: root.clicked()
+            onEntered: root.cellHovered(true)
+            onExited: root.cellHovered(false)
         }
     }
 

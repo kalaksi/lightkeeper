@@ -31,6 +31,7 @@ pub struct PropertyTableModel {
     get_separator_label: qt_method!(fn(&mut self, row: QVariant) -> QString),
     getRowHeight: qt_method!(fn(&mut self, row: QVariant) -> u32),
     get_column_width: qt_method!(fn(&self, row: QVariant, column: QVariant) -> f32),
+    get_row_acknowledged: qt_method!(fn(&self, row: QVariant) -> bool),
 
     // Internal data structures.
     i_monitoring_datas: Vec<MonitoringData>,
@@ -116,6 +117,13 @@ impl PropertyTableModel {
         else {
             0
         }
+    }
+
+    fn get_row_acknowledged(&self, row: QVariant) -> bool {
+        let row = usize::from_qvariant(row).unwrap();
+        self.row_datas.get(row)
+            .map(|row_data| row_data.value.acknowledged)
+            .unwrap_or(false)
     }
 
     fn get_column_width(&self, row: QVariant, column: QVariant) -> f32 {
@@ -297,7 +305,7 @@ impl QAbstractTableModel for PropertyTableModel {
                 };
                 let label_with_description = LabelAndDescription {
                     label: label,
-                    description: row_data.value.description.clone()
+                    description: row_data.value.description.clone(),
                 };
                 let label_with_description_json = serde_json::to_string(&label_with_description).unwrap();
                 label_with_description_json.to_qvariant()

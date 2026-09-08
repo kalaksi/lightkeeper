@@ -41,6 +41,7 @@ pub struct LkBackend {
 
     receiveUpdates: qt_method!(fn(&self)),
     reload: qt_method!(fn(&mut self)),
+    acknowledgeMonitorEntry: qt_method!(fn(&mut self, host_id: QString, monitor_id: QString, entry_id: QString, acknowledged: bool) -> bool),
     stop: qt_method!(fn(&mut self)),
 
     //
@@ -175,6 +176,24 @@ impl LkBackend {
 
     pub fn new_update_sender(&self) -> mpsc::Sender<UIUpdate> {
         self.update_sender_prototype.clone().unwrap()
+    }
+
+    fn acknowledgeMonitorEntry(&mut self, host_id: QString, monitor_id: QString, entry_id: QString, acknowledged: bool) -> bool {
+        let host = host_id.to_string();
+        let monitor = monitor_id.to_string();
+        let entry = entry_id.to_string();
+
+        let Some(host_settings) = self.config.borrow_mut().set_monitor_entry_acknowledged(
+            &host,
+            &monitor,
+            &entry,
+            acknowledged,
+        ) else {
+            return false;
+        };
+
+        self.host_manager.borrow().apply_monitor_acknowledged(&host, &monitor, host_settings);
+        true
     }
 
     fn reload(&mut self) {

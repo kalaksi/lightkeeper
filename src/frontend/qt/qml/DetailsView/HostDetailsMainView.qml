@@ -131,6 +131,7 @@ Item {
 
                     id: groupBox
                     categoryName: modelData
+                    hostId: root.hostId
 
                     // Link between invocation and command button has to be stored and handled on higher level and not in
                     // e.g. CommandButton or CommandButtonRow since those are not persistent.

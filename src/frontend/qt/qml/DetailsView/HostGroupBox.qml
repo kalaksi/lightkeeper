@@ -16,7 +16,6 @@ import "../StyleOverride"
 CategoryGroupBox {
     id: root
 
-    property string hostId: ""
     property string status: ""
     property string fqdn: ""
     property string ipAddress: ""

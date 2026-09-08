@@ -496,6 +496,7 @@ Module {
             Parameter { name: "host_id"; type: "string" }
             Parameter { name: "category"; type: "string" }
         }
+        Method { name: "getAlerts"; type: "string" }
         Method { name: "refresh_hosts_on_start"; type: "bool" }
         Method {
             name: "isHostInitialized"
@@ -588,6 +589,14 @@ Module {
 
         Method { name: "receiveUpdates" }
         Method { name: "reload" }
+        Method {
+            name: "acknowledgeMonitorEntry"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "monitor_id"; type: "string" }
+            Parameter { name: "entry_id"; type: "string" }
+            Parameter { name: "acknowledged"; type: "bool" }
+            type: "bool"
+        }
         Method { name: "stop" }
 
         Signal {
@@ -646,6 +655,7 @@ Module {
 
         Method { name: "dataChangedForHost"; Parameter { name: "host_id"; type: "string" } }
         Method { name: "toggleRow"; Parameter { name: "row"; type: "int" } }
+        Method { name: "selectHostById"; Parameter { name: "host_id"; type: "string" } }
         Method { name: "getSelectedHostId"; type: "string" }
         Method { name: "filter"; Parameter { name: "filter"; type: "string" } }
     }
@@ -675,6 +685,11 @@ Module {
             type: "double"
             Parameter { name: "row"; type: "QVariant" }
             Parameter { name: "column"; type: "QVariant" }
+        }
+        Method {
+            name: "get_row_acknowledged"
+            type: "bool"
+            Parameter { name: "row"; type: "QVariant" }
         }
     }
 }

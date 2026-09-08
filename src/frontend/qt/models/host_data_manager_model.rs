@@ -9,6 +9,7 @@ use qmetaobject::*;
 use crate::configuration;
 use crate::enums::Criticality;
 use crate::frontend;
+use crate::module::monitoring::AlertLeaf;
 use crate::module::monitoring::MonitoringData;
 
 
@@ -44,6 +45,7 @@ pub struct HostDataManagerModel {
     getDisplayData: qt_method!(fn(&self) -> QVariant),
     getCategories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
     getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
+    getAlerts: qt_method!(fn(&self) -> QString),
     refresh_hosts_on_start: qt_method!(fn(&self) -> bool),
     isHostInitialized: qt_method!(fn(&self, host_id: QString) -> bool),
     removeHost: qt_method!(fn(&self, host_id: QString)),
@@ -217,6 +219,44 @@ impl HostDataManagerModel {
         }
 
         result
+    }
+
+    fn getAlerts(&self) -> QString {
+        let mut alerts = Vec::new();
+
+        for (host_id, display_data) in self.display_data.hosts.iter() {
+            if host_id.starts_with('_') {
+                continue;
+            }
+
+            for (monitor_id, monitor_data) in display_data.host_state.monitor_data.iter() {
+                let Some(last) = monitor_data.values.back() else {
+                    continue;
+                };
+
+                for leaf in last.collect_alert_leaves(
+                    monitor_data.display_options.use_multivalue,
+                    &monitor_data.display_options.display_text,
+                ) {
+                    alerts.push(MonitorAlert {
+                        host_id: host_id.clone(),
+                        category: monitor_data.display_options.category.clone(),
+                        monitor_id: monitor_id.clone(),
+                        leaf,
+                    });
+                }
+            }
+        }
+
+        alerts.sort_by(|left, right| {
+            right.leaf.criticality.cmp(&left.leaf.criticality)
+                .then(left.leaf.acknowledged.cmp(&right.leaf.acknowledged))
+                .then(left.host_id.cmp(&right.host_id))
+                .then(left.category.cmp(&right.category))
+                .then(left.leaf.label.cmp(&right.leaf.label))
+        });
+
+        QString::from(serde_json::to_string(&alerts).unwrap_or_else(|_| String::from("[]")))
     }
 
     fn refresh_hosts_on_start(&self) -> bool {
@@ -472,4 +512,13 @@ impl HostDataManagerModel {
             self.criticalityCountsChanged();
         }
     }
+}
+
+#[derive(Clone, serde::Serialize)]
+struct MonitorAlert {
+    host_id: String,
+    category: String,
+    monitor_id: String,
+    #[serde(flatten)]
+    leaf: AlertLeaf,
 }

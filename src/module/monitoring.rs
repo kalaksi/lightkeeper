@@ -11,6 +11,7 @@ pub use monitoring_module::BoxCloneableMonitor;
 
 pub mod data_point;
 pub use data_point::DataPoint;
+pub use data_point::AlertLeaf;
 
 pub mod linux;
 

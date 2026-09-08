@@ -8,3 +8,4 @@ pub mod docker;
 pub mod haproxy;
 pub mod certificate;
 pub mod platform_info;
+pub mod data_point;
