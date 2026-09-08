@@ -27,6 +27,7 @@ pub struct HostTableModel {
 
     dataChangedForHost: qt_method!(fn(&self, host_id: QString)),
     toggleRow: qt_method!(fn(&mut self, row: i32)),
+    selectHostById: qt_method!(fn(&mut self, host_id: QString)),
     getSelectedHostId: qt_method!(fn(&self) -> QString),
     filter: qt_method!(fn(&self, filter: QString)),
 
@@ -103,6 +104,25 @@ impl HostTableModel {
             }
             self.selectedRow = row;
         }
+        self.selectedRowChanged();
+    }
+
+    fn selectHostById(&mut self, host_id: QString) {
+        let host_id = host_id.to_string();
+        let Some(row) = self.host_row_map.get(&host_id).copied() else {
+            return;
+        };
+
+        let row = row as i32;
+        if self.selectedRow == row {
+            return;
+        }
+
+        if self.selectedRow == -1 {
+            self.selectionActivated();
+        }
+
+        self.selectedRow = row;
         self.selectedRowChanged();
     }
 
