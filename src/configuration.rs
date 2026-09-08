@@ -273,6 +273,8 @@ pub struct MonitorConfig {
     pub is_critical: Option<bool>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub settings: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub acknowledged: Vec<String>,
 }
 
 impl MonitorConfig {
@@ -296,6 +298,7 @@ impl Default for MonitorConfig {
             enabled: MonitorConfig::default_enabled(),
             is_critical: None,
             settings: HashMap::new(),
+            acknowledged: Vec::new(),
         }
     }
 }
@@ -536,7 +539,14 @@ impl Configuration {
             let mut merged_config = first_config.monitors.get(monitor_id).cloned().unwrap_or_default();
             merged_config.settings.extend(new_config.settings.clone());
             merged_config.enabled = new_config.enabled.clone();
-            merged_config.is_critical = new_config.is_critical;
+            if new_config.is_critical.is_some() {
+                merged_config.is_critical = new_config.is_critical;
+            }
+            for entry in new_config.acknowledged.iter() {
+                if !merged_config.acknowledged.contains(entry) {
+                    merged_config.acknowledged.push(entry.clone());
+                }
+            }
             result.monitors.insert(monitor_id.clone(), merged_config);
         });
 
