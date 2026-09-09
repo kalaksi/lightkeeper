@@ -9,7 +9,6 @@ groups:
 
   # Host and package monitors/commands for Linux systems.
   host:
-    description: Host and package monitoring for Linux systems.
     monitors:
       os: {}
       kernel: {}
@@ -31,7 +30,6 @@ groups:
 
   # Storage monitors and commands. Prefer this over the bundled modules in "linux".
   storage:
-    description: Storage monitors and commands.
     monitors:
       filesystem: {}
       storage-lvm-logical-volume: {}
@@ -48,7 +46,6 @@ groups:
 
   # Network monitors and commands. Prefer this over the bundled modules in "linux".
   network:
-    description: Network monitors and commands.
     monitors:
       interface:
         settings:

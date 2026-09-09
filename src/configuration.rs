@@ -26,7 +26,7 @@ pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
-pub const MIGRATION_VERSION: u16 = 9;
+pub const MIGRATION_VERSION: u16 = 8;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -896,8 +896,9 @@ impl Configuration {
                     }
                 }
                 7 => {
-                    // Add category-based groups. Leave "linux" unchanged so existing hosts keep working.
-                    for name in ["storage", "network"] {
+                    // Prefer host + storage + network over the legacy linux bundle.
+                    // Leave "linux" unchanged so existing hosts keep working.
+                    for name in ["host", "storage", "network"] {
                         if let Some(default_group) = default_groups.groups.get(name) {
                             groups_config
                                 .groups
@@ -907,18 +908,6 @@ impl Configuration {
                         else {
                             return;
                         }
-                    }
-                }
-                8 => {
-                    // Prefer host + storage + network over the legacy linux bundle (no host membership changes).
-                    if let Some(default_group) = default_groups.groups.get("host") {
-                        groups_config
-                            .groups
-                            .entry(String::from("host"))
-                            .or_insert_with(|| default_group.clone());
-                    }
-                    else {
-                        return;
                     }
 
                     // Surface default descriptions (e.g. linux deprecation) when unset.
