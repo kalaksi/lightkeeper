@@ -1105,7 +1105,8 @@ impl ConfigManagerModel {
             .iter()
             .chain(metadata.secrets.iter())
             .collect();
-        full_settings.sort_by_key(|(key, _)| key.to_lowercase());
+        // Thresholds first (warning / error / critical), then other keys alphabetically.
+        full_settings.sort_by_key(|(key, _)| Self::module_setting_sort_key(key));
 
         full_settings
             .into_iter()
@@ -1138,6 +1139,25 @@ impl ConfigManagerModel {
                 }
             })
             .collect()
+    }
+
+    /// `warning_threshold` / `error_threshold` / `critical_threshold`, optionally prefixed (e.g. `age_`, `snapshot_`).
+    /// Mirrored in ModuleSettingsDialog.qml (`isAlertThresholdKey`) for the settings section separator.
+    fn alert_threshold_level(key: &str) -> Option<u8> {
+        if key == "warning_threshold" || key.ends_with("_warning_threshold") {
+            Some(0)
+        } else if key == "error_threshold" || key.ends_with("_error_threshold") {
+            Some(1)
+        } else if key == "critical_threshold" || key.ends_with("_critical_threshold") {
+            Some(2)
+        } else {
+            None
+        }
+    }
+
+    fn module_setting_sort_key(key: &str) -> (u8, String) {
+        let group = Self::alert_threshold_level(key).unwrap_or(10);
+        (group, key.to_lowercase())
     }
 }
 

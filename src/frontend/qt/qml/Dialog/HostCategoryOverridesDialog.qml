@@ -23,7 +23,7 @@ LightkeeperDialog {
     property bool _loading: true
     property int _buttonSize: 26
 
-    title: `Host overrides: ${root.categoryName}`
+    title: `Host overrides for ${root.categoryName}`
     implicitWidth: 630
     implicitHeight: 700
     standardButtons: Dialog.Cancel | Dialog.Ok
