@@ -83,6 +83,12 @@ impl HostTableModel {
         };
 
         if self.selectedRow != prev_selected_row {
+            if prev_selected_row >= 0 && self.selectedRow == -1 {
+                self.selectionDeactivated();
+            }
+            else if prev_selected_row == -1 && self.selectedRow >= 0 {
+                self.selectionActivated();
+            }
             self.selectedRowChanged();
         }
     }
