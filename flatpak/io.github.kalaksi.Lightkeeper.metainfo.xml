@@ -45,7 +45,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.44.0" date="2026-09-09">
+    <release version="0.44.1" date="2026-09-09">
       <description>
         <ul>
           <li>Add an alert panel and acknowledgements for easier alert management</li>
