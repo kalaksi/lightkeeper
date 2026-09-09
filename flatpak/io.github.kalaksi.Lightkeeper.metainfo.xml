@@ -45,6 +45,19 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.44.0" date="2026-09-09">
+      <description>
+        <ul>
+          <li>Add an alert panel and acknowledgements for easier alert management</li>
+          <li>Add module for haproxy</li>
+          <li>Add host-level category-specific module overrides</li>
+          <li>Split linux-group into category-specific groups</li>
+          <li>Support special bits in file permissions dialog</li>
+          <li>Fix some logs not respecting line count</li>
+          <li>Fix incorrect lvm parameter names</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.43.0" date="2026-08-26">
       <description>
         <ul>
