@@ -7,7 +7,9 @@ hosts:
     # Groups are defined in groups.yml
     groups:
       - defaults
-      - linux
+      - host
+      - storage
+      - network
       - docker
       - docker-compose
       - systemd-service

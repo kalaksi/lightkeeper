@@ -265,7 +265,9 @@ impl ConfigManagerModel {
         let config = HostSettings {
             groups: vec![
                 String::from("defaults"),
-                String::from("linux"),
+                String::from("host"),
+                String::from("storage"),
+                String::from("network"),
                 String::from("systemd-service"),
                 String::from("docker"),
                 String::from("docker-compose"),
