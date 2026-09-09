@@ -26,6 +26,9 @@ pub struct HostTableModel {
     selectionDeactivated: qt_signal!(),
 
     dataChangedForHost: qt_method!(fn(&self, host_id: QString)),
+    /// Incrementally update a single visible row from typed host display data.
+    /// Hosts not currently in the table (e.g. filtered out) are ignored.
+    updateHostRow: qt_method!(fn(&mut self, host_display_data: QVariant)),
     toggleRow: qt_method!(fn(&mut self, row: i32)),
     selectHostById: qt_method!(fn(&mut self, host_id: QString)),
     getSelectedHostId: qt_method!(fn(&self) -> QString),
@@ -63,6 +66,7 @@ impl HostTableModel {
 
         // Remember currently selected host.
         let selected_host_id = self.getSelectedHostId().to_string();
+        let prev_selected_row = self.selectedRow;
 
         self.host_row_map.clear();
         self.row_data.clear();
@@ -77,6 +81,10 @@ impl HostTableModel {
             Some(row) => *row as i32,
             None => -1,
         };
+
+        if self.selectedRow != prev_selected_row {
+            self.selectedRowChanged();
+        }
     }
 
     // A slot for informing about change in table data.
@@ -89,6 +97,33 @@ impl HostTableModel {
             let bottom_right = self.index(*host_index as i32, self.column_count() - 1);
 
             // The standard Qt signal.
+            self.data_changed(top_left, bottom_right);
+        }
+    }
+
+    fn updateHostRow(&mut self, host_display_data: QVariant) {
+        let Some(host_display_data) = frontend::HostDisplayData::from_qvariant(host_display_data) else {
+            return;
+        };
+
+        let host_id = host_display_data.host_state.host.name.clone();
+        if host_id.is_empty() || host_id.starts_with('_') {
+            return;
+        }
+
+        let Some(host_index) = self.host_row_map.get(&host_id).copied() else {
+            // Not currently visible (filtered out or not yet in the table).
+            return;
+        };
+
+        // Keep the cached table source in sync so later filter()/rebuilds stay accurate.
+        self.i_display_data.hosts.insert(host_id, host_display_data.clone());
+
+        if let Some(row) = self.row_data.get_mut(host_index) {
+            *row = HostDataModel::from(&host_display_data);
+
+            let top_left = self.index(host_index as i32, 0);
+            let bottom_right = self.index(host_index as i32, self.column_count() - 1);
             self.data_changed(top_left, bottom_right);
         }
     }

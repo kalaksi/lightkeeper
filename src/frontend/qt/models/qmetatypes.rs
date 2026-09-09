@@ -21,6 +21,9 @@ impl QMetaType for crate::command_handler::CommandButtonData {
 impl QMetaType for crate::frontend::DisplayData {
 }
 
+impl QMetaType for crate::frontend::HostDisplayData {
+}
+
 impl QMetaType for crate::configuration::DisplayOptions {
 }
 

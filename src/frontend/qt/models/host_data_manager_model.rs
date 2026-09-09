@@ -43,6 +43,7 @@ pub struct HostDataManagerModel {
     getMonitoringData: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QVariant),
     getMonitoringDataJson: qt_method!(fn(&self, host_id: QString, monitor_id: QString) -> QString),
     getDisplayData: qt_method!(fn(&self) -> QVariant),
+    getHostDisplayData: qt_method!(fn(&self, host_id: QString) -> QVariant),
     getCategories: qt_method!(fn(&self, host_id: QString, ignore_empty: bool) -> QStringList),
     getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category: QString) -> QStringList),
     getAlerts: qt_method!(fn(&self) -> QString),
@@ -201,6 +202,14 @@ impl HostDataManagerModel {
 
     fn getDisplayData(&self) -> QVariant {
         self.display_data.to_qvariant()
+    }
+
+    fn getHostDisplayData(&self, host_id: QString) -> QVariant {
+        self.display_data.hosts
+            .get(&host_id.to_string())
+            .cloned()
+            .unwrap_or_default()
+            .to_qvariant()
     }
 
     // Get list of monitors for category.

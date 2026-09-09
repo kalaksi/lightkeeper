@@ -485,6 +485,11 @@ Module {
         }
         Method { name: "getDisplayData"; type: "QVariant" }
         Method {
+            name: "getHostDisplayData"
+            type: "QVariant"
+            Parameter { name: "host_id"; type: "string" }
+        }
+        Method {
             name: "getCategories"
             type: "QStringList"
             Parameter { name: "host_id"; type: "string" }
@@ -654,6 +659,10 @@ Module {
         Signal { name: "selectionDeactivated" }
 
         Method { name: "dataChangedForHost"; Parameter { name: "host_id"; type: "string" } }
+        Method {
+            name: "updateHostRow"
+            Parameter { name: "host_display_data"; type: "QVariant" }
+        }
         Method { name: "toggleRow"; Parameter { name: "row"; type: "int" } }
         Method { name: "selectHostById"; Parameter { name: "host_id"; type: "string" } }
         Method { name: "getSelectedHostId"; type: "string" }

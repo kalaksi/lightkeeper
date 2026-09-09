@@ -158,8 +158,7 @@ ApplicationWindow {
         target: LK.hosts
 
         function onUpdateReceived(hostId) {
-            hostTableModel.dataChangedForHost(hostId)
-            hostTableModel.displayData = LK.hosts.getDisplayData()
+            hostTableModel.updateHostRow(LK.hosts.getHostDisplayData(hostId))
             root.refreshAlerts()
 
             if (hostId === hostTableModel.getSelectedHostId()) {
