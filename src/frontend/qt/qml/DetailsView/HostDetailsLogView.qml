@@ -42,9 +42,7 @@ Item {
                 let commandResult = JSON.parse(commandResultJson)
                 root.pendingInvocation = 0
 
-                if (commandResult.error) {
-                    root.errorText = commandResult.error
-                }
+                root.errorText = commandResult.error || ""
 
                 let coloredText = commandResult.message === "" ? "" : TextTransform.ansiToRichText(commandResult.message)
                 logList.rows = coloredText === "" ? [] : coloredText.split("\n")
@@ -274,7 +272,19 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
+            AlertText {
+                visible: root.errorText !== ""
+                text: root.errorText
+                criticality: "Error"
+                width: Math.min(parent.width * 0.8, 600)
+
+                // Centered vertically and horizontally
+                anchors.centerIn: parent
+                anchors.verticalCenterOffset: -0.2 * parent.height
+            }
+
             NormalText {
+                visible: root.errorText === ""
                 text: "No logs available"
                 color: Theme.textColorDark
 
@@ -333,6 +343,7 @@ Item {
     // Executes search again.
     function refresh() {
         logList.resetFields()
+        root.errorText = ""
 
         let fullStartTime = ""
         let fullEndTime = ""
