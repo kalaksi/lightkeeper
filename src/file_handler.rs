@@ -160,7 +160,8 @@ pub fn remove_expired_temporary_files() -> io::Result<()> {
             };
 
             let file_path = entry.path();
-            let Some(path_str) = file_path.to_str() else {
+            let Some(path_str) = file_path.to_str()
+            else {
                 continue;
             };
             if !path_str.ends_with(METADATA_SUFFIX) {

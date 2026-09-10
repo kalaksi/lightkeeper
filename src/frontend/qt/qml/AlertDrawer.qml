@@ -300,31 +300,41 @@ Item {
                                     Layout.fillWidth: true
                                 }
 
-                                SmallText {
-                                    text: modelData.monitor_id
-                                        + (modelData.label !== "" ? (" · " + modelData.label) : "")
-                                        + (modelData.value !== "" ? (" — " + modelData.value) : "")
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                }
-
                                 RowLayout {
-                                    spacing: Theme.spacingTight
                                     Layout.fillWidth: true
-
-                                    PillText {
-                                        text: modelData.from_level
-                                        pillColor: Theme.colorForCriticality(modelData.from_level)
-                                    }
+                                    spacing: Theme.spacingNormal
 
                                     SmallText {
-                                        text: "->"
+                                        text: modelData.monitor_id
+                                            + (modelData.label !== "" ? (" · " + modelData.label) : "")
+                                            + (modelData.value !== "" ? (" — " + modelData.value) : "")
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
                                         Layout.alignment: Qt.AlignVCenter
                                     }
 
-                                    PillText {
-                                        text: modelData.to_level
-                                        pillColor: Theme.colorForCriticality(modelData.to_level)
+                                    RowLayout {
+                                        spacing: Theme.spacingTight
+                                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+
+                                        PillText {
+                                            text: modelData.from_level
+                                            pillColor: Theme.colorForCriticality(modelData.from_level)
+                                            opacity: 0.55
+                                        }
+
+                                        OverlayImage {
+                                            source: "qrc:/main/images/button/go-next"
+                                            color: Theme.iconColor
+                                            Layout.preferredWidth: 12
+                                            Layout.preferredHeight: 12
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
+
+                                        PillText {
+                                            text: modelData.to_level
+                                            pillColor: Theme.colorForCriticality(modelData.to_level)
+                                        }
                                     }
                                 }
                             }

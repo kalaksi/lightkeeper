@@ -15,11 +15,11 @@ Item {
     property string text: ""
     property alias textColor: textElement.color
     property string pillColor: "#30FFFFFF"
-    property int padding: 2
+    property int padding: 4
     property string tooltip: ""
 
     implicitWidth: textElement.implicitWidth + padding * 2
-    implicitHeight: textElement.implicitHeight
+    implicitHeight: textElement.implicitHeight + 2
 
     MouseArea {
         id: mouseArea
@@ -42,11 +42,8 @@ Item {
     Text {
         id: textElement
         text: root.text
-        anchors.fill: parent
+        color: Theme.textColor
+        anchors.centerIn: parent
         font.pointSize: 8
-        verticalAlignment: Text.AlignVCenter
-        horizontalAlignment: Text.AlignHCenter
-        leftPadding: root.padding
-        rightPadding: root.padding
     }
 }
