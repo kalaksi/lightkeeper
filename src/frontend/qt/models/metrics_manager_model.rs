@@ -199,6 +199,7 @@ impl MetricsManagerModel {
             }
         }).collect::<Vec<_>>();
         items.reverse();
+        items.truncate(100);
 
         serde_json::to_string(&items).unwrap_or_else(|_| String::from("[]"))
     }
@@ -247,7 +248,7 @@ impl MetricsManagerModel {
                 return 0;
             }
         };
-        let start_time = end_time - 2 * 24 * 60 * 60;
+        let start_time = end_time - 24 * 60 * 60;
 
         match metrics_manager.get_alerts("", "", start_time, end_time) {
             Ok(invocation_id) => {

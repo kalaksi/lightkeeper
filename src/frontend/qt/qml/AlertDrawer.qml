@@ -386,7 +386,7 @@ Item {
                         anchors.centerIn: parent
                         visible: LK.config.showCharts && root.history.length === 0
                         color: Theme.textColorDark
-                        text: "No alert history in the last 2 days"
+                        text: "No alert history in the last day"
                     }
                 }
             }
