@@ -10,8 +10,7 @@
   </developer>
   <description>
     <p>
-      LightkeeperRM is a standalone and customizable server management and monitoring tool.
-      It works directly over SSH using shell commands.
+      LightkeeperRM is a standalone and customizable server management and monitoring tool that works directly over SSH.
     </p>
   </description>
   <url type="homepage">https://github.com/kalaksi/lightkeeper</url>
