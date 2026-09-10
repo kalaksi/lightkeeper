@@ -15,6 +15,7 @@ use crate::Host;
 const MAX_PATH_COMPONENTS: u8 = 2;
 const APP_DIR_NAME: &str = "lightkeeper";
 const METADATA_SUFFIX: &str = ".metadata.yml";
+const TEMPORARY_FILE_MAX_AGE_DAYS: i64 = 3;
 
 pub fn get_config_dir() -> PathBuf {
     let mut config_dir = if let Some(path) = env::var_os("XDG_CONFIG_HOME") {
@@ -127,6 +128,73 @@ pub fn write_file_metadata(metadata: FileMetadata) -> io::Result<()> {
     Ok(())
 }
 
+/// Removes temporary cache files whose download_time is older than 3 days.
+pub fn remove_expired_temporary_files() -> io::Result<()> {
+    let cache_dir = get_cache_dir();
+    if !cache_dir.is_dir() {
+        return Ok(());
+    }
+
+    let threshold = Utc::now() - chrono::Duration::days(TEMPORARY_FILE_MAX_AGE_DAYS);
+
+    for subdirectory in fs::read_dir(&cache_dir)? {
+        let subdirectory = match subdirectory {
+            Ok(entry) => entry,
+            Err(error) => {
+                log::error!("Error while reading cache directory: {}", error);
+                continue;
+            }
+        };
+
+        if !subdirectory.path().is_dir() || subdirectory.file_name() == "qmlcachedir" {
+            continue;
+        }
+
+        for entry in fs::read_dir(subdirectory.path())? {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) => {
+                    log::error!("Error while reading cache directory: {}", error);
+                    continue;
+                }
+            };
+
+            let file_path = entry.path();
+            let Some(path_str) = file_path.to_str() else {
+                continue;
+            };
+            if !path_str.ends_with(METADATA_SUFFIX) {
+                continue;
+            }
+
+            let metadata_string = match fs::read_to_string(&file_path) {
+                Ok(contents) => contents,
+                Err(error) => {
+                    log::error!("Error while reading cache metadata {}: {}", path_str, error);
+                    continue;
+                }
+            };
+            let metadata: FileMetadata = match serde_yaml::from_str(&metadata_string) {
+                Ok(metadata) => metadata,
+                Err(error) => {
+                    log::error!("Error while parsing cache metadata {}: {}", path_str, error);
+                    continue;
+                }
+            };
+
+            if metadata.temporary && metadata.download_time < threshold {
+                let path = path_str.to_string();
+                match remove_file(&path) {
+                    Ok(()) => log::debug!("Removed expired temporary cache file {}", path_str),
+                    Err(error) => log::error!("Failed to remove expired cache file {}: {}", path_str, error),
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Removes local copy of the (possible) content file and metadata file.
 pub fn remove_file(path: &String) -> io::Result<()> {
     // Verify, just in case, that path belongs to cache directory.
@@ -228,7 +296,8 @@ pub struct FileMetadata {
     pub owner_uid: u32,
     pub owner_gid: u32,
     pub permissions: u32,
-    /// Temporary files will be deleted when they're no longer used (usually after uploading).
+    /// Temporary files are deleted when the editor session ends.
+    /// Leftovers older than 3 days are removed on startup.
     pub temporary: bool,
 }
 

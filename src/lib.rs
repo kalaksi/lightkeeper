@@ -70,6 +70,10 @@ pub fn initialize_core(
 
     initialize_openssl()?;
 
+    if let Err(error) = file_handler::remove_expired_temporary_files() {
+        log::error!("Failed to clean up expired temporary cache files: {}", error);
+    }
+
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
     host_manager.borrow_mut().configure(hosts_config);
 
