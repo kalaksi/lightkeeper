@@ -4,11 +4,12 @@
  */
 
 import QtQuick.Controls.Fusion
+import "." as StyleOverride
 
 ScrollView {
     id: control
 
-    ScrollBar.vertical: ScrollBar {
+    ScrollBar.vertical: StyleOverride.ScrollBar {
         parent: control
         x: control.mirrored ? 0 : control.width - width
         y: control.topPadding
@@ -16,7 +17,7 @@ ScrollView {
         active: control.ScrollBar.horizontal.active
     }
 
-    ScrollBar.horizontal: ScrollBar {
+    ScrollBar.horizontal: StyleOverride.ScrollBar {
         parent: control
         x: control.leftPadding
         y: control.height - height

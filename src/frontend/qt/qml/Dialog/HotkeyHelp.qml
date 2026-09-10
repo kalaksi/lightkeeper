@@ -16,6 +16,7 @@ import "../StyleOverride"
 LightkeeperDialog {
     id: root
     modal: true
+    title: "Keyboard shortcuts"
     implicitWidth: 600
     implicitHeight: 700
     standardButtons: Dialog.Close
@@ -34,14 +35,9 @@ LightkeeperDialog {
             spacing: Theme.spacingTight
 
             BigText {
-                text: "Keyboard shortcuts"
+                text: "Details view"
 
                 Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: Theme.spacingNormal
-            }
-
-            BigText {
-                text: "Details view"
                 Layout.bottomMargin: Theme.spacingNormal
             }
 
@@ -69,6 +65,7 @@ LightkeeperDialog {
             BigText {
                 text: "File browser"
 
+                Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Theme.spacingLoose
                 Layout.bottomMargin: Theme.spacingNormal
             }
@@ -96,6 +93,7 @@ LightkeeperDialog {
             BigText {
                 text: "Log viewer"
 
+                Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Theme.spacingLoose
                 Layout.bottomMargin: Theme.spacingNormal
             }
@@ -129,6 +127,7 @@ LightkeeperDialog {
             BigText {
                 text: "Terminal"
 
+                Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Theme.spacingLoose
                 Layout.bottomMargin: Theme.spacingNormal
             }
