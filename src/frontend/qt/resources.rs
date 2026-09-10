@@ -60,6 +60,7 @@ pub fn init_resources() {
             "images/breeze/dark/group-new.svg" as "images/button/group-new",
             "images/breeze/dark/document-open.svg" as "images/button/document-open",
             "images/breeze/dark/document-open-folder.svg" as "images/button/document-open-folder",
+            "images/breeze/dark/view-calendar.svg" as "images/button/view-calendar",
             "images/breeze/dark/folder-new.svg" as "images/button/folder-new",
             "images/breeze/dark/lock.svg" as "images/button/lock",
             "images/breeze/dark/view-visible.svg" as "images/button/view-visible",

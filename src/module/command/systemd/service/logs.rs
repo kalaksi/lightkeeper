@@ -11,6 +11,7 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
+use crate::utils::is_valid_journalctl_time;
 use crate::utils::string_validation;
 use lightkeeper_module::command_module;
 
@@ -40,7 +41,7 @@ impl CommandModule for Logs {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("view-document"),
             display_text: String::from("Show logs"),
-            action: UIAction::LogView,
+            action: UIAction::LogViewWithTimeControls,
             tab_title: String::from("Service logs"),
             ..Default::default()
         }
@@ -71,9 +72,15 @@ impl CommandModule for Logs {
             command.arguments(vec!["journalctl", "-q", "-u", service]);
 
             if !start_time.is_empty() {
+                if !is_valid_journalctl_time(&start_time) {
+                    return Err(LkError::other_p("Invalid start time", &start_time));
+                }
                 command.arguments(vec!["--since", &start_time]);
             }
-            if !end_time.is_empty() {
+            if !end_time.is_empty() && end_time != "now" {
+                if !is_valid_journalctl_time(&end_time) {
+                    return Err(LkError::other_p("Invalid end time", &end_time));
+                }
                 command.arguments(vec!["--until", &end_time]);
             }
 

@@ -12,6 +12,7 @@ import Lightkeeper 1.0
 import ".."
 import "../Text"
 import "../Button"
+import "../Misc"
 import "../js/Utils.js" as Utils
 import "../js/TextTransform.js" as TextTransform
 import "../StyleOverride"
@@ -44,12 +45,17 @@ Item {
                 if (commandResult.error) {
                     root.errorText = commandResult.error
                 }
- 
+
                 let coloredText = commandResult.message === "" ? "" : TextTransform.ansiToRichText(commandResult.message)
                 logList.rows = coloredText === "" ? [] : coloredText.split("\n")
 
-                let [rowsMatched, totalMatches] = logList.getSearchDetails()
-                searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
+                if (searchField.text.length > 0) {
+                    let [rowsMatched, totalMatches] = logList.search("down", searchField.text)
+                    searchDetails.text = `${totalMatches} matches in ${rowsMatched} rows`
+                }
+                else {
+                    searchDetails.text = ""
+                }
             }
         }
     }
@@ -77,52 +83,65 @@ Item {
             Row {
                 spacing: Theme.spacingLoose
 
+                Column {
+                    visible: root.showTimeControls
+                    spacing: Theme.spacingTight
+
+                    Row {
+                        spacing: Theme.spacingLoose
+
+                        NormalText {
+                            id: fromLabel
+                            height: parent.height
+                            text: "From"
+                        }
+
+                        DateTimeField {
+                            id: startTime
+                            fieldWidth: searchBox.width * 0.11
+                            placeholderText: "Start date"
+                            placeholderTextColor: Theme.textColorDark
+                            text: Utils.getLocalTimezoneISOString(Date.now() - 1 * 60 * 60 * 1000).replace("T", " ")
+                            onAccepted: timeRangeSubmit.clicked()
+                        }
+
+                        NormalText {
+                            text: "To"
+                        }
+
+                        DateTimeField {
+                            id: endTime
+                            fieldWidth: searchBox.width * 0.11
+                            placeholderText: "End date"
+                            placeholderTextColor: Theme.textColorDark
+                            text: "now"
+                            onAccepted: timeRangeSubmit.clicked()
+                        }
+                    }
+
+                    Row {
+                        spacing: Theme.spacingLoose
+
+                        NormalText {
+                            // Same width as "From" so the switch lines up with the date field.
+                            width: fromLabel.width
+                            text: "UTC"
+                        }
+
+                        Switch {
+                            id: useUtc
+                            checked: false
+                        }
+                    }
+                }
+
                 NormalText {
-                    visible: root.showTimeControls
-                    height: parent.height
-                    text: "From"
-                }
-
-                TextField {
-                    id: startTime
-                    visible: root.showTimeControls
-                    width: searchBox.width * 0.12
-                    placeholderText: "Start date"
-                    placeholderTextColor: Theme.textColorDark
-                    text: Utils.getLocalTimezoneISOString(Date.now() - 1 * 60 * 60 * 1000).replace("T", " ")
-                    onAccepted: timeRangeSubmit.clicked(null)
-                }
-
-                NormalText {
-                    visible: root.showTimeControls
-                    text: "To"
-                }
-
-                TextField {
-                    id: endTime
-                    visible: root.showTimeControls
-                    width: searchBox.width * 0.12
-                    placeholderText: "End date"
-                    placeholderTextColor: Theme.textColorDark
-                    text: "now"
-                    onAccepted: timeRangeSubmit.clicked(null)
-                }
-
-                TextField {
-                    visible: false
-                    id: timezone
-                    text: Utils.formatTimezone(new Date().getTimezoneOffset())
-                }
-
-                NormalText {
-                    visible: !root.showTimeControls
-                    text: "Lines fo fetch"
+                    text: "Lines to fetch"
                 }
 
                 TextField {
                     id: numberOfLines
-                    visible: !root.showTimeControls
-                    width: searchBox.width * 0.12
+                    width: searchBox.width * 0.08
                     placeholderText: "Number of lines"
                     placeholderTextColor: Theme.textColorDark
                     text: "1000"
@@ -130,26 +149,16 @@ Item {
                 }
 
                 ImageButton {
-                    id: numberOfLinesSubmit
-                    visible: !root.showTimeControls
-                    size: numberOfLines.height
-                    imageSource: "qrc:/main/images/button/search"
-                    tooltip: "Fetch"
-                    onClicked: root.refresh()
-                }
-
-                ImageButton {
                     id: timeRangeSubmit
-                    visible: root.showTimeControls
                     size: numberOfLines.height
                     imageSource: "qrc:/main/images/button/search"
-                    tooltip: "Apply time range"
+                    tooltip: root.showTimeControls ? "Apply time range" : "Fetch"
                     onClicked: root.refresh()
                 }
 
                 // Spacer
                 Item {
-                    width: root.showTimeControls ? 0.01 * searchBox.width : 0.08 * searchBox.width
+                    width: 0.01 * searchBox.width
                     height: searchBox.height
                 }
 
@@ -158,7 +167,7 @@ Item {
 
                     TextField {
                         id: searchField
-                        width: searchBox.width * 0.55
+                        width: searchBox.width * (root.showTimeControls ? 0.35 : 0.55)
                         placeholderText: "Regex search..."
                         placeholderTextColor: Theme.textColorDark
                         focus: true
@@ -307,30 +316,36 @@ Item {
         onActivated: logList.search("up", searchField.text)
     }
 
+    function formatTimeArg(value) {
+        if (!useUtc.checked) {
+            return value
+        }
+        if (value === "" || value === "now" || value === "today" || value === "yesterday"
+            || value.startsWith("-")) {
+            return value
+        }
+        if (value.endsWith(" UTC")) {
+            return value
+        }
+        return value + " UTC"
+    }
+
     // Executes search again.
     function refresh() {
         logList.resetFields()
 
+        let fullStartTime = ""
+        let fullEndTime = ""
         if (root.showTimeControls) {
-            // TODO: implement checkbox for "Use UTC timezone"
-            // let fullStartTime = `${startTime.text} ${timezone.text}`
-            // let fullEndTime = `${endTime.text} ${timezone.text}`
-            let fullStartTime = startTime.text
-            let fullEndTime = endTime.text
+            fullStartTime = root.formatTimeArg(startTime.text)
+            fullEndTime = root.formatTimeArg(endTime.text)
+        }
 
-            root.pendingInvocation = LK.command.executePlain(
-                root.hostId,
-                root.commandId,
-                [...root.commandParams, fullStartTime, fullEndTime, ""]
-            )
-        }
-        else {
-            root.pendingInvocation = LK.command.executePlain(
-                root.hostId,
-                root.commandId,
-                [...root.commandParams, "", "", "1", numberOfLines.text]
-            )
-        }
+        root.pendingInvocation = LK.command.executePlain(
+            root.hostId,
+            root.commandId,
+            [...root.commandParams, fullStartTime, fullEndTime, "1", numberOfLines.text]
+        )
     }
 
     function activate() {

@@ -58,15 +58,28 @@ Item {
         id: panel
         width: root.panelWidth
         height: parent.height
-        x: root.open ? parent.width - width : parent.width
+        // Stay off-screen when closed; open state docks to the right edge.
+        // Use states/transitions (not Behavior) so resize does not animate x.
+        x: parent.width
         backgroundColor: Theme.backgroundColor
         borderColor: Theme.borderColor
         borderLeft: 1
         clip: true
         focus: root.open
 
-        Behavior on x {
+        states: State {
+            name: "open"
+            when: root.open
+
+            PropertyChanges {
+                target: panel
+                x: root.width - panel.width
+            }
+        }
+
+        transitions: Transition {
             NumberAnimation {
+                property: "x"
                 duration: Theme.animationDuration
                 easing.type: Easing.OutQuad
             }

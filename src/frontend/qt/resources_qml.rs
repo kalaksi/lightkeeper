@@ -82,6 +82,7 @@ pub fn init_resources() {
             "js/ValueUnit.js",
             "Misc/BorderRectangle.qml",
             "Misc/BusyOverlay.qml",
+            "Misc/DateTimeField.qml",
             "Misc/FilePathField.qml",
             "Misc/LKListView.qml",
             "Misc/LKTabButton.qml",

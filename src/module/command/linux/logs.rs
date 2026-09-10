@@ -12,7 +12,7 @@ use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
-use chrono::NaiveDateTime;
+use crate::utils::is_valid_journalctl_time;
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -66,21 +66,16 @@ impl CommandModule for Logs {
             command.arguments(vec!["journalctl", "-q"]);
 
             if !start_time.is_empty() {
-                if start_time == "-1h" {
-                    command.arguments(vec!["--since", &start_time]);
+                if !is_valid_journalctl_time(&start_time) {
+                    return Err(LkError::other_p("Invalid start time", &start_time));
                 }
-                else {
-                    match NaiveDateTime::parse_from_str(start_time.as_str(), "%Y-%m-%d %H:%M:%S") {
-                        Ok(_) => command.arguments(vec!["--since", &start_time]),
-                        Err(_) => return Err(LkError::other_p("Invalid start time", &start_time)),
-                    };
-                }
+                command.arguments(vec!["--since", &start_time]);
             }
             if !end_time.is_empty() && end_time != "now" {
-                match NaiveDateTime::parse_from_str(end_time.as_str(), "%Y-%m-%d %H:%M:%S") {
-                    Ok(_) => command.arguments(vec!["--until", &end_time]),
-                    Err(_) => return Err(LkError::other_p("Invalid end time: {}", &end_time)),
-                };
+                if !is_valid_journalctl_time(&end_time) {
+                    return Err(LkError::other_p("Invalid end time", &end_time));
+                }
+                command.arguments(vec!["--until", &end_time]);
             }
 
             if page_number > 0 {
