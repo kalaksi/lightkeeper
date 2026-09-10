@@ -13,6 +13,7 @@ use crate::module::*;
 use crate::module::command::*;
 use crate::utils::ShellCommand;
 use crate::utils::is_valid_journalctl_time;
+use crate::utils::journalctl_json_to_rich_text;
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -63,7 +64,7 @@ impl CommandModule for Logs {
            host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "15") ||
            host.platform.is_same_or_greater(platform_info::Flavor::OpenSUSE, "12") {
 
-            command.arguments(vec!["journalctl", "-q"]);
+            command.arguments(vec!["journalctl", "-q", "-o", "json"]);
 
             if !start_time.is_empty() {
                 if !is_valid_journalctl_time(&start_time) {
@@ -94,6 +95,6 @@ impl CommandModule for Logs {
         if response.is_error() {
             return Err((&response.message).trim_end().to_owned())
         }
-        Ok(CommandResult::new_hidden(response.message.clone()))
+        Ok(CommandResult::new_hidden(journalctl_json_to_rich_text(&response.message)))
     }
 }

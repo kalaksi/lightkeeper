@@ -247,10 +247,24 @@ fn test_unmask_error() {
 #[test]
 fn test_logs_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "journalctl" "-q" "-u" "test-service.service" "-n" "1000""#,
-            r#"Dec 01 10:00:00 hostname test-service[1234]: Starting test-service
-Dec 01 10:00:01 hostname test-service[1234]: test-service started successfully
-Dec 01 10:05:00 hostname test-service[1234]: Processing request"#, 0)
+        let output = concat!(
+            r#"{"PRIORITY":"6","_HOSTNAME":"hostname","SYSLOG_IDENTIFIER":"test-service","#,
+            r#""_PID":"1234","__REALTIME_TIMESTAMP":"1733047200000000","#,
+            r#""MESSAGE":"Starting test-service"}"#,
+            "\n",
+            r#"{"PRIORITY":"6","_HOSTNAME":"hostname","SYSLOG_IDENTIFIER":"test-service","#,
+            r#""_PID":"1234","__REALTIME_TIMESTAMP":"1733047201000000","#,
+            r#""MESSAGE":"test-service started successfully"}"#,
+            "\n",
+            r#"{"PRIORITY":"6","_HOSTNAME":"hostname","SYSLOG_IDENTIFIER":"test-service","#,
+            r#""_PID":"1234","__REALTIME_TIMESTAMP":"1733047500000000","#,
+            r#""MESSAGE":"Processing request"}"#,
+        );
+        StubSsh2::new(
+            r#""sudo" "journalctl" "-q" "-o" "json" "-u" "test-service.service" "-n" "1000""#,
+            output,
+            0,
+        )
     };
 
     let mut harness = CommandTestHarness::new_command_tester(
@@ -266,15 +280,27 @@ Dec 01 10:05:00 hostname test-service[1234]: Processing request"#, 0)
     harness.verify_next_command_result(&module_id, |result| {
         assert_eq!(result.criticality, Criticality::Normal);
         assert!(result.message.contains("test-service"));
+        assert!(result.message.contains("color:#c9b458"));
     });
 }
 
 #[test]
 fn test_logs_with_parameters() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "journalctl" "-q" "-u" "test-service.service" "-n" "1000""#,
-            r#"Dec 01 10:00:00 hostname test-service[1234]: Log entry 1
-Dec 01 10:00:01 hostname test-service[1234]: Log entry 2"#, 0)
+        let output = concat!(
+            r#"{"PRIORITY":"6","_HOSTNAME":"hostname","SYSLOG_IDENTIFIER":"test-service","#,
+            r#""_PID":"1234","__REALTIME_TIMESTAMP":"1733047200000000","#,
+            r#""MESSAGE":"Log entry 1"}"#,
+            "\n",
+            r#"{"PRIORITY":"6","_HOSTNAME":"hostname","SYSLOG_IDENTIFIER":"test-service","#,
+            r#""_PID":"1234","__REALTIME_TIMESTAMP":"1733047201000000","#,
+            r#""MESSAGE":"Log entry 2"}"#,
+        );
+        StubSsh2::new(
+            r#""sudo" "journalctl" "-q" "-o" "json" "-u" "test-service.service" "-n" "1000""#,
+            output,
+            0,
+        )
     };
 
     let mut harness = CommandTestHarness::new_command_tester(
@@ -303,7 +329,7 @@ Dec 01 10:00:01 hostname test-service[1234]: Log entry 2"#, 0)
 #[test]
 fn test_logs_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "journalctl" "-q" "-u" "nonexistent.service" "-n" "1000""#,
+        StubSsh2::new(r#""sudo" "journalctl" "-q" "-o" "json" "-u" "nonexistent.service" "-n" "1000""#,
             "No entries.", 1)
     };
 

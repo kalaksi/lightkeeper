@@ -21,3 +21,6 @@ pub mod sha256;
 
 pub mod journalctl_time;
 pub use journalctl_time::is_valid_journalctl_time;
+
+pub mod journalctl_format;
+pub use journalctl_format::journalctl_json_to_rich_text;
