@@ -563,6 +563,10 @@ Module {
             Parameter { name: "end_time_sec"; type: "int" }
         }
         Method {
+            name: "refreshAlertHistory"
+            type: "int"
+        }
+        Method {
             name: "getCategories"
             type: "QStringList"
             Parameter { name: "host_id"; type: "string" }
@@ -578,6 +582,11 @@ Module {
             name: "dataReceived"
             Parameter { name: "invocation_id"; type: "int" }
             Parameter { name: "chart_data"; type: "string" }
+        }
+        Signal {
+            name: "alertHistoryReceived"
+            Parameter { name: "invocation_id"; type: "int" }
+            Parameter { name: "alert_data"; type: "string" }
         }
     }
 

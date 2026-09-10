@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use serde::{Serialize, Deserialize};
 use crate::enums::Criticality;
@@ -174,6 +174,74 @@ impl DataPoint {
         leaves
     }
 
+    /// Leaf criticalities used to detect alert history transitions.
+    pub fn collect_leaf_states(&self, use_multivalue: bool, root_label: &str) -> Vec<LeafState> {
+        let mut leaves = Vec::new();
+        if !use_multivalue {
+            if self.criticality != Criticality::Ignore {
+                leaves.push(LeafState {
+                    entry_id: Self::ROOT_ENTRY_ID.to_string(),
+                    label: if root_label.is_empty() { self.label.clone() } else { root_label.to_string() },
+                    value: self.value.clone(),
+                    criticality: self.criticality,
+                });
+            }
+            return leaves;
+        }
+
+        Self::collect_leaf_states_recursive(self, None, &mut leaves);
+        leaves
+    }
+
+    pub fn criticality_transitions(
+        previous: Option<&DataPoint>,
+        current: &DataPoint,
+        use_multivalue: bool,
+        root_label: &str,
+    ) -> Vec<CriticalityTransition> {
+        let previous_states = previous
+            .map(|point| point.collect_leaf_states(use_multivalue, root_label))
+            .unwrap_or_default();
+        let current_states = current.collect_leaf_states(use_multivalue, root_label);
+
+        let mut previous_by_id: HashMap<String, LeafState> = previous_states
+            .into_iter()
+            .map(|leaf| (leaf.entry_id.clone(), leaf))
+            .collect();
+
+        let mut transitions = Vec::new();
+        for current_leaf in current_states {
+            let from_level = previous_by_id
+                .remove(&current_leaf.entry_id)
+                .map(|leaf| leaf.criticality)
+                .unwrap_or(Criticality::NoData);
+            let to_level = current_leaf.criticality;
+            if from_level != to_level && (from_level > Criticality::NoData || to_level > Criticality::NoData) {
+                transitions.push(CriticalityTransition {
+                    entry_id: current_leaf.entry_id,
+                    label: current_leaf.label,
+                    value: current_leaf.value,
+                    from_level,
+                    to_level,
+                });
+            }
+        }
+
+        for previous_leaf in previous_by_id.into_values() {
+            if previous_leaf.criticality > Criticality::NoData {
+                transitions.push(CriticalityTransition {
+                    entry_id: previous_leaf.entry_id,
+                    label: previous_leaf.label,
+                    value: previous_leaf.value,
+                    from_level: previous_leaf.criticality,
+                    to_level: Criticality::NoData,
+                });
+            }
+        }
+
+        transitions
+    }
+
     fn is_alert_leaf(point: &DataPoint) -> bool {
         point.criticality != Criticality::Ignore
             && (point.acknowledged || matches!(point.criticality, Criticality::Warning | Criticality::Error | Criticality::Critical))
@@ -230,6 +298,27 @@ impl DataPoint {
         }
     }
 
+    fn collect_leaf_states_recursive(point: &DataPoint, parent_path: Option<&str>, leaves: &mut Vec<LeafState>) {
+        for child in point.multivalue.iter() {
+            if child.criticality == Criticality::Ignore {
+                continue;
+            }
+
+            let entry_id = Self::entry_path(parent_path, &child.label);
+            if child.multivalue.is_empty() {
+                leaves.push(LeafState {
+                    entry_id,
+                    label: child.label.clone(),
+                    value: child.value.clone(),
+                    criticality: child.criticality,
+                });
+            }
+            else {
+                Self::collect_leaf_states_recursive(child, Some(&entry_id), leaves);
+            }
+        }
+    }
+
     /// After ack flags change: set criticality from unacked children only.
     /// If every child is acknowledged, fall back to Normal.
     fn recalculate_criticality_from_children(&mut self) {
@@ -269,6 +358,23 @@ pub struct AlertLeaf {
     pub value: String,
     pub criticality: Criticality,
     pub acknowledged: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LeafState {
+    pub entry_id: String,
+    pub label: String,
+    pub value: String,
+    pub criticality: Criticality,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CriticalityTransition {
+    pub entry_id: String,
+    pub label: String,
+    pub value: String,
+    pub from_level: Criticality,
+    pub to_level: Criticality,
 }
 
 impl fmt::Display for DataPoint {

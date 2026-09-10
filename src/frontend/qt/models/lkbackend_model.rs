@@ -12,7 +12,7 @@ use crate::{
     connection_manager::ConnectionManager,
     frontend::{HostDisplayData, UIUpdate},
     host_manager,
-    module::monitoring::MonitoringData,
+    module::monitoring::{DataPoint, MonitoringData},
     metrics,
 };
 
@@ -134,6 +134,27 @@ impl LkBackend {
         });
 
         let self_ptr = QPointer::from(&*self);
+        let process_alert_insert = qmetaobject::queued_callback(move |(
+            host_id,
+            monitor_id,
+            previous,
+            current,
+            use_multivalue,
+            root_label,
+        ): (String, String, Option<DataPoint>, DataPoint, bool, String)| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned.borrow().metrics.borrow_mut().insert_alert_transitions(
+                    &host_id,
+                    &monitor_id,
+                    previous.as_ref(),
+                    &current,
+                    use_multivalue,
+                    &root_label,
+                );
+            }
+        });
+
+        let self_ptr = QPointer::from(&*self);
         let handle_crash = qmetaobject::queued_callback(move |_| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
                 self_pinned.borrow().crashed();
@@ -147,8 +168,33 @@ impl LkBackend {
                         match received_data {
                             UIUpdate::Host(display_data) => {
                                 if let Some(new_monitoring_data) = &display_data.new_monitoring_data {
+                                    let monitor_id = new_monitoring_data.1.monitor_id.clone();
+                                    let previous = display_data.host_state.monitor_data
+                                        .get(&monitor_id)
+                                        .and_then(|monitor_data| {
+                                            if monitor_data.values.len() >= 2 {
+                                                monitor_data.values.get(monitor_data.values.len() - 2).cloned()
+                                            }
+                                            else {
+                                                None
+                                            }
+                                        });
+                                    if let Some(current) = new_monitoring_data.1.values.back().cloned() {
+                                        process_alert_insert((
+                                            display_data.host_state.host.name.clone(),
+                                            monitor_id,
+                                            previous,
+                                            current,
+                                            new_monitoring_data.1.display_options.use_multivalue,
+                                            new_monitoring_data.1.display_options.display_text.clone(),
+                                        ));
+                                    }
+
                                     if new_monitoring_data.1.display_options.use_with_charts {
-                                        process_chart_insert((display_data.host_state.host.name.clone(), new_monitoring_data.1.clone()));
+                                        process_chart_insert((
+                                            display_data.host_state.host.name.clone(),
+                                            new_monitoring_data.1.clone(),
+                                        ));
                                     }
                                 }
                                 process_host_update(display_data);

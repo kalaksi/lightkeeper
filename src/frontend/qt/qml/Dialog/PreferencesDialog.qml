@@ -420,7 +420,7 @@ LightkeeperDialog {
 
                 SmallText {
                     width: parent.width
-                    text: "Enables charts and local metrics server for handling historical data."
+                    text: "Enables charts, alert history, and local metrics server for historical data."
                     color: Theme.textColorDark
                     wrapMode: Text.WordWrap
                 }

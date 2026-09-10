@@ -30,7 +30,7 @@ use crate::metrics::lmserver::{self, LMSRequest, LMSResponse, RequestType};
 
 /// In milliseconds.
 const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
-const LMSERVER_VERSION: &str = "v0.2.1";
+const LMSERVER_VERSION: &str = "v0.3.0";
 
 pub struct MetricsManager {
     process_handle: Option<process::Child>,
@@ -347,6 +347,23 @@ impl MetricsManager {
         })?;
 
         Ok(invocation_id)
+    }
+
+    pub fn insert_alerts(&mut self, events: Vec<lmserver::AlertEvent>) -> Result<u64, LkError> {
+        if events.is_empty() {
+            return Ok(0);
+        }
+
+        self.send_request(RequestType::AlertInsert { events })
+    }
+
+    pub fn get_alerts(&mut self, host_id: &str, monitor_id: &str, start_time: i64, end_time: i64) -> Result<u64, LkError> {
+        self.send_request(RequestType::AlertQuery {
+            host_id: host_id.to_string(),
+            monitor_id: monitor_id.to_string(),
+            start_time,
+            end_time,
+        })
     }
 
     fn send_request(&mut self, request_type: RequestType) -> Result<u64, LkError> {
