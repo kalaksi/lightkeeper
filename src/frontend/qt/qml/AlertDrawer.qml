@@ -271,122 +271,141 @@ Item {
                     }
                 }
 
-                Item {
-                    ListView {
-                        id: historyList
-                        anchors.fill: parent
-                        clip: true
-                        boundsBehavior: Flickable.StopAtBounds
-                        spacing: Theme.spacingTight
-                        model: root.history
+                ColumnLayout {
+                    spacing: Theme.spacingNormal
+
+                    TextField {
+                        id: historySearchField
+                        Layout.fillWidth: true
                         visible: LK.config.showCharts
+                        placeholderText: "by host or monitor..."
+                        placeholderTextColor: Theme.textColorDark
 
-                        delegate: Rectangle {
-                            required property var modelData
-                            required property int index
+                        onTextChanged: historySearchDebounce.restart()
+                    }
 
-                            width: historyList.width - Theme.marginScrollbar
-                            height: historyContent.implicitHeight + Theme.spacingNormal
-                            radius: 6
-                            color: Theme.categoryBackgroundColor
-                            border.width: 1
-                            border.color: "#20ffffff"
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
 
-                            ColumnLayout {
-                                id: historyContent
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.margins: Theme.spacingNormal / 2.0
-                                spacing: Theme.spacingTight
+                        ListView {
+                            id: historyList
+                            anchors.fill: parent
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+                            spacing: Theme.spacingTight
+                            model: root.history
+                            visible: LK.config.showCharts
 
-                                SmallText {
-                                    text: Qt.formatDateTime(new Date(modelData.time * 1000), "yyyy-MM-dd hh:mm:ss")
-                                    color: Theme.textColorDark
-                                    Layout.fillWidth: true
-                                }
+                            delegate: Rectangle {
+                                required property var modelData
+                                required property int index
 
-                                SmallText {
-                                    text: modelData.host_id
-                                    font.bold: true
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                }
+                                width: historyList.width - Theme.marginScrollbar
+                                height: historyContent.implicitHeight + Theme.spacingNormal
+                                radius: 6
+                                color: Theme.categoryBackgroundColor
+                                border.width: 1
+                                border.color: "#20ffffff"
 
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Theme.spacingNormal
+                                ColumnLayout {
+                                    id: historyContent
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.margins: Theme.spacingNormal / 2.0
+                                    spacing: Theme.spacingTight
 
                                     SmallText {
-                                        text: modelData.monitor_id
-                                            + (modelData.label !== "" ? (" · " + modelData.label) : "")
-                                            + (modelData.value !== "" ? (" — " + modelData.value) : "")
+                                        text: Qt.formatDateTime(new Date(modelData.time * 1000), "yyyy-MM-dd hh:mm:ss")
+                                        color: Theme.textColorDark
+                                        Layout.fillWidth: true
+                                    }
+
+                                    SmallText {
+                                        text: modelData.host_id
+                                        font.bold: true
                                         elide: Text.ElideRight
                                         Layout.fillWidth: true
-                                        Layout.alignment: Qt.AlignVCenter
                                     }
 
                                     RowLayout {
-                                        spacing: Theme.spacingTight
-                                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                                        Layout.fillWidth: true
+                                        spacing: Theme.spacingNormal
 
-                                        PillText {
-                                            text: modelData.from_level
-                                            pillColor: Theme.colorForCriticality(modelData.from_level)
-                                            opacity: 0.55
-                                        }
-
-                                        OverlayImage {
-                                            source: "qrc:/main/images/button/go-next"
-                                            color: Theme.iconColor
-                                            Layout.preferredWidth: 12
-                                            Layout.preferredHeight: 12
+                                        SmallText {
+                                            text: modelData.monitor_id
+                                                + (modelData.label !== "" ? (" · " + modelData.label) : "")
+                                                + (modelData.value !== "" ? (" — " + modelData.value) : "")
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
                                             Layout.alignment: Qt.AlignVCenter
                                         }
 
-                                        PillText {
-                                            text: modelData.to_level
-                                            pillColor: Theme.colorForCriticality(modelData.to_level)
+                                        RowLayout {
+                                            spacing: Theme.spacingTight
+                                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+
+                                            PillText {
+                                                text: modelData.from_level
+                                                pillColor: Theme.colorForCriticality(modelData.from_level)
+                                                opacity: 0.55
+                                            }
+
+                                            OverlayImage {
+                                                source: "qrc:/main/images/button/go-next"
+                                                color: Theme.iconColor
+                                                Layout.preferredWidth: 12
+                                                Layout.preferredHeight: 12
+                                                Layout.alignment: Qt.AlignVCenter
+                                            }
+
+                                            PillText {
+                                                text: modelData.to_level
+                                                pillColor: Theme.colorForCriticality(modelData.to_level)
+                                            }
                                         }
                                     }
                                 }
                             }
+
+                            ScrollBar.vertical: StyleOverride.ScrollBar {
+                                policy: ScrollBar.AsNeeded
+                                fadeWhenIdle: false
+                                anchors.rightMargin: Theme.spacingNormal
+                            }
                         }
 
-                        ScrollBar.vertical: StyleOverride.ScrollBar {
-                            policy: ScrollBar.AsNeeded
-                            fadeWhenIdle: false
-                            anchors.rightMargin: Theme.spacingNormal
-                        }
-                    }
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: Theme.spacingNormal
+                            visible: !LK.config.showCharts
+                            width: parent.width * 0.85
 
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: Theme.spacingNormal
-                        visible: !LK.config.showCharts
-                        width: parent.width * 0.85
+                            NormalText {
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                text: "Alert history requires the local metrics server."
+                            }
+
+                            NormalText {
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                color: Theme.textColorDark
+                                text: "Enable charts in preferences (restart required)."
+                            }
+                        }
 
                         NormalText {
-                            width: parent.width
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.WordWrap
-                            text: "Alert history requires the local metrics server."
-                        }
-
-                        NormalText {
-                            width: parent.width
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.WordWrap
+                            anchors.centerIn: parent
+                            visible: LK.config.showCharts && root.history.length === 0
                             color: Theme.textColorDark
-                            text: "Enable charts in preferences (restart required)."
+                            text: historySearchField.text !== ""
+                                ? "No matching alerts"
+                                : "No alert history in the last day"
                         }
-                    }
-
-                    NormalText {
-                        anchors.centerIn: parent
-                        visible: LK.config.showCharts && root.history.length === 0
-                        color: Theme.textColorDark
-                        text: "No alert history in the last day"
                     }
                 }
             }
@@ -411,6 +430,21 @@ Item {
         onActivated: root.closeRequested()
     }
 
+    Shortcut {
+        enabled: root.open && root.modeIndex === 1 && LK.config.showCharts
+        sequences: [StandardKey.Find, "/"]
+        onActivated: {
+            historySearchField.forceActiveFocus()
+            historySearchField.selectAll()
+        }
+    }
+
+    Timer {
+        id: historySearchDebounce
+        interval: 300
+        onTriggered: root.refreshHistory()
+    }
+
     onOpenChanged: {
         if (open) {
             panel.forceActiveFocus()
@@ -433,6 +467,6 @@ Item {
             return
         }
 
-        root.historyInvocationId = LK.metrics.refreshAlertHistory()
+        root.historyInvocationId = LK.metrics.refreshAlertHistory(historySearchField.text)
     }
 }

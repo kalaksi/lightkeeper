@@ -111,8 +111,8 @@ ApplicationWindow {
             hostTableModel.filter(searchText)
         }
 
-        // Shortcuts are enabled if no host is selected.
-        enableShortcuts: hostTableModel.selectedRow === -1
+        // Shortcuts are enabled if no host is selected and alert drawer is closed.
+        enableShortcuts: hostTableModel.selectedRow === -1 && !alertDrawer.open
         enableEditButtons: hostTableModel.selectedRow !== -1
     }
 

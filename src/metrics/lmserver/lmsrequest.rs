@@ -5,7 +5,7 @@
 
 ///
 /// This module contains the client-server communication protocol of the locally run LMServer metrics server.
-/// Protocol version 1.1
+/// Protocol version 1.2
 ///
 use std::collections::HashMap;
 #[cfg(feature = "gui")]
@@ -65,7 +65,8 @@ pub enum RequestType {
     AlertInsert {
         events: Vec<AlertEvent>,
     },
-    /// Empty `host_id` or `monitor_id` means no filter on that field.
+    /// Empty `host_id`, `monitor_id`, or `search_text` means no filter on that field.
+    /// `search_text` matches a case-insensitive substring of host_id, monitor_id, or label.
     AlertQuery {
         host_id: String,
         monitor_id: String,
@@ -73,6 +74,7 @@ pub enum RequestType {
         start_time: i64,
         /// Unix timestamp in seconds.
         end_time: i64,
+        search_text: String,
     },
 }
 

@@ -357,12 +357,20 @@ impl MetricsManager {
         self.send_request(RequestType::AlertInsert { events })
     }
 
-    pub fn get_alerts(&mut self, host_id: &str, monitor_id: &str, start_time: i64, end_time: i64) -> Result<u64, LkError> {
+    pub fn get_alerts(
+        &mut self,
+        host_id: &str,
+        monitor_id: &str,
+        search_text: &str,
+        start_time: i64,
+        end_time: i64,
+    ) -> Result<u64, LkError> {
         self.send_request(RequestType::AlertQuery {
             host_id: host_id.to_string(),
             monitor_id: monitor_id.to_string(),
             start_time,
             end_time,
+            search_text: search_text.to_string(),
         })
     }
 

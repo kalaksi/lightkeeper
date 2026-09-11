@@ -28,7 +28,7 @@ pub struct MetricsManagerModel {
     //
     startService: qt_method!(fn(&self) -> ()),
     refreshCharts: qt_method!(fn(&self, host_id: QString, monitor_id: QString, start_time_sec: i64, end_time_sec: i64) -> u64),
-    refreshAlertHistory: qt_method!(fn(&self) -> u64),
+    refreshAlertHistory: qt_method!(fn(&self, search_text: QString) -> u64),
     getCategories: qt_method!(fn(&self, host_id: QString) -> QStringList),
     getCategoryMonitorIds: qt_method!(fn(&self, host_id: QString, category_id: QString) -> QStringList),
 
@@ -236,7 +236,7 @@ impl MetricsManagerModel {
         }
     }
 
-    fn refreshAlertHistory(&mut self) -> u64 {
+    fn refreshAlertHistory(&mut self, search_text: QString) -> u64 {
         let Some(metrics_manager) = self.metrics_manager.as_mut() else {
             return 0;
         };
@@ -250,7 +250,7 @@ impl MetricsManagerModel {
         };
         let start_time = end_time - 24 * 60 * 60;
 
-        match metrics_manager.get_alerts("", "", start_time, end_time) {
+        match metrics_manager.get_alerts("", "", &search_text.to_string(), start_time, end_time) {
             Ok(invocation_id) => {
                 self.pending_alert_queries.insert(invocation_id);
                 invocation_id

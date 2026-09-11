@@ -565,6 +565,7 @@ Module {
         Method {
             name: "refreshAlertHistory"
             type: "int"
+            Parameter { name: "search_text"; type: "QString" }
         }
         Method {
             name: "getCategories"
