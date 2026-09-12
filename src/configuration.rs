@@ -832,7 +832,7 @@ impl Configuration {
         Ok(())
     }
 
-    /// Backs up existing config files, then writes main/hosts/groups. Restores backups if any write fails.
+    /// Backs up all three config files, then writes them. Restores all backups if any write fails.
     pub fn write_all_configs_transactional(
         config_dir: &String,
         main: &Configuration,
@@ -854,24 +854,40 @@ impl Configuration {
         Ok(())
     }
 
+    /// Creates `.prev` for config.yml, hosts.yml, and groups.yml. Fails if any live file is missing.
     pub fn backup_config_files(config_dir: &String) -> io::Result<()> {
         let config_dir = Self::resolve_config_dir(config_dir);
         for name in [MAIN_CONFIG_FILE, HOSTS_FILE, GROUPS_FILE] {
             let source = config_dir.join(name);
-            if source.exists() {
-                fs::copy(&source, config_dir.join(format!("{}{}", name, CONFIG_BACKUP_SUFFIX)))?;
+            if !source.exists() {
+                return Err(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("Cannot backup missing config file {}", name),
+                ));
             }
+        }
+        for name in [MAIN_CONFIG_FILE, HOSTS_FILE, GROUPS_FILE] {
+            let source = config_dir.join(name);
+            fs::copy(&source, config_dir.join(format!("{}{}", name, CONFIG_BACKUP_SUFFIX)))?;
         }
         Ok(())
     }
 
+    /// Restores all three `.prev` backups. Fails if any backup is missing (no partial restore).
     pub fn restore_config_backups(config_dir: &String) -> io::Result<()> {
         let config_dir = Self::resolve_config_dir(config_dir);
         for name in [MAIN_CONFIG_FILE, HOSTS_FILE, GROUPS_FILE] {
             let backup = config_dir.join(format!("{}{}", name, CONFIG_BACKUP_SUFFIX));
-            if backup.exists() {
-                fs::copy(&backup, config_dir.join(name))?;
+            if !backup.exists() {
+                return Err(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("Cannot restore missing backup for {}", name),
+                ));
             }
+        }
+        for name in [MAIN_CONFIG_FILE, HOSTS_FILE, GROUPS_FILE] {
+            let backup = config_dir.join(format!("{}{}", name, CONFIG_BACKUP_SUFFIX));
+            fs::copy(&backup, config_dir.join(name))?;
         }
         Ok(())
     }

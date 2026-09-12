@@ -814,17 +814,14 @@ impl CommandHandler {
         }
     }
 
-    pub fn write_file(&mut self, local_file_path: &String, new_contents: Vec<u8>) {
-        file_handler::write_file(local_file_path, new_contents).unwrap();
+    pub fn write_file(&mut self, local_file_path: &String, new_contents: Vec<u8>) -> Result<(), LkError> {
+        file_handler::write_file(local_file_path, new_contents)?;
+        Ok(())
     }
 
-    pub fn remove_file(&mut self, local_file_path: &String) {
-        if file_handler::remove_file(local_file_path).is_ok() {
-            log::debug!("Removed file {}", local_file_path);
-        }
-        else {
-            log::error!("Failed to remove file {}", local_file_path);
-        }
+    pub fn remove_file(&mut self, local_file_path: &String) -> Result<(), LkError> {
+        file_handler::remove_file(local_file_path)?;
+        Ok(())
     }
 
     pub fn has_file_changed(&self, host_id: &str, remote_file_path: &str, content_hash: &str) -> Result<bool, LkError> {
