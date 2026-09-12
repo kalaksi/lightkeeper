@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use lightkeeper::remote_core::protocol::{ServerMessage, MAX_FRAME_SIZE};
+use lightkeeper::remote_core::protocol::{read_message, write_message, ServerMessage, MAX_FRAME_SIZE};
 
 #[test]
 fn server_config_yaml_payload_bincode_roundtrip() {
@@ -13,7 +13,8 @@ fn server_config_yaml_payload_bincode_roundtrip() {
         hosts_yml: String::from("hosts: {}\n"),
         groups_yml: String::from("groups: {}\n"),
     };
-    let bytes = bincode::serialize(&msg).unwrap();
-    assert!(bytes.len() < MAX_FRAME_SIZE);
-    let _: ServerMessage = bincode::deserialize(&bytes).unwrap();
+    let mut buffer = Vec::new();
+    write_message(&mut buffer, &msg).unwrap();
+    assert!(buffer.len() < MAX_FRAME_SIZE + 4);
+    let _: ServerMessage = read_message(&mut buffer.as_slice()).unwrap();
 }
