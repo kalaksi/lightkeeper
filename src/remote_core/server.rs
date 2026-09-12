@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use crate::configuration::{Configuration, Groups, Hosts};
 use crate::error::LkError;
-use crate::remote_core::protocol::{read_message, ClientMessage, ServerMessage, PROTOCOL_VERSION};
+use crate::remote_core::protocol::{read_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION};
 use crate::remote_core::runtime::CoreRuntime;
 use crate::remote_core::session::RemoteSession;
 use crate::remote_core::socket;
@@ -47,7 +47,7 @@ fn run_remote_client_session_with_claim(
         Ok(ClientMessage::Connect { protocol_version }) => protocol_version,
         Ok(_) => {
             let session = RemoteSession::new(stream.try_clone()?);
-            session.send_error("Expected connect as the first message")?;
+            session.send_error(RemoteErrorCode::InvalidRequest, "Expected connect as the first message")?;
             return Ok(());
         }
         Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => return Ok(()),
@@ -59,10 +59,13 @@ fn run_remote_client_session_with_claim(
 
     if protocol_version != PROTOCOL_VERSION {
         let session = RemoteSession::new(stream.try_clone()?);
-        session.send_error(format!(
-            "Unsupported protocol version {}. Expected {}.",
-            protocol_version, PROTOCOL_VERSION,
-        ))?;
+        session.send_error(
+            RemoteErrorCode::UnsupportedVersion,
+            format!(
+                "Unsupported protocol version {}. Expected {}.",
+                protocol_version, PROTOCOL_VERSION,
+            ),
+        )?;
         return Ok(());
     }
 
@@ -71,7 +74,7 @@ fn run_remote_client_session_with_claim(
             let mut active = client_session_active.lock().unwrap();
             if *active {
                 let session = RemoteSession::new(stream.try_clone()?);
-                session.send_error("Another desktop client is already connected")?;
+                session.send_error(RemoteErrorCode::Busy, "Another desktop client is already connected")?;
                 return Ok(());
             }
             *active = true;
@@ -102,7 +105,7 @@ fn run_remote_client_session_with_claim(
 fn reject_busy_client(stream: UnixStream) {
     if let Ok(clone) = stream.try_clone() {
         let session = RemoteSession::new(clone);
-        let _ = session.send_error("Another desktop client is already connected");
+        let _ = session.send_error(RemoteErrorCode::Busy, "Another desktop client is already connected");
     }
 }
 
@@ -125,7 +128,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
         match message {
             ClientMessage::Disconnect => return Ok(()),
             ClientMessage::Connect { .. } => {
-                session.send_error("Connect may only be sent once")?;
+                session.send_error(RemoteErrorCode::InvalidRequest, "Connect may only be sent once")?;
             }
             ClientMessage::ExecuteCommand {
                 request_id,
@@ -137,10 +140,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     session.send_message(&ServerMessage::ExecuteCommand { request_id, invocation_id })?;
                 }
                 Err(error) => {
-                    session.send_message(&ServerMessage::Error {
-                        request_id: Some(request_id),
-                        message: error.to_string(),
-                    })?;
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                 }
             },
             ClientMessage::CommandsForHost { request_id, host_id } => {
@@ -172,19 +172,28 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     categories: runtime.core.monitor_manager.get_all_host_categories(&host_id),
                 })?;
             }
-            ClientMessage::VerifyHostKey { host_id, connector_id, key_id } => {
+            ClientMessage::VerifyHostKey {
+                request_id,
+                host_id,
+                connector_id,
+                key_id,
+            } => {
                 runtime.core.command_handler.verify_host_key(&host_id, &connector_id, &key_id);
+                session.send_message(&ServerMessage::Ack { request_id })?;
             }
-            ClientMessage::InterruptInvocation { invocation_id } => {
+            ClientMessage::InterruptInvocation { request_id, invocation_id } => {
                 runtime.core.command_handler.interrupt_invocation(invocation_id);
+                session.send_message(&ServerMessage::Ack { request_id })?;
             }
-            ClientMessage::RefreshHostMonitors { host_id } => {
+            ClientMessage::RefreshHostMonitors { request_id, host_id } => {
                 for category in runtime.core.monitor_manager.get_all_host_categories(&host_id) {
                     let _invocation_ids = runtime.core.monitor_manager.refresh_monitors_of_category(&host_id, &category);
                 }
+                session.send_message(&ServerMessage::Ack { request_id })?;
             }
-            ClientMessage::RefreshPlatformInfo { host_id } => {
+            ClientMessage::RefreshPlatformInfo { request_id, host_id } => {
                 runtime.core.monitor_manager.refresh_platform_info(&host_id);
+                session.send_message(&ServerMessage::Ack { request_id })?;
             }
             ClientMessage::RefreshPlatformInfoAll { request_id } => {
                 let host_ids = runtime.core.monitor_manager.refresh_platform_info_all();
@@ -247,10 +256,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                         session.send_message(&ServerMessage::DownloadEditableFileResult { request_id, invocation_id })?;
                     }
                     Err(error) => {
-                        session.send_message(&ServerMessage::Error {
-                            request_id: Some(request_id),
-                            message: error.to_string(),
-                        })?;
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     }
                 }
             }
@@ -300,10 +306,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                         session.send_message(&ServerMessage::UploadFileFromCacheResult { request_id, invocation_id })?;
                     }
                     Err(error) => {
-                        session.send_message(&ServerMessage::Error {
-                            request_id: Some(request_id),
-                            message: error.to_string(),
-                        })?;
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     }
                 }
             }
@@ -325,10 +328,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                         })?;
                     }
                     Err(error) => {
-                        session.send_message(&ServerMessage::Error {
-                            request_id: Some(request_id),
-                            message: error.to_string(),
-                        })?;
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     }
                 }
             }
@@ -367,19 +367,13 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                             }
                             Err(error) => {
                                 session.start_update_stream(runtime.new_update_receiver());
-                                session.send_message(&ServerMessage::Error {
-                                    request_id: Some(request_id),
-                                    message: error.to_string(),
-                                })?;
+                                session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                             }
                         }
                     }
                     Err(error) => {
                         session.start_update_stream(runtime.new_update_receiver());
-                        session.send_message(&ServerMessage::Error {
-                            request_id: Some(request_id),
-                            message: error.to_string(),
-                        })?;
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     }
                 }
             }
@@ -395,10 +389,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                         session.send_message(&ServerMessage::GetSecretResult { request_id, value })?;
                     }
                     Err(error) => {
-                        session.send_message(&ServerMessage::Error {
-                            request_id: Some(request_id),
-                            message: error.to_string(),
-                        })?;
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     }
                 }
             }
@@ -419,10 +410,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                         })?;
                     }
                     Err(error) => {
-                        session.send_message(&ServerMessage::Error {
-                            request_id: Some(request_id),
-                            message: error.to_string(),
-                        })?;
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     }
                 }
             }
@@ -438,10 +426,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                         session.send_message(&ServerMessage::RemoveSecretResult { request_id })?;
                     }
                     Err(error) => {
-                        session.send_message(&ServerMessage::Error {
-                            request_id: Some(request_id),
-                            message: error.to_string(),
-                        })?;
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     }
                 }
             }
