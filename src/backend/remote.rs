@@ -13,6 +13,7 @@ use std::thread;
 use std::time::Duration;
 
 use super::api::{CommandBackend, ConfigBackend};
+use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
 use super::remote_config::RemoteConfigBackend;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
@@ -181,6 +182,8 @@ pub struct RemoteCoreClient {
     pending_rpc: Arc<Mutex<HashMap<u64, PendingRpc>>>,
     next_request_id: Arc<AtomicU64>,
     stopping: Arc<AtomicBool>,
+    profile: Mutex<configuration::CoreConnectionProfile>,
+    status: Arc<Mutex<CoreConnectionStatus>>,
 }
 
 impl RemoteCoreClient {
@@ -196,11 +199,41 @@ impl RemoteCoreClient {
             pending_rpc: Arc::new(Mutex::new(HashMap::new())),
             next_request_id: Arc::new(AtomicU64::new(1)),
             stopping: Arc::new(AtomicBool::new(false)),
+            profile: Mutex::new(configuration::CoreConnectionProfile::default()),
+            status: Arc::new(Mutex::new(CoreConnectionStatus::default())),
         }
     }
 
     pub fn set_frontend_update_sender(&self, sender: mpsc::Sender<frontend::UIUpdate>) {
         self.connection.lock().unwrap().frontend_update_sender = Some(sender);
+    }
+
+    pub fn profile(&self) -> configuration::CoreConnectionProfile {
+        self.profile.lock().unwrap().clone()
+    }
+
+    pub fn set_profile(&self, profile: configuration::CoreConnectionProfile) {
+        *self.profile.lock().unwrap() = profile;
+    }
+
+    pub fn status(&self) -> CoreConnectionStatus {
+        self.status.lock().unwrap().clone()
+    }
+
+    pub fn connection_state(&self) -> CoreConnectionState {
+        self.status.lock().unwrap().state
+    }
+
+    pub fn last_error(&self) -> Option<String> {
+        self.status.lock().unwrap().last_error.clone()
+    }
+
+    fn set_connection_state(&self, state: CoreConnectionState) {
+        self.status.lock().unwrap().set_state(state);
+    }
+
+    fn set_connection_failed(&self, message: impl Into<String>) {
+        self.status.lock().unwrap().set_failed(message);
     }
 
     fn next_request_id(&self) -> u64 {
@@ -211,65 +244,99 @@ impl RemoteCoreClient {
         if self.connection.lock().unwrap().writer.is_some() {
             return Ok(());
         }
-        let stream = UnixStream::connect(&self.socket_path).map_err(|error| error.to_string())?;
+        self.set_connection_state(CoreConnectionState::Handshaking);
+        let stream = match UnixStream::connect(&self.socket_path) {
+            Ok(stream) => stream,
+            Err(error) => {
+                let message = error.to_string();
+                self.set_connection_failed(message.clone());
+                return Err(message);
+            }
+        };
         self.connect_stream(stream)
     }
 
     pub fn connect_stream(&self, mut stream: UnixStream) -> Result<(), String> {
         let frontend_update_sender = {
-            let connection = self.connection.lock().map_err(|error| error.to_string())?;
+            let connection = match self.connection.lock() {
+                Ok(connection) => connection,
+                Err(error) => {
+                    let message = error.to_string();
+                    self.set_connection_failed(message.clone());
+                    return Err(message);
+                }
+            };
             if connection.writer.is_some() {
                 return Ok(());
             }
-            connection
-                .frontend_update_sender
-                .clone()
-                .ok_or_else(|| String::from("Missing UI update sender"))?
+            match connection.frontend_update_sender.clone() {
+                Some(sender) => sender,
+                None => {
+                    let message = String::from("Missing UI update sender");
+                    self.set_connection_failed(message.clone());
+                    return Err(message);
+                }
+            }
         };
 
-        write_message(&mut stream, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION })
-            .map_err(|error| error.to_string())?;
+        self.set_connection_state(CoreConnectionState::Handshaking);
 
-        let mut reader = stream.try_clone().map_err(|error| error.to_string())?;
-        reader
-            .set_read_timeout(Some(REMOTE_HANDSHAKE_TIMEOUT))
-            .map_err(|error| error.to_string())?;
+        let fail = |client: &RemoteCoreClient, message: String| -> Result<(), String> {
+            client.set_connection_failed(message.clone());
+            Err(message)
+        };
+
+        if let Err(error) = write_message(&mut stream, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION }) {
+            return fail(self, error.to_string());
+        }
+
+        let mut reader = match stream.try_clone() {
+            Ok(reader) => reader,
+            Err(error) => return fail(self, error.to_string()),
+        };
+        if let Err(error) = reader.set_read_timeout(Some(REMOTE_HANDSHAKE_TIMEOUT)) {
+            return fail(self, error.to_string());
+        }
 
         loop {
             match read_message::<ServerMessage, _>(&mut reader) {
                 Ok(ServerMessage::Connect { protocol_version }) => {
                     if protocol_version != PROTOCOL_VERSION {
-                        return Err(format!(
-                            "Protocol mismatch: expected {}, got {}",
-                            PROTOCOL_VERSION, protocol_version,
-                        ));
+                        return fail(
+                            self,
+                            format!(
+                                "Protocol mismatch: expected {}, got {}",
+                                PROTOCOL_VERSION, protocol_version,
+                            ),
+                        );
                     }
                     break;
                 }
                 Ok(ServerMessage::Error { code, message, .. }) => {
-                    return Err(format!("{}: {}", code, message));
+                    return fail(self, format!("{}: {}", code, message));
                 }
                 Ok(_) => {
-                    return Err(String::from("Unexpected message during remote core handshake"));
+                    return fail(self, String::from("Unexpected message during remote core handshake"));
                 }
                 Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
-                    return Err(String::from("Remote core handshake timed out"));
+                    return fail(self, String::from("Remote core handshake timed out"));
                 }
                 Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => {
-                    return Err(String::from("Connection closed during remote core handshake"));
+                    return fail(self, String::from("Connection closed during remote core handshake"));
                 }
-                Err(error) => return Err(error.to_string()),
+                Err(error) => return fail(self, error.to_string()),
             }
         }
 
-        reader
-            .set_read_timeout(Some(REMOTE_READ_TIMEOUT))
-            .map_err(|error| error.to_string())?;
+        if let Err(error) = reader.set_read_timeout(Some(REMOTE_READ_TIMEOUT)) {
+            return fail(self, error.to_string());
+        }
 
         let writer = Arc::new(Mutex::new(stream));
         let pending_rpc = self.pending_rpc.clone();
         let connection = self.connection.clone();
         let stopping = self.stopping.clone();
+        let status = self.status.clone();
         let (stop_sender, stop_receiver) = mpsc::channel();
 
         self.stopping.store(false, Ordering::SeqCst);
@@ -283,6 +350,9 @@ impl RemoteCoreClient {
                     conn.stop_sender = None;
                 }
                 if !stopping.load(Ordering::SeqCst) {
+                    if let Ok(mut status) = status.lock() {
+                        status.set_failed(message);
+                    }
                     let _ = frontend_update_sender.send(frontend::UIUpdate::FatalError());
                 }
             };
@@ -479,6 +549,8 @@ impl RemoteCoreClient {
         connection.writer = Some(writer);
         connection.stop_sender = Some(stop_sender);
         connection.response_thread = Some(response_thread);
+        drop(connection);
+        self.set_connection_state(CoreConnectionState::Connected);
         Ok(())
     }
 
@@ -562,10 +634,20 @@ impl RemoteCoreClient {
                 ::log::error!("Response thread failed: {:?}", error);
             }
         }
+
+        self.set_connection_state(CoreConnectionState::Disconnected);
     }
 
     pub fn is_connected(&self) -> bool {
         self.connection.lock().unwrap().writer.is_some()
+    }
+
+    pub fn begin_connecting_ssh(&self) {
+        self.set_connection_state(CoreConnectionState::ConnectingSsh);
+    }
+
+    pub fn begin_reconnecting(&self) {
+        self.set_connection_state(CoreConnectionState::Reconnecting);
     }
 }
 

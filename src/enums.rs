@@ -11,3 +11,6 @@ pub use host_status::HostStatus;
 
 pub mod edit_mode;
 pub use edit_mode::EditMode;
+
+pub mod core_transport;
+pub use core_transport::CoreTransportPreference;
