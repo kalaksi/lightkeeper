@@ -10,10 +10,12 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use lightkeeper::configuration::Configuration;
 use lightkeeper::remote_core::protocol::{
     read_message, write_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION,
 };
-use lightkeeper::remote_core::server::CoreListener;
+use lightkeeper::remote_core::runtime::CoreRuntime;
+use lightkeeper::remote_core::server::{self, CoreListener};
 use lightkeeper::remote_core::socket::{self, SOCKET_DIR_MODE, SOCKET_FILE_MODE};
 
 fn unique_temp_dir(prefix: &str) -> PathBuf {
@@ -122,4 +124,65 @@ fn second_client_is_rejected_while_first_is_connected() {
     first_client.join().unwrap();
     drop(listener);
     let _ = fs::remove_dir_all(socket_dir);
+}
+
+#[test]
+fn failed_handshake_releases_session_claim() {
+    let _ = env_logger::Builder::from_default_env().is_test(true).try_init();
+
+    let socket_dir = unique_temp_dir("core-handshake-release");
+    let socket_path = socket_dir.join("core.sock");
+    let listener = CoreListener::bind(socket_path.clone()).unwrap();
+
+    let config_dir = unique_temp_dir("core-handshake-config");
+    let config_dir_str = config_dir.to_string_lossy().to_string();
+    Configuration::write_initial_config(&config_dir).unwrap();
+    let (main_config, hosts, _groups) = Configuration::read(&config_dir_str).unwrap();
+    let mut runtime = CoreRuntime::new(&main_config, &hosts, config_dir_str).unwrap();
+
+    let connect_path = socket_path.clone();
+    let bad_client = thread::spawn(move || {
+        let mut stream = UnixStream::connect(&connect_path).unwrap();
+        stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+        write_message(
+            &mut stream,
+            &ClientMessage::Connect {
+                protocol_version: PROTOCOL_VERSION.wrapping_add(1),
+            },
+        )
+        .unwrap();
+
+        match read_message::<ServerMessage, _>(&mut stream).unwrap() {
+            ServerMessage::Error { code, .. } => assert_eq!(code, RemoteErrorCode::UnsupportedVersion),
+            _ => panic!("expected unsupported version error"),
+        }
+    });
+
+    let stream = listener.recv().unwrap();
+    assert!(
+        *listener.session_active_flag().lock().unwrap(),
+        "accept thread should claim the session before handoff"
+    );
+
+    server::run_claimed_remote_client_session(stream, &mut runtime, &listener.session_active_flag()).unwrap();
+    bad_client.join().unwrap();
+
+    assert!(
+        !*listener.session_active_flag().lock().unwrap(),
+        "failed handshake must release the session claim"
+    );
+
+    let connect_path = socket_path.clone();
+    let second_client = thread::spawn(move || UnixStream::connect(&connect_path).unwrap());
+    let accepted = listener.recv().unwrap();
+    second_client.join().unwrap();
+    assert!(
+        *listener.session_active_flag().lock().unwrap(),
+        "a new client should be able to claim after recovery"
+    );
+    drop(accepted);
+    listener.release_session_claim();
+    drop(listener);
+    let _ = fs::remove_dir_all(socket_dir);
+    let _ = fs::remove_dir_all(config_dir);
 }

@@ -27,6 +27,24 @@ enum SessionClaim {
     AlreadyClaimed,
 }
 
+/// Clears the accept-thread session claim when dropped, if armed.
+/// Armed immediately for streams already claimed by the accept thread so failed
+/// handshakes still release Busy; armed after a successful in-band claim otherwise.
+struct SessionClaimGuard {
+    flag: Arc<Mutex<bool>>,
+    armed: bool,
+}
+
+impl Drop for SessionClaimGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            if let Ok(mut active) = self.flag.lock() {
+                *active = false;
+            }
+        }
+    }
+}
+
 pub fn run_remote_client_session(
     stream: UnixStream,
     runtime: &mut CoreRuntime,
@@ -35,12 +53,26 @@ pub fn run_remote_client_session(
     run_remote_client_session_with_claim(stream, runtime, client_session_active, SessionClaim::Claim)
 }
 
+/// Runs a session for a stream whose session claim was already taken by the accept thread.
+pub fn run_claimed_remote_client_session(
+    stream: UnixStream,
+    runtime: &mut CoreRuntime,
+    client_session_active: &Arc<Mutex<bool>>,
+) -> Result<(), LkError> {
+    run_remote_client_session_with_claim(stream, runtime, client_session_active, SessionClaim::AlreadyClaimed)
+}
+
 fn run_remote_client_session_with_claim(
     mut stream: UnixStream,
     runtime: &mut CoreRuntime,
     client_session_active: &Arc<Mutex<bool>>,
     claim: SessionClaim,
 ) -> Result<(), LkError> {
+    let mut claim_guard = SessionClaimGuard {
+        flag: client_session_active.clone(),
+        armed: matches!(claim, SessionClaim::AlreadyClaimed),
+    };
+
     stream.set_read_timeout(Some(HANDSHAKE_READ_TIMEOUT))?;
 
     let protocol_version = match read_message::<ClientMessage, _>(&mut stream) {
@@ -78,25 +110,10 @@ fn run_remote_client_session_with_claim(
                 return Ok(());
             }
             *active = true;
+            claim_guard.armed = true;
         }
         SessionClaim::AlreadyClaimed => {}
     }
-
-    struct ClearClientSessionFlag {
-        flag: Arc<Mutex<bool>>,
-    }
-
-    impl Drop for ClearClientSessionFlag {
-        fn drop(&mut self) {
-            if let Ok(mut active) = self.flag.lock() {
-                *active = false;
-            }
-        }
-    }
-
-    let _clear_session = ClearClientSessionFlag {
-        flag: client_session_active.clone(),
-    };
 
     stream.set_read_timeout(None)?;
     handle_connected_client_loop(&mut stream, runtime)
@@ -348,14 +365,49 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 match parsed {
                     Ok((main, hosts, groups)) => {
                         let update_result: Result<(), LkError> = (|| {
-                            Configuration::write_main_config(&runtime.config_dir, &main)?;
-                            Configuration::write_hosts_config(&runtime.config_dir, &hosts)?;
-                            Configuration::write_groups_config(&runtime.config_dir, &groups)?;
+                            Configuration::write_all_configs_transactional(
+                                &runtime.config_dir,
+                                &main,
+                                &hosts,
+                                &groups,
+                            )?;
                             let module_factory = runtime.core.module_factory.clone();
                             runtime.stop();
-                            let (main_read, hosts_read, _groups) = Configuration::read(&runtime.config_dir)?;
-                            runtime.core = crate::initialize_core(&main_read, &hosts_read, module_factory)?;
-                            Ok(())
+                            match (|| {
+                                let (main_read, hosts_read, _groups) = Configuration::read(&runtime.config_dir)?;
+                                runtime.core = crate::initialize_core(&main_read, &hosts_read, module_factory.clone())?;
+                                Configuration::clear_config_backups(&runtime.config_dir)?;
+                                Ok(())
+                            })() {
+                                Ok(()) => Ok(()),
+                                Err(error) => {
+                                    if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
+                                        log::error!("Failed to restore configuration backups: {}", restore_error);
+                                    }
+                                    match Configuration::read(&runtime.config_dir) {
+                                        Ok((main_read, hosts_read, _groups)) => {
+                                            match crate::initialize_core(&main_read, &hosts_read, module_factory) {
+                                                Ok(core) => {
+                                                    runtime.core = core;
+                                                }
+                                                Err(recover_error) => {
+                                                    log::error!(
+                                                        "Failed to recover previous core runtime: {}",
+                                                        recover_error
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(read_error) => {
+                                            log::error!(
+                                                "Failed to read configuration while recovering: {}",
+                                                read_error
+                                            );
+                                        }
+                                    }
+                                    Err(error)
+                                }
+                            }
                         })();
                         match update_result {
                             Ok(()) => {
@@ -537,9 +589,7 @@ impl CoreServer {
         loop {
             let stream = self.listener.recv()?;
             let session_active = self.listener.session_active_flag();
-            if let Err(error) =
-                run_remote_client_session_with_claim(stream, &mut self.runtime, &session_active, SessionClaim::AlreadyClaimed)
-            {
+            if let Err(error) = run_claimed_remote_client_session(stream, &mut self.runtime, &session_active) {
                 log::error!("Client session failed: {}", error);
             }
         }
