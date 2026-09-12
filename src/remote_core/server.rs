@@ -284,13 +284,25 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 contents,
             } => {
                 let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
-                runtime.core.command_handler.write_file(&path, contents);
-                session.send_message(&ServerMessage::WriteCachedFileResult { request_id })?;
+                match runtime.core.command_handler.write_file(&path, contents) {
+                    Ok(()) => {
+                        session.send_message(&ServerMessage::WriteCachedFileResult { request_id })?;
+                    }
+                    Err(error) => {
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                    }
+                }
             }
             ClientMessage::RemoveCachedFile { request_id, host_id, remote_file_path } => {
                 let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
-                runtime.core.command_handler.remove_file(&path);
-                session.send_message(&ServerMessage::RemoveCachedFileResult { request_id })?;
+                match runtime.core.command_handler.remove_file(&path) {
+                    Ok(()) => {
+                        session.send_message(&ServerMessage::RemoveCachedFileResult { request_id })?;
+                    }
+                    Err(error) => {
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                    }
+                }
             }
             ClientMessage::HasCachedFileChanged {
                 request_id,
@@ -298,18 +310,18 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 remote_file_path,
                 content_hash,
             } => {
-                let changed = match runtime
+                match runtime
                     .core
                     .command_handler
                     .has_file_changed(&host_id, &remote_file_path, &content_hash)
                 {
-                    Ok(changed) => changed,
-                    Err(error) => {
-                        log::error!("{}", error);
-                        false
+                    Ok(changed) => {
+                        session.send_message(&ServerMessage::HasCachedFileChangedResult { request_id, changed })?;
                     }
-                };
-                session.send_message(&ServerMessage::HasCachedFileChangedResult { request_id, changed })?;
+                    Err(error) => {
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                    }
+                }
             }
             ClientMessage::UploadFileFromCache {
                 request_id,
@@ -376,10 +388,14 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                             match (|| {
                                 let (main_read, hosts_read, _groups) = Configuration::read(&runtime.config_dir)?;
                                 runtime.core = crate::initialize_core(&main_read, &hosts_read, module_factory.clone())?;
-                                Configuration::clear_config_backups(&runtime.config_dir)?;
                                 Ok(())
                             })() {
-                                Ok(()) => Ok(()),
+                                Ok(()) => {
+                                    if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
+                                        log::warn!("Failed to clear configuration backups: {}", error);
+                                    }
+                                    Ok(())
+                                }
                                 Err(error) => {
                                     if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
                                         log::error!("Failed to restore configuration backups: {}", restore_error);
