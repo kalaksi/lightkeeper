@@ -20,7 +20,9 @@ use crate::connection_manager::ConnectorRequest;
 use crate::error::{ErrorKind, LkError};
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
-use crate::remote_core::protocol::{read_message, write_message, ClientMessage, ServerMessage, PROTOCOL_VERSION};
+use crate::remote_core::protocol::{
+    read_message, write_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION,
+};
 use crate::utils::sha256;
 
 //
@@ -51,6 +53,7 @@ enum PendingRpcKind {
     GetSecret,
     StoreSecret,
     RemoveSecret,
+    Ack,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -76,43 +79,16 @@ enum PendingRpcReply {
     GetSecret(Option<String>),
     StoreSecret(String),
     RemoveSecretOk,
-    Error(String),
+    Ack,
+    Error {
+        code: RemoteErrorCode,
+        message: String,
+    },
 }
 
 struct PendingRpc {
     kind: PendingRpcKind,
     sender: mpsc::Sender<PendingRpcReply>,
-}
-
-fn default_reply(kind: PendingRpcKind) -> PendingRpcReply {
-    match kind {
-        PendingRpcKind::ExecuteCommand => PendingRpcReply::ExecuteCommand(0),
-        PendingRpcKind::CommandsForHost => PendingRpcReply::CommandsForHost(HashMap::new()),
-        PendingRpcKind::CommandForHost => PendingRpcReply::CommandForHost(None),
-        PendingRpcKind::CustomCommandsForHost => PendingRpcReply::CustomCommandsForHost(HashMap::new()),
-        PendingRpcKind::AllHostCategories => PendingRpcReply::AllHostCategories(Vec::new()),
-        PendingRpcKind::RefreshInvocationIds => PendingRpcReply::RefreshInvocationIds(Vec::new()),
-        PendingRpcKind::InitializeHosts => PendingRpcReply::InitializeHosts(Vec::new()),
-        PendingRpcKind::ResolveTextEditorPath => PendingRpcReply::ResolveTextEditorPath(None),
-        PendingRpcKind::DownloadEditable => PendingRpcReply::DownloadEditable(0),
-        PendingRpcKind::WriteCachedFile => PendingRpcReply::FileOpDone,
-        PendingRpcKind::RemoveCachedFile => PendingRpcReply::FileOpDone,
-        PendingRpcKind::HasCachedFileChanged => PendingRpcReply::FileChanged(false),
-        PendingRpcKind::UploadFromCache => PendingRpcReply::UploadFromCache(0),
-        PendingRpcKind::Config => PendingRpcReply::Config {
-            main_yml: String::new(),
-            hosts_yml: String::new(),
-            groups_yml: String::new(),
-        },
-        PendingRpcKind::UpdateConfig => PendingRpcReply::UpdateConfigOk,
-        PendingRpcKind::GetSecret => PendingRpcReply::GetSecret(None),
-        PendingRpcKind::StoreSecret => PendingRpcReply::StoreSecret(String::new()),
-        PendingRpcKind::RemoveSecret => PendingRpcReply::RemoveSecretOk,
-    }
-}
-
-fn completer_send_default(p: PendingRpc) {
-    let _ = p.sender.send(default_reply(p.kind));
 }
 
 fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
@@ -135,21 +111,19 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::UpdateConfig, PendingRpcReply::UpdateConfigOk) |
             (PendingRpcKind::GetSecret, PendingRpcReply::GetSecret(_)) |
             (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
-            (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk)
+            (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
+            (PendingRpcKind::Ack, PendingRpcReply::Ack)
     )
 }
 
-fn align_reply(kind: PendingRpcKind, reply: PendingRpcReply) -> PendingRpcReply {
-    if reply_matches(&kind, &reply) {
-        reply
-    }
-    else {
-        ::log::error!("Request failed: unexpected reply");
-        default_reply(kind)
+fn internal_error_reply(message: impl ToString) -> PendingRpcReply {
+    PendingRpcReply::Error {
+        code: RemoteErrorCode::Internal,
+        message: message.to_string(),
     }
 }
 
-fn fail_all_pending_rpcs(pending_rpc: &Arc<Mutex<HashMap<u64, PendingRpc>>>, message: &str) {
+fn fail_all_pending_rpcs(pending_rpc: &Arc<Mutex<HashMap<u64, PendingRpc>>>, code: RemoteErrorCode, message: &str) {
     let pending = match pending_rpc.lock() {
         Ok(mut map) => map.drain().map(|(_, pending)| pending).collect::<Vec<_>>(),
         Err(error) => {
@@ -158,7 +132,10 @@ fn fail_all_pending_rpcs(pending_rpc: &Arc<Mutex<HashMap<u64, PendingRpc>>>, mes
         }
     };
     for pending in pending {
-        let _ = pending.sender.send(PendingRpcReply::Error(message.to_string()));
+        let _ = pending.sender.send(PendingRpcReply::Error {
+            code,
+            message: message.to_string(),
+        });
     }
 }
 
@@ -177,7 +154,7 @@ fn deliver_response(
     };
     match pending {
         None => {
-            ::log::error!("Received unexpected response");
+            ::log::error!("Received response for unknown request id {}", request_id);
         }
         Some(p) if p.kind == expected => {
             if p.sender.send(on_match()).is_err() {
@@ -185,8 +162,8 @@ fn deliver_response(
             }
         }
         Some(p) => {
-            ::log::error!("RPC type mismatch");
-            let _ = p.sender.send(default_reply(p.kind));
+            ::log::error!("RPC type mismatch for request id {}", request_id);
+            let _ = p.sender.send(internal_error_reply("RPC response type mismatch"));
         }
     }
 }
@@ -269,8 +246,8 @@ impl RemoteCoreClient {
                     }
                     break;
                 }
-                Ok(ServerMessage::Error { message, .. }) => {
-                    return Err(message);
+                Ok(ServerMessage::Error { code, message, .. }) => {
+                    return Err(format!("{}: {}", code, message));
                 }
                 Ok(_) => {
                     return Err(String::from("Unexpected message during remote core handshake"));
@@ -300,7 +277,7 @@ impl RemoteCoreClient {
         let response_thread = thread::spawn(move || {
             let disconnect = |message: &str| {
                 ::log::error!("{}", message);
-                fail_all_pending_rpcs(&pending_rpc, message);
+                fail_all_pending_rpcs(&pending_rpc, RemoteErrorCode::Internal, message);
                 if let Ok(mut conn) = connection.lock() {
                     conn.writer = None;
                     conn.stop_sender = None;
@@ -422,7 +399,7 @@ impl RemoteCoreClient {
                             }
                             Some(p) => {
                                 ::log::error!("RPC type mismatch");
-                                let _ = p.sender.send(default_reply(p.kind));
+                                let _ = p.sender.send(internal_error_reply("RPC response type mismatch"));
                             }
                         }
                     }
@@ -468,14 +445,28 @@ impl RemoteCoreClient {
                             PendingRpcReply::RemoveSecretOk
                         });
                     }
-                    ServerMessage::Error { request_id: Some(request_id), message } => {
-                        ::log::error!("Core server error: {}", message);
+                    ServerMessage::Ack { request_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::Ack, || PendingRpcReply::Ack);
+                    }
+                    ServerMessage::Error {
+                        request_id: Some(request_id),
+                        code,
+                        message,
+                    } => {
+                        ::log::error!("Core server error [{}]: {}", code, message);
                         match pending_rpc.lock() {
                             Ok(mut map) => {
                                 if let Some(pending) = map.remove(&request_id) {
-                                    if pending.sender.send(PendingRpcReply::Error(message)).is_err() {
+                                    if pending
+                                        .sender
+                                        .send(PendingRpcReply::Error { code, message })
+                                        .is_err()
+                                    {
                                         ::log::error!("Receiver dropped");
                                     }
+                                }
+                                else {
+                                    ::log::error!("Received error for unknown request id {}", request_id);
                                 }
                             }
                             Err(err) => {
@@ -483,8 +474,12 @@ impl RemoteCoreClient {
                             }
                         }
                     }
-                    ServerMessage::Error { request_id: None, message } => {
-                        disconnect(&format!("Core server error: {}", message));
+                    ServerMessage::Error {
+                        request_id: None,
+                        code,
+                        message,
+                    } => {
+                        disconnect(&format!("Core server error [{}]: {}", code, message));
                         return;
                     }
                 }
@@ -520,17 +515,22 @@ impl RemoteCoreClient {
         if let Err(error) = self.send_nowait(&message) {
             if let Ok(mut map) = self.pending_rpc.lock() {
                 if let Some(pending) = map.remove(&request_id) {
-                    completer_send_default(pending);
+                    let _ = pending.sender.send(PendingRpcReply::Error {
+                        code: RemoteErrorCode::Internal,
+                        message: error.clone(),
+                    });
                 }
             }
             return Err(LkError::new(ErrorKind::ConnectionFailed, error));
         }
 
         match receiver.recv_timeout(REMOTE_COMMAND_TIMEOUT) {
-            Ok(PendingRpcReply::Error(message)) => Err(LkError::other(message)),
+            Ok(PendingRpcReply::Error { code, message }) => {
+                Err(LkError::other(format!("{}: {}", code, message)))
+            }
             Ok(reply) => {
                 if reply_matches(&kind, &reply) {
-                    Ok(align_reply(kind, reply))
+                    Ok(reply)
                 }
                 else {
                     Err(LkError::other("Unexpected response from remote core"))
@@ -547,7 +547,7 @@ impl RemoteCoreClient {
 
     pub fn stop_connection(&self) {
         self.stopping.store(true, Ordering::SeqCst);
-        fail_all_pending_rpcs(&self.pending_rpc, "Disconnected from remote core");
+        fail_all_pending_rpcs(&self.pending_rpc, RemoteErrorCode::Internal, "Disconnected from remote core");
 
         let (writer_opt, stop_sender_opt, thread_opt) = {
             let mut conn = self.connection.lock().unwrap();
@@ -633,10 +633,12 @@ impl CommandBackend for RemoteCommandBackend {
     }
 
     fn refresh_host_monitors(&mut self, host_id: &str) {
-        if let Err(error) = self
-            .client
-            .send_nowait(&ClientMessage::RefreshHostMonitors { host_id: host_id.to_string() })
-        {
+        if let Err(error) = self.client.send_message_result(PendingRpcKind::Ack, |request_id| {
+            ClientMessage::RefreshHostMonitors {
+                request_id,
+                host_id: host_id.to_string(),
+            }
+        }) {
             ::log::error!("Request failed: {}", error);
         }
     }
@@ -708,26 +710,36 @@ impl CommandBackend for RemoteCommandBackend {
             return;
         }
 
-        if let Err(error) = self.client.send_nowait(&ClientMessage::InterruptInvocation { invocation_id }) {
+        if let Err(error) = self.client.send_message_result(PendingRpcKind::Ack, |request_id| {
+            ClientMessage::InterruptInvocation {
+                request_id,
+                invocation_id,
+            }
+        }) {
             ::log::error!("Request failed: {}", error);
         }
     }
 
     fn verify_host_key(&self, host_id: &str, connector_id: &str, key_id: &str) {
-        if let Err(error) = self.client.send_nowait(&ClientMessage::VerifyHostKey {
-            host_id: host_id.to_string(),
-            connector_id: connector_id.to_string(),
-            key_id: key_id.to_string(),
+        if let Err(error) = self.client.send_message_result(PendingRpcKind::Ack, |request_id| {
+            ClientMessage::VerifyHostKey {
+                request_id,
+                host_id: host_id.to_string(),
+                connector_id: connector_id.to_string(),
+                key_id: key_id.to_string(),
+            }
         }) {
             ::log::error!("Request failed: {}", error);
         }
     }
 
     fn initialize_host(&mut self, host_id: &str) {
-        if let Err(error) = self
-            .client
-            .send_nowait(&ClientMessage::RefreshPlatformInfo { host_id: host_id.to_string() })
-        {
+        if let Err(error) = self.client.send_message_result(PendingRpcKind::Ack, |request_id| {
+            ClientMessage::RefreshPlatformInfo {
+                request_id,
+                host_id: host_id.to_string(),
+            }
+        }) {
             ::log::error!("Request failed: {}", error);
         }
     }

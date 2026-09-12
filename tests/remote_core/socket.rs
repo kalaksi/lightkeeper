@@ -10,7 +10,9 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use lightkeeper::remote_core::protocol::{read_message, write_message, ClientMessage, ServerMessage, PROTOCOL_VERSION};
+use lightkeeper::remote_core::protocol::{
+    read_message, write_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION,
+};
 use lightkeeper::remote_core::server::CoreListener;
 use lightkeeper::remote_core::socket::{self, SOCKET_DIR_MODE, SOCKET_FILE_MODE};
 
@@ -101,8 +103,9 @@ fn second_client_is_rejected_while_first_is_connected() {
     let read_deadline = Instant::now() + Duration::from_secs(2);
     while Instant::now() < read_deadline {
         match read_message::<ServerMessage, _>(&mut second) {
-            Ok(ServerMessage::Error { message, .. }) => {
+            Ok(ServerMessage::Error { message, code, .. }) => {
                 assert!(message.contains("already connected"), "unexpected error: {}", message);
+                assert_eq!(code, RemoteErrorCode::Busy);
                 saw_busy_error = true;
                 break;
             }

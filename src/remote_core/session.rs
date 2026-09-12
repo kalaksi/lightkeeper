@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use crate::error::LkError;
 use crate::frontend;
-use crate::remote_core::protocol::{write_message, ServerMessage};
+use crate::remote_core::protocol::{write_message, RemoteErrorCode, ServerMessage};
 
 const STOP_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
@@ -36,11 +36,17 @@ impl RemoteSession {
         Ok(())
     }
 
-    pub fn send_error<Stringable: ToString>(&self, message: Stringable) -> Result<(), LkError> {
-        self.send_message(&ServerMessage::Error {
-            request_id: None,
-            message: message.to_string(),
-        })
+    pub fn send_error(&self, code: RemoteErrorCode, message: impl ToString) -> Result<(), LkError> {
+        self.send_message(&ServerMessage::error(None, code, message))
+    }
+
+    pub fn send_request_error(
+        &self,
+        request_id: u64,
+        code: RemoteErrorCode,
+        message: impl ToString,
+    ) -> Result<(), LkError> {
+        self.send_message(&ServerMessage::error(Some(request_id), code, message))
     }
 
     pub fn start_update_stream(&mut self, receiver: mpsc::Receiver<frontend::UIUpdate>) {
@@ -61,7 +67,7 @@ impl RemoteSession {
             let result = match update {
                 frontend::UIUpdate::Host(host_update) => Self::send_message_internal(&writer, &ServerMessage::HostUpdate(host_update)),
                 frontend::UIUpdate::FatalError() => {
-                    let result = Self::send_error_internal(&writer, "Core runtime crashed");
+                    let result = Self::send_error_internal(&writer, RemoteErrorCode::Internal, "Core runtime crashed");
                     if result.is_ok() {
                         log::error!("Stopping client session after a fatal core error");
                     }
@@ -111,14 +117,8 @@ impl RemoteSession {
         Ok(())
     }
 
-    fn send_error_internal<Stringable: ToString>(writer: &Arc<Mutex<UnixStream>>, message: Stringable) -> Result<(), LkError> {
-        Self::send_message_internal(
-            writer,
-            &ServerMessage::Error {
-                request_id: None,
-                message: message.to_string(),
-            },
-        )
+    fn send_error_internal(writer: &Arc<Mutex<UnixStream>>, code: RemoteErrorCode, message: impl ToString) -> Result<(), LkError> {
+        Self::send_message_internal(writer, &ServerMessage::error(None, code, message))
     }
 }
 
