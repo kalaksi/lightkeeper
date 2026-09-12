@@ -241,6 +241,7 @@ Module {
 
         Method { name: "isSandboxed"; type: "bool" }
         Method { name: "isDevBuild"; type: "bool" }
+        Method { name: "getVersion"; type: "string" }
         Method { name: "getCurrentWorkDir"; type: "string" }
         Method { name: "getPreferences"; type: "QVariantMap" }
         Method { name: "setPreferences"; Parameter { name: "preferences"; type: "QVariantMap" } }

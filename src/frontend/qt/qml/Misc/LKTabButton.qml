@@ -58,6 +58,15 @@ TabButton {
             height: parent.height
             color: Theme.borderColor
         }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 1
+            color: Theme.borderColor
+            visible: !root.active
+        }
     }
 
     contentItem: Item {

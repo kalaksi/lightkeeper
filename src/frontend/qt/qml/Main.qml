@@ -379,6 +379,14 @@ ApplicationWindow {
                 SplitView.maximumHeight: 0.9 * body.height
             }
 
+            Binding {
+                target: hostDetailsLoader.item
+                property: "enableShortcuts"
+                when: hostDetailsLoader.item !== null
+                value: hostDetailsLoader.item.visible &&
+                       (root.dialogHandler === null || !root.dialogHandler.preferencesOpen)
+            }
+
             Connections {
                 target: hostDetailsLoader.item
 

@@ -45,6 +45,7 @@ pub struct ConfigManagerModel {
     mainViewSplitRatio: qt_property!(f64; READ getMainViewSplitRatio WRITE setMainViewSplitRatio),
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
+    getVersion: qt_method!(fn(&self) -> QString),
     getCurrentWorkDir: qt_method!(fn(&self) -> QString),
 
     //
@@ -396,6 +397,10 @@ impl ConfigManagerModel {
 
     fn isDevBuild(&self) -> bool {
         cfg!(debug_assertions)
+    }
+
+    fn getVersion(&self) -> QString {
+        QString::from(env!("CARGO_PKG_VERSION"))
     }
 
     fn getCurrentWorkDir(&self) -> QString {

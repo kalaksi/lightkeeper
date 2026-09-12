@@ -16,6 +16,8 @@ Item {
     id: root
     anchors.fill: parent
 
+    readonly property bool preferencesOpen: preferencesDialog.visible
+
     InputDialog {
         id: inputDialog
     }
