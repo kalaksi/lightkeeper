@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::io::{self, Read, Write};
 
+use bincode::Options;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::command_handler::CommandButtonData;
@@ -16,6 +17,16 @@ use crate::frontend::{DisplayData, HostDisplayData};
 
 pub const PROTOCOL_VERSION: u16 = 10;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
+
+/// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian),
+/// with a byte limit and rejection of trailing data after a successful decode.
+fn bincode_options() -> impl Options {
+    bincode::DefaultOptions::new()
+        .with_fixint_encoding()
+        .with_little_endian()
+        .with_limit(MAX_FRAME_SIZE as u64)
+        .reject_trailing_bytes()
+}
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum RemoteErrorCode {
@@ -279,11 +290,15 @@ pub fn read_message<T: DeserializeOwned, Reader: Read>(reader: &mut Reader) -> i
     let mut message_buffer = vec![0_u8; message_length];
     reader.read_exact(&mut message_buffer)?;
 
-    bincode::deserialize(&message_buffer).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))
+    bincode_options()
+        .deserialize(&message_buffer)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))
 }
 
 pub fn write_message<T: Serialize, Writer: Write>(writer: &mut Writer, message: &T) -> io::Result<()> {
-    let serialized = bincode::serialize(message).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))?;
+    let serialized = bincode_options()
+        .serialize(message)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))?;
 
     if serialized.len() > MAX_FRAME_SIZE {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Message is too large"));
