@@ -14,6 +14,7 @@ use crate::error::LkError;
 use crate::remote_core::protocol::{read_message, ClientMessage, ServerMessage, PROTOCOL_VERSION};
 use crate::remote_core::runtime::CoreRuntime;
 use crate::remote_core::session::RemoteSession;
+use crate::secrets_manager;
 
 pub fn run_remote_client_session(
     mut stream: UnixStream,
@@ -338,6 +339,68 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     }
                     Err(error) => {
                         session.start_update_stream(runtime.new_update_receiver());
+                        session.send_message(&ServerMessage::Error {
+                            request_id: Some(request_id),
+                            message: error.to_string(),
+                        })?;
+                    }
+                }
+            }
+            ClientMessage::GetSecret {
+                request_id,
+                source_id,
+                module_id,
+                setting_key,
+            } => {
+                let lookup_key = secrets_manager::secret_lookup_key(&module_id, &source_id, &setting_key);
+                match secrets_manager::get(&lookup_key) {
+                    Ok(value) => {
+                        session.send_message(&ServerMessage::GetSecretResult { request_id, value })?;
+                    }
+                    Err(error) => {
+                        session.send_message(&ServerMessage::Error {
+                            request_id: Some(request_id),
+                            message: error.to_string(),
+                        })?;
+                    }
+                }
+            }
+            ClientMessage::StoreSecret {
+                request_id,
+                source_id,
+                module_id,
+                setting_key,
+                secret_value,
+            } => {
+                let lookup_key = secrets_manager::secret_lookup_key(&module_id, &source_id, &setting_key);
+                match secrets_manager::set(&lookup_key, &secret_value) {
+                    Ok(()) => {
+                        let placeholder = format!("{}{}", secrets_manager::KEYRING_PREFIX, lookup_key);
+                        session.send_message(&ServerMessage::StoreSecretResult {
+                            request_id,
+                            placeholder,
+                        })?;
+                    }
+                    Err(error) => {
+                        session.send_message(&ServerMessage::Error {
+                            request_id: Some(request_id),
+                            message: error.to_string(),
+                        })?;
+                    }
+                }
+            }
+            ClientMessage::RemoveSecret {
+                request_id,
+                source_id,
+                module_id,
+                setting_key,
+            } => {
+                let lookup_key = secrets_manager::secret_lookup_key(&module_id, &source_id, &setting_key);
+                match secrets_manager::delete(&lookup_key) {
+                    Ok(()) => {
+                        session.send_message(&ServerMessage::RemoveSecretResult { request_id })?;
+                    }
+                    Err(error) => {
                         session.send_message(&ServerMessage::Error {
                             request_id: Some(request_id),
                             message: error.to_string(),
