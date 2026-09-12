@@ -7,20 +7,42 @@ use std::fs;
 use std::io;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 use crate::configuration::{Configuration, Groups, Hosts};
 use crate::error::LkError;
 use crate::remote_core::protocol::{read_message, ClientMessage, ServerMessage, PROTOCOL_VERSION};
 use crate::remote_core::runtime::CoreRuntime;
 use crate::remote_core::session::RemoteSession;
+use crate::remote_core::socket;
 use crate::secrets_manager;
 
+const HANDSHAKE_READ_TIMEOUT: Duration = Duration::from_secs(5);
+
+enum SessionClaim {
+    Claim,
+    AlreadyClaimed,
+}
+
 pub fn run_remote_client_session(
-    mut stream: UnixStream,
+    stream: UnixStream,
     runtime: &mut CoreRuntime,
     client_session_active: &Arc<Mutex<bool>>,
 ) -> Result<(), LkError> {
+    run_remote_client_session_with_claim(stream, runtime, client_session_active, SessionClaim::Claim)
+}
+
+fn run_remote_client_session_with_claim(
+    mut stream: UnixStream,
+    runtime: &mut CoreRuntime,
+    client_session_active: &Arc<Mutex<bool>>,
+    claim: SessionClaim,
+) -> Result<(), LkError> {
+    stream.set_read_timeout(Some(HANDSHAKE_READ_TIMEOUT))?;
+
     let protocol_version = match read_message::<ClientMessage, _>(&mut stream) {
         Ok(ClientMessage::Connect { protocol_version }) => protocol_version,
         Ok(_) => {
@@ -29,6 +51,9 @@ pub fn run_remote_client_session(
             return Ok(());
         }
         Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => return Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
+            return Err(LkError::other("Client handshake timed out"));
+        }
         Err(error) => return Err(error.into()),
     };
 
@@ -41,15 +66,17 @@ pub fn run_remote_client_session(
         return Ok(());
     }
 
-    {
-        let mut active = client_session_active.lock().unwrap();
-        if *active {
-            let session = RemoteSession::new(stream.try_clone()?);
-            session.send_message(&ServerMessage::Connect { protocol_version: PROTOCOL_VERSION })?;
-            session.send_error("Another desktop client is already connected")?;
-            return Ok(());
+    match claim {
+        SessionClaim::Claim => {
+            let mut active = client_session_active.lock().unwrap();
+            if *active {
+                let session = RemoteSession::new(stream.try_clone()?);
+                session.send_error("Another desktop client is already connected")?;
+                return Ok(());
+            }
+            *active = true;
         }
-        *active = true;
+        SessionClaim::AlreadyClaimed => {}
     }
 
     struct ClearClientSessionFlag {
@@ -64,9 +91,19 @@ pub fn run_remote_client_session(
         }
     }
 
-    let _clear_session = ClearClientSessionFlag { flag: client_session_active.clone() };
+    let _clear_session = ClearClientSessionFlag {
+        flag: client_session_active.clone(),
+    };
 
+    stream.set_read_timeout(None)?;
     handle_connected_client_loop(&mut stream, runtime)
+}
+
+fn reject_busy_client(stream: UnixStream) {
+    if let Ok(clone) = stream.try_clone() {
+        let session = RemoteSession::new(clone);
+        let _ = session.send_error("Another desktop client is already connected");
+    }
 }
 
 fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRuntime) -> Result<(), LkError> {
@@ -412,61 +449,113 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
     }
 }
 
-pub struct CoreServer {
-    listener: UnixListener,
+pub struct CoreListener {
     socket_path: PathBuf,
-    runtime: CoreRuntime,
     client_session_active: Arc<Mutex<bool>>,
+    incoming: mpsc::Receiver<UnixStream>,
+    _accept_thread: thread::JoinHandle<()>,
 }
 
-impl CoreServer {
-    pub fn start(socket_path: PathBuf, runtime: CoreRuntime) -> Result<(), LkError> {
-        if let Some(parent_dir) = socket_path.parent() {
-            fs::create_dir_all(parent_dir)?;
-        }
-
-        Self::remove_stale_socket(&socket_path)?;
+impl CoreListener {
+    pub fn bind(socket_path: PathBuf) -> Result<Self, LkError> {
+        socket::prepare_socket_path(&socket_path)?;
         let listener = UnixListener::bind(&socket_path)?;
-        let mut server = CoreServer {
-            listener,
-            socket_path,
-            runtime,
-            client_session_active: Arc::new(Mutex::new(false)),
-        };
+        socket::set_socket_permissions(&socket_path)?;
 
-        server.run()
-    }
+        let (incoming_tx, incoming_rx) = mpsc::channel();
+        let client_session_active = Arc::new(Mutex::new(false));
+        let accept_active = client_session_active.clone();
 
-    fn run(&mut self) -> Result<(), LkError> {
-        log::info!("Listening on {}", self.socket_path.display());
+        let accept_thread = thread::spawn(move || {
+            loop {
+                let stream = match listener.accept() {
+                    Ok((stream, _)) => stream,
+                    Err(error) => {
+                        log::error!("Accept failed: {}", error);
+                        break;
+                    }
+                };
 
-        loop {
-            let (stream, _address) = self.listener.accept()?;
+                {
+                    let mut active = accept_active.lock().unwrap();
+                    if *active {
+                        drop(active);
+                        reject_busy_client(stream);
+                        continue;
+                    }
+                    *active = true;
+                }
 
-            if let Err(error) = self.handle_client(stream) {
-                log::error!("Client session failed: {}", error);
+                if incoming_tx.send(stream).is_err() {
+                    if let Ok(mut active) = accept_active.lock() {
+                        *active = false;
+                    }
+                    break;
+                }
             }
+        });
+
+        Ok(CoreListener {
+            socket_path,
+            client_session_active,
+            incoming: incoming_rx,
+            _accept_thread: accept_thread,
+        })
+    }
+
+    pub fn recv(&self) -> Result<UnixStream, LkError> {
+        self.incoming
+            .recv()
+            .map_err(|_| LkError::other("Accept thread stopped"))
+    }
+
+    pub fn session_active_flag(&self) -> Arc<Mutex<bool>> {
+        self.client_session_active.clone()
+    }
+
+    pub fn release_session_claim(&self) {
+        if let Ok(mut active) = self.client_session_active.lock() {
+            *active = false;
         }
     }
 
-    fn handle_client(&mut self, stream: UnixStream) -> Result<(), LkError> {
-        run_remote_client_session(stream, &mut self.runtime, &self.client_session_active)
-    }
-
-    fn remove_stale_socket(socket_path: &Path) -> io::Result<()> {
-        match fs::remove_file(socket_path) {
-            Ok(()) => Ok(()),
-            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-            Err(error) => Err(error),
-        }
+    pub fn socket_path(&self) -> &Path {
+        &self.socket_path
     }
 }
 
-impl Drop for CoreServer {
+impl Drop for CoreListener {
     fn drop(&mut self) {
         if let Err(error) = fs::remove_file(&self.socket_path) {
             if error.kind() != io::ErrorKind::NotFound {
                 log::warn!("Failed to remove socket {}: {}", self.socket_path.display(), error);
+            }
+        }
+    }
+}
+
+pub struct CoreServer {
+    listener: CoreListener,
+    runtime: CoreRuntime,
+}
+
+impl CoreServer {
+    pub fn start(socket_path: PathBuf, runtime: CoreRuntime) -> Result<(), LkError> {
+        let listener = CoreListener::bind(socket_path)?;
+        let mut server = CoreServer { listener, runtime };
+        server.run()
+    }
+
+    fn run(&mut self) -> Result<(), LkError> {
+        log::info!("Listening on {}", self.listener.socket_path().display());
+
+        loop {
+            let stream = self.listener.recv()?;
+            let session_active = self.listener.session_active_flag();
+            if let Err(error) =
+                run_remote_client_session_with_claim(stream, &mut self.runtime, &session_active, SessionClaim::AlreadyClaimed)
+            {
+                log::error!("Client session failed: {}", error);
             }
         }
     }

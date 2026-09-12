@@ -6,3 +6,4 @@
 mod commands;
 mod config;
 mod protocol;
+mod socket;
