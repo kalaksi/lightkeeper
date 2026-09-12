@@ -382,26 +382,15 @@ impl RemoteCoreClient {
                             PendingRpcReply::DownloadEditable(invocation_id)
                         });
                     }
-                    ServerMessage::WriteCachedFileResult { request_id } | ServerMessage::RemoveCachedFileResult { request_id } => {
-                        let pending = match pending_rpc.lock() {
-                            Ok(mut map) => map.remove(&request_id),
-                            Err(error) => {
-                                ::log::error!("Request failed: {}", error);
-                                continue;
-                            }
-                        };
-                        match pending {
-                            None => {
-                                ::log::error!("Received unexpected response");
-                            }
-                            Some(p) if p.kind == PendingRpcKind::WriteCachedFile || p.kind == PendingRpcKind::RemoveCachedFile => {
-                                let _ = p.sender.send(PendingRpcReply::FileOpDone);
-                            }
-                            Some(p) => {
-                                ::log::error!("RPC type mismatch");
-                                let _ = p.sender.send(internal_error_reply("RPC response type mismatch"));
-                            }
-                        }
+                    ServerMessage::WriteCachedFileResult { request_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::WriteCachedFile, || {
+                            PendingRpcReply::FileOpDone
+                        });
+                    }
+                    ServerMessage::RemoveCachedFileResult { request_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::RemoveCachedFile, || {
+                            PendingRpcReply::FileOpDone
+                        });
                     }
                     ServerMessage::HasCachedFileChangedResult { request_id, changed } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::HasCachedFileChanged, || {

@@ -29,9 +29,10 @@ impl ConfigBackend for LocalConfigBackend {
         hosts: configuration::Hosts,
         groups: configuration::Groups,
     ) -> Result<(), LkError> {
-        Configuration::write_main_config(&self.config_dir, &main_config)?;
-        Configuration::write_hosts_config(&self.config_dir, &hosts)?;
-        Configuration::write_groups_config(&self.config_dir, &groups)?;
+        Configuration::write_all_configs_transactional(&self.config_dir, &main_config, &hosts, &groups)?;
+        if let Err(error) = Configuration::clear_config_backups(&self.config_dir) {
+            log::warn!("Failed to clear configuration backups: {}", error);
+        }
         Ok(())
     }
 

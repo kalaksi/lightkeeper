@@ -368,82 +368,78 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 groups_yml,
             } => {
                 session.halt_update_stream();
-                let parsed: Result<(Configuration, Hosts, Groups), LkError> = (|| {
-                    let main: Configuration = serde_yaml::from_str(&main_yml)?;
-                    let hosts: Hosts = serde_yaml::from_str(&hosts_yml)?;
-                    let groups: Groups = serde_yaml::from_str(&groups_yml)?;
-                    Ok((main, hosts, groups))
+
+                let parsed = (|| -> Result<(Configuration, Hosts, Groups), LkError> {
+                    Ok((
+                        serde_yaml::from_str(&main_yml)?,
+                        serde_yaml::from_str(&hosts_yml)?,
+                        serde_yaml::from_str(&groups_yml)?,
+                    ))
                 })();
-                match parsed {
-                    Ok((main, hosts, groups)) => {
-                        let update_result: Result<(), LkError> = (|| {
-                            Configuration::write_all_configs_transactional(
-                                &runtime.config_dir,
-                                &main,
-                                &hosts,
-                                &groups,
-                            )?;
-                            let module_factory = runtime.core.module_factory.clone();
-                            runtime.stop();
-                            match (|| {
-                                let (main_read, hosts_read, _groups) = Configuration::read(&runtime.config_dir)?;
-                                runtime.core = crate::initialize_core(&main_read, &hosts_read, module_factory.clone())?;
-                                Ok(())
-                            })() {
-                                Ok(()) => {
-                                    if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
-                                        log::warn!("Failed to clear configuration backups: {}", error);
-                                    }
-                                    Ok(())
-                                }
-                                Err(error) => {
-                                    if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
-                                        log::error!("Failed to restore configuration backups: {}", restore_error);
-                                    }
-                                    match Configuration::read(&runtime.config_dir) {
-                                        Ok((main_read, hosts_read, _groups)) => {
-                                            match crate::initialize_core(&main_read, &hosts_read, module_factory) {
-                                                Ok(core) => {
-                                                    runtime.core = core;
-                                                }
-                                                Err(recover_error) => {
-                                                    log::error!(
-                                                        "Failed to recover previous core runtime: {}",
-                                                        recover_error
-                                                    );
-                                                }
-                                            }
-                                        }
-                                        Err(read_error) => {
-                                            log::error!(
-                                                "Failed to read configuration while recovering: {}",
-                                                read_error
-                                            );
-                                        }
-                                    }
-                                    Err(error)
-                                }
-                            }
-                        })();
-                        match update_result {
-                            Ok(()) => {
-                                session.send_message(&ServerMessage::InitialState(
-                                    runtime.core.host_manager.borrow().get_display_data(),
-                                ))?;
-                                session.start_update_stream(runtime.new_update_receiver());
-                                session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;
-                            }
-                            Err(error) => {
-                                session.start_update_stream(runtime.new_update_receiver());
-                                session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
-                            }
-                        }
-                    }
+
+                let (main, hosts, groups) = match parsed {
+                    Ok(configs) => configs,
                     Err(error) => {
                         session.start_update_stream(runtime.new_update_receiver());
                         session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                        continue;
                     }
+                };
+
+                if let Err(error) =
+                    Configuration::write_all_configs_transactional(&runtime.config_dir, &main, &hosts, &groups)
+                {
+                    session.start_update_stream(runtime.new_update_receiver());
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                    continue;
                 }
+
+                let module_factory = runtime.core.module_factory.clone();
+                runtime.stop();
+
+                let reinit_error = match Configuration::read(&runtime.config_dir) {
+                    Ok((main_read, hosts_read, _groups)) => {
+                        match crate::initialize_core(&main_read, &hosts_read, module_factory.clone()) {
+                            Ok(core) => {
+                                runtime.core = core;
+                                None
+                            }
+                            Err(error) => Some(error),
+                        }
+                    }
+                    Err(error) => Some(error.into()),
+                };
+
+                if let Some(error) = reinit_error {
+                    if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
+                        log::error!("Failed to restore configuration backups: {}", restore_error);
+                    }
+                    match Configuration::read(&runtime.config_dir) {
+                        Ok((main_read, hosts_read, _groups)) => {
+                            match crate::initialize_core(&main_read, &hosts_read, module_factory) {
+                                Ok(core) => runtime.core = core,
+                                Err(recover_error) => {
+                                    log::error!("Failed to recover previous core runtime: {}", recover_error);
+                                }
+                            }
+                        }
+                        Err(read_error) => {
+                            log::error!("Failed to read configuration while recovering: {}", read_error);
+                        }
+                    }
+                    session.start_update_stream(runtime.new_update_receiver());
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                    continue;
+                }
+
+                if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
+                    log::warn!("Failed to clear configuration backups: {}", error);
+                }
+                session.send_message(&ServerMessage::InitialState(
+                    runtime.core.host_manager.borrow().get_display_data(),
+                ))?;
+                session.start_update_stream(runtime.new_update_receiver());
+                session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;
             }
             ClientMessage::GetSecret {
                 request_id,
