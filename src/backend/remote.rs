@@ -47,6 +47,9 @@ enum PendingRpcKind {
     UploadFromCache,
     Config,
     UpdateConfig,
+    GetSecret,
+    StoreSecret,
+    RemoveSecret,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -69,6 +72,9 @@ enum PendingRpcReply {
         groups_yml: String,
     },
     UpdateConfigOk,
+    GetSecret(Option<String>),
+    StoreSecret(String),
+    RemoveSecretOk,
     Error(String),
 }
 
@@ -98,6 +104,9 @@ fn default_reply(kind: PendingRpcKind) -> PendingRpcReply {
             groups_yml: String::new(),
         },
         PendingRpcKind::UpdateConfig => PendingRpcReply::UpdateConfigOk,
+        PendingRpcKind::GetSecret => PendingRpcReply::GetSecret(None),
+        PendingRpcKind::StoreSecret => PendingRpcReply::StoreSecret(String::new()),
+        PendingRpcKind::RemoveSecret => PendingRpcReply::RemoveSecretOk,
     }
 }
 
@@ -122,7 +131,10 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::HasCachedFileChanged, PendingRpcReply::FileChanged(_)) |
             (PendingRpcKind::UploadFromCache, PendingRpcReply::UploadFromCache(_)) |
             (PendingRpcKind::Config, PendingRpcReply::Config { .. }) |
-            (PendingRpcKind::UpdateConfig, PendingRpcReply::UpdateConfigOk)
+            (PendingRpcKind::UpdateConfig, PendingRpcReply::UpdateConfigOk) |
+            (PendingRpcKind::GetSecret, PendingRpcReply::GetSecret(_)) |
+            (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
+            (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk)
     )
 }
 
@@ -374,6 +386,21 @@ impl RemoteCoreClient {
                 ServerMessage::UpdateConfigOk { request_id } => {
                     deliver_response(&pending_rpc, request_id, PendingRpcKind::UpdateConfig, || {
                         PendingRpcReply::UpdateConfigOk
+                    });
+                }
+                ServerMessage::GetSecretResult { request_id, value } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::GetSecret, || {
+                        PendingRpcReply::GetSecret(value)
+                    });
+                }
+                ServerMessage::StoreSecretResult { request_id, placeholder } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::StoreSecret, || {
+                        PendingRpcReply::StoreSecret(placeholder)
+                    });
+                }
+                ServerMessage::RemoveSecretResult { request_id } => {
+                    deliver_response(&pending_rpc, request_id, PendingRpcKind::RemoveSecret, || {
+                        PendingRpcReply::RemoveSecretOk
                     });
                 }
                 ServerMessage::Error { request_id, message } => {
@@ -807,6 +834,51 @@ impl ConfigBackend for RemoteConfigBackend {
                 groups_yml,
             })? {
             PendingRpcReply::UpdateConfigOk => Ok(()),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
+    fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError> {
+        match self.client.send_message_result(PendingRpcKind::GetSecret, |request_id| ClientMessage::GetSecret {
+            request_id,
+            source_id: source_id.to_string(),
+            module_id: module_id.to_string(),
+            setting_key: setting_key.to_string(),
+        })? {
+            PendingRpcReply::GetSecret(value) => Ok(value),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
+    fn store_secret(
+        &self,
+        source_id: &str,
+        module_id: &str,
+        setting_key: &str,
+        secret_value: &str,
+    ) -> Result<String, LkError> {
+        match self.client.send_message_result(PendingRpcKind::StoreSecret, |request_id| ClientMessage::StoreSecret {
+            request_id,
+            source_id: source_id.to_string(),
+            module_id: module_id.to_string(),
+            setting_key: setting_key.to_string(),
+            secret_value: secret_value.to_string(),
+        })? {
+            PendingRpcReply::StoreSecret(placeholder) => Ok(placeholder),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
+    fn remove_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<(), LkError> {
+        match self
+            .client
+            .send_message_result(PendingRpcKind::RemoveSecret, |request_id| ClientMessage::RemoveSecret {
+                request_id,
+                source_id: source_id.to_string(),
+                module_id: module_id.to_string(),
+                setting_key: setting_key.to_string(),
+            })? {
+            PendingRpcReply::RemoveSecretOk => Ok(()),
             _ => Err(LkError::unexpected()),
         }
     }

@@ -63,6 +63,20 @@ pub trait ConfigBackend {
         hosts: configuration::Hosts,
         groups: configuration::Groups,
     ) -> Result<(), LkError>;
+
+    /// `source_id` is `host:<id>` or `group:<id>`. Returns plaintext or `None` if missing.
+    fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError>;
+
+    /// Stores the secret and returns the keyring placeholder to write into configuration.
+    fn store_secret(
+        &self,
+        source_id: &str,
+        module_id: &str,
+        setting_key: &str,
+        secret_value: &str,
+    ) -> Result<String, LkError>;
+
+    fn remove_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<(), LkError>;
 }
 
 pub trait LocalBackendApi {
