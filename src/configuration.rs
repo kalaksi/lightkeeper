@@ -21,6 +21,7 @@ use crate::secrets_manager;
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
 const GROUPS_FILE: &str = "groups.yml";
+const CONFIG_BACKUP_SUFFIX: &str = ".prev";
 pub const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
 pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
@@ -829,6 +830,72 @@ impl Configuration {
         }
 
         Ok(())
+    }
+
+    /// Backs up existing config files, then writes main/hosts/groups. Restores backups if any write fails.
+    pub fn write_all_configs_transactional(
+        config_dir: &String,
+        main: &Configuration,
+        hosts: &Hosts,
+        groups: &Groups,
+    ) -> io::Result<()> {
+        Self::backup_config_files(config_dir)?;
+        if let Err(error) = (|| {
+            Self::write_main_config(config_dir, main)?;
+            Self::write_hosts_config(config_dir, hosts)?;
+            Self::write_groups_config(config_dir, groups)?;
+            Ok(())
+        })() {
+            if let Err(restore_error) = Self::restore_config_backups(config_dir) {
+                log::error!("Failed to restore configuration backups: {}", restore_error);
+            }
+            return Err(error);
+        }
+        Ok(())
+    }
+
+    pub fn backup_config_files(config_dir: &String) -> io::Result<()> {
+        let config_dir = Self::resolve_config_dir(config_dir);
+        for name in [MAIN_CONFIG_FILE, HOSTS_FILE, GROUPS_FILE] {
+            let source = config_dir.join(name);
+            if source.exists() {
+                fs::copy(&source, config_dir.join(format!("{}{}", name, CONFIG_BACKUP_SUFFIX)))?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn restore_config_backups(config_dir: &String) -> io::Result<()> {
+        let config_dir = Self::resolve_config_dir(config_dir);
+        for name in [MAIN_CONFIG_FILE, HOSTS_FILE, GROUPS_FILE] {
+            let backup = config_dir.join(format!("{}{}", name, CONFIG_BACKUP_SUFFIX));
+            if backup.exists() {
+                fs::copy(&backup, config_dir.join(name))?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn clear_config_backups(config_dir: &String) -> io::Result<()> {
+        let config_dir = Self::resolve_config_dir(config_dir);
+        for name in [MAIN_CONFIG_FILE, HOSTS_FILE, GROUPS_FILE] {
+            let backup = config_dir.join(format!("{}{}", name, CONFIG_BACKUP_SUFFIX));
+            match fs::remove_file(&backup) {
+                Ok(()) => {}
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(())
+    }
+
+    fn resolve_config_dir(config_dir: &String) -> PathBuf {
+        if config_dir.is_empty() {
+            file_handler::get_config_dir()
+        }
+        else {
+            Path::new(config_dir).to_path_buf()
+        }
     }
 
     /// Helps keep the configuration up-to-date.

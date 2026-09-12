@@ -31,7 +31,7 @@ use crate::utils::sha256;
 
 const REMOTE_READ_TIMEOUT: Duration = Duration::from_millis(100);
 const REMOTE_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
-const REMOTE_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
+const REMOTE_COMMAND_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PendingRpcKind {
