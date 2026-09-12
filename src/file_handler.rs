@@ -55,6 +55,42 @@ pub fn get_cache_dir() -> PathBuf {
     cache_dir
 }
 
+/// Runtime directory for sockets and other ephemeral per-user state.
+/// Uses `$XDG_RUNTIME_DIR/lightkeeper`, or the data directory if unset.
+pub fn get_runtime_dir() -> io::Result<PathBuf> {
+    if let Some(path) = env::var_os("XDG_RUNTIME_DIR") {
+        let mut runtime_dir = PathBuf::from(path);
+        if env::var("FLATPAK_ID").is_err() {
+            runtime_dir = runtime_dir.join(APP_DIR_NAME);
+        }
+        Ok(runtime_dir)
+    }
+    else {
+        get_data_dir()
+    }
+}
+
+/// Effective user id from `/proc/self/status` (avoids unsafe / libc).
+pub fn effective_uid() -> io::Result<u32> {
+    let status = fs::read_to_string("/proc/self/status")?;
+    for line in status.lines() {
+        let Some(rest) = line.strip_prefix("Uid:") else {
+            continue;
+        };
+        // real, effective, saved, filesystem
+        let mut fields = rest.split_whitespace();
+        let _real = fields.next();
+        let effective = fields.next().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidData, "Uid line missing effective uid")
+        })?;
+        return effective.parse::<u32>().map_err(|error| {
+            io::Error::new(io::ErrorKind::InvalidData, error.to_string())
+        });
+    }
+
+    Err(io::Error::new(io::ErrorKind::NotFound, "Uid line not found in /proc/self/status"))
+}
+
 pub fn get_data_dir() -> io::Result<PathBuf> {
     let mut data_dir = if let Some(path) = env::var_os("XDG_DATA_HOME") {
         PathBuf::from(path)

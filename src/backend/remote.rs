@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::io;
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -28,6 +28,7 @@ use crate::utils::sha256;
 //
 
 const REMOTE_READ_TIMEOUT: Duration = Duration::from_millis(100);
+const REMOTE_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
 const REMOTE_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -148,6 +149,19 @@ fn align_reply(kind: PendingRpcKind, reply: PendingRpcReply) -> PendingRpcReply 
     }
 }
 
+fn fail_all_pending_rpcs(pending_rpc: &Arc<Mutex<HashMap<u64, PendingRpc>>>, message: &str) {
+    let pending = match pending_rpc.lock() {
+        Ok(mut map) => map.drain().map(|(_, pending)| pending).collect::<Vec<_>>(),
+        Err(error) => {
+            ::log::error!("Failed to lock pending RPCs: {}", error);
+            return;
+        }
+    };
+    for pending in pending {
+        let _ = pending.sender.send(PendingRpcReply::Error(message.to_string()));
+    }
+}
+
 fn deliver_response(
     pending_rpc: &Arc<Mutex<HashMap<u64, PendingRpc>>>,
     request_id: u64,
@@ -186,23 +200,25 @@ struct RemoteConnection {
 
 pub struct RemoteCoreClient {
     socket_path: PathBuf,
-    connection: Mutex<RemoteConnection>,
+    connection: Arc<Mutex<RemoteConnection>>,
     pending_rpc: Arc<Mutex<HashMap<u64, PendingRpc>>>,
     next_request_id: Arc<AtomicU64>,
+    stopping: Arc<AtomicBool>,
 }
 
 impl RemoteCoreClient {
     pub fn new(socket_path: PathBuf) -> Self {
         RemoteCoreClient {
             socket_path,
-            connection: Mutex::new(RemoteConnection {
+            connection: Arc::new(Mutex::new(RemoteConnection {
                 frontend_update_sender: None,
                 writer: None,
                 stop_sender: None,
                 response_thread: None,
-            }),
+            })),
             pending_rpc: Arc::new(Mutex::new(HashMap::new())),
             next_request_id: Arc::new(AtomicU64::new(1)),
+            stopping: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -239,173 +255,221 @@ impl RemoteCoreClient {
 
         let mut reader = stream.try_clone().map_err(|error| error.to_string())?;
         reader
+            .set_read_timeout(Some(REMOTE_HANDSHAKE_TIMEOUT))
+            .map_err(|error| error.to_string())?;
+
+        loop {
+            match read_message::<ServerMessage, _>(&mut reader) {
+                Ok(ServerMessage::Connect { protocol_version }) => {
+                    if protocol_version != PROTOCOL_VERSION {
+                        return Err(format!(
+                            "Protocol mismatch: expected {}, got {}",
+                            PROTOCOL_VERSION, protocol_version,
+                        ));
+                    }
+                    break;
+                }
+                Ok(ServerMessage::Error { message, .. }) => {
+                    return Err(message);
+                }
+                Ok(_) => {
+                    return Err(String::from("Unexpected message during remote core handshake"));
+                }
+                Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
+                    return Err(String::from("Remote core handshake timed out"));
+                }
+                Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => {
+                    return Err(String::from("Connection closed during remote core handshake"));
+                }
+                Err(error) => return Err(error.to_string()),
+            }
+        }
+
+        reader
             .set_read_timeout(Some(REMOTE_READ_TIMEOUT))
             .map_err(|error| error.to_string())?;
 
         let writer = Arc::new(Mutex::new(stream));
         let pending_rpc = self.pending_rpc.clone();
+        let connection = self.connection.clone();
+        let stopping = self.stopping.clone();
         let (stop_sender, stop_receiver) = mpsc::channel();
 
-        let response_thread = thread::spawn(move || loop {
-            match stop_receiver.try_recv() {
-                Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
-                Err(mpsc::TryRecvError::Empty) => {}
-            }
+        self.stopping.store(false, Ordering::SeqCst);
 
-            let message = match read_message::<ServerMessage, _>(&mut reader) {
-                Ok(message) => message,
-                Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
-                    continue;
+        let response_thread = thread::spawn(move || {
+            let disconnect = |message: &str| {
+                ::log::error!("{}", message);
+                fail_all_pending_rpcs(&pending_rpc, message);
+                if let Ok(mut conn) = connection.lock() {
+                    conn.writer = None;
+                    conn.stop_sender = None;
                 }
-                Err(error) => {
-                    ::log::error!("Receive failed: {}", error);
-                    return;
+                if !stopping.load(Ordering::SeqCst) {
+                    let _ = frontend_update_sender.send(frontend::UIUpdate::FatalError());
                 }
             };
 
-            match message {
-                ServerMessage::Connect { protocol_version } => {
-                    if protocol_version != PROTOCOL_VERSION {
-                        ::log::error!("Protocol mismatch: expected {}, got {}", PROTOCOL_VERSION, protocol_version,);
+            loop {
+                match stop_receiver.try_recv() {
+                    Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
+                    Err(mpsc::TryRecvError::Empty) => {}
+                }
+
+                let message = match read_message::<ServerMessage, _>(&mut reader) {
+                    Ok(message) => message,
+                    Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
+                        continue;
                     }
-                }
-                ServerMessage::ExecuteCommand { request_id, invocation_id } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::ExecuteCommand, || {
-                        PendingRpcReply::ExecuteCommand(invocation_id)
-                    });
-                }
-                ServerMessage::CommandsForHost { request_id, host_id: _, commands } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::CommandsForHost, || {
-                        PendingRpcReply::CommandsForHost(commands)
-                    });
-                }
-                ServerMessage::CommandForHost {
-                    request_id,
-                    host_id: _,
-                    command_id: _,
-                    command,
-                } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::CommandForHost, || {
-                        PendingRpcReply::CommandForHost(command)
-                    });
-                }
-                ServerMessage::CustomCommandsForHost { request_id, host_id: _, commands } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::CustomCommandsForHost, || {
-                        PendingRpcReply::CustomCommandsForHost(commands)
-                    });
-                }
-                ServerMessage::AllHostCategories { request_id, host_id: _, categories } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::AllHostCategories, || {
-                        PendingRpcReply::AllHostCategories(categories)
-                    });
-                }
-                ServerMessage::InitialState(display_data) => {
-                    for host_display_data in display_data.hosts.into_values() {
+                    Err(error) => {
+                        disconnect(&format!("Receive failed: {}", error));
+                        return;
+                    }
+                };
+
+                match message {
+                    ServerMessage::Connect { protocol_version } => {
+                        ::log::warn!(
+                            "Ignoring unexpected Connect after handshake (protocol {})",
+                            protocol_version,
+                        );
+                    }
+                    ServerMessage::ExecuteCommand { request_id, invocation_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::ExecuteCommand, || {
+                            PendingRpcReply::ExecuteCommand(invocation_id)
+                        });
+                    }
+                    ServerMessage::CommandsForHost { request_id, host_id: _, commands } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::CommandsForHost, || {
+                            PendingRpcReply::CommandsForHost(commands)
+                        });
+                    }
+                    ServerMessage::CommandForHost {
+                        request_id,
+                        host_id: _,
+                        command_id: _,
+                        command,
+                    } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::CommandForHost, || {
+                            PendingRpcReply::CommandForHost(command)
+                        });
+                    }
+                    ServerMessage::CustomCommandsForHost { request_id, host_id: _, commands } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::CustomCommandsForHost, || {
+                            PendingRpcReply::CustomCommandsForHost(commands)
+                        });
+                    }
+                    ServerMessage::AllHostCategories { request_id, host_id: _, categories } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::AllHostCategories, || {
+                            PendingRpcReply::AllHostCategories(categories)
+                        });
+                    }
+                    ServerMessage::InitialState(display_data) => {
+                        for host_display_data in display_data.hosts.into_values() {
+                            if frontend_update_sender.send(frontend::UIUpdate::Host(host_display_data)).is_err() {
+                                disconnect("Failed to deliver initial state update");
+                                return;
+                            }
+                        }
+                    }
+                    ServerMessage::HostUpdate(host_display_data) => {
                         if frontend_update_sender.send(frontend::UIUpdate::Host(host_display_data)).is_err() {
-                            ::log::error!("Failed to deliver initial state update");
+                            disconnect("Failed to deliver host update");
                             return;
                         }
                     }
-                }
-                ServerMessage::HostUpdate(host_display_data) => {
-                    if frontend_update_sender.send(frontend::UIUpdate::Host(host_display_data)).is_err() {
-                        ::log::error!("Failed to deliver host update");
-                        return;
+                    ServerMessage::VerificationRequest(request) => {
+                        ::log::warn!(
+                            "Ignoring standalone verification request for {}: {}",
+                            request.source_id,
+                            request.message,
+                        );
                     }
-                }
-                ServerMessage::VerificationRequest(request) => {
-                    ::log::warn!(
-                        "Ignoring standalone verification request for {}: {}",
-                        request.source_id,
-                        request.message,
-                    );
-                }
-                ServerMessage::RefreshInvocationIds { request_id, invocation_ids } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::RefreshInvocationIds, || {
-                        PendingRpcReply::RefreshInvocationIds(invocation_ids)
-                    });
-                }
-                ServerMessage::InitializeHostsResult { request_id, host_ids } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::InitializeHosts, || {
-                        PendingRpcReply::InitializeHosts(host_ids)
-                    });
-                }
-                ServerMessage::ResolveTextEditorPath { request_id, path } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::ResolveTextEditorPath, || {
-                        PendingRpcReply::ResolveTextEditorPath(path)
-                    });
-                }
-                ServerMessage::DownloadEditableFileResult { request_id, invocation_id } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::DownloadEditable, || {
-                        PendingRpcReply::DownloadEditable(invocation_id)
-                    });
-                }
-                ServerMessage::WriteCachedFileResult { request_id } | ServerMessage::RemoveCachedFileResult { request_id } => {
-                    let pending = match pending_rpc.lock() {
-                        Ok(mut map) => map.remove(&request_id),
-                        Err(error) => {
-                            ::log::error!("Request failed: {}", error);
-                            continue;
-                        }
-                    };
-                    match pending {
-                        None => {
-                            ::log::error!("Received unexpected response");
-                        }
-                        Some(p) if p.kind == PendingRpcKind::WriteCachedFile || p.kind == PendingRpcKind::RemoveCachedFile => {
-                            let _ = p.sender.send(PendingRpcReply::FileOpDone);
-                        }
-                        Some(p) => {
-                            ::log::error!("RPC type mismatch");
-                            let _ = p.sender.send(default_reply(p.kind));
+                    ServerMessage::RefreshInvocationIds { request_id, invocation_ids } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::RefreshInvocationIds, || {
+                            PendingRpcReply::RefreshInvocationIds(invocation_ids)
+                        });
+                    }
+                    ServerMessage::InitializeHostsResult { request_id, host_ids } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::InitializeHosts, || {
+                            PendingRpcReply::InitializeHosts(host_ids)
+                        });
+                    }
+                    ServerMessage::ResolveTextEditorPath { request_id, path } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::ResolveTextEditorPath, || {
+                            PendingRpcReply::ResolveTextEditorPath(path)
+                        });
+                    }
+                    ServerMessage::DownloadEditableFileResult { request_id, invocation_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::DownloadEditable, || {
+                            PendingRpcReply::DownloadEditable(invocation_id)
+                        });
+                    }
+                    ServerMessage::WriteCachedFileResult { request_id } | ServerMessage::RemoveCachedFileResult { request_id } => {
+                        let pending = match pending_rpc.lock() {
+                            Ok(mut map) => map.remove(&request_id),
+                            Err(error) => {
+                                ::log::error!("Request failed: {}", error);
+                                continue;
+                            }
+                        };
+                        match pending {
+                            None => {
+                                ::log::error!("Received unexpected response");
+                            }
+                            Some(p) if p.kind == PendingRpcKind::WriteCachedFile || p.kind == PendingRpcKind::RemoveCachedFile => {
+                                let _ = p.sender.send(PendingRpcReply::FileOpDone);
+                            }
+                            Some(p) => {
+                                ::log::error!("RPC type mismatch");
+                                let _ = p.sender.send(default_reply(p.kind));
+                            }
                         }
                     }
-                }
-                ServerMessage::HasCachedFileChangedResult { request_id, changed } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::HasCachedFileChanged, || {
-                        PendingRpcReply::FileChanged(changed)
-                    });
-                }
-                ServerMessage::UploadFileFromCacheResult { request_id, invocation_id } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::UploadFromCache, || {
-                        PendingRpcReply::UploadFromCache(invocation_id)
-                    });
-                }
-                ServerMessage::Config {
-                    request_id,
-                    main_yml,
-                    hosts_yml,
-                    groups_yml,
-                } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::Config, || PendingRpcReply::Config {
+                    ServerMessage::HasCachedFileChangedResult { request_id, changed } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::HasCachedFileChanged, || {
+                            PendingRpcReply::FileChanged(changed)
+                        });
+                    }
+                    ServerMessage::UploadFileFromCacheResult { request_id, invocation_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::UploadFromCache, || {
+                            PendingRpcReply::UploadFromCache(invocation_id)
+                        });
+                    }
+                    ServerMessage::Config {
+                        request_id,
                         main_yml,
                         hosts_yml,
                         groups_yml,
-                    });
-                }
-                ServerMessage::UpdateConfigOk { request_id } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::UpdateConfig, || {
-                        PendingRpcReply::UpdateConfigOk
-                    });
-                }
-                ServerMessage::GetSecretResult { request_id, value } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::GetSecret, || {
-                        PendingRpcReply::GetSecret(value)
-                    });
-                }
-                ServerMessage::StoreSecretResult { request_id, placeholder } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::StoreSecret, || {
-                        PendingRpcReply::StoreSecret(placeholder)
-                    });
-                }
-                ServerMessage::RemoveSecretResult { request_id } => {
-                    deliver_response(&pending_rpc, request_id, PendingRpcKind::RemoveSecret, || {
-                        PendingRpcReply::RemoveSecretOk
-                    });
-                }
-                ServerMessage::Error { request_id, message } => {
-                    ::log::error!("Core server error: {}", message);
-                    if let Some(request_id) = request_id {
+                    } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::Config, || PendingRpcReply::Config {
+                            main_yml,
+                            hosts_yml,
+                            groups_yml,
+                        });
+                    }
+                    ServerMessage::UpdateConfigOk { request_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::UpdateConfig, || {
+                            PendingRpcReply::UpdateConfigOk
+                        });
+                    }
+                    ServerMessage::GetSecretResult { request_id, value } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::GetSecret, || {
+                            PendingRpcReply::GetSecret(value)
+                        });
+                    }
+                    ServerMessage::StoreSecretResult { request_id, placeholder } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::StoreSecret, || {
+                            PendingRpcReply::StoreSecret(placeholder)
+                        });
+                    }
+                    ServerMessage::RemoveSecretResult { request_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::RemoveSecret, || {
+                            PendingRpcReply::RemoveSecretOk
+                        });
+                    }
+                    ServerMessage::Error { request_id: Some(request_id), message } => {
+                        ::log::error!("Core server error: {}", message);
                         match pending_rpc.lock() {
                             Ok(mut map) => {
                                 if let Some(pending) = map.remove(&request_id) {
@@ -418,6 +482,10 @@ impl RemoteCoreClient {
                                 ::log::error!("Request failed: {}", err);
                             }
                         }
+                    }
+                    ServerMessage::Error { request_id: None, message } => {
+                        disconnect(&format!("Core server error: {}", message));
+                        return;
                     }
                 }
             }
@@ -478,6 +546,9 @@ impl RemoteCoreClient {
     }
 
     pub fn stop_connection(&self) {
+        self.stopping.store(true, Ordering::SeqCst);
+        fail_all_pending_rpcs(&self.pending_rpc, "Disconnected from remote core");
+
         let (writer_opt, stop_sender_opt, thread_opt) = {
             let mut conn = self.connection.lock().unwrap();
             let w = conn.writer.take();
@@ -486,15 +557,15 @@ impl RemoteCoreClient {
             (w, s, t)
         };
 
+        if let Some(stop_sender) = stop_sender_opt {
+            let _ = stop_sender.send(());
+        }
+
         if let Some(writer) = writer_opt {
             let disconnect = ClientMessage::Disconnect;
             if let Ok(mut writer) = writer.lock() {
                 let _ = write_message(&mut *writer, &disconnect);
             }
-        }
-
-        if let Some(stop_sender) = stop_sender_opt {
-            let _ = stop_sender.send(());
         }
 
         if let Some(response_thread) = thread_opt {
