@@ -13,7 +13,7 @@ use crate::configuration::CustomCommandConfig;
 use crate::frontend::frontend::VerificationRequest;
 use crate::frontend::{DisplayData, HostDisplayData};
 
-pub const PROTOCOL_VERSION: u16 = 8;
+pub const PROTOCOL_VERSION: u16 = 9;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -119,6 +119,25 @@ pub enum ClientMessage {
         hosts_yml: String,
         groups_yml: String,
     },
+    GetSecret {
+        request_id: u64,
+        source_id: String,
+        module_id: String,
+        setting_key: String,
+    },
+    StoreSecret {
+        request_id: u64,
+        source_id: String,
+        module_id: String,
+        setting_key: String,
+        secret_value: String,
+    },
+    RemoveSecret {
+        request_id: u64,
+        source_id: String,
+        module_id: String,
+        setting_key: String,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -195,6 +214,17 @@ pub enum ServerMessage {
         groups_yml: String,
     },
     UpdateConfigOk {
+        request_id: u64,
+    },
+    GetSecretResult {
+        request_id: u64,
+        value: Option<String>,
+    },
+    StoreSecretResult {
+        request_id: u64,
+        placeholder: String,
+    },
+    RemoveSecretResult {
         request_id: u64,
     },
 }

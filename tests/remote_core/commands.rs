@@ -390,3 +390,29 @@ fn remote_core_get_update_config() {
         backend.stop();
     });
 }
+
+#[test]
+fn remote_core_secret_store_get_remove() {
+    init_log();
+
+    with_remote_core_session(move |mut backend, config, _ui_rx| {
+        let source_id = format!("host:{}", TEST_HOST);
+        let module_id = "ssh";
+        let setting_key = "password";
+        let secret_value = format!("lk-remote-core-test-secret-{}", std::process::id());
+
+        let placeholder = config
+            .store_secret(&source_id, module_id, setting_key, &secret_value)
+            .unwrap();
+        assert!(placeholder.starts_with(lightkeeper::secrets_manager::KEYRING_PREFIX));
+
+        let got = config.get_secret(&source_id, module_id, setting_key).unwrap();
+        assert_eq!(got.as_deref(), Some(secret_value.as_str()));
+
+        config.remove_secret(&source_id, module_id, setting_key).unwrap();
+        let after_remove = config.get_secret(&source_id, module_id, setting_key).unwrap();
+        assert!(after_remove.is_none());
+
+        backend.stop();
+    });
+}

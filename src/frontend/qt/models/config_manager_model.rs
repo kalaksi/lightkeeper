@@ -12,7 +12,6 @@ use std::str::FromStr;
 use crate::backend::ConfigBackend;
 use crate::error::LkError;
 use crate::secrets_manager;
-use crate::secrets_manager::*;
 use crate::{
     configuration::{self, ConfigGroup, Configuration, Groups, HostSettings, Hosts},
     enums::EditMode,
@@ -939,18 +938,18 @@ impl ConfigManagerModel {
     }
 
     fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> QString {
-        let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
-        if let Err(e) = secrets_manager::set(&lookup_key, secret_value) {
-            ::log::warn!("Failed to store secret for {} {}: {}", module_id, setting_key, e);
-            self.error(QString::from(format!("Failed to store secret: {}", e)));
-            return QString::default();
+        match self.config_backend.as_ref().unwrap().store_secret(source_id, module_id, setting_key, secret_value) {
+            Ok(placeholder) => QString::from(placeholder),
+            Err(e) => {
+                ::log::warn!("Failed to store secret for {} {}: {}", module_id, setting_key, e);
+                self.error(QString::from(format!("Failed to store secret: {}", e)));
+                QString::default()
+            }
         }
-        QString::from(format!("{}{}", KEYRING_PREFIX, lookup_key))
     }
 
     fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> QString {
-        let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
-        match secrets_manager::get(&lookup_key) {
+        match self.config_backend.as_ref().unwrap().get_secret(source_id, module_id, setting_key) {
             Ok(Some(value)) => QString::from(value),
             Ok(None) => QString::default(),
             Err(e) => {
@@ -961,9 +960,9 @@ impl ConfigManagerModel {
     }
 
     fn remove_secret(&self, source_id: &str, module_id: &str, setting_key: &str) {
-        let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
-        // Currently, error gets only logged in secrets manager.
-        let _ = secrets_manager::delete(&lookup_key);
+        if let Err(e) = self.config_backend.as_ref().unwrap().remove_secret(source_id, module_id, setting_key) {
+            ::log::warn!("Failed to remove secret for {} {}: {}", module_id, setting_key, e);
+        }
     }
 
     fn storeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString {
