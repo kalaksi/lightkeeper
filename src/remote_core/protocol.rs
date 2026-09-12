@@ -4,6 +4,7 @@
  */
 
 use std::collections::HashMap;
+use std::fmt;
 use std::io::{self, Read, Write};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -13,8 +14,27 @@ use crate::configuration::CustomCommandConfig;
 use crate::frontend::frontend::VerificationRequest;
 use crate::frontend::{DisplayData, HostDisplayData};
 
-pub const PROTOCOL_VERSION: u16 = 9;
+pub const PROTOCOL_VERSION: u16 = 10;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum RemoteErrorCode {
+    Busy = 0,
+    UnsupportedVersion = 1,
+    InvalidRequest = 2,
+    Internal = 3,
+}
+
+impl fmt::Display for RemoteErrorCode {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RemoteErrorCode::Busy => write!(formatter, "busy"),
+            RemoteErrorCode::UnsupportedVersion => write!(formatter, "unsupported_version"),
+            RemoteErrorCode::InvalidRequest => write!(formatter, "invalid_request"),
+            RemoteErrorCode::Internal => write!(formatter, "internal"),
+        }
+    }
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum ClientMessage {
@@ -45,18 +65,22 @@ pub enum ClientMessage {
         host_id: String,
     },
     VerifyHostKey {
+        request_id: u64,
         host_id: String,
         connector_id: String,
         key_id: String,
     },
     Disconnect,
     InterruptInvocation {
+        request_id: u64,
         invocation_id: u64,
     },
     RefreshHostMonitors {
+        request_id: u64,
         host_id: String,
     },
     RefreshPlatformInfo {
+        request_id: u64,
         host_id: String,
     },
     RefreshPlatformInfoAll {
@@ -175,6 +199,7 @@ pub enum ServerMessage {
     VerificationRequest(VerificationRequest),
     Error {
         request_id: Option<u64>,
+        code: RemoteErrorCode,
         message: String,
     },
     RefreshInvocationIds {
@@ -227,6 +252,19 @@ pub enum ServerMessage {
     RemoveSecretResult {
         request_id: u64,
     },
+    Ack {
+        request_id: u64,
+    },
+}
+
+impl ServerMessage {
+    pub fn error(request_id: Option<u64>, code: RemoteErrorCode, message: impl ToString) -> Self {
+        ServerMessage::Error {
+            request_id,
+            code,
+            message: message.to_string(),
+        }
+    }
 }
 
 pub fn read_message<T: DeserializeOwned, Reader: Read>(reader: &mut Reader) -> io::Result<T> {
