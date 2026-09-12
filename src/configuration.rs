@@ -12,7 +12,7 @@ use std::{collections::HashMap, fs, io};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
 
-use crate::enums::EditMode;
+use crate::enums::{CoreTransportPreference, EditMode};
 use crate::file_handler;
 use crate::host::HostSetting;
 use crate::module::PlatformInfo;
@@ -101,6 +101,33 @@ impl Default for EditorPreferences {
     }
 }
 
+/// Admin-host SSH identity for reaching lightkeeper-core.
+/// Do not store passwords or private-key passphrases here.
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Eq, Default)]
+#[serde(deny_unknown_fields)]
+pub struct CoreConnectionProfile {
+    /// SSH host or OpenSSH config Host alias.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub host: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    /// Override for the remote core socket path; None uses the core default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remote_socket_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub transport: CoreTransportPreference,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub auto_connect: bool,
+}
+
+impl CoreConnectionProfile {
+    pub fn is_configured(&self) -> bool {
+        !self.host.is_empty()
+    }
+}
+
 #[derive(Serialize, Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Preferences {
@@ -127,6 +154,8 @@ pub struct Preferences {
     pub editor_preferences: EditorPreferences,
     #[serde(default)]
     pub saved_core_addresses: Vec<String>,
+    #[serde(default, skip_serializing_if = "Configuration::is_default")]
+    pub core_connection: CoreConnectionProfile,
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone)]
