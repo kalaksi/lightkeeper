@@ -8,7 +8,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-use crate::utils::VersionNumber;
+use crate::utils::{string_manipulation, VersionNumber};
 
 #[derive(Default, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PlatformInfo {
@@ -48,6 +48,19 @@ impl PlatformInfo {
         }
     }
 
+    /// Build platform info from the same probes as `_internal-platform-info-ssh`
+    /// (`cat /etc/os-release` and `uname -m`).
+    pub fn from_linux_probe(os_release: &str, uname_machine: &str) -> Self {
+        let (os_flavor, os_version, os_variant_id) = parse_os_release(os_release);
+        PlatformInfo {
+            os: OperatingSystem::Linux,
+            os_version,
+            os_flavor,
+            os_variant_id,
+            architecture: Architecture::from(&uname_machine.trim()),
+        }
+    }
+
     pub fn is_set(&self) -> bool {
         self.os != OperatingSystem::Unknown
     }
@@ -65,6 +78,40 @@ impl PlatformInfo {
     pub fn is_variant(&self, flavor: Flavor, variant_id: &str) -> bool {
         self.os_flavor == flavor && self.os_variant_id == variant_id
     }
+}
+
+/// Parses `/etc/os-release` contents into flavor, version, and variant id.
+pub fn parse_os_release(message: &str) -> (Flavor, VersionNumber, String) {
+    let mut flavor = Flavor::default();
+    let mut version = VersionNumber::default();
+    let mut variant_id = String::new();
+
+    for line in message.lines() {
+        let mut parts = line.split('=');
+        let key = parts.next().unwrap_or_default();
+        let value = string_manipulation::remove_quotes(&parts.next().unwrap_or_default());
+
+        match key {
+            "ID" => {
+                match value.as_str() {
+                    "debian" => flavor = Flavor::Debian,
+                    "centos" => flavor = Flavor::CentOS,
+                    "ubuntu" => flavor = Flavor::Ubuntu,
+                    "nixos" => flavor = Flavor::NixOS,
+                    "arch" => flavor = Flavor::ArchLinux,
+                    "fedora" => flavor = Flavor::Fedora,
+                    "opensuse" => flavor = Flavor::OpenSUSE,
+                    "alpine" => flavor = Flavor::Alpine,
+                    _ => ()
+                }
+            },
+            "VERSION_ID" => version = VersionNumber::from_string(&value.to_string()),
+            "VARIANT_ID" => variant_id = value,
+            _ => ()
+        }
+    }
+
+    (flavor, version, variant_id)
 }
 
 #[derive(Clone, PartialEq, Eq, EnumString, Display, Serialize, Deserialize)]

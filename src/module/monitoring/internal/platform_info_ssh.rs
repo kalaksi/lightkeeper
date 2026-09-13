@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
 use crate::Host;
-use crate::utils::{VersionNumber, string_manipulation};
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
@@ -42,22 +41,16 @@ impl MonitoringModule for PlatformInfoSsh {
     }
 
     fn process_responses(&self, host: Host, response: Vec<ResponseMessage>, _result: DataPoint) -> Result<DataPoint, String> {
-        let mut platform = PlatformInfo::default();
-        platform.os = platform_info::OperatingSystem::Linux;
-
-        if let Some(first) = response.get(0) {
-            (platform.os_flavor, platform.os_version, platform.os_variant_id) = parse_os_release(&first.message);
-        }
-        else {
+        let os_release = response.get(0).map(|response| response.message.as_str()).unwrap_or("");
+        let uname_machine = response.get(1).map(|response| response.message.as_str()).unwrap_or("");
+        if os_release.is_empty() {
             return Err(String::from("No response for OS release"));
         }
-
-        if let Some(second) = response.get(1) {
-            platform.architecture = platform_info::Architecture::from(&second.message.trim())
-        }
-        else {
+        if uname_machine.is_empty() {
             return Err(String::from("No response for architecture"));
         }
+
+        let platform = PlatformInfo::from_linux_probe(os_release, uname_machine);
 
         // Special kind of datapoint for internal use.
         // TODO: separate module type?
@@ -70,38 +63,4 @@ impl MonitoringModule for PlatformInfoSsh {
         datapoint.multivalue.push(DataPoint::labeled_value(String::from("ip_address"), host.ip_address.to_string()));
         Ok(datapoint)
     }
-}
-
-fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber, String) {
-    let mut flavor = platform_info::Flavor::default();
-    let mut version = VersionNumber::default();
-    let mut variant_id = String::new();
-
-    let lines = message.lines();
-    for line in lines {
-        let mut parts = line.split('=');
-        let key = parts.next().unwrap_or_default();
-        let value = string_manipulation::remove_quotes(&parts.next().unwrap_or_default());
-
-        match key {
-            "ID" => {
-                match value.as_str() {
-                    "debian" => flavor = platform_info::Flavor::Debian,
-                    "centos" => flavor = platform_info::Flavor::CentOS,
-                    "ubuntu" => flavor = platform_info::Flavor::Ubuntu,
-                    "nixos" => flavor = platform_info::Flavor::NixOS,
-                    "arch" => flavor = platform_info::Flavor::ArchLinux,
-                    "fedora" => flavor = platform_info::Flavor::Fedora,
-                    "opensuse" => flavor = platform_info::Flavor::OpenSUSE,
-                    "alpine" => flavor = platform_info::Flavor::Alpine,
-                    _ => ()
-                }
-            },
-            "VERSION_ID" => version = VersionNumber::from_string(&value.to_string()),
-            "VARIANT_ID" => variant_id = value,
-            _ => ()
-        }
-    }
-
-    (flavor, version, variant_id)
 }
