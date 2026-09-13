@@ -534,10 +534,19 @@ impl CoreListener {
             loop {
                 let stream = match listener.accept() {
                     Ok((stream, _)) => stream,
-                    Err(error) => {
-                        log::error!("Accept failed: {}", error);
-                        break;
-                    }
+                    Err(error) => match error.kind() {
+                        io::ErrorKind::Interrupted
+                        | io::ErrorKind::ConnectionAborted
+                        | io::ErrorKind::ConnectionReset
+                        | io::ErrorKind::WouldBlock => {
+                            log::debug!("Ignoring transient accept error: {}", error);
+                            continue;
+                        }
+                        _ => {
+                            log::error!("Accept failed: {}", error);
+                            break;
+                        }
+                    },
                 };
 
                 {
