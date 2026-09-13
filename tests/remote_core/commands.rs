@@ -14,6 +14,7 @@ use lightkeeper::backend::{CommandBackend, ConfigBackend, RemoteCommandBackend, 
 use lightkeeper::configuration::{self, get_default_main_config, Configuration, Groups};
 use lightkeeper::frontend::{HostDisplayData, UIUpdate};
 use lightkeeper::module::command::internal::custom_command::CustomCommand;
+use lightkeeper::module::command::internal::filebrowser::edit::FileBrowserEdit;
 use lightkeeper::module::command::systemd;
 use lightkeeper::module::command::CommandModule;
 use lightkeeper::module::connection::Connector;
@@ -72,6 +73,9 @@ fn stub_ssh_factory() -> ModuleFactory {
         vec![(
             systemd::service::Start::get_metadata(),
             systemd::service::Start::new_command_module,
+        ), (
+            FileBrowserEdit::get_metadata(),
+            FileBrowserEdit::new_command_module,
         )],
     )
 }
@@ -87,6 +91,14 @@ fn stub_hosts() -> configuration::Hosts {
     );
     host_settings.overrides.commands.insert(
         systemd::service::Start::get_metadata().module_spec.id.clone(),
+        configuration::CommandConfig {
+            version: "0.0.1".to_string(),
+            settings: HashMap::new(),
+            ..Default::default()
+        },
+    );
+    host_settings.overrides.commands.insert(
+        FileBrowserEdit::get_metadata().module_spec.id.clone(),
         configuration::CommandConfig {
             version: "0.0.1".to_string(),
             settings: HashMap::new(),
@@ -322,11 +334,11 @@ fn remote_core_resolve_text_editor_path() {
 fn remote_core_download_editable_file() {
     init_log();
 
-    let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
+    let edit_id = FileBrowserEdit::get_metadata().module_spec.id.clone();
 
     with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
         let (invocation_id, path) = backend
-            .download_editable_file(TEST_HOST, &systemd_start_id, "test-service")
+            .download_editable_file(TEST_HOST, &edit_id, "/tmp/lk-edit-target")
             .unwrap();
         assert!(invocation_id > 0);
         assert!(!path.is_empty());
@@ -339,20 +351,21 @@ fn remote_core_download_editable_file() {
 fn remote_core_write_cache_and_upload() {
     init_log();
 
-    let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
+    let edit_id = FileBrowserEdit::get_metadata().module_spec.id.clone();
+    let remote_path = "/tmp/lk-edit-target";
 
     with_remote_core_session(move |mut backend, _cfg, ui_rx| {
-        backend.download_editable_file(TEST_HOST, &systemd_start_id, "test-service").unwrap();
+        backend.download_editable_file(TEST_HOST, &edit_id, remote_path).unwrap();
 
         recv_host_until(&ui_rx, TEST_HOST, |d| {
             d.host_state
                 .command_results
-                .get(&systemd_start_id)
+                .get(&edit_id)
                 .is_some_and(|result| result.progress == 100)
         });
 
-        backend.write_cached_file(TEST_HOST, "test-service", b"new-bytes".to_vec()).unwrap();
-        let invocation_id = backend.upload_file_from_cache(TEST_HOST, &systemd_start_id, "test-service").unwrap();
+        backend.write_cached_file(TEST_HOST, remote_path, b"new-bytes".to_vec()).unwrap();
+        let invocation_id = backend.upload_file_from_cache(TEST_HOST, &edit_id, remote_path).unwrap();
         assert!(invocation_id > 0);
 
         backend.stop();
