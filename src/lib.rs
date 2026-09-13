@@ -74,11 +74,14 @@ pub fn initialize_core(
         log::error!("Failed to clean up expired temporary cache files: {}", error);
     }
 
+    let mut hosts_config = hosts_config.clone();
+    Configuration::resolve_secrets_in_hosts(&mut hosts_config);
+
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
-    host_manager.borrow_mut().configure(hosts_config);
+    host_manager.borrow_mut().configure(&hosts_config);
 
     let mut connection_manager = ConnectionManager::new(module_factory.clone());
-    connection_manager.configure(hosts_config);
+    connection_manager.configure(&hosts_config);
 
     let invocation_id_counter = Arc::new(AtomicU64::new(0));
 
@@ -88,7 +91,7 @@ pub fn initialize_core(
         invocation_id_counter.clone(),
     );
     monitor_manager.configure(
-        hosts_config,
+        &hosts_config,
         connection_manager.new_request_sender(),
         host_manager.borrow().new_state_update_sender(),
     );
@@ -99,7 +102,7 @@ pub fn initialize_core(
         invocation_id_counter,
     );
     command_handler.configure(
-        hosts_config,
+        &hosts_config,
         &main_config.preferences,
         connection_manager.new_request_sender(),
         host_manager.borrow().new_state_update_sender(),

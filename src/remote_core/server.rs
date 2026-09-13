@@ -5,7 +5,7 @@
 
 use std::fs;
 use std::io;
-use std::os::unix::net::{UnixListener, UnixStream};
+use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
@@ -283,8 +283,9 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 remote_file_path,
                 contents,
             } => {
-                let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
-                match runtime.core.command_handler.write_file(&path, contents) {
+                match runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path)
+                    .and_then(|path| runtime.core.command_handler.write_file(&path, contents))
+                {
                     Ok(()) => {
                         session.send_message(&ServerMessage::WriteCachedFileResult { request_id })?;
                     }
@@ -294,8 +295,9 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 }
             }
             ClientMessage::RemoveCachedFile { request_id, host_id, remote_file_path } => {
-                let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
-                match runtime.core.command_handler.remove_file(&path) {
+                match runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path)
+                    .and_then(|path| runtime.core.command_handler.remove_file(&path))
+                {
                     Ok(()) => {
                         session.send_message(&ServerMessage::RemoveCachedFileResult { request_id })?;
                     }
@@ -329,8 +331,9 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 command_id,
                 remote_file_path,
             } => {
-                let path = runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path);
-                match runtime.core.command_handler.upload_file(&host_id, &command_id, &path) {
+                match runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path)
+                    .and_then(|path| runtime.core.command_handler.upload_file(&host_id, &command_id, &path))
+                {
                     Ok(invocation_id) => {
                         session.send_message(&ServerMessage::UploadFileFromCacheResult { request_id, invocation_id })?;
                     }
@@ -508,8 +511,7 @@ pub struct CoreListener {
 impl CoreListener {
     pub fn bind(socket_path: PathBuf) -> Result<Self, LkError> {
         socket::prepare_socket_path(&socket_path)?;
-        let listener = UnixListener::bind(&socket_path)?;
-        socket::set_socket_permissions(&socket_path)?;
+        let listener = socket::bind_listener(&socket_path)?;
 
         let (incoming_tx, incoming_rx) = mpsc::channel();
         let client_session_active = Arc::new(Mutex::new(false));

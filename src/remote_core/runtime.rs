@@ -42,7 +42,7 @@ impl CoreRuntime {
     }
 
     pub fn default_socket_path() -> Result<PathBuf, LkError> {
-        Ok(file_handler::get_runtime_dir()?.join("core.sock"))
+        Ok(file_handler::get_data_dir()?.join("core.sock"))
     }
 
     pub fn new_update_receiver(&mut self) -> mpsc::Receiver<frontend::UIUpdate> {
