@@ -6,34 +6,19 @@
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
-use std::path::{Path, PathBuf};
 use std::thread;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use lightkeeper::configuration::Configuration;
 use lightkeeper::remote_core::protocol::{
     read_message, write_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION,
 };
-use lightkeeper::remote_core::runtime::CoreRuntime;
 use lightkeeper::remote_core::server::{self, CoreListener};
 use lightkeeper::remote_core::socket::{self, SOCKET_DIR_MODE, SOCKET_FILE_MODE};
 
-fn unique_temp_dir(prefix: &str) -> PathBuf {
-    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("target").join(format!(
-        "lk-{}-{}-{}",
-        prefix,
-        std::process::id(),
-        nanos
-    ));
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(&dir).unwrap();
-    dir
-}
-
 #[test]
 fn prepare_socket_path_sets_private_dir_mode() {
-    let dir = unique_temp_dir("core-sock-dir");
+    let dir = crate::unique_target_dir("core-sock-dir");
     let socket_path = dir.join("nested").join("core.sock");
 
     socket::prepare_socket_path(&socket_path).unwrap();
@@ -41,40 +26,34 @@ fn prepare_socket_path_sets_private_dir_mode() {
     let parent = socket_path.parent().unwrap();
     let mode = fs::metadata(parent).unwrap().permissions().mode() & 0o777;
     assert_eq!(mode, SOCKET_DIR_MODE);
-
-    fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]
 fn remove_stale_socket_rejects_regular_file() {
-    let dir = unique_temp_dir("core-sock-file");
+    let dir = crate::unique_target_dir("core-sock-file");
     let path = dir.join("not-a-socket");
     fs::write(&path, b"nope").unwrap();
 
     let error = socket::remove_stale_socket(&path).unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
-
-    fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]
 fn bind_sets_socket_file_mode() {
-    let dir = unique_temp_dir("core-sock-bind");
+    let dir = crate::unique_target_dir("core-sock-bind");
     let socket_path = dir.join("core.sock");
     socket::prepare_socket_path(&socket_path).unwrap();
     let _listener = socket::bind_listener(&socket_path).unwrap();
 
     let mode = fs::metadata(&socket_path).unwrap().permissions().mode() & 0o777;
     assert_eq!(mode, SOCKET_FILE_MODE);
-
-    fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]
 fn second_client_is_rejected_while_first_is_connected() {
     let _ = env_logger::Builder::from_default_env().is_test(true).try_init();
 
-    let socket_dir = unique_temp_dir("core-server-sock");
+    let socket_dir = crate::unique_target_dir("core-server-sock");
     let socket_path = socket_dir.join("core.sock");
     let listener = CoreListener::bind(socket_path.clone()).unwrap();
 
@@ -122,22 +101,21 @@ fn second_client_is_rejected_while_first_is_connected() {
     first_client.thread().unpark();
     first_client.join().unwrap();
     drop(listener);
-    let _ = fs::remove_dir_all(socket_dir);
 }
 
 #[test]
 fn failed_handshake_releases_session_claim() {
     let _ = env_logger::Builder::from_default_env().is_test(true).try_init();
 
-    let socket_dir = unique_temp_dir("core-handshake-release");
+    let socket_dir = crate::unique_target_dir("core-handshake-release");
     let socket_path = socket_dir.join("core.sock");
     let listener = CoreListener::bind(socket_path.clone()).unwrap();
 
-    let config_dir = unique_temp_dir("core-handshake-config");
+    let config_dir = crate::unique_target_dir("core-handshake-config");
     let config_dir_str = config_dir.to_string_lossy().to_string();
     Configuration::write_initial_config(&config_dir).unwrap();
     let (main_config, hosts, _groups) = Configuration::read(&config_dir_str).unwrap();
-    let mut runtime = CoreRuntime::new(&main_config, &hosts, config_dir_str).unwrap();
+    let mut runtime = crate::test_core_runtime(&main_config, &hosts, config_dir_str);
 
     let connect_path = socket_path.clone();
     let bad_client = thread::spawn(move || {
@@ -182,6 +160,4 @@ fn failed_handshake_releases_session_claim() {
     drop(accepted);
     listener.release_session_claim();
     drop(listener);
-    let _ = fs::remove_dir_all(socket_dir);
-    let _ = fs::remove_dir_all(config_dir);
 }

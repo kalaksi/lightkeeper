@@ -5,7 +5,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::os::unix::net::UnixStream;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -14,6 +14,7 @@ use lightkeeper::backend::{CommandBackend, ConfigBackend, RemoteCommandBackend, 
 use lightkeeper::configuration::{self, get_default_main_config, Configuration, Groups};
 use lightkeeper::frontend::{HostDisplayData, UIUpdate};
 use lightkeeper::module::command::internal::custom_command::CustomCommand;
+use lightkeeper::module::command::internal::filebrowser::edit::FileBrowserEdit;
 use lightkeeper::module::command::systemd;
 use lightkeeper::module::command::CommandModule;
 use lightkeeper::module::connection::Connector;
@@ -26,6 +27,8 @@ use lightkeeper::remote_core::runtime::CoreRuntime;
 use lightkeeper::remote_core::server::run_remote_client_session;
 use lightkeeper::HostSetting;
 use lightkeeper::ModuleFactory;
+
+use crate::MemorySecretStore;
 
 use crate::{StubSsh2, StubTcp};
 
@@ -70,6 +73,9 @@ fn stub_ssh_factory() -> ModuleFactory {
         vec![(
             systemd::service::Start::get_metadata(),
             systemd::service::Start::new_command_module,
+        ), (
+            FileBrowserEdit::get_metadata(),
+            FileBrowserEdit::new_command_module,
         )],
     )
 }
@@ -87,6 +93,14 @@ fn stub_hosts() -> configuration::Hosts {
         systemd::service::Start::get_metadata().module_spec.id.clone(),
         configuration::CommandConfig {
             version: "0.0.1".to_string(),
+            ..Default::default()
+        },
+    );
+    host_settings.overrides.commands.insert(
+        FileBrowserEdit::get_metadata().module_spec.id.clone(),
+        configuration::CommandConfig {
+            version: "0.0.1".to_string(),
+            settings: HashMap::new(),
             ..Default::default()
         },
     );
@@ -121,17 +135,7 @@ fn stub_hosts() -> configuration::Hosts {
 }
 
 fn temp_config_dir_for_remote_core() -> (String, configuration::Configuration, configuration::Hosts) {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("target")
-        .join(format!("lk-remote-core-test-{}-{}", std::process::id(), nanos));
-
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-
+    let dir = crate::unique_target_dir("remote-core-test");
     let dir_str = dir.to_string_lossy().to_string();
     Configuration::write_initial_config(&dir).unwrap();
     let groups: Groups = serde_yaml::from_str(lightkeeper::configuration::DEFAULT_GROUPS_CONFIG).unwrap();
@@ -150,9 +154,17 @@ fn temp_config_dir_for_remote_core() -> (String, configuration::Configuration, c
 fn with_remote_core_session(
     client_body: impl FnOnce(RemoteCommandBackend, RemoteConfigBackend, mpsc::Receiver<UIUpdate>) + Send + 'static,
 ) {
+    let _xdg_cache = crate::redirect_xdg_cache_home();
     let (config_dir, main_config, hosts) = temp_config_dir_for_remote_core();
     let factory = Arc::new(stub_ssh_factory());
-    let mut runtime = CoreRuntime::new_with_module_factory(&main_config, &hosts, factory, config_dir).unwrap();
+    let secret_store = Arc::new(MemorySecretStore::new());
+    let mut runtime = CoreRuntime::new_with(
+        &main_config,
+        &hosts,
+        factory,
+        config_dir,
+        secret_store,
+    ).unwrap();
 
     let (client_stream, server) = UnixStream::pair().unwrap();
     let session_active = Arc::new(Mutex::new(false));
@@ -319,11 +331,11 @@ fn remote_core_resolve_text_editor_path() {
 fn remote_core_download_editable_file() {
     init_log();
 
-    let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
+    let edit_id = FileBrowserEdit::get_metadata().module_spec.id.clone();
 
     with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
         let (invocation_id, path) = backend
-            .download_editable_file(TEST_HOST, &systemd_start_id, "test-service")
+            .download_editable_file(TEST_HOST, &edit_id, "/tmp/lk-edit-target")
             .unwrap();
         assert!(invocation_id > 0);
         assert!(!path.is_empty());
@@ -336,20 +348,21 @@ fn remote_core_download_editable_file() {
 fn remote_core_write_cache_and_upload() {
     init_log();
 
-    let systemd_start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
+    let edit_id = FileBrowserEdit::get_metadata().module_spec.id.clone();
+    let remote_path = "/tmp/lk-edit-target";
 
     with_remote_core_session(move |mut backend, _cfg, ui_rx| {
-        backend.download_editable_file(TEST_HOST, &systemd_start_id, "test-service").unwrap();
+        backend.download_editable_file(TEST_HOST, &edit_id, remote_path).unwrap();
 
         recv_host_until(&ui_rx, TEST_HOST, |d| {
             d.host_state
                 .command_results
-                .get(&systemd_start_id)
+                .get(&edit_id)
                 .is_some_and(|result| result.progress == 100)
         });
 
-        backend.write_cached_file(TEST_HOST, "test-service", b"new-bytes".to_vec()).unwrap();
-        let invocation_id = backend.upload_file_from_cache(TEST_HOST, &systemd_start_id, "test-service").unwrap();
+        backend.write_cached_file(TEST_HOST, remote_path, b"new-bytes".to_vec()).unwrap();
+        let invocation_id = backend.upload_file_from_cache(TEST_HOST, &edit_id, remote_path).unwrap();
         assert!(invocation_id > 0);
 
         backend.stop();
