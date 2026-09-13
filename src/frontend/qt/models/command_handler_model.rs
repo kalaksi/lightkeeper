@@ -120,6 +120,17 @@ impl CommandHandlerModel {
         );
     }
 
+    pub fn set_backend(&mut self, backend: Box<dyn CommandBackend>) {
+        if let Some(mut previous) = self.backend.take() {
+            previous.stop();
+        }
+        self.backend = Some(backend);
+    }
+
+    pub fn set_configuration(&mut self, configuration: configuration::Configuration) {
+        self.configuration = configuration;
+    }
+
     pub fn start_processing_responses(&mut self) {
         self.backend_mut().start_processing_responses();
     }
