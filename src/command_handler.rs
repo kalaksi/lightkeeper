@@ -196,7 +196,9 @@ impl CommandHandler {
             LkError::from(error)
         })?;
 
-        let host = self.host_manager.borrow().get_host(host_id);
+        let host = self.host_manager.borrow().try_get_host(host_id).ok_or_else(|| {
+            LkError::other(format!("Host '{}' not found", host_id))
+        })?;
 
         if !host.platform.is_set() {
             log::warn!("[{}] Executing command \"{}\" despite missing platform info", host_id, command_id);
@@ -267,7 +269,7 @@ impl CommandHandler {
 
     pub fn get_connector_message(&self, host_id: &String, command_id: &String) -> Option<String> {
         let commands = self.commands.lock().ok()?;
-        let host = self.host_manager.borrow().get_host(host_id);
+        let host = self.host_manager.borrow().try_get_host(host_id)?;
         get_command_connector_messages(&host, &commands[host_id][command_id], &[]).ok()?.into_iter().next()
     }
 
@@ -283,7 +285,9 @@ impl CommandHandler {
         })?;
 
         let command = &commands[host_id][command_id];
-        let host = self.host_manager.borrow().get_host(host_id);
+        let host = self.host_manager.borrow().try_get_host(host_id).ok_or_else(|| {
+            LkError::other(format!("Host '{}' not found", host_id))
+        })?;
 
         let connector_messages = match get_command_connector_messages(&host, command, &[remote_file_path.clone()]) {
             Ok(messages) => messages,
@@ -324,7 +328,9 @@ impl CommandHandler {
         })?;
 
         let command = &commands[host_id][command_id];
-        let host = self.host_manager.borrow().get_host(host_id);
+        let host = self.host_manager.borrow().try_get_host(host_id).ok_or_else(|| {
+            LkError::other(format!("Host '{}' not found", host_id))
+        })?;
 
         let invocation_id = self.next_invocation_id();
 
@@ -375,7 +381,10 @@ impl CommandHandler {
     }
 
     pub fn verify_host_key(&self, host_id: &String, connector_id: &String, key_id: &String) {
-        let host = self.host_manager.borrow().get_host(host_id);
+        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
+            log::error!("Host '{}' not found", host_id);
+            return;
+        };
         // Version numbers aren't currently used, so it's hardcoded here.
         let module_spec = crate::module::ModuleSpecification::connector(&connector_id, "0.0.1");
 
@@ -398,7 +407,10 @@ impl CommandHandler {
         };
 
         let command_module = &commands[host_id][command_id];
-        let host = self.host_manager.borrow().get_host(host_id);
+        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
+            log::error!("Host '{}' not found", host_id);
+            return ShellCommand::new();
+        };
         let connector_messages = get_command_connector_messages(&host, command_module, parameters).unwrap_or_else(|error| {
             log::error!("Command failed: {}", error);
             Vec::new()
@@ -438,7 +450,10 @@ impl CommandHandler {
     }
 
     pub fn open_remote_text_editor(&self, host_id: &String, remote_file_path: &str) -> ShellCommand {
-        let host = self.host_manager.borrow().get_host(host_id);
+        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
+            log::error!("Host '{}' not found", host_id);
+            return ShellCommand::new();
+        };
         let mut command = self.remote_ssh_command(&host);
 
         if self.preferences.sudo_remote_editor {
@@ -459,7 +474,10 @@ impl CommandHandler {
         };
 
         let command = &commands[host_id][command_id];
-        let host = self.host_manager.borrow().get_host(host_id);
+        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
+            log::error!("Host '{}' not found", host_id);
+            return String::new();
+        };
 
         let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
             log::error!("Command failed: {}", error);
