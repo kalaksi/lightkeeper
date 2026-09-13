@@ -206,7 +206,10 @@ impl MonitorManager {
             .filter(|(host_id_key, _)| &host_id == host_id_key && !host_id_key.starts_with("_"));
 
         for (host_name, monitor_collection) in monitors_for_host {
-            let mut host = self.host_manager.borrow().get_host(host_name);
+            let Some(mut host) = self.host_manager.borrow().try_get_host(host_name) else {
+                log::error!("Host '{}' not found", host_name);
+                continue;
+            };
 
             if let Err(error) = host.resolve_ip() {
                 // TODO: show in UI?
@@ -293,13 +296,19 @@ impl MonitorManager {
         };
 
         let certificate_monitors = monitors[CERT_MONITOR_HOST_ID].iter().collect();
-        let cert_monitor_host = self.host_manager.borrow().get_host(&CERT_MONITOR_HOST_ID.to_string());
+        let Some(cert_monitor_host) = self.host_manager.borrow().try_get_host(CERT_MONITOR_HOST_ID) else {
+            log::error!("Host '{}' not found", CERT_MONITOR_HOST_ID);
+            return Vec::new();
+        };
         self.refresh_monitors(cert_monitor_host, certificate_monitors)
     }
 
     /// Returns the invocation IDs of the refresh operations.
     pub fn refresh_monitors_of_category(&mut self, host_id: &str, category: &str) -> Vec<u64> {
-        let host = self.host_manager.borrow().get_host(host_id);
+        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
+            log::error!("Host '{}' not found", host_id);
+            return Vec::new();
+        };
         let Ok(monitors) = self.monitors.lock() else {
             self.send_state_update(StateUpdateMessage::fatal_error());
             return Vec::new();
@@ -320,7 +329,10 @@ impl MonitorManager {
     /// Refresh by monitor ID.
     /// Returns the invocation IDs of the refresh operations.
     pub fn refresh_monitors_by_id(&mut self, host_id: &String, monitor_id: &String) -> Vec<u64> {
-        let host = self.host_manager.borrow().get_host(host_id);
+        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
+            log::error!("Host '{}' not found", host_id);
+            return Vec::new();
+        };
 
         let Ok(monitors) = self.monitors.lock() else {
             self.send_state_update(StateUpdateMessage::fatal_error());
