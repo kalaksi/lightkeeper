@@ -8,10 +8,6 @@ use std::fmt;
 use serde::{Serialize, Deserialize};
 use crate::enums::Criticality;
 
-fn is_false(value: &bool) -> bool {
-    !*value
-}
-
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DataPoint {
     /// With multivalue, value can be a composite result/value of all of the values.
@@ -32,7 +28,7 @@ pub struct DataPoint {
     // TODO: rename to children?
     pub multivalue: Vec<DataPoint>,
     pub criticality: Criticality,
-    #[serde(default, skip_serializing_if = "is_false")]
+    #[serde(default)]
     pub acknowledged: bool,
 }
 

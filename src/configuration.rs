@@ -106,14 +106,14 @@ impl Default for EditorPreferences {
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Eq, Default)]
 #[serde(deny_unknown_fields)]
 pub struct CoreConnectionProfile {
-    /// SSH host or OpenSSH config Host alias.
+    /// Resolvable SSH hostname or IP (libssh2 does not apply OpenSSH `Host` aliases).
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub host: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
-    /// Override for the remote core socket path; None uses the core default.
+    /// Optional remote core socket path. When unset, discovered over SSH.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remote_socket_path: Option<String>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
@@ -451,9 +451,9 @@ impl Configuration {
             return Err(io::Error::new(io::ErrorKind::Other, error_message));
         }
 
-        let mut secrets = secrets_manager::SecretsManager::new();
-
         // Merge config groups to form the final, effective config.
+        // Keyring placeholders are left unresolved here; call resolve_secrets_in_hosts before
+        // runtime connector setup so config/UI paths do not hold plaintext secrets.
         for (_, host_config) in hosts.hosts.iter_mut() {
             host_config.effective = Self::get_effective_group_config(host_config, &all_groups.groups);
 
@@ -475,8 +475,6 @@ impl Configuration {
             host_config.monitors = BTreeMap::new();
             host_config.connectors = BTreeMap::new();
             host_config.settings = Vec::new();
-
-            Self::resolve_secrets_in_effective_config(&mut host_config.effective, &mut secrets);
         }
 
         for (group_id, group) in &all_groups.groups {
@@ -493,6 +491,14 @@ impl Configuration {
         }
 
         Ok((main_config, hosts, all_groups))
+    }
+
+    /// Resolves keyring placeholders in `hosts.*.effective` for runtime connector use.
+    pub fn resolve_secrets_in_hosts(hosts: &mut Hosts) {
+        let mut secrets = secrets_manager::SecretsManager::new();
+        for host_config in hosts.hosts.values_mut() {
+            Self::resolve_secrets_in_effective_config(&mut host_config.effective, &mut secrets);
+        }
     }
 
     fn resolve_secrets_in_effective_config(

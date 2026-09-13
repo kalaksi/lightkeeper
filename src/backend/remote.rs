@@ -4,7 +4,7 @@
  */
 
 use std::collections::HashMap;
-use std::io;
+use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -12,9 +12,12 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use ssh2;
+
 use super::api::{CommandBackend, ConfigBackend};
 use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
 use super::remote_config::RemoteConfigBackend;
+use super::ssh_transport::Ssh2DirectStreamLocalTransport;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
@@ -25,6 +28,57 @@ use crate::remote_core::protocol::{
     read_message, write_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION,
 };
 use crate::utils::sha256;
+
+enum CoreClientStream {
+    Unix(UnixStream),
+    Ssh(ssh2::Channel),
+}
+
+impl CoreClientStream {
+    fn try_clone(&self) -> Result<Self, String> {
+        match self {
+            CoreClientStream::Unix(stream) => stream
+                .try_clone()
+                .map(CoreClientStream::Unix)
+                .map_err(|error| error.to_string()),
+            CoreClientStream::Ssh(channel) => Ok(CoreClientStream::Ssh(channel.clone())),
+        }
+    }
+
+    fn set_unix_read_timeout(&self, timeout: Option<Duration>) -> Result<(), String> {
+        if let CoreClientStream::Unix(stream) = self {
+            stream
+                .set_read_timeout(timeout)
+                .map_err(|error| error.to_string())?;
+        }
+        Ok(())
+    }
+}
+
+impl Read for CoreClientStream {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        match self {
+            CoreClientStream::Unix(stream) => stream.read(buf),
+            CoreClientStream::Ssh(channel) => channel.read(buf),
+        }
+    }
+}
+
+impl Write for CoreClientStream {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self {
+            CoreClientStream::Unix(stream) => stream.write(buf),
+            CoreClientStream::Ssh(channel) => channel.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match self {
+            CoreClientStream::Unix(stream) => stream.flush(),
+            CoreClientStream::Ssh(channel) => channel.flush(),
+        }
+    }
+}
 
 //
 // CommandBackend client for lightkeeper-core (unix socket).
@@ -169,11 +223,60 @@ fn deliver_response(
     }
 }
 
+fn perform_handshake(writer: &mut CoreClientStream, reader: &mut CoreClientStream) -> Result<(), String> {
+    write_message(writer, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION })
+        .map_err(|error| error.to_string())?;
+
+    loop {
+        match read_message::<ServerMessage, _>(reader) {
+            Ok(ServerMessage::Connect { protocol_version }) => {
+                if protocol_version != PROTOCOL_VERSION {
+                    return Err(format!(
+                        "Protocol mismatch: expected {}, got {}",
+                        PROTOCOL_VERSION, protocol_version,
+                    ));
+                }
+                return Ok(());
+            }
+            Ok(ServerMessage::Error { code, message, .. }) => {
+                return Err(format!("{}: {}", code, message));
+            }
+            Ok(_) => {
+                return Err(String::from("Unexpected message during remote core handshake"));
+            }
+            Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
+                return Err(String::from("Remote core handshake timed out"));
+            }
+            Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => {
+                return Err(String::from("Connection closed during remote core handshake"));
+            }
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+}
+
+fn open_transport_stream(
+    profile: &configuration::CoreConnectionProfile,
+    socket_path: &PathBuf,
+    stopping: &AtomicBool,
+) -> Result<(Option<Ssh2DirectStreamLocalTransport>, CoreClientStream), String> {
+    if profile.is_configured() {
+        let transport = Ssh2DirectStreamLocalTransport::start(profile, stopping)?;
+        let stream = CoreClientStream::Ssh(transport.channel());
+        Ok((Some(transport), stream))
+    }
+    else {
+        let stream = UnixStream::connect(socket_path).map_err(|error| error.to_string())?;
+        Ok((None, CoreClientStream::Unix(stream)))
+    }
+}
+
 struct RemoteConnection {
     frontend_update_sender: Option<mpsc::Sender<frontend::UIUpdate>>,
-    writer: Option<Arc<Mutex<UnixStream>>>,
+    writer: Option<Arc<Mutex<CoreClientStream>>>,
     stop_sender: Option<mpsc::Sender<()>>,
     response_thread: Option<thread::JoinHandle<()>>,
+    transport: Option<Ssh2DirectStreamLocalTransport>,
 }
 
 pub struct RemoteCoreClient {
@@ -195,6 +298,7 @@ impl RemoteCoreClient {
                 writer: None,
                 stop_sender: None,
                 response_thread: None,
+                transport: None,
             })),
             pending_rpc: Arc::new(Mutex::new(HashMap::new())),
             next_request_id: Arc::new(AtomicU64::new(1)),
@@ -244,19 +348,102 @@ impl RemoteCoreClient {
         if self.connection.lock().unwrap().writer.is_some() {
             return Ok(());
         }
-        self.set_connection_state(CoreConnectionState::Handshaking);
-        let stream = match UnixStream::connect(&self.socket_path) {
-            Ok(stream) => stream,
+
+        self.stopping.store(false, Ordering::SeqCst);
+        let profile = self.profile();
+        if profile.is_configured() {
+            self.begin_connecting_ssh();
+        }
+        else {
+            self.set_connection_state(CoreConnectionState::Handshaking);
+        }
+
+        let (transport, stream) = match open_transport_stream(&profile, &self.socket_path, &self.stopping) {
+            Ok(result) => result,
             Err(error) => {
-                let message = error.to_string();
-                self.set_connection_failed(message.clone());
-                return Err(message);
+                self.set_connection_failed(error.clone());
+                return Err(error);
             }
         };
-        self.connect_stream(stream)
+        if let Some(ref transport_ref) = transport {
+            transport_ref.set_timeout_ms(REMOTE_HANDSHAKE_TIMEOUT.as_millis() as u32);
+        }
+        self.connection.lock().unwrap().transport = transport;
+
+        if let Err(error) = self.connect_core_stream(stream) {
+            if let Some(mut transport) = self.connection.lock().unwrap().transport.take() {
+                transport.stop();
+            }
+            return Err(error);
+        }
+        Ok(())
     }
 
-    pub fn connect_stream(&self, mut stream: UnixStream) -> Result<(), String> {
+    pub fn probe(&self) -> Result<(), String> {
+        if self.is_connected() {
+            return Ok(());
+        }
+
+        self.stopping.store(false, Ordering::SeqCst);
+        let profile = self.profile();
+        if profile.is_configured() {
+            self.begin_connecting_ssh();
+        }
+        else {
+            self.set_connection_state(CoreConnectionState::Handshaking);
+        }
+
+        let (mut transport, mut stream) = match open_transport_stream(&profile, &self.socket_path, &self.stopping)
+        {
+            Ok(result) => result,
+            Err(error) => {
+                self.set_connection_failed(error.clone());
+                return Err(error);
+            }
+        };
+        if let Some(ref transport_ref) = transport {
+            transport_ref.set_timeout_ms(REMOTE_HANDSHAKE_TIMEOUT.as_millis() as u32);
+        }
+
+        let mut reader = match stream.try_clone() {
+            Ok(reader) => reader,
+            Err(error) => {
+                if let Some(transport) = transport.as_mut() {
+                    transport.stop();
+                }
+                self.set_connection_failed(error.clone());
+                return Err(error);
+            }
+        };
+        let _ = reader.set_unix_read_timeout(Some(REMOTE_HANDSHAKE_TIMEOUT));
+
+        let handshake_result = perform_handshake(&mut stream, &mut reader);
+        let _ = write_message(&mut stream, &ClientMessage::Disconnect);
+        if let Some(transport) = transport.as_mut() {
+            transport.stop();
+        }
+
+        match handshake_result {
+            Ok(()) => {
+                self.set_connection_state(CoreConnectionState::Disconnected);
+                Ok(())
+            }
+            Err(error) => {
+                self.set_connection_failed(error.clone());
+                Err(error)
+            }
+        }
+    }
+
+    pub fn cancel_connect(&self) {
+        self.stopping.store(true, Ordering::SeqCst);
+    }
+
+    pub fn connect_stream(&self, stream: UnixStream) -> Result<(), String> {
+        self.connect_core_stream(CoreClientStream::Unix(stream))
+    }
+
+    fn connect_core_stream(&self, mut stream: CoreClientStream) -> Result<(), String> {
         let frontend_update_sender = {
             let connection = match self.connection.lock() {
                 Ok(connection) => connection,
@@ -281,55 +468,35 @@ impl RemoteCoreClient {
 
         self.set_connection_state(CoreConnectionState::Handshaking);
 
-        let fail = |client: &RemoteCoreClient, message: String| -> Result<(), String> {
-            client.set_connection_failed(message.clone());
-            Err(message)
-        };
-
-        if let Err(error) = write_message(&mut stream, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION }) {
-            return fail(self, error.to_string());
+        if let Some(transport) = self.connection.lock().unwrap().transport.as_ref() {
+            transport.set_timeout_ms(REMOTE_HANDSHAKE_TIMEOUT.as_millis() as u32);
         }
 
         let mut reader = match stream.try_clone() {
             Ok(reader) => reader,
-            Err(error) => return fail(self, error.to_string()),
-        };
-        if let Err(error) = reader.set_read_timeout(Some(REMOTE_HANDSHAKE_TIMEOUT)) {
-            return fail(self, error.to_string());
-        }
-
-        loop {
-            match read_message::<ServerMessage, _>(&mut reader) {
-                Ok(ServerMessage::Connect { protocol_version }) => {
-                    if protocol_version != PROTOCOL_VERSION {
-                        return fail(
-                            self,
-                            format!(
-                                "Protocol mismatch: expected {}, got {}",
-                                PROTOCOL_VERSION, protocol_version,
-                            ),
-                        );
-                    }
-                    break;
-                }
-                Ok(ServerMessage::Error { code, message, .. }) => {
-                    return fail(self, format!("{}: {}", code, message));
-                }
-                Ok(_) => {
-                    return fail(self, String::from("Unexpected message during remote core handshake"));
-                }
-                Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
-                    return fail(self, String::from("Remote core handshake timed out"));
-                }
-                Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => {
-                    return fail(self, String::from("Connection closed during remote core handshake"));
-                }
-                Err(error) => return fail(self, error.to_string()),
+            Err(error) => {
+                let message = error.to_string();
+                self.set_connection_failed(message.clone());
+                return Err(message);
             }
+        };
+        if let Err(error) = reader.set_unix_read_timeout(Some(REMOTE_HANDSHAKE_TIMEOUT)) {
+            self.set_connection_failed(error.clone());
+            return Err(error);
         }
 
-        if let Err(error) = reader.set_read_timeout(Some(REMOTE_READ_TIMEOUT)) {
-            return fail(self, error.to_string());
+        if let Err(error) = perform_handshake(&mut stream, &mut reader) {
+            self.set_connection_failed(error.clone());
+            return Err(error);
+        }
+
+        if let Some(transport) = self.connection.lock().unwrap().transport.as_ref() {
+            transport.set_timeout_ms(REMOTE_READ_TIMEOUT.as_millis() as u32);
+        }
+        if let Err(error) = reader.set_unix_read_timeout(Some(REMOTE_READ_TIMEOUT)) {
+            let message = error;
+            self.set_connection_failed(message.clone());
+            return Err(message);
         }
 
         let writer = Arc::new(Mutex::new(stream));
@@ -345,10 +512,15 @@ impl RemoteCoreClient {
             let disconnect = |message: &str| {
                 ::log::error!("{}", message);
                 fail_all_pending_rpcs(&pending_rpc, RemoteErrorCode::Internal, message);
-                if let Ok(mut conn) = connection.lock() {
+                let transport = if let Ok(mut conn) = connection.lock() {
                     conn.writer = None;
                     conn.stop_sender = None;
+                    conn.transport.take()
                 }
+                else {
+                    None
+                };
+                drop(transport);
                 if !stopping.load(Ordering::SeqCst) {
                     if let Ok(mut status) = status.lock() {
                         status.set_failed(message);
@@ -424,13 +596,6 @@ impl RemoteCoreClient {
                             disconnect("Failed to deliver host update");
                             return;
                         }
-                    }
-                    ServerMessage::VerificationRequest(request) => {
-                        ::log::warn!(
-                            "Ignoring standalone verification request for {}: {}",
-                            request.source_id,
-                            request.message,
-                        );
                     }
                     ServerMessage::RefreshInvocationIds { request_id, invocation_ids } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::RefreshInvocationIds, || {
@@ -610,12 +775,14 @@ impl RemoteCoreClient {
         self.stopping.store(true, Ordering::SeqCst);
         fail_all_pending_rpcs(&self.pending_rpc, RemoteErrorCode::Internal, "Disconnected from remote core");
 
-        let (writer_opt, stop_sender_opt, thread_opt) = {
+        let (writer_opt, stop_sender_opt, thread_opt, transport_opt) = {
             let mut conn = self.connection.lock().unwrap();
-            let w = conn.writer.take();
-            let s = conn.stop_sender.take();
-            let t = conn.response_thread.take();
-            (w, s, t)
+            (
+                conn.writer.take(),
+                conn.stop_sender.take(),
+                conn.response_thread.take(),
+                conn.transport.take(),
+            )
         };
 
         if let Some(stop_sender) = stop_sender_opt {
@@ -633,6 +800,10 @@ impl RemoteCoreClient {
             if let Err(error) = response_thread.join() {
                 ::log::error!("Response thread failed: {:?}", error);
             }
+        }
+
+        if let Some(mut transport) = transport_opt {
+            transport.stop();
         }
 
         self.set_connection_state(CoreConnectionState::Disconnected);

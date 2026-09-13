@@ -825,7 +825,7 @@ impl CommandHandler {
     }
 
     pub fn has_file_changed(&self, host_id: &str, remote_file_path: &str, content_hash: &str) -> Result<bool, LkError> {
-        let local_path = self.cache_file_path_for_remote(host_id, remote_file_path);
+        let local_path = self.cache_file_path_for_remote(host_id, remote_file_path)?;
         match file_handler::read_file_metadata(&local_path) {
             Ok(metadata) => {
                 Ok(content_hash.to_ascii_lowercase() != metadata.remote_file_hash.to_ascii_lowercase())
@@ -834,9 +834,11 @@ impl CommandHandler {
         }
     }
 
-    pub fn cache_file_path_for_remote(&self, host_id: &str, remote_file_path: &str) -> String {
-        let host = self.host_manager.borrow().get_host(host_id);
-        file_handler::convert_to_local_paths(&host, remote_file_path).1
+    pub fn cache_file_path_for_remote(&self, host_id: &str, remote_file_path: &str) -> Result<String, LkError> {
+        let host = self.host_manager.borrow().try_get_host(host_id).ok_or_else(|| {
+            LkError::other(format!("Host '{}' not found", host_id))
+        })?;
+        Ok(file_handler::convert_to_local_paths(&host, remote_file_path).1)
     }
 
     fn remote_ssh_command(&self, host: &Host) -> ShellCommand {

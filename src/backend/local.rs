@@ -149,19 +149,19 @@ impl CommandBackend for LocalCommandBackend {
     }
 
     fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError> {
-        let path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
+        let path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path)?;
         self.command_handler
             .upload_file(&host_id.to_string(), &command_id.to_string(), &path)
     }
 
     fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError> {
-        let local_path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
+        let local_path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path)?;
         file_handler::write_file(&local_path, new_contents)?;
         Ok(())
     }
 
     fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) -> Result<(), LkError> {
-        let local_path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path);
+        let local_path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path)?;
         file_handler::remove_file(&local_path)?;
         Ok(())
     }

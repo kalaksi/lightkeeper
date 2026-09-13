@@ -158,10 +158,12 @@ impl HostManager {
 
     /// Get Host details by name. Panics if the host is not found.
     pub fn get_host(&self, host_name: &str) -> Host {
-        let hosts = self.hosts.lock().unwrap();
-        hosts.hosts.get(host_name)
-                   .unwrap_or_else(|| panic!("Host '{}' not found", host_name))
-                   .host.clone()
+        self.try_get_host(host_name)
+            .unwrap_or_else(|| panic!("Host '{}' not found", host_name))
+    }
+
+    pub fn try_get_host(&self, host_name: &str) -> Option<Host> {
+        self.hosts.lock().unwrap().hosts.get(host_name).map(|state| state.host.clone())
     }
 
     pub fn new_state_update_sender(&self) -> mpsc::Sender<StateUpdateMessage> {

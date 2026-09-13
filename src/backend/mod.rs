@@ -9,6 +9,7 @@ mod local;
 mod local_config;
 mod remote;
 mod remote_config;
+pub mod ssh_transport;
 
 pub use api::{CommandBackend, ConfigBackend, LocalBackendApi};
 pub use core_connection::{CoreConnectionState, CoreConnectionStatus};
