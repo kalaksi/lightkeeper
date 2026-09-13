@@ -152,4 +152,6 @@ pub enum ErrorKind {
     #[default]
     /// Other unspecified error.
     Other,
+    /// Runtime cannot continue; the process should exit.
+    Fatal,
 }
