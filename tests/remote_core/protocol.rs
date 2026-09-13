@@ -123,3 +123,56 @@ fn zero_and_oversized_frames_are_rejected() {
         Ok(_) => panic!("expected oversized frame to be rejected"),
     }
 }
+
+
+#[test]
+fn initial_state_roundtrip_works() {
+    use lightkeeper::frontend::DisplayData;
+    use std::collections::HashMap;
+
+    let message = ServerMessage::InitialState(DisplayData {
+        hosts: HashMap::new(),
+        all_monitor_names: vec![],
+        table_headers: vec![],
+    });
+    let mut buffer = Vec::new();
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ServerMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ServerMessage::InitialState(data) => assert!(data.hosts.is_empty()),
+        _ => panic!("expected InitialState"),
+    }
+}
+
+#[test]
+fn initial_state_with_hosts_roundtrip_works() {
+    use lightkeeper::configuration::Configuration;
+    use lightkeeper::remote_core::runtime::CoreRuntime;
+    use std::fs;
+    use std::path::Path;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("target").join(format!(
+        "lk-initial-state-{}-{}",
+        std::process::id(),
+        nanos
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    Configuration::write_initial_config(&dir).unwrap();
+    let config_dir = dir.to_string_lossy().to_string();
+    let (main_config, hosts, _groups) = Configuration::read(&config_dir).unwrap();
+    let runtime = CoreRuntime::new(&main_config, &hosts, config_dir).unwrap();
+    let display_data = runtime.core.host_manager.borrow().get_display_data();
+
+    let message = ServerMessage::InitialState(display_data);
+    let mut buffer = Vec::new();
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ServerMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ServerMessage::InitialState(_) => {}
+        _ => panic!("expected InitialState"),
+    }
+    let _ = fs::remove_dir_all(dir);
+}

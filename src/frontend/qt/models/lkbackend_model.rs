@@ -9,6 +9,7 @@ use std::{cell::RefCell, rc::Rc, sync::mpsc, thread};
 use qmetaobject::*;
 
 use crate::{
+    configuration::Configuration,
     connection_manager::ConnectionManager,
     frontend::{HostDisplayData, UIUpdate},
     host_manager,
@@ -245,11 +246,13 @@ impl LkBackend {
     fn reload(&mut self) {
         match self.config.borrow_mut().reload_configuration() {
             Ok((main_config, hosts_config)) => {
-                self.connection_manager.configure(&hosts_config);
-                let reset_hosts = self.host_manager.borrow_mut().configure(&hosts_config);
+                let mut runtime_hosts = hosts_config;
+                Configuration::resolve_secrets_in_hosts(&mut runtime_hosts);
+                self.connection_manager.configure(&runtime_hosts);
+                let reset_hosts = self.host_manager.borrow_mut().configure(&runtime_hosts);
                 self.command.borrow_mut().configure(
                     &main_config,
-                    &hosts_config,
+                    &runtime_hosts,
                     self.connection_manager.new_request_sender(),
                     self.host_manager.borrow().new_state_update_sender(),
                     self.new_update_sender(),

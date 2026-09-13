@@ -5,7 +5,7 @@
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::os::unix::net::{UnixListener, UnixStream};
+use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -62,8 +62,7 @@ fn bind_sets_socket_file_mode() {
     let dir = unique_temp_dir("core-sock-bind");
     let socket_path = dir.join("core.sock");
     socket::prepare_socket_path(&socket_path).unwrap();
-    let _listener = UnixListener::bind(&socket_path).unwrap();
-    socket::set_socket_permissions(&socket_path).unwrap();
+    let _listener = socket::bind_listener(&socket_path).unwrap();
 
     let mode = fs::metadata(&socket_path).unwrap().permissions().mode() & 0o777;
     assert_eq!(mode, SOCKET_FILE_MODE);

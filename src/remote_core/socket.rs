@@ -6,6 +6,7 @@
 use std::fs;
 use std::io;
 use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
+use std::os::unix::net::UnixListener;
 use std::path::Path;
 
 use crate::error::LkError;
@@ -23,6 +24,18 @@ pub fn prepare_socket_path(socket_path: &Path) -> Result<(), LkError> {
 
     remove_stale_socket(socket_path)?;
     Ok(())
+}
+
+/// Binds a Unix listener so the socket is created owner-only (no bind-then-chmod race).
+pub fn bind_listener(socket_path: &Path) -> io::Result<UnixListener> {
+    // 0777 & !0177 = 0600 for the socket inode at creation time.
+    let old_umask = unsafe { libc::umask(0o177) };
+    let bind_result = UnixListener::bind(socket_path);
+    unsafe { libc::umask(old_umask) };
+
+    let listener = bind_result?;
+    set_socket_permissions(socket_path)?;
+    Ok(listener)
 }
 
 pub fn set_socket_permissions(socket_path: &Path) -> io::Result<()> {
