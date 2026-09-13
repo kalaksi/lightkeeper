@@ -17,17 +17,19 @@ LightkeeperDialog {
     id: root
     title: "Lightkeeper Core"
     implicitWidth: 560
-    implicitHeight: 420
+    implicitHeight: 480
     standardButtons: Dialog.Close
 
     property string statusText: ""
     property string errorText: ""
+    property string probeSummary: ""
     property bool busy: false
     property bool usingRemote: false
 
     onOpened: {
         root.loadProfile()
         root.refreshStatus()
+        root.refreshProbeSummary()
     }
 
     Connections {
@@ -35,6 +37,7 @@ LightkeeperDialog {
 
         function onCoreConnectionChanged() {
             root.refreshStatus()
+            root.refreshProbeSummary()
         }
     }
 
@@ -86,19 +89,67 @@ LightkeeperDialog {
         }
     }
 
+    function refreshProbeSummary() {
+        let probe = LK.getCoreHostProbe()
+        if (!probe || !probe.architecture) {
+            root.probeSummary = ""
+            return
+        }
+
+        let lines = []
+        lines.push(
+            "Platform: " + (probe.osFlavor || probe.os || "Unknown")
+            + " " + (probe.osVersion || "")
+            + " / " + (probe.architecture || "Unknown")
+        )
+        if (probe.socketPath) {
+            lines.push("Socket: " + probe.socketPath)
+        }
+        else {
+            lines.push("Socket: not present")
+        }
+        if (probe.binaryPath) {
+            lines.push("Binary: " + probe.binaryPath)
+        }
+        else {
+            lines.push("Binary: lightkeeper-core not found (install will be offered later)")
+        }
+        root.probeSummary = lines.join("\n")
+    }
+
     function runTest() {
         root.busy = true
         root.errorText = ""
         root.saveProfile()
-        let error = LK.probeCore()
+        let error = LK.probeCoreHost()
         root.busy = false
+        root.refreshProbeSummary()
         if (error === "") {
-            root.statusText = "Probe succeeded"
-            root.errorText = ""
+            let probe = LK.getCoreHostProbe()
+            if (probe.socketPath) {
+                let coreError = LK.probeCore()
+                if (coreError === "") {
+                    root.statusText = "Probe succeeded (SSH + core handshake)"
+                    root.errorText = ""
+                }
+                else {
+                    root.statusText = "SSH ok; core socket present but handshake failed"
+                    root.errorText = coreError
+                }
+            }
+            else if (probe.binaryPath) {
+                root.statusText = "SSH ok; binary found but core socket is missing (is the service running?)"
+                root.errorText = ""
+            }
+            else {
+                root.statusText = "SSH ok; lightkeeper-core is not installed on the admin host"
+                root.errorText = ""
+            }
         }
         else {
             root.statusText = "Probe failed"
             root.errorText = error
+            root.probeSummary = ""
         }
     }
 
@@ -151,6 +202,7 @@ LightkeeperDialog {
                 placeholderText: "admin-host.example.com"
                 placeholderTextColor: Theme.textColorDark
                 enabled: !root.busy
+                onTextChanged: root.probeSummary = ""
             }
 
             Label {
@@ -167,6 +219,7 @@ LightkeeperDialog {
                     bottom: 1
                     top: 65535
                 }
+                onTextChanged: root.probeSummary = ""
             }
 
             Label {
@@ -179,6 +232,7 @@ LightkeeperDialog {
                 placeholderText: "current user"
                 placeholderTextColor: Theme.textColorDark
                 enabled: !root.busy
+                onTextChanged: root.probeSummary = ""
             }
         }
 
@@ -220,6 +274,13 @@ LightkeeperDialog {
         NormalText {
             Layout.fillWidth: true
             text: root.statusText
+            wrapMode: Text.WordWrap
+        }
+
+        NormalText {
+            Layout.fillWidth: true
+            visible: root.probeSummary.length > 0
+            text: root.probeSummary
             wrapMode: Text.WordWrap
         }
 

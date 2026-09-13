@@ -617,6 +617,8 @@ Module {
         }
         Method { name: "stop" }
         Method { name: "probeCore"; type: "string" }
+        Method { name: "probeCoreHost"; type: "string" }
+        Method { name: "getCoreHostProbe"; type: "QVariantMap" }
         Method { name: "connectCore"; type: "string" }
         Method { name: "disconnectCore" }
         Method { name: "getCoreConnectionState"; type: "string" }
