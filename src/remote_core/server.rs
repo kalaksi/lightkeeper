@@ -13,7 +13,7 @@ use std::thread;
 use std::time::Duration;
 
 use crate::configuration::{Configuration, Groups, Hosts};
-use crate::error::LkError;
+use crate::error::{ErrorKind, LkError};
 use crate::remote_core::protocol::{read_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION};
 use crate::remote_core::runtime::CoreRuntime;
 use crate::remote_core::session::RemoteSession;
@@ -417,18 +417,31 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
                         log::error!("Failed to restore configuration backups: {}", restore_error);
                     }
-                    match Configuration::read(&runtime.config_dir) {
+                    let recovered = match Configuration::read(&runtime.config_dir) {
                         Ok((main_read, hosts_read, _groups)) => {
                             match crate::initialize_core(&main_read, &hosts_read, module_factory) {
-                                Ok(core) => runtime.core = core,
+                                Ok(core) => {
+                                    runtime.core = core;
+                                    true
+                                }
                                 Err(recover_error) => {
                                     log::error!("Failed to recover previous core runtime: {}", recover_error);
+                                    false
                                 }
                             }
                         }
                         Err(read_error) => {
                             log::error!("Failed to read configuration while recovering: {}", read_error);
+                            false
                         }
+                    };
+                    if !recovered {
+                        let message = format!(
+                            "Unrecoverable core runtime after config update failure: {}",
+                            error,
+                        );
+                        let _ = session.send_request_error(request_id, RemoteErrorCode::Internal, &message);
+                        return Err(LkError::new(ErrorKind::Fatal, message));
                     }
                     session.start_update_stream(runtime.new_update_receiver());
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
@@ -605,6 +618,9 @@ impl CoreServer {
             let session_active = self.listener.session_active_flag();
             if let Err(error) = run_claimed_remote_client_session(stream, &mut self.runtime, &session_active) {
                 log::error!("Client session failed: {}", error);
+                if error.kind == ErrorKind::Fatal {
+                    return Err(error);
+                }
             }
         }
     }
