@@ -100,6 +100,18 @@ impl HostDataManagerModel {
         result
     }
 
+    pub fn clear_hosts(&mut self) {
+        self.display_data.hosts.clear();
+        self.update_criticality_counts();
+    }
+
+    pub fn set_hosts_config(&mut self, hosts_config: configuration::Hosts) {
+        self.hosts_config = hosts_config;
+    }
+
+    pub fn set_configuration_preferences(&mut self, preferences: configuration::Preferences) {
+        self.configuration_preferences = preferences;
+    }
 
     pub fn process_update(&mut self, new_display_data: frontend::HostDisplayData) {
         // HostDataModel cannot be passed between threads so parsing happens here.

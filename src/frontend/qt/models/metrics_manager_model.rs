@@ -72,6 +72,10 @@ impl MetricsManagerModel {
         }
     }
 
+    pub fn set_hosts_config(&mut self, hosts_config: configuration::Hosts) {
+        self.hosts_config = hosts_config;
+    }
+
     pub fn insert_data_point(&mut self, host_id: &str, monitor_id: &str, data_point: DataPoint) {
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             let current_unix_ms = if let Ok(duration) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {

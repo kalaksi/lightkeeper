@@ -4,13 +4,17 @@
  */
 
 extern crate qmetaobject;
-use std::{cell::RefCell, rc::Rc, sync::mpsc, sync::Arc, thread};
+use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::mpsc, sync::Arc, thread};
 
 use qmetaobject::*;
 
 use crate::{
+    backend::{
+        CoreConnectionState, RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient,
+    },
     configuration::Configuration,
     connection_manager::ConnectionManager,
+    file_handler,
     frontend::{HostDisplayData, UIUpdate},
     host_manager,
     module::monitoring::{DataPoint, MonitoringData},
@@ -45,6 +49,13 @@ pub struct LkBackend {
     acknowledgeMonitorEntry: qt_method!(fn(&mut self, host_id: QString, monitor_id: QString, entry_id: QString, acknowledged: bool) -> bool),
     stop: qt_method!(fn(&mut self)),
 
+    probeCore: qt_method!(fn(&mut self) -> QString),
+    connectCore: qt_method!(fn(&mut self) -> QString),
+    disconnectCore: qt_method!(fn(&mut self)),
+    getCoreConnectionState: qt_method!(fn(&self) -> QString),
+    getCoreConnectionError: qt_method!(fn(&self) -> QString),
+    isUsingRemoteCore: qt_method!(fn(&self) -> bool),
+
     //
     // Signals
     //
@@ -52,6 +63,7 @@ pub struct LkBackend {
     reloaded: qt_signal!(error: QString, reset_hosts: QStringList),
     // Somewhere, a panic has occurred and app needs to be reloaded.
     crashed: qt_signal!(),
+    coreConnectionChanged: qt_signal!(),
 
     //
     // Private properties
@@ -64,6 +76,8 @@ pub struct LkBackend {
     connection_manager: ConnectionManager,
     host_manager: Rc<RefCell<host_manager::HostManager>>,
     skip_connection_processing: bool,
+    remote_client: Option<Arc<RemoteCoreClient>>,
+    using_remote: bool,
 }
 
 #[allow(non_snake_case)]
@@ -162,6 +176,13 @@ impl LkBackend {
             }
         });
 
+        let self_ptr = QPointer::from(&*self);
+        let handle_core_connection_change = qmetaobject::queued_callback(move |_| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned.borrow().coreConnectionChanged();
+            }
+        });
+
         let thread = std::thread::spawn(move || {
             loop {
                 match update_receiver.recv() {
@@ -203,6 +224,7 @@ impl LkBackend {
                             UIUpdate::Chart(metrics) => process_chart_update(metrics),
                             UIUpdate::FatalError() => {
                                 handle_crash(());
+                                handle_core_connection_change(());
                             },
                             UIUpdate::Stop() => {
                                 ::log::debug!("Gracefully exiting UI state receiver thread");
@@ -225,6 +247,125 @@ impl LkBackend {
         self.update_sender_prototype.clone().unwrap()
     }
 
+    fn local_core_socket_path() -> PathBuf {
+        file_handler::get_data_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("core.sock")
+    }
+
+    fn detach_local_producers(&mut self) {
+        self.command.borrow_mut().stop();
+        self.host_manager.borrow_mut().stop();
+        self.connection_manager.stop();
+    }
+
+    fn sync_models_from_config(&mut self) {
+        let main_config = self.config.borrow().main_config_ref().clone();
+        let hosts_config = self.config.borrow().hosts_config().clone();
+        self.command.borrow_mut().set_configuration(main_config.clone());
+        self.hosts.borrow_mut().set_hosts_config(hosts_config.clone());
+        self.hosts.borrow_mut().set_configuration_preferences(main_config.preferences.clone());
+        self.metrics.borrow_mut().set_hosts_config(hosts_config);
+    }
+
+    fn install_remote_backends(&mut self, client: Arc<RemoteCoreClient>) -> Result<(), String> {
+        let config_backend = Box::new(RemoteConfigBackend::new(client.clone()));
+        self.config.borrow_mut().set_config_backend(config_backend)?;
+        self.command.borrow_mut().set_backend(Box::new(RemoteCommandBackend::new(client)));
+        self.sync_models_from_config();
+        Ok(())
+    }
+
+    fn probeCore(&mut self) -> QString {
+        let profile = self.config.borrow().core_connection_profile();
+        if !profile.is_configured() {
+            return QString::from("SSH host is required");
+        }
+
+        let client = RemoteCoreClient::new(Self::local_core_socket_path());
+        client.set_profile(profile);
+        match client.probe() {
+            Ok(()) => QString::from(""),
+            Err(error) => QString::from(error),
+        }
+    }
+
+    fn connectCore(&mut self) -> QString {
+        let profile = self.config.borrow().core_connection_profile();
+        if !profile.is_configured() {
+            return QString::from("SSH host is required");
+        }
+
+        // Validate reachability before tearing down the local backend.
+        if !self.using_remote {
+            let probe_client = RemoteCoreClient::new(Self::local_core_socket_path());
+            probe_client.set_profile(profile.clone());
+            if let Err(error) = probe_client.probe() {
+                self.coreConnectionChanged();
+                return QString::from(error);
+            }
+            self.detach_local_producers();
+            self.using_remote = true;
+        }
+        else if let Some(client) = &self.remote_client {
+            client.stop_connection();
+        }
+
+        let client = Arc::new(RemoteCoreClient::new(Self::local_core_socket_path()));
+        client.set_profile(profile);
+        client.set_frontend_update_sender(self.new_update_sender());
+
+        if let Err(error) = client.connect() {
+            self.remote_client = Some(client);
+            self.hosts.borrow_mut().clear_hosts();
+            self.coreConnectionChanged();
+            self.reloaded(QString::from(error.clone()), QStringList::default());
+            return QString::from(error);
+        }
+
+        if let Err(error) = self.install_remote_backends(client.clone()) {
+            client.stop_connection();
+            self.remote_client = Some(client);
+            self.coreConnectionChanged();
+            return QString::from(error);
+        }
+
+        self.hosts.borrow_mut().clear_hosts();
+        self.remote_client = Some(client);
+        self.coreConnectionChanged();
+        self.reloaded(QString::from(""), QStringList::default());
+        QString::from("")
+    }
+
+    fn disconnectCore(&mut self) {
+        if let Some(client) = &self.remote_client {
+            client.stop_connection();
+        }
+        self.hosts.borrow_mut().clear_hosts();
+        self.coreConnectionChanged();
+        self.reloaded(QString::from(""), QStringList::default());
+    }
+
+    fn getCoreConnectionState(&self) -> QString {
+        let state = match &self.remote_client {
+            Some(client) => client.connection_state(),
+            None if self.using_remote => CoreConnectionState::Disconnected,
+            None => CoreConnectionState::Disconnected,
+        };
+        QString::from(state.to_string())
+    }
+
+    fn getCoreConnectionError(&self) -> QString {
+        match &self.remote_client {
+            Some(client) => QString::from(client.last_error().unwrap_or_default()),
+            None => QString::from(""),
+        }
+    }
+
+    fn isUsingRemoteCore(&self) -> bool {
+        self.using_remote
+    }
+
     fn acknowledgeMonitorEntry(&mut self, host_id: QString, monitor_id: QString, entry_id: QString, acknowledged: bool) -> bool {
         let host = host_id.to_string();
         let monitor = monitor_id.to_string();
@@ -239,13 +380,24 @@ impl LkBackend {
             return false;
         };
 
-        self.host_manager.borrow().apply_monitor_acknowledged(&host, &monitor, host_settings);
+        if !self.using_remote {
+            self.host_manager.borrow().apply_monitor_acknowledged(&host, &monitor, host_settings);
+        }
         true
     }
 
     fn reload(&mut self) {
         match self.config.borrow_mut().reload_configuration() {
             Ok((main_config, hosts_config)) => {
+                if self.using_remote {
+                    self.command.borrow_mut().set_configuration(main_config.clone());
+                    self.hosts.borrow_mut().set_hosts_config(hosts_config.clone());
+                    self.hosts.borrow_mut().set_configuration_preferences(main_config.preferences.clone());
+                    self.metrics.borrow_mut().set_hosts_config(hosts_config);
+                    self.reloaded(QString::from(""), QStringList::default());
+                    return;
+                }
+
                 let mut runtime_hosts = hosts_config;
                 Configuration::resolve_secrets_in_hosts(
                     &mut runtime_hosts,
@@ -281,6 +433,10 @@ impl LkBackend {
     }
 
     pub fn stop(&mut self) {
+        if let Some(client) = &self.remote_client {
+            client.stop_connection();
+        }
+
         if let Some(thread) = self.update_receiver_thread.take() {
             if let Err(error) = self.new_update_sender().send(UIUpdate::Stop()) {
                 ::log::error!("Failed to send stop signal to UI state receiver: {}", error);
@@ -292,8 +448,10 @@ impl LkBackend {
         }
 
         self.command.borrow_mut().stop();
-        self.host_manager.borrow_mut().stop();
-        self.connection_manager.stop();
+        if !self.using_remote {
+            self.host_manager.borrow_mut().stop();
+            self.connection_manager.stop();
+        }
         self.metrics.borrow_mut().stop();
     }
 }

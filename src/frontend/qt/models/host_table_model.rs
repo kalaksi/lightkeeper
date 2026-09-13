@@ -118,7 +118,11 @@ impl HostTableModel {
         }
 
         let Some(host_index) = self.host_row_map.get(&host_id).copied() else {
-            // Not currently visible (filtered out or not yet in the table).
+            // New or filtered-out host (e.g. remote InitialState) — refresh cached data and rows.
+            self.i_display_data.hosts.insert(host_id, host_display_data);
+            self.begin_reset_model();
+            self.update_row_data();
+            self.end_reset_model();
             return;
         };
 

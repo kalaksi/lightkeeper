@@ -62,6 +62,8 @@ pub struct ConfigManagerModel {
 
     getSavedCoreAddresses: qt_method!(fn(&self) -> QStringList),
     addSavedCoreAddress: qt_method!(fn(&self, address: QString)),
+    getCoreConnection: qt_method!(fn(&self) -> QVariantMap),
+    setCoreConnection: qt_method!(fn(&self, profile: QVariantMap)),
 
     //
     // Host configuration
@@ -172,12 +174,28 @@ impl ConfigManagerModel {
     }
 
     pub fn set_config_backend(&mut self, backend: Box<dyn ConfigBackend>) -> Result<(), String> {
-        let (main_config, hosts_config, groups_config) = backend.get_config()?;
+        // Desktop-owned SSH profile for reaching the admin-host core must not be replaced by
+        // the remote core's preferences.
+        let desktop_core_connection = self.main_config.preferences.core_connection.clone();
+        let (mut main_config, hosts_config, groups_config) = backend.get_config()?;
+        main_config.preferences.core_connection = desktop_core_connection;
         self.main_config = main_config;
         self.hosts_config = hosts_config;
         self.groups_config = groups_config;
         self.config_backend = Some(backend);
         Ok(())
+    }
+
+    pub fn hosts_config(&self) -> &Hosts {
+        &self.hosts_config
+    }
+
+    pub fn main_config_ref(&self) -> &Configuration {
+        &self.main_config
+    }
+
+    pub fn core_connection_profile(&self) -> configuration::CoreConnectionProfile {
+        self.main_config.preferences.core_connection.clone()
     }
 
     pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts), LkError> {
@@ -333,6 +351,45 @@ impl ConfigManagerModel {
         {
             self.error(QString::from(error.to_string()));
         }
+    }
+
+    fn getCoreConnection(&self) -> QVariantMap {
+        let profile = &self.main_config.preferences.core_connection;
+        let mut map = QVariantMap::default();
+        map.insert("host".into(), QString::from(profile.host.clone()).into());
+        map.insert(
+            "port".into(),
+            QString::from(profile.port.map(|port| port.to_string()).unwrap_or_default()).into(),
+        );
+        map.insert(
+            "username".into(),
+            QString::from(profile.username.clone().unwrap_or_default()).into(),
+        );
+        map.insert(
+            "remoteSocketPath".into(),
+            QString::from(profile.remote_socket_path.clone().unwrap_or_default()).into(),
+        );
+        map.insert("autoConnect".into(), profile.auto_connect.into());
+        map
+    }
+
+    fn setCoreConnection(&mut self, profile_map: QVariantMap) {
+        let mut profile = core_connection_from_variant_map(&profile_map);
+        // Keep existing auto-connect until startup wiring lands.
+        profile.auto_connect = self.main_config.preferences.core_connection.auto_connect;
+        self.main_config.preferences.core_connection = profile.clone();
+        if let Err(error) = self.persist_desktop_core_connection(&profile) {
+            self.error(QString::from(error));
+        }
+    }
+
+    fn persist_desktop_core_connection(
+        &self,
+        profile: &configuration::CoreConnectionProfile,
+    ) -> Result<(), String> {
+        let (mut local_main, _, _) = Configuration::read(&self.config_dir).map_err(|error| error.to_string())?;
+        local_main.preferences.core_connection = profile.clone();
+        Configuration::write_main_config(&self.config_dir, &local_main).map_err(|error| error.to_string())
     }
 
     fn showStatusBar(&self) -> bool {
@@ -1186,4 +1243,39 @@ struct ModuleSetting {
     /// Whether the setting is enabled in the group baseline.
     #[serde(rename = "inheritedEnabled", default)]
     pub inherited_enabled: bool,
+}
+
+fn core_connection_from_variant_map(map: &QVariantMap) -> configuration::CoreConnectionProfile {
+    let host = map.value("host".into(), QString::from("").into()).to_qbytearray().to_string();
+    let port_text = map.value("port".into(), QString::from("").into()).to_qbytearray().to_string();
+    let port = port_text.parse::<u16>().ok().filter(|port| *port > 0);
+    let username_text = map
+        .value("username".into(), QString::from("").into())
+        .to_qbytearray()
+        .to_string();
+    let username = if username_text.is_empty() {
+        None
+    }
+    else {
+        Some(username_text)
+    };
+    let socket_text = map
+        .value("remoteSocketPath".into(), QString::from("").into())
+        .to_qbytearray()
+        .to_string();
+    let remote_socket_path = if socket_text.is_empty() {
+        None
+    }
+    else {
+        Some(socket_text)
+    };
+
+    configuration::CoreConnectionProfile {
+        host,
+        port,
+        username,
+        remote_socket_path,
+        transport: Default::default(),
+        auto_connect: map.value("autoConnect".into(), false.into()).to_bool(),
+    }
 }
