@@ -61,5 +61,6 @@ fn main() {
 
     if let Err(error) = CoreServer::start(socket_path, runtime) {
         log::error!("Core server stopped: {}", error);
+        std::process::exit(1);
     }
 }
