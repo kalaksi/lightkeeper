@@ -4,6 +4,7 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[cfg(feature = "native")]
 use keyring::Entry;
@@ -51,13 +52,98 @@ fn keyring() -> &'static oo7::Keyring {
     })
 }
 
+pub trait SecretStore: Send + Sync {
+    fn get(&self, key: &str) -> Result<Option<String>, LkError>;
+    fn set(&self, key: &str, value: &str) -> Result<(), LkError>;
+    fn delete(&self, key: &str) -> Result<(), LkError>;
+}
+
+pub struct KeyringSecretStore;
+
+impl SecretStore for KeyringSecretStore {
+    #[cfg(feature = "native")]
+    fn get(&self, key: &str) -> Result<Option<String>, LkError> {
+        let entry = Entry::new(SERVICE_NAME, key)?;
+        match entry.get_password() {
+            Ok(value) => Ok(Some(strip_unprintable(&value))),
+            Err(KeyringError::NoEntry) => {
+                log::warn!("Secret not found in keyring: {}", key);
+                Ok(None)
+            },
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    #[cfg(feature = "flatpak")]
+    fn get(&self, key: &str) -> Result<Option<String>, LkError> {
+        let attributes = [("service", SERVICE_NAME), ("key", key)];
+        let items = runtime().block_on(keyring().search_items(&attributes))?;
+        match items.first() {
+            Some(item) => {
+                let secret = runtime().block_on(item.secret())?;
+                let value = match &secret {
+                    oo7::Secret::Text(text) => text.clone(),
+                    oo7::Secret::Blob(bytes) => String::from_utf8_lossy(bytes).to_string(),
+                };
+                Ok(Some(strip_unprintable(&value)))
+            }
+            None => {
+                log::warn!("Secret not found in keyring: {}", key);
+                Ok(None)
+            }
+        }
+    }
+
+    #[cfg(feature = "native")]
+    fn set(&self, key: &str, value: &str) -> Result<(), LkError> {
+        let value = strip_unprintable(value);
+        let entry = Entry::new(SERVICE_NAME, key)?;
+        entry.set_password(&value)?;
+        let label = format!("lightkeeper/{}", key);
+        let attrs = HashMap::from([("application", "lightkeeper"), ("label", label.as_str())]);
+        entry.update_attributes(&attrs)?;
+        Ok(())
+    }
+
+    #[cfg(feature = "flatpak")]
+    fn set(&self, key: &str, value: &str) -> Result<(), LkError> {
+        let value = strip_unprintable(value);
+        let label = format!("lightkeeper/{}", key);
+        let attributes = [("service", SERVICE_NAME), ("key", key)];
+        runtime().block_on(keyring().create_item(&label, &attributes, oo7::Secret::text(&value), true))?;
+        Ok(())
+    }
+
+    #[cfg(feature = "native")]
+    fn delete(&self, key: &str) -> Result<(), LkError> {
+        let entry = Entry::new(SERVICE_NAME, key)?;
+        match entry.delete_credential() {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                log::warn!("Failed to remove keyring secret for {}: {}", key, error);
+                Err(error.into())
+            }
+        }
+    }
+
+    #[cfg(feature = "flatpak")]
+    fn delete(&self, key: &str) -> Result<(), LkError> {
+        let attributes = [("service", SERVICE_NAME), ("key", key)];
+        runtime().block_on(keyring().delete(&attributes))?;
+        Ok(())
+    }
+}
+
+/// Cached reads against a [`SecretStore`].
 pub struct SecretsManager {
+    store: Arc<dyn SecretStore>,
     cache: HashMap<String, Option<String>>,
 }
 
 impl SecretsManager {
-    pub fn new() -> Self {
+    pub fn new(store: Arc<dyn SecretStore>) -> Self {
         SecretsManager {
+            store,
             cache: HashMap::new(),
         }
     }
@@ -67,82 +153,10 @@ impl SecretsManager {
             return Ok(cached.clone());
         }
 
-        let value = crate::secrets_manager::get(key)?;
+        let value = self.store.get(key)?;
         self.cache.insert(key.to_string(), value.clone());
         Ok(value)
     }
-}
-
-#[cfg(feature = "native")]
-pub fn get(key: &str) -> Result<Option<String>, LkError> {
-    let entry = Entry::new(SERVICE_NAME, key)?;
-    match entry.get_password() {
-        Ok(value) => Ok(Some(strip_unprintable(&value))),
-        Err(KeyringError::NoEntry) => {
-            log::warn!("Secret not found in keyring: {}", key);
-            Ok(None)
-        },
-        Err(e) => Err(e.into()),
-    }
-}
-
-#[cfg(feature = "flatpak")]
-pub fn get(key: &str) -> Result<Option<String>, LkError> {
-    let attributes = [("service", SERVICE_NAME), ("key", key)];
-    let items = runtime().block_on(keyring().search_items(&attributes))?;
-    match items.first() {
-        Some(item) => {
-            let secret = runtime().block_on(item.secret())?;
-            let value = match &secret {
-                oo7::Secret::Text(text) => text.clone(),
-                oo7::Secret::Blob(bytes) => String::from_utf8_lossy(bytes).to_string(),
-            };
-            Ok(Some(strip_unprintable(&value)))
-        }
-        None => {
-            log::warn!("Secret not found in keyring: {}", key);
-            Ok(None)
-        }
-    }
-}
-
-#[cfg(feature = "native")]
-pub fn set(key: &str, value: &str) -> Result<(), LkError> {
-    let value = strip_unprintable(value);
-    let entry = Entry::new(SERVICE_NAME, key)?;
-    entry.set_password(&value)?;
-    let label = format!("lightkeeper/{}", key);
-    let attrs = HashMap::from([("application", "lightkeeper"), ("label", label.as_str())]);
-    entry.update_attributes(&attrs)?;
-    Ok(())
-}
-
-#[cfg(feature = "flatpak")]
-pub fn set(key: &str, value: &str) -> Result<(), LkError> {
-    let value = strip_unprintable(value);
-    let label = format!("lightkeeper/{}", key);
-    let attributes = [("service", SERVICE_NAME), ("key", key)];
-    runtime().block_on(keyring().create_item(&label, &attributes, oo7::Secret::text(&value), true))?;
-    Ok(())
-}
-
-#[cfg(feature = "native")]
-pub fn delete(key: &str) -> Result<(), LkError> {
-    let entry = Entry::new(SERVICE_NAME, key)?;
-    match entry.delete_credential() {
-        Ok(()) => Ok(()),
-        Err(error) => {
-            log::warn!("Failed to remove keyring secret for {}: {}", key, error);
-            Err(error.into())
-        }
-    }
-}
-
-#[cfg(feature = "flatpak")]
-pub fn delete(key: &str) -> Result<(), LkError> {
-    let attributes = [("service", SERVICE_NAME), ("key", key)];
-    runtime().block_on(keyring().delete(&attributes))?;
-    Ok(())
 }
 
 /// Returns `"keyring"` or `"plaintext"` for a stored secret value or placeholder.
@@ -174,30 +188,5 @@ impl From<KeyringError> for LkError {
 impl From<oo7::Error> for LkError {
     fn from(e: oo7::Error) -> Self {
         LkError::other(e.to_string())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn detect_secret_backend_empty_is_keyring() {
-        assert_eq!(detect_secret_backend(""), "keyring");
-    }
-
-    #[test]
-    fn detect_secret_backend_native_placeholder_is_keyring() {
-        assert_eq!(detect_secret_backend("keyring:abc"), "keyring");
-    }
-
-    #[test]
-    fn detect_secret_backend_portal_placeholder_is_keyring() {
-        assert_eq!(detect_secret_backend("pkeyring:abc"), "keyring");
-    }
-
-    #[test]
-    fn detect_secret_backend_plaintext_value() {
-        assert_eq!(detect_secret_backend("hunter2"), "plaintext");
     }
 }

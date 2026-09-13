@@ -125,5 +125,15 @@ impl ConnectionModule for StubSsh2 {
             return Ok(ResponseMessage::new(strip_newline(&response), return_code));
         }
     }
+
+    fn send_message_binary(&self, command: &str, stdin_data: &[u8]) -> Result<ResponseMessage, LkError> {
+        // Uploads (tee) and post-upload verification pass file bytes as stdin; echo them back.
+        if !stdin_data.is_empty() {
+            return Ok(ResponseMessage::new_binary(stdin_data.to_vec(), 0));
+        }
+
+        let response = self.send_message(command)?;
+        Ok(ResponseMessage::new_binary(response.message.into_bytes(), response.return_code))
+    }
 }
 

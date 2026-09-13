@@ -5,7 +5,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::os::unix::net::UnixStream;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -26,6 +26,8 @@ use lightkeeper::remote_core::runtime::CoreRuntime;
 use lightkeeper::remote_core::server::run_remote_client_session;
 use lightkeeper::HostSetting;
 use lightkeeper::ModuleFactory;
+
+use crate::MemorySecretStore;
 
 use crate::{StubSsh2, StubTcp};
 
@@ -124,17 +126,7 @@ fn stub_hosts() -> configuration::Hosts {
 }
 
 fn temp_config_dir_for_remote_core() -> (String, configuration::Configuration, configuration::Hosts) {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("target")
-        .join(format!("lk-remote-core-test-{}-{}", std::process::id(), nanos));
-
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-
+    let dir = crate::unique_target_dir("remote-core-test");
     let dir_str = dir.to_string_lossy().to_string();
     Configuration::write_initial_config(&dir).unwrap();
     let groups: Groups = serde_yaml::from_str(lightkeeper::configuration::DEFAULT_GROUPS_CONFIG).unwrap();
@@ -153,9 +145,17 @@ fn temp_config_dir_for_remote_core() -> (String, configuration::Configuration, c
 fn with_remote_core_session(
     client_body: impl FnOnce(RemoteCommandBackend, RemoteConfigBackend, mpsc::Receiver<UIUpdate>) + Send + 'static,
 ) {
+    let _xdg_cache = crate::redirect_xdg_cache_home();
     let (config_dir, main_config, hosts) = temp_config_dir_for_remote_core();
     let factory = Arc::new(stub_ssh_factory());
-    let mut runtime = CoreRuntime::new_with_module_factory(&main_config, &hosts, factory, config_dir).unwrap();
+    let secret_store = Arc::new(MemorySecretStore::new());
+    let mut runtime = CoreRuntime::new_with(
+        &main_config,
+        &hosts,
+        factory,
+        config_dir,
+        secret_store,
+    ).unwrap();
 
     let (client_stream, server) = UnixStream::pair().unwrap();
     let session_active = Arc::new(Mutex::new(false));

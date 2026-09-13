@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::{collections::HashMap, fs, io};
 
 use serde::{Deserialize, Serialize};
@@ -17,6 +18,7 @@ use crate::file_handler;
 use crate::host::HostSetting;
 use crate::module::PlatformInfo;
 use crate::secrets_manager;
+use crate::secrets_manager::SecretStore;
 
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
@@ -494,8 +496,8 @@ impl Configuration {
     }
 
     /// Resolves keyring placeholders in `hosts.*.effective` for runtime connector use.
-    pub fn resolve_secrets_in_hosts(hosts: &mut Hosts) {
-        let mut secrets = secrets_manager::SecretsManager::new();
+    pub fn resolve_secrets_in_hosts(hosts: &mut Hosts, secret_store: Arc<dyn SecretStore>) {
+        let mut secrets = secrets_manager::SecretsManager::new(secret_store);
         for host_config in hosts.hosts.values_mut() {
             Self::resolve_secrets_in_effective_config(&mut host_config.effective, &mut secrets);
         }

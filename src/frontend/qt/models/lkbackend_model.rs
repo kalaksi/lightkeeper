@@ -4,7 +4,7 @@
  */
 
 extern crate qmetaobject;
-use std::{cell::RefCell, rc::Rc, sync::mpsc, thread};
+use std::{cell::RefCell, rc::Rc, sync::mpsc, sync::Arc, thread};
 
 use qmetaobject::*;
 
@@ -247,7 +247,10 @@ impl LkBackend {
         match self.config.borrow_mut().reload_configuration() {
             Ok((main_config, hosts_config)) => {
                 let mut runtime_hosts = hosts_config;
-                Configuration::resolve_secrets_in_hosts(&mut runtime_hosts);
+                Configuration::resolve_secrets_in_hosts(
+                    &mut runtime_hosts,
+                    Arc::new(crate::secrets_manager::KeyringSecretStore),
+                );
                 self.connection_manager.configure(&runtime_hosts);
                 let reset_hosts = self.host_manager.borrow_mut().configure(&runtime_hosts);
                 self.command.borrow_mut().configure(

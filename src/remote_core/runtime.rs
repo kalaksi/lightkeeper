@@ -11,6 +11,7 @@ use crate::configuration;
 use crate::error::LkError;
 use crate::file_handler;
 use crate::frontend;
+use crate::secrets_manager::{KeyringSecretStore, SecretStore};
 use crate::Configuration;
 use crate::CoreComponents;
 use crate::ModuleFactory;
@@ -18,27 +19,39 @@ use crate::ModuleFactory;
 pub struct CoreRuntime {
     pub core: CoreComponents,
     pub config_dir: String,
+    pub secret_store: Arc<dyn SecretStore>,
 }
 
 impl CoreRuntime {
     pub fn new(main_config: &Configuration, hosts_config: &configuration::Hosts, config_dir: String) -> Result<Self, LkError> {
-        Self::new_with_module_factory(main_config, hosts_config, Arc::new(ModuleFactory::new()), config_dir)
+        Self::new_with(
+            main_config,
+            hosts_config,
+            Arc::new(ModuleFactory::new()),
+            config_dir,
+            Arc::new(KeyringSecretStore),
+        )
     }
 
-    pub fn new_with_module_factory(
+    pub fn new_with(
         main_config: &Configuration,
         hosts_config: &configuration::Hosts,
         module_factory: Arc<ModuleFactory>,
         config_dir: String,
+        secret_store: Arc<dyn SecretStore>,
     ) -> Result<Self, LkError> {
-        let mut core = crate::initialize_core(main_config, hosts_config, module_factory)?;
+        let mut core = crate::initialize_core(main_config, hosts_config, module_factory, secret_store.clone())?;
 
         if main_config.preferences.refresh_hosts_on_start {
             let host_ids = core.monitor_manager.refresh_platform_info_all();
             log::info!("Initialized {} host(s)", host_ids.len());
         }
 
-        Ok(CoreRuntime { core, config_dir })
+        Ok(CoreRuntime {
+            core,
+            config_dir,
+            secret_store,
+        })
     }
 
     pub fn default_socket_path() -> Result<PathBuf, LkError> {

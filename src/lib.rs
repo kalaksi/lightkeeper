@@ -66,6 +66,7 @@ pub fn initialize_core(
     main_config: &Configuration,
     hosts_config: &configuration::Hosts,
     module_factory: Arc<ModuleFactory>,
+    secret_store: Arc<dyn secrets_manager::SecretStore>,
 ) -> Result<CoreComponents, error::LkError> {
 
     initialize_openssl()?;
@@ -75,7 +76,7 @@ pub fn initialize_core(
     }
 
     let mut hosts_config = hosts_config.clone();
-    Configuration::resolve_secrets_in_hosts(&mut hosts_config);
+    Configuration::resolve_secrets_in_hosts(&mut hosts_config, secret_store);
 
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
     host_manager.borrow_mut().configure(&hosts_config);
@@ -131,18 +132,25 @@ pub fn run(
     test: bool,
 ) -> Result<ExitReason, String> {
 
+    let secret_store: Arc<dyn secrets_manager::SecretStore> = Arc::new(secrets_manager::KeyringSecretStore);
     let CoreComponents {
         module_factory,
         host_manager,
         connection_manager,
         command_handler,
         monitor_manager,
-    } = initialize_core(main_config, hosts_config, Arc::new(ModuleFactory::new())).map_err(String::from)?;
+    } = initialize_core(
+        main_config,
+        hosts_config,
+        Arc::new(ModuleFactory::new()),
+        secret_store.clone(),
+    ).map_err(String::from)?;
 
     let module_metadatas = module_factory.get_module_metadatas();
     let command_backend: Box<dyn backend::CommandBackend> =
         Box::new(backend::LocalCommandBackend::new(command_handler, monitor_manager));
-    let config_backend: Box<dyn backend::ConfigBackend> = Box::new(backend::LocalConfigBackend::new(config_dir.clone()));
+    let config_backend: Box<dyn backend::ConfigBackend> =
+        Box::new(backend::LocalConfigBackend::new(config_dir.clone(), secret_store));
 
     let mut frontend = frontend::qt::QmlFrontend::new(
         config_dir,

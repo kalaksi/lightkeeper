@@ -3,18 +3,24 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+use std::sync::Arc;
+
 use super::api::ConfigBackend;
 use crate::configuration::{self, Configuration};
 use crate::error::LkError;
-use crate::secrets_manager::{self, KEYRING_PREFIX, secret_lookup_key};
+use crate::secrets_manager::{KEYRING_PREFIX, SecretStore, secret_lookup_key};
 
 pub struct LocalConfigBackend {
     config_dir: String,
+    secret_store: Arc<dyn SecretStore>,
 }
 
 impl LocalConfigBackend {
-    pub fn new(config_dir: String) -> Self {
-        LocalConfigBackend { config_dir }
+    pub fn new(config_dir: String, secret_store: Arc<dyn SecretStore>) -> Self {
+        LocalConfigBackend {
+            config_dir,
+            secret_store,
+        }
     }
 }
 
@@ -38,7 +44,7 @@ impl ConfigBackend for LocalConfigBackend {
 
     fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError> {
         let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
-        secrets_manager::get(&lookup_key)
+        self.secret_store.get(&lookup_key)
     }
 
     fn store_secret(
@@ -49,12 +55,12 @@ impl ConfigBackend for LocalConfigBackend {
         secret_value: &str,
     ) -> Result<String, LkError> {
         let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
-        secrets_manager::set(&lookup_key, secret_value)?;
+        self.secret_store.set(&lookup_key, secret_value)?;
         Ok(format!("{}{}", KEYRING_PREFIX, lookup_key))
     }
 
     fn remove_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<(), LkError> {
         let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
-        secrets_manager::delete(&lookup_key)
+        self.secret_store.delete(&lookup_key)
     }
 }

@@ -402,7 +402,12 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
 
                 let reinit_error = match Configuration::read(&runtime.config_dir) {
                     Ok((main_read, hosts_read, _groups)) => {
-                        match crate::initialize_core(&main_read, &hosts_read, module_factory.clone()) {
+                        match crate::initialize_core(
+                            &main_read,
+                            &hosts_read,
+                            module_factory.clone(),
+                            runtime.secret_store.clone(),
+                        ) {
                             Ok(core) => {
                                 runtime.core = core;
                                 None
@@ -419,7 +424,12 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     }
                     let recovered = match Configuration::read(&runtime.config_dir) {
                         Ok((main_read, hosts_read, _groups)) => {
-                            match crate::initialize_core(&main_read, &hosts_read, module_factory) {
+                            match crate::initialize_core(
+                                &main_read,
+                                &hosts_read,
+                                module_factory,
+                                runtime.secret_store.clone(),
+                            ) {
                                 Ok(core) => {
                                     runtime.core = core;
                                     true
@@ -464,7 +474,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 setting_key,
             } => {
                 let lookup_key = secrets_manager::secret_lookup_key(&module_id, &source_id, &setting_key);
-                match secrets_manager::get(&lookup_key) {
+                match runtime.secret_store.get(&lookup_key) {
                     Ok(value) => {
                         session.send_message(&ServerMessage::GetSecretResult { request_id, value })?;
                     }
@@ -481,7 +491,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 secret_value,
             } => {
                 let lookup_key = secrets_manager::secret_lookup_key(&module_id, &source_id, &setting_key);
-                match secrets_manager::set(&lookup_key, &secret_value) {
+                match runtime.secret_store.set(&lookup_key, &secret_value) {
                     Ok(()) => {
                         let placeholder = format!("{}{}", secrets_manager::KEYRING_PREFIX, lookup_key);
                         session.send_message(&ServerMessage::StoreSecretResult {
@@ -501,7 +511,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 setting_key,
             } => {
                 let lookup_key = secrets_manager::secret_lookup_key(&module_id, &source_id, &setting_key);
-                match secrets_manager::delete(&lookup_key) {
+                match runtime.secret_store.delete(&lookup_key) {
                     Ok(()) => {
                         session.send_message(&ServerMessage::RemoveSecretResult { request_id })?;
                     }
