@@ -13,9 +13,20 @@ use ssh2;
 
 use crate::configuration::CoreConnectionProfile;
 use crate::file_handler;
+use crate::module::PlatformInfo;
 use crate::utils::sha256;
 
 const SSH_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Result of probing an admin host over SSH without requiring a live core socket.
+#[derive(Clone, PartialEq, Eq)]
+pub struct AdminHostProbe {
+    pub platform: PlatformInfo,
+    /// Absolute path if a core socket inode is present; otherwise `None`.
+    pub socket_path: Option<String>,
+    /// Absolute path if `lightkeeper-core` was found; otherwise `None`.
+    pub binary_path: Option<String>,
+}
 
 pub struct Ssh2DirectStreamLocalTransport {
     session: ssh2::Session,
@@ -24,45 +35,7 @@ pub struct Ssh2DirectStreamLocalTransport {
 
 impl Ssh2DirectStreamLocalTransport {
     pub fn start(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<Self, String> {
-        if !profile.is_configured() {
-            return Err(String::from("Core connection profile has no SSH host"));
-        }
-        check_cancel(cancel)?;
-
-        let port = profile.port.unwrap_or(22);
-        let username = profile
-            .username
-            .clone()
-            .filter(|name| !name.is_empty())
-            .unwrap_or_else(default_ssh_username);
-        if username.starts_with('-') {
-            return Err(String::from("Invalid SSH username"));
-        }
-
-        let mut addresses = format!("{}:{}", profile.host, port)
-            .to_socket_addrs()
-            .map_err(|error| format!("Failed to resolve {}: {}", profile.host, error))?;
-        let address = addresses
-            .next()
-            .ok_or_else(|| format!("Failed to resolve {}: no addresses", profile.host))?;
-
-        check_cancel(cancel)?;
-        let tcp = TcpStream::connect_timeout(&address, SSH_CONNECT_TIMEOUT)
-            .map_err(|error| format!("SSH TCP connect failed: {}", error))?;
-        tcp.set_nodelay(true).map_err(|error| error.to_string())?;
-
-        check_cancel(cancel)?;
-        let mut session = ssh2::Session::new().map_err(|error| error.to_string())?;
-        session.set_tcp_stream(tcp);
-        session
-            .handshake()
-            .map_err(|error| format!("SSH handshake failed: {}", error))?;
-
-        check_cancel(cancel)?;
-        verify_host_key(&session, &profile.host, port)?;
-        authenticate_agent(&session, &username)?;
-
-        check_cancel(cancel)?;
+        let session = connect_admin_session(profile, cancel)?;
         let remote_socket = match &profile.remote_socket_path {
             Some(path) => validate_remote_socket_path(path)?,
             None => discover_remote_core_socket_path(&session)?,
@@ -102,6 +75,123 @@ impl Drop for Ssh2DirectStreamLocalTransport {
     }
 }
 
+/// SSH to the admin host, collect platform info and core install presence (no streamlocal).
+pub fn probe_admin_host(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<AdminHostProbe, String> {
+    let session = connect_admin_session(profile, cancel)?;
+    let platform = probe_platform(&session)?;
+    let discovered_socket_path = match &profile.remote_socket_path {
+        Some(path) => validate_remote_socket_path(path)?,
+        None => discover_remote_core_socket_path(&session)?,
+    };
+    let socket_path = if remote_socket_exists(&session, &discovered_socket_path)? {
+        Some(discovered_socket_path)
+    }
+    else {
+        None
+    };
+    let binary_path = find_core_binary(&session)?;
+
+    Ok(AdminHostProbe {
+        platform,
+        socket_path,
+        binary_path,
+    })
+}
+
+fn connect_admin_session(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<ssh2::Session, String> {
+    if !profile.is_configured() {
+        return Err(String::from("Core connection profile has no SSH host"));
+    }
+    check_cancel(cancel)?;
+
+    let port = profile.port.unwrap_or(22);
+    let username = profile
+        .username
+        .clone()
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(default_ssh_username);
+    if username.starts_with('-') {
+        return Err(String::from("Invalid SSH username"));
+    }
+
+    let mut addresses = format!("{}:{}", profile.host, port)
+        .to_socket_addrs()
+        .map_err(|error| format!("Failed to resolve {}: {}", profile.host, error))?;
+    let address = addresses
+        .next()
+        .ok_or_else(|| format!("Failed to resolve {}: no addresses", profile.host))?;
+
+    check_cancel(cancel)?;
+    let tcp = TcpStream::connect_timeout(&address, SSH_CONNECT_TIMEOUT)
+        .map_err(|error| format!("SSH TCP connect failed: {}", error))?;
+    tcp.set_nodelay(true).map_err(|error| error.to_string())?;
+
+    check_cancel(cancel)?;
+    let mut session = ssh2::Session::new().map_err(|error| error.to_string())?;
+    session.set_tcp_stream(tcp);
+    session
+        .handshake()
+        .map_err(|error| format!("SSH handshake failed: {}", error))?;
+
+    check_cancel(cancel)?;
+    verify_host_key(&session, &profile.host, port)?;
+    authenticate_agent(&session, &username)?;
+    check_cancel(cancel)?;
+    Ok(session)
+}
+
+fn probe_platform(session: &ssh2::Session) -> Result<PlatformInfo, String> {
+    let os_release = exec_command(session, "cat /etc/os-release")?;
+    let uname_machine = exec_command(session, "uname -m")?;
+    Ok(PlatformInfo::from_linux_probe(&os_release, &uname_machine))
+}
+
+fn remote_socket_exists(session: &ssh2::Session, socket_path: &str) -> Result<bool, String> {
+    // Path already validated as absolute without shell metacharacters beyond '/'.
+    let command = format!(
+        "if [ -S '{}' ]; then printf yes; else printf no; fi",
+        socket_path.replace('\'', "'\\''"),
+    );
+    let output = exec_command(session, &command)?;
+    Ok(output.trim() == "yes")
+}
+
+fn find_core_binary(session: &ssh2::Session) -> Result<Option<String>, String> {
+    let command = concat!(
+        "if command -v lightkeeper-core >/dev/null 2>&1; then command -v lightkeeper-core; ",
+        "elif [ -x \"${HOME}/.local/bin/lightkeeper-core\" ]; then ",
+        "printf '%s\\n' \"${HOME}/.local/bin/lightkeeper-core\"; ",
+        "elif [ -x /usr/bin/lightkeeper-core ]; then printf '%s\\n' /usr/bin/lightkeeper-core; ",
+        "fi",
+    );
+    let output = exec_command(session, command)?;
+    Ok(parse_core_binary_path(&output))
+}
+
+fn exec_command(session: &ssh2::Session, command: &str) -> Result<String, String> {
+    let mut channel = session
+        .channel_session()
+        .map_err(|error| format!("Failed to open SSH session channel: {}", error))?;
+    channel
+        .exec(command)
+        .map_err(|error| format!("Failed to run remote command: {}", error))?;
+
+    let mut output = String::new();
+    channel
+        .read_to_string(&mut output)
+        .map_err(|error| format!("Failed to read remote command output: {}", error))?;
+    let _ = channel.wait_close();
+    let status = channel.exit_status().unwrap_or(-1);
+    if status != 0 {
+        return Err(format!(
+            "Remote command failed (exit {}): {}",
+            status,
+            command
+        ));
+    }
+    Ok(output)
+}
+
 /// Validates an explicit `remote_socket_path` from the connection profile.
 pub fn resolve_remote_socket_path(profile: &CoreConnectionProfile) -> Result<String, String> {
     let Some(path) = &profile.remote_socket_path else {
@@ -133,26 +223,8 @@ fn discover_remote_core_socket_path(session: &ssh2::Session) -> Result<String, S
         "else exit 1; fi",
     );
 
-    let mut channel = session
-        .channel_session()
-        .map_err(|error| format!("Failed to open SSH session for socket discovery: {}", error))?;
-    channel
-        .exec(discovery_command)
-        .map_err(|error| format!("Failed to run remote socket discovery: {}", error))?;
-
-    let mut output = String::new();
-    channel
-        .read_to_string(&mut output)
-        .map_err(|error| format!("Failed to read remote socket discovery output: {}", error))?;
-    let _ = channel.wait_close();
-    let status = channel.exit_status().unwrap_or(-1);
-    if status != 0 {
-        return Err(format!(
-            "Remote socket discovery failed (exit {})",
-            status
-        ));
-    }
-
+    let output = exec_command(session, discovery_command)
+        .map_err(|error| format!("Remote socket discovery failed: {}", error))?;
     parse_discovered_socket_path(&output)
 }
 
@@ -163,6 +235,15 @@ pub fn parse_discovered_socket_path(output: &str) -> Result<String, String> {
         .find(|line| !line.is_empty())
         .ok_or_else(|| String::from("Remote socket discovery returned no path"))?;
     validate_remote_socket_path(path)
+}
+
+/// Parses binary-discovery command output (first non-empty line).
+pub fn parse_core_binary_path(output: &str) -> Option<String> {
+    output
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(str::to_string)
 }
 
 fn default_ssh_username() -> String {
