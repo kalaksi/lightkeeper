@@ -250,6 +250,8 @@ Module {
         Method { name: "removeCertificateMonitor"; Parameter { name: "address"; type: "string" } }
         Method { name: "getSavedCoreAddresses"; type: "QStringList" }
         Method { name: "addSavedCoreAddress"; Parameter { name: "address"; type: "string" } }
+        Method { name: "getCoreConnection"; type: "QVariantMap" }
+        Method { name: "setCoreConnection"; Parameter { name: "profile"; type: "QVariantMap" } }
         Method { name: "addHost"; Parameter { name: "host_name"; type: "string" } }
         Method { name: "removeHost"; Parameter { name: "host_name"; type: "string" } }
         Method {
@@ -614,12 +616,20 @@ Module {
             type: "bool"
         }
         Method { name: "stop" }
+        Method { name: "probeCore"; type: "string" }
+        Method { name: "connectCore"; type: "string" }
+        Method { name: "disconnectCore" }
+        Method { name: "getCoreConnectionState"; type: "string" }
+        Method { name: "getCoreConnectionError"; type: "string" }
+        Method { name: "isUsingRemoteCore"; type: "bool" }
 
         Signal {
             name: "reloaded"
             Parameter { name: "error"; type: "string" }
+            Parameter { name: "reset_hosts"; type: "QStringList" }
         }
         Signal { name: "crashed" }
+        Signal { name: "coreConnectionChanged" }
     }
 
     Component {

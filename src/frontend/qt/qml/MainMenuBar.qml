@@ -49,7 +49,6 @@ ToolBar {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacingNormal
 
-        /*
         ToolButton {
             icon.source: "qrc:/main/images/button/network-connect"
             text: "Lightkeeper Core"
@@ -62,7 +61,6 @@ ToolBar {
 
         ToolSeparator {
         }
-        */
 
         ToolButton {
             icon.source: "qrc:/main/images/button/add"
