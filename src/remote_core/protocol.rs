@@ -12,20 +12,19 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::command_handler::CommandButtonData;
 use crate::configuration::CustomCommandConfig;
-use crate::frontend::frontend::VerificationRequest;
 use crate::frontend::{DisplayData, HostDisplayData};
 
 pub const PROTOCOL_VERSION: u16 = 10;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
-/// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian),
-/// with a byte limit and rejection of trailing data after a successful decode.
+/// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
+/// Frame length enforces `MAX_FRAME_SIZE`. Trailing bytes are rejected via a cursor position check
+/// after decode — `Options::with_limit` / `reject_trailing_bytes` corrupt nested HostDisplayData
+/// payloads in bincode 1.3.
 fn bincode_options() -> impl Options {
     bincode::DefaultOptions::new()
         .with_fixint_encoding()
-        .with_little_endian()
-        .with_limit(MAX_FRAME_SIZE as u64)
-        .reject_trailing_bytes()
+        .allow_trailing_bytes()
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -207,7 +206,6 @@ pub enum ServerMessage {
     },
     InitialState(DisplayData),
     HostUpdate(HostDisplayData),
-    VerificationRequest(VerificationRequest),
     Error {
         request_id: Option<u64>,
         code: RemoteErrorCode,
@@ -290,9 +288,14 @@ pub fn read_message<T: DeserializeOwned, Reader: Read>(reader: &mut Reader) -> i
     let mut message_buffer = vec![0_u8; message_length];
     reader.read_exact(&mut message_buffer)?;
 
-    bincode_options()
-        .deserialize(&message_buffer)
-        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))
+    let mut cursor = io::Cursor::new(message_buffer.as_slice());
+    let message = bincode_options()
+        .deserialize_from(&mut cursor)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))?;
+    if cursor.position() as usize != message_buffer.len() {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "trailing bytes in frame"));
+    }
+    Ok(message)
 }
 
 pub fn write_message<T: Serialize, Writer: Write>(writer: &mut Writer, message: &T) -> io::Result<()> {
