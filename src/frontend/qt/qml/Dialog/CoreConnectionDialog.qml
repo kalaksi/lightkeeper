@@ -26,11 +26,17 @@ LightkeeperDialog {
     property string probeSummary: ""
     property bool busy: false
     property bool usingRemote: false
+    property bool _loadingProfile: false
+    property bool installAvailable: false
 
     onOpened: {
+        root._loadingProfile = true
         root.loadProfile()
+        root._loadingProfile = false
+        LK.clearCoreHostProbe()
+        root.probeSummary = ""
+        root.installAvailable = false
         root.refreshStatus()
-        root.refreshProbeSummary()
     }
 
     Connections {
@@ -38,7 +44,17 @@ LightkeeperDialog {
 
         function onCoreConnectionChanged() {
             root.refreshStatus()
-            root.refreshProbeSummary()
+        }
+    }
+
+    ConfirmationDialog {
+        id: installConfirmDialog
+        keepHidden: true
+        title: "Install lightkeeper-core"
+
+        onAccepted: {
+            root.statusText = "Remote install is not implemented yet"
+            root.errorText = ""
         }
     }
 
@@ -71,7 +87,7 @@ LightkeeperDialog {
                 placeholderText: "admin-host.example.com"
                 placeholderTextColor: Theme.textColorDark
                 enabled: !root.busy
-                onTextChanged: root.probeSummary = ""
+                onTextChanged: root.clearProbeCache()
             }
 
             Label {
@@ -88,7 +104,7 @@ LightkeeperDialog {
                     bottom: 1
                     top: 65535
                 }
-                onTextChanged: root.probeSummary = ""
+                onTextChanged: root.clearProbeCache()
             }
 
             Label {
@@ -101,7 +117,7 @@ LightkeeperDialog {
                 placeholderText: "current user"
                 placeholderTextColor: Theme.textColorDark
                 enabled: !root.busy
-                onTextChanged: root.probeSummary = ""
+                onTextChanged: root.clearProbeCache()
             }
         }
 
@@ -133,6 +149,12 @@ LightkeeperDialog {
                 text: "Disconnect"
                 enabled: !root.busy && root.usingRemote
                 onClicked: root.runDisconnect()
+            }
+
+            Button {
+                text: "Install..."
+                enabled: !root.busy && root.installAvailable
+                onClicked: root.offerInstall()
             }
 
             Item {
@@ -177,6 +199,15 @@ LightkeeperDialog {
         hostField.text = profile.host || ""
         portField.text = profile.port || ""
         usernameField.text = profile.username || ""
+    }
+
+    function clearProbeCache() {
+        if (root._loadingProfile) {
+            return
+        }
+        LK.clearCoreHostProbe()
+        root.probeSummary = ""
+        root.installAvailable = false
     }
 
     function saveProfile() {
@@ -224,6 +255,7 @@ LightkeeperDialog {
         let probe = LK.getCoreHostProbe()
         if (!probe || !probe.architecture) {
             root.probeSummary = ""
+            root.installAvailable = false
             return
         }
 
@@ -241,16 +273,51 @@ LightkeeperDialog {
         }
         if (probe.binaryPath) {
             lines.push("Binary: " + probe.binaryPath)
+            root.installAvailable = false
         }
         else {
-            lines.push("Binary: lightkeeper-core not found (install will be offered later)")
+            lines.push("Binary: lightkeeper-core not found")
+            root.installAvailable = true
         }
         root.probeSummary = lines.join("\n")
+    }
+
+    function buildInstallConfirmationText(probe) {
+        let host = hostField.text.trim() || "remote host"
+        let lines = [
+            "Install lightkeeper-core on " + host + " as a per-user service?",
+            "",
+            "These paths would be created or updated:",
+            "  Binary: " + (probe.installBinaryPath || ""),
+            "  Unit:   " + (probe.installUnitPath || ""),
+            "  Socket: " + (probe.installSocketPath || "") + " (created when the service starts)",
+            "",
+            "Then: systemctl --user daemon-reload && enable --now lightkeeper-core",
+            "",
+            "Actual file transfer is not implemented yet; this confirms the planned layout.",
+        ]
+        return lines.join("\n")
+    }
+
+    function offerInstall() {
+        let probe = LK.getCoreHostProbe()
+        if (!probe || !probe.installBinaryPath) {
+            root.errorText = "Run Test first to probe the admin host"
+            return
+        }
+        if (probe.binaryPath) {
+            root.statusText = "lightkeeper-core is already present on the admin host"
+            return
+        }
+
+        installConfirmDialog.text = root.buildInstallConfirmationText(probe)
+        installConfirmDialog.open()
     }
 
     function runCoreProbe() {
         root.busy = true
         root.errorText = ""
+        root.installAvailable = false
         root.saveProfile()
         let error = LK.probeCoreHost()
         root.busy = false
@@ -275,12 +342,14 @@ LightkeeperDialog {
             else {
                 root.statusText = "SSH ok; lightkeeper-core is not installed on the admin host"
                 root.errorText = ""
+                root.offerInstall()
             }
         }
         else {
             root.statusText = "Probe failed"
             root.errorText = error
             root.probeSummary = ""
+            root.installAvailable = false
         }
     }
 
@@ -288,6 +357,8 @@ LightkeeperDialog {
         root.busy = true
         root.errorText = ""
         root.saveProfile()
+        root.probeSummary = ""
+        root.installAvailable = false
         let error = LK.connectCore()
         root.busy = false
         root.refreshStatus()
