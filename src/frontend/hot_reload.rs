@@ -14,6 +14,12 @@ use qmetaobject;
 pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
     use notify::{self, Watcher};
 
+    // QML engine APIs must run on the Qt GUI thread.
+    let reload = qmetaobject::queued_callback(move |()| {
+        engine.trim_component_cache();
+        engine.clear_component_cache();
+    });
+
     thread::spawn(move || {
         let (notify_sender, notify_receiver) = std::sync::mpsc::channel();
         let mut watcher = match notify::RecommendedWatcher::new(notify_sender, notify::Config::default()) {
@@ -48,8 +54,7 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
                 }
 
                 log::debug!("Reload triggered by file {}", event.paths[0].display());
-                engine.trim_component_cache();
-                engine.clear_component_cache();
+                reload(());
                 last_reload = Instant::now();
             }
         }

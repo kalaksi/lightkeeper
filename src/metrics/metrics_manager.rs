@@ -429,25 +429,21 @@ impl MetricsManager {
                 };
             }
 
+            // Server closes the socket on Exit; do not wait for a TLS response (often no close_notify).
+            if matches!(service_request.request_type, RequestType::Exit) {
+                break;
+            }
+
             // 16 MB buffer.
             let mut buffer = vec![0; 16777216];
 
-            let read_count = match service_request.request_type {
-                RequestType::Exit => match tls_stream.read_to_end(&mut buffer) {
-                    Ok(count) => count,
-                    Err(error) => {
-                        log::error!("Failed to read response when exiting: {}", error);
-                        break;
-                    }
-                },
-                _ => match tls_stream.read(&mut buffer) {
-                    Ok(count) => count,
-                    Err(error) => {
-                        // Too small buffer may also result in an error.
-                        log::error!("Failed to read response: {}", error);
-                        continue;
-                    }
-                },
+            let read_count = match tls_stream.read(&mut buffer) {
+                Ok(count) => count,
+                Err(error) => {
+                    // Too small buffer may also result in an error.
+                    log::error!("Failed to read response: {}", error);
+                    continue;
+                }
             };
 
             if read_count == 0 {
@@ -473,17 +469,13 @@ impl MetricsManager {
                 log::error!("Service error: {}", response.errors.join(". "));
             }
 
-            match service_request.request_type {
-                RequestType::Exit => break,
-                _ => (),
-            };
-
             if let Err(error) = update_sender.send(UIUpdate::Chart(response)) {
                 log::error!("Failed to send update: {}", error);
             }
         }
     }
 }
+
 /// Function to download a file using ureq.
 fn download_file(url: &str, access_token: &str, output_path: &Path) -> io::Result<()> {
     let agent = ureq::Agent::config_builder()
