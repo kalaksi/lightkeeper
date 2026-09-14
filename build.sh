@@ -37,3 +37,8 @@ if [ ! -z "$(git status -s)" ]; then
 fi
 
 cargo build --features hot-reload
+
+# Lightkeeper-core binary for remote core feature.
+if [ ! -e "target/debug/lightkeeper-core" ]; then
+    cargo build --no-default-features --features core --bin lightkeeper-core
+fi

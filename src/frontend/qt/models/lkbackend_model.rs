@@ -13,7 +13,7 @@ use crate::{
         probe_admin_host, AdminHostProbe, CoreConnectionState, RemoteCommandBackend,
         RemoteConfigBackend, RemoteCoreClient,
     },
-    configuration::{Configuration, CoreConnectionProfile},
+    configuration::Configuration,
     connection_manager::ConnectionManager,
     file_handler,
     frontend::{HostDisplayData, UIUpdate},
@@ -53,6 +53,7 @@ pub struct LkBackend {
     probeCore: qt_method!(fn(&mut self) -> QString),
     probeCoreHost: qt_method!(fn(&mut self) -> QString),
     getCoreHostProbe: qt_method!(fn(&self) -> QVariantMap),
+    clearCoreHostProbe: qt_method!(fn(&mut self)),
     connectCore: qt_method!(fn(&mut self) -> QString),
     disconnectCore: qt_method!(fn(&mut self)),
     getCoreConnectionState: qt_method!(fn(&self) -> QString),
@@ -81,7 +82,7 @@ pub struct LkBackend {
     skip_connection_processing: bool,
     remote_client: Option<Arc<RemoteCoreClient>>,
     using_remote: bool,
-    last_admin_host_probe: Option<(CoreConnectionProfile, AdminHostProbe)>,
+    last_admin_host_probe: Option<AdminHostProbe>,
 }
 
 #[allow(non_snake_case)]
@@ -304,7 +305,7 @@ impl LkBackend {
         let cancel = std::sync::atomic::AtomicBool::new(false);
         match probe_admin_host(&profile, &cancel) {
             Ok(probe) => {
-                self.last_admin_host_probe = Some((profile, probe));
+                self.last_admin_host_probe = Some(probe);
                 QString::from("")
             }
             Err(error) => {
@@ -316,13 +317,9 @@ impl LkBackend {
 
     fn getCoreHostProbe(&self) -> QVariantMap {
         let mut map = QVariantMap::default();
-        let current_profile = self.config.borrow().core_connection_profile();
-        let Some((profile, probe)) = &self.last_admin_host_probe else {
+        let Some(probe) = &self.last_admin_host_probe else {
             return map;
         };
-        if profile != &current_profile {
-            return map;
-        }
 
         map.insert("os".into(), QString::from(probe.platform.os.to_string()).into());
         map.insert(
@@ -347,10 +344,28 @@ impl LkBackend {
         if let Some(binary_path) = &probe.binary_path {
             map.insert("binaryPath".into(), QString::from(binary_path.clone()).into());
         }
+        map.insert(
+            "installBinaryPath".into(),
+            QString::from(probe.install_plan.binary_path.clone()).into(),
+        );
+        map.insert(
+            "installUnitPath".into(),
+            QString::from(probe.install_plan.unit_path.clone()).into(),
+        );
+        map.insert(
+            "installSocketPath".into(),
+            QString::from(probe.install_plan.socket_path.clone()).into(),
+        );
         map
     }
 
+    fn clearCoreHostProbe(&mut self) {
+        self.last_admin_host_probe = None;
+    }
+
     fn connectCore(&mut self) -> QString {
+        self.last_admin_host_probe = None;
+
         let profile = self.config.borrow().core_connection_profile();
         if !profile.is_configured() {
             return QString::from("SSH host is required");
