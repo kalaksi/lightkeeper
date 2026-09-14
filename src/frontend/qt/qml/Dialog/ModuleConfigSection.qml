@@ -31,8 +31,6 @@ ColumnLayout {
     property string hostId: ""
     property string moduleType: ""
     property string addDialogLabel: ""
-    /// When true, settingsByModule already holds full setting definitions (no group lookup).
-    property bool settingsAreComplete: false
 
     signal removeModule(string moduleId)
     signal addModule(string moduleId)
@@ -124,8 +122,8 @@ ColumnLayout {
                             imageSource: "qrc:/main/images/button/entry-edit"
                             onClicked: {
                                 editDialog.moduleId = modelData
-                                let full = root.settingsAreComplete
-                                    ? root.settingsByModule[modelData]
+                                let full = root.hostId !== ""
+                                    ? LK.config.getHostModuleSettings(root.hostId, modelData).map(JSON.parse)
                                     : LK.config.getGroupModuleSettings(root.groupName, modelData).map(JSON.parse)
                                 editDialog.moduleSettings =
                                     root.mergeModuleSettingsWithCache(full, root.settingsByModule[modelData])

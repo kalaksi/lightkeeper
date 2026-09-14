@@ -114,7 +114,7 @@ pub struct ConfigManagerModel {
     moduleRequiresSudo: qt_method!(fn(&self, module_id: QString) -> bool),
     addGroupModule: qt_method!(fn(&self, group_name: QString, module_id: QString, module_type: QString)),
     getGroupModuleSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
-    getHostConnectorModuleSettings: qt_method!(fn(&self, host_id: QString, module_id: QString) -> QStringList),
+    getHostModuleSettings: qt_method!(fn(&self, host_id: QString, module_id: QString) -> QStringList),
     detectSecretBackend: qt_method!(fn(&self, value: QString) -> QString),
     getEffectiveModuleSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList, module_type: QString) -> QString),
     getHostCategoryModuleSettings: qt_method!(fn(&self, host_id: QString, category: QString, module_type: QString) -> QString),
@@ -768,8 +768,8 @@ impl ConfigManagerModel {
         )
     }
 
-    /// Host-level connector overrides: same `ModuleSetting` view as `getGroupModuleSettings`.
-    fn getHostConnectorModuleSettings(&self, host_id: QString, module_id: QString) -> QStringList {
+    /// Host overrides for one module: metadata + inherited group baseline (monitors/commands).
+    fn getHostModuleSettings(&self, host_id: QString, module_id: QString) -> QStringList {
         let host_id = host_id.to_string();
         let module_id = module_id.to_string();
 
@@ -778,23 +778,42 @@ impl ConfigManagerModel {
             None => return QStringList::default(),
         };
 
-        if metadata.module_spec.module_type != ModuleType::Connector {
-            return QStringList::default();
-        }
-
         let host = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
-        let host_settings = host
-            .overrides
-            .connectors
-            .get(&module_id)
-            .cloned()
-            .unwrap_or_default()
-            .settings;
+        let empty_settings = HashMap::new();
+        let settings = match metadata.module_spec.module_type {
+            ModuleType::Monitor => {
+                let baseline = Self::group_baseline_for_host(&host, &self.groups_config);
+                let override_settings = host.overrides.monitors.get(&module_id)
+                    .map(|c| &c.settings)
+                    .unwrap_or(&empty_settings);
+                Self::build_module_settings(
+                    metadata,
+                    override_settings,
+                    baseline.monitors.get(&module_id).map(|c| &c.settings),
+                )
+            },
+            ModuleType::Command => {
+                let baseline = Self::group_baseline_for_host(&host, &self.groups_config);
+                let override_settings = host.overrides.commands.get(&module_id)
+                    .map(|c| &c.settings)
+                    .unwrap_or(&empty_settings);
+                Self::build_module_settings(
+                    metadata,
+                    override_settings,
+                    baseline.commands.get(&module_id).map(|c| &c.settings),
+                )
+            },
+            ModuleType::Connector => {
+                let override_settings = host.overrides.connectors.get(&module_id)
+                    .map(|c| &c.settings)
+                    .unwrap_or(&empty_settings);
+                Self::build_module_settings(metadata, override_settings, None)
+            },
+            _ => return QStringList::default(),
+        };
 
         QStringList::from_iter(
-            Self::build_module_settings(metadata, &host_settings, None)
-                .into_iter()
-                .map(|setting| serde_json::to_string(&setting).unwrap()),
+            settings.into_iter().map(|setting| serde_json::to_string(&setting).unwrap()),
         )
     }
 

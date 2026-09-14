@@ -19,7 +19,7 @@ Item {
 
     property string hostId: ""
     property string inheritedUsername: ""
-    // ModuleSetting rows for auth keys (from LK.config.getHostConnectorModuleSettings).
+    // ModuleSetting rows for auth keys (from LK.config.getHostModuleSettings).
     property var moduleSettings: []
 
     // ssh.settings keys this widget owns. The parent uses this to scrub
