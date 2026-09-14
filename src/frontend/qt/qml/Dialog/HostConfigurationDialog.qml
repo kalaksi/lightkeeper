@@ -49,7 +49,7 @@ LightkeeperDialog {
         root.hostSettings = JSON.parse(LK.config.getHostSettings(root.hostId))
         root._effectiveSettings = JSON.parse(
             LK.config.getEffectiveModuleSettings(root.hostId, root.groupNames(root._selectedGroups), "connector"))
-        root._sshModuleSettings = LK.config.getHostConnectorModuleSettings(root.hostId, "ssh").map(JSON.parse)
+        root._sshModuleSettings = LK.config.getHostModuleSettings(root.hostId, "ssh").map(JSON.parse)
         root._loading = false
         updateOkButton()
     }
