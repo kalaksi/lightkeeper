@@ -87,7 +87,6 @@ LightkeeperDialog {
                 allowDisable: true
                 showSudoBadge: true
                 hostId: root.hostId
-                settingsAreComplete: true
                 buttonSize: root._buttonSize
                 Layout.fillWidth: true
 
@@ -112,7 +111,6 @@ LightkeeperDialog {
                 allowDisable: true
                 showSudoBadge: true
                 hostId: root.hostId
-                settingsAreComplete: true
                 buttonSize: root._buttonSize
                 Layout.fillWidth: true
 

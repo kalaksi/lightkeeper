@@ -356,7 +356,7 @@ Module {
             Parameter { name: "module_id"; type: "string" }
         }
         Method {
-            name: "getHostConnectorModuleSettings"
+            name: "getHostModuleSettings"
             type: "QStringList"
             Parameter { name: "host_id"; type: "string" }
             Parameter { name: "module_id"; type: "string" }
