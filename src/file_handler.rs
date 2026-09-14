@@ -74,18 +74,19 @@ pub fn get_runtime_dir() -> io::Result<PathBuf> {
 pub fn effective_uid() -> io::Result<u32> {
     let status = fs::read_to_string("/proc/self/status")?;
     for line in status.lines() {
-        let Some(rest) = line.strip_prefix("Uid:") else {
+        let Some(rest) = line.strip_prefix("Uid:")
+        else {
             continue;
         };
         // real, effective, saved, filesystem
         let mut fields = rest.split_whitespace();
         let _real = fields.next();
-        let effective = fields.next().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidData, "Uid line missing effective uid")
-        })?;
-        return effective.parse::<u32>().map_err(|error| {
-            io::Error::new(io::ErrorKind::InvalidData, error.to_string())
-        });
+        let effective = fields
+            .next()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Uid line missing effective uid"))?;
+        return effective
+            .parse::<u32>()
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()));
     }
 
     Err(io::Error::new(io::ErrorKind::NotFound, "Uid line not found in /proc/self/status"))
