@@ -18,6 +18,7 @@ ToolBar {
     id: root
     property bool enableShortcuts: false
     property bool enableEditButtons: false
+    property bool remoteCoreBlocked: false
     property int refreshProgress: 100
     property int iconSize: 24
     property int alertCount: 0
@@ -63,6 +64,8 @@ ToolBar {
         }
 
         ToolButton {
+            enabled: !root.remoteCoreBlocked
+            opacity: Theme.opacity(enabled)
             icon.source: "qrc:/main/images/button/add"
             text: "Add host"
             display: AbstractButton.IconOnly
@@ -72,7 +75,7 @@ ToolBar {
         }
 
         ToolButton {
-            enabled: root.enableEditButtons
+            enabled: !root.remoteCoreBlocked && root.enableEditButtons
             opacity: Theme.opacity(enabled)
             text: "Remove host"
             display: AbstractButton.IconOnly
@@ -87,7 +90,7 @@ ToolBar {
         }
 
         ToolButton {
-            enabled: root.enableEditButtons
+            enabled: !root.remoteCoreBlocked && root.enableEditButtons
             opacity: Theme.opacity(enabled)
             display: AbstractButton.IconOnly
             text: "Edit host"
@@ -108,11 +111,14 @@ ToolBar {
                 Label {
                     text: "Search:"
                     anchors.verticalCenter: parent.verticalCenter
+                    opacity: Theme.opacity(!root.remoteCoreBlocked)
                 }
 
                 TextField {
                     id: searchInput
                     anchors.verticalCenter: parent.verticalCenter
+                    enabled: !root.remoteCoreBlocked
+                    opacity: Theme.opacity(enabled)
                     placeholderText: "by name or address..."
                     // TODO: color from global theme / palette? by default it's too dark.
                     placeholderTextColor: Theme.textColorDark
@@ -121,7 +127,7 @@ ToolBar {
                 }
 
                 AutoRefreshButton {
-                    enabled: root.refreshProgress === 100
+                    enabled: !root.remoteCoreBlocked && root.refreshProgress === 100
                     spinning: root.refreshProgress < 100
                     size: certMonitorButton.height
                     onClicked: root.clickedAutoRefresh()
@@ -168,6 +174,8 @@ ToolBar {
 
         ToolButton {
             id: alertsButton
+            enabled: !root.remoteCoreBlocked
+            opacity: Theme.opacity(enabled)
             icon.source: "qrc:/main/images/button/alerts"
             text: root.alertCount > 0
                 ? (root.alertCount === 1 ? "1 alert" : root.alertCount + " alerts")

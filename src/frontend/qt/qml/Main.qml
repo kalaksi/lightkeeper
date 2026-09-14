@@ -11,12 +11,14 @@ import Lightkeeper 1.0
 
 import "./Button"
 import "./DetailsView"
+import "./Text"
 import "js/Parse.js" as Parse
 import "js/Test.js" as Test 
 
 
 ApplicationWindow {
     property int errorCount: 0
+    property bool remoteCoreBlocked: false
 
     // For convenience.
     property DialogHandler dialogHandler: dialogHandlerLoader.item as DialogHandler
@@ -68,6 +70,8 @@ ApplicationWindow {
 
 
     menuBar: MainMenuBar {
+        remoteCoreBlocked: root.remoteCoreBlocked
+
         onClickedAdd: {
             root.dialogHandler.openNewHostConfig()
         }
@@ -112,8 +116,8 @@ ApplicationWindow {
         }
 
         // Shortcuts are enabled if no host is selected and alert drawer is closed.
-        enableShortcuts: hostTableModel.selectedRow === -1 && !alertDrawer.open
-        enableEditButtons: hostTableModel.selectedRow !== -1
+        enableShortcuts: !root.remoteCoreBlocked && hostTableModel.selectedRow === -1 && !alertDrawer.open
+        enableEditButtons: !root.remoteCoreBlocked && hostTableModel.selectedRow !== -1
     }
 
     footer: StatusBar {
@@ -136,8 +140,13 @@ ApplicationWindow {
             )
         }
 
+        function onCoreConnectionChanged() {
+            root.refreshRemoteCoreBlocked()
+        }
+
         function onReloaded(error, resetHosts) {
             hostTableModel.displayData = LK.hosts.getDisplayData()
+            root.refreshRemoteCoreBlocked()
 
             if (error !== "") {
                 root.errorCount += 1;
@@ -294,12 +303,22 @@ ApplicationWindow {
         DesktopPortal.receiveResponses()
 
         root.refreshAlerts()
+        root.refreshRemoteCoreBlocked()
 
         for (let error of LK.config.checkConfigErrors()) {
             snackbarContainer.addSnackbar("Error", "Configuration error: " + error)
         }
 
-        if (LK.hosts.refresh_hosts_on_start()) {
+        let coreProfile = LK.config.getCoreConnection()
+        if (coreProfile.autoConnect && (coreProfile.host || "").trim().length > 0) {
+            let connectError = LK.connectCore()
+            root.refreshRemoteCoreBlocked()
+            if (connectError !== "") {
+                root.errorCount += 1
+                snackbarContainer.addSnackbar("Error", connectError)
+            }
+        }
+        else if (LK.hosts.refresh_hosts_on_start()) {
             LK.command.forceInitializeHosts()
         }
     }
@@ -321,6 +340,7 @@ ApplicationWindow {
             id: mainSplitView
             anchors.fill: parent
             orientation: Qt.Vertical
+            enabled: !root.remoteCoreBlocked
 
             onResizingChanged: {
                 if (body._wasResizing && !resizing) {
@@ -383,7 +403,8 @@ ApplicationWindow {
                 target: hostDetailsLoader.item
                 property: "enableShortcuts"
                 when: hostDetailsLoader.item !== null
-                value: hostDetailsLoader.item.visible &&
+                value: !root.remoteCoreBlocked &&
+                       hostDetailsLoader.item.visible &&
                        (root.dialogHandler === null || !root.dialogHandler.preferencesOpen)
             }
 
@@ -409,6 +430,30 @@ ApplicationWindow {
                 function onCategoryConfigDialogOpened(categoryName) {
                     root.dialogHandler.openCategoryConfigDialog(hostDetailsLoader.item.hostId, categoryName)
                 }
+            }
+        }
+
+        Item {
+            id: remoteCoreOverlay
+            anchors.fill: parent
+            z: 100
+            visible: root.remoteCoreBlocked
+
+            Rectangle {
+                anchors.fill: parent
+                color: "#60000000"
+            }
+
+            NormalText {
+                anchors.centerIn: parent
+                width: Math.min(parent.width - Theme.marginDialog * 2, 480)
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                text: "Connect to remote Lightkeeper core or restart application to start using locally"
+            }
+
+            MouseArea {
+                anchors.fill: parent
             }
         }
 
@@ -489,6 +534,13 @@ ApplicationWindow {
 
     function reload() {
         // todo
+    }
+
+    function refreshRemoteCoreBlocked() {
+        root.remoteCoreBlocked = LK.isUsingRemoteCore() && LK.getCoreConnectionState() !== "connected"
+        if (root.remoteCoreBlocked) {
+            alertDrawer.open = false
+        }
     }
 
     function refreshAlerts() {

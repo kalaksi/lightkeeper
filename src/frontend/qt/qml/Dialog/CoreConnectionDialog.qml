@@ -18,7 +18,7 @@ LightkeeperDialog {
     id: root
     title: "Lightkeeper Core"
     implicitWidth: 560
-    implicitHeight: 480
+    implicitHeight: 520
     standardButtons: Dialog.Close
 
     property string statusText: ""
@@ -121,6 +121,18 @@ LightkeeperDialog {
             }
         }
 
+        CheckBox {
+            id: autoConnectCheckBox
+            text: "Connect automatically on startup"
+            enabled: !root.busy
+            Layout.fillWidth: true
+            onCheckedChanged: {
+                if (!root._loadingProfile) {
+                    root.saveProfile()
+                }
+            }
+        }
+
         RowLayout {
             Layout.fillWidth: true
             spacing: Theme.spacingNormal
@@ -199,6 +211,7 @@ LightkeeperDialog {
         hostField.text = profile.host || ""
         portField.text = profile.port || ""
         usernameField.text = profile.username || ""
+        autoConnectCheckBox.checked = !!profile.autoConnect
     }
 
     function clearProbeCache() {
@@ -217,6 +230,7 @@ LightkeeperDialog {
             port: portField.text.trim(),
             username: usernameField.text.trim(),
             remoteSocketPath: "",
+            autoConnect: autoConnectCheckBox.checked,
         })
     }
 
@@ -242,7 +256,7 @@ LightkeeperDialog {
             root.errorText = error
         }
         else if (root.usingRemote) {
-            root.statusText = "Disconnected from remote core (restart app to use local mode)"
+            root.statusText = "Connect to remote Lightkeeper core or restart application to start using locally"
             root.errorText = error
         }
         else {

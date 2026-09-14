@@ -374,9 +374,7 @@ impl ConfigManagerModel {
     }
 
     fn setCoreConnection(&mut self, profile_map: QVariantMap) {
-        let mut profile = core_connection_from_variant_map(&profile_map);
-        // Keep existing auto-connect until startup wiring lands.
-        profile.auto_connect = self.main_config.preferences.core_connection.auto_connect;
+        let profile = core_connection_from_variant_map(&profile_map);
         self.main_config.preferences.core_connection = profile.clone();
         if let Err(error) = self.persist_desktop_core_connection(&profile) {
             self.error(QString::from(error));
