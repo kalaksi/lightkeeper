@@ -18,6 +18,7 @@ use super::api::{CommandBackend, ConfigBackend};
 use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
 use super::remote_config::RemoteConfigBackend;
 use super::ssh_transport::Ssh2DirectStreamLocalTransport;
+use super::ssh_auth::{HostKeyChallenge, SshAuthError};
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
@@ -248,14 +249,15 @@ fn open_transport_stream(
     profile: &configuration::CoreConnectionProfile,
     socket_path: &PathBuf,
     stopping: &AtomicBool,
-) -> Result<(Option<Ssh2DirectStreamLocalTransport>, CoreClientStream), String> {
+) -> Result<(Option<Ssh2DirectStreamLocalTransport>, CoreClientStream), SshAuthError> {
     if profile.is_configured() {
         let transport = Ssh2DirectStreamLocalTransport::start(profile, stopping)?;
         let stream = CoreClientStream::Ssh(transport.channel());
         Ok((Some(transport), stream))
     }
     else {
-        let stream = UnixStream::connect(socket_path).map_err(|error| error.to_string())?;
+        let stream = UnixStream::connect(socket_path)
+            .map_err(|error| SshAuthError::other(error.to_string()))?;
         Ok((None, CoreClientStream::Unix(stream)))
     }
 }
@@ -276,6 +278,7 @@ pub struct RemoteCoreClient {
     stopping: Arc<AtomicBool>,
     profile: Mutex<configuration::CoreConnectionProfile>,
     status: Arc<Mutex<CoreConnectionStatus>>,
+    host_key_challenge: Mutex<Option<HostKeyChallenge>>,
 }
 
 impl RemoteCoreClient {
@@ -294,6 +297,7 @@ impl RemoteCoreClient {
             stopping: Arc::new(AtomicBool::new(false)),
             profile: Mutex::new(configuration::CoreConnectionProfile::default()),
             status: Arc::new(Mutex::new(CoreConnectionStatus::default())),
+            host_key_challenge: Mutex::new(None),
         }
     }
 
@@ -307,6 +311,28 @@ impl RemoteCoreClient {
 
     pub fn set_profile(&self, profile: configuration::CoreConnectionProfile) {
         *self.profile.lock().unwrap() = profile;
+    }
+
+    pub fn host_key_challenge(&self) -> Option<HostKeyChallenge> {
+        self.host_key_challenge.lock().unwrap().clone()
+    }
+
+    pub fn clear_host_key_challenge(&self) {
+        *self.host_key_challenge.lock().unwrap() = None;
+    }
+
+    fn record_ssh_error(&self, error: SshAuthError) -> String {
+        match error {
+            SshAuthError::HostKeyUnverified(challenge) => {
+                let message = challenge.message.clone();
+                *self.host_key_challenge.lock().unwrap() = Some(challenge);
+                message
+            }
+            other => {
+                self.clear_host_key_challenge();
+                other.to_ui_message()
+            }
+        }
     }
 
     pub fn status(&self) -> CoreConnectionStatus {
@@ -348,8 +374,12 @@ impl RemoteCoreClient {
         }
 
         let (transport, stream) = match open_transport_stream(&profile, &self.socket_path, &self.stopping) {
-            Ok(result) => result,
+            Ok(result) => {
+                self.clear_host_key_challenge();
+                result
+            }
             Err(error) => {
+                let error = self.record_ssh_error(error);
                 self.set_connection_failed(error.clone());
                 return Err(error);
             }
@@ -383,8 +413,12 @@ impl RemoteCoreClient {
         }
 
         let (mut transport, mut stream) = match open_transport_stream(&profile, &self.socket_path, &self.stopping) {
-            Ok(result) => result,
+            Ok(result) => {
+                self.clear_host_key_challenge();
+                result
+            }
             Err(error) => {
+                let error = self.record_ssh_error(error);
                 self.set_connection_failed(error.clone());
                 return Err(error);
             }

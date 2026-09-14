@@ -64,6 +64,9 @@ pub struct ConfigManagerModel {
     addSavedCoreAddress: qt_method!(fn(&self, address: QString)),
     getCoreConnection: qt_method!(fn(&self) -> QVariantMap),
     setCoreConnection: qt_method!(fn(&self, profile: QVariantMap)),
+    storeCoreSecret: qt_method!(fn(&self, setting_key: QString, secret_value: QString) -> QString),
+    getCoreSecret: qt_method!(fn(&self, setting_key: QString) -> QString),
+    removeCoreSecret: qt_method!(fn(&self, setting_key: QString)),
 
     //
     // Host configuration
@@ -174,7 +177,7 @@ impl ConfigManagerModel {
     }
 
     pub fn set_config_backend(&mut self, backend: Box<dyn ConfigBackend>) -> Result<(), String> {
-        // Desktop-owned SSH profile for reaching the admin-host core must not be replaced by
+        // Desktop-owned SSH profile for reaching the remote core host must not be replaced by
         // the remote core's preferences.
         let desktop_core_connection = self.main_config.preferences.core_connection.clone();
         let (mut main_config, hosts_config, groups_config) = backend.get_config()?;
@@ -374,6 +377,27 @@ impl ConfigManagerModel {
             QString::from(profile.remote_socket_path.clone().unwrap_or_default()).into(),
         );
         map.insert("autoConnect".into(), profile.auto_connect.into());
+        map.insert(
+            "password".into(),
+            QString::from(profile.password.clone().unwrap_or_default()).into(),
+        );
+        map.insert(
+            "privateKeyPath".into(),
+            QString::from(profile.private_key_path.clone().unwrap_or_default()).into(),
+        );
+        map.insert(
+            "privateKeyPassphrase".into(),
+            QString::from(profile.private_key_passphrase.clone().unwrap_or_default()).into(),
+        );
+        map.insert(
+            "agentKeyIdentifier".into(),
+            QString::from(profile.agent_key_identifier.clone().unwrap_or_default()).into(),
+        );
+        map.insert("verifyHostKey".into(), profile.verify_host_key.into());
+        map.insert(
+            "customKnownHostsPath".into(),
+            QString::from(profile.custom_known_hosts_path.clone().unwrap_or_default()).into(),
+        );
         map
     }
 
@@ -382,6 +406,44 @@ impl ConfigManagerModel {
         self.main_config.preferences.core_connection = profile.clone();
         if let Err(error) = self.persist_desktop_core_connection(&profile) {
             self.error(QString::from(error));
+        }
+    }
+
+    fn storeCoreSecret(&self, setting_key: QString, secret_value: QString) -> QString {
+        // Always use the desktop keyring; remote core host SSH credentials must not go to remote core.
+        match crate::backend::ssh_auth::store_core_secret(
+            &crate::secrets_manager::KeyringSecretStore,
+            &setting_key.to_string(),
+            &secret_value.to_string(),
+        ) {
+            Ok(placeholder) => QString::from(placeholder),
+            Err(error) => {
+                self.error(QString::from(error.to_ui_message()));
+                QString::default()
+            }
+        }
+    }
+
+    fn getCoreSecret(&self, setting_key: QString) -> QString {
+        match crate::backend::ssh_auth::get_core_secret(
+            &crate::secrets_manager::KeyringSecretStore,
+            &setting_key.to_string(),
+        ) {
+            Ok(Some(value)) => QString::from(value),
+            Ok(None) => QString::default(),
+            Err(error) => {
+                self.error(QString::from(error.to_ui_message()));
+                QString::default()
+            }
+        }
+    }
+
+    fn removeCoreSecret(&self, setting_key: QString) {
+        if let Err(error) = crate::backend::ssh_auth::remove_core_secret(
+            &crate::secrets_manager::KeyringSecretStore,
+            &setting_key.to_string(),
+        ) {
+            ::log::warn!("Failed to remove core secret: {}", error.to_ui_message());
         }
     }
 
@@ -1299,6 +1361,18 @@ fn core_connection_from_variant_map(map: &QVariantMap) -> configuration::CoreCon
     else {
         Some(socket_text)
     };
+    let optional_string = |key: &str| -> Option<String> {
+        let text = map
+            .value(key.into(), QString::from("").into())
+            .to_qbytearray()
+            .to_string();
+        if text.is_empty() {
+            None
+        }
+        else {
+            Some(text)
+        }
+    };
 
     configuration::CoreConnectionProfile {
         host,
@@ -1307,5 +1381,11 @@ fn core_connection_from_variant_map(map: &QVariantMap) -> configuration::CoreCon
         remote_socket_path,
         transport: Default::default(),
         auto_connect: map.value("autoConnect".into(), false.into()).to_bool(),
+        password: optional_string("password"),
+        private_key_path: optional_string("privateKeyPath"),
+        private_key_passphrase: optional_string("privateKeyPassphrase"),
+        agent_key_identifier: optional_string("agentKeyIdentifier"),
+        verify_host_key: map.value("verifyHostKey".into(), true.into()).to_bool(),
+        custom_known_hosts_path: optional_string("customKnownHostsPath"),
     }
 }

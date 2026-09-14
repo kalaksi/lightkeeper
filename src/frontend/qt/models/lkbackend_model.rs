@@ -10,8 +10,8 @@ use qmetaobject::*;
 
 use crate::{
     backend::{
-        probe_admin_host, AdminHostProbe, CoreConnectionState, RemoteCommandBackend,
-        RemoteConfigBackend, RemoteCoreClient,
+        accept_remote_core_host_key, probe_remote_core_host, RemoteCoreHostProbe, CoreConnectionState, HostKeyChallenge,
+        RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient, SshAuthError,
     },
     configuration::Configuration,
     connection_manager::ConnectionManager,
@@ -59,6 +59,9 @@ pub struct LkBackend {
     getCoreConnectionState: qt_method!(fn(&self) -> QString),
     getCoreConnectionError: qt_method!(fn(&self) -> QString),
     isUsingRemoteCore: qt_method!(fn(&self) -> bool),
+    getCoreHostKeyChallenge: qt_method!(fn(&self) -> QVariantMap),
+    clearCoreHostKeyChallenge: qt_method!(fn(&mut self)),
+    verifyCoreHostKey: qt_method!(fn(&mut self, key_id: QString) -> QString),
 
     //
     // Signals
@@ -82,7 +85,8 @@ pub struct LkBackend {
     skip_connection_processing: bool,
     remote_client: Option<Arc<RemoteCoreClient>>,
     using_remote: bool,
-    last_admin_host_probe: Option<AdminHostProbe>,
+    last_remote_core_host_probe: Option<RemoteCoreHostProbe>,
+    last_host_key_challenge: Option<HostKeyChallenge>,
 }
 
 #[allow(non_snake_case)]
@@ -290,34 +294,48 @@ impl LkBackend {
         let client = RemoteCoreClient::new(Self::local_core_socket_path());
         client.set_profile(profile);
         match client.probe() {
-            Ok(()) => QString::from(""),
-            Err(error) => QString::from(error),
+            Ok(()) => {
+                self.last_host_key_challenge = None;
+                QString::from("")
+            }
+            Err(error) => {
+                self.last_host_key_challenge = client.host_key_challenge();
+                QString::from(error)
+            }
         }
     }
 
     fn probeCoreHost(&mut self) -> QString {
         let profile = self.config.borrow().core_connection_profile();
         if !profile.is_configured() {
-            self.last_admin_host_probe = None;
+            self.last_remote_core_host_probe = None;
             return QString::from("SSH host is required");
         }
 
         let cancel = std::sync::atomic::AtomicBool::new(false);
-        match probe_admin_host(&profile, &cancel) {
+        match probe_remote_core_host(&profile, &cancel) {
             Ok(probe) => {
-                self.last_admin_host_probe = Some(probe);
+                self.last_remote_core_host_probe = Some(probe);
+                self.last_host_key_challenge = None;
                 QString::from("")
             }
+            Err(SshAuthError::HostKeyUnverified(challenge)) => {
+                self.last_remote_core_host_probe = None;
+                let message = challenge.message.clone();
+                self.last_host_key_challenge = Some(challenge);
+                QString::from(message)
+            }
             Err(error) => {
-                self.last_admin_host_probe = None;
-                QString::from(error)
+                self.last_remote_core_host_probe = None;
+                self.last_host_key_challenge = None;
+                QString::from(error.to_ui_message())
             }
         }
     }
 
     fn getCoreHostProbe(&self) -> QVariantMap {
         let mut map = QVariantMap::default();
-        let Some(probe) = &self.last_admin_host_probe else {
+        let Some(probe) = &self.last_remote_core_host_probe else {
             return map;
         };
 
@@ -360,11 +378,41 @@ impl LkBackend {
     }
 
     fn clearCoreHostProbe(&mut self) {
-        self.last_admin_host_probe = None;
+        self.last_remote_core_host_probe = None;
+    }
+
+    fn getCoreHostKeyChallenge(&self) -> QVariantMap {
+        let mut map = QVariantMap::default();
+        let Some(challenge) = &self.last_host_key_challenge else {
+            return map;
+        };
+        map.insert("message".into(), QString::from(challenge.message.clone()).into());
+        map.insert("keyId".into(), QString::from(challenge.key_id.clone()).into());
+        map
+    }
+
+    fn clearCoreHostKeyChallenge(&mut self) {
+        self.last_host_key_challenge = None;
+    }
+
+    fn verifyCoreHostKey(&mut self, key_id: QString) -> QString {
+        let profile = self.config.borrow().core_connection_profile();
+        if !profile.is_configured() {
+            return QString::from("SSH host is required");
+        }
+        let key_id = key_id.to_string();
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        match accept_remote_core_host_key(&profile, &key_id, &cancel) {
+            Ok(()) => {
+                self.last_host_key_challenge = None;
+                QString::from("")
+            }
+            Err(error) => QString::from(error.to_ui_message()),
+        }
     }
 
     fn connectCore(&mut self) -> QString {
-        self.last_admin_host_probe = None;
+        self.last_remote_core_host_probe = None;
 
         let profile = self.config.borrow().core_connection_profile();
         if !profile.is_configured() {
@@ -376,6 +424,7 @@ impl LkBackend {
             let probe_client = RemoteCoreClient::new(Self::local_core_socket_path());
             probe_client.set_profile(profile.clone());
             if let Err(error) = probe_client.probe() {
+                self.last_host_key_challenge = probe_client.host_key_challenge();
                 self.coreConnectionChanged();
                 return QString::from(error);
             }
@@ -391,6 +440,7 @@ impl LkBackend {
         client.set_frontend_update_sender(self.new_update_sender());
 
         if let Err(error) = client.connect() {
+            self.last_host_key_challenge = client.host_key_challenge();
             self.remote_client = Some(client);
             self.hosts.borrow_mut().clear_hosts();
             self.coreConnectionChanged();
@@ -398,6 +448,7 @@ impl LkBackend {
             return QString::from(error);
         }
 
+        self.last_host_key_challenge = None;
         if let Err(error) = self.install_remote_backends(client.clone()) {
             client.stop_connection();
             self.remote_client = Some(client);

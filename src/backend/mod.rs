@@ -9,6 +9,7 @@ mod local;
 mod local_config;
 mod remote;
 mod remote_config;
+pub mod ssh_auth;
 pub mod ssh_transport;
 
 pub use api::{CommandBackend, ConfigBackend, LocalBackendApi};
@@ -17,4 +18,7 @@ pub use local::LocalCommandBackend;
 pub use local_config::LocalConfigBackend;
 pub use remote::{RemoteCommandBackend, RemoteCoreClient};
 pub use remote_config::RemoteConfigBackend;
-pub use ssh_transport::{probe_admin_host, AdminHostProbe, CoreInstallPlan};
+pub use ssh_auth::{HostKeyChallenge, SshAuthError};
+pub use ssh_transport::{
+    accept_remote_core_host_key, probe_remote_core_host, RemoteCoreHostProbe, CoreInstallPlan,
+};

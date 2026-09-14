@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-/// Preferred transport for reaching lightkeeper-core on an admin host.
+/// Preferred transport for reaching lightkeeper-core on a remote core host.
 #[derive(Serialize, Deserialize, Default, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum CoreTransportPreference {
