@@ -82,10 +82,7 @@ impl Drop for Ssh2DirectStreamLocalTransport {
 }
 
 /// SSH to the admin host, collect platform info and core install presence (no streamlocal).
-pub fn probe_admin_host(
-    profile: &CoreConnectionProfile,
-    cancel: &AtomicBool,
-) -> Result<AdminHostProbe, String> {
+pub fn probe_admin_host(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<AdminHostProbe, String> {
     let session = connect_admin_session(profile, cancel)?;
     let os_release = exec_command(&session, "cat /etc/os-release")?;
     let uname_machine = exec_command(&session, "uname -m")?;
@@ -111,10 +108,7 @@ pub fn probe_admin_host(
     })
 }
 
-fn resolve_install_plan(
-    session: &ssh2::Session,
-    socket_path: &str,
-) -> Result<CoreInstallPlan, String> {
+fn resolve_install_plan(session: &ssh2::Session, socket_path: &str) -> Result<CoreInstallPlan, String> {
     let home = exec_command(session, "printf '%s' \"$HOME\"")?;
     let home = home.trim();
     if home.is_empty() || !home.starts_with('/') {
