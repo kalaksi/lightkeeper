@@ -47,11 +47,7 @@ impl CoreRuntime {
             log::info!("Initialized {} host(s)", host_ids.len());
         }
 
-        Ok(CoreRuntime {
-            core,
-            config_dir,
-            secret_store,
-        })
+        Ok(CoreRuntime { core, config_dir, secret_store })
     }
 
     pub fn default_socket_path() -> Result<PathBuf, LkError> {

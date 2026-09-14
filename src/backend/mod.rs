@@ -17,4 +17,4 @@ pub use local::LocalCommandBackend;
 pub use local_config::LocalConfigBackend;
 pub use remote::{RemoteCommandBackend, RemoteCoreClient};
 pub use remote_config::RemoteConfigBackend;
-pub use ssh_transport::{AdminHostProbe, probe_admin_host};
+pub use ssh_transport::{probe_admin_host, AdminHostProbe};

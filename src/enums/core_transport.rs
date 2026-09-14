@@ -22,9 +22,7 @@ impl FromStr for CoreTransportPreference {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "ssh2_direct_stream_local" | "openssh_stream_local" => {
-                Ok(CoreTransportPreference::Ssh2DirectStreamLocal)
-            }
+            "ssh2_direct_stream_local" | "openssh_stream_local" => Ok(CoreTransportPreference::Ssh2DirectStreamLocal),
             _ => Err(()),
         }
     }

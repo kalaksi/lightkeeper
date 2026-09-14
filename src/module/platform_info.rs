@@ -92,22 +92,20 @@ pub fn parse_os_release(message: &str) -> (Flavor, VersionNumber, String) {
         let value = string_manipulation::remove_quotes(&parts.next().unwrap_or_default());
 
         match key {
-            "ID" => {
-                match value.as_str() {
-                    "debian" => flavor = Flavor::Debian,
-                    "centos" => flavor = Flavor::CentOS,
-                    "ubuntu" => flavor = Flavor::Ubuntu,
-                    "nixos" => flavor = Flavor::NixOS,
-                    "arch" => flavor = Flavor::ArchLinux,
-                    "fedora" => flavor = Flavor::Fedora,
-                    "opensuse" => flavor = Flavor::OpenSUSE,
-                    "alpine" => flavor = Flavor::Alpine,
-                    _ => ()
-                }
+            "ID" => match value.as_str() {
+                "debian" => flavor = Flavor::Debian,
+                "centos" => flavor = Flavor::CentOS,
+                "ubuntu" => flavor = Flavor::Ubuntu,
+                "nixos" => flavor = Flavor::NixOS,
+                "arch" => flavor = Flavor::ArchLinux,
+                "fedora" => flavor = Flavor::Fedora,
+                "opensuse" => flavor = Flavor::OpenSUSE,
+                "alpine" => flavor = Flavor::Alpine,
+                _ => (),
             },
             "VERSION_ID" => version = VersionNumber::from_string(&value.to_string()),
             "VARIANT_ID" => variant_id = value,
-            _ => ()
+            _ => (),
         }
     }
 

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use super::api::ConfigBackend;
 use crate::configuration::{self, Configuration};
 use crate::error::LkError;
-use crate::secrets_manager::{KEYRING_PREFIX, SecretStore, secret_lookup_key};
+use crate::secrets_manager::{secret_lookup_key, SecretStore, KEYRING_PREFIX};
 
 pub struct LocalConfigBackend {
     config_dir: String,
@@ -17,10 +17,7 @@ pub struct LocalConfigBackend {
 
 impl LocalConfigBackend {
     pub fn new(config_dir: String, secret_store: Arc<dyn SecretStore>) -> Self {
-        LocalConfigBackend {
-            config_dir,
-            secret_store,
-        }
+        LocalConfigBackend { config_dir, secret_store }
     }
 }
 
@@ -47,13 +44,7 @@ impl ConfigBackend for LocalConfigBackend {
         self.secret_store.get(&lookup_key)
     }
 
-    fn store_secret(
-        &self,
-        source_id: &str,
-        module_id: &str,
-        setting_key: &str,
-        secret_value: &str,
-    ) -> Result<String, LkError> {
+    fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> Result<String, LkError> {
         let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
         self.secret_store.set(&lookup_key, secret_value)?;
         Ok(format!("{}{}", KEYRING_PREFIX, lookup_key))
