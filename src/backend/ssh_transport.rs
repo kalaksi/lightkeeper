@@ -18,6 +18,16 @@ use crate::utils::sha256;
 
 const SSH_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
+/// Absolute user-local paths for installing lightkeeper-core on the probed admin host
+/// (`~/.local/bin`, systemd user unit, data-dir socket). Used by the Install confirmation UI
+/// and by the remote install path when copying/enabling the service.
+#[derive(Clone, PartialEq, Eq)]
+pub struct CoreInstallPlan {
+    pub binary_path: String,
+    pub unit_path: String,
+    pub socket_path: String,
+}
+
 /// Result of probing an admin host over SSH without requiring a live core socket.
 #[derive(Clone, PartialEq, Eq)]
 pub struct AdminHostProbe {
@@ -26,6 +36,7 @@ pub struct AdminHostProbe {
     pub socket_path: Option<String>,
     /// Absolute path if `lightkeeper-core` was found; otherwise `None`.
     pub binary_path: Option<String>,
+    pub install_plan: CoreInstallPlan,
 }
 
 pub struct Ssh2DirectStreamLocalTransport {
@@ -71,7 +82,10 @@ impl Drop for Ssh2DirectStreamLocalTransport {
 }
 
 /// SSH to the admin host, collect platform info and core install presence (no streamlocal).
-pub fn probe_admin_host(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<AdminHostProbe, String> {
+pub fn probe_admin_host(
+    profile: &CoreConnectionProfile,
+    cancel: &AtomicBool,
+) -> Result<AdminHostProbe, String> {
     let session = connect_admin_session(profile, cancel)?;
     let os_release = exec_command(&session, "cat /etc/os-release")?;
     let uname_machine = exec_command(&session, "uname -m")?;
@@ -81,14 +95,37 @@ pub fn probe_admin_host(profile: &CoreConnectionProfile, cancel: &AtomicBool) ->
         None => discover_remote_core_socket_path(&session)?,
     };
     let socket_path = if remote_socket_exists(&session, &discovered_socket_path)? {
-        Some(discovered_socket_path)
+        Some(discovered_socket_path.clone())
     }
     else {
         None
     };
     let binary_path = find_core_binary(&session)?;
+    let install_plan = resolve_install_plan(&session, &discovered_socket_path)?;
 
-    Ok(AdminHostProbe { platform, socket_path, binary_path })
+    Ok(AdminHostProbe {
+        platform,
+        socket_path,
+        binary_path,
+        install_plan,
+    })
+}
+
+fn resolve_install_plan(
+    session: &ssh2::Session,
+    socket_path: &str,
+) -> Result<CoreInstallPlan, String> {
+    let home = exec_command(session, "printf '%s' \"$HOME\"")?;
+    let home = home.trim();
+    if home.is_empty() || !home.starts_with('/') {
+        return Err(String::from("Remote HOME is missing or invalid"));
+    }
+
+    Ok(CoreInstallPlan {
+        binary_path: format!("{}/.local/bin/lightkeeper-core", home),
+        unit_path: format!("{}/.config/systemd/user/lightkeeper-core.service", home),
+        socket_path: socket_path.to_string(),
+    })
 }
 
 fn connect_admin_session(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<ssh2::Session, String> {
