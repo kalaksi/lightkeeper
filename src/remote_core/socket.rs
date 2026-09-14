@@ -52,10 +52,7 @@ pub fn remove_stale_socket(socket_path: &Path) -> io::Result<()> {
     if !metadata.file_type().is_socket() {
         return Err(io::Error::new(
             io::ErrorKind::AlreadyExists,
-            format!(
-                "refusing to remove stale path {}: not a unix socket",
-                socket_path.display(),
-            ),
+            format!("refusing to remove stale path {}: not a unix socket", socket_path.display(),),
         ));
     }
 

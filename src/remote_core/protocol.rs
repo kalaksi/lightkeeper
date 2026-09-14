@@ -22,9 +22,7 @@ pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 /// after decode — `Options::with_limit` / `reject_trailing_bytes` corrupt nested HostDisplayData
 /// payloads in bincode 1.3.
 fn bincode_options() -> impl Options {
-    bincode::DefaultOptions::new()
-        .with_fixint_encoding()
-        .allow_trailing_bytes()
+    bincode::DefaultOptions::new().with_fixint_encoding().allow_trailing_bytes()
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]

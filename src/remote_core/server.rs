@@ -93,10 +93,7 @@ fn run_remote_client_session_with_claim(
         let session = RemoteSession::new(stream.try_clone()?);
         session.send_error(
             RemoteErrorCode::UnsupportedVersion,
-            format!(
-                "Unsupported protocol version {}. Expected {}.",
-                protocol_version, PROTOCOL_VERSION,
-            ),
+            format!("Unsupported protocol version {}. Expected {}.", protocol_version, PROTOCOL_VERSION,),
         )?;
         return Ok(());
     }
@@ -283,7 +280,10 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 remote_file_path,
                 contents,
             } => {
-                match runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path)
+                match runtime
+                    .core
+                    .command_handler
+                    .cache_file_path_for_remote(&host_id, &remote_file_path)
                     .and_then(|path| runtime.core.command_handler.write_file(&path, contents))
                 {
                     Ok(()) => {
@@ -295,7 +295,10 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 }
             }
             ClientMessage::RemoveCachedFile { request_id, host_id, remote_file_path } => {
-                match runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path)
+                match runtime
+                    .core
+                    .command_handler
+                    .cache_file_path_for_remote(&host_id, &remote_file_path)
                     .and_then(|path| runtime.core.command_handler.remove_file(&path))
                 {
                     Ok(()) => {
@@ -331,7 +334,10 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 command_id,
                 remote_file_path,
             } => {
-                match runtime.core.command_handler.cache_file_path_for_remote(&host_id, &remote_file_path)
+                match runtime
+                    .core
+                    .command_handler
+                    .cache_file_path_for_remote(&host_id, &remote_file_path)
                     .and_then(|path| runtime.core.command_handler.upload_file(&host_id, &command_id, &path))
                 {
                     Ok(invocation_id) => {
@@ -389,9 +395,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     }
                 };
 
-                if let Err(error) =
-                    Configuration::write_all_configs_transactional(&runtime.config_dir, &main, &hosts, &groups)
-                {
+                if let Err(error) = Configuration::write_all_configs_transactional(&runtime.config_dir, &main, &hosts, &groups) {
                     session.start_update_stream(runtime.new_update_receiver());
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     continue;
@@ -402,12 +406,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
 
                 let reinit_error = match Configuration::read(&runtime.config_dir) {
                     Ok((main_read, hosts_read, _groups)) => {
-                        match crate::initialize_core(
-                            &main_read,
-                            &hosts_read,
-                            module_factory.clone(),
-                            runtime.secret_store.clone(),
-                        ) {
+                        match crate::initialize_core(&main_read, &hosts_read, module_factory.clone(), runtime.secret_store.clone()) {
                             Ok(core) => {
                                 runtime.core = core;
                                 None
@@ -424,12 +423,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     }
                     let recovered = match Configuration::read(&runtime.config_dir) {
                         Ok((main_read, hosts_read, _groups)) => {
-                            match crate::initialize_core(
-                                &main_read,
-                                &hosts_read,
-                                module_factory,
-                                runtime.secret_store.clone(),
-                            ) {
+                            match crate::initialize_core(&main_read, &hosts_read, module_factory, runtime.secret_store.clone()) {
                                 Ok(core) => {
                                     runtime.core = core;
                                     true
@@ -446,10 +440,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                         }
                     };
                     if !recovered {
-                        let message = format!(
-                            "Unrecoverable core runtime after config update failure: {}",
-                            error,
-                        );
+                        let message = format!("Unrecoverable core runtime after config update failure: {}", error,);
                         let _ = session.send_request_error(request_id, RemoteErrorCode::Internal, &message);
                         return Err(LkError::new(ErrorKind::Fatal, message));
                     }
@@ -461,9 +452,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
                     log::warn!("Failed to clear configuration backups: {}", error);
                 }
-                session.send_message(&ServerMessage::InitialState(
-                    runtime.core.host_manager.borrow().get_display_data(),
-                ))?;
+                session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
                 session.start_update_stream(runtime.new_update_receiver());
                 session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;
             }
@@ -494,10 +483,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                 match runtime.secret_store.set(&lookup_key, &secret_value) {
                     Ok(()) => {
                         let placeholder = format!("{}{}", secrets_manager::KEYRING_PREFIX, lookup_key);
-                        session.send_message(&ServerMessage::StoreSecretResult {
-                            request_id,
-                            placeholder,
-                        })?;
+                        session.send_message(&ServerMessage::StoreSecretResult { request_id, placeholder })?;
                     }
                     Err(error) => {
                         session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
@@ -540,41 +526,39 @@ impl CoreListener {
         let client_session_active = Arc::new(Mutex::new(false));
         let accept_active = client_session_active.clone();
 
-        let accept_thread = thread::spawn(move || {
-            loop {
-                let stream = match listener.accept() {
-                    Ok((stream, _)) => stream,
-                    Err(error) => match error.kind() {
-                        io::ErrorKind::Interrupted
-                        | io::ErrorKind::ConnectionAborted
-                        | io::ErrorKind::ConnectionReset
-                        | io::ErrorKind::WouldBlock => {
-                            log::debug!("Ignoring transient accept error: {}", error);
-                            continue;
-                        }
-                        _ => {
-                            log::error!("Accept failed: {}", error);
-                            break;
-                        }
-                    },
-                };
-
-                {
-                    let mut active = accept_active.lock().unwrap();
-                    if *active {
-                        drop(active);
-                        reject_busy_client(stream);
+        let accept_thread = thread::spawn(move || loop {
+            let stream = match listener.accept() {
+                Ok((stream, _)) => stream,
+                Err(error) => match error.kind() {
+                    io::ErrorKind::Interrupted |
+                    io::ErrorKind::ConnectionAborted |
+                    io::ErrorKind::ConnectionReset |
+                    io::ErrorKind::WouldBlock => {
+                        log::debug!("Ignoring transient accept error: {}", error);
                         continue;
                     }
-                    *active = true;
-                }
-
-                if incoming_tx.send(stream).is_err() {
-                    if let Ok(mut active) = accept_active.lock() {
-                        *active = false;
+                    _ => {
+                        log::error!("Accept failed: {}", error);
+                        break;
                     }
-                    break;
+                },
+            };
+
+            {
+                let mut active = accept_active.lock().unwrap();
+                if *active {
+                    drop(active);
+                    reject_busy_client(stream);
+                    continue;
                 }
+                *active = true;
+            }
+
+            if incoming_tx.send(stream).is_err() {
+                if let Ok(mut active) = accept_active.lock() {
+                    *active = false;
+                }
+                break;
             }
         });
 
@@ -587,9 +571,7 @@ impl CoreListener {
     }
 
     pub fn recv(&self) -> Result<UnixStream, LkError> {
-        self.incoming
-            .recv()
-            .map_err(|_| LkError::other("Accept thread stopped"))
+        self.incoming.recv().map_err(|_| LkError::other("Accept thread stopped"))
     }
 
     pub fn session_active_flag(&self) -> Arc<Mutex<bool>> {

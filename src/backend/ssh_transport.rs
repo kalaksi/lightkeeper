@@ -44,12 +44,7 @@ impl Ssh2DirectStreamLocalTransport {
         check_cancel(cancel)?;
         let channel = session
             .channel_direct_streamlocal(&remote_socket, None)
-            .map_err(|error| {
-                format!(
-                    "Failed to open direct-streamlocal to {}: {}",
-                    remote_socket, error
-                )
-            })?;
+            .map_err(|error| format!("Failed to open direct-streamlocal to {}: {}", remote_socket, error))?;
 
         Ok(Ssh2DirectStreamLocalTransport { session, channel })
     }
@@ -78,7 +73,9 @@ impl Drop for Ssh2DirectStreamLocalTransport {
 /// SSH to the admin host, collect platform info and core install presence (no streamlocal).
 pub fn probe_admin_host(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<AdminHostProbe, String> {
     let session = connect_admin_session(profile, cancel)?;
-    let platform = probe_platform(&session)?;
+    let os_release = exec_command(&session, "cat /etc/os-release")?;
+    let uname_machine = exec_command(&session, "uname -m")?;
+    let platform = PlatformInfo::from_linux_probe(&os_release, &uname_machine);
     let discovered_socket_path = match &profile.remote_socket_path {
         Some(path) => validate_remote_socket_path(path)?,
         None => discover_remote_core_socket_path(&session)?,
@@ -91,11 +88,7 @@ pub fn probe_admin_host(profile: &CoreConnectionProfile, cancel: &AtomicBool) ->
     };
     let binary_path = find_core_binary(&session)?;
 
-    Ok(AdminHostProbe {
-        platform,
-        socket_path,
-        binary_path,
-    })
+    Ok(AdminHostProbe { platform, socket_path, binary_path })
 }
 
 fn connect_admin_session(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<ssh2::Session, String> {
@@ -122,28 +115,20 @@ fn connect_admin_session(profile: &CoreConnectionProfile, cancel: &AtomicBool) -
         .ok_or_else(|| format!("Failed to resolve {}: no addresses", profile.host))?;
 
     check_cancel(cancel)?;
-    let tcp = TcpStream::connect_timeout(&address, SSH_CONNECT_TIMEOUT)
-        .map_err(|error| format!("SSH TCP connect failed: {}", error))?;
+    let tcp =
+        TcpStream::connect_timeout(&address, SSH_CONNECT_TIMEOUT).map_err(|error| format!("SSH TCP connect failed: {}", error))?;
     tcp.set_nodelay(true).map_err(|error| error.to_string())?;
 
     check_cancel(cancel)?;
     let mut session = ssh2::Session::new().map_err(|error| error.to_string())?;
     session.set_tcp_stream(tcp);
-    session
-        .handshake()
-        .map_err(|error| format!("SSH handshake failed: {}", error))?;
+    session.handshake().map_err(|error| format!("SSH handshake failed: {}", error))?;
 
     check_cancel(cancel)?;
     verify_host_key(&session, &profile.host, port)?;
     authenticate_agent(&session, &username)?;
     check_cancel(cancel)?;
     Ok(session)
-}
-
-fn probe_platform(session: &ssh2::Session) -> Result<PlatformInfo, String> {
-    let os_release = exec_command(session, "cat /etc/os-release")?;
-    let uname_machine = exec_command(session, "uname -m")?;
-    Ok(PlatformInfo::from_linux_probe(&os_release, &uname_machine))
 }
 
 fn remote_socket_exists(session: &ssh2::Session, socket_path: &str) -> Result<bool, String> {
@@ -183,18 +168,15 @@ fn exec_command(session: &ssh2::Session, command: &str) -> Result<String, String
     let _ = channel.wait_close();
     let status = channel.exit_status().unwrap_or(-1);
     if status != 0 {
-        return Err(format!(
-            "Remote command failed (exit {}): {}",
-            status,
-            command
-        ));
+        return Err(format!("Remote command failed (exit {}): {}", status, command));
     }
     Ok(output)
 }
 
 /// Validates an explicit `remote_socket_path` from the connection profile.
 pub fn resolve_remote_socket_path(profile: &CoreConnectionProfile) -> Result<String, String> {
-    let Some(path) = &profile.remote_socket_path else {
+    let Some(path) = &profile.remote_socket_path
+    else {
         return Err(String::from("Remote core socket path is not set"));
     };
     validate_remote_socket_path(path)
@@ -223,8 +205,7 @@ fn discover_remote_core_socket_path(session: &ssh2::Session) -> Result<String, S
         "else exit 1; fi",
     );
 
-    let output = exec_command(session, discovery_command)
-        .map_err(|error| format!("Remote socket discovery failed: {}", error))?;
+    let output = exec_command(session, discovery_command).map_err(|error| format!("Remote socket discovery failed: {}", error))?;
     parse_discovered_socket_path(&output)
 }
 
@@ -239,11 +220,7 @@ pub fn parse_discovered_socket_path(output: &str) -> Result<String, String> {
 
 /// Parses binary-discovery command output (first non-empty line).
 pub fn parse_core_binary_path(output: &str) -> Option<String> {
-    output
-        .lines()
-        .map(str::trim)
-        .find(|line| !line.is_empty())
-        .map(str::to_string)
+    output.lines().map(str::trim).find(|line| !line.is_empty()).map(str::to_string)
 }
 
 fn default_ssh_username() -> String {
@@ -260,9 +237,7 @@ fn check_cancel(cancel: &AtomicBool) -> Result<(), String> {
 }
 
 fn authenticate_agent(session: &ssh2::Session, username: &str) -> Result<(), String> {
-    let mut agent = session
-        .agent()
-        .map_err(|error| format!("Failed to open SSH agent: {}", error))?;
+    let mut agent = session.agent().map_err(|error| format!("Failed to open SSH agent: {}", error))?;
     agent
         .connect()
         .map_err(|error| format!("Failed to connect to SSH agent: {}", error))?;
@@ -314,9 +289,7 @@ fn verify_host_key(session: &ssh2::Session, hostname: &str, port: u16) -> Result
 fn known_hosts_path() -> Result<PathBuf, String> {
     let path = file_handler::get_config_dir().join("known_hosts");
     if !path.exists() {
-        std::fs::File::create(&path).map_err(|error| {
-            format!("Failed to create known_hosts {}: {}", path.display(), error)
-        })?;
+        std::fs::File::create(&path).map_err(|error| format!("Failed to create known_hosts {}: {}", path.display(), error))?;
     }
     Ok(path)
 }
