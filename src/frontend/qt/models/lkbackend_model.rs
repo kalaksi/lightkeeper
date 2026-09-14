@@ -305,12 +305,10 @@ impl LkBackend {
         match probe_admin_host(&profile, &cancel) {
             Ok(probe) => {
                 self.last_admin_host_probe = Some((profile, probe));
-                self.coreConnectionChanged();
                 QString::from("")
             }
             Err(error) => {
                 self.last_admin_host_probe = None;
-                self.coreConnectionChanged();
                 QString::from(error)
             }
         }

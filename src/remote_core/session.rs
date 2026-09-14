@@ -40,12 +40,7 @@ impl RemoteSession {
         self.send_message(&ServerMessage::error(None, code, message))
     }
 
-    pub fn send_request_error(
-        &self,
-        request_id: u64,
-        code: RemoteErrorCode,
-        message: impl ToString,
-    ) -> Result<(), LkError> {
+    pub fn send_request_error(&self, request_id: u64, code: RemoteErrorCode, message: impl ToString) -> Result<(), LkError> {
         self.send_message(&ServerMessage::error(Some(request_id), code, message))
     }
 
@@ -65,9 +60,7 @@ impl RemoteSession {
             };
 
             let result = match update {
-                frontend::UIUpdate::Host(host_update) => {
-                    Self::send_on_writer(&writer, &ServerMessage::HostUpdate(host_update))
-                }
+                frontend::UIUpdate::Host(host_update) => Self::send_on_writer(&writer, &ServerMessage::HostUpdate(host_update)),
                 frontend::UIUpdate::FatalError() => {
                     let result = Self::send_on_writer(
                         &writer,
