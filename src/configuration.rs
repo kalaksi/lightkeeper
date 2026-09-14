@@ -103,9 +103,9 @@ impl Default for EditorPreferences {
     }
 }
 
-/// Admin-host SSH identity for reaching lightkeeper-core.
-/// Do not store passwords or private-key passphrases here.
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Eq, Default)]
+/// Remote core host SSH identity for reaching lightkeeper-core.
+/// Password / key-passphrase may be plaintext (lab) or `keyring:` placeholders (desktop keyring).
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct CoreConnectionProfile {
     /// Resolvable SSH hostname or IP (libssh2 does not apply OpenSSH `Host` aliases).
@@ -122,6 +122,40 @@ pub struct CoreConnectionProfile {
     pub transport: CoreTransportPreference,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub auto_connect: bool,
+    /// Password or `keyring:` placeholder. Empty / unset means not used (try key or agent).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub private_key_path: Option<String>,
+    /// Passphrase or `keyring:` placeholder for `private_key_path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub private_key_passphrase: Option<String>,
+    /// SSH-agent identity comment filter (same as ssh connector `agent_key_identifier`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_key_identifier: Option<String>,
+    #[serde(default = "DisplayOptions::default_to_true")]
+    pub verify_host_key: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_known_hosts_path: Option<String>,
+}
+
+impl Default for CoreConnectionProfile {
+    fn default() -> Self {
+        Self {
+            host: String::new(),
+            port: None,
+            username: None,
+            remote_socket_path: None,
+            transport: CoreTransportPreference::default(),
+            auto_connect: false,
+            password: None,
+            private_key_path: None,
+            private_key_passphrase: None,
+            agent_key_identifier: None,
+            verify_host_key: true,
+            custom_known_hosts_path: None,
+        }
+    }
 }
 
 impl CoreConnectionProfile {

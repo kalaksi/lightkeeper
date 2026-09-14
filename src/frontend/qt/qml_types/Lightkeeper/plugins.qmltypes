@@ -252,6 +252,21 @@ Module {
         Method { name: "addSavedCoreAddress"; Parameter { name: "address"; type: "string" } }
         Method { name: "getCoreConnection"; type: "QVariantMap" }
         Method { name: "setCoreConnection"; Parameter { name: "profile"; type: "QVariantMap" } }
+        Method {
+            name: "storeCoreSecret"
+            Parameter { name: "setting_key"; type: "string" }
+            Parameter { name: "secret_value"; type: "string" }
+            type: "string"
+        }
+        Method {
+            name: "getCoreSecret"
+            Parameter { name: "setting_key"; type: "string" }
+            type: "string"
+        }
+        Method {
+            name: "removeCoreSecret"
+            Parameter { name: "setting_key"; type: "string" }
+        }
         Method { name: "addHost"; Parameter { name: "host_name"; type: "string" } }
         Method { name: "removeHost"; Parameter { name: "host_name"; type: "string" } }
         Method {
@@ -625,6 +640,13 @@ Module {
         Method { name: "getCoreConnectionState"; type: "string" }
         Method { name: "getCoreConnectionError"; type: "string" }
         Method { name: "isUsingRemoteCore"; type: "bool" }
+        Method { name: "getCoreHostKeyChallenge"; type: "QVariantMap" }
+        Method { name: "clearCoreHostKeyChallenge" }
+        Method {
+            name: "verifyCoreHostKey"
+            Parameter { name: "key_id"; type: "string" }
+            type: "string"
+        }
 
         Signal {
             name: "reloaded"

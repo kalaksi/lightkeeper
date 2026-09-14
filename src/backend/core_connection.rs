@@ -5,7 +5,7 @@
 
 use std::fmt::Display;
 
-/// Runtime connection lifecycle for the desktop to admin-host core link.
+/// Runtime connection lifecycle for the desktop to remote core host link.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CoreConnectionState {
     #[default]
