@@ -70,17 +70,15 @@ pub fn known_hosts_path(custom_path: Option<&str>) -> Result<PathBuf, SshAuthErr
 
     let path = file_handler::get_config_dir().join("known_hosts");
     if !path.exists() {
-        std::fs::File::create(&path).map_err(|error| {
-            SshAuthError::other(format!("Failed to create known_hosts {}: {}", path.display(), error))
-        })?;
+        std::fs::File::create(&path)
+            .map_err(|error| SshAuthError::other(format!("Failed to create known_hosts {}: {}", path.display(), error)))?;
     }
     Ok(path)
 }
 
 pub fn host_key_id(key_type: ssh2::HostKeyType, key: &[u8]) -> Result<String, SshAuthError> {
     let fp_hex = sha256::hash(key);
-    let fp_bytes = Vec::<u8>::from_hex(fp_hex.clone())
-        .map_err(|error| SshAuthError::other(error.to_string()))?;
+    let fp_bytes = Vec::<u8>::from_hex(fp_hex.clone()).map_err(|error| SshAuthError::other(error.to_string()))?;
     let fp_base64 = base64::engine::general_purpose::STANDARD_NO_PAD.encode(fp_bytes);
 
     Ok(format!(
@@ -121,16 +119,10 @@ pub fn check_known_hosts(
             key_id,
         })),
         ssh2::CheckResult::Mismatch => Err(SshAuthError::HostKeyUnverified(HostKeyChallenge {
-            message: format!(
-                "Host key for '{}' HAS CHANGED! Do you trust this NEW key:",
-                hostname
-            ),
+            message: format!("Host key for '{}' HAS CHANGED! Do you trust this NEW key:", hostname),
             key_id,
         })),
-        ssh2::CheckResult::Failure => Err(SshAuthError::other(format!(
-            "Failed to check host key for '{}'",
-            hostname
-        ))),
+        ssh2::CheckResult::Failure => Err(SshAuthError::other(format!("Failed to check host key for '{}'", hostname))),
     }
 }
 
@@ -206,9 +198,7 @@ pub fn authenticate(session: &ssh2::Session, auth: &SshAuthOptions) -> Result<()
         .list_identities()
         .map_err(|error| SshAuthError::other(format!("Failed to list SSH agent identities: {}", error)))?;
 
-    let mut identities = agent
-        .identities()
-        .map_err(|error| SshAuthError::other(error.to_string()))?;
+    let mut identities = agent.identities().map_err(|error| SshAuthError::other(error.to_string()))?;
     if let Some(selected_id) = auth.agent_key_identifier.as_ref().filter(|value| !value.is_empty()) {
         identities.retain(|identity| identity.comment() == selected_id.as_str());
     }
@@ -245,11 +235,7 @@ pub fn resolve_secret_value(store: &dyn SecretStore, stored: &str) -> Result<Opt
     Ok(Some(stored.to_string()))
 }
 
-pub fn store_core_secret(
-    store: &dyn SecretStore,
-    setting_key: &str,
-    secret_value: &str,
-) -> Result<String, SshAuthError> {
+pub fn store_core_secret(store: &dyn SecretStore, setting_key: &str, secret_value: &str) -> Result<String, SshAuthError> {
     let lookup_key = secrets_manager::secret_lookup_key("ssh", "core", setting_key);
     store
         .set(&lookup_key, secret_value)
@@ -259,14 +245,10 @@ pub fn store_core_secret(
 
 pub fn get_core_secret(store: &dyn SecretStore, setting_key: &str) -> Result<Option<String>, SshAuthError> {
     let lookup_key = secrets_manager::secret_lookup_key("ssh", "core", setting_key);
-    store
-        .get(&lookup_key)
-        .map_err(|error| SshAuthError::other(error.to_string()))
+    store.get(&lookup_key).map_err(|error| SshAuthError::other(error.to_string()))
 }
 
 pub fn remove_core_secret(store: &dyn SecretStore, setting_key: &str) -> Result<(), SshAuthError> {
     let lookup_key = secrets_manager::secret_lookup_key("ssh", "core", setting_key);
-    store
-        .delete(&lookup_key)
-        .map_err(|error| SshAuthError::other(error.to_string()))
+    store.delete(&lookup_key).map_err(|error| SshAuthError::other(error.to_string()))
 }

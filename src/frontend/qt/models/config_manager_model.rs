@@ -393,11 +393,6 @@ impl ConfigManagerModel {
             "agentKeyIdentifier".into(),
             QString::from(profile.agent_key_identifier.clone().unwrap_or_default()).into(),
         );
-        map.insert("verifyHostKey".into(), profile.verify_host_key.into());
-        map.insert(
-            "customKnownHostsPath".into(),
-            QString::from(profile.custom_known_hosts_path.clone().unwrap_or_default()).into(),
-        );
         map
     }
 
@@ -1385,7 +1380,5 @@ fn core_connection_from_variant_map(map: &QVariantMap) -> configuration::CoreCon
         private_key_path: optional_string("privateKeyPath"),
         private_key_passphrase: optional_string("privateKeyPassphrase"),
         agent_key_identifier: optional_string("agentKeyIdentifier"),
-        verify_host_key: map.value("verifyHostKey".into(), true.into()).to_bool(),
-        custom_known_hosts_path: optional_string("customKnownHostsPath"),
     }
 }
