@@ -182,13 +182,15 @@ impl ConfigManagerModel {
         }
     }
 
-    pub fn set_config_backend(&mut self, backend: Box<dyn ConfigBackend>) -> Result<(), String> {
-        let (main_config, hosts_config, groups_config) = backend.get_config()?;
+    pub fn set_config_backend(
+        &mut self,
+        backend: Box<dyn ConfigBackend>,
+        (main_config, hosts_config, groups_config): (Configuration, Hosts, Groups),
+    ) {
         self.main_config = main_config;
         self.hosts_config = hosts_config;
         self.groups_config = groups_config;
         self.config_backend = Some(backend);
-        Ok(())
     }
 
     pub fn hosts_config(&self) -> &Hosts {

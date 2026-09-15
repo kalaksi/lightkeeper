@@ -10,10 +10,10 @@ use qmetaobject::*;
 
 use crate::{
     backend::{
-        accept_remote_core_host_key, probe_remote_core_host, RemoteCoreHostProbe, CoreConnectionState, HostKeyChallenge,
-        RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient, SshAuthError,
+        accept_remote_core_host_key, probe_remote_core_host, ConfigBackend, CoreConnectionState, HostKeyChallenge,
+        RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient, RemoteCoreHostProbe, SshAuthError,
     },
-    configuration::Configuration,
+    configuration::{self, Configuration},
     connection_manager::ConnectionManager,
     file_handler,
     frontend::{HostDisplayData, UIUpdate},
@@ -231,6 +231,7 @@ impl LkBackend {
                                 process_host_update(display_data);
                             }
                             UIUpdate::Chart(metrics) => process_chart_update(metrics),
+                            UIUpdate::CoreConnectionChanged() => handle_core_connection_change(()),
                             UIUpdate::FatalError() => {
                                 handle_crash(());
                                 handle_core_connection_change(());
@@ -277,12 +278,15 @@ impl LkBackend {
         self.metrics.borrow_mut().set_hosts_config(hosts_config);
     }
 
-    fn install_remote_backends(&mut self, client: Arc<RemoteCoreClient>) -> Result<(), String> {
-        let config_backend = Box::new(RemoteConfigBackend::new(client.clone()));
-        self.config.borrow_mut().set_config_backend(config_backend)?;
+    fn install_remote_backends(
+        &mut self,
+        client: Arc<RemoteCoreClient>,
+        config_backend: RemoteConfigBackend,
+        config: (Configuration, configuration::Hosts, configuration::Groups),
+    ) {
+        self.config.borrow_mut().set_config_backend(Box::new(config_backend), config);
         self.command.borrow_mut().set_backend(Box::new(RemoteCommandBackend::new(client)));
         self.sync_models_from_config();
-        Ok(())
     }
 
     fn probeCore(&mut self) -> QString {
@@ -419,44 +423,61 @@ impl LkBackend {
             return QString::from("SSH host is required");
         }
 
-        // Validate reachability before tearing down the local backend.
-        if !self.using_remote {
-            let probe_client = RemoteCoreClient::new(Self::local_core_socket_path());
-            probe_client.set_profile(profile.clone());
-            if let Err(error) = probe_client.probe() {
-                self.last_host_key_challenge = probe_client.host_key_challenge();
-                self.coreConnectionChanged();
-                return QString::from(error);
+        if self.using_remote {
+            if let Some(client) = &self.remote_client {
+                client.stop_connection();
             }
-            self.detach_local_producers();
-            self.using_remote = true;
-        }
-        else if let Some(client) = &self.remote_client {
-            client.stop_connection();
         }
 
+        let (remote_update_sender, remote_update_receiver) = mpsc::channel();
         let client = Arc::new(RemoteCoreClient::new(Self::local_core_socket_path()));
         client.set_profile(profile);
-        client.set_frontend_update_sender(self.new_update_sender());
+        client.set_frontend_update_sender(remote_update_sender);
 
         if let Err(error) = client.connect() {
             self.last_host_key_challenge = client.host_key_challenge();
             self.remote_client = Some(client);
-            self.hosts.borrow_mut().clear_hosts();
+            if self.using_remote {
+                self.hosts.borrow_mut().clear_hosts();
+            }
             self.coreConnectionChanged();
             self.reloaded(QString::from(error.clone()), QStringList::default());
             return QString::from(error);
         }
-
         self.last_host_key_challenge = None;
-        if let Err(error) = self.install_remote_backends(client.clone()) {
-            client.stop_connection();
-            self.remote_client = Some(client);
-            self.coreConnectionChanged();
-            return QString::from(error);
+
+        let config_backend = RemoteConfigBackend::new(client.clone());
+        let remote_config = match config_backend.get_config() {
+            Ok(config) => config,
+            Err(error) => {
+                let error = error.to_string();
+                client.stop_connection();
+                self.remote_client = Some(client);
+                if self.using_remote {
+                    self.hosts.borrow_mut().clear_hosts();
+                }
+                self.coreConnectionChanged();
+                self.reloaded(QString::from(error.clone()), QStringList::default());
+                return QString::from(error);
+            }
+        };
+
+        if !self.using_remote {
+            self.detach_local_producers();
         }
 
+        self.install_remote_backends(client.clone(), config_backend, remote_config);
         self.hosts.borrow_mut().clear_hosts();
+        self.using_remote = true;
+        let frontend_update_sender = self.new_update_sender();
+        thread::spawn(move || {
+            while let Ok(update) = remote_update_receiver.recv() {
+                if frontend_update_sender.send(update).is_err() {
+                    return;
+                }
+            }
+        });
+
         self.remote_client = Some(client);
         self.coreConnectionChanged();
         self.reloaded(QString::from(""), QStringList::default());

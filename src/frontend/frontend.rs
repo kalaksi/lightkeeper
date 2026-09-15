@@ -19,6 +19,7 @@ use crate::utils::ErrorMessage;
 pub enum UIUpdate {
     Host(HostDisplayData),
     Chart(lmserver::LMSResponse),
+    CoreConnectionChanged(),
     FatalError(),
     Stop(),
 }

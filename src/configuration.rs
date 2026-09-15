@@ -187,8 +187,7 @@ impl CoreConnectionProfile {
         };
         fs::create_dir_all(&config_dir)?;
         let path = config_dir.join(CORE_CONNECTION_FILE);
-        let contents =
-            serde_yaml::to_string(self).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+        let contents = serde_yaml::to_string(self).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
         fs::write(&path, contents)?;
         fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
         log::info!("Updated core connection profile {}", path.display());

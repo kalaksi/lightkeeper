@@ -530,7 +530,7 @@ impl RemoteCoreClient {
         self.stopping.store(false, Ordering::SeqCst);
 
         let response_thread = thread::spawn(move || {
-            let disconnect = |message: &str| {
+            let disconnect = |message: &str, fatal: bool| {
                 ::log::error!("{}", message);
                 fail_all_pending_rpcs(&pending_rpc, RemoteErrorCode::Internal, message);
                 let transport = if let Ok(mut conn) = connection.lock() {
@@ -546,7 +546,13 @@ impl RemoteCoreClient {
                     if let Ok(mut status) = status.lock() {
                         status.set_failed(message);
                     }
-                    let _ = frontend_update_sender.send(frontend::UIUpdate::FatalError());
+                    let update = if fatal {
+                        frontend::UIUpdate::FatalError()
+                    }
+                    else {
+                        frontend::UIUpdate::CoreConnectionChanged()
+                    };
+                    let _ = frontend_update_sender.send(update);
                 }
             };
 
@@ -562,7 +568,7 @@ impl RemoteCoreClient {
                         continue;
                     }
                     Err(error) => {
-                        disconnect(&format!("Receive failed: {}", error));
+                        disconnect(&format!("Receive failed: {}", error), error.kind() == io::ErrorKind::InvalidData);
                         return;
                     }
                 };
@@ -604,14 +610,14 @@ impl RemoteCoreClient {
                     ServerMessage::InitialState(display_data) => {
                         for host_display_data in display_data.hosts.into_values() {
                             if frontend_update_sender.send(frontend::UIUpdate::Host(host_display_data)).is_err() {
-                                disconnect("Failed to deliver initial state update");
+                                disconnect("Failed to deliver initial state update", false);
                                 return;
                             }
                         }
                     }
                     ServerMessage::HostUpdate(host_display_data) => {
                         if frontend_update_sender.send(frontend::UIUpdate::Host(host_display_data)).is_err() {
-                            disconnect("Failed to deliver host update");
+                            disconnect("Failed to deliver host update", false);
                             return;
                         }
                     }
@@ -713,7 +719,7 @@ impl RemoteCoreClient {
                         }
                     }
                     ServerMessage::Error { request_id: None, code, message } => {
-                        disconnect(&format!("Core server error [{}]: {}", code, message));
+                        disconnect(&format!("Core server error [{}]: {}", code, message), true);
                         return;
                     }
                 }
@@ -823,10 +829,6 @@ impl RemoteCoreClient {
 
     pub fn begin_connecting_ssh(&self) {
         self.set_connection_state(CoreConnectionState::ConnectingSsh);
-    }
-
-    pub fn begin_reconnecting(&self) {
-        self.set_connection_state(CoreConnectionState::Reconnecting);
     }
 }
 

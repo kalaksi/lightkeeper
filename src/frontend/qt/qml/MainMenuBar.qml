@@ -30,8 +30,7 @@ ToolBar {
         if (root.usingRemoteCore
             && root.coreConnectionState !== "connected"
             && root.coreConnectionState !== "connecting_ssh"
-            && root.coreConnectionState !== "handshaking"
-            && root.coreConnectionState !== "reconnecting") {
+            && root.coreConnectionState !== "handshaking") {
             return "qrc:/main/images/button/network-disconnect"
         }
         return "qrc:/main/images/button/network-connect"
@@ -45,8 +44,7 @@ ToolBar {
             return "Connected to remote core"
         }
         if (root.coreConnectionState === "connecting_ssh"
-            || root.coreConnectionState === "handshaking"
-            || root.coreConnectionState === "reconnecting") {
+            || root.coreConnectionState === "handshaking") {
             return "Connecting..."
         }
         return "Remote core disconnected"
