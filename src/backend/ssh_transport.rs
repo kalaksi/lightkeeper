@@ -10,10 +10,7 @@ use std::time::Duration;
 
 use ssh2;
 
-use super::ssh_auth::{
-    accept_host_key, authenticate, check_known_hosts, resolve_secret_value, SshAuthError,
-    SshAuthOptions,
-};
+use super::ssh_auth::{accept_host_key, authenticate, check_known_hosts, resolve_secret_value, SshAuthError, SshAuthOptions};
 use crate::configuration::CoreConnectionProfile;
 use crate::module::PlatformInfo;
 use crate::secrets_manager::KeyringSecretStore;
@@ -57,12 +54,7 @@ impl Ssh2DirectStreamLocalTransport {
         check_cancel(cancel)?;
         let channel = session
             .channel_direct_streamlocal(&remote_socket, None)
-            .map_err(|error| {
-                SshAuthError::other(format!(
-                    "Failed to open direct-streamlocal to {}: {}",
-                    remote_socket, error
-                ))
-            })?;
+            .map_err(|error| SshAuthError::other(format!("Failed to open direct-streamlocal to {}: {}", remote_socket, error)))?;
 
         Ok(Ssh2DirectStreamLocalTransport { session, channel })
     }
@@ -89,10 +81,7 @@ impl Drop for Ssh2DirectStreamLocalTransport {
 }
 
 /// SSH to the remote core host, collect platform info and core install presence (no streamlocal).
-pub fn probe_remote_core_host(
-    profile: &CoreConnectionProfile,
-    cancel: &AtomicBool,
-) -> Result<RemoteCoreHostProbe, SshAuthError> {
+pub fn probe_remote_core_host(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<RemoteCoreHostProbe, SshAuthError> {
     let session = connect_remote_core_session(profile, cancel)?;
     let os_release = exec_command(&session, "cat /etc/os-release")?;
     let uname_machine = exec_command(&session, "uname -m")?;
@@ -126,13 +115,7 @@ pub fn accept_remote_core_host_key(
 ) -> Result<(), SshAuthError> {
     let session = connect_remote_core_session_skip_host_key(profile, cancel)?;
     let port = profile.port.unwrap_or(22);
-    accept_host_key(
-        &session,
-        &profile.host,
-        port,
-        expected_key_id,
-        profile.custom_known_hosts_path.as_deref(),
-    )
+    accept_host_key(&session, &profile.host, port, expected_key_id, None)
 }
 
 fn resolve_install_plan(session: &ssh2::Session, socket_path: &str) -> Result<CoreInstallPlan, SshAuthError> {
@@ -149,22 +132,12 @@ fn resolve_install_plan(session: &ssh2::Session, socket_path: &str) -> Result<Co
     })
 }
 
-fn connect_remote_core_session(
-    profile: &CoreConnectionProfile,
-    cancel: &AtomicBool,
-) -> Result<ssh2::Session, SshAuthError> {
+fn connect_remote_core_session(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<ssh2::Session, SshAuthError> {
     let session = connect_remote_core_tcp_and_handshake(profile, cancel)?;
     let port = profile.port.unwrap_or(22);
 
     check_cancel(cancel)?;
-    if profile.verify_host_key {
-        check_known_hosts(
-            &session,
-            &profile.host,
-            port,
-            profile.custom_known_hosts_path.as_deref(),
-        )?;
-    }
+    check_known_hosts(&session, &profile.host, port, None)?;
 
     check_cancel(cancel)?;
     let auth = build_auth_options(profile)?;
@@ -180,10 +153,7 @@ fn connect_remote_core_session_skip_host_key(
     connect_remote_core_tcp_and_handshake(profile, cancel)
 }
 
-fn connect_remote_core_tcp_and_handshake(
-    profile: &CoreConnectionProfile,
-    cancel: &AtomicBool,
-) -> Result<ssh2::Session, SshAuthError> {
+fn connect_remote_core_tcp_and_handshake(profile: &CoreConnectionProfile, cancel: &AtomicBool) -> Result<ssh2::Session, SshAuthError> {
     if !profile.is_configured() {
         return Err(SshAuthError::other("Core connection profile has no SSH host"));
     }
@@ -209,8 +179,7 @@ fn connect_remote_core_tcp_and_handshake(
     check_cancel(cancel)?;
     let tcp = TcpStream::connect_timeout(&address, SSH_CONNECT_TIMEOUT)
         .map_err(|error| SshAuthError::other(format!("SSH TCP connect failed: {}", error)))?;
-    tcp.set_nodelay(true)
-        .map_err(|error| SshAuthError::other(error.to_string()))?;
+    tcp.set_nodelay(true).map_err(|error| SshAuthError::other(error.to_string()))?;
 
     check_cancel(cancel)?;
     let mut session = ssh2::Session::new().map_err(|error| SshAuthError::other(error.to_string()))?;
@@ -283,10 +252,7 @@ fn exec_command(session: &ssh2::Session, command: &str) -> Result<String, SshAut
     let _ = channel.wait_close();
     let status = channel.exit_status().unwrap_or(-1);
     if status != 0 {
-        return Err(SshAuthError::other(format!(
-            "Remote command failed (exit {}): {}",
-            status, command
-        )));
+        return Err(SshAuthError::other(format!("Remote command failed (exit {}): {}", status, command)));
     }
     Ok(output)
 }
@@ -354,4 +320,3 @@ fn check_cancel(cancel: &AtomicBool) -> Result<(), SshAuthError> {
         Ok(())
     }
 }
-

@@ -18,6 +18,7 @@ ToolBar {
     required property int errorCount
     required property int jobsLeft
     required property int hostCount
+    property string remoteCoreStatus: ""
     padding: 0
 
     background: BorderRectangle {
@@ -31,7 +32,15 @@ ToolBar {
         width: parent.width
         spacing: Theme.spacingLoose
 
-        // Spacer
+        NormalText {
+            visible: root.remoteCoreStatus.length > 0
+            leftPadding: Theme.spacingLoose * 2
+            text: root.remoteCoreStatus
+            color: Theme.textColorDark
+            elide: Text.ElideRight
+            Layout.maximumWidth: parent.width * 0.5
+        }
+
         Item {
             Layout.fillWidth: true
         }

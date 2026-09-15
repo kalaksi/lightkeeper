@@ -17,8 +17,8 @@ use ssh2;
 use super::api::{CommandBackend, ConfigBackend};
 use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
 use super::remote_config::RemoteConfigBackend;
-use super::ssh_transport::Ssh2DirectStreamLocalTransport;
 use super::ssh_auth::{HostKeyChallenge, SshAuthError};
+use super::ssh_transport::Ssh2DirectStreamLocalTransport;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
@@ -256,8 +256,7 @@ fn open_transport_stream(
         Ok((Some(transport), stream))
     }
     else {
-        let stream = UnixStream::connect(socket_path)
-            .map_err(|error| SshAuthError::other(error.to_string()))?;
+        let stream = UnixStream::connect(socket_path).map_err(|error| SshAuthError::other(error.to_string()))?;
         Ok((None, CoreClientStream::Unix(stream)))
     }
 }

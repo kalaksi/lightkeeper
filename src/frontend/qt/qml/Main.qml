@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
+import QtQuick.Layouts
 
 import Lightkeeper 1.0
 
@@ -19,6 +20,10 @@ import "js/Test.js" as Test
 ApplicationWindow {
     property int errorCount: 0
     property bool remoteCoreBlocked: false
+    property bool usingRemoteCore: false
+    property string coreConnectionState: "disconnected"
+    property string coreConnectionError: ""
+    property string remoteCoreStatus: ""
 
     // For convenience.
     property DialogHandler dialogHandler: dialogHandlerLoader.item as DialogHandler
@@ -71,6 +76,8 @@ ApplicationWindow {
 
     menuBar: MainMenuBar {
         remoteCoreBlocked: root.remoteCoreBlocked
+        usingRemoteCore: root.usingRemoteCore
+        coreConnectionState: root.coreConnectionState
 
         onClickedAdd: {
             root.dialogHandler.openNewHostConfig()
@@ -126,6 +133,7 @@ ApplicationWindow {
         errorCount: root.errorCount
         jobsLeft: 0
         hostCount: hostTableModel.rowCount
+        remoteCoreStatus: root.remoteCoreStatus
     }
 
     Connections {
@@ -316,8 +324,14 @@ ApplicationWindow {
             let connectError = LK.connectCore()
             root.refreshRemoteCoreBlocked()
             if (connectError !== "") {
-                root.errorCount += 1
-                snackbarContainer.addSnackbar("Error", connectError)
+                let challenge = LK.getCoreHostKeyChallenge()
+                if (challenge && challenge.keyId) {
+                    root.dialogHandler.openCoreConnection()
+                }
+                else {
+                    root.errorCount += 1
+                    snackbarContainer.addSnackbar("Error", connectError)
+                }
             }
         }
         else if (LK.hosts.refresh_hosts_on_start()) {
@@ -444,18 +458,60 @@ ApplicationWindow {
             Rectangle {
                 anchors.fill: parent
                 color: "#60000000"
+
+                MouseArea {
+                    anchors.fill: parent
+                }
             }
 
-            NormalText {
+            Rectangle {
                 anchors.centerIn: parent
-                width: Math.min(parent.width - Theme.marginDialog * 2, 480)
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                text: "Connect to remote Lightkeeper core or restart application to start using locally"
-            }
+                width: Math.min(parent.width - Theme.marginDialog * 2, 440)
+                height: overlayColumn.implicitHeight + Theme.spacingLoose * 2
+                color: Theme.backgroundColor
+                border.color: Theme.borderColor
+                border.width: 1
+                radius: 6
 
-            MouseArea {
-                anchors.fill: parent
+                ColumnLayout {
+                    id: overlayColumn
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: Theme.spacingLoose
+                    spacing: Theme.spacingNormal
+
+                    NormalText {
+                        Layout.fillWidth: true
+                        text: "Remote core unavailable"
+                        horizontalAlignment: Text.AlignHCenter
+                        font.bold: true
+                    }
+
+                    NormalText {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        text: root.coreConnectionError !== ""
+                            ? root.coreConnectionError
+                            : "Connect to remote Lightkeeper core, or Quit and restart to use locally."
+                    }
+
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: Theme.spacingNormal
+
+                        Button {
+                            text: "Open connection settings"
+                            onClicked: root.dialogHandler.openCoreConnection()
+                        }
+
+                        Button {
+                            text: "Quit"
+                            onClicked: root.quit()
+                        }
+                    }
+                }
             }
         }
 
@@ -539,7 +595,26 @@ ApplicationWindow {
     }
 
     function refreshRemoteCoreBlocked() {
-        root.remoteCoreBlocked = LK.isUsingRemoteCore() && LK.getCoreConnectionState() !== "connected"
+        root.usingRemoteCore = LK.isUsingRemoteCore()
+        root.coreConnectionState = LK.getCoreConnectionState()
+        root.coreConnectionError = LK.getCoreConnectionError()
+        root.remoteCoreBlocked = root.usingRemoteCore && root.coreConnectionState !== "connected"
+        if (root.usingRemoteCore && root.coreConnectionState === "connected") {
+            let profile = LK.config.getCoreConnection()
+            let host = (profile.host || "").trim()
+            let user = (profile.username || "").trim()
+            let port = (profile.port || "").trim()
+            let address = user !== "" ? (user + "@" + host) : host
+            if (port !== "" && port !== "22") {
+                address += ":" + port
+            }
+            root.remoteCoreStatus = address !== ""
+                ? "Connected to remote core " + address
+                : "Connected to remote core"
+        }
+        else {
+            root.remoteCoreStatus = ""
+        }
         if (root.remoteCoreBlocked) {
             alertDrawer.open = false
         }

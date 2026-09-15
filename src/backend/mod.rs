@@ -19,6 +19,4 @@ pub use local_config::LocalConfigBackend;
 pub use remote::{RemoteCommandBackend, RemoteCoreClient};
 pub use remote_config::RemoteConfigBackend;
 pub use ssh_auth::{HostKeyChallenge, SshAuthError};
-pub use ssh_transport::{
-    accept_remote_core_host_key, probe_remote_core_host, RemoteCoreHostProbe, CoreInstallPlan,
-};
+pub use ssh_transport::{accept_remote_core_host_key, probe_remote_core_host, CoreInstallPlan, RemoteCoreHostProbe};

@@ -22,26 +22,63 @@ LightkeeperDialog {
     standardButtons: Dialog.Close
 
     property string statusText: ""
+    property string statusHint: ""
     property string errorText: ""
     property string probeSummary: ""
+    property string probeRecommendation: ""
+    property string connectionState: "disconnected"
     property bool busy: false
     property bool usingRemote: false
     property bool _loadingProfile: false
-    property bool installAvailable: false
     property var _pendingPassword: null
     property var _pendingPassphrase: null
     property string _passwordSaveValue: ""
     property string _passphraseSaveValue: ""
+    // "connect", "test", or "" — retry after trusting a host key.
+    property string _pendingRetry: ""
+
+    readonly property string statusCriticality: {
+        if (root.busy
+            || root.connectionState === "connecting_ssh"
+            || root.connectionState === "handshaking"
+            || root.connectionState === "reconnecting") {
+            return "Warning"
+        }
+        if (root.connectionState === "connected") {
+            return "Normal"
+        }
+        if (root.connectionState === "failed"
+            || (root.usingRemote && root.connectionState !== "connected")) {
+            return "Error"
+        }
+        return "Info"
+    }
+
+    // Opaque accent for the status banner (colorForCriticality is too transparent for fills).
+    readonly property color statusAccentColor: {
+        if (root.statusCriticality === "Normal") {
+            return "#33cc33"
+        }
+        if (root.statusCriticality === "Warning") {
+            return "#ffcc00"
+        }
+        if (root.statusCriticality === "Error") {
+            return "#ff3300"
+        }
+        return Theme.borderColor
+    }
 
     onOpened: {
         root._loadingProfile = true
         root.loadProfile()
         root._loadingProfile = false
         LK.clearCoreHostProbe()
-        LK.clearCoreHostKeyChallenge()
         root.probeSummary = ""
-        root.installAvailable = false
+        root.probeRecommendation = ""
         root.refreshStatus()
+        if (root.offerHostKeyChallenge()) {
+            root._pendingRetry = "connect"
+        }
     }
 
     Connections {
@@ -49,17 +86,6 @@ LightkeeperDialog {
 
         function onCoreConnectionChanged() {
             root.refreshStatus()
-        }
-    }
-
-    ConfirmationDialog {
-        id: installConfirmDialog
-        keepHidden: true
-        title: "Install lightkeeper-core"
-
-        onAccepted: {
-            root.statusText = "Remote install is not implemented yet"
-            root.errorText = ""
         }
     }
 
@@ -73,24 +99,37 @@ LightkeeperDialog {
             let challenge = LK.getCoreHostKeyChallenge()
             if (!challenge || !challenge.keyId) {
                 root.errorText = "No pending host key challenge"
+                root._pendingRetry = ""
                 return
             }
             root.busy = true
             let error = LK.verifyCoreHostKey(challenge.keyId)
             root.busy = false
             if (error === "") {
-                root.statusText = "Host key trusted. Connect or Test again."
+                root.statusText = "Host key trusted"
+                root.statusHint = ""
                 root.errorText = ""
                 LK.clearCoreHostKeyChallenge()
+                let retry = root._pendingRetry
+                root._pendingRetry = ""
+                if (retry === "connect") {
+                    root.runConnect()
+                }
+                else if (retry === "test") {
+                    root.runCoreProbe()
+                }
             }
             else {
                 root.statusText = "Failed to trust host key"
+                root.statusHint = "Fix the problem and try again"
                 root.errorText = error
+                root._pendingRetry = ""
             }
         }
 
         onRejected: {
             LK.clearCoreHostKeyChallenge()
+            root._pendingRetry = ""
         }
     }
 
@@ -101,168 +140,241 @@ LightkeeperDialog {
         anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
 
-        NormalText {
+        Rectangle {
             Layout.fillWidth: true
-            text: "Connect to lightkeeper-core on a remote core host over SSH. Host keys use the desktop known_hosts file."
-            wrapMode: Text.WordWrap
+            Layout.preferredHeight: statusColumn.implicitHeight + Theme.spacingNormal * 2
+            color: Theme.baseColor
+            border.color: Theme.borderColor
+            border.width: 1
+            radius: 4
+            clip: true
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: 4
+                color: root.statusAccentColor
+            }
+
+            ColumnLayout {
+                id: statusColumn
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: Theme.spacingNormal + 4
+                anchors.rightMargin: Theme.spacingNormal
+                spacing: Theme.spacingTight
+
+                NormalText {
+                    Layout.fillWidth: true
+                    text: root.statusText
+                    wrapMode: Text.WordWrap
+                    font.bold: true
+                    color: Theme.textColor
+                }
+
+                NormalText {
+                    Layout.fillWidth: true
+                    visible: root.statusHint.length > 0
+                    text: root.statusHint
+                    wrapMode: Text.WordWrap
+                    color: Theme.textColor
+                    opacity: 0.85
+                }
+            }
         }
 
-        GridLayout {
+        SmallText {
             Layout.fillWidth: true
-            columns: 2
-            columnSpacing: Theme.spacingNormal
-            rowSpacing: Theme.spacingNormal
+            text: "Connect to lightkeeper-core on a remote host over SSH."
+            wrapMode: Text.WordWrap
+            color: Theme.textColorDark
+        }
 
-            Label {
-                text: "Host"
-            }
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Theme.spacingNormal
 
-            TextField {
-                id: hostField
+            RowLayout {
                 Layout.fillWidth: true
-                placeholderText: "remote-core.example.com"
-                placeholderTextColor: Theme.textColorDark
-                enabled: !root.busy
-                onTextChanged: root.clearProbeCache()
-            }
+                spacing: Theme.spacingLoose
 
-            Label {
-                text: "Port"
-            }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.spacingTight
 
-            TextField {
-                id: portField
-                Layout.fillWidth: true
-                placeholderText: "22"
-                placeholderTextColor: Theme.textColorDark
-                enabled: !root.busy
-                validator: IntValidator {
-                    bottom: 1
-                    top: 65535
+                    Label {
+                        text: "Host"
+                    }
+
+                    TextField {
+                        id: hostField
+                        Layout.fillWidth: true
+                        placeholderText: "remote-core.example.com"
+                        placeholderTextColor: Theme.textColorDark
+                        enabled: !root.busy
+                        onTextChanged: root.clearProbeCache()
+                    }
                 }
-                onTextChanged: root.clearProbeCache()
-            }
 
-            Label {
-                text: "Username"
-            }
+                ColumnLayout {
+                    spacing: Theme.spacingTight
 
-            TextField {
-                id: usernameField
-                Layout.fillWidth: true
-                placeholderText: "current user"
-                placeholderTextColor: Theme.textColorDark
-                enabled: !root.busy
-                onTextChanged: root.clearProbeCache()
-            }
+                    Label {
+                        text: "Port"
+                    }
 
-            Label {
-                text: "Auth method"
-            }
-
-            ComboBox {
-                id: methodCombo
-                Layout.fillWidth: true
-                enabled: !root.busy
-                textRole: "label"
-                valueRole: "methodId"
-                model: ListModel {
-                    ListElement { methodId: "agent"; label: "SSH agent" }
-                    ListElement { methodId: "password"; label: "Password" }
-                    ListElement { methodId: "key"; label: "Private key" }
-                }
-                onCurrentValueChanged: {
-                    if (!root._loadingProfile) {
-                        passwordField._revealedSecret = ""
-                        passphraseField._revealedSecret = ""
+                    TextField {
+                        id: portField
+                        Layout.preferredWidth: 72
+                        placeholderText: "22"
+                        placeholderTextColor: Theme.textColorDark
+                        enabled: !root.busy
+                        validator: IntValidator {
+                            bottom: 1
+                            top: 65535
+                        }
+                        onTextChanged: root.clearProbeCache()
                     }
                 }
             }
 
-            Label {
-                visible: methodCombo.currentValue === "password"
-                text: "Password"
-            }
-
-            SecretValueField {
-                id: passwordField
-                visible: methodCombo.currentValue === "password"
+            CheckBox {
+                id: autoConnectCheckBox
+                text: "Connect automatically on startup"
                 enabled: !root.busy
                 Layout.fillWidth: true
-                settingKey: "password"
-                saveValue: root._passwordSaveValue
-                onRevealRequested: passwordField.revealSecret(root.resolveCoreSecret(passwordField))
-                onEditRequested: passwordField.openEditor(root.resolveCoreSecret(passwordField))
-                onSecretSubmitted: function(value, backend) {
-                    root._pendingPassword = { value: value, backend: backend }
-                    root.saveProfile()
+                onCheckedChanged: {
+                    if (!root._loadingProfile) {
+                        root.saveProfile()
+                    }
                 }
-            }
-
-            Label {
-                visible: methodCombo.currentValue === "key"
-                text: "Private key"
-            }
-
-            TextField {
-                id: privateKeyPathField
-                visible: methodCombo.currentValue === "key"
-                Layout.fillWidth: true
-                placeholderText: "path to private key"
-                placeholderTextColor: Theme.textColorDark
-                enabled: !root.busy
-            }
-
-            Label {
-                visible: methodCombo.currentValue === "key"
-                text: "Passphrase"
-            }
-
-            SecretValueField {
-                id: passphraseField
-                visible: methodCombo.currentValue === "key"
-                enabled: !root.busy
-                Layout.fillWidth: true
-                settingKey: "private_key_passphrase"
-                saveValue: root._passphraseSaveValue
-                onRevealRequested: passphraseField.revealSecret(root.resolveCoreSecret(passphraseField))
-                onEditRequested: passphraseField.openEditor(root.resolveCoreSecret(passphraseField))
-                onSecretSubmitted: function(value, backend) {
-                    root._pendingPassphrase = { value: value, backend: backend }
-                    root.saveProfile()
-                }
-            }
-
-            Label {
-                visible: methodCombo.currentValue === "agent"
-                text: "Agent key"
-            }
-
-            TextField {
-                id: agentKeyField
-                visible: methodCombo.currentValue === "agent"
-                Layout.fillWidth: true
-                placeholderText: "Optional key identifier"
-                placeholderTextColor: Theme.textColorDark
-                enabled: !root.busy
             }
         }
 
-        CheckBox {
-            id: verifyHostKeyCheckBox
-            text: "Verify host key (known_hosts)"
-            enabled: !root.busy
+        ColumnLayout {
             Layout.fillWidth: true
-        }
+            spacing: Theme.spacingTight
 
-        CheckBox {
-            id: autoConnectCheckBox
-            text: "Connect automatically on startup"
-            enabled: !root.busy
-            Layout.fillWidth: true
-            onCheckedChanged: {
-                if (!root._loadingProfile) {
-                    root.saveProfile()
+            Label {
+                text: "Authentication"
+                font.bold: true
+            }
+
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 2
+                columnSpacing: Theme.spacingNormal
+                rowSpacing: Theme.spacingNormal
+
+                Label {
+                    text: "Username"
+                }
+
+                TextField {
+                    id: usernameField
+                    Layout.fillWidth: true
+                    placeholderText: "current user"
+                    placeholderTextColor: Theme.textColorDark
+                    enabled: !root.busy
+                    onTextChanged: root.clearProbeCache()
+                }
+
+                Label {
+                    text: "Method"
+                }
+
+                ComboBox {
+                    id: methodCombo
+                    Layout.fillWidth: true
+                    enabled: !root.busy
+                    textRole: "label"
+                    valueRole: "methodId"
+                    model: ListModel {
+                        ListElement { methodId: "agent"; label: "SSH agent" }
+                        ListElement { methodId: "password"; label: "Password" }
+                        ListElement { methodId: "key"; label: "Private key" }
+                    }
+                    delegate: ItemDelegate {
+                        required property string label
+                        width: methodCombo.width
+                        text: label
+                    }
+                    onCurrentValueChanged: {
+                        if (!root._loadingProfile) {
+                            passwordField._revealedSecret = ""
+                            passphraseField._revealedSecret = ""
+                        }
+                    }
+                }
+
+                Label {
+                    visible: methodCombo.currentValue === "password"
+                    text: "Password"
+                }
+
+                SecretValueField {
+                    id: passwordField
+                    visible: methodCombo.currentValue === "password"
+                    enabled: !root.busy
+                    Layout.fillWidth: true
+                    settingKey: "password"
+                    saveValue: root._passwordSaveValue
+                    onRevealRequested: passwordField.revealSecret(root.resolveCoreSecret(passwordField))
+                    onEditRequested: passwordField.openEditor(root.resolveCoreSecret(passwordField))
+                    onSecretSubmitted: function(value, backend) {
+                        root._pendingPassword = { value: value, backend: backend }
+                        root.saveProfile()
+                    }
+                }
+
+                Label {
+                    visible: methodCombo.currentValue === "key"
+                    text: "Private key"
+                }
+
+                FilePathField {
+                    id: privateKeyPathField
+                    visible: methodCombo.currentValue === "key"
+                    Layout.fillWidth: true
+                    placeholderText: "Path to private key..."
+                    placeholderTextColor: Theme.textColorDark
+                    enabled: !root.busy
+                }
+
+                Label {
+                    visible: methodCombo.currentValue === "key"
+                    text: "Passphrase"
+                }
+
+                SecretValueField {
+                    id: passphraseField
+                    visible: methodCombo.currentValue === "key"
+                    enabled: !root.busy
+                    Layout.fillWidth: true
+                    settingKey: "private_key_passphrase"
+                    saveValue: root._passphraseSaveValue
+                    onRevealRequested: passphraseField.revealSecret(root.resolveCoreSecret(passphraseField))
+                    onEditRequested: passphraseField.openEditor(root.resolveCoreSecret(passphraseField))
+                    onSecretSubmitted: function(value, backend) {
+                        root._pendingPassphrase = { value: value, backend: backend }
+                        root.saveProfile()
+                    }
+                }
+
+                Label {
+                    visible: methodCombo.currentValue === "agent"
+                    text: "Agent key"
+                }
+
+                TextField {
+                    id: agentKeyField
+                    visible: methodCombo.currentValue === "agent"
+                    Layout.fillWidth: true
+                    placeholderText: "Optional key identifier"
+                    placeholderTextColor: Theme.textColorDark
+                    enabled: !root.busy
                 }
             }
         }
@@ -297,45 +409,58 @@ LightkeeperDialog {
                 onClicked: root.runDisconnect()
             }
 
-            Button {
-                text: "Install..."
-                enabled: !root.busy && root.installAvailable
-                onClicked: root.offerInstall()
-            }
-
             Item {
                 Layout.fillWidth: true
             }
         }
 
-        NormalText {
-            Layout.fillWidth: true
-            text: root.statusText
-            wrapMode: Text.WordWrap
-        }
-
-        NormalText {
-            Layout.fillWidth: true
-            visible: root.probeSummary.length > 0
-            text: root.probeSummary
-            wrapMode: Text.WordWrap
-        }
-
-        NormalText {
+        ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.errorText.length > 0
-            text: root.errorText
-            color: Theme.colorForCriticality("Error")
-            wrapMode: Text.WrapAnywhere
-        }
+            spacing: Theme.spacingTight
+            visible: root.probeSummary.length > 0 || root.errorText.length > 0 || root.busy
 
-        Item {
-            visible: root.busy
-            Layout.fillWidth: true
-            Layout.preferredHeight: 48
+            Label {
+                visible: root.probeSummary.length > 0
+                text: "Diagnostics"
+                font.bold: true
+            }
 
-            WorkingSprite {
+            NormalText {
+                Layout.fillWidth: true
+                visible: root.probeSummary.length > 0
+                text: root.probeSummary
+                wrapMode: Text.WordWrap
+            }
+
+            SmallText {
+                Layout.fillWidth: true
+                visible: root.probeRecommendation.length > 0
+                text: root.probeRecommendation
+                wrapMode: Text.WordWrap
+                color: Theme.textColorDark
+            }
+
+            NormalText {
+                Layout.fillWidth: true
+                visible: root.errorText.length > 0
+                text: root.errorText
+                color: Theme.colorForCriticality("Error")
+                wrapMode: Text.WrapAnywhere
+            }
+
+            Item {
+                visible: root.busy
+                Layout.fillWidth: true
+                Layout.preferredHeight: 48
+
+                WorkingSprite {
+                }
+            }
+
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
             }
         }
     }
@@ -346,7 +471,6 @@ LightkeeperDialog {
         portField.text = profile.port || ""
         usernameField.text = profile.username || ""
         autoConnectCheckBox.checked = !!profile.autoConnect
-        verifyHostKeyCheckBox.checked = profile.verifyHostKey !== false
         privateKeyPathField.text = profile.privateKeyPath || ""
         agentKeyField.text = profile.agentKeyIdentifier || ""
         root._passwordSaveValue = profile.password || ""
@@ -373,7 +497,7 @@ LightkeeperDialog {
         }
         LK.clearCoreHostProbe()
         root.probeSummary = ""
-        root.installAvailable = false
+        root.probeRecommendation = ""
     }
 
     function resolveCoreSecret(field) {
@@ -446,38 +570,65 @@ LightkeeperDialog {
             privateKeyPath: privateKeyPath,
             privateKeyPassphrase: passphrase,
             agentKeyIdentifier: agentKey,
-            verifyHostKey: verifyHostKeyCheckBox.checked,
-            customKnownHostsPath: "",
         })
+    }
+
+    function formattedHostLabel() {
+        let host = hostField.text.trim()
+        if (host === "") {
+            return ""
+        }
+        let user = usernameField.text.trim()
+        let port = portField.text.trim()
+        let label = user !== "" ? (user + "@" + host) : host
+        if (port !== "" && port !== "22") {
+            label += ":" + port
+        }
+        return label
     }
 
     function refreshStatus() {
         let state = LK.getCoreConnectionState()
         let error = LK.getCoreConnectionError()
         root.usingRemote = LK.isUsingRemoteCore()
+        root.connectionState = state
+        let hostLabel = root.formattedHostLabel()
 
         if (state === "connected") {
-            root.statusText = "Connected to remote core"
+            root.statusText = hostLabel !== ""
+                ? "Connected to remote core - " + hostLabel
+                : "Connected to remote core"
+            root.statusHint = ""
             root.errorText = ""
         }
         else if (state === "connecting_ssh") {
             root.statusText = "Connecting over SSH..."
+            root.statusHint = hostLabel
             root.errorText = error
         }
         else if (state === "handshaking") {
-            root.statusText = "Handshaking with core..."
+            root.statusText = "Authenticating with lightkeeper-core..."
+            root.statusHint = hostLabel
+            root.errorText = error
+        }
+        else if (state === "reconnecting") {
+            root.statusText = "Reconnecting..."
+            root.statusHint = hostLabel
             root.errorText = error
         }
         else if (state === "failed") {
             root.statusText = root.usingRemote ? "Remote connection failed" : "Connection failed"
+            root.statusHint = "Fix settings and Connect again"
             root.errorText = error
         }
         else if (root.usingRemote) {
-            root.statusText = "Connect to remote Lightkeeper core or restart application to start using locally"
+            root.statusText = "Remote core disconnected"
+            root.statusHint = "Connect again, or Quit to use local"
             root.errorText = error
         }
         else {
             root.statusText = "Using local backend"
+            root.statusHint = "Configure a remote host to connect"
             root.errorText = error
         }
     }
@@ -487,7 +638,8 @@ LightkeeperDialog {
         if (!challenge || !challenge.keyId) {
             return false
         }
-        hostKeyConfirmDialog.text = (challenge.message || "Trust this host key?") + "\n\n" + challenge.keyId
+        let message = challenge.message || "Trust this host key?"
+        hostKeyConfirmDialog.text = message + "\n\n" + challenge.keyId
         hostKeyConfirmDialog.open()
         return true
     }
@@ -496,7 +648,7 @@ LightkeeperDialog {
         let probe = LK.getCoreHostProbe()
         if (!probe || !probe.architecture) {
             root.probeSummary = ""
-            root.installAvailable = false
+            root.probeRecommendation = ""
             return
         }
 
@@ -514,51 +666,17 @@ LightkeeperDialog {
         }
         if (probe.binaryPath) {
             lines.push("Binary: " + probe.binaryPath)
-            root.installAvailable = false
         }
         else {
             lines.push("Binary: lightkeeper-core not found")
-            root.installAvailable = true
         }
         root.probeSummary = lines.join("\n")
-    }
-
-    function buildInstallConfirmationText(probe) {
-        let host = hostField.text.trim() || "remote core host"
-        let lines = [
-            "Install lightkeeper-core on " + host + " as a per-user service?",
-            "",
-            "These paths would be created or updated:",
-            "  Binary: " + (probe.installBinaryPath || ""),
-            "  Unit:   " + (probe.installUnitPath || ""),
-            "  Socket: " + (probe.installSocketPath || "") + " (created when the service starts)",
-            "",
-            "Then: systemctl --user daemon-reload && enable --now lightkeeper-core",
-            "",
-            "Actual file transfer is not implemented yet; this confirms the planned layout.",
-        ]
-        return lines.join("\n")
-    }
-
-    function offerInstall() {
-        let probe = LK.getCoreHostProbe()
-        if (!probe || !probe.installBinaryPath) {
-            root.errorText = "Run Test first to probe the remote core host"
-            return
-        }
-        if (probe.binaryPath) {
-            root.statusText = "lightkeeper-core is already present on the remote core host"
-            return
-        }
-
-        installConfirmDialog.text = root.buildInstallConfirmationText(probe)
-        installConfirmDialog.open()
     }
 
     function runCoreProbe() {
         root.busy = true
         root.errorText = ""
-        root.installAvailable = false
+        root.probeRecommendation = ""
         root.saveProfile()
         let error = LK.probeCoreHost()
         root.busy = false
@@ -568,39 +686,52 @@ LightkeeperDialog {
             if (probe.socketPath) {
                 let coreError = LK.probeCore()
                 if (coreError === "") {
-                    root.statusText = "Probe succeeded (SSH + core handshake)"
+                    root.statusText = "Probe succeeded"
+                    root.statusHint = "SSH and core handshake are healthy"
                     root.errorText = ""
+                    root.probeRecommendation = "Ready to Connect."
                 }
                 else if (root.offerHostKeyChallenge()) {
+                    root._pendingRetry = "test"
                     root.statusText = "Host key verification required"
+                    root.statusHint = "Trust the host key to continue"
                     root.errorText = coreError
+                    root.probeRecommendation = ""
                 }
                 else {
-                    root.statusText = "SSH ok; core socket present but handshake failed"
+                    root.statusText = "SSH ok; core handshake failed"
+                    root.statusHint = "Check that lightkeeper-core is running"
                     root.errorText = coreError
+                    root.probeRecommendation = "Socket is present but the core handshake failed."
                 }
             }
             else if (probe.binaryPath) {
-                root.statusText = "SSH ok; binary found but core socket is missing (is the service running?)"
+                root.statusText = "SSH ok; core socket missing"
+                root.statusHint = "Is the lightkeeper-core service running?"
                 root.errorText = ""
+                root.probeRecommendation = "Binary found, but the service socket is not present."
             }
             else {
-                root.statusText = "SSH ok; lightkeeper-core is not installed on the remote core host"
+                root.statusText = "SSH ok; lightkeeper-core not installed"
+                root.statusHint = "Install lightkeeper-core on the remote host"
                 root.errorText = ""
-                root.offerInstall()
+                root.probeRecommendation = "Remote install from this dialog is not available yet."
             }
         }
         else if (root.offerHostKeyChallenge()) {
+            root._pendingRetry = "test"
             root.statusText = "Host key verification required"
+            root.statusHint = "Trust the host key to continue"
             root.errorText = error
             root.probeSummary = ""
-            root.installAvailable = false
+            root.probeRecommendation = ""
         }
         else {
             root.statusText = "Probe failed"
+            root.statusHint = "Fix settings and Test again"
             root.errorText = error
             root.probeSummary = ""
-            root.installAvailable = false
+            root.probeRecommendation = ""
         }
     }
 
@@ -609,16 +740,19 @@ LightkeeperDialog {
         root.errorText = ""
         root.saveProfile()
         root.probeSummary = ""
-        root.installAvailable = false
+        root.probeRecommendation = ""
         let error = LK.connectCore()
         root.busy = false
         root.refreshStatus()
         if (error !== "") {
             if (root.offerHostKeyChallenge()) {
+                root._pendingRetry = "connect"
                 root.statusText = "Host key verification required"
+                root.statusHint = "Trust the host key to continue"
             }
             else {
                 root.statusText = "Connect failed"
+                root.statusHint = "Fix settings and Connect again"
             }
             root.errorText = error
         }
