@@ -349,14 +349,8 @@ impl ConnectionModule for Ssh2 {
             .map_err(|error| LkError::other_p("Failed to read known hosts file", error))?;
 
         // The session probably gets disconnected since receiving host key fails if not reconnecting.
-        let mut socket_addresses = format!("{}:{}", self_address, self_port).to_socket_addrs()?;
-        let socket_address = match socket_addresses.next() {
-            Some(address) => address,
-            None => return Err(LkError::other("Failed to resolve address")),
-        };
-
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
-        let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
+        let stream = Self::connect_tcp(&self_address, self_port, connection_timeout)?;
 
         log::info!("Connected to {}:{}", self_address, self_port);
         session_data.session = ssh2::Session::new().expect("Unable to initialize SSH sessions.");
@@ -438,14 +432,8 @@ impl Ssh2 {
             return Ok(())
         }
 
-        let mut socket_addresses = format!("{}:{}", address, port).to_socket_addrs()?;
-        let socket_address = match socket_addresses.next() {
-            Some(address) => address,
-            None => return Err(LkError::other("Failed to resolve address")),
-        };
-
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
-        let stream = TcpStream::connect_timeout(&socket_address, connection_timeout)?;
+        let stream = Self::connect_tcp(address, port, connection_timeout)?;
         log::info!("Connected to {}:{}", address, port);
 
         session_data.session = ssh2::Session::new().expect("Unable to initialize SSH sessions.");
@@ -502,6 +490,23 @@ impl Ssh2 {
 
         session_data.is_initialized = true;
         Ok(())
+    }
+
+    fn connect_tcp(address: &str, port: u16, timeout: Duration) -> Result<TcpStream, LkError> {
+        let socket_addresses = format!("{}:{}", address, port).to_socket_addrs()?;
+        let mut last_error = None;
+
+        for socket_address in socket_addresses {
+            match TcpStream::connect_timeout(&socket_address, timeout) {
+                Ok(stream) => return Ok(stream),
+                Err(error) => last_error = Some(error),
+            }
+        }
+
+        match last_error {
+            Some(error) => Err(LkError::from(error)),
+            None => Err(LkError::other("Failed to resolve address")),
+        }
     }
 
     fn reconnect(&self, session_data: &mut MutexGuard<'_, SessionData>) -> Result<(), LkError> {

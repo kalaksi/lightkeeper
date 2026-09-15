@@ -169,16 +169,26 @@ fn connect_remote_core_tcp_and_handshake(profile: &CoreConnectionProfile, cancel
         return Err(SshAuthError::other("Invalid SSH username"));
     }
 
-    let mut addresses = format!("{}:{}", profile.host, port)
+    let addresses = format!("{}:{}", profile.host, port)
         .to_socket_addrs()
         .map_err(|error| SshAuthError::other(format!("Failed to resolve {}: {}", profile.host, error)))?;
-    let address = addresses
-        .next()
-        .ok_or_else(|| SshAuthError::other(format!("Failed to resolve {}: no addresses", profile.host)))?;
+    let mut last_error = None;
+    let mut tcp = None;
 
-    check_cancel(cancel)?;
-    let tcp = TcpStream::connect_timeout(&address, SSH_CONNECT_TIMEOUT)
-        .map_err(|error| SshAuthError::other(format!("SSH TCP connect failed: {}", error)))?;
+    for address in addresses {
+        check_cancel(cancel)?;
+        match TcpStream::connect_timeout(&address, SSH_CONNECT_TIMEOUT) {
+            Ok(stream) => {
+                tcp = Some(stream);
+                break;
+            }
+            Err(error) => last_error = Some(error),
+        }
+    }
+    let tcp = tcp.ok_or_else(|| match last_error {
+        Some(error) => SshAuthError::other(format!("SSH TCP connect failed: {}", error)),
+        None => SshAuthError::other(format!("Failed to resolve {}: no addresses", profile.host)),
+    })?;
     tcp.set_nodelay(true).map_err(|error| SshAuthError::other(error.to_string()))?;
 
     check_cancel(cancel)?;
