@@ -106,7 +106,6 @@ impl Default for EditorPreferences {
 /// Remote core host SSH identity for reaching lightkeeper-core.
 /// Password / key-passphrase may be plaintext (lab) or `keyring:` placeholders (desktop keyring).
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
 pub struct CoreConnectionProfile {
     /// Resolvable SSH hostname or IP (libssh2 does not apply OpenSSH `Host` aliases).
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -133,10 +132,6 @@ pub struct CoreConnectionProfile {
     /// SSH-agent identity comment filter (same as ssh connector `agent_key_identifier`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent_key_identifier: Option<String>,
-    #[serde(default = "DisplayOptions::default_to_true")]
-    pub verify_host_key: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub custom_known_hosts_path: Option<String>,
 }
 
 impl Default for CoreConnectionProfile {
@@ -152,8 +147,6 @@ impl Default for CoreConnectionProfile {
             private_key_path: None,
             private_key_passphrase: None,
             agent_key_identifier: None,
-            verify_host_key: true,
-            custom_known_hosts_path: None,
         }
     }
 }

@@ -19,10 +19,38 @@ ToolBar {
     property bool enableShortcuts: false
     property bool enableEditButtons: false
     property bool remoteCoreBlocked: false
+    property bool usingRemoteCore: false
+    property string coreConnectionState: "disconnected"
     property int refreshProgress: 100
     property int iconSize: 24
     property int alertCount: 0
     property string alertCriticality: "Error"
+
+    readonly property string coreButtonIcon: {
+        if (root.usingRemoteCore
+            && root.coreConnectionState !== "connected"
+            && root.coreConnectionState !== "connecting_ssh"
+            && root.coreConnectionState !== "handshaking"
+            && root.coreConnectionState !== "reconnecting") {
+            return "qrc:/main/images/button/network-disconnect"
+        }
+        return "qrc:/main/images/button/network-connect"
+    }
+
+    readonly property string coreButtonTooltip: {
+        if (!root.usingRemoteCore) {
+            return "Lightkeeper Core"
+        }
+        if (root.coreConnectionState === "connected") {
+            return "Connected to remote core"
+        }
+        if (root.coreConnectionState === "connecting_ssh"
+            || root.coreConnectionState === "handshaking"
+            || root.coreConnectionState === "reconnecting") {
+            return "Connecting..."
+        }
+        return "Remote core disconnected"
+    }
 
     focus: true
     height: 42
@@ -51,13 +79,17 @@ ToolBar {
         spacing: Theme.spacingNormal
 
         ToolButton {
-            icon.source: "qrc:/main/images/button/network-connect"
-            text: "Lightkeeper Core"
+            icon.source: root.coreButtonIcon
+            text: root.coreButtonTooltip
             display: AbstractButton.IconOnly
             onClicked: root.clickedCoreConnection()
             icon.height: root.iconSize
             icon.width: root.iconSize
             padding: 4
+
+            ToolTip.visible: hovered
+            ToolTip.delay: Theme.tooltipDelay
+            ToolTip.text: root.coreButtonTooltip
         }
 
         ToolSeparator {
