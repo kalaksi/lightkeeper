@@ -132,6 +132,7 @@ pub struct ConfigManagerModel {
 
 
     config_dir: String,
+    core_connection: configuration::CoreConnectionProfile,
     main_config: Configuration,
     hosts_config: Hosts,
     hosts_config_backup: Option<Hosts>,
@@ -151,6 +152,10 @@ impl ConfigManagerModel {
         module_metadatas: Vec<Metadata>,
         config_backend: Box<dyn ConfigBackend>,
     ) -> Self {
+        let core_connection = configuration::CoreConnectionProfile::read(&config_dir).unwrap_or_else(|error| {
+            ::log::error!("Failed to read core connection profile: {}", error);
+            Default::default()
+        });
         
         if Configuration::is_schema_outdated(main_config.schema_version) {
             Configuration::upgrade_schema(&mut main_config, &mut groups_config);
@@ -166,6 +171,7 @@ impl ConfigManagerModel {
 
         ConfigManagerModel {
             config_dir: config_dir,
+            core_connection,
             main_config: main_config,
             hosts_config: hosts_config,
             groups_config: groups_config,
@@ -177,11 +183,7 @@ impl ConfigManagerModel {
     }
 
     pub fn set_config_backend(&mut self, backend: Box<dyn ConfigBackend>) -> Result<(), String> {
-        // Desktop-owned SSH profile for reaching the remote core host must not be replaced by
-        // the remote core's preferences.
-        let desktop_core_connection = self.main_config.preferences.core_connection.clone();
-        let (mut main_config, hosts_config, groups_config) = backend.get_config()?;
-        main_config.preferences.core_connection = desktop_core_connection;
+        let (main_config, hosts_config, groups_config) = backend.get_config()?;
         self.main_config = main_config;
         self.hosts_config = hosts_config;
         self.groups_config = groups_config;
@@ -198,7 +200,7 @@ impl ConfigManagerModel {
     }
 
     pub fn core_connection_profile(&self) -> configuration::CoreConnectionProfile {
-        self.main_config.preferences.core_connection.clone()
+        self.core_connection.clone()
     }
 
     pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts), LkError> {
@@ -337,7 +339,7 @@ impl ConfigManagerModel {
     }
 
     fn getSavedCoreAddresses(&self) -> QStringList {
-        QStringList::from_iter(self.main_config.preferences.saved_core_addresses.clone())
+        QStringList::from_iter(self.core_connection.saved_core_addresses.clone())
     }
 
     fn addSavedCoreAddress(&mut self, address: QString) {
@@ -346,22 +348,20 @@ impl ConfigManagerModel {
             return;
         }
 
-        if self.main_config.preferences.saved_core_addresses.iter().any(|existing| existing == &address)
+        if self.core_connection.saved_core_addresses.iter().any(|existing| existing == &address)
         {
             return;
         }
 
-        self.main_config.preferences.saved_core_addresses.push(address);
+        self.core_connection.saved_core_addresses.push(address);
 
-        if let Err(error) = self.config_backend.as_mut().unwrap()
-            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
-        {
+        if let Err(error) = self.core_connection.write(&self.config_dir) {
             self.error(QString::from(error.to_string()));
         }
     }
 
     fn getCoreConnection(&self) -> QVariantMap {
-        let profile = &self.main_config.preferences.core_connection;
+        let profile = &self.core_connection;
         let mut map = QVariantMap::default();
         map.insert("host".into(), QString::from(profile.host.clone()).into());
         map.insert(
@@ -397,10 +397,11 @@ impl ConfigManagerModel {
     }
 
     fn setCoreConnection(&mut self, profile_map: QVariantMap) {
-        let profile = core_connection_from_variant_map(&profile_map);
-        self.main_config.preferences.core_connection = profile.clone();
-        if let Err(error) = self.persist_desktop_core_connection(&profile) {
-            self.error(QString::from(error));
+        let mut profile = core_connection_from_variant_map(&profile_map);
+        profile.saved_core_addresses = self.core_connection.saved_core_addresses.clone();
+        self.core_connection = profile;
+        if let Err(error) = self.core_connection.write(&self.config_dir) {
+            self.error(QString::from(error.to_string()));
         }
     }
 
@@ -440,15 +441,6 @@ impl ConfigManagerModel {
         ) {
             ::log::warn!("Failed to remove core secret: {}", error.to_ui_message());
         }
-    }
-
-    fn persist_desktop_core_connection(
-        &self,
-        profile: &configuration::CoreConnectionProfile,
-    ) -> Result<(), String> {
-        let (mut local_main, _, _) = Configuration::read(&self.config_dir).map_err(|error| error.to_string())?;
-        local_main.preferences.core_connection = profile.clone();
-        Configuration::write_main_config(&self.config_dir, &local_main).map_err(|error| error.to_string())
     }
 
     fn showStatusBar(&self) -> bool {
@@ -1380,5 +1372,6 @@ fn core_connection_from_variant_map(map: &QVariantMap) -> configuration::CoreCon
         private_key_path: optional_string("privateKeyPath"),
         private_key_passphrase: optional_string("privateKeyPassphrase"),
         agent_key_identifier: optional_string("agentKeyIdentifier"),
+        saved_core_addresses: Vec::new(),
     }
 }

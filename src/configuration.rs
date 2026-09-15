@@ -23,6 +23,7 @@ use crate::secrets_manager::SecretStore;
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
 const GROUPS_FILE: &str = "groups.yml";
+const CORE_CONNECTION_FILE: &str = "core-connection.yml";
 const CONFIG_BACKUP_SUFFIX: &str = ".prev";
 pub const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
 pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
@@ -103,9 +104,10 @@ impl Default for EditorPreferences {
     }
 }
 
-/// Remote core host SSH identity for reaching lightkeeper-core.
+/// Desktop-owned SSH identity for reaching lightkeeper-core.
 /// Password / key-passphrase may be plaintext (lab) or `keyring:` placeholders (desktop keyring).
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct CoreConnectionProfile {
     /// Resolvable SSH hostname or IP (libssh2 does not apply OpenSSH `Host` aliases).
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -132,6 +134,8 @@ pub struct CoreConnectionProfile {
     /// SSH-agent identity comment filter (same as ssh connector `agent_key_identifier`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent_key_identifier: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub saved_core_addresses: Vec<String>,
 }
 
 impl Default for CoreConnectionProfile {
@@ -147,6 +151,7 @@ impl Default for CoreConnectionProfile {
             private_key_path: None,
             private_key_passphrase: None,
             agent_key_identifier: None,
+            saved_core_addresses: Vec::new(),
         }
     }
 }
@@ -154,6 +159,40 @@ impl Default for CoreConnectionProfile {
 impl CoreConnectionProfile {
     pub fn is_configured(&self) -> bool {
         !self.host.is_empty()
+    }
+
+    pub fn read(config_dir: &str) -> io::Result<Self> {
+        let config_dir = if config_dir.is_empty() {
+            file_handler::get_config_dir()
+        }
+        else {
+            Path::new(config_dir).to_path_buf()
+        };
+        let path = config_dir.join(CORE_CONNECTION_FILE);
+        if !path.exists() {
+            return Ok(Self::default());
+        }
+
+        log::info!("Reading core connection profile from {}", path.display());
+        let contents = fs::read_to_string(path)?;
+        serde_yaml::from_str(&contents).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))
+    }
+
+    pub fn write(&self, config_dir: &str) -> io::Result<()> {
+        let config_dir = if config_dir.is_empty() {
+            file_handler::get_config_dir()
+        }
+        else {
+            Path::new(config_dir).to_path_buf()
+        };
+        fs::create_dir_all(&config_dir)?;
+        let path = config_dir.join(CORE_CONNECTION_FILE);
+        let contents =
+            serde_yaml::to_string(self).map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+        fs::write(&path, contents)?;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+        log::info!("Updated core connection profile {}", path.display());
+        Ok(())
     }
 }
 
@@ -181,10 +220,6 @@ pub struct Preferences {
     pub show_chart_threshold_lines: bool,
     #[serde(default)]
     pub editor_preferences: EditorPreferences,
-    #[serde(default)]
-    pub saved_core_addresses: Vec<String>,
-    #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub core_connection: CoreConnectionProfile,
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone)]
