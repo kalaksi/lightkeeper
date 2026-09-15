@@ -40,8 +40,7 @@ LightkeeperDialog {
     readonly property string statusCriticality: {
         if (root.busy
             || root.connectionState === "connecting_ssh"
-            || root.connectionState === "handshaking"
-            || root.connectionState === "reconnecting") {
+            || root.connectionState === "handshaking") {
             return "Warning"
         }
         if (root.connectionState === "connected") {
@@ -608,11 +607,6 @@ LightkeeperDialog {
         }
         else if (state === "handshaking") {
             root.statusText = "Authenticating with lightkeeper-core..."
-            root.statusHint = hostLabel
-            root.errorText = error
-        }
-        else if (state === "reconnecting") {
-            root.statusText = "Reconnecting..."
             root.statusHint = hostLabel
             root.errorText = error
         }

@@ -13,7 +13,6 @@ pub enum CoreConnectionState {
     ConnectingSsh,
     Handshaking,
     Connected,
-    Reconnecting,
     Failed,
 }
 
@@ -24,7 +23,6 @@ impl Display for CoreConnectionState {
             CoreConnectionState::ConnectingSsh => write!(f, "connecting_ssh"),
             CoreConnectionState::Handshaking => write!(f, "handshaking"),
             CoreConnectionState::Connected => write!(f, "connected"),
-            CoreConnectionState::Reconnecting => write!(f, "reconnecting"),
             CoreConnectionState::Failed => write!(f, "failed"),
         }
     }
