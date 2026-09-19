@@ -30,7 +30,7 @@ use crate::metrics::lmserver::{self, LMSRequest, LMSResponse, RequestType};
 
 /// In milliseconds.
 const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
-const LMSERVER_VERSION: &str = "v0.3.0";
+const LMSERVER_VERSION: &str = "v0.4.1";
 
 pub struct MetricsManager {
     process_handle: Option<process::Child>,
