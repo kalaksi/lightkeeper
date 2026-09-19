@@ -14,7 +14,7 @@ Item {
     id: root
     property string text: ""
     property alias textColor: textElement.color
-    property string pillColor: "#30FFFFFF"
+    property string pillColor: "#60a0a0a0"
     property int padding: 4
     property string tooltip: ""
 
