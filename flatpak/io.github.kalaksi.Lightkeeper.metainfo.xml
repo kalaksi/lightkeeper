@@ -44,6 +44,20 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.45.0" date="2026-09-19">
+      <description>
+        <ul>
+          <li>Add alerts query support and search for alert history</li>
+          <li>Add date pickers for log viewer</li>
+          <li>Add coloring for journalctl logs</li>
+          <li>Improve error handling in log viewer</li>
+          <li>Add "About" tab to preferences dialog</li>
+          <li>Close details view when host is filtered from list</li>
+          <li>Optimize GUI state updates</li>
+          <li>Improve criticality indicator and hotkey dialog style</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.44.1" date="2026-09-09">
       <description>
         <ul>
