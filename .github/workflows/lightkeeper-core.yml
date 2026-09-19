@@ -1,0 +1,100 @@
+name: lightkeeper-core
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "macros/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "packaging/lightkeeper-core/**"
+      - ".github/workflows/lightkeeper-core.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build-${{ matrix.arch }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+
+    steps:
+      - name: Checkout
+        # actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libdbus-1-dev \
+            libssl-dev
+
+      - name: Install Rust
+        # dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: "1.88"
+
+      - name: Build lightkeeper-core
+        run: |
+          cargo build --release --locked \
+            --no-default-features \
+            --features core \
+            --bin lightkeeper-core
+
+      - name: Package tarball
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          STAGE="lightkeeper-core-${VERSION}-${{ matrix.arch }}-linux"
+          mkdir -p "${STAGE}"
+          cp target/release/lightkeeper-core "${STAGE}/"
+          cp packaging/lightkeeper-core/lightkeeper-core.service "${STAGE}/"
+          cat > "${STAGE}/README.txt" <<EOF
+          lightkeeper-core ${VERSION} (${{ matrix.arch }})
+
+          Install (user-local, no root):
+            install -Dm755 lightkeeper-core ~/.local/bin/lightkeeper-core
+            install -Dm644 lightkeeper-core.service ~/.config/systemd/user/lightkeeper-core.service
+            systemctl --user daemon-reload
+            systemctl --user enable --now lightkeeper-core
+
+          Headless hosts may need linger and a Secret Service for keyring: secrets.
+          EOF
+          tar -czf "${STAGE}.tar.gz" "${STAGE}"
+          sha256sum "${STAGE}.tar.gz" > "${STAGE}.tar.gz.sha256"
+
+      - name: Attest tarball provenance
+        # actions/attest@v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: lightkeeper-core-*-${{ matrix.arch }}-linux.tar.gz
+
+      - name: Upload artifact
+        # actions/upload-artifact@v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        with:
+          name: lightkeeper-core-${{ matrix.arch }}
+          path: |
+            lightkeeper-core-*-${{ matrix.arch }}-linux.tar.gz
+            lightkeeper-core-*-${{ matrix.arch }}-linux.tar.gz.sha256
+          if-no-files-found: error

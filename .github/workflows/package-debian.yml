@@ -14,9 +14,12 @@ jobs:
     name: Build Debian 14 package
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     runs-on: ubuntu-latest
     container:
-      image: debian:forky
+      # debian:forky
+      image: debian:forky@sha256:a46c047e81bbede575434a5bd8e94bdeee49a605fc652e1f275fc03c94a4aaea
 
     steps:
       - name: Install build dependencies
@@ -34,6 +37,7 @@ jobs:
           rustc --version
 
       - name: Checkout repository
+        # actions/checkout@v4
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: recursive
@@ -61,7 +65,14 @@ jobs:
           cp -a "${BUILDDIR}"/*.changes artifacts/deb/ || true
           cp -a "${BUILDDIR}"/*.buildinfo artifacts/deb/ || true
 
+      - name: Attest .deb provenance
+        # actions/attest@v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: artifacts/deb/*.deb
+
       - name: Upload .deb artifacts
+        # actions/upload-artifact@v4
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: debian-deb
