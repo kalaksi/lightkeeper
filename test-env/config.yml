@@ -9,15 +9,16 @@ preferences:
   terminal_args: []
   close_to_tray: true
   show_monitor_notifications: true
+  show_charts: false
+  show_chart_threshold_lines: true
+  editor_preferences:
+    edit_mode: regular
+    font_size: 12
+    word_wrap: true
+  saved_core_addresses: []
 display_options:
   qtquick_style: ''
   hide_info_notifications: false
   show_status_bar: true
-  show_charts: false
-cache_settings:
-  enable_cache: false
-  provide_initial_value: true
-  initial_value_time_to_live: 604800
-  prefer_cache: true
-  time_to_live: 8400
-schema_version: 2
+  main_view_split_ratio: 0.8
+schema_version: 8

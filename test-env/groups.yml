@@ -35,7 +35,32 @@ groups:
       docker-compose-start: {}
       docker-compose-stop: {}
       docker-compose-up: {}
+  haproxy:
+    monitors:
+      haproxy:
+        settings:
+          socket_file: /run/haproxy/admin.sock
+  host:
+    monitors:
+      kernel: {}
+      load: {}
+      os: {}
+      package: {}
+      ram: {}
+      uptime: {}
+      who: {}
+    commands:
+      linux-packages-clean: {}
+      linux-packages-logs: {}
+      linux-packages-refresh: {}
+      linux-packages-update: {}
+      linux-packages-update-all: {}
+      linux-shell: {}
+      logs: {}
+      reboot: {}
+      shutdown: {}
   linux:
+    description: Deprecated. Prefer host, storage, and network groups instead.
     monitors:
       filesystem: {}
       interface:
@@ -67,21 +92,70 @@ groups:
       reboot: {}
       shutdown: {}
       storage-file-space-usage: {}
+      storage-filebrowser: {}
       storage-lvm-lvrefresh: {}
       storage-lvm-lvremove: {}
       storage-lvm-lvresize: {}
       storage-lvm-snapshot: {}
+  network:
+    monitors:
+      interface:
+        settings:
+          ignored_interfaces: br-,docker,lo,veth
+      network-dns: {}
+      network-routes: {}
+    commands:
+      network-socket-listen: {}
+      network-socket-tcp: {}
   nixos:
     monitors:
       nixos-rebuild-generations: {}
     commands:
       nixos-channel-update: {}
-      nixos-edit-configuration: {}
       nixos-collectgarbage: {}
+      nixos-edit-configuration: {}
       nixos-rebuild-boot: {}
       nixos-rebuild-dryrun: {}
       nixos-rebuild-rollback: {}
       nixos-rebuild-switch: {}
+  podman:
+    monitors:
+      podman-containers: {}
+      podman-images: {}
+    commands:
+      podman-image-prune: {}
+      podman-image-remote-tags: {}
+      podman-image-remove: {}
+      podman-inspect: {}
+      podman-restart: {}
+      podman-shell: {}
+  podman-compose:
+    monitors:
+      podman-compose: {}
+    commands:
+      podman-compose-build: {}
+      podman-compose-edit: {}
+      podman-compose-logs: {}
+      podman-compose-pull: {}
+      podman-compose-restart: {}
+      podman-compose-shell: {}
+      podman-compose-start: {}
+      podman-compose-stop: {}
+      podman-compose-up: {}
+  storage:
+    monitors:
+      filesystem: {}
+      storage-cryptsetup: {}
+      storage-lvm-logical-volume: {}
+      storage-lvm-physical-volume: {}
+      storage-lvm-volume-group: {}
+    commands:
+      storage-file-space-usage: {}
+      storage-filebrowser: {}
+      storage-lvm-lvrefresh: {}
+      storage-lvm-lvremove: {}
+      storage-lvm-lvresize: {}
+      storage-lvm-snapshot: {}
   systemd-service:
     monitors:
       systemd-service:
@@ -94,8 +168,3 @@ groups:
       systemd-service-start: {}
       systemd-service-stop: {}
       systemd-service-unmask: {}
-  haproxy:
-    monitors:
-      haproxy:
-        settings:
-          socket_file: /run/haproxy/admin.sock
