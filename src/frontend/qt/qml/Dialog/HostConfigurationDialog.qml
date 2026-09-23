@@ -195,15 +195,16 @@ LightkeeperDialog {
                     id: useSudoCheckbox
                     Layout.alignment: Qt.AlignHCenter
                     checked: {
+                        let settings = []
                         if (root.hostSettings.overrides !== undefined &&
-                            root.hostSettings.overrides.host_settings !== undefined) {
-                            return root.hostSettings.overrides.host_settings.indexOf("use_sudo") !== -1
+                            Array.isArray(root.hostSettings.overrides.host_settings)) {
+                            settings = root.hostSettings.overrides.host_settings
                         }
-                        if (root.hostSettings.effective !== undefined &&
-                            root.hostSettings.effective.host_settings !== undefined) {
-                            return root.hostSettings.effective.host_settings.indexOf("use_sudo") !== -1
+                        else if (root.hostSettings.effective !== undefined &&
+                                 Array.isArray(root.hostSettings.effective.host_settings)) {
+                            settings = root.hostSettings.effective.host_settings
                         }
-                        return true
+                        return settings.indexOf("use_sudo") !== -1
                     }
                     onCheckedChanged: root.updateOkButton()
                 }
