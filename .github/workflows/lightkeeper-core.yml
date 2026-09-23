@@ -49,10 +49,9 @@ jobs:
             libssl-dev
 
       - name: Install Rust
-        # dtolnay/rust-toolchain@stable
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
-        with:
-          toolchain: "1.88"
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.88
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Build lightkeeper-core
         run: |
