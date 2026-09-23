@@ -44,6 +44,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.45.2" date="2026-09-23">
+      <description>
+        <ul>
+          <li>Fix log viewer search highlighting</li>
+          <li>Undo some changes to status colors</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.45.1" date="2026-09-19">
       <description>
         <ul>
