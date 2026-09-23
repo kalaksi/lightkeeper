@@ -80,6 +80,8 @@ impl CommandModule for Snapshot {
         else if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "7") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "7") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
 
             command.arguments(vec!["lvcreate", "--snapshot", "--name", &snapshot_name, "--size", &new_size, lv_path]);

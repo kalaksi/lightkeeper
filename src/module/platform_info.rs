@@ -96,6 +96,8 @@ pub enum Flavor {
     ArchLinux,
     RedHat,
     CentOS,
+    AlmaLinux,
+    Rocky,
     NixOS,
     Fedora,
     OpenSUSE,

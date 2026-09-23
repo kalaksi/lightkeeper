@@ -51,7 +51,9 @@ impl CommandModule for Clean {
             command.arguments(vec!["apt-get", "clean"]);
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") {
+                host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") {
             command.arguments(vec!["dnf", "clean", "all"]);
         }
         else {

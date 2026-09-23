@@ -51,7 +51,9 @@ impl MonitoringModule for Routes {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
-           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") {
+           host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "7") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "7") {
             Ok(String::from("/sbin/ip route ls"))
         }
         else if host.platform.os_flavor == platform_info::Flavor::Alpine {

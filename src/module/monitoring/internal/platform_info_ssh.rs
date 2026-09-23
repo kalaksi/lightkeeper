@@ -88,6 +88,8 @@ fn parse_os_release(message: &String) -> (platform_info::Flavor, VersionNumber, 
                 match value.as_str() {
                     "debian" => flavor = platform_info::Flavor::Debian,
                     "centos" => flavor = platform_info::Flavor::CentOS,
+                    "almalinux" => flavor = platform_info::Flavor::AlmaLinux,
+                    "rocky" => flavor = platform_info::Flavor::Rocky,
                     "ubuntu" => flavor = platform_info::Flavor::Ubuntu,
                     "nixos" => flavor = platform_info::Flavor::NixOS,
                     "arch" => flavor = platform_info::Flavor::ArchLinux,

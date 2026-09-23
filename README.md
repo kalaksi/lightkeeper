@@ -153,7 +153,7 @@ The (current) goal is to support:
 - Debian
 - Ubuntu
 - RHEL
-- CentOS
+- CentOS, AlmaLinux, Rocky
 - NixOS
 - Fedora
 - Fedora CoreOS

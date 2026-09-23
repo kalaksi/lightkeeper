@@ -63,6 +63,8 @@ impl CommandModule for Restart {
             host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") ||
             host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
             host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "7") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "7") ||
             host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") ||
             host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
 

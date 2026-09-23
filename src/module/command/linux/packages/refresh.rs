@@ -55,6 +55,8 @@ impl CommandModule for Refresh {
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") ||
                 (host.platform.os_flavor == platform_info::Flavor::Fedora &&
                     !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos")) {
             command.arguments(vec!["dnf", "check-update"]);
@@ -76,6 +78,8 @@ impl CommandModule for Refresh {
             }
             else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
                     host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                    host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
+                    host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") ||
                     (host.platform.os_flavor == platform_info::Flavor::Fedora &&
                         !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos")) {
                 10

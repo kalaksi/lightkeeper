@@ -70,7 +70,9 @@ impl MonitoringModule for Service {
         let mut command = ShellCommand::new();
 
         if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") {
             command.arguments(vec!["busctl", "--no-pager", "call", "org.freedesktop.systemd1",
                                     "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
             Ok(command.to_string())
@@ -96,7 +98,9 @@ impl MonitoringModule for Service {
         let mut result = DataPoint::empty();
 
         let all_units = if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") {
             // First 2 words are like: a(ssssssouso) 253 
             let actual_content = response.message.splitn(3, " ").last().unwrap_or("");
             // Removes first and last quotes and then splits.

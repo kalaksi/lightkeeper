@@ -61,7 +61,9 @@ impl CommandModule for Update {
             command.arguments(vec!["apt", "--only-upgrade", "-y", "install", package]); 
         }
         else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") {
             command.arguments(vec!["dnf", "upgrade", "-y", package]);
         }
         else if host.platform.os_flavor == platform_info::Flavor::Alpine {
@@ -80,7 +82,9 @@ impl CommandModule for Update {
                 self.parse_progress_for_apt(response)
             }
             else if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-                    host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+                    host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                    host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
+                    host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") {
                 1
             }
             else {

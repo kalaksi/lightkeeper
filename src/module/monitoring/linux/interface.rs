@@ -59,7 +59,9 @@ impl MonitoringModule for Interface {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         if host.platform.os_flavor == platform_info::Flavor::CentOS ||
-           host.platform.os_flavor == platform_info::Flavor::RedHat {
+           host.platform.os_flavor == platform_info::Flavor::RedHat ||
+           host.platform.os_flavor == platform_info::Flavor::AlmaLinux ||
+           host.platform.os_flavor == platform_info::Flavor::Rocky {
             Ok(String::from("/sbin/ip -j addr show"))
         }
         else if host.platform.os_flavor == platform_info::Flavor::Alpine {

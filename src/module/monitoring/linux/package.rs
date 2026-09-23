@@ -55,7 +55,9 @@ impl MonitoringModule for Package {
             Ok(command.to_string())
         }
         else if host.platform.is_same_or_greater(Flavor::CentOS, "8") ||
-                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
+                host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+                host.platform.is_same_or_greater(Flavor::AlmaLinux, "8") ||
+                host.platform.is_same_or_greater(Flavor::Rocky, "8") {
             command.arguments(vec!["dnf", "check-update", "--quiet", "--color=never", "--assumeno"]);
             Ok(command.to_string())
         }
@@ -81,6 +83,8 @@ impl MonitoringModule for Package {
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
         let uses_dnf = host.platform.is_same_or_greater(Flavor::CentOS, "8") ||
             host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
+            host.platform.is_same_or_greater(Flavor::AlmaLinux, "8") ||
+            host.platform.is_same_or_greater(Flavor::Rocky, "8") ||
             (host.platform.os_flavor == platform_info::Flavor::Fedora &&
                 !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos"));
 
