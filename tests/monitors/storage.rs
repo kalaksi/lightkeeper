@@ -73,6 +73,41 @@ r#"{
 }
 
 #[test]
+fn test_cryptsetup_size_as_string() {
+    // Older lsblk (e.g. CentOS 8) quotes SIZE even with -b.
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new("lsblk -b -p -o NAME,SIZE,FSTYPE,MOUNTPOINT --json",
+r#"{
+  "blockdevices": [
+    {
+      "name": "/dev/sda1",
+      "size": "137438953472",
+      "fstype": "crypto_LUKS",
+      "mountpoint": null,
+      "children": []
+    }
+  ]
+}"#, 0)
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::CentOS, "8"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (storage::Cryptsetup::get_metadata(), storage::Cryptsetup::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_next_datapoint(&storage::Cryptsetup::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.multivalue.len(), 1);
+        assert_eq!(datapoint.multivalue[0].label, "sda1");
+        assert_eq!(datapoint.multivalue[0].description, "137.44 G");
+        assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
+    });
+}
+
+#[test]
 fn test_lvm_logical_volume() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new(r#""sudo" "lvs" "--separator" "|" "--options" "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent" "--units" "h""#,

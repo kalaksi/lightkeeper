@@ -187,6 +187,38 @@ systemd-sysusers.aarch64           258.7-1.fc43                updates-archive"#
 }
 
 #[test]
+fn test_package_alpine() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(
+            r#""sudo" "apk" "list" "--upgradable""#,
+            r#"rsync-3.2.3-r4 x86_64 {rsync} (GPL-3.0-or-later) [upgradable from: rsync-3.2.3-r2]
+curl-7.78.0-r0 x86_64 {curl} (MIT) [upgradable from: curl-7.77.0-r1]"#,
+            0,
+        )
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Alpine, "3.18"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (linux::Package::get_metadata(), linux::Package::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_next_datapoint(&linux::Package::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.multivalue.len(), 2);
+        assert_eq!(datapoint.multivalue[0].label, "rsync");
+        assert_eq!(datapoint.multivalue[0].value, "3.2.3-r4");
+        assert_eq!(datapoint.multivalue[0].description, "3.2.3-r2");
+        assert_eq!(datapoint.multivalue[0].command_params, vec!["rsync"]);
+        assert_eq!(datapoint.multivalue[1].label, "curl");
+        assert_eq!(datapoint.multivalue[1].value, "7.78.0-r0");
+        assert_eq!(datapoint.multivalue[1].description, "7.77.0-r1");
+    });
+}
+
+#[test]
 fn test_ram() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new("free -m",

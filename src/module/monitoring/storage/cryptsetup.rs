@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+use serde::de::{self, Deserializer, Visitor};
 use serde::Deserialize;
 use serde_json;
 
 use std::collections::HashMap;
+use std::fmt;
 use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
@@ -161,8 +163,39 @@ pub struct Lsblk {
 #[derive(Deserialize)]
 pub struct BlockDevice {
     pub name: String,
+    // Older lsblk (e.g. CentOS 8) emits SIZE as a JSON string even with -b.
+    #[serde(deserialize_with = "deserialize_u64_flexible")]
     pub size: u64,
     pub fstype: Option<String>,
     pub mountpoint: Option<String>,
     pub children: Option<Vec<BlockDevice>>,
+}
+
+fn deserialize_u64_flexible<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct U64FlexibleVisitor;
+
+    impl<'de> Visitor<'de> for U64FlexibleVisitor {
+        type Value = u64;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("u64 or string containing u64")
+        }
+
+        fn visit_u64<E: de::Error>(self, value: u64) -> Result<u64, E> {
+            Ok(value)
+        }
+
+        fn visit_i64<E: de::Error>(self, value: i64) -> Result<u64, E> {
+            u64::try_from(value).map_err(de::Error::custom)
+        }
+
+        fn visit_str<E: de::Error>(self, value: &str) -> Result<u64, E> {
+            value.parse().map_err(de::Error::custom)
+        }
+    }
+
+    deserializer.deserialize_any(U64FlexibleVisitor)
 }
