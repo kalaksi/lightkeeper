@@ -9,6 +9,7 @@ Vagrant.configure("2") do |config|
     libvirt.memory = 768
   end
   config.vm.provision "shell", inline: <<-SHELL
+    apk add iproute2
     if [ ! -e /mnt/test.img ]; then
       DEBIAN_FRONTEND=noninteractive apk add lvm2
       truncate -s 256M /mnt/test.img

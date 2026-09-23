@@ -1,15 +1,16 @@
 preferences:
-  use_sandbox_mode: true
+  use_sandbox_mode: false
   refresh_hosts_on_start: false
   use_remote_editor: true
   sudo_remote_editor: true
   remote_text_editor: nano
   text_editor: internal
   terminal: internal
-  terminal_args: []
+  terminal_args:
+  - ''
   close_to_tray: true
   show_monitor_notifications: true
-  show_charts: false
+  show_charts: true
   show_chart_threshold_lines: true
   editor_preferences:
     edit_mode: regular

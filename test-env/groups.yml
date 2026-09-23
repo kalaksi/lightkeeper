@@ -1,11 +1,7 @@
 groups:
   defaults:
     monitors:
-      docker-compose:
-        settings:
-          working_dir: /mnt/containers
-      tcp-connect:
-        is_critical: false
+      tcp-connect: {}
     connectors:
       ssh:
         settings:
