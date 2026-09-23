@@ -560,6 +560,34 @@ LightkeeperDialog {
                 Item {
                     Layout.fillHeight: true
                 }
+
+                RowLayout {
+                    spacing: Theme.spacingNormal
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: Theme.spacingLoose
+
+                    Image {
+                        source: "qrc:/main/images/whitebark-logo"
+                        sourceSize.width: 44
+                        sourceSize.height: 44
+                        Layout.preferredWidth: 44
+                        Layout.preferredHeight: 44
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    NormalText {
+                        text: '<a href="https://whitebark.dev">Whitebark.dev</a>'
+                        textFormat: Text.RichText
+                        Layout.alignment: Qt.AlignVCenter
+                        onLinkActivated: (link) => Qt.openUrlExternally(link)
+
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.NoButton
+                            cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        }
+                    }
+                }
             }
         }
     }

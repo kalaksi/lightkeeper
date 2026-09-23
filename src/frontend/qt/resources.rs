@@ -87,6 +87,9 @@ pub fn init_resources() {
             // Tray icon
             "images/lightkeeper-tray-icon.png" as "images/tray-icon",
 
+            // Brand
+            "images/whitebark-logo.png" as "images/whitebark-logo",
+
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
             "images/nixos.svg" as "images/nixos",
@@ -189,6 +192,9 @@ pub fn init_resources() {
 
             // Tray icon
             "images/lightkeeper-tray-icon.png" as "images/tray-icon",
+
+            // Brand
+            "images/whitebark-logo.png" as "images/whitebark-logo",
 
             // Category icons
             "images/fontawesome/docker.svg" as "images/docker",
