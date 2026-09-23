@@ -69,6 +69,10 @@ impl MonitoringModule for Package {
             command.arguments(vec!["dnf", "check-update", "--quiet", "--assumeno"]);
             Ok(command.to_string())
         }
+        else if host.platform.os_flavor == Flavor::Alpine {
+            command.arguments(vec!["apk", "list", "--upgradable"]);
+            Ok(command.to_string())
+        }
         else {
             Err(LkError::unsupported_platform())
         }
@@ -125,6 +129,25 @@ impl MonitoringModule for Package {
 
                 let mut data_point = DataPoint::labeled_value(package_name.clone(), new_version);
                 data_point.description = repository;
+                data_point.command_params = vec![package_name];
+                result.multivalue.push(data_point);
+            }
+        }
+        else if host.platform.os_flavor == Flavor::Alpine {
+            // Example: rsync-3.2.3-r4 x86_64 {rsync} (GPL-3.0-or-later) [upgradable from: rsync-3.2.3-r2]
+            let lines = response.message.lines().filter(|line| line.contains("[upgradable"));
+            for line in lines {
+                let package_name = string_manipulation::get_string_between(&line, "{", "}")
+                    .ok_or(LkError::unexpected())?;
+                let name_prefix = format!("{}-", package_name);
+                let full_new = line.split_whitespace().next().ok_or(LkError::unexpected())?.to_string();
+                let new_version = full_new.strip_prefix(&name_prefix).unwrap_or(&full_new).to_string();
+                let full_old = string_manipulation::get_string_between(&line, "[upgradable from: ", "]")
+                    .unwrap_or(String::from("unknown version"));
+                let old_version = full_old.strip_prefix(&name_prefix).unwrap_or(&full_old).to_string();
+
+                let mut data_point = DataPoint::labeled_value(package_name.clone(), new_version);
+                data_point.description = old_version;
                 data_point.command_params = vec![package_name];
                 result.multivalue.push(data_point);
             }

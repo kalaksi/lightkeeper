@@ -64,6 +64,9 @@ impl CommandModule for UpdateAll {
 
             command.arguments(vec!["dnf", "update", "-y"]); 
         }
+        else if host.platform.os_flavor == platform_info::Flavor::Alpine {
+            command.arguments(vec!["apk", "upgrade"]);
+        }
         else {
             return Err(LkError::unsupported_platform());
         }

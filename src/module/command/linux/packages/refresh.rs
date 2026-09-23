@@ -59,6 +59,9 @@ impl CommandModule for Refresh {
                     !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos")) {
             command.arguments(vec!["dnf", "check-update"]);
         }
+        else if host.platform.os_flavor == platform_info::Flavor::Alpine {
+            command.arguments(vec!["apk", "update"]);
+        }
         else {
             return Err(LkError::unsupported_platform());
         }

@@ -46,6 +46,49 @@ r#"[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"mtu":65536,
 }
 
 #[test]
+fn test_interface_alpine() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new("ip addr show",
+r#"1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether 52:54:00:12:34:56 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.10/24 scope global eth0
+       valid_lft forever preferred_lft forever
+3: eth1: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc pfifo_fast state DOWN qlen 1000
+    link/ether 52:54:00:65:43:21 brd ff:ff:ff:ff:ff:ff"#, 0)
+    };
+
+    let mut harness = MonitorTestHarness::new_monitor_tester(
+        PlatformInfo::linux(Flavor::Alpine, "3.18"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (linux::Interface::get_metadata(), linux::Interface::new_monitoring_module),
+    );
+
+    harness.refresh_monitors();
+
+    harness.verify_next_datapoint(&linux::Interface::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.multivalue.len(), 3);
+        assert_eq!(datapoint.multivalue[0].label, "lo");
+        assert_eq!(datapoint.multivalue[0].multivalue[0].label, "127.0.0.1/8");
+        assert_eq!(datapoint.multivalue[0].multivalue[1].label, "::1/128");
+        assert_eq!(datapoint.multivalue[1].label, "eth0");
+        assert_eq!(datapoint.multivalue[1].value, "up");
+        assert_eq!(datapoint.multivalue[1].description, "52:54:00:12:34:56");
+        assert_eq!(datapoint.multivalue[1].multivalue[0].label, "192.168.1.10/24");
+        assert_eq!(datapoint.multivalue[2].label, "eth1");
+        assert_eq!(datapoint.multivalue[2].value, "down");
+        assert_eq!(datapoint.multivalue[2].criticality, Criticality::Error);
+        assert!(datapoint.multivalue[2].tags.contains(&String::from("NO-CARRIER")));
+    });
+}
+
+#[test]
 fn test_kernel() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new("uname -r -m", "6.1.0-41-amd64 x86_64", 0)

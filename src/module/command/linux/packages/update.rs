@@ -64,6 +64,9 @@ impl CommandModule for Update {
                 host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") {
             command.arguments(vec!["dnf", "upgrade", "-y", package]);
         }
+        else if host.platform.os_flavor == platform_info::Flavor::Alpine {
+            command.arguments(vec!["apk", "upgrade", package]);
+        }
         else {
             return Err(LkError::unsupported_platform());
         }

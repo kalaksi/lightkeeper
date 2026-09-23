@@ -46,7 +46,11 @@ impl MonitoringModule for Who {
     }
 
     fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, LkError> {
-        if host.platform.os == platform_info::OperatingSystem::Linux {
+        if host.platform.os_flavor == platform_info::Flavor::Alpine {
+            // BusyBox who has no -s.
+            Ok(String::from("who"))
+        }
+        else if host.platform.os == platform_info::OperatingSystem::Linux {
             Ok(String::from("who -s"))
         }
         else {
