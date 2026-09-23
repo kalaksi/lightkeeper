@@ -147,6 +147,8 @@ pub enum ErrorKind {
     NotImplemented,
     /// Invalid parameter.
     InvalidParameter,
+    /// Command or monitor needs sudo but host has it disabled.
+    SudoRequired,
     #[default]
     /// Other unspecified error.
     Other,

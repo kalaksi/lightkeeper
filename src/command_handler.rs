@@ -228,7 +228,10 @@ impl CommandHandler {
             }) {
 
             log::warn!("[{}][{}] Skipping, sudo required", host_id, command_id);
-            return Err(LkError::other("Sudo is required for this command but is disabled for this host"));
+            return Err(LkError::new(
+                ErrorKind::SudoRequired,
+                "Sudo is required for this command but is disabled for this host",
+            ).set_source(command_id));
         }
 
         let invocation_id = self.next_invocation_id();

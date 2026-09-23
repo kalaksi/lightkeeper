@@ -33,6 +33,13 @@ CategoryGroupBox {
                 propertyTable.model.update(monitoringDataQv)
             }
         }
+
+        function onUpdateReceived(hostId) {
+            if (hostId === root.hostId) {
+                let pending = LK.hosts.getPendingMonitorCountForCategory(root.hostId, root.categoryName)
+                root.refreshProgress = pending > 0 ? 0 : 100
+            }
+        }
     }
 
     Connections {

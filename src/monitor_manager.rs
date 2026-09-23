@@ -392,6 +392,19 @@ impl MonitorManager {
                 trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\"")
             }) {
                 log::warn!("[{}][{}] Skipping, sudo required", host.name, monitor.get_module_spec().id);
+
+                self.send_state_update(StateUpdateMessage {
+                    host_name: host.name.clone(),
+                    display_options: monitor.get_display_options(),
+                    module_spec: monitor.get_module_spec(),
+                    errors: vec![
+                        LkError::new(ErrorKind::SudoRequired, "Sudo is required but is disabled for this host")
+                            .set_source(monitor.get_module_spec().id),
+                    ],
+                    invocation_id: current_invocation_id,
+                    ..Default::default()
+                });
+
                 continue;
             }
 
@@ -568,6 +581,25 @@ impl MonitorManager {
                                 trimmed.starts_with("sudo ") || trimmed.starts_with("\"sudo\"")
                             }) {
                                 log::warn!("[{}][{}] Skipping, sudo required", response.host.name, next_monitor.get_module_spec().id);
+                                errors.push(
+                                    LkError::new(
+                                        ErrorKind::SudoRequired,
+                                        "Sudo is required but is disabled for this host",
+                                    ).set_source(next_monitor.get_module_spec().id),
+                                );
+
+                                if let Err(error) = state_update_sender.send(StateUpdateMessage {
+                                    host_name: response.host.name.clone(),
+                                    display_options: monitor.get_display_options(),
+                                    module_spec: monitor.get_module_spec(),
+                                    data_point: new_data_point,
+                                    errors: errors,
+                                    invocation_id: response.invocation_id,
+                                    ..Default::default()
+                                }) {
+                                    log::error!("Failed to send state update: {}", error);
+                                    panic!("Failed to send state update: {}", error);
+                                }
                                 continue;
                             }
                             messages

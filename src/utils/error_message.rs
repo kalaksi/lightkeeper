@@ -15,9 +15,11 @@ pub struct ErrorMessage {
 
 impl From<LkError> for ErrorMessage {
     fn from(error: LkError) -> Self {
-        ErrorMessage {
-            message: error.to_string(),
-            criticality: Criticality::Error,
-        }
+        let criticality = match error.kind {
+            crate::error::ErrorKind::SudoRequired => Criticality::Warning,
+            _ => Criticality::Error,
+        };
+
+        ErrorMessage { message: error.to_string(), criticality }
     }
 }

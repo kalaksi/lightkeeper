@@ -172,6 +172,13 @@ Item {
                             }
                         }
 
+                        function onUpdateReceived(hostId) {
+                            if (hostId === root.hostId) {
+                                let pending = LK.hosts.getPendingMonitorCountForCategory(root.hostId, groupBox.categoryName)
+                                groupBox.refreshProgress = pending > 0 ? 0 : 100
+                            }
+                        }
+
                         // Update command progress. Starts automatic refresh of relevant monitors if finished.
                         function onCommandResultReceived(commandResultJson, invocationId) {
                             if (groupBox._invocationIdToButton[invocationId] !== undefined) {
