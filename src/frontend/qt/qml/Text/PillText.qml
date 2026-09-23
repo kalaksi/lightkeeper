@@ -14,7 +14,7 @@ Item {
     id: root
     property string text: ""
     property alias textColor: textElement.color
-    property string pillColor: "#60a0a0a0"
+    property string pillColor: "#70a0a0a0"
     property int padding: 4
     property string tooltip: ""
 
@@ -42,7 +42,7 @@ Item {
     Text {
         id: textElement
         text: root.text
-        color: Theme.textColor
+        color: "#111111"
         anchors.centerIn: parent
         font.pointSize: 8
     }

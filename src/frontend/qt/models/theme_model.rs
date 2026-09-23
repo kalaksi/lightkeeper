@@ -161,18 +161,18 @@ impl ThemeModel {
         let criticality = criticality.to_string();
 
         if criticality.is_empty() {
-            return QString::from("#a0a0a0a0");
+            return QString::from("#b0a0a0a0");
         }
 
         match Criticality::from_str(&criticality).unwrap() {
-            Criticality::Ignore => QString::from("#a0a0a0a0"),
-            Criticality::Normal => QString::from("#6033cc33"),
-            Criticality::Info => QString::from("#a0a0a0a0"),
-            Criticality::NoData => QString::from("#a0a0a0a0"),
-            Criticality::Warning => QString::from("#60ffcc00"),
-            Criticality::Error => QString::from("#60ff3300"),
-            Criticality::Critical => QString::from("#60ff3300"),
-            Criticality::NotAvailable => QString::from("#a0a0a0a0"),
+            Criticality::Ignore => QString::from("#b0a0a0a0"),
+            Criticality::Normal => QString::from("#7033cc33"),
+            Criticality::Info => QString::from("#b0a0a0a0"),
+            Criticality::NoData => QString::from("#b0a0a0a0"),
+            Criticality::Warning => QString::from("#70ffcc00"),
+            Criticality::Error => QString::from("#70ff3300"),
+            Criticality::Critical => QString::from("#70ff3300"),
+            Criticality::NotAvailable => QString::from("#b0a0a0a0"),
         }
     }
 
