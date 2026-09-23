@@ -98,6 +98,7 @@ pub enum Flavor {
     CentOS,
     AlmaLinux,
     Rocky,
+    AmazonLinux,
     NixOS,
     Fedora,
     OpenSUSE,

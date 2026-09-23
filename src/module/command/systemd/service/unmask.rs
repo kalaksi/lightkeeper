@@ -62,6 +62,7 @@ impl CommandModule for Unmask {
             host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
             host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "7") ||
             host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "7") ||
+            host.platform.is_same_or_greater(platform_info::Flavor::AmazonLinux, "2") ||
             host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") {
 
             command.arguments(vec!["systemctl", "unmask", service]);

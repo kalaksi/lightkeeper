@@ -58,6 +58,7 @@ impl MonitoringModule for Dns {
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") ||
+           host.platform.is_same_or_greater(platform_info::Flavor::AmazonLinux, "2023") ||
            host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "20") ||
            host.platform.os_flavor == platform_info::Flavor::Fedora ||
            host.platform.os_flavor == platform_info::Flavor::Alpine {

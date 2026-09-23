@@ -154,6 +154,7 @@ The (current) goal is to support:
 - Ubuntu
 - RHEL
 - CentOS, AlmaLinux, Rocky
+- Amazon Linux
 - NixOS
 - Fedora
 - Fedora CoreOS

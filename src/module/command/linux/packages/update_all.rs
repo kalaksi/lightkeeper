@@ -61,6 +61,7 @@ impl CommandModule for UpdateAll {
                 host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") ||
+                host.platform.is_same_or_greater(platform_info::Flavor::AmazonLinux, "2023") ||
                 (host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") &&
                     !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos")) {
 
@@ -85,6 +86,7 @@ impl CommandModule for UpdateAll {
                     host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
                     host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
                     host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") ||
+                    host.platform.is_same_or_greater(platform_info::Flavor::AmazonLinux, "2023") ||
                     (host.platform.is_same_or_greater(platform_info::Flavor::Fedora, "22") &&
                         !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos")) {
                 1

@@ -57,7 +57,8 @@ impl MonitoringModule for Package {
         else if host.platform.is_same_or_greater(Flavor::CentOS, "8") ||
                 host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
                 host.platform.is_same_or_greater(Flavor::AlmaLinux, "8") ||
-                host.platform.is_same_or_greater(Flavor::Rocky, "8") {
+                host.platform.is_same_or_greater(Flavor::Rocky, "8") ||
+                host.platform.is_same_or_greater(Flavor::AmazonLinux, "2023") {
             command.arguments(vec!["dnf", "check-update", "--quiet", "--color=never", "--assumeno"]);
             Ok(command.to_string())
         }
@@ -85,6 +86,7 @@ impl MonitoringModule for Package {
             host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
             host.platform.is_same_or_greater(Flavor::AlmaLinux, "8") ||
             host.platform.is_same_or_greater(Flavor::Rocky, "8") ||
+            host.platform.is_same_or_greater(Flavor::AmazonLinux, "2023") ||
             (host.platform.os_flavor == platform_info::Flavor::Fedora &&
                 !host.platform.is_variant(platform_info::Flavor::Fedora, "coreos"));
 
