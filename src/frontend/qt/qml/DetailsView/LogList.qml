@@ -10,7 +10,6 @@ import QtQuick.Controls
 import Lightkeeper 1.0
 
 import "../Text"
-import "../js/TextTransform.js" as TextTransform
 import "../js/Utils.js" as Utils
 import "../StyleOverride"
 
@@ -229,31 +228,44 @@ ListView {
         let matchingRows = []
         let totalMatches = 0
         let regexp = RegExp(query, "g")
+        let highlightOpen = "<span style='background-color: " + Theme.highlightColorBright + "'>"
+        let highlightClose = "</span>"
 
         let modelRows = []
         for (let i = 0; i < rows.length; i++) {
-            let text = rows[i]
-            let lastIndex = 0
-            let rowMatches = false
+            // Rows are already Qt rich text (journalctl/ANSI spans). Search only text segments so
+            // existing markup stays intact and tags are not matched or escaped into visible text.
             let resultRow = ""
+            let rowMatches = false
+            for (const part of rows[i].split(/(<[^>]+>)/)) {
+                if (part.startsWith("<") && part.endsWith(">")) {
+                    resultRow += part
+                    continue
+                }
 
-            let match = regexp.exec(text)
-            while (match !== null) {
-                rowMatches = true
-                totalMatches += 1
+                regexp.lastIndex = 0
+                let lastIndex = 0
+                let match = regexp.exec(part)
+                while (match !== null) {
+                    let word = match[0]
+                    if (word.length === 0) {
+                        regexp.lastIndex += 1
+                        match = regexp.exec(part)
+                        continue
+                    }
 
-                let word = match[0]
-                // There are no security risks here but escaping is done to display text correctly since it's interpreted as rich text.
-                resultRow += TextTransform.escapeHtml(text.substring(lastIndex, match.index))
-                resultRow += "<span style='background-color: " + Theme.highlightColorBright + "'>" + TextTransform.escapeHtml(word) + "</span>"
-                lastIndex = match.index + word.length
+                    rowMatches = true
+                    totalMatches += 1
+                    resultRow += part.substring(lastIndex, match.index)
+                    resultRow += highlightOpen + word + highlightClose
+                    lastIndex = match.index + word.length
+                    match = regexp.exec(part)
+                }
 
-                match = regexp.exec(text)
+                resultRow += part.substring(lastIndex)
             }
 
-            resultRow += TextTransform.escapeHtml(text.substring(lastIndex))
             modelRows.push(resultRow)
-
             if (rowMatches) {
                 matchingRows.push(i)
             }
