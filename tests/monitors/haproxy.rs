@@ -86,7 +86,7 @@ fn test_haproxy() {
 
 #[test]
 fn test_haproxy_without_servers() {
-    let mut settings = HashMap::new();
+    let mut settings = BTreeMap::new();
     settings.insert("include_servers".to_string(), "false".to_string());
 
     let mut host_settings = configuration::HostSettings::default();

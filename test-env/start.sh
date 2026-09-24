@@ -9,3 +9,5 @@ for vagrantfile in $current_dir/**/Vagrantfile; do
     vagrant up --no-tty
     popd
 done
+
+"$current_dir/amazonlinux2023/install.sh"

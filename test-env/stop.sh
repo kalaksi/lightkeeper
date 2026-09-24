@@ -7,3 +7,5 @@ for vagrantfile in $current_dir/**/Vagrantfile; do
     dir="$(dirname "$vagrantfile")"
     pushd "$dir" && vagrant halt --no-tty && popd
 done
+
+"$current_dir/amazonlinux2023/stop.sh"

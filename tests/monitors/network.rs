@@ -191,7 +191,7 @@ fn test_tcp_connect_error() {
 
 #[test]
 fn test_tcp_connect_custom_port() {
-    let mut settings = HashMap::new();
+    let mut settings = BTreeMap::new();
     settings.insert("port".to_string(), "443".to_string());
 
     let mut host_settings = configuration::HostSettings::default();
