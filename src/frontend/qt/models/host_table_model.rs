@@ -27,7 +27,7 @@ pub struct HostTableModel {
 
     dataChangedForHost: qt_method!(fn(&self, host_id: QString)),
     /// Incrementally update a single visible row from typed host display data.
-    /// Hosts not currently in the table (e.g. filtered out) are ignored.
+    /// New hosts that match the current filter are inserted via a table rebuild.
     updateHostRow: qt_method!(fn(&mut self, host_display_data: QVariant)),
     toggleRow: qt_method!(fn(&mut self, row: i32)),
     selectHostById: qt_method!(fn(&mut self, host_id: QString)),
@@ -56,11 +56,8 @@ impl HostTableModel {
             // Host IDs starting with underscore are reserved for internal use.
             .filter(|(host_id, _)| !host_id.starts_with("_"))
             .filter(|(host_id, host_display_data)| {
-                self.search_filter.is_empty() ||
-                host_id.to_lowercase().contains(&self.search_filter) ||
-                host_display_data.host_state.host.fqdn.to_lowercase().contains(&self.search_filter) ||
-                host_display_data.host_state.host.ip_address.to_string().to_lowercase().contains(&self.search_filter)
-        }).collect::<Vec<_>>();
+                self.host_matches_filter(host_id, host_display_data)
+            }).collect::<Vec<_>>();
 
         filtered_hosts.sort_by_key(|(key, _)| key.to_lowercase());
 
@@ -117,13 +114,18 @@ impl HostTableModel {
             return;
         }
 
+        // Keep the cached table source in sync so later filter()/rebuilds stay accurate.
+        self.i_display_data.hosts.insert(host_id.clone(), host_display_data.clone());
+
         let Some(host_index) = self.host_row_map.get(&host_id).copied() else {
-            // Not currently visible (filtered out or not yet in the table).
+            // New host (or previously filtered out): rebuild if it should be visible.
+            if self.host_matches_filter(&host_id, &host_display_data) {
+                self.begin_reset_model();
+                self.update_row_data();
+                self.end_reset_model();
+            }
             return;
         };
-
-        // Keep the cached table source in sync so later filter()/rebuilds stay accurate.
-        self.i_display_data.hosts.insert(host_id, host_display_data.clone());
 
         if let Some(row) = self.row_data.get_mut(host_index) {
             *row = HostDataModel::from(&host_display_data);
@@ -132,6 +134,13 @@ impl HostTableModel {
             let bottom_right = self.index(host_index as i32, self.column_count() - 1);
             self.data_changed(top_left, bottom_right);
         }
+    }
+
+    fn host_matches_filter(&self, host_id: &str, host_display_data: &frontend::HostDisplayData) -> bool {
+        self.search_filter.is_empty() ||
+        host_id.to_lowercase().contains(&self.search_filter) ||
+        host_display_data.host_state.host.fqdn.to_lowercase().contains(&self.search_filter) ||
+        host_display_data.host_state.host.ip_address.to_string().to_lowercase().contains(&self.search_filter)
     }
 
     fn toggleRow(&mut self, row: i32) {

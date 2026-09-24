@@ -255,6 +255,13 @@ impl LkBackend {
                     self.new_update_sender(),
                 );
 
+                // Keep UI host list in sync with HostManager (adds/removes).
+                self.hosts.borrow_mut().sync_after_reload(
+                    self.host_manager.borrow().get_display_data(),
+                    hosts_config,
+                    main_config.preferences.clone(),
+                );
+
                 // `self.metrics` doesn't have to be reconfigured.
 
                 self.host_manager.borrow_mut().start_receiving_updates();

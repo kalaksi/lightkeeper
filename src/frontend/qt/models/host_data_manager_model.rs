@@ -68,7 +68,7 @@ pub struct HostDataManagerModel {
     //
 
     // Basically contains the state of hosts and relevant data.
-    // Retains data between reloads.
+    // Synced from HostManager on configuration reload.
     display_data: frontend::DisplayData,
     display_options_category_order: Vec<String>,
     configuration_preferences: configuration::Preferences,
@@ -100,6 +100,17 @@ impl HostDataManagerModel {
         result
     }
 
+    pub fn sync_after_reload(
+        &mut self,
+        display_data: frontend::DisplayData,
+        hosts_config: configuration::Hosts,
+        preferences: configuration::Preferences,
+    ) {
+        self.display_data = display_data;
+        self.hosts_config = hosts_config;
+        self.configuration_preferences = preferences;
+        self.update_criticality_counts();
+    }
 
     pub fn process_update(&mut self, new_display_data: frontend::HostDisplayData) {
         // HostDataModel cannot be passed between threads so parsing happens here.
