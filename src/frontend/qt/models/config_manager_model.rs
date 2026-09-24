@@ -273,6 +273,10 @@ impl ConfigManagerModel {
                 String::from("docker"),
                 String::from("docker-compose"),
             ],
+            overrides: ConfigGroup {
+                host_settings: vec![crate::host::HostSetting::UseSudo],
+                ..Default::default()
+            },
             ..Default::default()
         };
         self.hosts_config.hosts.insert(host_name, config);
