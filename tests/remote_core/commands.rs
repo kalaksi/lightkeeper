@@ -87,7 +87,6 @@ fn stub_hosts() -> configuration::Hosts {
         systemd::service::Start::get_metadata().module_spec.id.clone(),
         configuration::CommandConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         },
     );
@@ -95,7 +94,6 @@ fn stub_hosts() -> configuration::Hosts {
         Os::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         },
     );
@@ -103,7 +101,6 @@ fn stub_hosts() -> configuration::Hosts {
         Service::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         },
     );

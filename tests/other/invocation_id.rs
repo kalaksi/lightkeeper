@@ -27,7 +27,6 @@ fn invocation_ids_are_globally_unique() {
         systemd::service::Start::get_metadata().module_spec.id.clone(),
         configuration::CommandConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         },
     );
@@ -39,7 +38,6 @@ fn invocation_ids_are_globally_unique() {
         monitoring::os::Os::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         },
     );

@@ -134,8 +134,8 @@ impl CommandHandler {
             self.add_command(host_id, filebrowser_ls_links);
             let filebrowser_copy = crate::module::command::internal::FileBrowserCopy::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_copy);
-            let ssh_settings = host_config.effective.connectors
-                .get("ssh").map(|c| c.settings.clone()).unwrap_or_default();
+            let ssh_settings: HashMap<String, String> = host_config.effective.connectors
+                .get("ssh").map(|c| c.settings.clone().into_iter().collect()).unwrap_or_default();
             let filebrowser_download = crate::module::command::internal::FileBrowserDownload::new_command_module(&ssh_settings);
             self.add_command(host_id, filebrowser_download);
             let filebrowser_edit = crate::module::command::internal::FileBrowserEdit::new_command_module(&HashMap::new());

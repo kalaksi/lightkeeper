@@ -186,7 +186,6 @@ r#"{
         docker::Images::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         }
     );
@@ -195,7 +194,6 @@ r#"{
         docker::ImageUpdates::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         }
     );

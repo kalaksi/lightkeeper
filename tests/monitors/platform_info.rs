@@ -38,7 +38,6 @@ PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
         linux::Kernel::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         }
     );
@@ -107,7 +106,6 @@ PRETTY_NAME="Ubuntu 22.04 LTS"
         linux::Kernel::get_metadata().module_spec.id.clone(),
         configuration::MonitorConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
             ..Default::default()
         }
     );

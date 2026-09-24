@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use super::{
     command,
@@ -51,7 +51,7 @@ impl ModuleFactory {
         }
     }
 
-    pub fn new_connector(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<connection::Connector> {
+    pub fn new_connector(&self, module_spec: &ModuleSpecification, settings: &BTreeMap<String, String>) -> Option<connection::Connector> {
         let mut normalized_spec = module_spec.clone();
         if normalized_spec.latest_version() {
             if let Some(latest_version) = self.get_latest_version_for_connector(&normalized_spec.id) {
@@ -67,14 +67,15 @@ impl ModuleFactory {
             .find(|(metadata, _ctor)| metadata.module_spec == normalized_spec)
             .map(|(_, ctor)| ctor) 
         {
-            Some(constructor(settings))
+            let settings: HashMap<String, String> = settings.clone().into_iter().collect();
+            Some(constructor(&settings))
         }
         else {
             None
         }
     }
 
-    pub fn new_monitor(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<monitoring::Monitor> {
+    pub fn new_monitor(&self, module_spec: &ModuleSpecification, settings: &BTreeMap<String, String>) -> Option<monitoring::Monitor> {
         let mut normalized_spec = module_spec.clone();
         if normalized_spec.latest_version() {
             if let Some(latest_version) = self.get_latest_version_for_monitor(&normalized_spec.id) {
@@ -90,14 +91,15 @@ impl ModuleFactory {
             .find(|(metadata, _ctor)| metadata.module_spec == normalized_spec)
             .map(|(_, ctor)| ctor) 
         {
-            Some(constructor(settings))
+            let settings: HashMap<String, String> = settings.clone().into_iter().collect();
+            Some(constructor(&settings))
         }
         else {
             None
         }
     }
 
-    pub fn new_command(&self, module_spec: &ModuleSpecification, settings: &HashMap<String, String>) -> Option<command::Command> {
+    pub fn new_command(&self, module_spec: &ModuleSpecification, settings: &BTreeMap<String, String>) -> Option<command::Command> {
         let mut normalized_spec = module_spec.clone();
         if normalized_spec.latest_version() {
             if let Some(latest_version) = self.get_latest_version_for_command(&normalized_spec.id) {
@@ -113,7 +115,8 @@ impl ModuleFactory {
             .find(|(metadata, _ctor)| metadata.module_spec == normalized_spec)
             .map(|(_, ctor)| ctor) 
         {
-            Some(constructor(settings))
+            let settings: HashMap<String, String> = settings.clone().into_iter().collect();
+            Some(constructor(&settings))
         }
         else {
             None

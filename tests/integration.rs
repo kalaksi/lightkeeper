@@ -175,7 +175,6 @@ impl MonitorTestHarness {
             monitor_module.0.module_spec.id.clone(),
             configuration::MonitorConfig {
                 version: "0.0.1".to_string(),
-                settings: HashMap::new(),
                 ..Default::default()
             }
         );
@@ -211,7 +210,6 @@ impl MonitorTestHarness {
                 monitor_module.0.module_spec.id.clone(),
                 configuration::MonitorConfig {
                     version: "0.0.1".to_string(),
-                    settings: HashMap::new(),
                     ..Default::default()
                 }
             );
@@ -404,7 +402,6 @@ impl CommandTestHarness {
             command_module.0.module_spec.id.clone(),
             configuration::CommandConfig {
                 version: "0.0.1".to_string(),
-                settings: HashMap::new(),
                 ..Default::default()
             }
         );

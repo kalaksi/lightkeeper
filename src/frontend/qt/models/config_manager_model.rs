@@ -7,7 +7,7 @@ extern crate qmetaobject;
 
 use qmetaobject::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 use crate::backend::ConfigBackend;
 use crate::error::LkError;
@@ -816,7 +816,7 @@ impl ConfigManagerModel {
         let host = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
         let baseline = Self::group_baseline_for_host(&host, &self.groups_config);
         let effective = Configuration::get_effective_group_config(&host, &self.groups_config.groups);
-        let empty_settings = HashMap::new();
+        let empty_settings = BTreeMap::new();
 
         let modules_settings: HashMap<String, Vec<ModuleSetting>> = match Self::parse_module_type(&module_type) {
             ModuleType::Monitor => effective.monitors.iter()
@@ -868,7 +868,7 @@ impl ConfigManagerModel {
             };
 
             for (module_id, settings) in monitor_settings {
-                let enabled_settings: HashMap<String, String> = settings.into_iter()
+                let enabled_settings: BTreeMap<String, String> = settings.into_iter()
                     .filter(|setting| setting.enabled)
                     .map(|setting| (setting.key, setting.value))
                     .collect();
@@ -896,7 +896,7 @@ impl ConfigManagerModel {
             }
 
             for (module_id, settings) in command_settings {
-                let enabled_settings: HashMap<String, String> = settings.into_iter()
+                let enabled_settings: BTreeMap<String, String> = settings.into_iter()
                     .filter(|setting| setting.enabled)
                     .map(|setting| (setting.key, setting.value))
                     .collect();
@@ -929,13 +929,13 @@ impl ConfigManagerModel {
             ModuleType::Monitor => {
                 let spec = ModuleSpecification::monitor(module_id, "latest");
                 self.module_factory
-                    .new_monitor(&spec, &HashMap::new())
+                    .new_monitor(&spec, &BTreeMap::new())
                     .map(|monitor| monitor.get_display_options().category)
             },
             ModuleType::Command => {
                 let spec = ModuleSpecification::command(module_id, "latest");
                 self.module_factory
-                    .new_command(&spec, &HashMap::new())
+                    .new_command(&spec, &BTreeMap::new())
                     .map(|command| command.get_display_options().category)
             },
             _ => None,
@@ -1024,7 +1024,7 @@ impl ConfigManagerModel {
             let settings = settings.into_iter()
                 .filter(|setting| setting.enabled)
                 .map(|setting| (setting.key, setting.value))
-                .collect::<HashMap<String, String>>();
+                .collect::<BTreeMap<String, String>>();
 
             group.connectors.entry(module_id).or_insert(Default::default()).settings = settings;
         }
@@ -1034,7 +1034,7 @@ impl ConfigManagerModel {
             let settings = settings.into_iter()
                 .filter(|setting| setting.enabled)
                 .map(|setting| (setting.key, setting.value))
-                .collect::<HashMap<String, String>>();
+                .collect::<BTreeMap<String, String>>();
 
             group.monitors.entry(module_id).or_insert(Default::default()).settings = settings;
         }
@@ -1044,7 +1044,7 @@ impl ConfigManagerModel {
             let settings = settings.into_iter()
                 .filter(|setting| setting.enabled)
                 .map(|setting| (setting.key, setting.value))
-                .collect::<HashMap<String, String>>();
+                .collect::<BTreeMap<String, String>>();
 
             group.commands.entry(module_id).or_insert(Default::default()).settings = settings;
         }
@@ -1104,11 +1104,11 @@ impl ConfigManagerModel {
 
     fn build_module_settings(
         metadata: &Metadata,
-        settings: &HashMap<String, String>,
-        inherited: Option<&HashMap<String, String>>,
+        settings: &BTreeMap<String, String>,
+        inherited: Option<&BTreeMap<String, String>>,
     ) -> Vec<ModuleSetting> {
 
-        let empty = HashMap::new();
+        let empty = BTreeMap::new();
         let inherited_map = inherited.unwrap_or(&empty);
 
         let mut full_settings: Vec<(&String, &String)> = metadata

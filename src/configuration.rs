@@ -272,7 +272,7 @@ pub struct MonitorConfig {
     #[serde(skip_serializing_if = "Configuration::is_default")]
     pub is_critical: Option<bool>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub settings: HashMap<String, String>,
+    pub settings: BTreeMap<String, String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub acknowledged: Vec<String>,
 }
@@ -302,7 +302,7 @@ impl Default for MonitorConfig {
             version: MonitorConfig::default_version(),
             enabled: MonitorConfig::default_enabled(),
             is_critical: None,
-            settings: HashMap::new(),
+            settings: BTreeMap::new(),
             acknowledged: Vec::new(),
         }
     }
@@ -317,7 +317,7 @@ pub struct CommandConfig {
     )]
     pub version: String,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub settings: HashMap<String, String>,
+    pub settings: BTreeMap<String, String>,
 }
 
 impl CommandConfig {
@@ -330,7 +330,7 @@ impl Default for CommandConfig {
     fn default() -> Self {
         CommandConfig {
             version: CommandConfig::default_version(),
-            settings: HashMap::new(),
+            settings: BTreeMap::new(),
         }
     }
 }
@@ -347,7 +347,7 @@ pub struct CustomCommandConfig {
 #[serde(deny_unknown_fields)]
 pub struct ConnectorConfig {
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
-    pub settings: HashMap<String, String>,
+    pub settings: BTreeMap<String, String>,
 }
 
 impl Configuration {

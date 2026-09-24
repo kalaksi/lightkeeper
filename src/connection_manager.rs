@@ -68,7 +68,7 @@ impl ConnectionManager {
         let new_host_configs = if stateful_connectors.is_empty() {
             // For certificate monitoring.
             let cert_monitor_connectors = stateful_connectors.entry(CERT_MONITOR_HOST_ID.to_string()).or_insert(HashMap::new());
-            let mut settings = HashMap::new();
+            let mut settings = BTreeMap::new();
             settings.insert("verify_certificate".to_string(), "true".to_string());
             // Use module_factory instead of directly creating Tcp::new_connection_module() to allow
             // tests to inject mock connectors (e.g., StubTcp) via the module factory.
@@ -77,6 +77,7 @@ impl ConnectionManager {
                 cert_monitor_connectors.insert(cert_monitor_connector.get_module_spec(), cert_monitor_connector);
             }
             else {
+                let settings: HashMap<String, String> = settings.into_iter().collect();
                 let cert_monitor_connector = Tcp::new_connection_module(&settings);
                 cert_monitor_connectors.insert(cert_monitor_connector.get_module_spec(), cert_monitor_connector);
             }
@@ -120,7 +121,7 @@ impl ConnectionManager {
 
                     let connector_settings = match host_config.effective.connectors.get(&connector_spec.id) {
                         Some(config) => config.settings.clone(),
-                        None => HashMap::new(),
+                        None => BTreeMap::new(),
                     };
 
                     let connector = match self.module_factory.new_connector(&connector_spec, &connector_settings) {
@@ -144,7 +145,7 @@ impl ConnectionManager {
                 if let Some(connector_spec) = command.get_connector_spec() {
                     let connector_settings = match host_config.effective.connectors.get(&connector_spec.id) {
                         Some(config) => config.settings.clone(),
-                        None => HashMap::new(),
+                        None => BTreeMap::new(),
                     };
 
                     let connector = match self.module_factory.new_connector(&connector_spec, &connector_settings) {
@@ -266,7 +267,7 @@ impl ConnectionManager {
 
                         // Stateless connectors.
                         if connector_metadata.is_stateless {
-                            match module_factory.new_connector(&connector_spec, &HashMap::new()) {
+                            match module_factory.new_connector(&connector_spec, &BTreeMap::new()) {
                                 Some(connector) => connector,
                                 None => return,
                             }
