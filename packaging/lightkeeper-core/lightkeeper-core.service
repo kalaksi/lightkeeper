@@ -1,0 +1,14 @@
+[Unit]
+Description=Lightkeeper Core
+Documentation=https://github.com/kalaksi/lightkeeper
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/lightkeeper-core
+Restart=on-failure
+RestartSec=5
+# Environment=RUST_LOG=info
+
+[Install]
+WantedBy=default.target
