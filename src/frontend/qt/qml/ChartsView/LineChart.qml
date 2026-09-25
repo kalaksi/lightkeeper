@@ -214,9 +214,6 @@ Item {
                     }],
                     yAxes: [{
                         display: true,
-                        suggestedMin: root.yMin,
-                        suggestedMax: root.yMax,
-                        beginAtZero: true,
                         scaleLabel: {
                             display: true,
                             labelString: root.yLabel,
@@ -228,6 +225,9 @@ Item {
                         },
                         ticks: {
                             maxTicksLimit: 8,
+                            // yMax of 0 means the range is unknown, so scale dynamically.
+                            min: root.yMax > 0 ? root.yMin : undefined,
+                            max: root.yMax > 0 ? root.yMax : undefined,
                             fontColor: Theme.textColor,
                             // Performance optimization:
                             maxRotation: 0,

@@ -328,8 +328,7 @@ Item {
                                             height: root.chartHeight
                                             yLabel: chart.monitoringData.display_options.unit
                                             yMin: chart.monitoringData.display_options.value_min
-                                            yMax: chart.monitoringData.display_options.value_max > 0 ?
-                                                chart.monitoringData.display_options.value_max : 100
+                                            yMax: chart.monitoringData.display_options.value_max
                                             showThresholdLines: LK.config.showChartThresholdLines
                                             warningLevel: chart.monitoringData.charts_warning_value
                                             criticalLevel: chart.monitoringData.charts_critical_value

@@ -56,6 +56,7 @@ impl MonitoringModule for Filesystem {
             display_text: String::from("Filesystem usage"),
             category: String::from("storage"),
             unit: String::from("%"),
+            value_max: 100.0,
             use_multivalue: true,
             use_with_charts: true,
             charts_warning_level_setting: String::from("warning_threshold"),

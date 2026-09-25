@@ -21,7 +21,7 @@ use crate::module::monitoring::*;
     version="0.0.1",
     description="Provides information about average load (using uptime-command).",
     settings={
-        value_max => "Maximum value for the load average. Affects charts. Default: 20",
+        value_max => "Maximum value for the load average. Affects charts. Default: 0 (dynamic)",
     }
 )]
 pub struct Load {
@@ -31,7 +31,7 @@ pub struct Load {
 impl Module for Load {
     fn new(settings: &HashMap<String, String>) -> Self {
         Load {
-            value_max: settings.get("value_max").and_then(|value| value.parse().ok()).unwrap_or(20.0),
+            value_max: settings.get("value_max").and_then(|value| value.parse().ok()).unwrap_or(0.0),
         }
     }
 }

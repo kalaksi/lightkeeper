@@ -50,6 +50,7 @@ impl MonitoringModule for Ram {
             display_text: String::from("RAM usage"),
             category: String::from("host"),
             unit: String::from("%"),
+            value_max: 100.0,
             use_with_charts: true,
             ..Default::default()
         }
