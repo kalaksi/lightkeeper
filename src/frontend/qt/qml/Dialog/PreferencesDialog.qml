@@ -576,7 +576,7 @@ LightkeeperDialog {
                     }
 
                     NormalText {
-                        text: '<a href="https://whitebark.dev">Whitebark.dev</a>'
+                        text: '<a href="https://whitebark.dev/donate">Whitebark.dev</a>'
                         textFormat: Text.RichText
                         Layout.alignment: Qt.AlignVCenter
                         onLinkActivated: (link) => Qt.openUrlExternally(link)
