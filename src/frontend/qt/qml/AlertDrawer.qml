@@ -164,7 +164,6 @@ Item {
                         height: rowContent.implicitHeight + Theme.spacingNormal
                         radius: 6
                         color: Theme.categoryBackgroundColor
-                        opacity: modelData.acknowledged ? 0.45 : 1.0
                         border.width: 1
                         border.color: "#20ffffff"
 
@@ -199,6 +198,8 @@ Item {
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
                                 spacing: 0
+                                // Dim alert content when acked; keep ack button at full opacity.
+                                opacity: modelData.acknowledged ? 0.45 : 1.0
 
                                 SmallText {
                                     text: modelData.host_id
@@ -231,6 +232,7 @@ Item {
                                     text: modelData.criticality
                                     pillColor: Theme.colorForCriticality(modelData.criticality)
                                     Layout.alignment: Qt.AlignRight
+                                    opacity: modelData.acknowledged ? 0.45 : 1.0
                                 }
 
                                 ImageButton {
