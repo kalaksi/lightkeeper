@@ -274,6 +274,13 @@ Item {
                 ColumnLayout {
                     spacing: Theme.spacingNormal
 
+                    SmallText {
+                        visible: LK.config.showCharts
+                        Layout.fillWidth: true
+                        color: Theme.textColorDark
+                        text: "History is temporarily limited to 1 day"
+                    }
+
                     TextField {
                         id: historySearchField
                         Layout.fillWidth: true
