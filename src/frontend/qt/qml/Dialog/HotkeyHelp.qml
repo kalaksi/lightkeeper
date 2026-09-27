@@ -104,7 +104,7 @@ LightkeeperDialog {
                     ["Up, K", "Previous line"],
                     ["Page down", "Jump multiple lines down"],
                     ["Page up ", "Jump multiple lines up"],
-                    ["Ctrl + C, Y", "Copy selected line"],
+                    ["Ctrl + C, Y", "Copy selected lines"],
                     ["Ctrl + F, /", "Focus on search line"],
                     ["F3, N", "Next match"],
                     ["Shift + F3, Shift + N", "Previous match"],

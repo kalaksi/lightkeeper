@@ -9,7 +9,6 @@ import QtQuick.Controls
 
 import Lightkeeper 1.0
 
-import "../Text"
 import "../js/Utils.js" as Utils
 import "../StyleOverride"
 
@@ -30,6 +29,10 @@ ListView {
     property int _listPageSize: 15
     /// For appendOnly mode: keeps track of received rows so only new rows are appended.
     property int _lastRowCount: 0
+    /// Sparse set of selected model indices. Reassign the object when mutating so bindings update.
+    property var _selectedIndices: ({})
+    property int _selectedCount: 0
+    property int _selectionAnchor: -1
 
     // TODO: use selectionBehavior etc. after upgrading to Qt >= 6.4
     boundsBehavior: Flickable.StopAtBounds
@@ -39,11 +42,7 @@ ListView {
     clip: true
     focus: true
     reuseItems: true
-    highlightFollowsCurrentItem: true
-    highlightMoveDuration: 0
-    highlight: Rectangle {
-        color: root.selectionColor
-    }
+    highlightFollowsCurrentItem: false
 
     model: ListModel {
         id: listModel
@@ -60,30 +59,72 @@ ListView {
 
     delegate: Item {
         required property int index
-        required property var modelData
+        required property string text
 
         id: rowItem
         width: root.width - scrollBar.width
         height: textContent.implicitHeight
+        // Depend on _selectedCount so reused delegates refresh when the set changes.
+        property bool selected: root._selectedCount >= 0 && root._selectedIndices[rowItem.index] === true
 
-        SmallText {
+        // Drop leftover selection when the delegate is recycled.
+        ListView.onPooled: textContent.deselect()
+        ListView.onReused: textContent.deselect()
+
+        Rectangle {
+            anchors.fill: parent
+            color: rowItem.selected ? root.selectionColor : "transparent"
+        }
+
+        TextEdit {
             id: textContent
             width: parent.width
-            text: rowItem.modelData || ""
+            text: rowItem.text || ""
+            color: Theme.textColor
             font.family: "monospace"
-            textFormat: Text.RichText
-            wrapMode: Text.Wrap
+            font.pointSize: Theme.fontSize - 2
+            textFormat: TextEdit.RichText
+            wrapMode: TextEdit.Wrap
+            readOnly: true
+            selectByMouse: true
+            persistentSelection: true
+            activeFocusOnPress: true
+            cursorVisible: false
 
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
+                cursorShape: Qt.IBeamCursor
+                onPressed: function(mouse) {
+                    if (mouse.button === Qt.RightButton) {
+                        if (root._selectedIndices[rowItem.index] !== true) {
+                            root.selectOnly(rowItem.index)
+                        }
+                        mouse.accepted = true
+                        return
+                    }
+
+                    if (mouse.modifiers & Qt.ShiftModifier) {
+                        textContent.deselect()
+                        root.selectRange(rowItem.index)
+                        mouse.accepted = true
+                        return
+                    }
+
+                    if (mouse.modifiers & Qt.ControlModifier) {
+                        textContent.deselect()
+                        root.toggleSelect(rowItem.index)
+                        mouse.accepted = true
+                        return
+                    }
+
+                    // Plain click/drag: mark the line, then let TextEdit handle text selection.
+                    root.selectOnly(rowItem.index)
+                    mouse.accepted = false
+                }
                 onClicked: function(mouse) {
-                    // Right-click opens context menu.
                     if (mouse.button === Qt.RightButton) {
                         contextMenu.popup()
-                    }
-                    else if (mouse.button === Qt.LeftButton) {
-                        root.currentIndex = rowItem.index
                     }
                 }
 
@@ -91,17 +132,29 @@ ListView {
                     id: contextMenu
                     MenuItem {
                         text: "Copy"
-                        onTriggered: root.copyRowToClipboard(rowItem.index)
+                        onTriggered: root.copySelectionToClipboard()
                     }
                 }
             }
+        }
+
+        function hasTextSelection() {
+            return textContent.selectedText.length > 0
+        }
+
+        function copyTextSelection() {
+            textContent.copy()
+        }
+
+        function clearTextSelection() {
+            textContent.deselect()
         }
     }
 
     Shortcut {
         enabled: root.enableShortcuts
         sequences: [StandardKey.Copy]
-        onActivated: root.copyRowToClipboard(root.currentIndex)
+        onActivated: root.copySelectionToClipboard()
     }
 
     // Vim-like shortcut.
@@ -123,7 +176,7 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "Y"
-        onActivated: root.copyRowToClipboard(root.currentIndex)
+        onActivated: root.copySelectionToClipboard()
     }
 
     // Vim-like shortcut.
@@ -131,7 +184,8 @@ ListView {
         enabled: root.enableShortcuts
         sequence: "G"
         onActivated: {
-            root.currentIndex = 0
+            root.selectOnly(0)
+            root._clearCurrentTextSelection()
         }
     }
 
@@ -141,7 +195,8 @@ ListView {
         sequence: "Shift+G"
         onActivated: {
             if (root.rows.length > 0) {
-                root.currentIndex = root.rows.length - 1
+                root.selectOnly(root.rows.length - 1)
+                root._clearCurrentTextSelection()
             }
         }
     }
@@ -149,13 +204,21 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequences: [StandardKey.MoveToPreviousLine, "K"]
-        onActivated: root.decrementCurrentIndex()
+        onActivated: {
+            root.decrementCurrentIndex()
+            root.selectOnly(root.currentIndex)
+            root._clearCurrentTextSelection()
+        }
     }
 
     Shortcut {
         enabled: root.enableShortcuts
         sequences: [StandardKey.MoveToNextLine, "J"]
-        onActivated: root.incrementCurrentIndex()
+        onActivated: {
+            root.incrementCurrentIndex()
+            root.selectOnly(root.currentIndex)
+            root._clearCurrentTextSelection()
+        }
     }
 
     Shortcut {
@@ -163,6 +226,8 @@ ListView {
         sequence: StandardKey.MoveToPreviousPage
         onActivated: {
             root.currentIndex -= Math.min(root._listPageSize, root.currentIndex)
+            root.selectOnly(root.currentIndex)
+            root._clearCurrentTextSelection()
         }
     }
 
@@ -171,6 +236,8 @@ ListView {
         sequence: StandardKey.MoveToNextPage
         onActivated: {
             root.currentIndex += Math.min(root._listPageSize, root.count - root.currentIndex)
+            root.selectOnly(root.currentIndex)
+            root._clearCurrentTextSelection()
         }
     }
 
@@ -181,11 +248,87 @@ ListView {
         text: ""
     }
 
-    function copyRowToClipboard(modelIndex) {
-        if (modelIndex >= 0) {
+    function selectOnly(modelIndex) {
+        if (modelIndex < 0) {
+            return
+        }
+        let selected = {}
+        selected[modelIndex] = true
+        root._selectedIndices = selected
+        root._selectedCount = 1
+        root._selectionAnchor = modelIndex
+        root.currentIndex = modelIndex
+    }
+
+    function toggleSelect(modelIndex) {
+        if (modelIndex < 0) {
+            return
+        }
+        let selected = Object.assign({}, root._selectedIndices)
+        if (selected[modelIndex] === true) {
+            delete selected[modelIndex]
+        }
+        else {
+            selected[modelIndex] = true
+        }
+        root._selectedIndices = selected
+        root._selectedCount = Object.keys(selected).length
+        root._selectionAnchor = modelIndex
+        root.currentIndex = modelIndex
+    }
+
+    function selectRange(modelIndex) {
+        if (modelIndex < 0) {
+            return
+        }
+        let anchor = root._selectionAnchor >= 0 ? root._selectionAnchor : modelIndex
+        let top = Math.min(anchor, modelIndex)
+        let bottom = Math.max(anchor, modelIndex)
+        let selected = {}
+        for (let i = top; i <= bottom; i++) {
+            selected[i] = true
+        }
+        root._selectedIndices = selected
+        root._selectedCount = bottom - top + 1
+        root.currentIndex = modelIndex
+    }
+
+    function clearSelection() {
+        root._selectedIndices = {}
+        root._selectedCount = 0
+        root._selectionAnchor = -1
+    }
+
+    function copySelectionToClipboard() {
+        // Prefer in-line text selection when only one line is selected.
+        if (root._selectedCount <= 1) {
+            let item = root.itemAtIndex(root.currentIndex)
+            if (item && item.hasTextSelection()) {
+                item.copyTextSelection()
+                return
+            }
+        }
+
+        let indices = Object.keys(root._selectedIndices).map(Number)
+        if (indices.length === 0 && root.currentIndex >= 0) {
+            indices = [root.currentIndex]
+        }
+        if (indices.length === 0) {
+            return
+        }
+
+        Utils.sortNumerically(indices)
+        let lines = indices.map((modelIndex) => {
             let index = root.invertRowOrder ? root.rows.length - 1 - modelIndex : modelIndex
-            let text = root.rows[index]
-            root._copyToClipboard(text)
+            return root.rows[index]
+        })
+        root._copyToClipboard(lines.join("\n"))
+    }
+
+    function _clearCurrentTextSelection() {
+        let item = root.itemAtIndex(root.currentIndex)
+        if (item) {
+            item.clearTextSelection()
         }
     }
 
@@ -214,7 +357,8 @@ ListView {
         }
 
         if (match >= 0) {
-            root.currentIndex = match
+            root.selectOnly(match)
+            root._clearCurrentTextSelection()
         }
 
         return [root._matchingRows.length, root._totalMatches]
@@ -307,6 +451,16 @@ ListView {
             for (const row of modelRows ) {
                 root.model.append({"text": row})
             }
+
+            if (root.model.count === 0) {
+                root.clearSelection()
+            }
+            else if (root.currentIndex >= 0 && root.currentIndex < root.model.count) {
+                root.selectOnly(root.currentIndex)
+            }
+            else {
+                root.selectOnly(0)
+            }
         }
     }
 
@@ -316,10 +470,10 @@ ListView {
 
         if (root.rows.length > 0) {
             if (root.invertRowOrder) {
-                root.currentIndex = 0
+                root.selectOnly(0)
             }
             else {
-                root.currentIndex = root.rows.length - 1
+                root.selectOnly(root.rows.length - 1)
             }
         }
     }
@@ -335,5 +489,6 @@ ListView {
         root._matchingRows = []
         root._totalMatches = 0
         root._lastRowCount = 0
+        root.clearSelection()
     }
 }
