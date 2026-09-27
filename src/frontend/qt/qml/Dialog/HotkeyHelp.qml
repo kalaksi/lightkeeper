@@ -102,6 +102,7 @@ LightkeeperDialog {
                 model: [
                     ["Down, J", "Next line"],
                     ["Up, K", "Previous line"],
+                    ["Shift + Up/Down/J/K", "Extend line selection"],
                     ["Page down", "Jump multiple lines down"],
                     ["Page up ", "Jump multiple lines up"],
                     ["Ctrl + C, Y", "Copy selected lines"],

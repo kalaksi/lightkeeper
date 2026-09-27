@@ -87,6 +87,7 @@ ListView {
             wrapMode: TextEdit.Wrap
             readOnly: true
             selectByMouse: true
+            selectByKeyboard: false
             persistentSelection: true
             activeFocusOnPress: true
             cursorVisible: false
@@ -105,14 +106,12 @@ ListView {
                     }
 
                     if (mouse.modifiers & Qt.ShiftModifier) {
-                        textContent.deselect()
                         root.selectRange(rowItem.index)
                         mouse.accepted = true
                         return
                     }
 
                     if (mouse.modifiers & Qt.ControlModifier) {
-                        textContent.deselect()
                         root.toggleSelect(rowItem.index)
                         mouse.accepted = true
                         return
@@ -183,10 +182,7 @@ ListView {
     Shortcut {
         enabled: root.enableShortcuts
         sequence: "G"
-        onActivated: {
-            root.selectOnly(0)
-            root._clearCurrentTextSelection()
-        }
+        onActivated: root.selectOnly(0)
     }
 
     // Vim-like shortcut.
@@ -196,7 +192,6 @@ ListView {
         onActivated: {
             if (root.rows.length > 0) {
                 root.selectOnly(root.rows.length - 1)
-                root._clearCurrentTextSelection()
             }
         }
     }
@@ -207,7 +202,6 @@ ListView {
         onActivated: {
             root.decrementCurrentIndex()
             root.selectOnly(root.currentIndex)
-            root._clearCurrentTextSelection()
         }
     }
 
@@ -217,7 +211,24 @@ ListView {
         onActivated: {
             root.incrementCurrentIndex()
             root.selectOnly(root.currentIndex)
-            root._clearCurrentTextSelection()
+        }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequences: ["Shift+Up", "Shift+K"]
+        onActivated: {
+            root.decrementCurrentIndex()
+            root.selectRange(root.currentIndex)
+        }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequences: ["Shift+Down", "Shift+J"]
+        onActivated: {
+            root.incrementCurrentIndex()
+            root.selectRange(root.currentIndex)
         }
     }
 
@@ -227,7 +238,6 @@ ListView {
         onActivated: {
             root.currentIndex -= Math.min(root._listPageSize, root.currentIndex)
             root.selectOnly(root.currentIndex)
-            root._clearCurrentTextSelection()
         }
     }
 
@@ -237,7 +247,24 @@ ListView {
         onActivated: {
             root.currentIndex += Math.min(root._listPageSize, root.count - root.currentIndex)
             root.selectOnly(root.currentIndex)
-            root._clearCurrentTextSelection()
+        }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequence: "Shift+PgUp"
+        onActivated: {
+            root.currentIndex -= Math.min(root._listPageSize, root.currentIndex)
+            root.selectRange(root.currentIndex)
+        }
+    }
+
+    Shortcut {
+        enabled: root.enableShortcuts
+        sequence: "Shift+PgDown"
+        onActivated: {
+            root.currentIndex += Math.min(root._listPageSize, root.count - root.currentIndex)
+            root.selectRange(root.currentIndex)
         }
     }
 
@@ -252,6 +279,8 @@ ListView {
         if (modelIndex < 0) {
             return
         }
+        // Drop partial text highlights on other rows so only one selection is visible.
+        root._clearAllTextSelections()
         let selected = {}
         selected[modelIndex] = true
         root._selectedIndices = selected
@@ -264,6 +293,7 @@ ListView {
         if (modelIndex < 0) {
             return
         }
+        root._clearAllTextSelections()
         let selected = Object.assign({}, root._selectedIndices)
         if (selected[modelIndex] === true) {
             delete selected[modelIndex]
@@ -281,6 +311,7 @@ ListView {
         if (modelIndex < 0) {
             return
         }
+        root._clearAllTextSelections()
         let anchor = root._selectionAnchor >= 0 ? root._selectionAnchor : modelIndex
         let top = Math.min(anchor, modelIndex)
         let bottom = Math.max(anchor, modelIndex)
@@ -294,6 +325,7 @@ ListView {
     }
 
     function clearSelection() {
+        root._clearAllTextSelections()
         root._selectedIndices = {}
         root._selectedCount = 0
         root._selectionAnchor = -1
@@ -325,10 +357,12 @@ ListView {
         root._copyToClipboard(lines.join("\n"))
     }
 
-    function _clearCurrentTextSelection() {
-        let item = root.itemAtIndex(root.currentIndex)
-        if (item) {
-            item.clearTextSelection()
+    function _clearAllTextSelections() {
+        for (let i = 0; i < root.count; i++) {
+            let item = root.itemAtIndex(i)
+            if (item) {
+                item.clearTextSelection()
+            }
         }
     }
 
@@ -358,7 +392,6 @@ ListView {
 
         if (match >= 0) {
             root.selectOnly(match)
-            root._clearCurrentTextSelection()
         }
 
         return [root._matchingRows.length, root._totalMatches]
