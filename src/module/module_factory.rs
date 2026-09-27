@@ -397,6 +397,7 @@ impl ModuleFactory {
             (command::storage::lvm::LVRefresh::get_metadata(), command::storage::lvm::LVRefresh::new_command_module),
             (command::docker::Restart::get_metadata(), command::docker::Restart::new_command_module),
             (command::docker::Inspect::get_metadata(), command::docker::Inspect::new_command_module),
+            (command::docker::Rm::get_metadata(), command::docker::Rm::new_command_module),
             (command::docker::Shell::get_metadata(), command::docker::Shell::new_command_module),
             (command::docker::image::Remove::get_metadata(), command::docker::image::Remove::new_command_module),
             (command::docker::image::Prune::get_metadata(), command::docker::image::Prune::new_command_module),

@@ -70,11 +70,12 @@ display_options:
       priority: 8
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
+      command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-rm"]
     docker-images:
       priority: 9
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
-      command_order: ["docker-inspect", "docker-restart", "docker-shell", "docker-image-remote-tags", "docker-image-remove"]
+      command_order: ["docker-image-remote-tags", "docker-image-remove"]
     podman-compose:
       priority: 10
       icon: "qrc:///main/images/docker"

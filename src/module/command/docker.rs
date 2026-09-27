@@ -9,6 +9,9 @@ pub use inspect::Inspect;
 pub mod restart;
 pub use restart::Restart;
 
+pub mod rm;
+pub use rm::Rm;
+
 pub mod shell;
 pub use shell::Shell;
 

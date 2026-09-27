@@ -121,6 +121,7 @@ groups:
       docker-image-prune: {}
       docker-restart: {}
       docker-inspect: {}
+      docker-rm: {}
       docker-shell: {}
       docker-image-remove: {}
       docker-image-remote-tags: {}
