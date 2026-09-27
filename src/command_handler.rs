@@ -108,6 +108,10 @@ impl CommandHandler {
 
         for (host_id, host_config) in hosts_config.hosts.iter() {
             for (command_id, command_config) in host_config.effective.commands.iter() {
+                if !crate::configuration::CommandConfig::is_enabled(&command_config.enabled) {
+                    continue;
+                }
+
                 let command_spec = crate::module::ModuleSpecification::command(command_id, &command_config.version);
                 if let Some(command) = self.module_factory.new_command(&command_spec, &command_config.settings) {
                     self.add_command(host_id, command);

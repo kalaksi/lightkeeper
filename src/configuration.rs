@@ -316,6 +316,8 @@ pub struct CommandConfig {
         skip_serializing_if = "Configuration::version_is_latest"
     )]
     pub version: String,
+    #[serde(default = "CommandConfig::default_enabled", skip_serializing_if = "CommandConfig::is_enabled")]
+    pub enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub settings: BTreeMap<String, String>,
 }
@@ -324,12 +326,26 @@ impl CommandConfig {
     pub fn default_version() -> String {
         String::from("latest")
     }
+
+    pub fn default_enabled() -> Option<bool> {
+        Some(true)
+    }
+
+    pub fn is_enabled(enabled: &Option<bool>) -> bool {
+        (*enabled).unwrap_or(true)
+    }
+
+    /// True when this override has nothing beyond defaults and can be dropped.
+    pub fn is_empty_override(&self) -> bool {
+        Self::is_enabled(&self.enabled) && self.settings.is_empty()
+    }
 }
 
 impl Default for CommandConfig {
     fn default() -> Self {
         CommandConfig {
             version: CommandConfig::default_version(),
+            enabled: CommandConfig::default_enabled(),
             settings: BTreeMap::new(),
         }
     }
@@ -559,6 +575,7 @@ impl Configuration {
             let mut merged_config = first_config.commands.get(command_id).cloned().unwrap_or_default();
             merged_config.settings.extend(new_config.settings.clone());
             merged_config.version = new_config.version.clone();
+            merged_config.enabled = new_config.enabled.clone();
             result.commands.insert(command_id.clone(), merged_config);
         });
 

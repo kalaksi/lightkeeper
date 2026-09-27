@@ -902,7 +902,20 @@ impl ConfigManagerModel {
                     .collect();
 
                 if enabled_settings.is_empty() {
-                    host_config.overrides.commands.remove(&module_id);
+                    let removable = host_config.overrides.commands.get(&module_id)
+                        .map(|command| {
+                            let mut cleared = command.clone();
+                            cleared.settings.clear();
+                            cleared.is_empty_override()
+                        })
+                        .unwrap_or(true);
+
+                    if removable {
+                        host_config.overrides.commands.remove(&module_id);
+                    }
+                    else if let Some(command) = host_config.overrides.commands.get_mut(&module_id) {
+                        command.settings.clear();
+                    }
                 }
                 else {
                     host_config.overrides.commands.entry(module_id).or_default().settings = enabled_settings;
