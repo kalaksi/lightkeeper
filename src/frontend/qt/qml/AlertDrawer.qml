@@ -243,7 +243,8 @@ Item {
                                     )
                                     imageRelativeWidth: 0.9
                                     imageRelativeHeight: 0.9
-                                    color: Theme.iconColor
+                                    // Stronger than iconColor so the control stays readable on an acked row.
+                                    color: Theme.textColor
                                     hoverColor: Theme.highlightColorLight
                                     // Show current state: crossed = muted/acked, bell = active.
                                     imageSource: modelData.acknowledged

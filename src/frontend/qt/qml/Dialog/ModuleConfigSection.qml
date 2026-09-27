@@ -88,7 +88,6 @@ ColumnLayout {
             property bool _moduleEnabled: !root.allowDisable || root.enabledByModule[modelData] !== false
             Layout.fillWidth: true
             Layout.leftMargin: Theme.commonIndent
-            opacity: _moduleEnabled ? 1.0 : 0.45
 
             RowHighlight {
                 width: parent.width
@@ -108,6 +107,7 @@ ColumnLayout {
 
                         NormalText {
                             text: modelData
+                            opacity: _moduleEnabled ? 1.0 : 0.45
                             Layout.alignment: Qt.AlignVCenter
                         }
 
@@ -116,6 +116,7 @@ ColumnLayout {
                             text: "sudo"
                             pillColor: Theme.colorForCriticality("Info")
                             tooltip: "may require sudo for root privileges"
+                            opacity: _moduleEnabled ? 1.0 : 0.45
                             Layout.alignment: Qt.AlignVCenter
                             Layout.leftMargin: Theme.spacingLoose
                         }
@@ -141,6 +142,7 @@ ColumnLayout {
                             roundButton: false
                             tooltip: "Module settings..."
                             size: root.buttonSize
+                            opacity: _moduleEnabled ? 1.0 : 0.45
 
                             Layout.alignment: Qt.AlignVCenter
                         }
@@ -151,7 +153,7 @@ ColumnLayout {
                             onClicked: root.setModuleEnabled(modelData, !_moduleEnabled)
                             flatButton: true
                             roundButton: false
-                            tooltip: "Disable"
+                            tooltip: _moduleEnabled ? "Disable" : "Enable"
                             size: root.buttonSize
 
                             Layout.alignment: Qt.AlignVCenter
@@ -165,6 +167,7 @@ ColumnLayout {
                             roundButton: false
                             tooltip: "Remove module from group"
                             size: root.buttonSize
+                            opacity: _moduleEnabled ? 1.0 : 0.45
 
                             Layout.alignment: Qt.AlignVCenter
                         }
@@ -173,7 +176,7 @@ ColumnLayout {
                     SmallText {
                         id: descriptionText
                         visible: text !== ""
-                        opacity: visible ? 1 : 0
+                        opacity: visible ? (_moduleEnabled ? 1.0 : 0.45) : 0
                         text: ""
                         color: Theme.textColorDark
                     }
@@ -184,6 +187,8 @@ ColumnLayout {
                 model: root.settingsByModule[modelData].filter((setting) => setting.enabled === true)
 
                 RowLayout {
+                    opacity: _moduleEnabled ? 1.0 : 0.45
+
                     SmallText {
                         text: modelData.key + ": "
                         color: Theme.textColorDark
