@@ -110,10 +110,6 @@ impl ConnectionManager {
             let host_connectors = stateful_connectors.entry(host_id.clone()).or_insert(HashMap::new());
 
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
-                if !crate::configuration::MonitorConfig::is_enabled(&monitor_config.enabled) {
-                    continue;
-                }
-
                 let monitor_spec = ModuleSpecification::monitor(monitor_id.as_str(), monitor_config.version.as_str());
                 let monitor = match self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings) {
                     Some(monitor) => monitor,
@@ -140,10 +136,6 @@ impl ConnectionManager {
             }
 
             for (command_id, command_config) in host_config.effective.commands.iter() {
-                if !crate::configuration::CommandConfig::is_enabled(&command_config.enabled) {
-                    continue;
-                }
-
                 let command_spec = ModuleSpecification::command(command_id, &command_config.version);
                 let command = match self.module_factory.new_command(&command_spec, &command_config.settings) {
                     Some(command) => command,

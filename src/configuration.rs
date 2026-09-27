@@ -521,14 +521,14 @@ impl Configuration {
         }
     }
 
-    /// Merge config groups to form the final, effective config.
-    pub fn get_effective_group_config(host_config: &HostSettings, all_groups: &BTreeMap<String, ConfigGroup>) -> ConfigGroup {
-        let mut effective_config = ConfigGroup::default();
+    /// Merge groups and host overrides. Does not drop disabled modules.
+    pub fn merge_host_configuration(host_config: &HostSettings, all_groups: &BTreeMap<String, ConfigGroup>) -> ConfigGroup {
+        let mut merged = ConfigGroup::default();
 
         for group_id in host_config.groups.iter() {
             match all_groups.get(group_id) {
                 Some(group_config) => {
-                    effective_config = Self::merge_group_config(&effective_config, group_config);
+                    merged = Self::merge_group_config(&merged, group_config);
                 }
                 None => {
                     log::error!("Group {} not found when creating effective configuration", group_id);
@@ -547,9 +547,37 @@ impl Configuration {
         };
 
         let all_overrides = Self::merge_group_config(&old_overrides, &host_config.overrides);
+        Self::merge_group_config(&merged, &all_overrides)
+    }
 
-        effective_config = Self::merge_group_config(&effective_config, &all_overrides);
+    /// Groups only (no host monitor/command overrides). Keeps disabled modules for override UI.
+    pub fn get_group_baseline_config(host_config: &HostSettings, all_groups: &BTreeMap<String, ConfigGroup>) -> ConfigGroup {
+        let mut merged = ConfigGroup::default();
+
+        for group_id in host_config.groups.iter() {
+            match all_groups.get(group_id) {
+                Some(group_config) => {
+                    merged = Self::merge_group_config(&merged, group_config);
+                }
+                None => {
+                    log::error!("Group {} not found when creating group baseline configuration", group_id);
+                }
+            }
+        }
+
+        merged
+    }
+
+    /// Effective config for runtime: merged groups + overrides, with disabled modules removed.
+    pub fn get_effective_group_config(host_config: &HostSettings, all_groups: &BTreeMap<String, ConfigGroup>) -> ConfigGroup {
+        let mut effective_config = Self::merge_host_configuration(host_config, all_groups);
+        Self::strip_disabled_modules(&mut effective_config);
         effective_config
+    }
+
+    fn strip_disabled_modules(config: &mut ConfigGroup) {
+        config.monitors.retain(|_, monitor| MonitorConfig::is_enabled(&monitor.enabled));
+        config.commands.retain(|_, command| CommandConfig::is_enabled(&command.enabled));
     }
 
     /// Merges configuration groups, second parameter will overwrite conflicting contents from first.

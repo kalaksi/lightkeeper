@@ -99,10 +99,6 @@ impl MonitorManager {
 
             let mut new_monitors = Vec::<Monitor>::new();
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
-                if !crate::configuration::MonitorConfig::is_enabled(&monitor_config.enabled) {
-                    continue;
-                }
-
                 let monitor_spec = ModuleSpecification::monitor(monitor_id, &monitor_config.version);
                 let monitor = match self.module_factory.new_monitor(&monitor_spec, &monitor_config.settings) {
                     Some(monitor) => monitor,

@@ -260,7 +260,9 @@ Item {
     function refresh() {
         if (root.hostId !== "") {
             root._hostDetails = Parse.TryParseJson(LK.hosts.getHostDataJson(root.hostId))
-            root._categories =  LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
+            // Clear first so category delegates (and PropertyTables) are recreated.
+            root._categories = []
+            root._categories = LK.hosts.getCategories(root.hostId, !root._showEmptyCategories)
             customCommandsGroupBox.refresh()
         }
     }

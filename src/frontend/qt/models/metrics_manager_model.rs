@@ -267,7 +267,6 @@ impl MetricsManagerModel {
         let host_config = self.hosts_config.hosts.get(&host_id).unwrap();
 
         let host_monitors = host_config.effective.monitors.iter()
-            .filter(|(_monitor_id, config)| config.enabled.unwrap_or(true))
             .map(|(monitor_id, _config)| monitor_id)
             .collect::<Vec<_>>();
 
@@ -291,7 +290,6 @@ impl MetricsManagerModel {
         };
 
         let host_monitors = host_config.effective.monitors.iter()
-            .filter(|(_monitor_id, config)| config.enabled.unwrap_or(true))
             .map(|(monitor_id, _config)| monitor_id)
             .collect::<Vec<_>>();
 

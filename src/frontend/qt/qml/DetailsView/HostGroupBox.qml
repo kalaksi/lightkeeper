@@ -48,6 +48,11 @@ CategoryGroupBox {
         function onHostInitializing(hostId) {
             if (hostId === root.hostId) {
                 root.refreshProgress = 0
+                propertyTable.monitoring_datas = LK.hosts.getCategoryMonitorIds(root.hostId, root._categoryName)
+                    .map(monitorId => LK.hosts.getMonitoringData(root.hostId, monitorId))
+                propertyTable.command_datas = LK.command.getCategoryCommands(root.hostId, root._categoryName)
+                categoryCommands.commands = LK.command.getCommandsOnLevel(root.hostId, root._categoryName, "", 0)
+                    .map(JSON.parse)
             }
         }
         // Reset command progress to 0.

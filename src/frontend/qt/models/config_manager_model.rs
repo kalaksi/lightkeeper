@@ -809,7 +809,7 @@ impl ConfigManagerModel {
     }
 
     /// Monitor/command settings for modules in `category`, for host-override editing.
-    /// `enabled` on each module is the effective module enabled flag; setting `enabled` means the key is overridden.
+    /// Lists group-baseline modules; `enabled` is whether the module is in effective (active) config.
     fn getHostCategoryModuleSettings(&self, host_id: QString, category: QString, module_type: QString) -> QString {
         let host_id = host_id.to_string();
         let category = category.to_string();
@@ -819,16 +819,16 @@ impl ConfigManagerModel {
         let empty_settings = BTreeMap::new();
 
         let modules_settings: HashMap<String, HostModuleConfig> = match Self::parse_module_type(&module_type) {
-            ModuleType::Monitor => effective.monitors.iter()
+            ModuleType::Monitor => baseline.monitors.iter()
                 .filter(|(module_id, _)| self.module_category(module_id, ModuleType::Monitor).as_deref() == Some(category.as_str()))
-                .filter_map(|(module_id, monitor_config)| {
+                .filter_map(|(module_id, _)| {
                     let metadata = self.module_metadatas.iter().find(|m| m.module_spec.id == *module_id)?;
                     let override_settings = host.overrides.monitors.get(module_id)
                         .map(|c| &c.settings)
                         .unwrap_or(&empty_settings);
                     let baseline_settings = baseline.monitors.get(module_id).map(|c| &c.settings);
                     Some((module_id.clone(), HostModuleConfig {
-                        enabled: configuration::MonitorConfig::is_enabled(&monitor_config.enabled),
+                        enabled: effective.monitors.contains_key(module_id),
                         settings: Self::build_module_settings(
                             metadata,
                             override_settings,
@@ -837,16 +837,16 @@ impl ConfigManagerModel {
                     }))
                 })
                 .collect(),
-            ModuleType::Command => effective.commands.iter()
+            ModuleType::Command => baseline.commands.iter()
                 .filter(|(module_id, _)| self.module_category(module_id, ModuleType::Command).as_deref() == Some(category.as_str()))
-                .filter_map(|(module_id, command_config)| {
+                .filter_map(|(module_id, _)| {
                     let metadata = self.module_metadatas.iter().find(|m| m.module_spec.id == *module_id)?;
                     let override_settings = host.overrides.commands.get(module_id)
                         .map(|c| &c.settings)
                         .unwrap_or(&empty_settings);
                     let baseline_settings = baseline.commands.get(module_id).map(|c| &c.settings);
                     Some((module_id.clone(), HostModuleConfig {
-                        enabled: configuration::CommandConfig::is_enabled(&command_config.enabled),
+                        enabled: effective.commands.contains_key(module_id),
                         settings: Self::build_module_settings(
                             metadata,
                             override_settings,
@@ -913,11 +913,9 @@ impl ConfigManagerModel {
     }
 
     /// Effective config from the host's groups only (no host monitor/command overrides).
+    /// Keeps disabled modules so the host-override dialog can list and re-enable them.
     fn group_baseline_for_host(host: &HostSettings, groups: &Groups) -> ConfigGroup {
-        let mut baseline_host = host.clone();
-        baseline_host.overrides.monitors.clear();
-        baseline_host.overrides.commands.clear();
-        Configuration::get_effective_group_config(&baseline_host, &groups.groups)
+        Configuration::get_group_baseline_config(host, &groups.groups)
     }
 
     fn module_category(&self, module_id: &str, module_type: ModuleType) -> Option<String> {

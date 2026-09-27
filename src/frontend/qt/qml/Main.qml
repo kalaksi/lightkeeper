@@ -138,6 +138,8 @@ ApplicationWindow {
 
         function onReloaded(error, resetHosts) {
             hostTableModel.displayData = LK.hosts.getDisplayData()
+            // Rebuild details tables from post-reload state (update() only upserts monitors).
+            root.hostDetails.refresh()
 
             if (error !== "") {
                 root.errorCount += 1;

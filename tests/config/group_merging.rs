@@ -264,8 +264,8 @@ fn test_monitor_enabled_flag_merging() {
     
     let effective = Configuration::get_effective_group_config(&host_settings, &groups);
     
-    // Later group should win
-    assert_eq!(effective.monitors["monitor1"].enabled, Some(false));
+    // Disabled modules are omitted from effective config.
+    assert!(!effective.monitors.contains_key("monitor1"));
 }
 
 #[test]
@@ -290,7 +290,7 @@ fn test_command_enabled_flag_merging() {
 
     let effective = Configuration::get_effective_group_config(&host_settings, &groups);
 
-    assert_eq!(effective.commands["command1"].enabled, Some(false));
+    assert!(!effective.commands.contains_key("command1"));
 }
 
 #[test]
@@ -316,10 +316,12 @@ fn test_host_override_disables_modules() {
 
     let effective = Configuration::get_effective_group_config(&host_settings, &groups);
 
-    assert!(effective.monitors.contains_key("monitor1"));
-    assert_eq!(effective.monitors["monitor1"].enabled, Some(false));
-    assert!(effective.commands.contains_key("command1"));
-    assert_eq!(effective.commands["command1"].enabled, Some(false));
+    assert!(!effective.monitors.contains_key("monitor1"));
+    assert!(!effective.commands.contains_key("command1"));
+
+    let baseline = Configuration::get_group_baseline_config(&host_settings, &groups);
+    assert!(baseline.monitors.contains_key("monitor1"));
+    assert!(baseline.commands.contains_key("command1"));
 }
 
 #[test]

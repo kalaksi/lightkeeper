@@ -135,6 +135,16 @@ impl HostManager {
             }
         }
 
+        // Drop monitor data for modules no longer in effective config.
+        for (host_id, host_state) in host_states.hosts.iter_mut() {
+            let Some(host_config) = hosts_config.hosts.get(host_id) else {
+                continue;
+            };
+            host_state.monitor_data.retain(|monitor_id, _| {
+                host_config.effective.monitors.contains_key(monitor_id)
+            });
+        }
+
         *self.current_config.lock().unwrap() = hosts_config.hosts.clone();
 
         let (sender, receiver) = mpsc::channel::<StateUpdateMessage>();
