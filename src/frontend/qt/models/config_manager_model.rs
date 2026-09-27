@@ -809,7 +809,7 @@ impl ConfigManagerModel {
     }
 
     /// Monitor/command settings for modules in `category`, for host-override editing.
-    /// `enabled` means the key is overridden on the host; `inheritedValue` is the group-derived value.
+    /// `enabled` on each module is the effective module enabled flag; setting `enabled` means the key is overridden.
     fn getHostCategoryModuleSettings(&self, host_id: QString, category: QString, module_type: QString) -> QString {
         let host_id = host_id.to_string();
         let category = category.to_string();
@@ -818,35 +818,41 @@ impl ConfigManagerModel {
         let effective = Configuration::get_effective_group_config(&host, &self.groups_config.groups);
         let empty_settings = BTreeMap::new();
 
-        let modules_settings: HashMap<String, Vec<ModuleSetting>> = match Self::parse_module_type(&module_type) {
+        let modules_settings: HashMap<String, HostModuleConfig> = match Self::parse_module_type(&module_type) {
             ModuleType::Monitor => effective.monitors.iter()
                 .filter(|(module_id, _)| self.module_category(module_id, ModuleType::Monitor).as_deref() == Some(category.as_str()))
-                .filter_map(|(module_id, _)| {
+                .filter_map(|(module_id, monitor_config)| {
                     let metadata = self.module_metadatas.iter().find(|m| m.module_spec.id == *module_id)?;
                     let override_settings = host.overrides.monitors.get(module_id)
                         .map(|c| &c.settings)
                         .unwrap_or(&empty_settings);
                     let baseline_settings = baseline.monitors.get(module_id).map(|c| &c.settings);
-                    Some((module_id.clone(), Self::build_module_settings(
-                        metadata,
-                        override_settings,
-                        baseline_settings,
-                    )))
+                    Some((module_id.clone(), HostModuleConfig {
+                        enabled: configuration::MonitorConfig::is_enabled(&monitor_config.enabled),
+                        settings: Self::build_module_settings(
+                            metadata,
+                            override_settings,
+                            baseline_settings,
+                        ),
+                    }))
                 })
                 .collect(),
             ModuleType::Command => effective.commands.iter()
                 .filter(|(module_id, _)| self.module_category(module_id, ModuleType::Command).as_deref() == Some(category.as_str()))
-                .filter_map(|(module_id, _)| {
+                .filter_map(|(module_id, command_config)| {
                     let metadata = self.module_metadatas.iter().find(|m| m.module_spec.id == *module_id)?;
                     let override_settings = host.overrides.commands.get(module_id)
                         .map(|c| &c.settings)
                         .unwrap_or(&empty_settings);
                     let baseline_settings = baseline.commands.get(module_id).map(|c| &c.settings);
-                    Some((module_id.clone(), Self::build_module_settings(
-                        metadata,
-                        override_settings,
-                        baseline_settings,
-                    )))
+                    Some((module_id.clone(), HostModuleConfig {
+                        enabled: configuration::CommandConfig::is_enabled(&command_config.enabled),
+                        settings: Self::build_module_settings(
+                            metadata,
+                            override_settings,
+                            baseline_settings,
+                        ),
+                    }))
                 })
                 .collect(),
             _ => HashMap::new(),
@@ -859,66 +865,43 @@ impl ConfigManagerModel {
     /// Every enabled setting is stored as an override (switch = override intent).
     fn updateHostCategoryModuleSettings(&mut self, host_id: QString, monitor_settings_json: QString, command_settings_json: QString) {
         let host_id = host_id.to_string();
-        let monitor_settings = serde_json::from_str::<HashMap<String, Vec<ModuleSetting>>>(&monitor_settings_json.to_string()).unwrap_or_default();
-        let command_settings = serde_json::from_str::<HashMap<String, Vec<ModuleSetting>>>(&command_settings_json.to_string()).unwrap_or_default();
+        let monitor_settings = serde_json::from_str::<HashMap<String, HostModuleConfig>>(&monitor_settings_json.to_string())
+            .unwrap_or_default();
+        let command_settings = serde_json::from_str::<HashMap<String, HostModuleConfig>>(&command_settings_json.to_string())
+            .unwrap_or_default();
 
         {
             let Some(host_config) = self.hosts_config.hosts.get_mut(&host_id) else {
                 return;
             };
 
-            for (module_id, settings) in monitor_settings {
-                let enabled_settings: BTreeMap<String, String> = settings.into_iter()
+            for (module_id, config) in monitor_settings {
+                let enabled_settings: BTreeMap<String, String> = config.settings.into_iter()
                     .filter(|setting| setting.enabled)
                     .map(|setting| (setting.key, setting.value))
                     .collect();
 
-                if enabled_settings.is_empty() {
-                    let removable = host_config.overrides.monitors.get(&module_id)
-                        .map(|monitor| {
-                            // Settings are being cleared; removable if nothing else remains.
-                            let mut cleared = monitor.clone();
-                            cleared.settings.clear();
-                            cleared.is_empty_override()
-                        })
-                        .unwrap_or(true);
+                let monitor = host_config.overrides.monitors.entry(module_id.clone()).or_default();
+                monitor.settings = enabled_settings;
+                monitor.enabled = Some(config.enabled);
 
-                    if removable {
-                        host_config.overrides.monitors.remove(&module_id);
-                    }
-                    else if let Some(monitor) = host_config.overrides.monitors.get_mut(&module_id) {
-                        monitor.settings.clear();
-                    }
-                }
-                else {
-                    host_config.overrides.monitors.entry(module_id).or_default().settings = enabled_settings;
+                if monitor.is_empty_override() {
+                    host_config.overrides.monitors.remove(&module_id);
                 }
             }
 
-            for (module_id, settings) in command_settings {
-                let enabled_settings: BTreeMap<String, String> = settings.into_iter()
+            for (module_id, config) in command_settings {
+                let enabled_settings: BTreeMap<String, String> = config.settings.into_iter()
                     .filter(|setting| setting.enabled)
                     .map(|setting| (setting.key, setting.value))
                     .collect();
 
-                if enabled_settings.is_empty() {
-                    let removable = host_config.overrides.commands.get(&module_id)
-                        .map(|command| {
-                            let mut cleared = command.clone();
-                            cleared.settings.clear();
-                            cleared.is_empty_override()
-                        })
-                        .unwrap_or(true);
+                let command = host_config.overrides.commands.entry(module_id.clone()).or_default();
+                command.settings = enabled_settings;
+                command.enabled = Some(config.enabled);
 
-                    if removable {
-                        host_config.overrides.commands.remove(&module_id);
-                    }
-                    else if let Some(command) = host_config.overrides.commands.get_mut(&module_id) {
-                        command.settings.clear();
-                    }
-                }
-                else {
-                    host_config.overrides.commands.entry(module_id).or_default().settings = enabled_settings;
+                if command.is_empty_override() {
+                    host_config.overrides.commands.remove(&module_id);
                 }
             }
         }
@@ -1182,6 +1165,21 @@ impl ConfigManagerModel {
     fn module_setting_sort_key(key: &str) -> (u8, String) {
         let group = Self::alert_threshold_level(key).unwrap_or(10);
         (group, key.to_lowercase())
+    }
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+#[allow(non_snake_case)]
+struct HostModuleConfig {
+    #[serde(default = "HostModuleConfig::default_enabled")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub settings: Vec<ModuleSetting>,
+}
+
+impl HostModuleConfig {
+    fn default_enabled() -> bool {
+        true
     }
 }
 

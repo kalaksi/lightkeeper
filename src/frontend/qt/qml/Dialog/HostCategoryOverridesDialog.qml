@@ -18,6 +18,8 @@ LightkeeperDialog {
     property string categoryName: ""
     property var monitorSettings: ({})
     property var commandSettings: ({})
+    property var monitorEnabled: ({})
+    property var commandEnabled: ({})
     property var _monitorList: []
     property var _commandList: []
     property bool _loading: true
@@ -38,8 +40,8 @@ LightkeeperDialog {
     onAccepted: {
         LK.config.updateHostCategoryModuleSettings(
             root.hostId,
-            JSON.stringify(root.monitorSettings),
-            JSON.stringify(root.commandSettings))
+            JSON.stringify(root.packModuleConfigs(root.monitorSettings, root.monitorEnabled)),
+            JSON.stringify(root.packModuleConfigs(root.commandSettings, root.commandEnabled)))
         LK.config.endHostConfiguration()
         root.configurationChanged()
         root.resetModel()
@@ -80,7 +82,9 @@ LightkeeperDialog {
                 emptyPlaceholder: "No modules in this category"
                 moduleIds: root._monitorList
                 settingsByModule: root.monitorSettings
+                enabledByModule: root.monitorEnabled
                 allowAddRemove: false
+                allowDisable: true
                 showSudoBadge: true
                 hostId: root.hostId
                 settingsAreComplete: true
@@ -89,9 +93,12 @@ LightkeeperDialog {
 
                 onUpdateModuleSettings: function(moduleId, settings) {
                     root.monitorSettings[moduleId] = settings
-                    let temp = root._monitorList
-                    root._monitorList = []
-                    root._monitorList = temp
+                    root.refreshMonitorList()
+                }
+
+                onSetModuleEnabled: function(moduleId, enabled) {
+                    root.monitorEnabled[moduleId] = enabled
+                    root.refreshMonitorList()
                 }
             }
 
@@ -100,7 +107,9 @@ LightkeeperDialog {
                 emptyPlaceholder: "No modules in this category"
                 moduleIds: root._commandList
                 settingsByModule: root.commandSettings
+                enabledByModule: root.commandEnabled
                 allowAddRemove: false
+                allowDisable: true
                 showSudoBadge: true
                 hostId: root.hostId
                 settingsAreComplete: true
@@ -109,26 +118,62 @@ LightkeeperDialog {
 
                 onUpdateModuleSettings: function(moduleId, settings) {
                     root.commandSettings[moduleId] = settings
-                    let temp = root._commandList
-                    root._commandList = []
-                    root._commandList = temp
+                    root.refreshCommandList()
+                }
+
+                onSetModuleEnabled: function(moduleId, enabled) {
+                    root.commandEnabled[moduleId] = enabled
+                    root.refreshCommandList()
                 }
             }
         }
     }
 
     function refreshModel() {
-        root.monitorSettings = JSON.parse(
+        let monitors = JSON.parse(
             LK.config.getHostCategoryModuleSettings(root.hostId, root.categoryName, "monitor"))
+        root.monitorSettings = {}
+        root.monitorEnabled = {}
+        for (let moduleId of Object.keys(monitors)) {
+            root.monitorSettings[moduleId] = monitors[moduleId].settings
+            root.monitorEnabled[moduleId] = monitors[moduleId].enabled
+        }
+        root.refreshMonitorList()
+
+        let commands = JSON.parse(
+            LK.config.getHostCategoryModuleSettings(root.hostId, root.categoryName, "command"))
+        root.commandSettings = {}
+        root.commandEnabled = {}
+        for (let moduleId of Object.keys(commands)) {
+            root.commandSettings[moduleId] = commands[moduleId].settings
+            root.commandEnabled[moduleId] = commands[moduleId].enabled
+        }
+        root.refreshCommandList()
+    }
+
+    function refreshMonitorList() {
         let monitorIds = Object.keys(root.monitorSettings)
         monitorIds.sort()
+        root._monitorList = []
         root._monitorList = monitorIds
+    }
 
-        root.commandSettings = JSON.parse(
-            LK.config.getHostCategoryModuleSettings(root.hostId, root.categoryName, "command"))
+    function refreshCommandList() {
         let commandIds = Object.keys(root.commandSettings)
         commandIds.sort()
+        root._commandList = []
         root._commandList = commandIds
+    }
+
+    function packModuleConfigs(settingsByModule, enabledByModule) {
+        let packed = {}
+        for (let moduleId of Object.keys(settingsByModule)) {
+            packed[moduleId] = {
+                enabled: enabledByModule[moduleId] !== false,
+                settings: settingsByModule[moduleId],
+            }
+        }
+        return packed
     }
 
     function resetModel() {
@@ -138,6 +183,8 @@ LightkeeperDialog {
         root._commandList = []
         root.monitorSettings = {}
         root.commandSettings = {}
+        root.monitorEnabled = {}
+        root.commandEnabled = {}
         root._loading = true
     }
 }

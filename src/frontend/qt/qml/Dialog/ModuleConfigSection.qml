@@ -23,8 +23,11 @@ ColumnLayout {
     property string emptyPlaceholder: "No changes"
     property var moduleIds: []
     property var settingsByModule: ({})
+    /// moduleId -> bool; used when allowDisable is true.
+    property var enabledByModule: ({})
     property bool readOnly: false
     property bool allowAddRemove: !root.readOnly
+    property bool allowDisable: false
     property bool showSudoBadge: false
     property int buttonSize: 26
     property string groupName: ""
@@ -37,6 +40,7 @@ ColumnLayout {
     signal removeModule(string moduleId)
     signal addModule(string moduleId)
     signal updateModuleSettings(string moduleId, var settings)
+    signal setModuleEnabled(string moduleId, bool enabled)
 
     RowLayout {
         Layout.fillWidth: true
@@ -81,8 +85,10 @@ ColumnLayout {
         model: root.moduleIds
 
         Column {
+            property bool _moduleEnabled: !root.allowDisable || root.enabledByModule[modelData] !== false
             Layout.fillWidth: true
             Layout.leftMargin: Theme.commonIndent
+            opacity: _moduleEnabled ? 1.0 : 0.45
 
             RowHighlight {
                 width: parent.width
@@ -134,6 +140,18 @@ ColumnLayout {
                             flatButton: true
                             roundButton: false
                             tooltip: "Module settings..."
+                            size: root.buttonSize
+
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        ImageButton {
+                            visible: root.allowDisable && !root.readOnly
+                            imageSource: "qrc:/main/images/button/cancel"
+                            onClicked: root.setModuleEnabled(modelData, !_moduleEnabled)
+                            flatButton: true
+                            roundButton: false
+                            tooltip: "Disable"
                             size: root.buttonSize
 
                             Layout.alignment: Qt.AlignVCenter
