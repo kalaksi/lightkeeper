@@ -506,6 +506,35 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                     }
                 }
             }
+            ClientMessage::BuildTerminalCommand {
+                request_id,
+                host_id,
+                command_id,
+                parameters,
+            } => match runtime
+                .core
+                .command_handler
+                .build_remote_terminal_command(&host_id, &command_id, &parameters)
+            {
+                Ok(command) => {
+                    session.send_message(&ServerMessage::ShellCommandResult { request_id, arguments: command.to_vec() })?;
+                }
+                Err(error) => {
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                }
+            },
+            ClientMessage::BuildRemoteEditorCommand { request_id, host_id, remote_file_path } => match runtime
+                .core
+                .command_handler
+                .build_remote_editor_command(&host_id, &remote_file_path)
+            {
+                Ok(command) => {
+                    session.send_message(&ServerMessage::ShellCommandResult { request_id, arguments: command.to_vec() })?;
+                }
+                Err(error) => {
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                }
+            },
         }
     }
 }

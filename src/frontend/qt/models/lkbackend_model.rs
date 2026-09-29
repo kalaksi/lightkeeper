@@ -284,8 +284,11 @@ impl LkBackend {
         config_backend: RemoteConfigBackend,
         config: (Configuration, configuration::Hosts, configuration::Groups),
     ) {
+        let (main_config, _hosts, _groups) = &config;
+        let mut command_backend = RemoteCommandBackend::new(client);
+        command_backend.set_preferences(main_config.preferences.clone());
         self.config.borrow_mut().set_config_backend(Box::new(config_backend), config);
-        self.command.borrow_mut().set_backend(Box::new(RemoteCommandBackend::new(client)));
+        self.command.borrow_mut().set_backend(Box::new(command_backend));
         self.sync_models_from_config();
     }
 
@@ -545,7 +548,7 @@ impl LkBackend {
                     return;
                 }
 
-                let mut runtime_hosts = hosts_config;
+                let mut runtime_hosts = hosts_config.clone();
                 Configuration::resolve_secrets_in_hosts(
                     &mut runtime_hosts,
                     Arc::new(crate::secrets_manager::KeyringSecretStore),

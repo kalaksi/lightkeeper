@@ -128,6 +128,7 @@ impl CommandHandlerModel {
     }
 
     pub fn set_configuration(&mut self, configuration: configuration::Configuration) {
+        self.backend_mut().update_preferences(&configuration.preferences);
         self.configuration = configuration;
     }
 
@@ -373,12 +374,18 @@ impl CommandHandlerModel {
             },
             UIAction::Terminal => {
                 let Some(local_backend) = self.backend().local_backend() else {
+                    self.error(QString::from("Terminal is not available with the current backend"));
                     return;
                 };
 
                 if self.configuration.preferences.terminal == configuration::INTERNAL {
                     let command = local_backend.remote_terminal_command(&host_id, &command_id, &parameters);
-                    let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
+                    let arguments = command.to_vec();
+                    if arguments.is_empty() {
+                        self.error(QString::from("Failed to build terminal command"));
+                        return;
+                    }
+                    let command_qsl = arguments.into_iter().map(QString::from).collect::<QStringList>();
                     self.terminalViewOpened(QString::from(display_options.tab_title), command_qsl)
                 }
                 else {
@@ -408,12 +415,18 @@ impl CommandHandlerModel {
 
                 if self.configuration.preferences.use_remote_editor {
                     let Some(local_backend) = self.backend().local_backend() else {
+                        self.error(QString::from("Remote editor is not available with the current backend"));
                         return;
                     };
 
                     if self.configuration.preferences.terminal == configuration::INTERNAL {
                         let command = local_backend.remote_text_editor_command(&host_id, &remote_file_path);
-                        let command_qsl = command.to_vec().into_iter().map(QString::from).collect::<QStringList>();
+                        let arguments = command.to_vec();
+                        if arguments.is_empty() {
+                            self.error(QString::from("Failed to build remote editor command"));
+                            return;
+                        }
+                        let command_qsl = arguments.into_iter().map(QString::from).collect::<QStringList>();
                         let editor_header_text = self.build_editor_header_text(&display_options, &command_id, &remote_file_path);
                         self.terminalViewOpened(editor_header_text, command_qsl);
                     }
@@ -434,6 +447,9 @@ impl CommandHandlerModel {
                     }
                     else {
                         let Some(local_backend) = self.backend().local_backend() else {
+                            self.error(QString::from(
+                                "External text editor is not available with the current backend",
+                            ));
                             return;
                         };
                         let local_file_path = local_backend.open_external_text_editor(
@@ -441,6 +457,12 @@ impl CommandHandlerModel {
                             &command_id,
                             &remote_file_path,
                         );
+                        if local_file_path.is_empty() {
+                            self.error(QString::from(
+                                "External text editor is not supported with remote core",
+                            ));
+                            return;
+                        }
                         if let Err(error) =
                             self.backend_mut().upload_file(&host_id, &command_id, &local_file_path)
                         {

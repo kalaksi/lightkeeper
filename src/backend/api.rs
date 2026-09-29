@@ -52,6 +52,8 @@ pub trait CommandBackend {
     fn local_backend(&self) -> Option<&dyn LocalBackendApi> {
         None
     }
+
+    fn update_preferences(&mut self, _preferences: &configuration::Preferences) {}
 }
 
 pub trait ConfigBackend {
