@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use ssh2;
 
-use super::api::{CommandBackend, ConfigBackend};
+use super::api::{CommandBackend, ConfigBackend, LocalBackendApi};
 use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
 use super::remote_config::RemoteConfigBackend;
 use super::ssh_auth::{HostKeyChallenge, SshAuthError};
@@ -26,7 +26,7 @@ use crate::error::{ErrorKind, LkError};
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
 use crate::remote_core::protocol::{read_message, write_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION};
-use crate::utils::sha256;
+use crate::utils::{sh_single_quoted, sha256, ShellCommand};
 
 enum CoreClientStream {
     Unix(UnixStream),
@@ -103,6 +103,7 @@ enum PendingRpcKind {
     StoreSecret,
     RemoveSecret,
     Ack,
+    ShellCommand,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -129,6 +130,7 @@ enum PendingRpcReply {
     StoreSecret(String),
     RemoveSecretOk,
     Ack,
+    ShellCommand(Vec<String>),
     Error {
         code: RemoteErrorCode,
         message: String,
@@ -161,7 +163,8 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::GetSecret, PendingRpcReply::GetSecret(_)) |
             (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
             (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
-            (PendingRpcKind::Ack, PendingRpcReply::Ack)
+            (PendingRpcKind::Ack, PendingRpcReply::Ack) |
+            (PendingRpcKind::ShellCommand, PendingRpcReply::ShellCommand(_))
     )
 }
 
@@ -259,6 +262,41 @@ fn open_transport_stream(
         let stream = UnixStream::connect(socket_path).map_err(|error| SshAuthError::other(error.to_string()))?;
         Ok((None, CoreClientStream::Unix(stream)))
     }
+}
+
+/// Wraps a command that should run on the remote core host so the desktop OpenSSH client
+/// executes it over an SSH login to the core (bastion). Uses a shell-quoted remote
+/// command so host connector key paths resolve on the core, not the desktop.
+///
+/// When the core profile has no SSH host (local unix socket), returns `remote_command` as-is.
+fn wrap_command_via_core_ssh(
+    profile: &configuration::CoreConnectionProfile,
+    remote_command: Vec<String>,
+) -> Result<ShellCommand, String> {
+    if remote_command.is_empty() {
+        return Err(String::from("Empty remote shell command"));
+    }
+    if !profile.is_configured() {
+        return Ok(ShellCommand::new_from(remote_command));
+    }
+
+    let username = profile
+        .username
+        .clone()
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| std::env::var("USER").unwrap_or_else(|_| String::from("root")));
+    let port = profile.port.unwrap_or(22).to_string();
+    let destination = format!("{}@{}", username, profile.host);
+    let remote_command = remote_command.iter().map(|arg| sh_single_quoted(arg)).collect::<Vec<_>>().join(" ");
+
+    let mut command = ShellCommand::new();
+    command.arguments(vec![String::from("ssh"), String::from("-t"), String::from("-p"), port]);
+    if let Some(private_key_path) = profile.private_key_path.as_ref().filter(|path| !path.is_empty()) {
+        command.arguments(vec![String::from("-i"), private_key_path.clone()]);
+    }
+    command.argument(destination);
+    command.argument(remote_command);
+    Ok(command)
 }
 
 struct RemoteConnection {
@@ -696,6 +734,11 @@ impl RemoteCoreClient {
                     ServerMessage::Ack { request_id } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::Ack, || PendingRpcReply::Ack);
                     }
+                    ServerMessage::ShellCommandResult { request_id, arguments } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::ShellCommand, || {
+                            PendingRpcReply::ShellCommand(arguments)
+                        });
+                    }
                     ServerMessage::Error {
                         request_id: Some(request_id),
                         code,
@@ -830,15 +873,56 @@ impl RemoteCoreClient {
     pub fn begin_connecting_ssh(&self) {
         self.set_connection_state(CoreConnectionState::ConnectingSsh);
     }
+
+    pub fn build_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<Vec<String>, LkError> {
+        match self.send_message_result(PendingRpcKind::ShellCommand, |request_id| ClientMessage::BuildTerminalCommand {
+            request_id,
+            host_id: host_id.to_string(),
+            command_id: command_id.to_string(),
+            parameters: parameters.to_vec(),
+        })? {
+            PendingRpcReply::ShellCommand(arguments) => Ok(arguments),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
+    pub fn build_remote_editor_command(&self, host_id: &str, remote_file_path: &str) -> Result<Vec<String>, LkError> {
+        match self.send_message_result(PendingRpcKind::ShellCommand, |request_id| ClientMessage::BuildRemoteEditorCommand {
+            request_id,
+            host_id: host_id.to_string(),
+            remote_file_path: remote_file_path.to_string(),
+        })? {
+            PendingRpcReply::ShellCommand(arguments) => Ok(arguments),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
+    fn desktop_shell_command(&self, remote_command: Vec<String>) -> ShellCommand {
+        match wrap_command_via_core_ssh(&self.profile(), remote_command) {
+            Ok(command) => command,
+            Err(error) => {
+                ::log::error!("Failed to wrap remote shell command: {}", error);
+                ShellCommand::new()
+            }
+        }
+    }
 }
 
 pub struct RemoteCommandBackend {
     client: Arc<RemoteCoreClient>,
+    preferences: configuration::Preferences,
 }
 
 impl RemoteCommandBackend {
     pub fn new(client: Arc<RemoteCoreClient>) -> Self {
-        RemoteCommandBackend { client }
+        RemoteCommandBackend {
+            client,
+            preferences: configuration::Preferences::default(),
+        }
+    }
+
+    pub fn set_preferences(&mut self, preferences: configuration::Preferences) {
+        self.preferences = preferences;
     }
 
     fn connect(&mut self) -> Result<(), String> {
@@ -861,27 +945,80 @@ impl RemoteCommandBackend {
     fn stop_connection(&mut self) {
         self.client.stop_connection();
     }
+
+    fn fetch_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> ShellCommand {
+        match self.client.build_terminal_command(host_id, command_id, parameters) {
+            Ok(arguments) => self.client.desktop_shell_command(arguments),
+            Err(error) => {
+                ::log::error!("Request failed: {}", error);
+                ShellCommand::new()
+            }
+        }
+    }
+
+    fn fetch_remote_editor_command(&self, host_id: &str, remote_file_path: &str) -> ShellCommand {
+        match self.client.build_remote_editor_command(host_id, remote_file_path) {
+            Ok(arguments) => self.client.desktop_shell_command(arguments),
+            Err(error) => {
+                ::log::error!("Request failed: {}", error);
+                ShellCommand::new()
+            }
+        }
+    }
+}
+
+impl LocalBackendApi for RemoteCommandBackend {
+    fn remote_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> ShellCommand {
+        self.fetch_terminal_command(host_id, command_id, parameters)
+    }
+
+    fn open_external_terminal(&self, host_id: &str, command_id: &str, parameters: Vec<String>) {
+        let command_args = self.fetch_terminal_command(host_id, command_id, &parameters);
+        ::log::debug!("Starting local process: {} {}", self.preferences.terminal, command_args.to_string());
+        let spawn_result = ShellCommand::new()
+            .arguments(vec![self.preferences.terminal.clone()])
+            .arguments(self.preferences.terminal_args.clone())
+            .arguments(command_args.to_vec())
+            .spawn();
+        if let Err(error) = spawn_result {
+            ::log::error!("Couldn't start terminal: {}", error);
+        }
+    }
+
+    fn remote_text_editor_command(&self, host_id: &str, remote_file_path: &str) -> ShellCommand {
+        self.fetch_remote_editor_command(host_id, remote_file_path)
+    }
+
+    fn open_external_text_editor(&self, _host_id: &str, _command_id: &str, _remote_file_path: &str) -> String {
+        ::log::error!("External text editor is not supported with remote core; use the internal editor or remote editor");
+        String::new()
+    }
 }
 
 impl CommandBackend for RemoteCommandBackend {
     fn configure(
         &mut self,
         _hosts_config: &configuration::Hosts,
-        _preferences: &configuration::Preferences,
+        preferences: &configuration::Preferences,
         _request_sender: mpsc::Sender<ConnectorRequest>,
         _update_sender: mpsc::Sender<StateUpdateMessage>,
         frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
     ) {
+        self.preferences = preferences.clone();
         self.client.set_frontend_update_sender(frontend_update_sender);
         if let Err(error) = self.connect() {
             ::log::error!("Request failed: {}", error);
         }
     }
 
+    fn update_preferences(&mut self, preferences: &configuration::Preferences) {
+        self.preferences = preferences.clone();
+    }
+
     fn start_processing_responses(&mut self) {}
 
     fn stop(&mut self) {
-        self.client.stop_connection();
+        self.stop_connection();
     }
 
     fn refresh_host_monitors(&mut self, host_id: &str) {
@@ -1137,6 +1274,10 @@ impl CommandBackend for RemoteCommandBackend {
             PendingRpcReply::FileChanged(changed) => Ok(changed),
             _ => Err(LkError::unexpected()),
         }
+    }
+
+    fn local_backend(&self) -> Option<&dyn LocalBackendApi> {
+        Some(self)
     }
 }
 

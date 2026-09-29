@@ -403,38 +403,52 @@ impl CommandHandler {
         });
     }
 
-    pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &[String]) -> ShellCommand {
-        let Ok(commands) = self.commands.lock() else {
-            self.send_state_update(StateUpdateMessage::fatal_error());
-            return ShellCommand::new();
-        };
+    /// Builds a host shell/terminal command as if executed on this machine
+    /// (typically `ssh -t …`). Used by the desktop UI and by remote-core RPC.
+    pub fn build_remote_terminal_command(
+        &self,
+        host_id: &str,
+        command_id: &str,
+        parameters: &[String],
+    ) -> Result<ShellCommand, LkError> {
+        let commands = self.commands.lock().map_err(|_| LkError::other("Commands lock poisoned"))?;
+        let command_module = commands
+            .get(host_id)
+            .and_then(|host_commands| host_commands.get(command_id))
+            .ok_or_else(|| LkError::other(format!("Command '{}' not found for host '{}'", command_id, host_id)))?;
+        let host = self.host_manager.borrow().try_get_host(host_id)
+            .ok_or_else(|| LkError::other(format!("Host '{}' not found", host_id)))?;
+        let connector_messages = get_command_connector_messages(&host, command_module, parameters)?;
 
-        let command_module = &commands[host_id][command_id];
-        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
-            log::error!("Host '{}' not found", host_id);
-            return ShellCommand::new();
-        };
-        let connector_messages = get_command_connector_messages(&host, command_module, parameters).unwrap_or_else(|error| {
-            log::error!("Command failed: {}", error);
-            Vec::new()
-        });
-
-        let command = if command_module.get_connector_spec().as_ref().map(|s| s.id.as_str()) == Some("local-command") {
+        let command = if command_module.get_connector_spec().as_ref().map(|spec| spec.id.as_str()) == Some("local-command") {
             if let Some(message) = connector_messages.first() {
-                ShellCommand::new_from(vec!["bash", "-c", message])
+                ShellCommand::new_from(vec!["bash", "-c", message.as_str()])
             }
             else {
-                ShellCommand::new()
+                return Err(LkError::other("Local command produced no connector message"));
             }
         }
         else {
-            let mut cmd = self.remote_ssh_command(&host);
+            let mut cmd = self.remote_ssh_command(&host)?;
             cmd.arguments(connector_messages);
             cmd
         };
 
+        if command.to_vec().is_empty() {
+            return Err(LkError::other("Built an empty terminal command"));
+        }
         ::log::debug!("Opening terminal with command: {}", command.to_string());
-        command
+        Ok(command)
+    }
+
+    pub fn open_remote_terminal_command(&self, host_id: &String, command_id: &String, parameters: &[String]) -> ShellCommand {
+        match self.build_remote_terminal_command(host_id, command_id, parameters) {
+            Ok(command) => command,
+            Err(error) => {
+                log::error!("Command failed: {}", error);
+                ShellCommand::new()
+            }
+        }
     }
 
     pub fn open_external_terminal(&self, host_id: &String, command_id: &String, parameters: Vec<String>) {
@@ -452,12 +466,11 @@ impl CommandHandler {
         }
     }
 
-    pub fn open_remote_text_editor(&self, host_id: &String, remote_file_path: &str) -> ShellCommand {
-        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
-            log::error!("Host '{}' not found", host_id);
-            return ShellCommand::new();
-        };
-        let mut command = self.remote_ssh_command(&host);
+    /// Builds a remote text editor command over SSH as if executed on this machine.
+    pub fn build_remote_editor_command(&self, host_id: &str, remote_file_path: &str) -> Result<ShellCommand, LkError> {
+        let host = self.host_manager.borrow().try_get_host(host_id)
+            .ok_or_else(|| LkError::other(format!("Host '{}' not found", host_id)))?;
+        let mut command = self.remote_ssh_command(&host)?;
 
         if self.preferences.sudo_remote_editor {
             command.argument("sudo");
@@ -465,7 +478,20 @@ impl CommandHandler {
 
         command.argument(self.preferences.remote_text_editor.clone());
         command.argument(remote_file_path);
-        command
+        if command.to_vec().is_empty() {
+            return Err(LkError::other("Built an empty remote editor command"));
+        }
+        Ok(command)
+    }
+
+    pub fn open_remote_text_editor(&self, host_id: &String, remote_file_path: &str) -> ShellCommand {
+        match self.build_remote_editor_command(host_id, remote_file_path) {
+            Ok(command) => command,
+            Err(error) => {
+                log::error!("{}", error);
+                ShellCommand::new()
+            }
+        }
     }
 
     // TODO: this will block the UI thread? Improve!
@@ -862,8 +888,14 @@ impl CommandHandler {
         Ok(file_handler::convert_to_local_paths(&host, remote_file_path).1)
     }
 
-    fn remote_ssh_command(&self, host: &Host) -> ShellCommand {
-        let ssh_settings = self.hosts_config.hosts[&host.name].effective.connectors["ssh"].settings.clone();
+    fn remote_ssh_command(&self, host: &Host) -> Result<ShellCommand, LkError> {
+        let ssh_settings = self
+            .hosts_config
+            .hosts
+            .get(&host.name)
+            .and_then(|host_config| host_config.effective.connectors.get("ssh"))
+            .map(|connector| connector.settings.clone())
+            .ok_or_else(|| LkError::other(format!("No SSH connector configured for host '{}'", host.name)))?;
 
         let remote_address = if !host.fqdn.is_empty() {
             host.fqdn.clone()
@@ -876,7 +908,8 @@ impl CommandHandler {
         command.arguments(vec![
             String::from("ssh"),
             String::from("-t"),
-            String::from("-p"), ssh_settings.get("port").unwrap_or(&String::from("22")).clone(),
+            String::from("-p"),
+            ssh_settings.get("port").unwrap_or(&String::from("22")).clone(),
         ]);
 
         if let Some(username) = ssh_settings.get("username") {
@@ -888,7 +921,7 @@ impl CommandHandler {
         }
 
         command.argument(remote_address);
-        command
+        Ok(command)
     }
 
     pub fn interrupt_invocation(&self, invocation_id: u64) {

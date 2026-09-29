@@ -164,3 +164,50 @@ fn initial_state_with_hosts_roundtrip_works() {
         _ => panic!("expected InitialState"),
     }
 }
+
+#[test]
+fn build_terminal_command_client_roundtrip() {
+    let mut buffer = Vec::new();
+    let message = ClientMessage::BuildTerminalCommand {
+        request_id: 3,
+        host_id: "h1".to_string(),
+        command_id: "linux-shell".to_string(),
+        parameters: vec![],
+    };
+
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ClientMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ClientMessage::BuildTerminalCommand {
+            request_id,
+            host_id,
+            command_id,
+            parameters,
+        } => {
+            assert_eq!(request_id, 3);
+            assert_eq!(host_id, "h1");
+            assert_eq!(command_id, "linux-shell");
+            assert!(parameters.is_empty());
+        }
+        _ => panic!("Invalid message"),
+    }
+}
+
+#[test]
+fn shell_command_result_server_roundtrip() {
+    let mut buffer = Vec::new();
+    let message = ServerMessage::ShellCommandResult {
+        request_id: 4,
+        arguments: vec![String::from("ssh"), String::from("-t"), String::from("host")],
+    };
+
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ServerMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ServerMessage::ShellCommandResult { request_id, arguments } => {
+            assert_eq!(request_id, 4);
+            assert_eq!(arguments, vec![String::from("ssh"), String::from("-t"), String::from("host")]);
+        }
+        _ => panic!("Invalid message"),
+    }
+}

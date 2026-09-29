@@ -14,7 +14,7 @@ use crate::command_handler::CommandButtonData;
 use crate::configuration::CustomCommandConfig;
 use crate::frontend::{DisplayData, HostDisplayData};
 
-pub const PROTOCOL_VERSION: u16 = 10;
+pub const PROTOCOL_VERSION: u16 = 11;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -170,6 +170,19 @@ pub enum ClientMessage {
         module_id: String,
         setting_key: String,
     },
+    /// Builds a host shell/terminal command as if run on the core host (`ssh -t …`).
+    BuildTerminalCommand {
+        request_id: u64,
+        host_id: String,
+        command_id: String,
+        parameters: Vec<String>,
+    },
+    /// Builds a remote-file editor command over SSH as if run on the core host.
+    BuildRemoteEditorCommand {
+        request_id: u64,
+        host_id: String,
+        remote_file_path: String,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -261,6 +274,10 @@ pub enum ServerMessage {
     },
     Ack {
         request_id: u64,
+    },
+    ShellCommandResult {
+        request_id: u64,
+        arguments: Vec<String>,
     },
 }
 
