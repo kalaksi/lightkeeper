@@ -10,7 +10,9 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use lightkeeper::backend::{CommandBackend, ConfigBackend, RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient};
+use lightkeeper::backend::{
+    CommandBackend, ConfigBackend, LocalBackendApi, RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient,
+};
 use lightkeeper::configuration::{self, get_default_main_config, Configuration, Groups};
 use lightkeeper::frontend::{HostDisplayData, UIUpdate};
 use lightkeeper::module::command::internal::custom_command::CustomCommand;
@@ -100,7 +102,7 @@ fn stub_hosts() -> configuration::Hosts {
         FileBrowserEdit::get_metadata().module_spec.id.clone(),
         configuration::CommandConfig {
             version: "0.0.1".to_string(),
-            settings: HashMap::new(),
+            settings: BTreeMap::new(),
             ..Default::default()
         },
     );
@@ -422,6 +424,35 @@ fn remote_core_secret_store_get_remove() {
         config.remove_secret(&source_id, module_id, setting_key).unwrap();
         let after_remove = config.get_secret(&source_id, module_id, setting_key).unwrap();
         assert!(after_remove.is_none());
+
+        backend.stop();
+    });
+}
+
+#[test]
+fn remote_core_build_terminal_and_editor_commands() {
+    init_log();
+
+    let start_id = systemd::service::Start::get_metadata().module_spec.id.clone();
+
+    with_remote_core_session(move |mut backend, _cfg, _ui_rx| {
+        assert!(backend.local_backend().is_some());
+
+        let terminal = backend.remote_terminal_command(
+            TEST_HOST,
+            &start_id,
+            &["ssh.service".to_string()],
+        );
+        let terminal_command = terminal.to_vec();
+        assert!(!terminal_command.is_empty(), "expected terminal command");
+        assert_eq!(terminal_command[0], "ssh");
+        assert!(terminal_command.iter().any(|arg| arg == "127.0.0.1"));
+
+        let editor = backend.remote_text_editor_command(TEST_HOST, "/tmp/lk-edit-target");
+        let editor_command = editor.to_vec();
+        assert!(!editor_command.is_empty(), "expected editor command");
+        assert_eq!(editor_command[0], "ssh");
+        assert!(editor_command.iter().any(|arg| arg == "/tmp/lk-edit-target"));
 
         backend.stop();
     });

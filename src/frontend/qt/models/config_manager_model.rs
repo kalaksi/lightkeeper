@@ -832,7 +832,7 @@ impl ConfigManagerModel {
         };
 
         let host = self.hosts_config.hosts.get(&host_id).cloned().unwrap_or_default();
-        let empty_settings = HashMap::new();
+        let empty_settings = BTreeMap::new();
         let settings = match metadata.module_spec.module_type {
             ModuleType::Monitor => {
                 let baseline = Self::group_baseline_for_host(&host, &self.groups_config);
