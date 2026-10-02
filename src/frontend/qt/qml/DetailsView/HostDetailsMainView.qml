@@ -175,7 +175,14 @@ Item {
                         function onUpdateReceived(hostId) {
                             if (hostId === root.hostId) {
                                 let pending = LK.hosts.getPendingMonitorCountForCategory(root.hostId, groupBox.categoryName)
-                                groupBox.refreshProgress = pending > 0 ? 0 : 100
+                                if (pending > 0) {
+                                    groupBox.refreshProgress = 0
+                                }
+                                // During host refresh, category might not yet have pending monitor requests until
+                                // platform info has been received.
+                                else if (LK.hosts.getPendingMonitorCount(hostId) === 0) {
+                                    groupBox.refreshProgress = 100
+                                }
                             }
                         }
 
