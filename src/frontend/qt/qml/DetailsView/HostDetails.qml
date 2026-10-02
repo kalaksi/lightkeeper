@@ -24,6 +24,13 @@ Item {
     property string _previousHostId: ""
     property bool _refreshingHost: false
 
+    readonly property Item currentTabContent: {
+        if (!(root.hostId in root._tabStacks)) {
+            return null
+        }
+        return root._tabStacks[root.hostId].currentContent
+    }
+
 
     signal closeClicked()
     signal maximizeClicked()
@@ -495,11 +502,7 @@ Item {
     }
 
     function getCurrentTabContent() {
-        if (!(root.hostId in root._tabStacks)) {
-            return undefined
-        }
-        const content = root._tabStacks[root.hostId].currentContent
-        return content === null ? undefined : content
+        return root.currentTabContent === null ? undefined : root.currentTabContent
     }
 
     function close() {
