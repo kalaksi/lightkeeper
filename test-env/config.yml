@@ -16,7 +16,6 @@ preferences:
     edit_mode: regular
     font_size: 12
     word_wrap: true
-  saved_core_addresses: []
 display_options:
   qtquick_style: ''
   hide_info_notifications: false
