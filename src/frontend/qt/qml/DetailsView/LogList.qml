@@ -142,7 +142,8 @@ ListView {
         }
 
         function copyTextSelection() {
-            textContent.copy()
+            // Avoid TextEdit.copy() on RichText: it puts HTML on the clipboard.
+            root._copyToClipboard(textContent.selectedText)
         }
 
         function clearTextSelection() {
@@ -350,9 +351,12 @@ ListView {
         }
 
         Utils.sortNumerically(indices)
+        // Parse each row as rich text so clipboard text matches what TextEdit displays.
         let lines = indices.map((modelIndex) => {
             let index = root.invertRowOrder ? root.rows.length - 1 - modelIndex : modelIndex
-            return root.rows[index]
+            textEdit.textFormat = TextEdit.RichText
+            textEdit.text = root.rows[index] || ""
+            return textEdit.getText(0, textEdit.length)
         })
         root._copyToClipboard(lines.join("\n"))
     }
@@ -368,6 +372,7 @@ ListView {
 
     // Workaround for copying to clipboard since there's currently no native QML way to do it (AFAIK).
     function _copyToClipboard(text) {
+        textEdit.textFormat = TextEdit.PlainText
         textEdit.text = text
         textEdit.selectAll()
         textEdit.copy()
