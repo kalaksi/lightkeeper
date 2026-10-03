@@ -104,6 +104,7 @@ enum PendingRpcKind {
     RemoveSecret,
     Ack,
     ShellCommand,
+    MetricsQuery,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -131,6 +132,7 @@ enum PendingRpcReply {
     RemoveSecretOk,
     Ack,
     ShellCommand(Vec<String>),
+    MetricsQuery(u64),
     Error {
         code: RemoteErrorCode,
         message: String,
@@ -164,7 +166,8 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
             (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
             (PendingRpcKind::Ack, PendingRpcReply::Ack) |
-            (PendingRpcKind::ShellCommand, PendingRpcReply::ShellCommand(_))
+            (PendingRpcKind::ShellCommand, PendingRpcReply::ShellCommand(_)) |
+            (PendingRpcKind::MetricsQuery, PendingRpcReply::MetricsQuery(_))
     )
 }
 
@@ -659,6 +662,17 @@ impl RemoteCoreClient {
                             return;
                         }
                     }
+                    ServerMessage::Chart(response) => {
+                        if frontend_update_sender.send(frontend::UIUpdate::Chart(response)).is_err() {
+                            disconnect("Failed to deliver chart update", false);
+                            return;
+                        }
+                    }
+                    ServerMessage::MetricsQuery { request_id, invocation_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::MetricsQuery, || {
+                            PendingRpcReply::MetricsQuery(invocation_id)
+                        });
+                    }
                     ServerMessage::RefreshInvocationIds { request_id, invocation_ids } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::RefreshInvocationIds, || {
                             PendingRpcReply::RefreshInvocationIds(invocation_ids)
@@ -893,6 +907,40 @@ impl RemoteCoreClient {
             remote_file_path: remote_file_path.to_string(),
         })? {
             PendingRpcReply::ShellCommand(arguments) => Ok(arguments),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
+    pub fn get_metrics(&self, host_id: &str, monitor_id: &str, start_time: i64, end_time: i64) -> Result<u64, LkError> {
+        match self.send_message_result(PendingRpcKind::MetricsQuery, |request_id| ClientMessage::GetMetrics {
+            request_id,
+            host_id: host_id.to_string(),
+            monitor_id: monitor_id.to_string(),
+            start_time,
+            end_time,
+        })? {
+            PendingRpcReply::MetricsQuery(invocation_id) => Ok(invocation_id),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
+    pub fn get_alerts(
+        &self,
+        host_id: &str,
+        monitor_id: &str,
+        search_text: &str,
+        start_time: i64,
+        end_time: i64,
+    ) -> Result<u64, LkError> {
+        match self.send_message_result(PendingRpcKind::MetricsQuery, |request_id| ClientMessage::GetAlerts {
+            request_id,
+            host_id: host_id.to_string(),
+            monitor_id: monitor_id.to_string(),
+            search_text: search_text.to_string(),
+            start_time,
+            end_time,
+        })? {
+            PendingRpcReply::MetricsQuery(invocation_id) => Ok(invocation_id),
             _ => Err(LkError::unexpected()),
         }
     }

@@ -16,6 +16,7 @@ use crate::error::LkError;
 use crate::file_handler;
 use crate::frontend::UIUpdate;
 use crate::metrics::lmserver::{self, LMSRequest, LMSResponse, RequestType};
+use crate::module::monitoring::DataPoint;
 
 //
 // NOTE: MetricsManager handles connections to metrics server that stores host metrics for charts.
@@ -336,6 +337,75 @@ impl MetricsManager {
         })?;
 
         Ok(invocation_id)
+    }
+
+    pub fn insert_data_point(&mut self, host_id: &str, monitor_id: &str, data_point: &DataPoint) -> Result<(), LkError> {
+        let current_unix_ms = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|_| LkError::other("Time calculation error"))?
+            .as_millis() as i64;
+
+        let mut metrics = Vec::new();
+        Self::collect_metrics(data_point, "", current_unix_ms, &mut metrics);
+        self.insert_metrics(host_id, monitor_id, &metrics)?;
+        Ok(())
+    }
+
+    pub fn insert_alert_transitions(
+        &mut self,
+        host_id: &str,
+        monitor_id: &str,
+        previous: Option<&DataPoint>,
+        current: &DataPoint,
+        use_multivalue: bool,
+        root_label: &str,
+    ) -> Result<(), LkError> {
+        let time_sec = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|_| LkError::other("Time calculation error"))?
+            .as_secs() as i64;
+
+        let events = DataPoint::criticality_transitions(previous, current, use_multivalue, root_label)
+            .into_iter()
+            .map(|transition| lmserver::AlertEvent {
+                time: time_sec,
+                host_id: host_id.to_string(),
+                monitor_id: monitor_id.to_string(),
+                entry_id: transition.entry_id,
+                label: transition.label,
+                value: transition.value,
+                from_level: transition.from_level as u8,
+                to_level: transition.to_level as u8,
+            })
+            .collect::<Vec<_>>();
+
+        if !events.is_empty() {
+            self.insert_alerts(events)?;
+        }
+        Ok(())
+    }
+
+    fn collect_metrics(data_point: &DataPoint, parent_label: &str, time: i64, metrics: &mut Vec<super::Metric>) {
+        let label = if parent_label.is_empty() || data_point.label.is_empty() {
+            data_point.label.clone()
+        }
+        else {
+            format!("{}/{}", parent_label, data_point.label)
+        };
+
+        // Prefer leaf series for nested multivalue (e.g. HAProxy proxy / FRONTEND / BACKEND / server).
+        if data_point.multivalue.is_empty() {
+            metrics.push(super::Metric {
+                label,
+                value: data_point.value_float,
+                time,
+            });
+        }
+        else {
+            for child in data_point.multivalue.iter() {
+                Self::collect_metrics(child, &label, time, metrics);
+            }
+        }
     }
 
     pub fn get_metrics(&mut self, host_id: &str, monitor_id: &str, start_time: i64, end_time: i64) -> Result<u64, LkError> {

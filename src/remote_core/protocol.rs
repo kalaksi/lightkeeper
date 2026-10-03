@@ -13,8 +13,9 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::command_handler::CommandButtonData;
 use crate::configuration::CustomCommandConfig;
 use crate::frontend::{DisplayData, HostDisplayData};
+use crate::metrics::lmserver::LMSResponse;
 
-pub const PROTOCOL_VERSION: u16 = 11;
+pub const PROTOCOL_VERSION: u16 = 12;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -183,6 +184,21 @@ pub enum ClientMessage {
         host_id: String,
         remote_file_path: String,
     },
+    GetMetrics {
+        request_id: u64,
+        host_id: String,
+        monitor_id: String,
+        start_time: i64,
+        end_time: i64,
+    },
+    GetAlerts {
+        request_id: u64,
+        host_id: String,
+        monitor_id: String,
+        search_text: String,
+        start_time: i64,
+        end_time: i64,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -217,6 +233,11 @@ pub enum ServerMessage {
     },
     InitialState(DisplayData),
     HostUpdate(HostDisplayData),
+    Chart(LMSResponse),
+    MetricsQuery {
+        request_id: u64,
+        invocation_id: u64,
+    },
     Error {
         request_id: Option<u64>,
         code: RemoteErrorCode,

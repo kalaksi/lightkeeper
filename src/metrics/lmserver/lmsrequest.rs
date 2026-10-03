@@ -8,7 +8,7 @@
 /// Protocol version 1.2
 ///
 use std::collections::HashMap;
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,7 @@ pub struct AlertEvent {
     pub to_level: u8,
 }
 
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 #[derive(Serialize, Deserialize)]
 pub struct LMSRequest {
     pub request_id: u64,
@@ -44,7 +44,7 @@ pub struct LMSRequest {
     pub request_type: RequestType,
 }
 
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 #[derive(Serialize, Deserialize)]
 pub enum RequestType {
     Healthcheck,
@@ -78,7 +78,7 @@ pub enum RequestType {
     },
 }
 
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 impl LMSRequest {
     pub fn exit() -> Self {
         LMSRequest {
@@ -89,7 +89,7 @@ impl LMSRequest {
     }
 }
 
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 impl Debug for LMSRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "ServiceRequest({})", self.request_id)
