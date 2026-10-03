@@ -44,6 +44,19 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.47.0" date="2026-10-03">
+      <description>
+        <ul>
+          <li>Add option to disable modules per host</li>
+          <li>Add multi-line selection to log list</li>
+          <li>Add docker-rm command</li>
+          <li>Show more range in charts</li>
+          <li>Optimize file browser list generation</li>
+          <li>Fix ctrl-r not working in terminal</li>
+          <li>Fix masking of categories during host refresh</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.46.0" date="2026-09-25">
       <description>
         <ul>
