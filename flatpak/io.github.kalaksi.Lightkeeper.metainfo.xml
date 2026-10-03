@@ -44,7 +44,13 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.47.0" date="2026-10-03">
+    <release version="0.47.1" date="2026-10-03">
+      <description>
+        <ul>
+        </ul>
+      </description>
+    </release>
+    <release version="0.47.1" date="2026-10-03">
       <description>
         <ul>
           <li>Add option to disable modules per host</li>
