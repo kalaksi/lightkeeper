@@ -6,11 +6,13 @@
 
 extern crate qmetaobject;
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use qmetaobject::*;
 
 use crate::{
+    backend::RemoteCoreClient,
     configuration,
     enums::Criticality,
     metrics,
@@ -43,6 +45,7 @@ pub struct MetricsManagerModel {
     // Private properties
     //
     metrics_manager: Option<metrics::MetricsManager>,
+    remote_client: Option<Arc<RemoteCoreClient>>,
     hosts_config: configuration::Hosts,
     display_options: configuration::DisplayOptions,
     pending_alert_queries: HashSet<u64>,
@@ -76,20 +79,21 @@ impl MetricsManagerModel {
         self.hosts_config = hosts_config;
     }
 
+    pub fn set_display_options(&mut self, display_options: configuration::DisplayOptions) {
+        self.display_options = display_options;
+    }
+
+    pub fn set_remote_client(&mut self, remote_client: Option<Arc<RemoteCoreClient>>) {
+        self.remote_client = remote_client;
+    }
+
     pub fn insert_data_point(&mut self, host_id: &str, monitor_id: &str, data_point: DataPoint) {
+        if self.remote_client.is_some() {
+            return;
+        }
+
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
-            let current_unix_ms = if let Ok(duration) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-                duration.as_millis() as i64
-            }
-            else {
-                ::log::error!("Time calculation error");
-                return;
-            };
-
-            let mut metrics = Vec::new();
-            Self::collect_metrics(&data_point, "", current_unix_ms, &mut metrics);
-
-            if let Err(error) = metrics_manager.insert_metrics(host_id, monitor_id, &metrics) {
+            if let Err(error) = metrics_manager.insert_data_point(host_id, monitor_id, &data_point) {
                 ::log::error!("Error inserting data point: {}", error);
             }
         }
@@ -104,61 +108,23 @@ impl MetricsManagerModel {
         use_multivalue: bool,
         root_label: &str,
     ) {
+        if self.remote_client.is_some() {
+            return;
+        }
+
         let Some(metrics_manager) = self.metrics_manager.as_mut() else {
             return;
         };
 
-        let time_sec = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-            Ok(duration) => duration.as_secs() as i64,
-            Err(_) => {
-                ::log::error!("Time calculation error");
-                return;
-            }
-        };
-
-        let events = DataPoint::criticality_transitions(previous, current, use_multivalue, root_label)
-            .into_iter()
-            .map(|transition| metrics::lmserver::AlertEvent {
-                time: time_sec,
-                host_id: host_id.to_string(),
-                monitor_id: monitor_id.to_string(),
-                entry_id: transition.entry_id,
-                label: transition.label,
-                value: transition.value,
-                from_level: transition.from_level as u8,
-                to_level: transition.to_level as u8,
-            })
-            .collect::<Vec<_>>();
-
-        if events.is_empty() {
-            return;
-        }
-
-        if let Err(error) = metrics_manager.insert_alerts(events) {
+        if let Err(error) = metrics_manager.insert_alert_transitions(
+            host_id,
+            monitor_id,
+            previous,
+            current,
+            use_multivalue,
+            root_label,
+        ) {
             ::log::error!("Error inserting alert history: {}", error);
-        }
-    }
-
-    fn collect_metrics(data_point: &DataPoint, parent_label: &str, time: i64, metrics: &mut Vec<metrics::Metric>) {
-        let label = if parent_label.is_empty() || data_point.label.is_empty() {
-            data_point.label.clone()
-        }
-        else {
-            format!("{}/{}", parent_label, data_point.label)
-        };
-
-        // Prefer leaf series for nested multivalue (e.g. HAProxy proxy → FRONTEND/BACKEND/server).
-        if data_point.multivalue.is_empty() {
-            metrics.push(metrics::Metric {
-                label,
-                value: data_point.value_float,
-                time,
-            });
-        }
-        else {
-            for child in data_point.multivalue.iter() {
-                Self::collect_metrics(child, &label, time, metrics);
-            }
         }
     }
 
@@ -209,6 +175,10 @@ impl MetricsManagerModel {
     }
 
     fn startService(&mut self) {
+        if self.remote_client.is_some() {
+            return;
+        }
+
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             if let Err(error) = metrics_manager.start_service() {
                 // TODO: show in UI
@@ -219,6 +189,21 @@ impl MetricsManagerModel {
     }
 
     fn refreshCharts(&mut self, host_id: QString, monitor_id: QString, start_time_sec: i64, end_time_sec: i64) -> u64 {
+        if let Some(remote_client) = &self.remote_client {
+            return match remote_client.get_metrics(
+                &host_id.to_string(),
+                &monitor_id.to_string(),
+                start_time_sec,
+                end_time_sec,
+            ) {
+                Ok(invocation_id) => invocation_id,
+                Err(error) => {
+                    ::log::error!("Error refreshing charts: {}", error);
+                    0
+                }
+            };
+        }
+
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             let invocation_result = metrics_manager.get_metrics(
                 &host_id.to_string(),
@@ -241,6 +226,28 @@ impl MetricsManagerModel {
     }
 
     fn refreshAlertHistory(&mut self, search_text: QString) -> u64 {
+        if let Some(remote_client) = &self.remote_client {
+            let end_time = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                Ok(duration) => duration.as_secs() as i64,
+                Err(_) => {
+                    ::log::error!("Time calculation error");
+                    return 0;
+                }
+            };
+            let start_time = end_time - 24 * 60 * 60;
+
+            return match remote_client.get_alerts("", "", &search_text.to_string(), start_time, end_time) {
+                Ok(invocation_id) => {
+                    self.pending_alert_queries.insert(invocation_id);
+                    invocation_id
+                }
+                Err(error) => {
+                    ::log::error!("Error refreshing alert history: {}", error);
+                    0
+                }
+            };
+        }
+
         let Some(metrics_manager) = self.metrics_manager.as_mut() else {
             return 0;
         };

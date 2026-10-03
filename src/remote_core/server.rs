@@ -132,6 +132,16 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
     session.send_message(&ServerMessage::InitialState(display_data))?;
     session.start_update_stream(update_receiver);
 
+    let result = handle_client_messages(stream, runtime, &mut session);
+    runtime.clear_session_update_sender();
+    result
+}
+
+fn handle_client_messages(
+    stream: &mut UnixStream,
+    runtime: &mut CoreRuntime,
+    session: &mut RemoteSession,
+) -> Result<(), LkError> {
     loop {
         let message = match read_message::<ClientMessage, _>(stream) {
             Ok(message) => message,
@@ -426,6 +436,9 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
                             match crate::initialize_core(&main_read, &hosts_read, module_factory, runtime.secret_store.clone()) {
                                 Ok(core) => {
                                     runtime.core = core;
+                                    if let Err(metrics_error) = runtime.refresh_metrics(&main_read) {
+                                        log::error!("Failed to refresh metrics after config recovery: {}", metrics_error);
+                                    }
                                     true
                                 }
                                 Err(recover_error) => {
@@ -451,6 +464,9 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
 
                 if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
                     log::warn!("Failed to clear configuration backups: {}", error);
+                }
+                if let Err(error) = runtime.refresh_metrics(&main) {
+                    log::error!("Failed to refresh metrics after config update: {}", error);
                 }
                 session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
                 session.start_update_stream(runtime.new_update_receiver());
@@ -530,6 +546,35 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
             {
                 Ok(command) => {
                     session.send_message(&ServerMessage::ShellCommandResult { request_id, arguments: command.to_vec() })?;
+                }
+                Err(error) => {
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                }
+            },
+            ClientMessage::GetMetrics {
+                request_id,
+                host_id,
+                monitor_id,
+                start_time,
+                end_time,
+            } => match runtime.get_metrics(&host_id, &monitor_id, start_time, end_time) {
+                Ok(invocation_id) => {
+                    session.send_message(&ServerMessage::MetricsQuery { request_id, invocation_id })?;
+                }
+                Err(error) => {
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                }
+            },
+            ClientMessage::GetAlerts {
+                request_id,
+                host_id,
+                monitor_id,
+                search_text,
+                start_time,
+                end_time,
+            } => match runtime.get_alerts(&host_id, &monitor_id, &search_text, start_time, end_time) {
+                Ok(invocation_id) => {
+                    session.send_message(&ServerMessage::MetricsQuery { request_id, invocation_id })?;
                 }
                 Err(error) => {
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;

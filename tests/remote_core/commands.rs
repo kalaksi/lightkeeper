@@ -392,12 +392,12 @@ fn remote_core_get_update_config() {
     with_remote_core_session(move |mut backend, config, ui_rx| {
         let _ = ui_rx.recv_timeout(Duration::from_secs(5));
         let (mut main0, hosts0, groups0) = config.get_config().unwrap();
-        assert!(!main0.preferences.show_charts);
+        assert!(!main0.preferences.refresh_hosts_on_start);
 
-        main0.preferences.show_charts = true;
+        main0.preferences.refresh_hosts_on_start = true;
         config.update_config(main0, hosts0, groups0).unwrap();
         let (main2, _, _) = config.get_config().unwrap();
-        assert!(main2.preferences.show_charts);
+        assert!(main2.preferences.refresh_hosts_on_start);
 
         backend.stop();
     });

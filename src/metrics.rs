@@ -5,12 +5,12 @@
 
 pub mod lmserver;
 
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 pub mod metric;
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 pub use metric::*;
 
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 pub mod metrics_manager;
-#[cfg(feature = "gui")]
+#[cfg(any(feature = "gui", feature = "core"))]
 pub use metrics_manager::MetricsManager;

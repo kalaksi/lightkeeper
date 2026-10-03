@@ -276,6 +276,7 @@ impl LkBackend {
         self.hosts.borrow_mut().set_hosts_config(hosts_config.clone());
         self.hosts.borrow_mut().set_configuration_preferences(main_config.preferences.clone());
         self.metrics.borrow_mut().set_hosts_config(hosts_config);
+        self.metrics.borrow_mut().set_display_options(main_config.display_options);
     }
 
     fn install_remote_backends(
@@ -285,10 +286,12 @@ impl LkBackend {
         config: (Configuration, configuration::Hosts, configuration::Groups),
     ) {
         let (main_config, _hosts, _groups) = &config;
-        let mut command_backend = RemoteCommandBackend::new(client);
+        let mut command_backend = RemoteCommandBackend::new(client.clone());
         command_backend.set_preferences(main_config.preferences.clone());
         self.config.borrow_mut().set_config_backend(Box::new(config_backend), config);
         self.command.borrow_mut().set_backend(Box::new(command_backend));
+        self.metrics.borrow_mut().stop();
+        self.metrics.borrow_mut().set_remote_client(Some(client));
         self.sync_models_from_config();
     }
 
@@ -544,6 +547,7 @@ impl LkBackend {
                     self.hosts.borrow_mut().set_hosts_config(hosts_config.clone());
                     self.hosts.borrow_mut().set_configuration_preferences(main_config.preferences.clone());
                     self.metrics.borrow_mut().set_hosts_config(hosts_config);
+                    self.metrics.borrow_mut().set_display_options(main_config.display_options);
                     self.reloaded(QString::from(""), QStringList::default());
                     return;
                 }

@@ -211,3 +211,73 @@ fn shell_command_result_server_roundtrip() {
         _ => panic!("Invalid message"),
     }
 }
+
+#[test]
+fn get_metrics_client_roundtrip() {
+    let mut buffer = Vec::new();
+    let message = ClientMessage::GetMetrics {
+        request_id: 5,
+        host_id: "h1".to_string(),
+        monitor_id: "load".to_string(),
+        start_time: 10,
+        end_time: 20,
+    };
+
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ClientMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ClientMessage::GetMetrics {
+            request_id,
+            host_id,
+            monitor_id,
+            start_time,
+            end_time,
+        } => {
+            assert_eq!(request_id, 5);
+            assert_eq!(host_id, "h1");
+            assert_eq!(monitor_id, "load");
+            assert_eq!(start_time, 10);
+            assert_eq!(end_time, 20);
+        }
+        _ => panic!("Invalid message"),
+    }
+}
+
+#[test]
+fn chart_and_metrics_query_server_roundtrip() {
+    use lightkeeper::metrics::lmserver::LMSResponse;
+    use std::collections::HashMap;
+
+    let mut buffer = Vec::new();
+    let message = ServerMessage::Chart(LMSResponse {
+        request_id: 6,
+        lag: 1,
+        metrics: HashMap::new(),
+        alerts: Vec::new(),
+        errors: Vec::new(),
+    });
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ServerMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ServerMessage::Chart(response) => assert_eq!(response.request_id, 6),
+        _ => panic!("Invalid message"),
+    }
+
+    let mut buffer = Vec::new();
+    let message = ServerMessage::MetricsQuery {
+        request_id: 7,
+        invocation_id: 8,
+    };
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ServerMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ServerMessage::MetricsQuery {
+            request_id,
+            invocation_id,
+        } => {
+            assert_eq!(request_id, 7);
+            assert_eq!(invocation_id, 8);
+        }
+        _ => panic!("Invalid message"),
+    }
+}

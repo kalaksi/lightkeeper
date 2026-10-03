@@ -61,6 +61,7 @@ impl RemoteSession {
 
             let result = match update {
                 frontend::UIUpdate::Host(host_update) => Self::send_on_writer(&writer, &ServerMessage::HostUpdate(host_update)),
+                frontend::UIUpdate::Chart(response) => Self::send_on_writer(&writer, &ServerMessage::Chart(response)),
                 frontend::UIUpdate::FatalError() => {
                     let result = Self::send_on_writer(
                         &writer,
@@ -72,7 +73,7 @@ impl RemoteSession {
                     result
                 }
                 frontend::UIUpdate::Stop() => return,
-                frontend::UIUpdate::Chart(_) | frontend::UIUpdate::CoreConnectionChanged() => continue,
+                frontend::UIUpdate::CoreConnectionChanged() => continue,
             };
 
             match result {
