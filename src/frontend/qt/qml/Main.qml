@@ -146,11 +146,16 @@ ApplicationWindow {
                 snackbarContainer.addSnackbar("Critical", error)
             }
             else {
-                // resetHosts are previously initialized hosts whose configuration changed.
-                // Re-initialize only the currently shown host.
+                // Same path as selecting a host again: host state is reset when settings change.
                 let shownHostId = hostTableModel.getSelectedHostId()
-                if (shownHostId !== "" && resetHosts.indexOf(shownHostId) !== -1) {
-                    LK.command.initializeHost(shownHostId)
+                if (shownHostId === "") {
+                    shownHostId = root.hostDetails.hostId
+                }
+                if (shownHostId !== "") {
+                    root.hostDetails.hostId = shownHostId
+                    if (!LK.hosts.isHostInitialized(shownHostId)) {
+                        LK.command.initializeHost(shownHostId)
+                    }
                 }
             }
         }

@@ -19,7 +19,7 @@ use crate::error::LkError;
 use crate::module::monitoring::DataPoint;
 use crate::monitor_manager::CERT_MONITOR_HOST_ID;
 use crate::Host;
-use crate::configuration::{ConfigGroup, HostSettings, Hosts};
+use crate::configuration::{HostSettings, Hosts};
 use crate::file_handler::{self, FileMetadata};
 use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
@@ -41,7 +41,7 @@ pub struct ConnectionManager {
     stateful_connectors: Arc<Mutex<HashMap<String, ConnectorStates>>>,
     module_factory: Arc<ModuleFactory>,
     /// Only meant for tracking config changes in re-configuration.
-    current_config: HashMap<String, ConfigGroup>,
+    current_config: BTreeMap<String, HostSettings>,
 
     request_receiver: Option<mpsc::Receiver<ConnectorRequest>>,
     request_sender_prototype: Option<mpsc::Sender<ConnectorRequest>>,
@@ -86,10 +86,14 @@ impl ConnectionManager {
             hosts_config.hosts.clone()
         }
         else {
-            // Re-add hosts that had their config changed.
+            // Re-add hosts that had their connection-relevant config changed.
             for (host_id, new_host_config) in hosts_config.hosts.iter() {
                 if let Some(current_host_config) = self.current_config.get(host_id) {
-                    if current_host_config.connectors != new_host_config.effective.connectors {
+                    let connectors_changed =
+                        current_host_config.effective.connectors != new_host_config.effective.connectors;
+                    let address_changed = current_host_config.address != new_host_config.address
+                        || current_host_config.fqdn != new_host_config.fqdn;
+                    if connectors_changed || address_changed {
                         stateful_connectors.remove(host_id);
                     }
                 }
@@ -160,9 +164,7 @@ impl ConnectionManager {
             }
         }
 
-        self.current_config = hosts_config.hosts.iter()
-            .map(|(host_id, config)| (host_id.clone(), config.effective.clone()))
-            .collect();
+        self.current_config = hosts_config.hosts.clone();
 
         let (sender, receiver) = mpsc::channel::<ConnectorRequest>();
         self.request_receiver = Some(receiver);
