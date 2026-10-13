@@ -59,7 +59,7 @@ impl CommandModule for Build {
         let service_name = parameters.get(2).unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec![

@@ -47,7 +47,7 @@ impl CommandModule for Refresh {
 
     fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Ubuntu, "20") {

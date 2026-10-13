@@ -14,7 +14,6 @@ use crate::utils::ShellCommand;
 use crate::{
     frontend,
     Host,
-    HostSetting,
 };
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
@@ -101,7 +100,7 @@ impl MonitoringModule for Haproxy {
         // Only nc needs elevated privileges to open the socket.
         let mut command = ShellCommand::new();
         command.arguments(vec!["echo", "show stat"]);
-        if host.settings.contains(&HostSetting::UseSudo) {
+        if host.should_use_sudo() {
             command.pipe_to(vec!["sudo", "nc", "-U", self.socket_file.as_str()]);
         }
         else {

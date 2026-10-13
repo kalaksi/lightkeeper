@@ -53,7 +53,7 @@ impl CommandModule for Up {
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let compose_file = parameters.first().unwrap();
         let mut command = ShellCommand::new();
-        command.use_sudo = self.as_root;
+        command.use_sudo = self.as_root && !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "compose", "-f", compose_file, "up", "-d"]);

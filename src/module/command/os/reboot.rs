@@ -45,7 +45,7 @@ impl CommandModule for Reboot {
 
     fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.argument("reboot");

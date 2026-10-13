@@ -76,7 +76,7 @@ impl CommandModule for FileBrowserChmod {
         };
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+        command.use_sudo = host.should_use_sudo();
         command.arguments(vec!["chmod", &chmod_mode, path]);
 
         // chown can overwrite special bits that were set with chmod, so need to guarantee order here.
@@ -95,7 +95,7 @@ impl CommandModule for FileBrowserChmod {
             };
 
             let mut chown_command = ShellCommand::new();
-            chown_command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+            chown_command.use_sudo = host.should_use_sudo();
             chown_command.arguments(vec!["chown", &owner_group, path]);
 
             return Ok(format!("{} && {}", chown_command.to_string(), command.to_string()));

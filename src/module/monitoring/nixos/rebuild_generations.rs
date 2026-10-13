@@ -54,7 +54,7 @@ impl MonitoringModule for RebuildGenerations {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
         command.ignore_stderr = true;
 
         if host.platform.is_same_or_greater(platform_info::Flavor::NixOS, "23.11") {

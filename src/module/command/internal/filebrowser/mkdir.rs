@@ -62,7 +62,7 @@ impl CommandModule for FileBrowserMkdir {
         let new_path_str = new_path.to_string_lossy();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+        command.use_sudo = host.should_use_sudo();
         command.arguments(vec!["mkdir", "--", &new_path_str]);
 
         Ok(command.to_string())

@@ -49,7 +49,7 @@ impl CommandModule for FileBrowserLsLinks {
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = host.settings.contains(&HostSetting::UseSudo);
+        command.use_sudo = host.should_use_sudo();
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();

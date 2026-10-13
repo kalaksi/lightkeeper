@@ -52,7 +52,7 @@ impl CommandModule for Stop {
         let service = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
             string_validation::begins_with_dash(service){

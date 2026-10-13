@@ -48,7 +48,7 @@ impl CommandModule for Up {
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let compose_file = parameters.first().unwrap();
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["docker", "compose", "-f", compose_file, "up", "-d"]);

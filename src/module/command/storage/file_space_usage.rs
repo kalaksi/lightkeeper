@@ -60,7 +60,7 @@ impl CommandModule for FileSpaceUsage {
         let mountpoint = &parameters[0];
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["du", "-x", "--block-size=1MB", mountpoint])

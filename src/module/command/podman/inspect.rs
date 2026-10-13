@@ -56,7 +56,7 @@ impl CommandModule for Inspect {
         let target_id = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = self.as_root;
+        command.use_sudo = self.as_root && !host.is_root;
 
         if !string_validation::is_alphanumeric_with(target_id, &"-_") {
             Err(LkError::invalid_parameter("Invalid container ID", target_id))

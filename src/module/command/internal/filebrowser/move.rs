@@ -65,7 +65,7 @@ impl CommandModule for FileBrowserMove {
             }
         }
 
-        let sudo = if host.settings.contains(&HostSetting::UseSudo) { "sudo " } else { "" };
+        let sudo = if host.should_use_sudo() { "sudo " } else { "" };
         let dest = match destination.ends_with('/') {
             true => destination.clone(),
             false => format!("{}/", destination),

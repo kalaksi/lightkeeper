@@ -16,6 +16,9 @@ pub struct Host {
     pub ip_address: IpAddr,
     pub platform: PlatformInfo,
     pub settings: Vec<HostSetting>,
+    /// True when the SSH connector username is root (default).
+    #[serde(default)]
+    pub is_root: bool,
 }
 
 impl Host {
@@ -37,6 +40,7 @@ impl Host {
             },
             platform: PlatformInfo::new(),
             settings: settings.to_vec(),
+            is_root: false,
         };
 
         Ok(new)
@@ -49,6 +53,7 @@ impl Host {
             ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             platform: PlatformInfo::default(),
             settings: settings.to_vec(),
+            is_root: false,
         }
     }
 
@@ -86,6 +91,11 @@ impl Host {
             self.ip_address.to_string()
         }
     }
+
+    /// Whether commands should prefix sudo (host allows sudo and session is not already root).
+    pub fn should_use_sudo(&self) -> bool {
+        self.settings.contains(&HostSetting::UseSudo) && !self.is_root
+    }
 }
 
 impl Default for Host {
@@ -96,6 +106,7 @@ impl Default for Host {
             ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             platform: PlatformInfo::default(),
             settings: Vec::default(),
+            is_root: false,
         }
     }
 }

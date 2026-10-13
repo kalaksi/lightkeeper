@@ -61,7 +61,7 @@ impl CommandModule for Shell {
         }
 
         let mut command = ShellCommand::new();
-        command.use_sudo = self.as_root;
+        command.use_sudo = self.as_root && !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "exec", "-it", target_id, "/bin/sh"]);

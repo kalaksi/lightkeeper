@@ -111,11 +111,17 @@ impl HostManager {
         for (host_id, new_host_config) in new_host_configs.iter() {
             log::debug!("Configuring host {}", host_id);
 
-            if let Ok(host) = Host::new(host_id, &new_host_config.address, &new_host_config.fqdn, &new_host_config.effective.host_settings) {
+            if let Ok(mut host) = Host::new(host_id, &new_host_config.address, &new_host_config.fqdn, &new_host_config.effective.host_settings) {
                 if host_states.hosts.contains_key(&host.name) {
                     log::error!("Host '{}' already exists", host.name);
                     continue;
                 }
+
+                // True only when SSH username is explicitly "root".
+                host.is_root = new_host_config.effective.connectors
+                    .get("ssh")
+                    .and_then(|config| config.settings.get("username"))
+                    .is_some_and(|username| username == "root");
 
                 let mut new_state = HostState::from_host(host.clone(), HostStatus::Unknown);
 

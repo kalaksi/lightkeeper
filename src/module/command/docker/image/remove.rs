@@ -54,7 +54,7 @@ impl CommandModule for Remove {
         let target_id = parameters.first().unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if !string_validation::is_alphanumeric_with(target_id, ":-.") {
             Err(LkError::invalid_parameter("Invalid image ID", target_id))

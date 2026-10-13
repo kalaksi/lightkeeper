@@ -105,7 +105,7 @@ impl CommandModule for FileBrowserDownload {
             self.verify_host_key,
             self.custom_known_hosts_path.as_deref(),
         )?);
-        if host.settings.contains(&HostSetting::UseSudo) {
+        if host.should_use_sudo() {
             command.argument("--rsync-path=sudo rsync");
         }
         command.arguments(vec![remote_spec, local_path.clone()]);

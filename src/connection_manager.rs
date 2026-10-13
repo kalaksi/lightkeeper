@@ -483,7 +483,7 @@ impl ConnectionManager {
 
     fn process_download(host: &Host, connector: &Connector, file_path: &str) -> Result<ResponseMessage, LkError> {
         log::debug!("[{}] Downloading file: {}", host.name, file_path);
-        if host.settings.contains(&crate::host::HostSetting::UseSudo) {
+        if host.should_use_sudo() {
             Self::download_file_with_sudo(host, connector, file_path)
         } else {
             match connector.download_file(file_path) {
@@ -502,7 +502,7 @@ impl ConnectionManager {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
         match file_handler::read_file(local_file_path) {
             Ok((metadata, contents)) => {
-                if host.settings.contains(&crate::host::HostSetting::UseSudo) {
+                if host.should_use_sudo() {
                     Self::upload_file_with_sudo(connector, &metadata.remote_path, contents, local_file_path)
                 } else {
                     match connector.upload_file(&metadata, contents) {

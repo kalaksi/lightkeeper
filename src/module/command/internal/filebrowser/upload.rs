@@ -96,7 +96,7 @@ impl CommandModule for FileBrowserUpload {
             self.custom_known_hosts_path.as_deref(),
         )?);
 
-        if host.settings.contains(&HostSetting::UseSudo) {
+        if host.should_use_sudo() {
             command.argument("--rsync-path=sudo rsync");
         }
         command.arguments(vec![local_path.clone(), remote_spec]);

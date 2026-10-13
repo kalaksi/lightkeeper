@@ -54,7 +54,7 @@ impl CommandModule for Restart {
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = self.as_root;
+        command.use_sudo = self.as_root && !host.is_root;
 
         let target_id = parameters.first().unwrap();
         if !string_validation::is_alphanumeric(target_id) {

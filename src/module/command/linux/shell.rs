@@ -57,9 +57,8 @@ impl CommandModule for Shell {
             return Err(LkError::unsupported_platform());
         }
 
-        if self.as_root && host.settings.contains(&crate::host::HostSetting::UseSudo) {
-            // Skip sudo when already root.
-            Ok(String::from(r#"[ "$(id -u)" -eq 0 ] || exec sudo -i"#))
+        if self.as_root && host.should_use_sudo() {
+            Ok(String::from("sudo -i"))
         }
         else {
             Ok(String::new())

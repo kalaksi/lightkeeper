@@ -54,7 +54,7 @@ impl CommandModule for LVRemove {
         let _lv_size = parameters.get(3).unwrap();
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if host.platform.is_same_or_greater(platform_info::Flavor::Debian, "9") ||
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||

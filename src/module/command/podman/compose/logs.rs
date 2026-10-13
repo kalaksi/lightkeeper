@@ -62,7 +62,7 @@ impl CommandModule for Logs {
         let row_count = parameters.get(6).and_then(|s| s.parse::<i32>().ok()).unwrap_or(1000);
 
         let mut command = ShellCommand::new();
-        command.use_sudo = self.as_root;
+        command.use_sudo = self.as_root && !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             command.arguments(vec!["podman", "compose", "-f", compose_file, "logs", "-t"]);

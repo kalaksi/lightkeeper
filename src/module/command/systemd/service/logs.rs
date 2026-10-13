@@ -56,7 +56,7 @@ impl CommandModule for Logs {
         let page_size = parameters.get(4).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1000);
 
         let mut command = ShellCommand::new();
-        command.use_sudo = true;
+        command.use_sudo = !host.is_root;
 
         if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
             string_validation::begins_with_dash(service){
