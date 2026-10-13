@@ -56,7 +56,7 @@ impl CommandModule for FileBrowser {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();
             command.arguments(vec![
-                "ls", "-lAL", "--group-directories-first", "--color=never", "--time-style=long-iso", path
+                "ls", "-lAL", "--group-directories-first", "--color=never", "--full-time", path
             ]);
         }
         else {

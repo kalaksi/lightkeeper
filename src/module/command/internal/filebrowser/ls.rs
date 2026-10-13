@@ -53,12 +53,13 @@ impl CommandModule for FileBrowserLs {
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();
+            // --full-time works on both GNU coreutils and BusyBox; --time-style does not.
             command.arguments(vec![
                 "ls",
                 "-lAL",
                 "--group-directories-first",
                 "--color=never",
-                "--time-style=long-iso",
+                "--full-time",
                 path
             ]);
         }
@@ -104,19 +105,43 @@ pub fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
 
     for line in lines {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let [permissions, links, owner, group, size, date, time, name_parts @ ..] = parts.as_slice()
-        else {
+        // permissions links owner group size date time [timezone] name...
+        if parts.len() < 8 {
             log::warn!("Invalid line: {}", line);
             continue;
-        };
+        }
+
+        let permissions = parts[0];
+        let links = parts[1];
+        let owner = parts[2];
+        let group = parts[3];
+        let size = parts[4];
+        let date = parts[5];
+        let time = parts[6];
 
         if !is_valid_ls_permissions(permissions) {
             return Err(output.trim().to_string());
         }
 
-        // Everything from index 7 onwards is the name.
+        // --full-time adds a timezone after time (BusyBox and GNU).
+        let timezone = parts[7].as_bytes();
+        let name_start = if timezone.len() >= 5
+            && matches!(timezone[0], b'+' | b'-')
+            && timezone[1..].iter().all(|&byte| byte.is_ascii_digit() || byte == b':')
+        {
+            8
+        }
+        else {
+            7
+        };
+        if parts.len() <= name_start {
+            log::warn!("Invalid line: {}", line);
+            continue;
+        }
+
+        // Everything from name_start onwards is the name.
         // This also converts any other whitespace characters to spaces.
-        let name = name_parts.join(" ");
+        let name = parts[name_start..].join(" ");
 
         // Determine file type from permissions first character
         let file_type = match permissions.chars().next() {

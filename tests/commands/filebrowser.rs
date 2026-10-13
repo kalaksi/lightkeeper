@@ -32,6 +32,24 @@ fn test_ls_parse_preserves_special_bits() {
 }
 
 #[test]
+fn test_ls_parse_full_time_with_timezone() {
+    let output = concat!(
+        "total 8\n",
+        "drwxr-xr-x 2 owner group 4096 2026-09-03 10:00:00 +0200 directory\n",
+        "-rw-r----- 1 alice staff 123 2026-09-03 10:03:45.123456789 +0000 valid file.txt\n",
+    );
+
+    let entries = parse_ls_output(output).unwrap();
+
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries[0]["name"], "directory");
+    assert_eq!(entries[0]["time"], "2026-09-03 10:00:00");
+    assert_eq!(entries[1]["name"], "valid file.txt");
+    assert_eq!(entries[1]["time"], "2026-09-03 10:03:45.123456789");
+    assert_eq!(entries[1]["owner"], "alice");
+}
+
+#[test]
 fn test_ls_parse_skips_malformed_lines() {
     let output = concat!(
         "total 4\n",
