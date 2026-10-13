@@ -10,7 +10,6 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
-use crate::utils::ShellCommand;
 use crate::enums;
 use lightkeeper_module::command_module;
 
@@ -54,24 +53,17 @@ impl CommandModule for Shell {
     }
 
     fn get_connector_message(&self, host: Host, _parameters: Vec<String>) -> Result<String, LkError> {
-        let mut command = ShellCommand::new();
-        command.use_sudo = false;
-
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            if self.as_root {
-                if host.settings.contains(&crate::host::HostSetting::UseSudo) {
-                    command.arguments(vec!["sudo", "-i"]);
-                }
-                else {
-                    command.arguments(vec!["su", "-"]);
-                }
-            }
-        }
-        else {
+        if host.platform.os != platform_info::OperatingSystem::Linux {
             return Err(LkError::unsupported_platform());
         }
 
-        Ok(command.to_string())
+        if self.as_root && host.settings.contains(&crate::host::HostSetting::UseSudo) {
+            // Skip sudo when already root.
+            Ok(String::from(r#"[ "$(id -u)" -eq 0 ] || exec sudo -i"#))
+        }
+        else {
+            Ok(String::new())
+        }
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {

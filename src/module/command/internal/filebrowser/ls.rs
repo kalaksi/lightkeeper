@@ -70,6 +70,16 @@ impl CommandModule for FileBrowserLs {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+        if response.return_code != 0 {
+            let msg = if response.message.trim().is_empty() {
+                format!("Failed to list directory (exit code {})", response.return_code)
+            }
+            else {
+                response.message.clone()
+            };
+            return Ok(CommandResult::new_error(msg));
+        }
+
         let entries = parse_ls_output(&response.message)?;
         let json_result = json!({
             "entries": entries
@@ -80,21 +90,29 @@ impl CommandModule for FileBrowserLs {
 
 pub fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
     let mut entries = Vec::new();
-    let lines: Vec<&str> = output.lines().collect();
+    let mut lines = output.lines().map(str::trim).filter(|line| !line.is_empty());
 
-    // Skip the first line which contains "total X"
-    for line in lines.iter().skip(1) {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
+    let Some(first_line) = lines.next() else {
+        return Ok(entries);
+    };
 
+    // Valid `ls -l` directory listings always start with "total N". Error messages do not;
+    // without this check they get mis-parsed as file rows and spread across UI columns.
+    if !first_line.starts_with("total ") {
+        return Err(output.trim().to_string());
+    }
+
+    for line in lines {
         let parts: Vec<&str> = line.split_whitespace().collect();
         let [permissions, links, owner, group, size, date, time, name_parts @ ..] = parts.as_slice()
         else {
             log::warn!("Invalid line: {}", line);
             continue;
         };
+
+        if !is_valid_ls_permissions(permissions) {
+            return Err(output.trim().to_string());
+        }
 
         // Everything from index 7 onwards is the name.
         // This also converts any other whitespace characters to spaces.
@@ -128,4 +146,23 @@ pub fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
     }
 
     Ok(entries)
+}
+
+fn is_valid_ls_permissions(permissions: &str) -> bool {
+    let bytes = permissions.as_bytes();
+    // type + 9 mode bits, optionally followed by ACL (+) and/or SELinux (.) markers
+    if bytes.len() < 10 || bytes.len() > 12 {
+        return false;
+    }
+    match bytes[0] {
+        b'd' | b'l' | b'c' | b'b' | b'p' | b's' | b'-' => {},
+        _ => return false,
+    }
+    for &byte in &bytes[1..10] {
+        match byte {
+            b'r' | b'w' | b'x' | b'-' | b's' | b'S' | b't' | b'T' => {},
+            _ => return false,
+        }
+    }
+    bytes[10..].iter().all(|&byte| byte == b'+' || byte == b'.')
 }

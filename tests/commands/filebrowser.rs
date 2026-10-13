@@ -48,6 +48,28 @@ fn test_ls_parse_skips_malformed_lines() {
 }
 
 #[test]
+fn test_ls_parse_rejects_error_output() {
+    let output = concat!(
+        "sudo: a terminal is required to read the password; either use the -S option ",
+        "to read from standard input or configure an askpass helper\n",
+        "sudo: a password is required\n",
+    );
+
+    let error = parse_ls_output(output).unwrap_err();
+    assert!(error.contains("sudo:"));
+}
+
+#[test]
+fn test_ls_parse_rejects_invalid_permissions_row() {
+    let output = concat!(
+        "total 4\n",
+        "Administrator. It usually boils down to these three things:\n",
+    );
+
+    assert!(parse_ls_output(output).is_err());
+}
+
+#[test]
 fn test_chmod_applies_ownership_first() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new(

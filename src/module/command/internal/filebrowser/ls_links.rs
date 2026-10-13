@@ -63,6 +63,16 @@ impl CommandModule for FileBrowserLsLinks {
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+        if response.return_code != 0 {
+            let msg = if response.message.trim().is_empty() {
+                format!("Failed to list directory (exit code {})", response.return_code)
+            }
+            else {
+                response.message.clone()
+            };
+            return Ok(CommandResult::new_error(msg));
+        }
+
         let entries = ls::parse_ls_output(&response.message)?;
         let json_result = json!({
             "entries": entries
