@@ -38,8 +38,8 @@ fn init_log() {
 fn stub_ssh_factory() -> ModuleFactory {
     const STUB_SSH_FALLBACK: &str = "stub-line-from-fake-ssh-connector-output\n";
     const BUSCTL_LIST_UNITS: &str = concat!(
-        r#""busctl" "--no-pager" "--json=short" "call" "org.freedesktop.systemd1" "#,
-        r#""/org/freedesktop/systemd1" "org.freedesktop.systemd1.Manager" "ListUnits""#
+        r#"'busctl' '--no-pager' '--json=short' 'call' 'org.freedesktop.systemd1' "#,
+        r#"'/org/freedesktop/systemd1' 'org.freedesktop.systemd1.Manager' 'ListUnits'"#
     );
     const BUSCTL_JSON: &str = r#"{
   "type": "a(ssssssouso)",

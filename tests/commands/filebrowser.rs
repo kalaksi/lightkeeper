@@ -91,7 +91,7 @@ fn test_ls_parse_rejects_invalid_permissions_row() {
 fn test_chmod_applies_ownership_first() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new(
-            r#""sudo" "chown" "alice:staff" "/tmp/file" && "sudo" "chmod" "6750" "/tmp/file""#,
+            r#"'sudo' 'chown' 'alice:staff' '/tmp/file' && 'sudo' 'chmod' '6750' '/tmp/file'"#,
             "",
             0,
         )
@@ -123,7 +123,7 @@ fn test_chmod_applies_ownership_first() {
 fn test_chmod_pads_numeric_mode() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new(
-            r#""sudo" "chmod" "00775" "/tmp/dir""#,
+            r#"'sudo' 'chmod' '00775' '/tmp/dir'"#,
             "",
             0,
         )
@@ -150,7 +150,7 @@ fn test_chmod_pads_numeric_mode() {
 fn test_chmod_keeps_three_digit_mode() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new(
-            r#""sudo" "chmod" "775" "/tmp/dir""#,
+            r#"'sudo' 'chmod' '775' '/tmp/dir'"#,
             "",
             0,
         )

@@ -13,7 +13,7 @@ use crate::{MonitorTestHarness, StubLocalCommand, StubSsh2, StubTcp, TEST_HOST_I
 #[test]
 fn test_ping() {
     let new_stub_local = |_settings: &HashMap<String, String>| {
-        StubLocalCommand::new(r#""ping" "-c" "2" "-W" "10" "127.0.0.1""#,
+        StubLocalCommand::new(r#"'ping' '-c' '2' '-W' '10' '127.0.0.1'"#,
 r#"PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 64 bytes from 127.0.0.1: icmp_seq=1 time=0.123 ms
 64 bytes from 127.0.0.1: icmp_seq=2 time=0.145 ms
@@ -69,7 +69,7 @@ r#"default via 192.168.1.1 dev eth0 proto static
 fn test_dns() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         let mut ssh = StubSsh2::default();
-        ssh.add_response(r#""grep" "-E" "^nameserver" "/etc/resolv.conf""#, "nameserver 127.0.0.1\nnameserver 127.0.0.2", 0);
+        ssh.add_response(r#"'grep' '-E' '^nameserver' '/etc/resolv.conf'"#, "nameserver 127.0.0.1\nnameserver 127.0.0.2", 0);
         ssh.add_response("resolvectl dns", r#"Global:\nLink 2 (enp123s0f3u1u2): 127.0.0.1\nLink 3 (wlp1s0):"#, 0);
         
         Box::new(ssh) as connection::Connector

@@ -110,7 +110,7 @@ r#"{
 #[test]
 fn test_lvm_logical_volume() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "lvs" "--separator" "|" "--options" "lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent" "--units" "h""#,
+        StubSsh2::new(r#"'sudo' 'lvs' '--separator' '|' '--options' 'lv_path,lv_name,vg_name,lv_size,lv_attr,sync_percent,raid_mismatch_count,snap_percent' '--units' 'h'"#,
 r#"  LV Path|LV|VG|LSize|Attr|Sync%|#Mis|Snap%  
   /dev/vg0/lv0|lv0|vg0|10.00h|-wi-ao----|100.00|0|"#, 0)
     };
@@ -135,7 +135,7 @@ r#"  LV Path|LV|VG|LSize|Attr|Sync%|#Mis|Snap%
 #[test]
 fn test_lvm_volume_group() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "vgs" "--separator" "|" "--options" "vg_name,vg_attr,vg_size,vg_free" "--units" "h""#,
+        StubSsh2::new(r#"'sudo' 'vgs' '--separator' '|' '--options' 'vg_name,vg_attr,vg_size,vg_free' '--units' 'h'"#,
 r#"  VG|Attr|VSize|VFree  
   vg0|wz--n-|20.00h|10.00h"#, 0)
     };
@@ -160,7 +160,7 @@ r#"  VG|Attr|VSize|VFree
 #[test]
 fn test_lvm_physical_volume() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "pvs" "--separator" "|" "--options" "pv_name,pv_attr,pv_size,pv_free" "--units" "h""#,
+        StubSsh2::new(r#"'sudo' 'pvs' '--separator' '|' '--options' 'pv_name,pv_attr,pv_size,pv_free' '--units' 'h'"#,
 r#"  PV|Attr|PSize|PFree  
   /dev/sda1|a--|20.00h|10.00h"#, 0)
     };

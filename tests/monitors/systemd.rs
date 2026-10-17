@@ -12,7 +12,7 @@ use crate::{MonitorTestHarness, StubSsh2};
 #[test]
 fn test_service() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""busctl" "--no-pager" "--json=short" "call" "org.freedesktop.systemd1" "/org/freedesktop/systemd1" "org.freedesktop.systemd1.Manager" "ListUnits""#,
+        StubSsh2::new(r#"'busctl' '--no-pager' '--json=short' 'call' 'org.freedesktop.systemd1' '/org/freedesktop/systemd1' 'org.freedesktop.systemd1.Manager' 'ListUnits'"#,
 r#"{
   "type": "a(ssssssouso)",
   "data": [

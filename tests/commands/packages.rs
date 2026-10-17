@@ -13,7 +13,7 @@ use crate::{CommandTestHarness, StubSsh2};
 fn test_update_all() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         // TODO: actual output
-        StubSsh2::new(r#""sudo" "apt" "upgrade" "-y""#,
+        StubSsh2::new(r#"'sudo' 'apt' 'upgrade' '-y'"#,
 r#"Reading package lists... Done
 Building dependency tree... Done
 Reading state information... Done
@@ -65,7 +65,7 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
 #[test]
 fn test_update_all_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "apt" "upgrade" "-y""#,
+        StubSsh2::new(r#"'sudo' 'apt' 'upgrade' '-y'"#,
             "E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)\nE: Unable to acquire the dpkg frontend lock (/var/lib/dpkg/lock-frontend), are you root?", 1)
     };
 
@@ -107,7 +107,7 @@ fn test_update_all_error() {
 #[test]
 fn test_update_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "apt" "--only-upgrade" "-y" "install" "docker-ce""#,
+        StubSsh2::new(r#"'sudo' 'apt' '--only-upgrade' '-y' 'install' 'docker-ce'"#,
 r#"Reading package lists... Done
 Building dependency tree... Done
 Reading state information... Done
@@ -165,7 +165,7 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
 #[test]
 fn test_update_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "apt" "--only-upgrade" "-y" "install" "nonexistent-package""#,
+        StubSsh2::new(r#"'sudo' 'apt' '--only-upgrade' '-y' 'install' 'nonexistent-package'"#,
             "E: Unable to locate package nonexistent-package", 1)
     };
 
@@ -208,7 +208,7 @@ fn test_update_error() {
 #[test]
 fn test_clean_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "apt-get" "clean""#,
+        StubSsh2::new(r#"'sudo' 'apt-get' 'clean'"#,
             "", 0)
     };
 
@@ -231,7 +231,7 @@ fn test_clean_success() {
 #[test]
 fn test_clean_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "apt-get" "clean""#,
+        StubSsh2::new(r#"'sudo' 'apt-get' 'clean'"#,
             "E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)", 1)
     };
 
@@ -255,7 +255,7 @@ fn test_clean_error() {
 #[test]
 fn test_refresh_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "apt" "update""#,
+        StubSsh2::new(r#"'sudo' 'apt' 'update'"#,
 r#"Hit:1 http://deb.debian.org/debian bookworm InRelease
 Hit:2 http://deb.debian.org/debian-security bookworm-security InRelease
 Hit:3 http://deb.debian.org/debian bookworm-updates InRelease
@@ -289,7 +289,7 @@ Reading package lists... Done"#, 0)
 #[test]
 fn test_refresh_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "apt" "update""#,
+        StubSsh2::new(r#"'sudo' 'apt' 'update'"#,
             "E: Could not open lock file /var/lib/apt/lists/lock - open (13: Permission denied)", 1)
     };
 
@@ -330,7 +330,7 @@ fn test_refresh_error() {
 #[test]
 fn test_logs_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "tail" "-n" "1000" "/var/log/apt/term.log""#,
+        StubSsh2::new(r#"'sudo' 'tail' '-n' '1000' '/var/log/apt/term.log'"#,
 r#"Log file: /var/log/apt/term.log
 Reading package lists...
 Building dependency tree...
@@ -360,7 +360,7 @@ Setting up docker-ce (5:29.0.3-1~debian.12~bookworm) ..."#, 0)
 #[test]
 fn test_logs_with_parameters() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "tail" "-n" "500" "/var/log/apt/term.log""#,
+        StubSsh2::new(r#"'sudo' 'tail' '-n' '500' '/var/log/apt/term.log'"#,
 r#"Log file: /var/log/apt/term.log
 Reading package lists...
 Building dependency tree..."#, 0)
@@ -390,7 +390,7 @@ Building dependency tree..."#, 0)
 #[test]
 fn test_logs_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "tail" "-n" "1000" "/var/log/apt/term.log""#,
+        StubSsh2::new(r#"'sudo' 'tail' '-n' '1000' '/var/log/apt/term.log'"#,
             "tail: cannot open '/var/log/apt/term.log' for reading: No such file or directory", 1)
     };
 

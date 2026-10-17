@@ -17,7 +17,7 @@ use crate::{CommandTestHarness, StubSsh2};
 #[test]
 fn test_start_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "start" "test-service.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'start' 'test-service.service'"#,
             "", 0)
     };
 
@@ -40,7 +40,7 @@ fn test_start_success() {
 #[test]
 fn test_start_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "start" "nonexistent.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'start' 'nonexistent.service'"#,
             "Failed to start nonexistent.service: Unit nonexistent.service not found.", 1)
     };
 
@@ -63,7 +63,7 @@ fn test_start_error() {
 #[test]
 fn test_stop_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "stop" "test-service.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'stop' 'test-service.service'"#,
             "", 0)
     };
 
@@ -86,7 +86,7 @@ fn test_stop_success() {
 #[test]
 fn test_stop_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "stop" "nonexistent.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'stop' 'nonexistent.service'"#,
             "Failed to stop nonexistent.service: Unit nonexistent.service not loaded.", 1)
     };
 
@@ -109,7 +109,7 @@ fn test_stop_error() {
 #[test]
 fn test_restart_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "restart" "test-service.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'restart' 'test-service.service'"#,
             "", 0)
     };
 
@@ -132,7 +132,7 @@ fn test_restart_success() {
 #[test]
 fn test_restart_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "restart" "nonexistent.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'restart' 'nonexistent.service'"#,
             "Failed to restart nonexistent.service: Unit nonexistent.service not found.", 1)
     };
 
@@ -155,7 +155,7 @@ fn test_restart_error() {
 #[test]
 fn test_mask_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "mask" "test-service.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'mask' 'test-service.service'"#,
             "", 0)
     };
 
@@ -178,7 +178,7 @@ fn test_mask_success() {
 #[test]
 fn test_mask_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "mask" "nonexistent.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'mask' 'nonexistent.service'"#,
             "Failed to mask unit: Unit nonexistent.service not found.", 1)
     };
 
@@ -201,7 +201,7 @@ fn test_mask_error() {
 #[test]
 fn test_unmask_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "unmask" "test-service.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'unmask' 'test-service.service'"#,
             "", 0)
     };
 
@@ -224,7 +224,7 @@ fn test_unmask_success() {
 #[test]
 fn test_unmask_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "systemctl" "unmask" "nonexistent.service""#,
+        StubSsh2::new(r#"'sudo' 'systemctl' 'unmask' 'nonexistent.service'"#,
             "Failed to unmask unit: Unit nonexistent.service not found.", 1)
     };
 
@@ -261,7 +261,7 @@ fn test_logs_success() {
             r#""MESSAGE":"Processing request"}"#,
         );
         StubSsh2::new(
-            r#""sudo" "journalctl" "-q" "-o" "json" "-u" "test-service.service" "-n" "1000""#,
+            r#"'sudo' 'journalctl' '-q' '-o' 'json' '-u' 'test-service.service' '-n' '1000'"#,
             output,
             0,
         )
@@ -297,7 +297,7 @@ fn test_logs_with_parameters() {
             r#""MESSAGE":"Log entry 2"}"#,
         );
         StubSsh2::new(
-            r#""sudo" "journalctl" "-q" "-o" "json" "-u" "test-service.service" "-n" "1000""#,
+            r#"'sudo' 'journalctl' '-q' '-o' 'json' '-u' 'test-service.service' '-n' '1000'"#,
             output,
             0,
         )
@@ -329,7 +329,7 @@ fn test_logs_with_parameters() {
 #[test]
 fn test_logs_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "journalctl" "-q" "-o" "json" "-u" "nonexistent.service" "-n" "1000""#,
+        StubSsh2::new(r#"'sudo' 'journalctl' '-q' '-o' 'json' '-u' 'nonexistent.service' '-n' '1000'"#,
             "No entries.", 1)
     };
 

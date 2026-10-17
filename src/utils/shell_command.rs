@@ -121,41 +121,27 @@ pub fn sh_single_quoted(s: &str) -> String {
 impl ToString for ShellCommand {
     fn to_string(&self) -> String {
         if self.arguments.is_empty() {
-            String::new()
+            return String::new();
         }
-        else {
-            let mut command;
-            if self.use_sudo {
-                command = process::Command::new("sudo");
-                for argument in self.arguments.iter() {
-                    command.arg(argument);
-                }
-            }
-            else {
-                command = process::Command::new(&self.arguments[0]);
-                for argument in self.arguments.iter().skip(1) {
-                    command.arg(argument);
-                }
-            };
 
-            let mut command_string = format!("{:?}", command);
+        // Every argument is single-quoted so the shell never expands anything inside them.
+        let quote_all = |arguments: &mut dyn Iterator<Item = &String>| {
+            arguments.map(|argument| sh_single_quoted(argument)).collect::<Vec<_>>().join(" ")
+        };
 
-            if self.ignore_stderr {
-                command_string = format!("{} 2>/dev/null", command_string);
-            }
-
-            if !self.piped_to.is_empty() {
-                for piped_arguments in self.piped_to.iter() {
-                    let mut piped_command = process::Command::new(&piped_arguments[0]);
-                    for argument in piped_arguments.iter().skip(1) {
-                        piped_command.arg(argument);
-                    }
-
-                    command_string = format!("{} | {:?}", command_string, piped_command);
-                }
-            }
-
-            command_string
+        let mut command_string = quote_all(&mut self.arguments.iter());
+        if self.use_sudo {
+            command_string = format!("'sudo' {}", command_string);
         }
+
+        if self.ignore_stderr {
+            command_string = format!("{} 2>/dev/null", command_string);
+        }
+
+        for piped_arguments in self.piped_to.iter() {
+            command_string = format!("{} | {}", command_string, quote_all(&mut piped_arguments.iter()));
+        }
+
+        command_string
     }
 }

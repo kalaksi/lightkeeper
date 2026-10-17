@@ -13,7 +13,7 @@ use crate::{MonitorTestHarness, StubSsh2, StubHttp, TEST_HOST_ID};
 #[test]
 fn test_compose() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/containers/json?all=true""#,
+        StubSsh2::new(r#"'sudo' 'curl' '-s' '--unix-socket' '/var/run/docker.sock' 'http://localhost/containers/json?all=true'"#,
 r#"[{
   "Id": "abc123",
   "Names": ["/project1_service1"],
@@ -51,7 +51,7 @@ r#"[{
 #[test]
 fn test_containers() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/containers/json?all=true""#,
+        StubSsh2::new(r#"'sudo' 'curl' '-s' '--unix-socket' '/var/run/docker.sock' 'http://localhost/containers/json?all=true'"#,
 r#"[{
   "Id": "abc123",
   "Names": ["/container1"],
@@ -95,7 +95,7 @@ r#"[{
 fn test_images() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         // Using a timestamp from about 100 days ago
-        StubSsh2::new(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/images/json""#,
+        StubSsh2::new(r#"'sudo' 'curl' '-s' '--unix-socket' '/var/run/docker.sock' 'http://localhost/images/json'"#,
 r#"[{
   "Id": "sha256:abc123",
   "Created": 1700000000,
@@ -218,7 +218,7 @@ r#"{
         vec![
             (StubSsh2::get_metadata(), |_settings: &HashMap<String, String>| {
                 let mut ssh = StubSsh2::default();
-                ssh.add_response(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/images/json""#,
+                ssh.add_response(r#"'sudo' 'curl' '-s' '--unix-socket' '/var/run/docker.sock' 'http://localhost/images/json'"#,
 r#"[{
   "Id": "sha256:abc123",
   "Created": 1700000000,

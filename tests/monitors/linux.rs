@@ -132,7 +132,7 @@ fn test_load() {
 #[test]
 fn test_package() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "apt" "list" "--upgradable""#, 
+        StubSsh2::new(r#"'sudo' 'apt' 'list' '--upgradable'"#, 
 r#"Listing... Done
 docker-ce-cli/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]
 docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]"#, 0)
@@ -158,7 +158,7 @@ docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.
 fn test_package_fedora_dnf_check_update() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new(
-            r#""sudo" "dnf" "check-update" "--quiet" "--assumeno""#,
+            r#"'sudo' 'dnf' 'check-update' '--quiet' '--assumeno'"#,
             r#"Last metadata expiration check: 0:05:00 ago on Sun 01 Jan 2000.
 systemd-shared.aarch64             258.7-1.fc43                updates
 systemd-sysusers.aarch64           258.7-1.fc43                updates-archive"#,
@@ -190,7 +190,7 @@ systemd-sysusers.aarch64           258.7-1.fc43                updates-archive"#
 fn test_package_alpine() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
         StubSsh2::new(
-            r#""sudo" "apk" "list" "--upgradable""#,
+            r#"'sudo' 'apk' 'list' '--upgradable'"#,
             r#"rsync-3.2.3-r4 x86_64 {rsync} (GPL-3.0-or-later) [upgradable from: rsync-3.2.3-r2]
 curl-7.78.0-r0 x86_64 {curl} (MIT) [upgradable from: curl-7.77.0-r1]"#,
             0,

@@ -20,7 +20,7 @@ serviceA,FRONTEND,,19,262122,OPEN,0,,,,,tcp
 ";
 
 const EXPECTED_COMMAND: &str =
-    r#""echo" "show stat" | "sudo" "nc" "-U" "/run/haproxy/admin.sock""#;
+    r#"'echo' 'show stat' | 'sudo' 'nc' '-U' '/run/haproxy/admin.sock'"#;
 
 #[test]
 fn test_haproxy() {

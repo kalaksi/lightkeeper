@@ -11,7 +11,7 @@ use crate::{MonitorTestHarness, StubSsh2};
 #[test]
 fn test_rebuild_generations() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "nixos-rebuild" "list-generations" "--json" 2>/dev/null"#, 
+        StubSsh2::new(r#"'sudo' 'nixos-rebuild' 'list-generations' '--json' 2>/dev/null"#, 
 r#"[{"generation":3,"date":"2024-01-15T10:30:00Z","nixosVersion":"23.11","kernelVersion":"6.1.0","current":true},
 {"generation":2,"date":"2024-01-10T08:15:00Z","nixosVersion":"23.11","kernelVersion":"6.1.0","current":false},
 {"generation":1,"date":"2024-01-05T12:00:00Z","nixosVersion":"23.11","kernelVersion":"6.1.0","current":false}]"#, 0)

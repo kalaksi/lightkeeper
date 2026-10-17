@@ -13,7 +13,7 @@ use crate::{CommandTestHarness, StubSsh2};
 #[test]
 fn test_inspect() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "curl" "-s" "--unix-socket" "/var/run/docker.sock" "http://localhost/containers/test-container/json?all=true""#,
+        StubSsh2::new(r#"'sudo' 'curl' '-s' '--unix-socket' '/var/run/docker.sock' 'http://localhost/containers/test-container/json?all=true'"#,
 r#"{
   "Id": "8001819398ea4b320c0604a26f0d0f15ebd0353bc76f113f1d9ac629a83458d8",
   "Created": "2025-11-16T10:49:42.466460495Z",
@@ -302,7 +302,7 @@ r#"{
 #[test]
 fn test_compose_up_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "up" "-d""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'up' '-d'"#,
             "", 0)
     };
 
@@ -325,7 +325,7 @@ fn test_compose_up_success() {
 #[test]
 fn test_compose_up_with_service() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "up" "-d" "service1""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'up' '-d' 'service1'"#,
             "", 0)
     };
 
@@ -351,7 +351,7 @@ fn test_compose_up_with_service() {
 #[test]
 fn test_compose_up_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/nonexistent/docker-compose.yml" "up" "-d""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/nonexistent/docker-compose.yml' 'up' '-d'"#,
             "Error: can't find a suitable configuration file", 1)
     };
 
@@ -374,7 +374,7 @@ fn test_compose_up_error() {
 #[test]
 fn test_compose_start_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "start""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'start'"#,
             "", 0)
     };
 
@@ -396,7 +396,7 @@ fn test_compose_start_success() {
 #[test]
 fn test_compose_start_with_service() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "start" "service1""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'start' 'service1'"#,
             "", 0)
     };
 
@@ -422,7 +422,7 @@ fn test_compose_start_with_service() {
 #[test]
 fn test_compose_start_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/nonexistent/docker-compose.yml" "start""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/nonexistent/docker-compose.yml' 'start'"#,
             "Error: can't find a suitable configuration file", 1)
     };
 
@@ -445,7 +445,7 @@ fn test_compose_start_error() {
 #[test]
 fn test_compose_stop_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "stop""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'stop'"#,
             "", 0)
     };
 
@@ -468,7 +468,7 @@ fn test_compose_stop_success() {
 #[test]
 fn test_compose_stop_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/nonexistent/docker-compose.yml" "stop""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/nonexistent/docker-compose.yml' 'stop'"#,
             "Error: can't find a suitable configuration file", 1)
     };
 
@@ -491,7 +491,7 @@ fn test_compose_stop_error() {
 #[test]
 fn test_compose_restart_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "restart""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'restart'"#,
             "", 0)
     };
 
@@ -514,7 +514,7 @@ fn test_compose_restart_success() {
 #[test]
 fn test_compose_restart_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/nonexistent/docker-compose.yml" "restart""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/nonexistent/docker-compose.yml' 'restart'"#,
             "Error: can't find a suitable configuration file", 1)
     };
 
@@ -537,7 +537,7 @@ fn test_compose_restart_error() {
 #[test]
 fn test_compose_logs_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "logs" "-t" "--tail" "1000" "service1""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'logs' '-t' '--tail' '1000' 'service1'"#,
             r#"project1-service1-1  | 2025-12-01T10:00:00.000Z Starting service
 project1-service1-1  | 2025-12-01T10:00:01.000Z Service started successfully"#, 0)
     };
@@ -571,7 +571,7 @@ project1-service1-1  | 2025-12-01T10:00:01.000Z Service started successfully"#, 
 #[test]
 fn test_compose_logs_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "logs" "-t" "--tail" "1000" "nonexistent""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'logs' '-t' '--tail' '1000' 'nonexistent'"#,
             "Error: no such service: nonexistent", 1)
     };
 
@@ -602,7 +602,7 @@ fn test_compose_logs_error() {
 #[test]
 fn test_compose_pull_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "pull""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'pull'"#,
             "Pulling service1...\nlatest: Pulling from library/nginx\nStatus: Downloaded newer image", 0)
     };
 
@@ -625,7 +625,7 @@ fn test_compose_pull_success() {
 #[test]
 fn test_compose_pull_with_local_image() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "pull""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'pull'"#,
             r#"Pulling service1...
 Error response from daemon: dial tcp 127.0.0.1:80: connect: connection refused
 0 errors occurred"#, 1)
@@ -650,7 +650,7 @@ Error response from daemon: dial tcp 127.0.0.1:80: connect: connection refused
 #[test]
 fn test_compose_pull_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "-f" "/mnt/containers/project1/docker-compose.yml" "pull""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '-f' '/mnt/containers/project1/docker-compose.yml' 'pull'"#,
             r#"Pulling service1...
 Error response from daemon: pull access denied
 1 errors occurred"#, 1)
@@ -675,7 +675,7 @@ Error response from daemon: pull access denied
 #[test]
 fn test_compose_build_success() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "--progress=plain" "-f" "/mnt/containers/project1/docker-compose.yml" "build" "service1""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '--progress=plain' '-f' '/mnt/containers/project1/docker-compose.yml' 'build' 'service1'"#,
             r#"Building service1
 Step 1/5 : FROM nginx:latest
 Step 2/5 : COPY . /usr/share/nginx/html
@@ -713,7 +713,7 @@ Successfully built abc123"#, 0)
 #[test]
 fn test_compose_build_error() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#""sudo" "docker" "compose" "--progress=plain" "-f" "/mnt/containers/project1/docker-compose.yml" "build" "service1""#,
+        StubSsh2::new(r#"'sudo' 'docker' 'compose' '--progress=plain' '-f' '/mnt/containers/project1/docker-compose.yml' 'build' 'service1'"#,
             r#"Building service1
 Step 1/5 : FROM nginx:latest
 ERROR: failed to solve: failed to fetch"#, 1)
