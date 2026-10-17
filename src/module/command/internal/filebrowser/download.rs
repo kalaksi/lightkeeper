@@ -13,7 +13,8 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::{UIAction, *};
-use crate::utils::{ShellCommand, sh_single_quoted};
+use crate::utils::ShellCommand;
+use serde::{Deserialize, Serialize};
 use lightkeeper_module::command_module;
 
 #[command_module(
@@ -23,23 +24,13 @@ use lightkeeper_module::command_module;
     uses_sudo=true,
 )]
 pub struct FileBrowserDownload {
-    username: String,
-    port: u16,
-    private_key_path: Option<String>,
-    verify_host_key: bool,
-    custom_known_hosts_path: Option<PathBuf>,
+    ssh: RsyncSsh,
 }
 
 impl Module for FileBrowserDownload {
     fn new(settings: &HashMap<String, String>) -> Self {
         FileBrowserDownload {
-            username: settings.get("username").cloned().unwrap_or_default(),
-            port: settings.get("port").and_then(|v| v.parse().ok()).unwrap_or(22),
-            private_key_path: settings.get("private_key_path").cloned(),
-            verify_host_key: settings.get("verify_host_key")
-                .and_then(|v| v.parse().ok()).unwrap_or(true),
-            custom_known_hosts_path: settings.get("custom_known_hosts_path")
-                .map(PathBuf::from),
+            ssh: RsyncSsh::new(settings),
         }
     }
 }
@@ -85,26 +76,13 @@ impl CommandModule for FileBrowserDownload {
             return Err(LkError::other("Local path is empty"));
         }
 
-        // Directory paths from the file browser end with '/'.
-        // Strip it so rsync copies whole directories instead of just their contents.
-        let trimmed_remote = remote_path.trim_end_matches('/');
-        let remote_path = if trimmed_remote.is_empty() { remote_path.as_str() } else { trimmed_remote };
-
-        let remote_spec = match self.username.is_empty() {
-            true => format!("{}:{}", host.get_address(), remote_path),
-            false => format!("{}@{}:{}", self.username, host.get_address(), remote_path),
-        };
+        let remote_spec = self.ssh.remote_spec(&host.get_address(), remote_path, false)?;
 
         let mut command = ShellCommand::new();
         command.use_sudo = false;
         command.arguments(vec!["env", "LANG=C", "LC_ALL=C", "rsync", "-avz", "--info=progress2", "--stats", RSYNC_OUT_FORMAT]);
         command.argument("-e");
-        command.argument(build_rsync_ssh_command(
-            self.port,
-            self.private_key_path.as_deref(),
-            self.verify_host_key,
-            self.custom_known_hosts_path.as_deref(),
-        )?);
+        command.argument(rsync_remote_shell(&self.ssh.ssh_arguments()?)?);
         if host.should_use_sudo() {
             command.argument("--rsync-path=sudo rsync");
         }
@@ -123,39 +101,111 @@ impl CommandModule for FileBrowserDownload {
     }
 }
 
-pub fn build_rsync_ssh_command(
-    port: u16,
-    private_key_path: Option<&str>,
-    verify_host_key: bool,
-    custom_known_hosts_path: Option<&std::path::Path>,
-) -> Result<String, LkError> {
-    let known_hosts_path = match custom_known_hosts_path {
-        Some(path) => path.to_path_buf(),
-        None => {
-            let path = file_handler::get_config_dir().join("known_hosts");
-            if !path.exists() {
-                std::fs::File::create(&path)
-                    .map_err(|error| LkError::other(format!("{}", error)))?;
-            }
-            path
-        }
-    };
+/// SSH connector settings needed for rsync's remote shell.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RsyncSsh {
+    pub username: String,
+    pub port: u16,
+    pub private_key_path: Option<String>,
+    pub verify_host_key: bool,
+    pub custom_known_hosts_path: Option<PathBuf>,
+}
 
-    let mut parts = vec![String::from("ssh")];
-    parts.push(format!("-p {}", port));
-    if let Some(key_path) = private_key_path {
-        parts.push(format!("-i {}", sh_single_quoted(key_path)));
+impl RsyncSsh {
+    pub fn new(ssh_settings: &HashMap<String, String>) -> Self {
+        RsyncSsh {
+            username: ssh_settings.get("username").cloned().unwrap_or_default(),
+            port: ssh_settings.get("port").and_then(|v| v.parse().ok()).unwrap_or(22),
+            private_key_path: ssh_settings.get("private_key_path").cloned(),
+            verify_host_key: ssh_settings.get("verify_host_key")
+                .and_then(|v| v.parse().ok()).unwrap_or(true),
+            custom_known_hosts_path: ssh_settings.get("custom_known_hosts_path")
+                .map(PathBuf::from),
+        }
     }
-    if verify_host_key {
-        parts.push(format!("-o UserKnownHostsFile={}",
-            sh_single_quoted(&known_hosts_path.to_string_lossy())));
-        parts.push(String::from("-o GlobalKnownHostsFile=/dev/null"));
+
+    /// Builds the remote `user@host:path` side of an rsync transfer.
+    /// Address and username are validated so the spec can't become an rsync option or a local path.
+    pub fn remote_spec(&self, address: &str, remote_path: &str, for_upload: bool) -> Result<String, LkError> {
+        let is_invalid = |value: &str| {
+            value.starts_with('-') ||
+                value.contains(|c: char| matches!(c, ':' | '@' | '/') || c.is_whitespace() || c.is_control())
+        };
+        if address.is_empty() || is_invalid(address) || is_invalid(&self.username) {
+            return Err(LkError::other("Invalid host address or username"));
+        }
+
+        let path = if for_upload {
+            if remote_path.ends_with('/') {
+                remote_path.to_string()
+            }
+            else {
+                format!("{}/", remote_path)
+            }
+        }
+        else {
+            // Directory paths from the file browser end with '/'.
+            // Strip it so rsync copies whole directories instead of just their contents.
+            let trimmed = remote_path.trim_end_matches('/');
+            if trimmed.is_empty() { remote_path.to_string() } else { trimmed.to_string() }
+        };
+
+        if self.username.is_empty() {
+            Ok(format!("{}:{}", address, path))
+        }
+        else {
+            Ok(format!("{}@{}:{}", self.username, address, path))
+        }
     }
-    else {
-        parts.push(String::from("-o StrictHostKeyChecking=no"));
-        parts.push(String::from("-o UserKnownHostsFile=/dev/null"));
+
+    /// Custom known hosts path or the default one, which is created if missing.
+    pub fn known_hosts_path(&self) -> Result<PathBuf, LkError> {
+        match &self.custom_known_hosts_path {
+            Some(path) => Ok(path.clone()),
+            None => {
+                let path = file_handler::get_config_dir().join("known_hosts");
+                if !path.exists() {
+                    std::fs::File::create(&path)
+                        .map_err(|error| LkError::other(format!("{}", error)))?;
+                }
+                Ok(path)
+            }
+        }
     }
-    Ok(parts.join(" "))
+
+    /// Unquoted ssh arguments for rsync's remote shell.
+    pub fn ssh_arguments(&self) -> Result<Vec<String>, LkError> {
+        let mut arguments = vec![String::from("ssh"), String::from("-p"), self.port.to_string()];
+        if let Some(key_path) = &self.private_key_path {
+            arguments.extend([String::from("-i"), key_path.clone()]);
+        }
+        if self.verify_host_key {
+            arguments.extend([
+                String::from("-o"),
+                format!("UserKnownHostsFile={}", self.known_hosts_path()?.to_string_lossy()),
+                String::from("-o"),
+                String::from("GlobalKnownHostsFile=/dev/null"),
+            ]);
+        }
+        else {
+            arguments.extend([
+                String::from("-o"),
+                String::from("StrictHostKeyChecking=no"),
+                String::from("-o"),
+                String::from("UserKnownHostsFile=/dev/null"),
+            ]);
+        }
+        Ok(arguments)
+    }
+}
+
+/// Joins arguments for rsync's `-e`. rsync splits the remote shell command itself and only supports quotes
+/// (no escaping), so arguments containing double quotes are rejected.
+pub fn rsync_remote_shell(arguments: &[String]) -> Result<String, LkError> {
+    if arguments.iter().any(|argument| argument.contains('"')) {
+        return Err(LkError::other("Remote shell arguments can't contain double quotes"));
+    }
+    Ok(arguments.iter().map(|argument| format!("\"{}\"", argument)).collect::<Vec<_>>().join(" "))
 }
 
 /// Parses rsync --info=progress2 output and returns the last percentage (0-100).
