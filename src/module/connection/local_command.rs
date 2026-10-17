@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::io::Read;
 use std::os::unix::io::AsRawFd;
+use std::os::unix::process::CommandExt;
 use std::process::{self, Stdio};
 use std::sync::{Arc, Mutex};
 
@@ -56,10 +57,12 @@ impl ConnectionModule for LocalCommand {
 
     fn send_message_partial(&self, message: &str, _invocation_id: u64) -> Result<ResponseMessage, LkError> {
         let merged_command = format!("{{ {}; }} 2>&1", message);
+        // Own process group so interrupt reaches the actual command and not only the wrapping shell.
         let mut child = process::Command::new("bash")
             .args(["-c", &merged_command])
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
+            .process_group(0)
             .spawn()?;
 
         let mut stdout = child.stdout.take()
@@ -103,8 +106,9 @@ impl ConnectionModule for LocalCommand {
     }
 
     fn interrupt(&self, _invocation_id: u64) -> Result<(), LkError> {
-        if let Some(ref mut open) = *self.open_process.lock()? {
-            let _ = open.child.kill();
+        if let Some(ref open) = *self.open_process.lock()? {
+            // SIGINT lets commands like rsync exit cleanly with their own "interrupted" exit code.
+            unsafe { libc::kill(-(open.child.id() as libc::pid_t), libc::SIGINT) };
         }
         Ok(())
     }
