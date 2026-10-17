@@ -88,10 +88,14 @@ impl CoreRuntime {
     }
 
     pub fn get_metrics(&self, host_id: &str, monitor_id: &str, start_time: i64, end_time: i64) -> Result<u64, LkError> {
-        let Some(metrics_manager) = &self.metrics_manager else {
+        let Some(metrics_manager) = &self.metrics_manager
+        else {
             return Err(LkError::other("Charts are disabled on the remote core"));
         };
-        metrics_manager.lock().unwrap().get_metrics(host_id, monitor_id, start_time, end_time)
+        metrics_manager
+            .lock()
+            .unwrap()
+            .get_metrics(host_id, monitor_id, start_time, end_time)
     }
 
     pub fn get_alerts(
@@ -102,7 +106,8 @@ impl CoreRuntime {
         start_time: i64,
         end_time: i64,
     ) -> Result<u64, LkError> {
-        let Some(metrics_manager) = &self.metrics_manager else {
+        let Some(metrics_manager) = &self.metrics_manager
+        else {
             return Err(LkError::other("Charts are disabled on the remote core"));
         };
         metrics_manager
@@ -113,7 +118,8 @@ impl CoreRuntime {
 
     /// Restarts metrics ingest after core components are replaced (e.g. config update).
     pub fn attach_metrics_ingest(&mut self) {
-        let Some(metrics_manager) = self.metrics_manager.clone() else {
+        let Some(metrics_manager) = self.metrics_manager.clone()
+        else {
             return;
         };
 
@@ -122,27 +128,25 @@ impl CoreRuntime {
 
         thread::spawn(move || {
             while let Ok(update) = receiver.recv() {
-                let frontend::UIUpdate::Host(display_data) = update else {
+                let frontend::UIUpdate::Host(display_data) = update
+                else {
                     continue;
                 };
 
-                let Some(new_monitoring_data) = display_data.new_monitoring_data else {
+                let Some(new_monitoring_data) = display_data.new_monitoring_data
+                else {
                     continue;
                 };
 
                 let monitor_id = new_monitoring_data.1.monitor_id.clone();
-                let previous = display_data
-                    .host_state
-                    .monitor_data
-                    .get(&monitor_id)
-                    .and_then(|monitor_data| {
-                        if monitor_data.values.len() >= 2 {
-                            monitor_data.values.get(monitor_data.values.len() - 2).cloned()
-                        }
-                        else {
-                            None
-                        }
-                    });
+                let previous = display_data.host_state.monitor_data.get(&monitor_id).and_then(|monitor_data| {
+                    if monitor_data.values.len() >= 2 {
+                        monitor_data.values.get(monitor_data.values.len() - 2).cloned()
+                    }
+                    else {
+                        None
+                    }
+                });
 
                 if let Some(current) = new_monitoring_data.1.values.back().cloned() {
                     let mut metrics_manager = metrics_manager.lock().unwrap();
