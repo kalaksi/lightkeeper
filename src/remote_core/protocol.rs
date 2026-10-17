@@ -14,8 +14,9 @@ use crate::command_handler::CommandButtonData;
 use crate::configuration::CustomCommandConfig;
 use crate::frontend::{DisplayData, HostDisplayData};
 use crate::metrics::lmserver::LMSResponse;
+use crate::module::command::internal::filebrowser::download::RsyncSsh;
 
-pub const PROTOCOL_VERSION: u16 = 12;
+pub const PROTOCOL_VERSION: u16 = 13;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -184,6 +185,13 @@ pub enum ClientMessage {
         host_id: String,
         remote_file_path: String,
     },
+    /// Builds desktop-side rsync pieces for file-browser upload/download (nested SSH via core).
+    BuildFileTransferCommand {
+        request_id: u64,
+        host_id: String,
+        command_id: String,
+        remote_path: String,
+    },
     GetMetrics {
         request_id: u64,
         host_id: String,
@@ -300,6 +308,29 @@ pub enum ServerMessage {
         request_id: u64,
         arguments: Vec<String>,
     },
+    FileTransferCommandResult {
+        request_id: u64,
+        plan: FileTransferPlan,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum FileTransferDirection {
+    Upload,
+    Download,
+}
+
+/// Core-provided data for a desktop-owned rsync transfer. Local paths stay on the desktop.
+/// Only plain data is sent so that the desktop builds (and validates) all commands itself.
+/// `ssh` describes the inner ssh (managed-host hop) that the desktop nests through the core.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FileTransferPlan {
+    pub invocation_id: u64,
+    pub direction: FileTransferDirection,
+    pub address: String,
+    pub remote_path: String,
+    pub ssh: RsyncSsh,
+    pub use_sudo_rsync: bool,
 }
 
 impl ServerMessage {

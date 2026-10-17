@@ -19,6 +19,8 @@ use crate::utils::ErrorMessage;
 pub enum UIUpdate {
     Host(HostDisplayData),
     Chart(lmserver::LMSResponse),
+    /// Result for an invocation that runs on the desktop instead of the core (e.g. remote core file transfers).
+    CommandResult(u64, CommandResult),
     CoreConnectionChanged(),
     FatalError(),
     Stop(),

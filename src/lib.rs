@@ -20,8 +20,8 @@ pub mod utils;
 pub mod enums;
 // Made public for integration tests
 pub mod frontend;
+pub mod metrics;
 pub mod file_handler;
-mod metrics;
 pub mod remote_core;
 pub mod backend;
 

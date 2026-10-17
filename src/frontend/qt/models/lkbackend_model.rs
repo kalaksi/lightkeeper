@@ -18,6 +18,7 @@ use crate::{
     file_handler,
     frontend::{HostDisplayData, UIUpdate},
     host_manager,
+    module::command::CommandResult,
     module::monitoring::{DataPoint, MonitoringData},
     metrics,
 };
@@ -142,6 +143,14 @@ impl LkBackend {
         });
 
         let self_ptr = QPointer::from(&*self);
+        let process_command_result =
+            qmetaobject::queued_callback(move |(invocation_id, command_result): (u64, CommandResult)| {
+                if let Some(self_pinned) = self_ptr.as_pinned() {
+                    self_pinned.borrow().hosts.borrow_mut().process_command_result(invocation_id, command_result);
+                }
+            });
+
+        let self_ptr = QPointer::from(&*self);
         let process_chart_update = qmetaobject::queued_callback(move |response: metrics::lmserver::LMSResponse| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
                 self_pinned.borrow().metrics.borrow_mut().process_update(response);
@@ -231,6 +240,9 @@ impl LkBackend {
                                 process_host_update(display_data);
                             }
                             UIUpdate::Chart(metrics) => process_chart_update(metrics),
+                            UIUpdate::CommandResult(invocation_id, command_result) => {
+                                process_command_result((invocation_id, command_result))
+                            }
                             UIUpdate::CoreConnectionChanged() => handle_core_connection_change(()),
                             UIUpdate::FatalError() => {
                                 handle_crash(());
@@ -285,10 +297,9 @@ impl LkBackend {
         config_backend: RemoteConfigBackend,
         config: (Configuration, configuration::Hosts, configuration::Groups),
     ) {
-        let (main_config, _hosts, _groups) = &config;
-        let mut command_backend = RemoteCommandBackend::new(client.clone());
-        command_backend.set_preferences(main_config.preferences.clone());
         self.config.borrow_mut().set_config_backend(Box::new(config_backend), config);
+        let mut command_backend = RemoteCommandBackend::new(client.clone());
+        command_backend.set_preferences(self.config.borrow().main_config_ref().preferences.clone());
         self.command.borrow_mut().set_backend(Box::new(command_backend));
         self.metrics.borrow_mut().stop();
         self.metrics.borrow_mut().set_remote_client(Some(client));

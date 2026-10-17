@@ -6,6 +6,7 @@
 mod client;
 mod commands;
 mod config;
+mod file_transfer;
 mod protocol;
 mod socket;
 mod ssh_transport;

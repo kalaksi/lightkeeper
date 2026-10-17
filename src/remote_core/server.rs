@@ -137,11 +137,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
     result
 }
 
-fn handle_client_messages(
-    stream: &mut UnixStream,
-    runtime: &mut CoreRuntime,
-    session: &mut RemoteSession,
-) -> Result<(), LkError> {
+fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, session: &mut RemoteSession) -> Result<(), LkError> {
     loop {
         let message = match read_message::<ClientMessage, _>(stream) {
             Ok(message) => message,
@@ -546,6 +542,23 @@ fn handle_client_messages(
             {
                 Ok(command) => {
                     session.send_message(&ServerMessage::ShellCommandResult { request_id, arguments: command.to_vec() })?;
+                }
+                Err(error) => {
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                }
+            },
+            ClientMessage::BuildFileTransferCommand {
+                request_id,
+                host_id,
+                command_id,
+                remote_path,
+            } => match runtime
+                .core
+                .command_handler
+                .build_file_transfer_plan(&host_id, &command_id, &remote_path)
+            {
+                Ok(plan) => {
+                    session.send_message(&ServerMessage::FileTransferCommandResult { request_id, plan })?;
                 }
                 Err(error) => {
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;

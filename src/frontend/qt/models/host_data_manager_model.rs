@@ -9,6 +9,7 @@ use qmetaobject::*;
 use crate::configuration;
 use crate::enums::Criticality;
 use crate::frontend;
+use crate::module::command::CommandResult;
 use crate::module::monitoring::AlertLeaf;
 use crate::module::monitoring::MonitoringData;
 
@@ -175,6 +176,11 @@ impl HostDataManagerModel {
         }
 
         self.updateReceived(QString::from(host_state.host.name.clone()));
+    }
+
+    pub fn process_command_result(&mut self, invocation_id: u64, command_result: CommandResult) {
+        let json = QString::from(serde_json::to_string(&command_result).unwrap());
+        self.commandResultReceived(json, invocation_id);
     }
 
     // Get monitoring data as a QVariant.
