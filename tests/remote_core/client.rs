@@ -31,7 +31,7 @@ fn probe_succeeds_against_local_core_socket() {
         assert!(!client.is_connected());
     });
 
-    let stream = listener.recv().unwrap();
+    let stream = listener.recv().unwrap().unwrap();
     // Probe disconnects right after handshake; InitialState send may see a broken pipe.
     let _ = server::run_claimed_remote_client_session(stream, &mut runtime, &listener.session_active_flag());
     client_thread.join().unwrap();

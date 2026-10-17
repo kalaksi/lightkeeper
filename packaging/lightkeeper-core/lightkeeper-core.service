@@ -8,6 +8,7 @@ Type=simple
 ExecStart=%h/.local/bin/lightkeeper-core
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=30
 # Environment=RUST_LOG=info
 
 [Install]

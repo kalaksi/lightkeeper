@@ -65,7 +65,7 @@ fn second_client_is_rejected_while_first_is_connected() {
         drop(stream);
     });
 
-    let _first_stream = listener.recv().unwrap();
+    let _first_stream = listener.recv().unwrap().unwrap();
 
     let mut second = UnixStream::connect(&socket_path).unwrap();
     second
@@ -135,7 +135,7 @@ fn failed_handshake_releases_session_claim() {
         }
     });
 
-    let stream = listener.recv().unwrap();
+    let stream = listener.recv().unwrap().unwrap();
     assert!(
         *listener.session_active_flag().lock().unwrap(),
         "accept thread should claim the session before handoff"
@@ -151,7 +151,7 @@ fn failed_handshake_releases_session_claim() {
 
     let connect_path = socket_path.clone();
     let second_client = thread::spawn(move || UnixStream::connect(&connect_path).unwrap());
-    let accepted = listener.recv().unwrap();
+    let accepted = listener.recv().unwrap().unwrap();
     second_client.join().unwrap();
     assert!(
         *listener.session_active_flag().lock().unwrap(),

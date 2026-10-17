@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use lightkeeper::Configuration;
 use lightkeeper::remote_core::runtime::CoreRuntime;
-use lightkeeper::remote_core::server::CoreServer;
+use lightkeeper::remote_core::server::{CoreServer, ShutdownSignals};
 
 #[derive(Parser, Clone)]
 pub struct Args {
@@ -30,11 +30,19 @@ fn main() {
 
     log::info!("Lightkeeper Core starting...");
 
+    let shutdown_signals = match ShutdownSignals::block() {
+        Ok(shutdown_signals) => shutdown_signals,
+        Err(error) => {
+            log::error!("Failed to set up signal handling: {}", error);
+            std::process::exit(1);
+        }
+    };
+
     let (main_config, hosts_config, _group_config) = match Configuration::read(&args.config_dir) {
         Ok(configuration) => configuration,
         Err(error) => {
             log::error!("Error while reading configuration files: {}", error);
-            return;
+            std::process::exit(1);
         }
     };
 
@@ -43,7 +51,7 @@ fn main() {
             Ok(path) => path,
             Err(error) => {
                 log::error!("Failed to determine socket path: {}", error);
-                return;
+                std::process::exit(1);
             }
         }
     }
@@ -55,11 +63,11 @@ fn main() {
         Ok(runtime) => runtime,
         Err(error) => {
             log::error!("Failed to start backend runtime: {}", error);
-            return;
+            std::process::exit(1);
         }
     };
 
-    if let Err(error) = CoreServer::start(socket_path, runtime) {
+    if let Err(error) = CoreServer::start(socket_path, runtime, shutdown_signals) {
         log::error!("Core server stopped: {}", error);
         std::process::exit(1);
     }

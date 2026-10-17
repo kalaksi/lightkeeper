@@ -5,6 +5,7 @@
 
 use std::fs;
 use std::io;
+use std::net::Shutdown;
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
@@ -600,7 +601,9 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
 pub struct CoreListener {
     socket_path: PathBuf,
     client_session_active: Arc<Mutex<bool>>,
-    incoming: mpsc::Receiver<UnixStream>,
+    /// None is sent to wake up the receiver for shutdown.
+    incoming: mpsc::Receiver<Option<UnixStream>>,
+    incoming_sender: mpsc::Sender<Option<UnixStream>>,
     _accept_thread: thread::JoinHandle<()>,
 }
 
@@ -610,6 +613,7 @@ impl CoreListener {
         let listener = socket::bind_listener(&socket_path)?;
 
         let (incoming_tx, incoming_rx) = mpsc::channel();
+        let incoming_sender = incoming_tx.clone();
         let client_session_active = Arc::new(Mutex::new(false));
         let accept_active = client_session_active.clone();
 
@@ -641,7 +645,7 @@ impl CoreListener {
                 *active = true;
             }
 
-            if incoming_tx.send(stream).is_err() {
+            if incoming_tx.send(Some(stream)).is_err() {
                 if let Ok(mut active) = accept_active.lock() {
                     *active = false;
                 }
@@ -653,11 +657,13 @@ impl CoreListener {
             socket_path,
             client_session_active,
             incoming: incoming_rx,
+            incoming_sender,
             _accept_thread: accept_thread,
         })
     }
 
-    pub fn recv(&self) -> Result<UnixStream, LkError> {
+    /// Returns None when shutdown was requested.
+    pub fn recv(&self) -> Result<Option<UnixStream>, LkError> {
         self.incoming.recv().map_err(|_| LkError::other("Accept thread stopped"))
     }
 
@@ -686,30 +692,95 @@ impl Drop for CoreListener {
     }
 }
 
+/// Blocks SIGTERM and SIGINT so that `CoreServer` can handle them for graceful shutdown.
+/// Has to be created before spawning any threads since threads inherit the signal mask.
+pub struct ShutdownSignals {
+    signal_set: libc::sigset_t,
+}
+
+impl ShutdownSignals {
+    pub fn block() -> io::Result<Self> {
+        let mut signal_set = unsafe { std::mem::zeroed::<libc::sigset_t>() };
+        let result = unsafe {
+            libc::sigemptyset(&mut signal_set);
+            libc::sigaddset(&mut signal_set, libc::SIGTERM);
+            libc::sigaddset(&mut signal_set, libc::SIGINT);
+            libc::pthread_sigmask(libc::SIG_BLOCK, &signal_set, std::ptr::null_mut())
+        };
+
+        if result != 0 {
+            return Err(io::Error::from_raw_os_error(result));
+        }
+        Ok(ShutdownSignals { signal_set })
+    }
+}
+
+/// Kept under one lock so a session starting during shutdown can't miss the shutdown request.
+#[derive(Default)]
+struct ActiveSession {
+    stream: Option<UnixStream>,
+    shutdown_requested: bool,
+}
+
 pub struct CoreServer {
     listener: CoreListener,
     runtime: CoreRuntime,
+    active_session: Arc<Mutex<ActiveSession>>,
 }
 
 impl CoreServer {
-    pub fn start(socket_path: PathBuf, runtime: CoreRuntime) -> Result<(), LkError> {
+    pub fn start(socket_path: PathBuf, runtime: CoreRuntime, shutdown_signals: ShutdownSignals) -> Result<(), LkError> {
         let listener = CoreListener::bind(socket_path)?;
-        let mut server = CoreServer { listener, runtime };
+        let active_session = Arc::new(Mutex::new(ActiveSession::default()));
+
+        let wake_sender = listener.incoming_sender.clone();
+        let signal_session = active_session.clone();
+        thread::spawn(move || {
+            let mut signal = 0;
+            let result = unsafe { libc::sigwait(&shutdown_signals.signal_set, &mut signal) };
+            if result != 0 {
+                log::error!("Waiting for shutdown signals failed: {}", io::Error::from_raw_os_error(result));
+                return;
+            }
+
+            log::info!("Received signal {}, shutting down", signal);
+            let mut session = signal_session.lock().unwrap();
+            session.shutdown_requested = true;
+            if let Some(stream) = session.stream.take() {
+                let _ = stream.shutdown(Shutdown::Both);
+            }
+            let _ = wake_sender.send(None);
+        });
+
+        let mut server = CoreServer { listener, runtime, active_session };
         server.run()
     }
 
     fn run(&mut self) -> Result<(), LkError> {
         log::info!("Listening on {}", self.listener.socket_path().display());
 
-        loop {
-            let stream = self.listener.recv()?;
+        while let Some(stream) = self.listener.recv()? {
+            {
+                let mut session = self.active_session.lock().unwrap();
+                if session.shutdown_requested {
+                    break;
+                }
+                session.stream = Some(stream.try_clone()?);
+            }
+
             let session_active = self.listener.session_active_flag();
-            if let Err(error) = run_claimed_remote_client_session(stream, &mut self.runtime, &session_active) {
+            let result = run_claimed_remote_client_session(stream, &mut self.runtime, &session_active);
+            self.active_session.lock().unwrap().stream = None;
+
+            if let Err(error) = result {
                 log::error!("Client session failed: {}", error);
                 if error.kind == ErrorKind::Fatal {
                     return Err(error);
                 }
             }
         }
+
+        log::info!("Core server stopped");
+        Ok(())
     }
 }
