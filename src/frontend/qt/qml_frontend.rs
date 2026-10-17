@@ -5,7 +5,7 @@
 
 use std::env;
 use std::rc::Rc;
-use std::{cell::RefCell, sync::mpsc};
+use std::{cell::Cell, cell::RefCell, sync::mpsc};
 extern crate qmetaobject;
 use qmetaobject::*;
 
@@ -77,12 +77,14 @@ impl QmlFrontend {
         host_manager: Rc<RefCell<host_manager::HostManager>>,
         metrics_manager: Option<MetricsManager>,
         skip_connection_processing: bool,
+        skip_core_auto_connect: bool,
     ) -> ExitReason {
         qml_register_type::<PropertyTableModel>(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("HostTableModel"));
 
         let display_data = host_manager.borrow().get_display_data();
         let file_chooser = FileChooserModel::new();
+        let restart_local = Rc::new(Cell::new(false));
         let lk_backend = LkBackend::new(
             self.update_sender_prototype.clone(),
             self.update_receiver.take().unwrap(),
@@ -100,6 +102,8 @@ impl QmlFrontend {
                 config_backend,
             ),
             skip_connection_processing,
+            skip_core_auto_connect,
+            restart_local.clone(),
         );
 
         let is_flatpak = env::var("FLATPAK_ID").is_ok();
@@ -126,7 +130,12 @@ impl QmlFrontend {
             arc_engine.exec();
         }
 
-        ExitReason::Quit
+        if restart_local.get() {
+            ExitReason::RestartLocal
+        }
+        else {
+            ExitReason::Quit
+        }
     }
 
     pub fn new_update_sender(&self) -> mpsc::Sender<frontend::UIUpdate> {

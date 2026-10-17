@@ -152,6 +152,10 @@ ApplicationWindow {
             root.refreshRemoteCoreBlocked()
         }
 
+        function onRestartRequested() {
+            root.quit()
+        }
+
         function onReloaded(error, resetHosts) {
             hostTableModel.displayData = LK.hosts.getDisplayData()
             // Rebuild details tables from post-reload state (update() only upserts monitors).
@@ -325,7 +329,7 @@ ApplicationWindow {
         }
 
         let coreProfile = LK.config.getCoreConnection()
-        if (coreProfile.autoConnect && (coreProfile.host || "").trim().length > 0) {
+        if (coreProfile.autoConnect && !LK.isCoreAutoConnectSkipped() && (coreProfile.host || "").trim().length > 0) {
             let connectError = LK.connectCore()
             root.refreshRemoteCoreBlocked()
             if (connectError !== "") {
@@ -499,7 +503,7 @@ ApplicationWindow {
                         wrapMode: Text.WordWrap
                         text: root.coreConnectionError !== ""
                             ? root.coreConnectionError
-                            : "Connect to remote Lightkeeper core, or Quit and restart to use locally."
+                            : "Connect to remote Lightkeeper core, or restart to use locally."
                     }
 
                     RowLayout {
@@ -509,6 +513,11 @@ ApplicationWindow {
                         Button {
                             text: "Open connection settings"
                             onClicked: root.dialogHandler.openCoreConnection()
+                        }
+
+                        Button {
+                            text: "Restart locally"
+                            onClicked: LK.disconnectCore()
                         }
 
                         Button {

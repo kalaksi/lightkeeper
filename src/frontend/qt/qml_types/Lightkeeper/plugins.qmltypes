@@ -640,6 +640,7 @@ Module {
         Method { name: "getCoreConnectionState"; type: "string" }
         Method { name: "getCoreConnectionError"; type: "string" }
         Method { name: "isUsingRemoteCore"; type: "bool" }
+        Method { name: "isCoreAutoConnectSkipped"; type: "bool" }
         Method { name: "getCoreHostKeyChallenge"; type: "QVariantMap" }
         Method { name: "clearCoreHostKeyChallenge" }
         Method {
@@ -655,6 +656,7 @@ Module {
         }
         Signal { name: "crashed" }
         Signal { name: "coreConnectionChanged" }
+        Signal { name: "restartRequested" }
     }
 
     Component {

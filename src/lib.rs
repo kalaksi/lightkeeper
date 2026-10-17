@@ -43,6 +43,8 @@ use host::Host;
 pub enum ExitReason {
     Quit,
     Restart,
+    /// Restart without automatically connecting to remote core.
+    RestartLocal,
 }
 
 pub struct CoreComponents {
@@ -129,6 +131,7 @@ pub fn run(
     main_config: &Configuration,
     hosts_config: &configuration::Hosts,
     group_config: &configuration::Groups,
+    skip_core_auto_connect: bool,
     test: bool,
 ) -> Result<ExitReason, String> {
 
@@ -179,6 +182,7 @@ pub fn run(
             host_manager,
             metrics_manager,
             false,
+            skip_core_auto_connect,
         ))
     }
     else {

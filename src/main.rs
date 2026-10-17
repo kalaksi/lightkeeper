@@ -45,6 +45,7 @@ fn main() {
         return;
     }
 
+    let mut skip_core_auto_connect = false;
     loop {
         log::info!("Lightkeeper starting...");
 
@@ -56,7 +57,14 @@ fn main() {
             }
         };
 
-        let exit_reason = lightkeeper::run(&args.config_dir, &main_config, &hosts_config, &group_config, false);
+        let exit_reason = lightkeeper::run(
+            &args.config_dir,
+            &main_config,
+            &hosts_config,
+            &group_config,
+            skip_core_auto_connect,
+            false,
+        );
 
         match exit_reason {
             Err (error) => {
@@ -67,6 +75,10 @@ fn main() {
                 break
             },
             Ok(ExitReason::Restart) => {
+                continue
+            },
+            Ok(ExitReason::RestartLocal) => {
+                skip_core_auto_connect = true;
                 continue
             },
         };

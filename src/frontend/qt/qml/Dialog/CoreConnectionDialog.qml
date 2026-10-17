@@ -617,7 +617,7 @@ LightkeeperDialog {
         }
         else if (root.usingRemote) {
             root.statusText = "Remote core disconnected"
-            root.statusHint = "Connect again, or Quit to use local"
+            root.statusHint = "Connect again, or Disconnect to restart locally"
             root.errorText = error
         }
         else {

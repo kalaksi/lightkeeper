@@ -4,7 +4,7 @@
  */
 
 extern crate qmetaobject;
-use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::mpsc, sync::Arc, thread};
+use std::{cell::Cell, cell::RefCell, path::PathBuf, rc::Rc, sync::mpsc, sync::Arc, thread};
 
 use qmetaobject::*;
 
@@ -60,6 +60,7 @@ pub struct LkBackend {
     getCoreConnectionState: qt_method!(fn(&self) -> QString),
     getCoreConnectionError: qt_method!(fn(&self) -> QString),
     isUsingRemoteCore: qt_method!(fn(&self) -> bool),
+    isCoreAutoConnectSkipped: qt_method!(fn(&self) -> bool),
     getCoreHostKeyChallenge: qt_method!(fn(&self) -> QVariantMap),
     clearCoreHostKeyChallenge: qt_method!(fn(&mut self)),
     verifyCoreHostKey: qt_method!(fn(&mut self, key_id: QString) -> QString),
@@ -72,6 +73,8 @@ pub struct LkBackend {
     // Somewhere, a panic has occurred and app needs to be reloaded.
     crashed: qt_signal!(),
     coreConnectionChanged: qt_signal!(),
+    // App should quit so it can be restarted in local mode.
+    restartRequested: qt_signal!(),
 
     //
     // Private properties
@@ -84,6 +87,9 @@ pub struct LkBackend {
     connection_manager: ConnectionManager,
     host_manager: Rc<RefCell<host_manager::HostManager>>,
     skip_connection_processing: bool,
+    skip_core_auto_connect: bool,
+    /// Shared with QmlFrontend, which restarts the app in local mode when set.
+    restart_local: Rc<Cell<bool>>,
     remote_client: Option<Arc<RemoteCoreClient>>,
     using_remote: bool,
     last_remote_core_host_probe: Option<RemoteCoreHostProbe>,
@@ -102,6 +108,8 @@ impl LkBackend {
         metrics_model: MetricsManagerModel,
         config_model: ConfigManagerModel,
         skip_connection_processing: bool,
+        skip_core_auto_connect: bool,
+        restart_local: Rc<Cell<bool>>,
     ) -> LkBackend {
 
         LkBackend {
@@ -115,6 +123,8 @@ impl LkBackend {
             host_manager: host_manager,
             connection_manager: connection_manager,
             skip_connection_processing,
+            skip_core_auto_connect,
+            restart_local,
             ..Default::default()
         }
     }
@@ -501,13 +511,13 @@ impl LkBackend {
         QString::from("")
     }
 
+    /// Local backends were detached when switching to remote, so the app is restarted to use them again.
     fn disconnectCore(&mut self) {
         if let Some(client) = &self.remote_client {
             client.stop_connection();
         }
-        self.hosts.borrow_mut().clear_hosts();
-        self.coreConnectionChanged();
-        self.reloaded(QString::from(""), QStringList::default());
+        self.restart_local.set(true);
+        self.restartRequested();
     }
 
     fn getCoreConnectionState(&self) -> QString {
@@ -528,6 +538,10 @@ impl LkBackend {
 
     fn isUsingRemoteCore(&self) -> bool {
         self.using_remote
+    }
+
+    fn isCoreAutoConnectSkipped(&self) -> bool {
+        self.skip_core_auto_connect
     }
 
     fn acknowledgeMonitorEntry(&mut self, host_id: QString, monitor_id: QString, entry_id: QString, acknowledged: bool) -> bool {
