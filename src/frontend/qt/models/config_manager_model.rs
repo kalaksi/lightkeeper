@@ -187,7 +187,7 @@ impl ConfigManagerModel {
         backend: Box<dyn ConfigBackend>,
         (main_config, hosts_config, groups_config): (Configuration, Hosts, Groups),
     ) {
-        self.main_config = main_config;
+        self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config;
         self.groups_config = groups_config;
         self.config_backend = Some(backend);
@@ -208,10 +208,43 @@ impl ConfigManagerModel {
     pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts), LkError> {
         ::log::info!("Reloading configuration...");
         let (main_config, hosts_config, groups_config) = self.config_backend.as_ref().unwrap().get_config()?;
-        self.main_config = main_config.clone();
+        self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config.clone();
         self.groups_config = groups_config;
-        Ok((main_config, hosts_config))
+        Ok((self.main_config.clone(), hosts_config))
+    }
+
+    /// Preferences for launching desktop programs always come from the local config, so that a remote core
+    /// can't make the desktop run arbitrary commands.
+    fn with_local_desktop_preferences(&self, mut main_config: Configuration) -> Configuration {
+        let preferences = &mut main_config.preferences;
+        match Configuration::read(&self.config_dir) {
+            Ok((local_config, _, _)) => {
+                preferences.text_editor = local_config.preferences.text_editor;
+                preferences.terminal = local_config.preferences.terminal;
+                preferences.terminal_args = local_config.preferences.terminal_args;
+            }
+            Err(error) => {
+                ::log::error!("Failed to read local configuration, using internal editor and terminal: {}", error);
+                preferences.text_editor = configuration::INTERNAL.to_string();
+                preferences.terminal = configuration::INTERNAL.to_string();
+                preferences.terminal_args = Vec::new();
+            }
+        }
+        main_config
+    }
+
+    /// Desktop preferences are stored locally also when the configuration backend is a remote core.
+    fn write_local_desktop_preferences(&mut self) {
+        let result = Configuration::read(&self.config_dir).and_then(|(mut local_config, _, _)| {
+            local_config.preferences.text_editor = self.main_config.preferences.text_editor.clone();
+            local_config.preferences.terminal = self.main_config.preferences.terminal.clone();
+            local_config.preferences.terminal_args = self.main_config.preferences.terminal_args.clone();
+            Configuration::write_main_config(&self.config_dir, &local_config)
+        });
+        if let Err(error) = result {
+            self.error(QString::from(format!("Failed to write local preferences: {}", error)));
+        }
     }
 
     fn getPreferences(&self) -> QVariantMap {
@@ -278,6 +311,7 @@ impl ConfigManagerModel {
                 editor_prefs_map.value("wordWrap".into(), true.into()).to_bool();
         }
 
+        self.write_local_desktop_preferences();
         if let Err(error) = self.config_backend.as_mut().unwrap()
             .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
         {
@@ -530,6 +564,7 @@ impl ConfigManagerModel {
                 self.main_config.preferences.terminal_args = Vec::new();
             }
 
+            self.write_local_desktop_preferences();
             if let Err(error) = self.config_backend.as_mut().unwrap()
                 .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
             {
