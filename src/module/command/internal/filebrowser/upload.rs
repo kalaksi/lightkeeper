@@ -4,7 +4,6 @@
  */
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 use crate::error::LkError;
 use super::download;
 use crate::frontend;
@@ -22,23 +21,13 @@ use lightkeeper_module::command_module;
     uses_sudo=true,
 )]
 pub struct FileBrowserUpload {
-    username: String,
-    port: u16,
-    private_key_path: Option<String>,
-    verify_host_key: bool,
-    custom_known_hosts_path: Option<PathBuf>,
+    ssh: download::RsyncSsh,
 }
 
 impl Module for FileBrowserUpload {
     fn new(settings: &HashMap<String, String>) -> Self {
         FileBrowserUpload {
-            username: settings.get("username").cloned().unwrap_or_default(),
-            port: settings.get("port").and_then(|v| v.parse().ok()).unwrap_or(22),
-            private_key_path: settings.get("private_key_path").cloned(),
-            verify_host_key: settings.get("verify_host_key")
-                .and_then(|v| v.parse().ok()).unwrap_or(true),
-            custom_known_hosts_path: settings.get("custom_known_hosts_path")
-                .map(PathBuf::from),
+            ssh: download::RsyncSsh::new(settings),
         }
     }
 }
@@ -68,16 +57,6 @@ impl CommandModule for FileBrowserUpload {
         let local_path = parameters.first().ok_or(LkError::other("No local path specified"))?;
         let remote_path = parameters.get(1).ok_or(LkError::other("No remote path specified"))?;
 
-        let remote_dir = if remote_path.ends_with('/') {
-            remote_path.clone()
-        } else {
-            format!("{}/", remote_path)
-        };
-        let remote_spec = match self.username.is_empty() {
-            true => format!("{}:{}", host.get_address(), remote_dir),
-            false => format!("{}@{}:{}", self.username, host.get_address(), remote_dir),
-        };
-
         if local_path.is_empty() {
             return Err(LkError::other("Local path is empty"));
         }
@@ -85,16 +64,13 @@ impl CommandModule for FileBrowserUpload {
             return Err(LkError::other("Remote path is empty"));
         }
 
+        let remote_spec = self.ssh.remote_spec(&host.get_address(), remote_path, true)?;
+
         let mut command = ShellCommand::new();
         command.use_sudo = false;
         command.arguments(vec!["env", "LANG=C", "LC_ALL=C", "rsync", "-avz", "--info=progress2", "--stats", download::RSYNC_OUT_FORMAT]);
         command.argument("-e");
-        command.argument(download::build_rsync_ssh_command(
-            self.port,
-            self.private_key_path.as_deref(),
-            self.verify_host_key,
-            self.custom_known_hosts_path.as_deref(),
-        )?);
+        command.argument(download::rsync_remote_shell(&self.ssh.ssh_arguments()?)?);
 
         if host.should_use_sudo() {
             command.argument("--rsync-path=sudo rsync");
