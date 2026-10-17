@@ -16,7 +16,7 @@ pub use api::{CommandBackend, ConfigBackend, LocalBackendApi};
 pub use core_connection::{CoreConnectionState, CoreConnectionStatus};
 pub use local::LocalCommandBackend;
 pub use local_config::LocalConfigBackend;
-pub use remote::{RemoteCommandBackend, RemoteCoreClient};
+pub use remote::{build_desktop_rsync_command, RemoteCommandBackend, RemoteCoreClient};
 pub use remote_config::RemoteConfigBackend;
 pub use ssh_auth::{HostKeyChallenge, SshAuthError};
 pub use ssh_transport::{accept_remote_core_host_key, probe_remote_core_host, CoreInstallPlan, RemoteCoreHostProbe};

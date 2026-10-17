@@ -73,7 +73,7 @@ impl RemoteSession {
                     result
                 }
                 frontend::UIUpdate::Stop() => return,
-                frontend::UIUpdate::CoreConnectionChanged() => continue,
+                frontend::UIUpdate::CoreConnectionChanged() | frontend::UIUpdate::CommandResult(..) => continue,
             };
 
             match result {

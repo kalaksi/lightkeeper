@@ -166,6 +166,69 @@ fn initial_state_with_hosts_roundtrip_works() {
 }
 
 #[test]
+fn build_file_transfer_command_client_roundtrip() {
+    let mut buffer = Vec::new();
+    let message = ClientMessage::FileTransferPlan {
+        request_id: 11,
+        host_id: "h1".to_string(),
+        command_id: "_internal-filebrowser-upload".to_string(),
+        remote_path: "/tmp/dest".to_string(),
+    };
+
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ClientMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ClientMessage::FileTransferPlan {
+            request_id,
+            host_id,
+            command_id,
+            remote_path,
+        } => {
+            assert_eq!(request_id, 11);
+            assert_eq!(host_id, "h1");
+            assert_eq!(command_id, "_internal-filebrowser-upload");
+            assert_eq!(remote_path, "/tmp/dest");
+        }
+        _ => panic!("Invalid message"),
+    }
+}
+
+#[test]
+fn file_transfer_command_result_server_roundtrip() {
+    use lightkeeper::module::command::internal::filebrowser::download::RsyncSsh;
+    use lightkeeper::remote_core::protocol::{FileTransferDirection, FileTransferPlan};
+    use std::collections::HashMap;
+
+    let mut buffer = Vec::new();
+    let message = ServerMessage::FileTransferPlanResult {
+        request_id: 12,
+        plan: FileTransferPlan {
+            invocation_id: 99,
+            direction: FileTransferDirection::Download,
+            address: "host".to_string(),
+            remote_path: "/tmp/a".to_string(),
+            ssh: RsyncSsh::new(&HashMap::from([("port".to_string(), "2222".to_string())])),
+            use_sudo_rsync: true,
+        },
+    };
+
+    write_message(&mut buffer, &message).unwrap();
+    let decoded: ServerMessage = read_message(&mut buffer.as_slice()).unwrap();
+    match decoded {
+        ServerMessage::FileTransferPlanResult { request_id, plan } => {
+            assert_eq!(request_id, 12);
+            assert_eq!(plan.invocation_id, 99);
+            assert_eq!(plan.direction, FileTransferDirection::Download);
+            assert_eq!(plan.address, "host");
+            assert_eq!(plan.remote_path, "/tmp/a");
+            assert_eq!(plan.ssh.port, 2222);
+            assert!(plan.use_sudo_rsync);
+        }
+        _ => panic!("Invalid message"),
+    }
+}
+
+#[test]
 fn build_terminal_command_client_roundtrip() {
     let mut buffer = Vec::new();
     let message = ClientMessage::BuildTerminalCommand {

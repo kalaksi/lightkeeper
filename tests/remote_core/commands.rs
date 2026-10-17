@@ -40,7 +40,7 @@ fn init_log() {
     let _ = env_logger::Builder::from_default_env().is_test(true).try_init();
 }
 
-fn stub_ssh_factory() -> ModuleFactory {
+pub(crate) fn stub_ssh_factory() -> ModuleFactory {
     const STUB_SSH_FALLBACK: &str = "stub-line-from-fake-ssh-connector-output\n";
     const BUSCTL_LIST_UNITS: &str = concat!(
         r#"'busctl' '--no-pager' '--json=short' 'call' 'org.freedesktop.systemd1' "#,
@@ -82,7 +82,7 @@ fn stub_ssh_factory() -> ModuleFactory {
     )
 }
 
-fn stub_hosts() -> configuration::Hosts {
+pub(crate) fn stub_hosts() -> configuration::Hosts {
     let mut host_settings = configuration::HostSettings::default();
     host_settings.address = "127.0.0.1".to_string();
     // Use `overrides`, not `effective`: `write_hosts_config` clears `effective` before serializing.
@@ -136,7 +136,7 @@ fn stub_hosts() -> configuration::Hosts {
     }
 }
 
-fn temp_config_dir_for_remote_core() -> (String, configuration::Configuration, configuration::Hosts) {
+pub(crate) fn temp_config_dir_for_remote_core() -> (String, configuration::Configuration, configuration::Hosts) {
     let dir = crate::unique_target_dir("remote-core-test");
     let dir_str = dir.to_string_lossy().to_string();
     Configuration::write_initial_config(&dir).unwrap();

@@ -17,4 +17,4 @@ mod test_runtime;
 pub use test_runtime::test_core_runtime;
 
 mod target_dir;
-pub use target_dir::{redirect_xdg_cache_home, unique_target_dir, EnvVarGuard};
+pub use target_dir::{redirect_xdg_cache_home, redirect_xdg_config_home, unique_target_dir, EnvVarGuard};

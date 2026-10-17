@@ -56,3 +56,10 @@ pub fn redirect_xdg_cache_home() -> EnvVarGuard {
     let dir = unique_target_dir("xdg-cache");
     EnvVarGuard::set("XDG_CACHE_HOME", &dir)
 }
+
+/// Points `XDG_CONFIG_HOME` at a unique `target/` dir so config writes stay out of `$HOME`.
+pub fn redirect_xdg_config_home() -> EnvVarGuard {
+    let dir = unique_target_dir("xdg-config");
+    fs::create_dir_all(dir.join("lightkeeper")).unwrap();
+    EnvVarGuard::set("XDG_CONFIG_HOME", &dir)
+}

@@ -38,7 +38,12 @@ use crate::{
 use crate::module::{
     command::Command,
     command::CommandResult,
+    command::internal::{FileBrowserDownload, FileBrowserUpload},
+    command::internal::filebrowser::download::RsyncSsh,
+    platform_info,
+    MetadataSupport,
 };
+use crate::remote_core::protocol::{FileTransferDirection, FileTransferPlan};
 
 // Default needs to be implemented because of Qt QObject requirements.
 #[derive(Default)]
@@ -482,6 +487,52 @@ impl CommandHandler {
             return Err(LkError::other("Built an empty remote editor command"));
         }
         Ok(command)
+    }
+
+    /// Builds desktop-owned rsync transfer pieces for file-browser upload/download.
+    /// Allocates an invocation id but does not register a core-side invocation.
+    pub fn build_file_transfer_plan(
+        &self,
+        host_id: &str,
+        command_id: &str,
+        remote_path: &str,
+    ) -> Result<FileTransferPlan, LkError> {
+        if remote_path.is_empty() {
+            return Err(LkError::other("Remote path is empty"));
+        }
+
+        let direction = if *command_id == FileBrowserUpload::get_metadata().module_spec.id {
+            FileTransferDirection::Upload
+        }
+        else if *command_id == FileBrowserDownload::get_metadata().module_spec.id {
+            FileTransferDirection::Download
+        }
+        else {
+            return Err(LkError::other(format!("Command '{}' is not a file transfer command", command_id)));
+        };
+
+        let host = self.host_manager.borrow().try_get_host(host_id)
+            .ok_or_else(|| LkError::other(format!("Host '{}' not found", host_id)))?;
+        if host.platform.os != platform_info::OperatingSystem::Linux {
+            return Err(LkError::unsupported_platform());
+        }
+
+        let ssh_settings: HashMap<String, String> = self.hosts_config.hosts.get(host_id)
+            .and_then(|host_config| host_config.effective.connectors.get("ssh"))
+            .map(|connector| connector.settings.clone().into_iter().collect())
+            .unwrap_or_default();
+        let mut ssh = RsyncSsh::new(&ssh_settings);
+        // Resolved here since the default known hosts file lives on the core.
+        ssh.custom_known_hosts_path = Some(ssh.known_hosts_path()?);
+
+        Ok(FileTransferPlan {
+            invocation_id: self.next_invocation_id(),
+            direction,
+            address: host.get_address(),
+            remote_path: remote_path.to_string(),
+            ssh,
+            use_sudo_rsync: host.should_use_sudo(),
+        })
     }
 
     pub fn open_remote_text_editor(&self, host_id: &String, remote_file_path: &str) -> ShellCommand {

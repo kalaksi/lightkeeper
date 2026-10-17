@@ -17,7 +17,7 @@ use ssh2;
 use super::api::{CommandBackend, ConfigBackend, LocalBackendApi};
 use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
 use super::remote_config::RemoteConfigBackend;
-use super::ssh_auth::{HostKeyChallenge, SshAuthError};
+use super::ssh_auth::{self, HostKeyChallenge, SshAuthError};
 use super::ssh_transport::Ssh2DirectStreamLocalTransport;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
@@ -25,7 +25,17 @@ use crate::connection_manager::ConnectorRequest;
 use crate::error::{ErrorKind, LkError};
 use crate::frontend;
 use crate::host_manager::StateUpdateMessage;
-use crate::remote_core::protocol::{read_message, write_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION};
+use crate::module::command::internal::filebrowser::download::{
+    process_rsync_final_response,
+    process_rsync_partial_response,
+    rsync_remote_shell,
+    RSYNC_OUT_FORMAT,
+};
+use crate::module::command::internal::{FileBrowserDownload, FileBrowserUpload};
+use crate::module::command::CommandResult;
+use crate::module::connection::{ConnectionModule, LocalCommand, ResponseMessage};
+use crate::module::{MetadataSupport, Module};
+use crate::remote_core::protocol::*;
 use crate::utils::{sh_single_quoted, sha256, ShellCommand};
 
 enum CoreClientStream {
@@ -104,6 +114,7 @@ enum PendingRpcKind {
     RemoveSecret,
     Ack,
     ShellCommand,
+    FileTransfer,
     MetricsQuery,
 }
 
@@ -132,6 +143,7 @@ enum PendingRpcReply {
     RemoveSecretOk,
     Ack,
     ShellCommand(Vec<String>),
+    FileTransfer(FileTransferPlan),
     MetricsQuery(u64),
     Error {
         code: RemoteErrorCode,
@@ -167,6 +179,7 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
             (PendingRpcKind::Ack, PendingRpcReply::Ack) |
             (PendingRpcKind::ShellCommand, PendingRpcReply::ShellCommand(_)) |
+            (PendingRpcKind::FileTransfer, PendingRpcReply::FileTransfer(_)) |
             (PendingRpcKind::MetricsQuery, PendingRpcReply::MetricsQuery(_))
     )
 }
@@ -283,22 +296,93 @@ fn wrap_command_via_core_ssh(
         return Ok(ShellCommand::new_from(remote_command));
     }
 
+    let remote_command = remote_command.iter().map(|arg| sh_single_quoted(arg)).collect::<Vec<_>>().join(" ");
+
+    let mut command = ShellCommand::new();
+    command.arguments(vec!["ssh", "-t"]);
+    command.arguments(core_ssh_arguments(profile));
+    command.argument(remote_command);
+    Ok(command)
+}
+
+/// OpenSSH arguments (after `ssh`) for logging in to the core host, ending with the destination.
+fn core_ssh_arguments(profile: &configuration::CoreConnectionProfile) -> Vec<String> {
     let username = profile
         .username
         .clone()
         .filter(|name| !name.is_empty())
         .unwrap_or_else(|| std::env::var("USER").unwrap_or_else(|_| String::from("root")));
-    let port = profile.port.unwrap_or(22).to_string();
-    let destination = format!("{}@{}", username, profile.host);
-    let remote_command = remote_command.iter().map(|arg| sh_single_quoted(arg)).collect::<Vec<_>>().join(" ");
+
+    let mut arguments = vec![String::from("-p"), profile.port.unwrap_or(22).to_string()];
+    if let Some(private_key_path) = profile.private_key_path.as_ref().filter(|path| !path.is_empty()) {
+        arguments.extend([String::from("-i"), private_key_path.clone()]);
+    }
+    arguments.push(format!("{}@{}", username, profile.host));
+    arguments
+}
+
+/// Builds the desktop rsync command from a core-provided transfer plan. The plan only contains data, so a
+/// compromised core can't inject desktop-side commands. When the core is reached over SSH, rsync's remote
+/// shell first logs in to the core (key or agent auth only, no prompts) and then runs the inner ssh there,
+/// so managed-host credentials never leave the core.
+pub fn build_desktop_rsync_command(
+    profile: &configuration::CoreConnectionProfile,
+    plan: &FileTransferPlan,
+    local_path: &str,
+) -> Result<ShellCommand, LkError> {
+    if local_path.is_empty() {
+        return Err(LkError::other("Local path is empty"));
+    }
+    if plan.remote_path.is_empty() {
+        return Err(LkError::other("Remote path is empty"));
+    }
+
+    let is_upload = plan.direction == FileTransferDirection::Upload;
+    let remote_spec = plan.ssh.remote_spec(&plan.address, &plan.remote_path, is_upload)?;
+    let inner_ssh = plan.ssh.ssh_arguments()?;
+
+    let remote_shell = if profile.is_configured() {
+        let known_hosts_path = ssh_auth::known_hosts_path(None).map_err(|error| LkError::other(error.to_ui_message()))?;
+        let mut arguments = vec![
+            String::from("ssh"),
+            String::from("-o"),
+            String::from("BatchMode=yes"),
+            String::from("-o"),
+            format!("UserKnownHostsFile={}", known_hosts_path.to_string_lossy()),
+        ];
+        arguments.extend(core_ssh_arguments(profile));
+        // Inner ssh is run by the core's shell. Quoting also keeps outer ssh from parsing it as options.
+        arguments.push(inner_ssh.iter().map(|argument| sh_single_quoted(argument)).collect::<Vec<_>>().join(" "));
+        rsync_remote_shell(&arguments)?
+    }
+    else {
+        rsync_remote_shell(&inner_ssh)?
+    };
 
     let mut command = ShellCommand::new();
-    command.arguments(vec![String::from("ssh"), String::from("-t"), String::from("-p"), port]);
-    if let Some(private_key_path) = profile.private_key_path.as_ref().filter(|path| !path.is_empty()) {
-        command.arguments(vec![String::from("-i"), private_key_path.clone()]);
+    // --protect-args keeps file names off the remote command line, which is parsed by a shell on both hops.
+    command.arguments(vec![
+        "env",
+        "LANG=C",
+        "LC_ALL=C",
+        "rsync",
+        "-avz",
+        "--protect-args",
+        "--info=progress2",
+        "--stats",
+        RSYNC_OUT_FORMAT,
+    ]);
+    command.arguments(vec![String::from("-e"), remote_shell]);
+    if plan.use_sudo_rsync {
+        command.argument("--rsync-path=sudo rsync");
     }
-    command.argument(destination);
-    command.argument(remote_command);
+
+    if is_upload {
+        command.arguments(vec![local_path.to_string(), remote_spec]);
+    }
+    else {
+        command.arguments(vec![remote_spec, local_path.to_string()]);
+    }
     Ok(command)
 }
 
@@ -753,6 +837,11 @@ impl RemoteCoreClient {
                             PendingRpcReply::ShellCommand(arguments)
                         });
                     }
+                    ServerMessage::FileTransferPlanResult { request_id, plan } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::FileTransfer, || {
+                            PendingRpcReply::FileTransfer(plan)
+                        });
+                    }
                     ServerMessage::Error {
                         request_id: Some(request_id),
                         code,
@@ -911,6 +1000,19 @@ impl RemoteCoreClient {
         }
     }
 
+    pub fn build_file_transfer_plan(&self, host_id: &str, command_id: &str, remote_path: &str) -> Result<FileTransferPlan, LkError> {
+        let reply = self.send_message_result(PendingRpcKind::FileTransfer, |request_id| ClientMessage::FileTransferPlan {
+            request_id,
+            host_id: host_id.to_string(),
+            command_id: command_id.to_string(),
+            remote_path: remote_path.to_string(),
+        })?;
+        match reply {
+            PendingRpcReply::FileTransfer(plan) => Ok(plan),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
     pub fn get_metrics(&self, host_id: &str, monitor_id: &str, start_time: i64, end_time: i64) -> Result<u64, LkError> {
         match self.send_message_result(PendingRpcKind::MetricsQuery, |request_id| ClientMessage::GetMetrics {
             request_id,
@@ -959,6 +1061,8 @@ impl RemoteCoreClient {
 pub struct RemoteCommandBackend {
     client: Arc<RemoteCoreClient>,
     preferences: configuration::Preferences,
+    /// Desktop-side file transfers. Value is set when the transfer should be interrupted.
+    active_transfers: Arc<Mutex<HashMap<u64, Arc<AtomicBool>>>>,
 }
 
 impl RemoteCommandBackend {
@@ -966,6 +1070,7 @@ impl RemoteCommandBackend {
         RemoteCommandBackend {
             client,
             preferences: configuration::Preferences::default(),
+            active_transfers: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -979,6 +1084,75 @@ impl RemoteCommandBackend {
 
     pub fn connect_stream(&mut self, stream: UnixStream) -> Result<(), String> {
         self.client.connect_stream(stream)
+    }
+
+    /// File browser uploads and downloads use desktop-local paths, so rsync runs here instead of on the core.
+    fn start_desktop_file_transfer(&self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<u64, LkError> {
+        let (first, second) = match parameters {
+            [first, second, ..] => (first, second),
+            _ => return Err(LkError::other("Both local and remote paths are required")),
+        };
+        let is_upload = *command_id == FileBrowserUpload::get_metadata().module_spec.id;
+        let (local_path, remote_path) = if is_upload { (first, second) } else { (second, first) };
+
+        let plan = self.client.build_file_transfer_plan(host_id, command_id, remote_path)?;
+        let command = build_desktop_rsync_command(&self.client.profile(), &plan, local_path)?.to_string();
+        let invocation_id = plan.invocation_id;
+        let (operation, partial_operation) = if is_upload {
+            ("Upload", "Uploading")
+        }
+        else {
+            ("Download", "Downloading")
+        };
+        let interrupt_requested = Arc::new(AtomicBool::new(false));
+        self.active_transfers
+            .lock()
+            .unwrap()
+            .insert(invocation_id, interrupt_requested.clone());
+
+        let sender = self.client.connection.lock().unwrap().frontend_update_sender.clone();
+        let active_transfers = self.active_transfers.clone();
+        thread::spawn(move || {
+            let send_result = |result: CommandResult| {
+                if let Some(sender) = &sender {
+                    let _ = sender.send(frontend::UIUpdate::CommandResult(invocation_id, result));
+                }
+            };
+
+            let connector = LocalCommand::new(&HashMap::new());
+            let mut whole_message = String::new();
+            let mut response_result = connector.send_message_partial(&command, invocation_id);
+            loop {
+                if interrupt_requested.swap(false, Ordering::SeqCst) {
+                    let _ = connector.interrupt(invocation_id);
+                }
+
+                match response_result {
+                    Ok(response) => {
+                        whole_message.push_str(&response.message_increment);
+                        let response = ResponseMessage {
+                            message: whole_message.clone(),
+                            ..response
+                        };
+                        if response.is_partial {
+                            send_result(process_rsync_partial_response(&response, partial_operation));
+                            response_result = connector.receive_partial_response(invocation_id);
+                        }
+                        else {
+                            send_result(process_rsync_final_response(&response, operation));
+                            break;
+                        }
+                    }
+                    Err(error) => {
+                        send_result(CommandResult::new_error(error.to_string()));
+                        break;
+                    }
+                }
+            }
+            active_transfers.lock().unwrap().remove(&invocation_id);
+        });
+
+        Ok(invocation_id)
     }
 
     pub fn connect_with_frontend_stream(
@@ -1130,6 +1304,12 @@ impl CommandBackend for RemoteCommandBackend {
     }
 
     fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<u64, LkError> {
+        if *command_id == FileBrowserUpload::get_metadata().module_spec.id ||
+            *command_id == FileBrowserDownload::get_metadata().module_spec.id
+        {
+            return self.start_desktop_file_transfer(host_id, command_id, parameters);
+        }
+
         match self
             .client
             .send_message_result(PendingRpcKind::ExecuteCommand, |request_id| ClientMessage::ExecuteCommand {
@@ -1144,6 +1324,10 @@ impl CommandBackend for RemoteCommandBackend {
     }
 
     fn interrupt_invocation(&self, invocation_id: u64) {
+        if let Some(interrupt_requested) = self.active_transfers.lock().unwrap().get(&invocation_id) {
+            interrupt_requested.store(true, Ordering::SeqCst);
+            return;
+        }
         if !self.client.is_connected() {
             return;
         }
