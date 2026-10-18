@@ -44,9 +44,14 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.47.1" date="2026-10-03">
+    <release version="0.48.0" date="2026-10-18">
       <description>
         <ul>
+          <li>Update platform support for systemd modules</li>
+          <li>Improve ls command portability</li>
+          <li>Fix file browser, shell, and sudo when using root user</li>
+          <li>Fix connection not being re-created when host address changes</li>
+          <li>Allow esc shortcut only in details view</li>
         </ul>
       </description>
     </release>
