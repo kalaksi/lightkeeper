@@ -99,7 +99,7 @@ Item {
                             fieldWidth: searchBox.width * 0.11
                             placeholderText: "Start date"
                             placeholderTextColor: Theme.textColorDark
-                            text: Utils.getLocalTimezoneISOString(Date.now() - 1 * 60 * 60 * 1000).replace("T", " ")
+                            text: Utils.getLocalTimezoneISOString(Date.now() - 24 * 60 * 60 * 1000).replace("T", " ")
                             onAccepted: timeRangeSubmit.clicked()
                         }
 

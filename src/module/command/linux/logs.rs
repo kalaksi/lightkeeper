@@ -48,7 +48,7 @@ impl CommandModule for Logs {
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
-        let start_time = parameters.get(0).cloned().unwrap_or(String::from("-1h"));
+        let start_time = parameters.get(0).cloned().unwrap_or(String::from("-1day"));
         let end_time = parameters.get(1).cloned().unwrap_or(String::from("now"));
         let page_number = parameters.get(2).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(-1);
         let page_size = parameters.get(3).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1000);
