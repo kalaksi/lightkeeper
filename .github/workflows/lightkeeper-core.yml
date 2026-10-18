@@ -34,8 +34,8 @@ jobs:
 
     steps:
       - name: Checkout
-        # actions/checkout@v4
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        # actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Verify tag matches Cargo.toml version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -94,8 +94,8 @@ jobs:
           subject-path: lightkeeper-core-*-${{ matrix.arch }}-linux.tar.gz
 
       - name: Upload artifact
-        # actions/upload-artifact@v4
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        # actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: lightkeeper-core-${{ matrix.arch }}
           path: |
