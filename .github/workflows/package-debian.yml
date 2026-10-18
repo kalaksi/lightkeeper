@@ -1,10 +1,8 @@
 name: Build Debian 14 package
 
 on:
+  workflow_call:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: read

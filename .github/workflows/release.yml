@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  fedora:
+    uses: ./.github/workflows/fedora-rpm.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+  debian:
+    uses: ./.github/workflows/package-debian.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+  core:
+    uses: ./.github/workflows/lightkeeper-core.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+  draft-release:
+    needs: [fedora, debian, core]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        # actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Upload to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          files=(
+            artifacts/**/lightkeeper-*.rpm
+            artifacts/**/lightkeeper_*.deb
+            artifacts/**/lightkeeper-core-*.tar.gz
+            artifacts/**/lightkeeper-core-*.tar.gz.sha256
+          )
+          files=($(printf '%s\n' "${files[@]}" | grep -vE 'debug(info|source)|dbgsym' || true))
+          [ "${#files[@]}" -gt 0 ] || { echo "No release assets found" >&2; exit 1; }
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME"
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
