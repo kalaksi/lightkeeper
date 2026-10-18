@@ -153,12 +153,7 @@ Item {
     }
 
     function getButtonIdentifiers() {
-        let result = []
-        for (let i = 0; i < commandRepeater.count; i++) {
-            let button = commandRepeater.itemAt(i) as CommandButton
-            result.push(button.buttonId)
-        }
-        return result
+        return root.commands.map(command => root.createButtonId(command))
     }
 
     // Allows updating one button at a time.
