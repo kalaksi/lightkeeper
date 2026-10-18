@@ -363,9 +363,9 @@ Item {
     }
 
     Shortcut {
-        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && 
-                 !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView) && 
-                 root.enableShortcuts
+        // Only the host details tab. Other tabs (editor, terminal, etc.) need Escape themselves.
+        enabled: root.enableShortcuts &&
+                 mainViewHeader.tabIndex === (root.showCharts ? 1 : 0)
         sequences: [StandardKey.Cancel]
         onActivated: root.close()
     }
