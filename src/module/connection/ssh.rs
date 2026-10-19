@@ -4,8 +4,9 @@
  */
 
 use std::path::PathBuf;
-use std::sync::{Arc, MutexGuard};
-use std::time::Duration;
+use std::ops::{Deref, DerefMut};
+use std::sync::{Arc, Condvar, MutexGuard};
+use std::time::{Duration, Instant};
 use std::sync::Mutex;
 use std::{
     net::TcpStream,
@@ -27,7 +28,7 @@ use crate::module::*;
 use crate::module::connection::*;
 
 static MODULE_NAME: &str = "ssh";
-const SESSION_WAIT_SLEEP: u64 = 200;
+const SESSION_WAIT_WARNING_INTERVAL: Duration = Duration::from_secs(120);
 const PARTIAL_READ_TIMEOUT_MS: u32 = 2000;
 
 
@@ -65,6 +66,39 @@ pub struct Ssh2 {
     custom_known_hosts_path: Option<PathBuf>,
 
     available_sessions: Arc<Vec<Mutex<SessionData>>>,
+    /// Notified when a session is released. Has to be locked while scanning for a free session so releases
+    /// between the scan and the wait aren't missed.
+    session_released: Arc<(Mutex<()>, Condvar)>,
+}
+
+/// Notifies waiters in `wait_for_session` when the session is released.
+struct SessionGuard<'a> {
+    session_data: Option<MutexGuard<'a, SessionData>>,
+    session_released: &'a (Mutex<()>, Condvar),
+}
+
+impl Deref for SessionGuard<'_> {
+    type Target = SessionData;
+
+    fn deref(&self) -> &SessionData {
+        self.session_data.as_ref().unwrap()
+    }
+}
+
+impl DerefMut for SessionGuard<'_> {
+    fn deref_mut(&mut self) -> &mut SessionData {
+        self.session_data.as_mut().unwrap()
+    }
+}
+
+impl Drop for SessionGuard<'_> {
+    fn drop(&mut self) {
+        // Session has to be unlocked before notifying.
+        self.session_data.take();
+        let (lock, condvar) = self.session_released;
+        let _released = lock.lock().unwrap();
+        condvar.notify_all();
+    }
 }
 
 pub struct SessionData {
@@ -104,6 +138,7 @@ impl Module for Ssh2 {
             verify_host_key: settings.get("verify_host_key").and_then(|value| value.parse::<bool>().ok()).unwrap_or(true),
             custom_known_hosts_path: settings.get("custom_known_hosts_path").map(|path| PathBuf::from(path)),
             available_sessions: Arc::new(available_sessions),
+            session_released: Arc::new((Mutex::new(()), Condvar::new())),
         }
     }
 }
@@ -390,50 +425,60 @@ impl ConnectionModule for Ssh2 {
 }
 
 impl Ssh2 {
-    fn wait_for_session(&self, invocation_id: u64, connect_automatically: bool) -> Result<MutexGuard<'_, SessionData>, LkError> {
-        let mut total_wait = Duration::from_secs(0);
+    fn wait_for_session(&self, invocation_id: u64, connect_automatically: bool) -> Result<SessionGuard<'_>, LkError> {
+        let (lock, condvar) = &*self.session_released;
+        let wait_start = Instant::now();
+        let mut next_warning = SESSION_WAIT_WARNING_INTERVAL;
+        let mut released = lock.lock().unwrap();
 
-        loop {
-            for (index, session) in self.available_sessions.iter().enumerate() {
-                if let Ok(mut session_data) = session.try_lock() {
-                    // New commands need a free session. Partial responses and interrupts must
-                    // resume the session that owns their invocation.
-                    let is_matching_session = if invocation_id == 0 {
-                        session_data.invocation_id == 0
-                    }
-                    else {
-                        session_data.invocation_id == invocation_id
-                    };
-                    if !is_matching_session {
-                        continue;
-                    }
-
-                    log::debug!("Attached to session {}", index);
-
-                    if connect_automatically && !session_data.is_initialized {
-                        let address = self.address.lock().unwrap().clone();
-                        let port = *self.port.lock().unwrap();
-                        if let Err(error) = self.connect(&mut session_data, &address, port) {
-                            log::error!("Error while connecting {}: {}", address, error);
-                            return Err(error);
-                        }
-                    }
-
-                    return Ok(session_data);
+        let (index, session) = loop {
+            let found = self.available_sessions.iter().enumerate().find_map(|(index, session)| {
+                let session_data = session.try_lock().ok()?;
+                // New commands need a free session. Partial responses and interrupts must
+                // resume the session that owns their invocation.
+                let is_matching_session = if invocation_id == 0 {
+                    session_data.invocation_id == 0
                 }
+                else {
+                    session_data.invocation_id == invocation_id
+                };
+                is_matching_session.then_some((index, session_data))
+            });
+
+            if let Some(found) = found {
+                break found;
             }
 
-            std::thread::sleep(Duration::from_millis(SESSION_WAIT_SLEEP));
-            total_wait += Duration::from_millis(SESSION_WAIT_SLEEP);
+            let timeout = next_warning.saturating_sub(wait_start.elapsed());
+            released = condvar.wait_timeout(released, timeout).unwrap().0;
 
             // Print a warning every 2 minutes.
-            if total_wait.as_secs() > 0 && total_wait.as_secs() % 120 == 0 {
-                log::warn!("No free SSH session available after {} seconds. Still waiting.", total_wait.as_secs());
+            if wait_start.elapsed() >= next_warning {
+                log::warn!("No free SSH session available after {} seconds. Still waiting.", next_warning.as_secs());
+                next_warning += SESSION_WAIT_WARNING_INTERVAL;
+            }
+        };
+        drop(released);
+
+        log::debug!("Attached to session {}", index);
+        let mut session_data = SessionGuard {
+            session_data: Some(session),
+            session_released: &self.session_released,
+        };
+
+        if connect_automatically && !session_data.is_initialized {
+            let address = self.address.lock().unwrap().clone();
+            let port = *self.port.lock().unwrap();
+            if let Err(error) = self.connect(&mut session_data, &address, port) {
+                log::error!("Error while connecting {}: {}", address, error);
+                return Err(error);
             }
         }
+
+        Ok(session_data)
     }
 
-    fn connect(&self, session_data: &mut MutexGuard<'_, SessionData>, address: &str, port: u16) -> Result<(), LkError> {
+    fn connect(&self, session_data: &mut SessionData, address: &str, port: u16) -> Result<(), LkError> {
         if session_data.is_initialized {
             return Ok(())
         }
@@ -504,7 +549,7 @@ impl Ssh2 {
         Ok(())
     }
 
-    fn reconnect(&self, session_data: &mut MutexGuard<'_, SessionData>) -> Result<(), LkError> {
+    fn reconnect(&self, session_data: &mut SessionData) -> Result<(), LkError> {
         let address = self.address.lock().unwrap().clone();
         let port = *self.port.lock().unwrap();
 
@@ -514,7 +559,7 @@ impl Ssh2 {
         self.connect(session_data, &address, port)
     }
 
-    fn check_known_hosts(&self, session_data: &MutexGuard<'_, SessionData>, hostname: &str, port: u16) -> Result<(), LkError> {
+    fn check_known_hosts(&self, session_data: &SessionData, hostname: &str, port: u16) -> Result<(), LkError> {
         let known_hosts_path = self.get_known_hosts_path()?;
 
         let mut known_hosts = session_data.session.known_hosts()
