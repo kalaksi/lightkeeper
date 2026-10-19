@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use std::io::Read;
+use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
@@ -12,10 +13,13 @@ use ssh2;
 
 use super::ssh_auth::{accept_host_key, authenticate, check_known_hosts, resolve_secret_value, SshAuthError, SshAuthOptions};
 use crate::configuration::CoreConnectionProfile;
+use crate::module::platform_info::Architecture;
 use crate::module::PlatformInfo;
 use crate::secrets_manager::KeyringSecretStore;
 
 const SSH_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(120);
+const DOWNLOAD_SIZE_LIMIT: u64 = 100 * 1024 * 1024;
 
 /// Absolute user-local paths for installing lightkeeper-core on the probed remote core host
 /// (`~/.local/bin`, systemd user unit, data-dir socket). Used by the Install confirmation UI
@@ -116,6 +120,87 @@ pub fn accept_remote_core_host_key(
     let session = connect_remote_core_session_skip_host_key(profile, cancel)?;
     let port = profile.port.unwrap_or(22);
     accept_host_key(&session, &profile.host, port, expected_key_id, None)
+}
+
+/// Downloads and verifies the release tarball matching this build's version, uploads it to the remote core host,
+/// installs the binary and systemd user unit to the planned paths and enables the service.
+pub fn install_remote_core(
+    profile: &CoreConnectionProfile,
+    probe: &RemoteCoreHostProbe,
+    cancel: &AtomicBool,
+) -> Result<(), SshAuthError> {
+    let architecture = match probe.platform.architecture {
+        Architecture::X86_64 => "x86_64",
+        Architecture::Arm64 => "aarch64",
+        _ => return Err(SshAuthError::other(format!("Unsupported architecture: {}", probe.platform.architecture))),
+    };
+    let version = env!("CARGO_PKG_VERSION");
+    let stage = format!("lightkeeper-core-{}-{}-linux", version, architecture);
+    let url = format!("https://github.com/kalaksi/lightkeeper/releases/download/v{}/{}.tar.gz", version, stage);
+
+    let tarball = download(&url)?;
+    check_cancel(cancel)?;
+    let checksum_file = String::from_utf8(download(&format!("{}.sha256", url))?)
+        .map_err(|_| SshAuthError::other("Invalid checksum file"))?;
+    let expected_checksum = checksum_file.split_whitespace().next().unwrap_or_default().to_lowercase();
+    let checksum: String = openssl::sha::sha256(&tarball).iter().map(|byte| format!("{:02x}", byte)).collect();
+    if checksum != expected_checksum {
+        return Err(SshAuthError::other("Downloaded lightkeeper-core tarball failed checksum verification"));
+    }
+
+    let session = connect_remote_core_session(profile, cancel)?;
+    let remote_dir = exec_command(&session, "mktemp -d")?.trim().to_string();
+    validate_remote_socket_path(&remote_dir).map_err(SshAuthError::other)?;
+    let remote_tarball = format!("{}/core.tar.gz", remote_dir);
+
+    let upload_result = (|| {
+        let mut channel = session
+            .scp_send(Path::new(&remote_tarball), 0o600, tarball.len() as u64, None)
+            .map_err(|error| SshAuthError::other(format!("Failed to upload lightkeeper-core: {}", error)))?;
+        channel
+            .write_all(&tarball)
+            .map_err(|error| SshAuthError::other(format!("Failed to upload lightkeeper-core: {}", error)))?;
+        let _ = channel.send_eof();
+        let _ = channel.wait_eof();
+        let _ = channel.close();
+        let _ = channel.wait_close();
+        check_cancel(cancel)
+    })();
+
+    let quote = |value: &str| format!("'{}'", value.replace('\'', "'\\''"));
+    let install_commands = format!(
+        concat!(
+            "set -eu; cd {dir}; tar -xzf core.tar.gz; ",
+            "install -Dm755 {stage}/lightkeeper-core {binary}; ",
+            "install -Dm644 {stage}/lightkeeper-core.service {unit}; ",
+            "systemctl --user daemon-reload; ",
+            "systemctl --user enable --now lightkeeper-core",
+        ),
+        dir = quote(&remote_dir),
+        stage = quote(&stage),
+        binary = quote(&probe.install_plan.binary_path),
+        unit = quote(&probe.install_plan.unit_path),
+    );
+    let result = upload_result.and_then(|_| exec_command(&session, &install_commands).map(|_| ()));
+    let _ = exec_command(&session, &format!("rm -rf {}", quote(&remote_dir)));
+    result
+}
+
+fn download(url: &str) -> Result<Vec<u8>, SshAuthError> {
+    let agent = ureq::Agent::config_builder()
+        .timeout_global(Some(DOWNLOAD_TIMEOUT))
+        .build()
+        .new_agent();
+    let mut response = agent
+        .get(url)
+        .call()
+        .map_err(|error| SshAuthError::other(format!("Failed to download {}: {}", url, error)))?;
+    response
+        .body_mut()
+        .with_config()
+        .limit(DOWNLOAD_SIZE_LIMIT)
+        .read_to_vec()
+        .map_err(|error| SshAuthError::other(format!("Failed to download {}: {}", url, error)))
 }
 
 fn resolve_install_plan(session: &ssh2::Session, socket_path: &str) -> Result<CoreInstallPlan, SshAuthError> {
@@ -259,10 +344,13 @@ fn exec_command(session: &ssh2::Session, command: &str) -> Result<String, SshAut
     channel
         .read_to_string(&mut output)
         .map_err(|error| SshAuthError::other(format!("Failed to read remote command output: {}", error)))?;
+    let mut error_output = String::new();
+    let _ = channel.stderr().read_to_string(&mut error_output);
     let _ = channel.wait_close();
     let status = channel.exit_status().unwrap_or(-1);
     if status != 0 {
-        return Err(SshAuthError::other(format!("Remote command failed (exit {}): {}", status, command)));
+        let details = if error_output.trim().is_empty() { command } else { error_output.trim() };
+        return Err(SshAuthError::other(format!("Remote command failed (exit {}): {}", status, details)));
     }
     Ok(output)
 }

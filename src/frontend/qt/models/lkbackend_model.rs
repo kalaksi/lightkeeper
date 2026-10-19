@@ -10,8 +10,9 @@ use qmetaobject::*;
 
 use crate::{
     backend::{
-        accept_remote_core_host_key, probe_remote_core_host, ConfigBackend, CoreConnectionState, HostKeyChallenge,
-        RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient, RemoteCoreHostProbe, SshAuthError,
+        accept_remote_core_host_key, install_remote_core, probe_remote_core_host, ConfigBackend, CoreConnectionState,
+        HostKeyChallenge, RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient, RemoteCoreHostProbe,
+        SshAuthError,
     },
     configuration::{self, Configuration},
     connection_manager::ConnectionManager,
@@ -55,6 +56,7 @@ pub struct LkBackend {
     probeCoreHost: qt_method!(fn(&mut self) -> QString),
     getCoreHostProbe: qt_method!(fn(&self) -> QVariantMap),
     clearCoreHostProbe: qt_method!(fn(&mut self)),
+    installCore: qt_method!(fn(&mut self) -> QString),
     connectCore: qt_method!(fn(&mut self) -> QString),
     disconnectCore: qt_method!(fn(&mut self)),
     getCoreConnectionState: qt_method!(fn(&self) -> QString),
@@ -410,6 +412,18 @@ impl LkBackend {
 
     fn clearCoreHostProbe(&mut self) {
         self.last_remote_core_host_probe = None;
+    }
+
+    fn installCore(&mut self) -> QString {
+        let Some(probe) = &self.last_remote_core_host_probe else {
+            return QString::from("Test the connection before installing");
+        };
+        let profile = self.config.borrow().core_connection_profile();
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        match install_remote_core(&profile, probe, &cancel) {
+            Ok(()) => QString::from(""),
+            Err(error) => QString::from(error.to_ui_message()),
+        }
     }
 
     fn getCoreHostKeyChallenge(&self) -> QVariantMap {

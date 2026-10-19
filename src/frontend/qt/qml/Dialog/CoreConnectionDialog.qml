@@ -29,6 +29,7 @@ LightkeeperDialog {
     property string connectionState: "disconnected"
     property bool busy: false
     property bool usingRemote: false
+    property bool canInstall: false
     property bool _loadingProfile: false
     property var _pendingPassword: null
     property var _pendingPassphrase: null
@@ -72,6 +73,7 @@ LightkeeperDialog {
         root.loadProfile()
         root._loadingProfile = false
         LK.clearCoreHostProbe()
+        root.canInstall = false
         root.probeSummary = ""
         root.probeRecommendation = ""
         root.refreshStatus()
@@ -130,6 +132,15 @@ LightkeeperDialog {
             LK.clearCoreHostKeyChallenge()
             root._pendingRetry = ""
         }
+    }
+
+    ConfirmationDialog {
+        id: installConfirmDialog
+        keepHidden: true
+        title: "Install lightkeeper-core"
+        centerText: false
+
+        onAccepted: root.runInstall()
     }
 
     contentItem: ColumnLayout {
@@ -403,6 +414,21 @@ LightkeeperDialog {
             }
 
             Button {
+                text: "Install"
+                visible: root.canInstall
+                enabled: !root.busy
+                onClicked: {
+                    let probe = LK.getCoreHostProbe()
+                    installConfirmDialog.text = "Download lightkeeper-core from GitHub releases and install it on the "
+                        + "remote host as a systemd user service?\n\n"
+                        + "Binary: " + probe.installBinaryPath + "\n"
+                        + "Unit: " + probe.installUnitPath + "\n"
+                        + "Socket: " + probe.installSocketPath
+                    installConfirmDialog.open()
+                }
+            }
+
+            Button {
                 text: "Disconnect"
                 enabled: !root.busy && root.usingRemote
                 onClicked: root.runDisconnect()
@@ -495,6 +521,7 @@ LightkeeperDialog {
             return
         }
         LK.clearCoreHostProbe()
+        root.canInstall = false
         root.probeSummary = ""
         root.probeRecommendation = ""
     }
@@ -671,6 +698,7 @@ LightkeeperDialog {
         root.busy = true
         root.errorText = ""
         root.probeRecommendation = ""
+        root.canInstall = false
         root.saveProfile()
         let error = LK.probeCoreHost()
         root.busy = false
@@ -709,7 +737,8 @@ LightkeeperDialog {
                 root.statusText = "SSH ok; lightkeeper-core not installed"
                 root.statusHint = "Install lightkeeper-core on the remote host"
                 root.errorText = ""
-                root.probeRecommendation = "Remote install from this dialog is not available yet."
+                root.probeRecommendation = "Use Install to set up a user-local service."
+                root.canInstall = true
             }
         }
         else if (root.offerHostKeyChallenge()) {
@@ -726,6 +755,21 @@ LightkeeperDialog {
             root.errorText = error
             root.probeSummary = ""
             root.probeRecommendation = ""
+        }
+    }
+
+    function runInstall() {
+        root.busy = true
+        root.errorText = ""
+        let error = LK.installCore()
+        root.busy = false
+        if (error === "") {
+            root.runCoreProbe()
+        }
+        else {
+            root.statusText = "Install failed"
+            root.statusHint = "Fix the problem and try again"
+            root.errorText = error
         }
     }
 
