@@ -352,7 +352,13 @@ pub fn build_desktop_rsync_command(
         ];
         arguments.extend(core_ssh_arguments(profile));
         // Inner ssh is run by the core's shell. Quoting also keeps outer ssh from parsing it as options.
-        arguments.push(inner_ssh.iter().map(|argument| sh_single_quoted(argument)).collect::<Vec<_>>().join(" "));
+        arguments.push(
+            inner_ssh
+                .iter()
+                .map(|argument| sh_single_quoted(argument))
+                .collect::<Vec<_>>()
+                .join(" "),
+        );
         rsync_remote_shell(&arguments)?
     }
     else {

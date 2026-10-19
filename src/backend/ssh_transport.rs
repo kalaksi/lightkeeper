@@ -132,20 +132,30 @@ pub fn install_remote_core(
     let architecture = match probe.platform.architecture {
         Architecture::X86_64 => "x86_64",
         Architecture::Arm64 => "aarch64",
-        _ => return Err(SshAuthError::other(format!("Unsupported architecture: {}", probe.platform.architecture))),
+        _ => {
+            return Err(SshAuthError::other(format!(
+                "Unsupported architecture: {}",
+                probe.platform.architecture
+            )))
+        }
     };
     let version = env!("CARGO_PKG_VERSION");
     let stage = format!("lightkeeper-core-{}-{}-linux", version, architecture);
-    let url = format!("https://github.com/kalaksi/lightkeeper/releases/download/v{}/{}.tar.gz", version, stage);
+    let url = format!(
+        "https://github.com/kalaksi/lightkeeper/releases/download/v{}/{}.tar.gz",
+        version, stage
+    );
 
     let tarball = download(&url)?;
     check_cancel(cancel)?;
-    let checksum_file = String::from_utf8(download(&format!("{}.sha256", url))?)
-        .map_err(|_| SshAuthError::other("Invalid checksum file"))?;
+    let checksum_file =
+        String::from_utf8(download(&format!("{}.sha256", url))?).map_err(|_| SshAuthError::other("Invalid checksum file"))?;
     let expected_checksum = checksum_file.split_whitespace().next().unwrap_or_default().to_lowercase();
     let checksum: String = openssl::sha::sha256(&tarball).iter().map(|byte| format!("{:02x}", byte)).collect();
     if checksum != expected_checksum {
-        return Err(SshAuthError::other("Downloaded lightkeeper-core tarball failed checksum verification"));
+        return Err(SshAuthError::other(
+            "Downloaded lightkeeper-core tarball failed checksum verification",
+        ));
     }
 
     let session = connect_remote_core_session(profile, cancel)?;
@@ -349,7 +359,12 @@ fn exec_command(session: &ssh2::Session, command: &str) -> Result<String, SshAut
     let _ = channel.wait_close();
     let status = channel.exit_status().unwrap_or(-1);
     if status != 0 {
-        let details = if error_output.trim().is_empty() { command } else { error_output.trim() };
+        let details = if error_output.trim().is_empty() {
+            command
+        }
+        else {
+            error_output.trim()
+        };
         return Err(SshAuthError::other(format!("Remote command failed (exit {}): {}", status, details)));
     }
     Ok(output)
