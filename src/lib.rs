@@ -157,11 +157,8 @@ pub fn run(
         None
     };
 
-    // TODO: Needs a proper fix for a race.
-    // Wait a small amount as a workaround so initial data points have time to get sent to host manager.
-    // Otherwise, initial status summary icons are randomly not shown.
-    std::thread::sleep(std::time::Duration::from_millis(100));
-
+    // Observer has to be added before the frontend takes its initial display data in start(). Otherwise, initial
+    // data points processed in between are lost and initial status summary icons are randomly not shown.
     host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if !test {
         Ok(frontend.start(
