@@ -43,8 +43,9 @@ pub trait CommandBackend {
     fn refresh_certificate_monitors(&mut self) -> Result<Vec<u64>, LkError>;
     fn resolve_text_editor_path(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<Option<String>, LkError>;
     fn download_editable_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<(u64, String), LkError>;
-    fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> Result<u64, LkError>;
-    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError>;
+    fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str, force: bool) -> Result<u64, LkError>;
+    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, force: bool)
+        -> Result<u64, LkError>;
     fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError>;
     fn remove_cached_file(&mut self, host_id: &str, remote_file_path: &str) -> Result<(), LkError>;
     fn has_cached_file_changed(&self, host_id: &str, remote_file_path: &str, new_contents: &[u8]) -> Result<bool, LkError>;

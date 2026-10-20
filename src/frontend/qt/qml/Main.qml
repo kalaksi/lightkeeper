@@ -240,7 +240,11 @@ ApplicationWindow {
             }
         }
 
-        function onVerificationRequested(hostId, connectorId, message, keyId) {
+        function onConfirmationRequested(hostId, kind, invocationId, connectorId, message, keyId) {
+            if (kind !== "HostKeyNotVerified") {
+                return
+            }
+
             let text = message + "\n\n" + keyId
 
             root.dialogHandler.openConfirmationDialog(

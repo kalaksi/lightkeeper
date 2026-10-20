@@ -245,8 +245,7 @@ impl From<String> for HandshakeError {
 }
 
 fn perform_handshake(writer: &mut CoreClientStream, reader: &mut CoreClientStream) -> Result<(), HandshakeError> {
-    write_message(writer, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION })
-        .map_err(|error| error.to_string())?;
+    write_message(writer, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION }).map_err(|error| error.to_string())?;
 
     loop {
         match read_message::<ServerMessage, _>(reader) {
@@ -1474,7 +1473,7 @@ impl CommandBackend for RemoteCommandBackend {
         }
     }
 
-    fn upload_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError> {
+    fn upload_file(&mut self, host_id: &str, command_id: &str, remote_file_path: &str, force: bool) -> Result<u64, LkError> {
         match self
             .client
             .send_message_result(PendingRpcKind::UploadFromCache, |request_id| ClientMessage::UploadFileFromCache {
@@ -1482,14 +1481,21 @@ impl CommandBackend for RemoteCommandBackend {
                 host_id: host_id.to_string(),
                 command_id: command_id.to_string(),
                 remote_file_path: remote_file_path.to_string(),
+                force,
             })? {
             PendingRpcReply::UploadFromCache(id) => Ok(id),
             _ => Err(LkError::unexpected()),
         }
     }
 
-    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError> {
-        self.upload_file(host_id, command_id, remote_file_path)
+    fn upload_file_from_cache(
+        &mut self,
+        host_id: &str,
+        command_id: &str,
+        remote_file_path: &str,
+        force: bool,
+    ) -> Result<u64, LkError> {
+        self.upload_file(host_id, command_id, remote_file_path, force)
     }
 
     fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError> {

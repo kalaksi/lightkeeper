@@ -143,15 +143,21 @@ impl CommandBackend for LocalCommandBackend {
             .download_editable_file(&host_id.to_string(), &command_id.to_string(), &remote_file_path.to_string())
     }
 
-    fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str) -> Result<u64, LkError> {
+    fn upload_file(&mut self, host_id: &str, command_id: &str, local_file_path: &str, force: bool) -> Result<u64, LkError> {
         self.command_handler
-            .upload_file(&host_id.to_string(), &command_id.to_string(), &local_file_path.to_string())
+            .upload_file(&host_id.to_string(), &command_id.to_string(), &local_file_path.to_string(), force)
     }
 
-    fn upload_file_from_cache(&mut self, host_id: &str, command_id: &str, remote_file_path: &str) -> Result<u64, LkError> {
+    fn upload_file_from_cache(
+        &mut self,
+        host_id: &str,
+        command_id: &str,
+        remote_file_path: &str,
+        force: bool,
+    ) -> Result<u64, LkError> {
         let path = self.command_handler.cache_file_path_for_remote(host_id, remote_file_path)?;
         self.command_handler
-            .upload_file(&host_id.to_string(), &command_id.to_string(), &path)
+            .upload_file(&host_id.to_string(), &command_id.to_string(), &path, force)
     }
 
     fn write_cached_file(&mut self, host_id: &str, remote_file_path: &str, new_contents: Vec<u8>) -> Result<(), LkError> {

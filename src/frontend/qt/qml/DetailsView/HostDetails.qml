@@ -326,7 +326,8 @@ Item {
 
         HostDetailsCodeEditorView {
             onSaved: function(commandId, remoteFilePath, content) {
-                pendingInvocation = LK.command.saveAndUploadFile(root.hostId, commandId, remoteFilePath, content)
+                pendingInvocation = LK.command.saveAndUploadFile(
+                    root.hostId, commandId, remoteFilePath, content, false)
             }
             onClosed: function(remoteFilePath) {
                 LK.command.removeCachedFile(root.hostId, remoteFilePath)

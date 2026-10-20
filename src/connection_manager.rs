@@ -336,8 +336,11 @@ impl ConnectionManager {
                         },
                         RequestType::Download { remote_file_path: file_path } =>
                             vec![Self::process_download(&request.host, &connector, &file_path)],
-                        RequestType::Upload { metadata: _, local_file_path } =>
-                            vec![Self::process_upload(&request.host, &connector, &local_file_path)],
+                        RequestType::Upload { metadata: _, local_file_path, remote_hash, force } => {
+                            vec![Self::process_upload(
+                                &request.host, &connector, &local_file_path, &remote_hash, *force,
+                            )]
+                        },
                         _ => {
                             log::error!("[{}][{}] Unsupported request type", request.host.name, request.source_id);
                             vec![Err(LkError::other("Unsupported request type"))]
@@ -498,10 +501,17 @@ impl ConnectionManager {
         }
     }
 
-    fn process_upload(host: &Host, connector: &Connector, local_file_path: &str) -> Result<ResponseMessage, LkError> {
+    fn process_upload(host: &Host, connector: &Connector, local_file_path: &str, remote_hash: &str, force: bool)
+        -> Result<ResponseMessage, LkError>
+    {
         log::debug!("[{}] Uploading file: {}", host.name, local_file_path);
         match file_handler::read_file(local_file_path) {
             Ok((metadata, contents)) => {
+                if !force {
+                    let use_sudo = host.should_use_sudo();
+                    Self::check_remote_unchanged(connector, &metadata.remote_path, remote_hash, use_sudo)?;
+                }
+
                 if host.should_use_sudo() {
                     Self::upload_file_with_sudo(connector, &metadata.remote_path, contents, local_file_path)
                 } else {
@@ -512,6 +522,34 @@ impl ConnectionManager {
                 }
             },
             Err(error) => Err(error.into()),
+        }
+    }
+
+    /// Ok if remote still matches download-time hash, or hash cannot be read. Err on mismatch.
+    fn check_remote_unchanged(connector: &Connector, remote_path: &str, remote_hash: &str, use_sudo: bool)
+        -> Result<(), LkError>
+    {
+        let sha256_cmd = if use_sudo {
+            ShellCommand::new_from(vec!["sha256sum", remote_path]).use_sudo()
+        }
+        else {
+            ShellCommand::new_from(vec!["sha256sum", remote_path])
+        };
+        let response = connector.send_message(&sha256_cmd.to_string())?;
+        if response.return_code != 0 {
+            return Ok(());
+        }
+        let Some(actual_hash) = response.message.split_whitespace().next() else {
+            return Ok(());
+        };
+        if actual_hash.eq_ignore_ascii_case(remote_hash) {
+            Ok(())
+        }
+        else {
+            Err(LkError::new(
+                crate::error::ErrorKind::RemoteFileChanged,
+                "Remote file has changed since it was opened. Overwrite with your edits?",
+            ))
         }
     }
 
@@ -650,6 +688,10 @@ pub enum RequestType {
     Upload {
         local_file_path: String,
         metadata: FileMetadata,
+        /// Hash of remote contents at download time (before local edits).
+        remote_hash: String,
+        /// Skip remote conflict check when true (user confirmed overwrite).
+        force: bool,
     },
     KeyVerification {
         key_id: String,

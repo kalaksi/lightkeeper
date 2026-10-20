@@ -39,7 +39,14 @@ pub struct CommandHandlerModel {
     listFiles: qt_method!(fn(&self, host_id: QString, path: QString) -> u64),
     downloadEditableFile: qt_method!(fn(&mut self, host_id: QString, command_id: QString, remote_file_path: QString) -> u64),
     openRemoteFileInEditor: qt_method!(fn(&self, host_id: QString, remote_path: QString)),
-    saveAndUploadFile: qt_method!(fn(&self, host_id: QString, command_id: QString, remote_file_path: QString, contents: QString) -> u64),
+    saveAndUploadFile: qt_method!(fn(
+        &self,
+        host_id: QString,
+        command_id: QString,
+        remote_file_path: QString,
+        contents: QString,
+        force: bool
+    ) -> u64),
     removeCachedFile: qt_method!(fn(&self, host_id: QString, remote_file_path: QString)),
     hasFileChanged: qt_method!(fn(&self, host_id: QString, remote_file_path: QString, contents: QString) -> bool),
     verifyHostKey: qt_method!(fn(&self, host_id: QString, connector_id: QString, key_id: QString)),
@@ -464,7 +471,7 @@ impl CommandHandlerModel {
                             return;
                         }
                         if let Err(error) =
-                            self.backend_mut().upload_file(&host_id, &command_id, &local_file_path)
+                            self.backend_mut().upload_file(&host_id, &command_id, &local_file_path, false)
                         {
                             self.error(QString::from(error.to_string()));
                         }
@@ -537,7 +544,14 @@ impl CommandHandlerModel {
         );
     }
 
-    fn saveAndUploadFile(&mut self, host_id: QString, command_id: QString, remote_file_path: QString, contents: QString) -> u64 {
+    fn saveAndUploadFile(
+        &mut self,
+        host_id: QString,
+        command_id: QString,
+        remote_file_path: QString,
+        contents: QString,
+        force: bool,
+    ) -> u64 {
         let host_id = host_id.to_string();
         let command_id = command_id.to_string();
         let remote_file_path = remote_file_path.to_string();
@@ -547,7 +561,7 @@ impl CommandHandlerModel {
             self.error(QString::from(error.to_string()));
             return 0;
         }
-        match self.backend_mut().upload_file_from_cache(&host_id, &command_id, &remote_file_path) {
+        match self.backend_mut().upload_file_from_cache(&host_id, &command_id, &remote_file_path, force) {
             Ok(id) => id,
             Err(error) => {
                 self.error(QString::from(error.to_string()));

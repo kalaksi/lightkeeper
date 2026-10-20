@@ -143,6 +143,8 @@ pub enum ClientMessage {
         host_id: String,
         command_id: String,
         remote_file_path: String,
+        #[serde(default)]
+        force: bool,
     },
     GetConfig {
         request_id: u64,

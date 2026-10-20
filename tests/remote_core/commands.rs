@@ -364,7 +364,7 @@ fn remote_core_write_cache_and_upload() {
         });
 
         backend.write_cached_file(TEST_HOST, remote_path, b"new-bytes".to_vec()).unwrap();
-        let invocation_id = backend.upload_file_from_cache(TEST_HOST, &edit_id, remote_path).unwrap();
+        let invocation_id = backend.upload_file_from_cache(TEST_HOST, &edit_id, remote_path, false).unwrap();
         assert!(invocation_id > 0);
 
         backend.stop();

@@ -122,6 +122,7 @@ Module {
             Parameter { name: "command_id"; type: "string" }
             Parameter { name: "remote_file_path"; type: "string" }
             Parameter { name: "contents"; type: "string" }
+            Parameter { name: "force"; type: "bool" }
         }
         Method {
             name: "removeCachedFile"
@@ -482,11 +483,13 @@ Module {
             Parameter { name: "error"; type: "string" }
         }
         Signal {
-            name: "verificationRequested"
+            name: "confirmationRequested"
             Parameter { name: "host_id"; type: "string" }
-            Parameter { name: "connector_id"; type: "string" }
+            Parameter { name: "kind"; type: "string" }
+            Parameter { name: "invocation_id"; type: "int" }
+            Parameter { name: "source_id"; type: "string" }
             Parameter { name: "message"; type: "string" }
-            Parameter { name: "key_id"; type: "string" }
+            Parameter { name: "parameter"; type: "string" }
         }
 
         Method {

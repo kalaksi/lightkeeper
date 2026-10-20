@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::configuration::HostSettings;
 use crate::error::LkError;
-use crate::frontend::frontend::VerificationRequest;
+use crate::frontend::frontend::ConfirmationRequest;
 use crate::module::platform_info;
 use crate::module::{
     ModuleSpecification,
@@ -359,16 +359,20 @@ impl HostManager {
 
                 host_state.update_status();
 
-                let (verification_requests, unhandled_errors): (Vec<_>, Vec<_>) = state_update.errors.into_iter()
-                    .partition(|error| error.kind == crate::error::ErrorKind::HostKeyNotVerified);
+                let (confirmation_requests, unhandled_errors): (Vec<_>, Vec<_>) = state_update.errors.into_iter()
+                    .partition(|error| matches!(
+                        error.kind,
+                        crate::error::ErrorKind::HostKeyNotVerified | crate::error::ErrorKind::RemoteFileChanged
+                    ));
 
-                let verification_requests: Vec<_> = verification_requests.iter()
-                    .map(|error| VerificationRequest {
-                        source_id: error.source_id.to_owned(),
-                        key_id: error.parameter.to_owned().unwrap(),
-                        message: error.message.to_owned(),
-                    }) .collect();
-
+                let confirmation_requests: Vec<_> = confirmation_requests.into_iter()
+                    .map(|error| ConfirmationRequest {
+                        kind: error.kind.to_string(),
+                        invocation_id: state_update.invocation_id,
+                        source_id: error.source_id,
+                        message: error.message,
+                        parameter: error.parameter.unwrap_or_default(),
+                    }).collect();
 
                 // Send the state update to the front end.
                 let update = frontend::UIUpdate::Host(frontend::HostDisplayData {
@@ -376,7 +380,7 @@ impl HostManager {
                     new_monitoring_data: new_monitoring_data.clone(),
                     new_command_result: new_command_results.clone(),
                     new_errors: unhandled_errors.iter().cloned().map(ErrorMessage::from).collect(),
-                    verification_requests: verification_requests.clone(),
+                    confirmation_requests: confirmation_requests,
                     ..Default::default()
                 });
                 let mut observers = observers.lock().unwrap();

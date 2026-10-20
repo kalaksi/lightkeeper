@@ -149,6 +149,8 @@ pub enum ErrorKind {
     InvalidParameter,
     /// Command or monitor needs sudo but host has it disabled.
     SudoRequired,
+    /// Remote file content differs from the hash stored at download time.
+    RemoteFileChanged,
     #[default]
     /// Other unspecified error.
     Other,

@@ -35,7 +35,14 @@ pub struct HostDataManagerModel {
     commandResultReceived: qt_signal!(command_result: QString, invocation_id: u64),
     monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data_qv: QVariant, invocation_id: u64),
     errorReceived: qt_signal!(criticality: QString, error: QString),
-    verificationRequested: qt_signal!(host_id: QString, connector_id: QString, message: QString, key_id: QString),
+    confirmationRequested: qt_signal!(
+        host_id: QString,
+        kind: QString,
+        invocation_id: u64,
+        source_id: QString,
+        message: QString,
+        parameter: QString
+    ),
 
     //
     // Slots
@@ -166,12 +173,14 @@ impl HostDataManagerModel {
             self.errorReceived(QString::from(error.criticality.to_string()), QString::from(error.message));
         }
 
-        for request in new_display_data.verification_requests {
-            self.verificationRequested(
+        for request in new_display_data.confirmation_requests {
+            self.confirmationRequested(
                 QString::from(host_state.host.name.clone()),
+                QString::from(request.kind),
+                request.invocation_id,
                 QString::from(request.source_id),
                 QString::from(request.message),
-                QString::from(request.key_id),
+                QString::from(request.parameter),
             );
         }
 

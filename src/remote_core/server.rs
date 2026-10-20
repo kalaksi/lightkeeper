@@ -345,12 +345,13 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 host_id,
                 command_id,
                 remote_file_path,
+                force,
             } => {
                 match runtime
                     .core
                     .command_handler
                     .cache_file_path_for_remote(&host_id, &remote_file_path)
-                    .and_then(|path| runtime.core.command_handler.upload_file(&host_id, &command_id, &path))
+                    .and_then(|path| runtime.core.command_handler.upload_file(&host_id, &command_id, &path, force))
                 {
                     Ok(invocation_id) => {
                         session.send_message(&ServerMessage::UploadFileFromCacheResult { request_id, invocation_id })?;

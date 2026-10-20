@@ -13,6 +13,7 @@ import Lightkeeper 1.0
 
 import ".."
 import "../Button"
+import "../Dialog"
 import "../Misc"
 import "../js/Utils.js" as Utils
 
@@ -36,6 +37,7 @@ Item {
     property bool _useSimpleCodeEditor: false
     property bool _vimCloseAfterSave: false
     property bool _saveOverlayActive: false
+    property string _pendingOverwriteContent: ""
     property string _detectedLanguage: Utils.detectLanguageFromPath(root.remoteFilePath)
     property string _aceMode: Utils.mapLanguageToAceMode(root._detectedLanguage)
     // First time text was changed in editor.
@@ -98,6 +100,7 @@ Item {
 
                 let closeAfterSave = root._vimCloseAfterSave
                 root._vimCloseAfterSave = false
+                root._pendingOverwriteContent = ""
 
                 if (commandResult.criticality === "Normal") {
                     root.text = commandResult.message
@@ -118,6 +121,14 @@ Item {
                 }
 
                 root.activate()
+            }
+        }
+
+        function onConfirmationRequested(hostId, kind, invocationId, sourceId, message, parameter) {
+            if (kind === "RemoteFileChanged" && root.hostId === hostId && root.pendingInvocation === invocationId) {
+                root.pendingInvocation = 0
+                overwriteConfirmationDialog.text = message
+                overwriteConfirmationDialog.open()
             }
         }
     }
@@ -392,6 +403,7 @@ Item {
                     }
 
                     onSaved: function(commandId, remoteFilePath, content) {
+                        root._pendingOverwriteContent = content
                         root.saved(commandId, remoteFilePath, content)
                     }
                     onClosed: function(remoteFilePath) {
@@ -426,6 +438,27 @@ Item {
         anchors.fill: parent
         visible: root._saveOverlayActive
         text: "Saving..."
+    }
+
+    ConfirmationDialog {
+        id: overwriteConfirmationDialog
+        parent: root
+        keepHidden: true
+        onAccepted: {
+            root._saveOverlayActive = root._vimCloseAfterSave
+            root.pendingInvocation = LK.command.saveAndUploadFile(
+                root.hostId,
+                root.commandId,
+                root.remoteFilePath,
+                root._pendingOverwriteContent,
+                true)
+        }
+        onRejected: {
+            root._vimCloseAfterSave = false
+            root._saveOverlayActive = false
+            root._pendingOverwriteContent = ""
+            root.activate()
+        }
     }
 
     Shortcut {
@@ -498,6 +531,7 @@ Item {
                 if (root._vimCloseAfterSave) {
                     root._saveOverlayActive = true
                 }
+                root._pendingOverwriteContent = content
                 root.saved(root.commandId, root.remoteFilePath, content)
             })
             return true

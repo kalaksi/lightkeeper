@@ -329,7 +329,9 @@ impl CommandHandler {
         Ok((invocation_id, local_file_path))
     }
 
-    pub fn upload_file(&mut self, host_id: &String, command_id: &String, local_file_path: &String) -> Result<u64, LkError> {
+    pub fn upload_file(&mut self, host_id: &String, command_id: &String, local_path: &String, force: bool)
+        -> Result<u64, LkError>
+    {
         let commands = self.commands.lock().map_err(|error| {
             self.send_state_update(StateUpdateMessage::fatal_error());
             LkError::from(error)
@@ -342,11 +344,12 @@ impl CommandHandler {
 
         let invocation_id = self.next_invocation_id();
 
-        match file_handler::read_file(local_file_path) {
+        match file_handler::read_file(local_path) {
             Ok((mut metadata, contents)) => {
                 let local_file_hash = sha256::hash(&contents);
+                let remote_hash = metadata.remote_file_hash.clone();
 
-                if local_file_hash == metadata.remote_file_hash {
+                if !force && local_file_hash == remote_hash {
                     self.send_state_update(StateUpdateMessage {
                         host_name: host.name,
                         display_options: command.get_display_options(),
@@ -366,8 +369,10 @@ impl CommandHandler {
                         invocation_id,
                         response_sender: self.new_response_sender(),
                         request_type: RequestType::Upload {
-                            local_file_path: local_file_path.clone(),
+                            local_file_path: local_path.clone(),
                             metadata: metadata,
+                            remote_hash,
+                            force,
                         },
                     });
                 }
@@ -662,7 +667,7 @@ impl CommandHandler {
                                     Self::process_download_for_external_editor(command, &preferences.text_editor, new_state_update_sender, response);
                                 }
                             },
-                            RequestType::Upload { local_file_path, metadata } => {
+                            RequestType::Upload { local_file_path, metadata, .. } => {
                                 Self::process_upload_file_response(command, &local_file_path, metadata, false, new_state_update_sender, response);
                             },
                             _ => {
@@ -850,6 +855,17 @@ impl CommandHandler {
                 }
 
                 CommandResult::new_info("File updated")
+            },
+            Err(error) if error.kind == ErrorKind::RemoteFileChanged => {
+                state_update_sender.send(StateUpdateMessage {
+                    host_name: response.host.name,
+                    display_options: command.get_display_options(),
+                    module_spec: command.get_module_spec(),
+                    errors: vec![error.clone()],
+                    invocation_id: response.invocation_id,
+                    ..Default::default()
+                }).unwrap();
+                return;
             },
             Err(error) => {
                 let error_message = format!("Error uploading file: {}", error);
