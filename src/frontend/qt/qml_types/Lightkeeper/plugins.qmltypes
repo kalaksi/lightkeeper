@@ -640,6 +640,7 @@ Module {
         Method { name: "disconnectCore" }
         Method { name: "getCoreConnectionState"; type: "string" }
         Method { name: "getCoreConnectionError"; type: "string" }
+        Method { name: "isCoreVersionMismatch"; type: "bool" }
         Method { name: "isUsingRemoteCore"; type: "bool" }
         Method { name: "isCoreAutoConnectSkipped"; type: "bool" }
         Method { name: "getCoreHostKeyChallenge"; type: "QVariantMap" }

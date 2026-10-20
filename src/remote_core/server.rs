@@ -94,7 +94,12 @@ fn run_remote_client_session_with_claim(
         let session = RemoteSession::new(stream.try_clone()?);
         session.send_error(
             RemoteErrorCode::UnsupportedVersion,
-            format!("Unsupported protocol version {}. Expected {}.", protocol_version, PROTOCOL_VERSION,),
+            format!(
+                "Unsupported protocol version {}. lightkeeper-core {} uses protocol {}.",
+                protocol_version,
+                env!("CARGO_PKG_VERSION"),
+                PROTOCOL_VERSION,
+            ),
         )?;
         return Ok(());
     }

@@ -233,33 +233,48 @@ fn deliver_response(
     }
 }
 
-fn perform_handshake(writer: &mut CoreClientStream, reader: &mut CoreClientStream) -> Result<(), String> {
-    write_message(writer, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION }).map_err(|error| error.to_string())?;
+struct HandshakeError {
+    message: String,
+    version_mismatch: bool,
+}
+
+impl From<String> for HandshakeError {
+    fn from(message: String) -> Self {
+        HandshakeError { message, version_mismatch: false }
+    }
+}
+
+fn perform_handshake(writer: &mut CoreClientStream, reader: &mut CoreClientStream) -> Result<(), HandshakeError> {
+    write_message(writer, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION })
+        .map_err(|error| error.to_string())?;
 
     loop {
         match read_message::<ServerMessage, _>(reader) {
             Ok(ServerMessage::Connect { protocol_version }) => {
                 if protocol_version != PROTOCOL_VERSION {
-                    return Err(format!(
-                        "Protocol mismatch: expected {}, got {}",
-                        PROTOCOL_VERSION, protocol_version,
-                    ));
+                    return Err(HandshakeError {
+                        message: format!("Protocol mismatch: expected {}, got {}", PROTOCOL_VERSION, protocol_version),
+                        version_mismatch: true,
+                    });
                 }
                 return Ok(());
             }
             Ok(ServerMessage::Error { code, message, .. }) => {
-                return Err(format!("{}: {}", code, message));
+                return Err(HandshakeError {
+                    message: format!("{}: {}", code, message),
+                    version_mismatch: code == RemoteErrorCode::UnsupportedVersion,
+                });
             }
             Ok(_) => {
-                return Err(String::from("Unexpected message during remote core handshake"));
+                return Err(String::from("Unexpected message during remote core handshake").into());
             }
             Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
-                return Err(String::from("Remote core handshake timed out"));
+                return Err(String::from("Remote core handshake timed out").into());
             }
             Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => {
-                return Err(String::from("Connection closed during remote core handshake"));
+                return Err(String::from("Connection closed during remote core handshake").into());
             }
-            Err(error) => return Err(error.to_string()),
+            Err(error) => return Err(error.to_string().into()),
         }
     }
 }
@@ -485,6 +500,13 @@ impl RemoteCoreClient {
         self.status.lock().unwrap().set_failed(message);
     }
 
+    fn set_handshake_failed(&self, error: HandshakeError) -> String {
+        let mut status = self.status.lock().unwrap();
+        status.set_failed(error.message.clone());
+        status.version_mismatch = error.version_mismatch;
+        error.message
+    }
+
     fn next_request_id(&self) -> u64 {
         self.next_request_id.fetch_add(1, Ordering::SeqCst)
     }
@@ -580,10 +602,7 @@ impl RemoteCoreClient {
                 self.set_connection_state(CoreConnectionState::Disconnected);
                 Ok(())
             }
-            Err(error) => {
-                self.set_connection_failed(error.clone());
-                Err(error)
-            }
+            Err(error) => Err(self.set_handshake_failed(error)),
         }
     }
 
@@ -638,8 +657,7 @@ impl RemoteCoreClient {
         }
 
         if let Err(error) = perform_handshake(&mut stream, &mut reader) {
-            self.set_connection_failed(error.clone());
-            return Err(error);
+            return Err(self.set_handshake_failed(error));
         }
 
         if let Some(transport) = self.connection.lock().unwrap().transport.as_ref() {

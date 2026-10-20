@@ -33,6 +33,8 @@ pub struct CoreConnectionStatus {
     pub state: CoreConnectionState,
     /// Last actionable transport or handshake error for the UI.
     pub last_error: Option<String>,
+    /// Desktop and core protocol versions differ, core needs an upgrade (or downgrade).
+    pub version_mismatch: bool,
 }
 
 impl CoreConnectionStatus {
@@ -41,6 +43,7 @@ impl CoreConnectionStatus {
         match state {
             CoreConnectionState::Connected | CoreConnectionState::Disconnected => {
                 self.last_error = None;
+                self.version_mismatch = false;
             }
             CoreConnectionState::Failed => {}
             _ => {}
@@ -50,5 +53,6 @@ impl CoreConnectionStatus {
     pub fn set_failed(&mut self, message: impl Into<String>) {
         self.state = CoreConnectionState::Failed;
         self.last_error = Some(message.into());
+        self.version_mismatch = false;
     }
 }

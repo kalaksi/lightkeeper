@@ -30,6 +30,8 @@ LightkeeperDialog {
     property bool busy: false
     property bool usingRemote: false
     property bool canInstall: false
+    // Install replaces an existing user-local core with the version matching this desktop.
+    property bool installIsUpgrade: false
     property bool _loadingProfile: false
     property var _pendingPassword: null
     property var _pendingPassphrase: null
@@ -74,6 +76,7 @@ LightkeeperDialog {
         root._loadingProfile = false
         LK.clearCoreHostProbe()
         root.canInstall = false
+        root.installIsUpgrade = false
         root.probeSummary = ""
         root.probeRecommendation = ""
         root.refreshStatus()
@@ -137,7 +140,7 @@ LightkeeperDialog {
     ConfirmationDialog {
         id: installConfirmDialog
         keepHidden: true
-        title: "Install lightkeeper-core"
+        title: root.installIsUpgrade ? "Upgrade lightkeeper-core" : "Install lightkeeper-core"
         centerText: false
 
         onAccepted: root.runInstall()
@@ -414,13 +417,14 @@ LightkeeperDialog {
             }
 
             Button {
-                text: "Install"
+                text: root.installIsUpgrade ? "Upgrade" : "Install"
                 visible: root.canInstall
                 enabled: !root.busy
                 onClicked: {
                     let probe = LK.getCoreHostProbe()
-                    installConfirmDialog.text = "Download lightkeeper-core from GitHub releases and install it on the "
-                        + "remote host as a systemd user service?\n\n"
+                    installConfirmDialog.text = "Download lightkeeper-core " + LK.config.getVersion()
+                        + " from GitHub releases and install it on the remote host as a systemd user service?"
+                        + (root.installIsUpgrade ? " The running service will be restarted." : "") + "\n\n"
                         + "Binary: " + probe.installBinaryPath + "\n"
                         + "Unit: " + probe.installUnitPath + "\n"
                         + "Socket: " + probe.installSocketPath
@@ -522,6 +526,7 @@ LightkeeperDialog {
         }
         LK.clearCoreHostProbe()
         root.canInstall = false
+        root.installIsUpgrade = false
         root.probeSummary = ""
         root.probeRecommendation = ""
     }
@@ -699,6 +704,7 @@ LightkeeperDialog {
         root.errorText = ""
         root.probeRecommendation = ""
         root.canInstall = false
+        root.installIsUpgrade = false
         root.saveProfile()
         let error = LK.probeCoreHost()
         root.busy = false
@@ -719,6 +725,20 @@ LightkeeperDialog {
                     root.statusHint = "Trust the host key to continue"
                     root.errorText = coreError
                     root.probeRecommendation = ""
+                }
+                else if (LK.isCoreVersionMismatch()) {
+                    root.statusText = "SSH ok; lightkeeper-core version mismatch"
+                    root.statusHint = "Core version has to match desktop version " + LK.config.getVersion()
+                    root.errorText = coreError
+                    if (probe.binaryPath === probe.installBinaryPath) {
+                        root.probeRecommendation = "Use Upgrade to install the matching user-local version."
+                        root.canInstall = true
+                        root.installIsUpgrade = true
+                    }
+                    else {
+                        root.probeRecommendation = "Upgrade lightkeeper-core at " + probe.binaryPath
+                            + " with the method it was installed with, e.g. the system package manager."
+                    }
                 }
                 else {
                     root.statusText = "SSH ok; core handshake failed"
@@ -787,6 +807,10 @@ LightkeeperDialog {
                 root._pendingRetry = "connect"
                 root.statusText = "Host key verification required"
                 root.statusHint = "Trust the host key to continue"
+            }
+            else if (LK.isCoreVersionMismatch()) {
+                root.statusText = "lightkeeper-core version mismatch"
+                root.statusHint = "Use Test to see upgrade options"
             }
             else {
                 root.statusText = "Connect failed"

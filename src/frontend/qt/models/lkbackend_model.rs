@@ -61,6 +61,7 @@ pub struct LkBackend {
     disconnectCore: qt_method!(fn(&mut self)),
     getCoreConnectionState: qt_method!(fn(&self) -> QString),
     getCoreConnectionError: qt_method!(fn(&self) -> QString),
+    isCoreVersionMismatch: qt_method!(fn(&self) -> bool),
     isUsingRemoteCore: qt_method!(fn(&self) -> bool),
     isCoreAutoConnectSkipped: qt_method!(fn(&self) -> bool),
     getCoreHostKeyChallenge: qt_method!(fn(&self) -> QVariantMap),
@@ -96,6 +97,8 @@ pub struct LkBackend {
     using_remote: bool,
     last_remote_core_host_probe: Option<RemoteCoreHostProbe>,
     last_host_key_challenge: Option<HostKeyChallenge>,
+    /// Set by the latest probe or connect attempt.
+    core_version_mismatch: bool,
 }
 
 #[allow(non_snake_case)]
@@ -326,7 +329,9 @@ impl LkBackend {
 
         let client = RemoteCoreClient::new(Self::local_core_socket_path());
         client.set_profile(profile);
-        match client.probe() {
+        let result = client.probe();
+        self.core_version_mismatch = client.status().version_mismatch;
+        match result {
             Ok(()) => {
                 self.last_host_key_challenge = None;
                 QString::from("")
@@ -475,7 +480,9 @@ impl LkBackend {
         client.set_profile(profile);
         client.set_frontend_update_sender(remote_update_sender);
 
-        if let Err(error) = client.connect() {
+        let result = client.connect();
+        self.core_version_mismatch = client.status().version_mismatch;
+        if let Err(error) = result {
             self.last_host_key_challenge = client.host_key_challenge();
             self.remote_client = Some(client);
             if self.using_remote {
@@ -548,6 +555,10 @@ impl LkBackend {
             Some(client) => QString::from(client.last_error().unwrap_or_default()),
             None => QString::from(""),
         }
+    }
+
+    fn isCoreVersionMismatch(&self) -> bool {
+        self.core_version_mismatch
     }
 
     fn isUsingRemoteCore(&self) -> bool {

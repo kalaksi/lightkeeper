@@ -123,7 +123,7 @@ pub fn accept_remote_core_host_key(
 }
 
 /// Downloads and verifies the release tarball matching this build's version, uploads it to the remote core host,
-/// installs the binary and systemd user unit to the planned paths and enables the service.
+/// installs the binary and systemd user unit to the planned paths and enables and (re)starts the service.
 pub fn install_remote_core(
     profile: &CoreConnectionProfile,
     probe: &RemoteCoreHostProbe,
@@ -184,7 +184,8 @@ pub fn install_remote_core(
             "install -Dm755 {stage}/lightkeeper-core {binary}; ",
             "install -Dm644 {stage}/lightkeeper-core.service {unit}; ",
             "systemctl --user daemon-reload; ",
-            "systemctl --user enable --now lightkeeper-core",
+            "systemctl --user enable lightkeeper-core; ",
+            "systemctl --user restart lightkeeper-core",
         ),
         dir = quote(&remote_dir),
         stage = quote(&stage),
