@@ -39,6 +39,8 @@ pub struct RemoteCoreHostProbe {
     pub socket_path: Option<String>,
     /// Absolute path if `lightkeeper-core` was found; otherwise `None`.
     pub binary_path: Option<String>,
+    /// Whether systemd keeps user services running without an active login session.
+    pub linger_enabled: bool,
     pub install_plan: CoreInstallPlan,
 }
 
@@ -101,12 +103,17 @@ pub fn probe_remote_core_host(profile: &CoreConnectionProfile, cancel: &AtomicBo
         None
     };
     let binary_path = find_core_binary(&session)?;
+    let linger = exec_command(
+        &session,
+        "loginctl show-user \"$(id -un)\" --property=Linger --value 2>/dev/null || true",
+    )?;
     let install_plan = resolve_install_plan(&session, &discovered_socket_path)?;
 
     Ok(RemoteCoreHostProbe {
         platform,
         socket_path,
         binary_path,
+        linger_enabled: linger.trim() == "yes",
         install_plan,
     })
 }

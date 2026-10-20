@@ -400,6 +400,7 @@ impl LkBackend {
         if let Some(binary_path) = &probe.binary_path {
             map.insert("binaryPath".into(), QString::from(binary_path.clone()).into());
         }
+        map.insert("lingerEnabled".into(), probe.linger_enabled.into());
         map.insert(
             "installBinaryPath".into(),
             QString::from(probe.install_plan.binary_path.clone()).into(),

@@ -18,7 +18,7 @@ LightkeeperDialog {
     id: root
     title: "Lightkeeper Core"
     implicitWidth: 580
-    implicitHeight: 640
+    implicitHeight: 720
     standardButtons: Dialog.Close
 
     property string statusText: ""
@@ -26,6 +26,7 @@ LightkeeperDialog {
     property string errorText: ""
     property string probeSummary: ""
     property string probeRecommendation: ""
+    property string coreStatus: ""
     property string connectionState: "disconnected"
     property bool busy: false
     property bool usingRemote: false
@@ -198,11 +199,25 @@ LightkeeperDialog {
             }
         }
 
-        SmallText {
+        RowLayout {
             Layout.fillWidth: true
-            text: "Connect to lightkeeper-core on a remote host over SSH."
-            wrapMode: Text.WordWrap
-            color: Theme.textColorDark
+            spacing: Theme.spacingNormal
+
+            Image {
+                source: "qrc:/main/images/core-topology"
+                sourceSize.width: 160
+                sourceSize.height: 96
+            }
+
+            SmallText {
+                Layout.fillWidth: true
+                text: "Connect to lightkeeper-core on a remote host.\n"
+                    + "Lightkeeper-core is the backend that runs the monitoring and commands,"
+                    + " while this application is the user interface."
+                    + " Use a host that can reach your monitored hosts, e.g. a jump host or an always-on server."
+                wrapMode: Text.WordWrap
+                color: Theme.textColorDark
+            }
         }
 
         ColumnLayout {
@@ -224,7 +239,7 @@ LightkeeperDialog {
                     TextField {
                         id: hostField
                         Layout.fillWidth: true
-                        placeholderText: "remote-core.example.com"
+                        placeholderText: "remote-core.example.invalid"
                         placeholderTextColor: Theme.textColorDark
                         enabled: !root.busy
                         onTextChanged: root.clearProbeCache()
@@ -398,9 +413,10 @@ LightkeeperDialog {
 
             Button {
                 text: "Test"
+                Layout.preferredHeight: 34
                 enabled: !root.busy && hostField.text.trim().length > 0
                 display: AbstractButton.TextBesideIcon
-                icon.source: "qrc:/main/images/button/network-disconnect"
+                icon.source: "qrc:/main/images/button/search"
                 icon.height: 22
                 icon.width: 22
                 onClicked: root.runCoreProbe()
@@ -408,6 +424,7 @@ LightkeeperDialog {
 
             Button {
                 text: "Connect"
+                Layout.preferredHeight: 34
                 enabled: !root.busy && hostField.text.trim().length > 0
                 display: AbstractButton.TextBesideIcon
                 icon.source: "qrc:/main/images/button/network-connect"
@@ -418,12 +435,12 @@ LightkeeperDialog {
 
             Button {
                 text: root.installIsUpgrade ? "Upgrade" : "Install"
-                visible: root.canInstall
-                enabled: !root.busy
+                Layout.preferredHeight: 34
+                enabled: !root.busy && root.canInstall
                 onClicked: {
                     let probe = LK.getCoreHostProbe()
-                    installConfirmDialog.text = "Download lightkeeper-core " + LK.config.getVersion()
-                        + " from GitHub releases and install it on the remote host as a systemd user service?"
+                    installConfirmDialog.text = "Install Lightkeeper-core " + LK.config.getVersion()
+                        + " on this remote core host as a systemd user service in user's home directory?"
                         + (root.installIsUpgrade ? " The running service will be restarted." : "") + "\n\n"
                         + "Binary: " + probe.installBinaryPath + "\n"
                         + "Unit: " + probe.installUnitPath + "\n"
@@ -434,7 +451,12 @@ LightkeeperDialog {
 
             Button {
                 text: "Disconnect"
+                Layout.preferredHeight: 34
                 enabled: !root.busy && root.usingRemote
+                display: AbstractButton.TextBesideIcon
+                icon.source: "qrc:/main/images/button/network-disconnect"
+                icon.height: 22
+                icon.width: 22
                 onClicked: root.runDisconnect()
             }
 
@@ -447,11 +469,10 @@ LightkeeperDialog {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: Theme.spacingTight
-            visible: root.probeSummary.length > 0 || root.errorText.length > 0 || root.busy
 
             Label {
                 visible: root.probeSummary.length > 0
-                text: "Diagnostics"
+                text: root.coreStatus ? "Core status: " + root.coreStatus : "Core status"
                 font.bold: true
             }
 
@@ -653,7 +674,7 @@ LightkeeperDialog {
             root.errorText = error
         }
         else {
-            root.statusText = "Using local backend"
+            root.statusText = "Currently using local backend"
             root.statusHint = "Configure a remote host to connect"
             root.errorText = error
         }
@@ -696,6 +717,8 @@ LightkeeperDialog {
         else {
             lines.push("Binary: lightkeeper-core not found")
         }
+        lines.push("Can run in background: "
+            + (probe.lingerEnabled ? "yes" : "no (use \"loginctl enable-linger\" to allow)"))
         root.probeSummary = lines.join("\n")
     }
 
@@ -703,6 +726,7 @@ LightkeeperDialog {
         root.busy = true
         root.errorText = ""
         root.probeRecommendation = ""
+        root.coreStatus = ""
         root.canInstall = false
         root.installIsUpgrade = false
         root.saveProfile()
@@ -714,10 +738,11 @@ LightkeeperDialog {
             if (probe.socketPath) {
                 let coreError = LK.probeCore()
                 if (coreError === "") {
-                    root.statusText = "Probe succeeded"
-                    root.statusHint = "SSH and core handshake are healthy"
+                    root.statusText = "SSH connection works"
+                    root.statusHint = ""
                     root.errorText = ""
                     root.probeRecommendation = "Ready to Connect."
+                    root.coreStatus = "installed"
                 }
                 else if (root.offerHostKeyChallenge()) {
                     root._pendingRetry = "test"
@@ -727,9 +752,10 @@ LightkeeperDialog {
                     root.probeRecommendation = ""
                 }
                 else if (LK.isCoreVersionMismatch()) {
-                    root.statusText = "SSH ok; lightkeeper-core version mismatch"
-                    root.statusHint = "Core version has to match desktop version " + LK.config.getVersion()
+                    root.statusText = "SSH connection works"
+                    root.statusHint = ""
                     root.errorText = coreError
+                    root.coreStatus = "different version installed"
                     if (probe.binaryPath === probe.installBinaryPath) {
                         root.probeRecommendation = "Use Upgrade to install the matching user-local version."
                         root.canInstall = true
@@ -741,23 +767,28 @@ LightkeeperDialog {
                     }
                 }
                 else {
-                    root.statusText = "SSH ok; core handshake failed"
-                    root.statusHint = "Check that lightkeeper-core is running"
+                    root.statusText = "SSH connection works"
+                    root.statusHint = ""
                     root.errorText = coreError
                     root.probeRecommendation = "Socket is present but the core handshake failed."
+                    root.coreStatus = "installed, not responding"
                 }
             }
             else if (probe.binaryPath) {
-                root.statusText = "SSH ok; core socket missing"
-                root.statusHint = "Is the lightkeeper-core service running?"
+                root.statusText = "SSH connection works"
+                root.statusHint = ""
                 root.errorText = ""
                 root.probeRecommendation = "Binary found, but the service socket is not present."
+                root.coreStatus = "installed, not running"
             }
             else {
-                root.statusText = "SSH ok; lightkeeper-core not installed"
-                root.statusHint = "Install lightkeeper-core on the remote host"
+                root.statusText = "SSH connection works"
+                root.statusHint = ""
                 root.errorText = ""
-                root.probeRecommendation = "Use Install to set up a user-local service."
+                root.probeRecommendation = "Use 'install' to set up lightkeeper-core as a systemd user service "
+                    + "in user's home directory.\n"
+                    + "Lightkeeper-core will listen on a unix socket and not on any port."
+                root.coreStatus = "not installed"
                 root.canInstall = true
             }
         }

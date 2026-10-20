@@ -87,6 +87,9 @@ pub fn init_resources() {
             // Tray icon
             "images/lightkeeper-tray-icon.png" as "images/tray-icon",
 
+            // Illustrations
+            "images/core-topology.svg" as "images/core-topology",
+
             // Brand
             "images/whitebark-logo.png" as "images/whitebark-logo",
 
@@ -192,6 +195,9 @@ pub fn init_resources() {
 
             // Tray icon
             "images/lightkeeper-tray-icon.png" as "images/tray-icon",
+
+            // Illustrations
+            "images/core-topology.svg" as "images/core-topology",
 
             // Brand
             "images/whitebark-logo.png" as "images/whitebark-logo",
