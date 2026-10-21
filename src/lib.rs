@@ -115,6 +115,7 @@ pub fn initialize_core(
     connection_manager.start_processing_requests();
     command_handler.start_processing_responses();
     monitor_manager.start_processing_responses();
+    monitor_manager.start_auto_refresh(&hosts_config, main_config.preferences.auto_refresh_interval);
 
     Ok(CoreComponents {
         module_factory,

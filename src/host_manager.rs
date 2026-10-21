@@ -176,6 +176,12 @@ impl HostManager {
         self.hosts.lock().unwrap().hosts.get(host_name).map(|state| state.host.clone())
     }
 
+    /// Same as `try_get_host`, but usable from other threads.
+    pub fn new_host_getter(&self) -> impl Fn(&str) -> Option<Host> + Send + 'static {
+        let hosts = self.hosts.clone();
+        move |host_name| hosts.lock().unwrap().hosts.get(host_name).map(|state| state.host.clone())
+    }
+
     pub fn new_state_update_sender(&self) -> mpsc::Sender<StateUpdateMessage> {
         self.data_sender_prototype.as_ref().unwrap().clone()
     }

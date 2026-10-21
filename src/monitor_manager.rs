@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
+use std::time::Duration;
 
 use crate::error::*;
 use crate::module::connection::RequestResponse;
@@ -45,6 +46,10 @@ pub struct MonitorManager {
     response_sender_prototype: Option<mpsc::Sender<RequestResponse>>,
     response_receiver: Option<mpsc::Receiver<RequestResponse>>,
     response_receiver_thread: Option<thread::JoinHandle<()>>,
+
+    /// Dropping the sender stops the auto-refresh thread.
+    auto_refresh_stop_sender: Option<mpsc::Sender<()>>,
+    auto_refresh_thread: Option<thread::JoinHandle<()>>,
 }
 
 impl MonitorManager {
@@ -123,6 +128,13 @@ impl MonitorManager {
     }
 
     pub fn stop(&mut self) {
+        self.auto_refresh_stop_sender = None;
+        if let Some(thread) = self.auto_refresh_thread.take() {
+            if let Err(_) = thread.join() {
+                log::warn!("Thread had paniced");
+            }
+        }
+
         if let Some(thread) = self.response_receiver_thread.take() {
             if let Err(_) = self.new_response_sender().send(RequestResponse::stop()) {
                 log::warn!("Couldn't stop thread, it may have already stopped.");
@@ -351,7 +363,87 @@ impl MonitorManager {
         self.refresh_monitors(host, monitor)
     }
 
+    /// Periodically refreshes monitors of hosts that allow auto-refresh. Stopped by `stop()`.
+    /// Hosts that haven't been initialized yet (no platform info) are skipped.
+    pub fn start_auto_refresh(&mut self, hosts_config: &Hosts, interval_seconds: u64) {
+        if interval_seconds == 0 {
+            return;
+        }
+
+        let host_ids = hosts_config.hosts.iter()
+            .filter(|(host_id, host_config)| host_config.allow_auto_refresh && !host_id.starts_with("_"))
+            .map(|(host_id, _)| host_id.clone())
+            .collect::<Vec<_>>();
+
+        let monitors = self.monitors.clone();
+        let get_host = self.host_manager.borrow().new_host_getter();
+        let invocation_id_counter = self.invocation_id_counter.clone();
+        let request_sender = self.request_sender.clone().unwrap();
+        let state_update_sender = self.state_update_sender.clone().unwrap();
+        let response_sender = self.new_response_sender();
+        let (stop_sender, stop_receiver) = mpsc::channel::<()>();
+
+        let thread = thread::spawn(move || {
+            log::debug!("Started auto-refresh with interval of {} seconds", interval_seconds);
+            let interval = Duration::from_secs(interval_seconds);
+
+            while let Err(mpsc::RecvTimeoutError::Timeout) = stop_receiver.recv_timeout(interval) {
+                let Ok(monitors) = monitors.lock() else {
+                    break;
+                };
+
+                for host_id in host_ids.iter() {
+                    let (Some(host), Some(host_monitors)) = (get_host(host_id), monitors.get(host_id)) else {
+                        continue;
+                    };
+                    if !host.platform.is_set() {
+                        continue;
+                    }
+
+                    Self::_refresh_monitors(
+                        host,
+                        host_monitors.iter().collect(),
+                        &invocation_id_counter,
+                        &request_sender,
+                        &state_update_sender,
+                        &response_sender,
+                    );
+                }
+            }
+
+            log::debug!("Stopped auto-refresh");
+        });
+
+        self.auto_refresh_stop_sender = Some(stop_sender);
+        self.auto_refresh_thread = Some(thread);
+    }
+
     fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>) -> Vec<u64> {
+        Self::_refresh_monitors(
+            host,
+            monitors,
+            &self.invocation_id_counter,
+            self.request_sender.as_ref().unwrap(),
+            self.state_update_sender.as_ref().unwrap(),
+            &self.new_response_sender(),
+        )
+    }
+
+    fn _refresh_monitors(
+        host: Host,
+        monitors: HashMap<&String, &Monitor>,
+        invocation_id_counter: &AtomicU64,
+        request_sender: &mpsc::Sender<ConnectorRequest>,
+        state_update_sender: &mpsc::Sender<StateUpdateMessage>,
+        response_sender: &mpsc::Sender<RequestResponse>,
+    ) -> Vec<u64> {
+        let send_state_update = |message: StateUpdateMessage| {
+            if let Err(error) = state_update_sender.send(message) {
+                log::error!("Failed to send state update: {}", error);
+                panic!("Failed to send state update: {}", error);
+            }
+        };
+
         if !host.platform.is_set() && monitors.values().any(|monitor| !monitor.is_internal()) {
             log::warn!("[{}] Refreshing monitors despite missing platform info", host.name);
         }
@@ -360,7 +452,9 @@ impl MonitorManager {
         let (extensions, bases): (Vec<&Monitor>, Vec<&Monitor>) = 
             monitors.values().partition(|monitor| monitor.get_metadata_self().parent_module.is_some());
 
-        let invocation_ids = (1..=bases.len()).map(|_| self.next_invocation_id()).collect::<Vec<_>>();
+        let invocation_ids = (1..=bases.len())
+            .map(|_| invocation_id_counter.fetch_add(1, Ordering::SeqCst) + 1)
+            .collect::<Vec<_>>();
         let mut id_iter = invocation_ids.iter();
 
         for monitor in bases {
@@ -371,7 +465,7 @@ impl MonitorManager {
                 .map(|ext| ext.get_module_spec().id.clone()).collect();
 
             // Notify host state manager about new pending monitor invocation.
-            self.send_state_update(StateUpdateMessage {
+            send_state_update(StateUpdateMessage {
                 host_name: host.name.clone(),
                 display_options: monitor.get_display_options(),
                 module_spec: monitor.get_module_spec(),
@@ -385,7 +479,7 @@ impl MonitorManager {
                 Err(error) => {
                     log::error!("Monitor failed: {}", error);
 
-                    self.send_state_update(StateUpdateMessage {
+                    send_state_update(StateUpdateMessage {
                         host_name: host.name.clone(),
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
@@ -405,7 +499,7 @@ impl MonitorManager {
             }) {
                 log::warn!("[{}][{}] Skipping, sudo required", host.name, monitor.get_module_spec().id);
 
-                self.send_state_update(StateUpdateMessage {
+                send_state_update(StateUpdateMessage {
                     host_name: host.name.clone(),
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
@@ -420,18 +514,21 @@ impl MonitorManager {
                 continue;
             }
 
-            self.send_connector_request(ConnectorRequest {
+            if let Err(error) = request_sender.send(ConnectorRequest {
                 connector_spec: monitor.get_connector_spec(),
                 source_id: monitor.get_module_spec().id,
                 host: host.clone(),
                 invocation_id: current_invocation_id,
-                response_sender: self.new_response_sender(),
+                response_sender: response_sender.clone(),
                 request_type: RequestType::MonitorCommand {
                     parent_datapoint: None,
                     extension_monitors: extension_ids,
                     commands: messages,
                 },
-            });
+            }) {
+                log::error!("Failed to send connector request: {}", error);
+                send_state_update(StateUpdateMessage::fatal_error());
+            }
         }
 
         invocation_ids

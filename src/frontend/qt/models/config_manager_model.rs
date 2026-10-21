@@ -250,6 +250,8 @@ impl ConfigManagerModel {
     fn getPreferences(&self) -> QVariantMap {
         let mut preferences = QVariantMap::default();
         preferences.insert("refreshHostsOnStart".into(), self.main_config.preferences.refresh_hosts_on_start.into());
+        let auto_refresh_interval = self.main_config.preferences.auto_refresh_interval as i32;
+        preferences.insert("autoRefreshInterval".into(), auto_refresh_interval.into());
         preferences.insert("useRemoteEditor".into(), self.main_config.preferences.use_remote_editor.into());
         preferences.insert("remoteTextEditor".into(), QString::from(self.main_config.preferences.remote_text_editor.clone()).into());
         preferences.insert("sudoRemoteEditor".into(), self.main_config.preferences.sudo_remote_editor.into());
@@ -274,6 +276,9 @@ impl ConfigManagerModel {
 
     fn setPreferences(&mut self, preferences: QVariantMap) {
         self.main_config.preferences.refresh_hosts_on_start = preferences.value("refreshHostsOnStart".into(), false.into()).to_bool();
+        let auto_refresh_interval = self.main_config.preferences.auto_refresh_interval as i32;
+        self.main_config.preferences.auto_refresh_interval =
+            preferences.value("autoRefreshInterval".into(), auto_refresh_interval.into()).to_int().max(0) as u64;
         self.main_config.preferences.use_remote_editor = preferences.value("useRemoteEditor".into(), false.into()).to_bool();
         self.main_config.preferences.remote_text_editor = preferences.value("remoteTextEditor".into(), QString::from("vim").into()).to_qbytearray().to_string();
         self.main_config.preferences.sudo_remote_editor = preferences.value("sudoRemoteEditor".into(), false.into()).to_bool();
@@ -331,6 +336,7 @@ impl ConfigManagerModel {
                 String::from("docker"),
                 String::from("docker-compose"),
             ],
+            allow_auto_refresh: true,
             overrides: ConfigGroup {
                 host_settings: vec![crate::host::HostSetting::UseSudo],
                 ..Default::default()
@@ -635,6 +641,7 @@ impl ConfigManagerModel {
 
             host_config.address = new_settings.address;
             host_config.fqdn = new_settings.fqdn;
+            host_config.allow_auto_refresh = new_settings.allow_auto_refresh;
             host_config.overrides = new_settings.overrides;
 
             host_config.overrides.custom_commands = custom_commands;

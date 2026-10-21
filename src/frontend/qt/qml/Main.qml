@@ -78,6 +78,7 @@ ApplicationWindow {
         remoteCoreBlocked: root.remoteCoreBlocked
         usingRemoteCore: root.usingRemoteCore
         coreConnectionState: root.coreConnectionState
+        autoRefreshInterval: LK.config.getPreferences().autoRefreshInterval
 
         onClickedAdd: {
             root.dialogHandler.openNewHostConfig()
@@ -117,6 +118,12 @@ ApplicationWindow {
         }
         onClickedAutoRefresh: {
             LK.command.forceInitializeHosts()
+        }
+        onAutoRefreshIntervalSelected: function(intervalSec) {
+            let preferences = LK.config.getPreferences()
+            preferences.autoRefreshInterval = intervalSec
+            LK.config.setPreferences(preferences)
+            LK.reload()
         }
         onFilterChanged: function(searchText) {
             hostTableModel.filter(searchText)
@@ -158,6 +165,7 @@ ApplicationWindow {
 
         function onReloaded(error, resetHosts) {
             hostTableModel.displayData = LK.hosts.getDisplayData()
+            root.menuBar.autoRefreshInterval = LK.config.getPreferences().autoRefreshInterval
             // Rebuild details tables from post-reload state (update() only upserts monitors).
             root.hostDetails.refresh()
             root.refreshRemoteCoreBlocked()

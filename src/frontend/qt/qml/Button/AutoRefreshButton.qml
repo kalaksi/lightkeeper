@@ -21,6 +21,10 @@ Item {
     property real size: 0.8 * parent.height
     property int iconWidth: Math.floor(imageRelativeWidth * size)
     property int iconHeight: Math.floor(imageRelativeHeight * size)
+    /// In seconds. 0 disables auto-refresh.
+    property int autoRefreshInterval: 0
+    /// If false, the timer only shows progress and the refresh is expected to happen elsewhere (e.g. in core).
+    property bool clickOnAutoRefresh: true
 
     enabled: true
     opacity: enabled ? 1.0 : 0.5
@@ -28,15 +32,16 @@ Item {
     height: root.size
 
     signal clicked()
+    signal intervalSelected(int intervalSec)
 
 
 
     // Auto-refresh timer. Triggered for every percentage change in progress.
     Timer {
         id: autoRefreshTimer
-        // Value for 1 h.
-        interval: 36000
-        running: false
+        // In other words, (intervalSec * 1000) / 100
+        interval: Math.max(1, root.autoRefreshInterval * 10)
+        running: root.autoRefreshInterval > 0
         repeat: true
 
         onTriggered: {
@@ -44,7 +49,9 @@ Item {
 
             if (refreshTimerCanvas.progressPercent >= 100) {
                 refreshTimerCanvas.progressPercent = 0
-                root.clicked()
+                if (root.clickOnAutoRefresh) {
+                    root.clicked()
+                }
             }
 
             refreshTimerCanvas.requestPaint()
@@ -168,17 +175,14 @@ Item {
                         y: parent.y + parent.height
 
                         function setTimerInterval(intervalSec) {
-                            if (intervalSec === 0) {
-                                autoRefreshTimer.stop()
-                            }
-                            else {
-                                refreshTimerCanvas.progressPercent = 0
-                                refreshTimerCanvas.requestPaint()
-                                // Timer is triggered for every percentage change in progress.
-                                // In other words, (intervalSec * 1000) / 100
-                                autoRefreshTimer.interval = intervalSec * 10
+                            // Timer is triggered for every percentage change in progress.
+                            refreshTimerCanvas.progressPercent = 0
+                            refreshTimerCanvas.requestPaint()
+                            root.autoRefreshInterval = intervalSec
+                            if (intervalSec > 0) {
                                 autoRefreshTimer.restart()
                             }
+                            root.intervalSelected(intervalSec)
 
                             refreshMenu.close()
                         }

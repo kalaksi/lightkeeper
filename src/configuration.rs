@@ -201,6 +201,9 @@ pub struct Preferences {
     #[serde(default)]
     pub use_sandbox_mode: bool,
     pub refresh_hosts_on_start: bool,
+    /// Interval in seconds for refreshing monitors of hosts that allow it. 0 disables auto-refresh.
+    #[serde(default)]
+    pub auto_refresh_interval: u64,
     pub use_remote_editor: bool,
     pub sudo_remote_editor: bool,
     pub remote_text_editor: String,
@@ -296,6 +299,8 @@ pub struct HostSettings {
     pub address: String,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub fqdn: String,
+    #[serde(default = "DisplayOptions::default_to_true")]
+    pub allow_auto_refresh: bool,
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub overrides: ConfigGroup,
     /// Effective configuration after merging everything. Will not be stored in config file, but is available in runtime.

@@ -44,6 +44,8 @@ impl CommandBackend for LocalCommandBackend {
     ) {
         self.monitor_manager
             .configure(hosts_config, request_sender.clone(), update_sender.clone());
+        self.monitor_manager
+            .start_auto_refresh(hosts_config, preferences.auto_refresh_interval);
         self.command_handler
             .configure(hosts_config, preferences, request_sender, update_sender);
     }

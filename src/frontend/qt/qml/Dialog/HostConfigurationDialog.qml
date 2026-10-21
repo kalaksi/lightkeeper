@@ -56,6 +56,7 @@ LightkeeperDialog {
 
     onAccepted: {
         let newSettings = {
+            allow_auto_refresh: allowAutoRefreshSwitch.checked,
             overrides: {
                 connectors: {},
                 host_settings: []
@@ -280,6 +281,29 @@ LightkeeperDialog {
                         regularExpression: /[1-9][0-9]{0,4}/
                     }
                     onTextChanged: root.updateOkButton()
+                }
+            }
+
+            ColumnLayout {
+                spacing: Theme.spacingTight
+
+                Layout.row: 2
+                Layout.column: 1
+                Layout.preferredWidth: root._formRightColumnWidth
+                Layout.minimumWidth: root._formRightColumnWidth
+                Layout.maximumWidth: root._formRightColumnWidth
+
+                Label {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "Allow auto-refresh"
+                }
+
+                Switch {
+                    id: allowAutoRefreshSwitch
+                    Layout.alignment: Qt.AlignHCenter
+                    checked: root.hostSettings.allow_auto_refresh ?? true
+                    onCheckedChanged: root.updateOkButton()
                 }
             }
         }
