@@ -159,12 +159,15 @@ Item {
     // Allows updating one button at a time.
     // State has to be stored and handled on higher level and not in e.g. CommandButton or CommandButtonRow since those are not persistent.
     function updateProgress(buttonId, progressPercent) {
-        let button = commandRepeater.itemAt(getButtonIdentifiers().indexOf(buttonId)) as CommandButton
+        if (root._buttonProgressStates[buttonId] === progressPercent) {
+            return
+        }
 
-        // Assign new value only if necessary.
-        if (button !== null && button.progressPercent !== progressPercent) {
-            // console.log("Updating progress for button " + buttonId + " to " + progressPercent)
-            root._buttonProgressStates[buttonId] = progressPercent
+        // Do not use `as CommandButton` here: with ComponentBehavior Bound the cast fails and returns null.
+        root._buttonProgressStates[buttonId] = progressPercent
+        let index = getButtonIdentifiers().indexOf(buttonId)
+        let button = index >= 0 ? commandRepeater.itemAt(index) : null
+        if (button !== null) {
             button.progressPercent = progressPercent
         }
     }
