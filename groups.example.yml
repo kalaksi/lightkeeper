@@ -124,6 +124,7 @@ groups:
       docker-rm: {}
       docker-shell: {}
       docker-image-remove: {}
+      docker-image-pull: {}
       docker-image-remote-tags: {}
 
   # Monitors and commands for Docker-compose.

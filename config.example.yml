@@ -75,7 +75,7 @@ display_options:
       priority: 9
       icon: "qrc:///main/images/docker"
       color: "#8010a0ee"
-      command_order: ["docker-image-remote-tags", "docker-image-remove"]
+      command_order: ["docker-image-remote-tags", "docker-image-pull", "docker-image-remove"]
     podman-compose:
       priority: 10
       icon: "qrc:///main/images/docker"

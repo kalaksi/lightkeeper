@@ -9,5 +9,8 @@ pub use remove::Remove;
 pub mod prune;
 pub use prune::Prune;
 
+pub mod pull;
+pub use pull::Pull;
+
 pub mod remote_tags;
 pub use remote_tags::RemoteTags;
