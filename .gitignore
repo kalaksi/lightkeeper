@@ -2,6 +2,7 @@ build
 /target
 /flatpak/build
 .*
+!.github
 vendor
 android
 

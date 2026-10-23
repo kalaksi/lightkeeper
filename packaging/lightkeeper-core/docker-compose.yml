@@ -1,0 +1,19 @@
+services:
+  lightkeeper-core:
+    image: ghcr.io/kalaksi/lightkeeper-core
+    restart: unless-stopped
+    # UID/GID of the user that Lightkeeper uses for SSH connections to this host (see `id -u` and `id -g`).
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    # environment:
+    #   RUST_LOG: debug
+    volumes:
+      # Host directories can be anywhere, but they have to exist beforehand, be owned by the user above
+      # and have mode 0700, e.g.:
+      # mkdir -p -m 700 ~/lightkeeper-core/config ~/lightkeeper-core/data ~/.local/share/lightkeeper
+      - ~/lightkeeper-core/config:/config
+      - ~/lightkeeper-core/data:/data/lightkeeper
+      # The socket is created as core.sock in this directory. With the default location Lightkeeper finds it
+      # automatically. Otherwise set "Socket path" to "<host directory>/core.sock" in Lightkeeper's core dialog.
+      - ~/.local/share/lightkeeper:/socket

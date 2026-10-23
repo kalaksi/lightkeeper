@@ -1,0 +1,107 @@
+name: Container
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/lightkeeper-core
+  TAG: ${{ github.event.release.tag_name }}
+
+jobs:
+  build:
+    name: build-${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: amd64
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            platform: arm64
+            arch: aarch64
+    steps:
+      - name: Checkout
+        # actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Download and verify release binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --dir release --pattern "lightkeeper-core-*-${{ matrix.arch }}-linux.tar.gz*"
+          cd release
+          sha256sum -c *.sha256
+          gh attestation verify *.tar.gz --repo "$GITHUB_REPOSITORY"
+          mkdir -p "../context/${{ matrix.platform }}"
+          tar -xzf *.tar.gz --strip-components=1 -C "../context/${{ matrix.platform }}" --wildcards '*/lightkeeper-core'
+
+      - name: Build and push image by digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx create --use
+          docker buildx build --platform "linux/${{ matrix.platform }}" --pull \
+            --output "type=image,name=$IMAGE,push-by-digest=true,name-canonical=true,push=true" \
+            --metadata-file metadata.json \
+            -f packaging/lightkeeper-core/Dockerfile context
+          mkdir digests
+          jq -r '."containerimage.digest"' metadata.json > "digests/${{ matrix.platform }}"
+
+      - name: Upload digest
+        # actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: digest-${{ matrix.platform }}
+          path: digests/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download digests
+        # actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          path: digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Create and push multi-arch image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx imagetools create -t "$IMAGE:$VERSION" -t "$IMAGE:latest" \
+            $(for digest in digests/*; do printf '%s@%s ' "$IMAGE" "$(cat "$digest")"; done)
+          DIGEST="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)"
+          echo "DIGEST=$DIGEST" >> "$GITHUB_ENV"
+
+      - name: Attest image provenance
+        # actions/attest@v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ env.DIGEST }}
+          push-to-registry: true
