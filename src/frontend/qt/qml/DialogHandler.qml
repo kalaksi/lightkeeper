@@ -36,7 +36,7 @@ Item {
 
     CoreConnectionDialog {
         id: coreConnectionDialog
-        bottomMargin: 0.12 * parent.height
+        bottomMargin: 0.04 * parent.height
     }
 
     PreferencesDialog {

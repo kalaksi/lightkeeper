@@ -18,7 +18,7 @@ LightkeeperDialog {
     id: root
     title: "Lightkeeper Core"
     implicitWidth: 580
-    implicitHeight: 720
+    implicitHeight: 800
     standardButtons: Dialog.Close
 
     property string statusText: ""
@@ -211,10 +211,12 @@ LightkeeperDialog {
 
             SmallText {
                 Layout.fillWidth: true
-                text: "Connect to lightkeeper-core on a remote host.\n"
+                text: "Connect to lightkeeper-core on a remote host.<br>"
                     + "Lightkeeper-core is the backend that runs the monitoring and commands,"
                     + " while this application is the user interface."
-                    + " Use a host that can reach your monitored hosts, e.g. a jump host or an always-on server."
+                    + " Use a host that can reach your monitored hosts, e.g. a jump host or an always-on server. "
+                    + "<b>Lightkeeper-core will listen on a unix socket and not on any port.</b>"
+                textFormat: Text.RichText
                 wrapMode: Text.WordWrap
                 color: Theme.textColorDark
             }
@@ -265,6 +267,24 @@ LightkeeperDialog {
                         }
                         onTextChanged: root.clearProbeCache()
                     }
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spacingTight
+
+                Label {
+                    text: "Socket path"
+                }
+
+                TextField {
+                    id: socketPathField
+                    Layout.fillWidth: true
+                    placeholderText: "~/.local/share/lightkeeper/core.sock"
+                    placeholderTextColor: Theme.textColorDark
+                    enabled: !root.busy
+                    onTextChanged: root.clearProbeCache()
                 }
             }
 
@@ -487,8 +507,16 @@ LightkeeperDialog {
                 Layout.fillWidth: true
                 visible: root.probeRecommendation.length > 0
                 text: root.probeRecommendation
+                textFormat: Text.RichText
                 wrapMode: Text.WordWrap
                 color: Theme.textColorDark
+                onLinkActivated: (link) => Qt.openUrlExternally(link)
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.NoButton
+                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                }
             }
 
             NormalText {
@@ -497,15 +525,6 @@ LightkeeperDialog {
                 text: root.errorText
                 color: Theme.colorForCriticality("Error")
                 wrapMode: Text.WrapAnywhere
-            }
-
-            Item {
-                visible: root.busy
-                Layout.fillWidth: true
-                Layout.preferredHeight: 48
-
-                WorkingSprite {
-                }
             }
 
             Item {
@@ -520,6 +539,7 @@ LightkeeperDialog {
         hostField.text = profile.host || ""
         portField.text = profile.port || ""
         usernameField.text = profile.username || ""
+        socketPathField.text = profile.remoteSocketPath || ""
         autoConnectCheckBox.checked = !!profile.autoConnect
         privateKeyPathField.text = profile.privateKeyPath || ""
         agentKeyField.text = profile.agentKeyIdentifier || ""
@@ -611,12 +631,12 @@ LightkeeperDialog {
             }
         }
 
-        // Always clear remoteSocketPath so the remote core host socket is auto-discovered over SSH.
+        // Empty remoteSocketPath means the remote core host socket is auto-discovered over SSH.
         LK.config.setCoreConnection({
             host: hostField.text.trim(),
             port: portField.text.trim(),
             username: usernameField.text.trim(),
-            remoteSocketPath: "",
+            remoteSocketPath: socketPathField.text.trim(),
             autoConnect: autoConnectCheckBox.checked,
             password: password,
             privateKeyPath: privateKeyPath,
@@ -717,7 +737,7 @@ LightkeeperDialog {
         else {
             lines.push("Binary: lightkeeper-core not found")
         }
-        lines.push("Can run in background: "
+        lines.push("Can run user service on background: "
             + (probe.lingerEnabled ? "yes" : "no (use \"loginctl enable-linger\" to allow)"))
         root.probeSummary = lines.join("\n")
     }
@@ -735,6 +755,8 @@ LightkeeperDialog {
         root.refreshProbeSummary()
         if (error === "") {
             let probe = LK.getCoreHostProbe()
+            // Install and upgrade only set up the default socket path.
+            let customSocketPath = socketPathField.text.trim() !== ""
             if (probe.socketPath) {
                 let coreError = LK.probeCore()
                 if (coreError === "") {
@@ -756,7 +778,11 @@ LightkeeperDialog {
                     root.statusHint = ""
                     root.errorText = coreError
                     root.coreStatus = "different version installed"
-                    if (probe.binaryPath === probe.installBinaryPath) {
+                    if (customSocketPath) {
+                        root.probeRecommendation = "Upgrade the lightkeeper-core serving the configured socket "
+                            + "path, e.g. by updating the container image."
+                    }
+                    else if (probe.binaryPath === probe.installBinaryPath) {
                         root.probeRecommendation = "Use Upgrade to install the matching user-local version."
                         root.canInstall = true
                         root.installIsUpgrade = true
@@ -774,6 +800,14 @@ LightkeeperDialog {
                     root.coreStatus = "installed, not responding"
                 }
             }
+            else if (customSocketPath) {
+                root.statusText = "SSH connection works"
+                root.statusHint = ""
+                root.errorText = ""
+                root.probeRecommendation = "Socket is not present at the configured path. Install is only "
+                    + "available with the default socket path, so clear the field to use it."
+                root.coreStatus = "not running"
+            }
             else if (probe.binaryPath) {
                 root.statusText = "SSH connection works"
                 root.statusHint = ""
@@ -786,8 +820,10 @@ LightkeeperDialog {
                 root.statusHint = ""
                 root.errorText = ""
                 root.probeRecommendation = "Use 'install' to set up lightkeeper-core as a systemd user service "
-                    + "in user's home directory.\n"
-                    + "Lightkeeper-core will listen on a unix socket and not on any port."
+                    + "in user's home directory.<br>"
+                    + "Alternatively, run the ghcr.io/kalaksi/lightkeeper-core container. "
+                    + "See <a href=\"https://github.com/kalaksi/lightkeeper/blob/master/packaging/lightkeeper-core/docker-compose.yml\">"
+                    + "https://github.com/kalaksi/lightkeeper/blob/master/packaging/lightkeeper-core/docker-compose.yml</a>."
                 root.coreStatus = "not installed"
                 root.canInstall = true
             }
