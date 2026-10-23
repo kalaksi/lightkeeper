@@ -273,6 +273,17 @@ fn perform_handshake(writer: &mut CoreClientStream, reader: &mut CoreClientStrea
             Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => {
                 return Err(String::from("Connection closed during remote core handshake").into());
             }
+            // Older cores may reject with a wire format the desktop can no longer decode
+            // (e.g. Error without RemoteErrorCode, or shifted enum indexes). Treat as mismatch.
+            Err(error) if error.kind() == io::ErrorKind::InvalidData => {
+                return Err(HandshakeError {
+                    message: format!(
+                        "Protocol mismatch: incompatible core response (desktop expects protocol {})",
+                        PROTOCOL_VERSION,
+                    ),
+                    version_mismatch: true,
+                });
+            }
             Err(error) => return Err(error.to_string().into()),
         }
     }

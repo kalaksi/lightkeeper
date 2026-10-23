@@ -79,6 +79,7 @@ ToolBar {
         spacing: Theme.spacingNormal
 
         ToolButton {
+            visible: false
             icon.source: root.coreButtonIcon
             text: root.coreButtonTooltip
             display: AbstractButton.IconOnly
@@ -93,6 +94,7 @@ ToolBar {
         }
 
         ToolSeparator {
+            visible: false
         }
 
         ToolButton {
