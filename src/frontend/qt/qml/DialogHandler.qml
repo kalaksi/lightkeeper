@@ -24,7 +24,7 @@ Item {
 
     HostConfigurationDialog {
         id: hostConfigDialog
-        bottomMargin: 0.13 * parent.height
+        bottomMargin: 0.04 * parent.height
 
         onConfigurationChanged: LK.reload()
     }
