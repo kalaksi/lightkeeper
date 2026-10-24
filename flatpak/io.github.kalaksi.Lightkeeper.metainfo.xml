@@ -44,6 +44,18 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.49.0" date="2026-10-24">
+      <description>
+        <ul>
+          <li>Add docker-image-pull for pulling new images</li>
+          <li>Confirm writing from user if remote file has changed</li>
+          <li>Use multiple resolved addresses in SSH connections</li>
+          <li>Improve SSH performance a bit</li>
+          <li>Fix host-level module settings losing descriptions after save</li>
+          <li>Fix button progress animation</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.48.0" date="2026-10-18">
       <description>
         <ul>
