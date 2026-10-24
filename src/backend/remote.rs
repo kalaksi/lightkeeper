@@ -79,7 +79,8 @@ impl Write for CoreClientStream {
     fn flush(&mut self) -> io::Result<()> {
         match self {
             CoreClientStream::Unix(stream) => stream.flush(),
-            CoreClientStream::Ssh(channel) => channel.flush(),
+            // libssh2 channel flush discards unread incoming data. Blocking writes are already sent.
+            CoreClientStream::Ssh(_) => Ok(()),
         }
     }
 }
@@ -715,19 +716,53 @@ impl RemoteCoreClient {
                 }
             };
 
+            // Read timeouts can interrupt a frame, so partial frames are buffered to keep framing in sync.
+            let mut buffer = Vec::new();
+            let mut chunk = [0_u8; 64 * 1024];
             loop {
                 match stop_receiver.try_recv() {
                     Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
                     Err(mpsc::TryRecvError::Empty) => {}
                 }
 
-                let message = match read_message::<ServerMessage, _>(&mut reader) {
-                    Ok(message) => message,
-                    Err(error) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock => {
-                        continue;
+                let frame_length = match buffer.get(..4) {
+                    Some(length_bytes) => Some(u32::from_be_bytes(length_bytes.try_into().unwrap()) as usize),
+                    None => None,
+                };
+                if frame_length.is_some_and(|length| length == 0 || length > MAX_FRAME_SIZE) {
+                    disconnect("Receive failed: Invalid frame length", true);
+                    return;
+                }
+
+                let message = match frame_length {
+                    Some(length) if buffer.len() >= 4 + length => {
+                        let result = read_message::<ServerMessage, _>(&mut &buffer[..4 + length]);
+                        buffer.drain(..4 + length);
+                        match result {
+                            Ok(message) => message,
+                            Err(error) => {
+                                disconnect(&format!("Receive failed: {}", error), true);
+                                return;
+                            }
+                        }
                     }
-                    Err(error) => {
-                        disconnect(&format!("Receive failed: {}", error), error.kind() == io::ErrorKind::InvalidData);
+                    _ => {
+                        match reader.read(&mut chunk) {
+                            Ok(0) => disconnect("Receive failed: Connection closed", false),
+                            Ok(count) => {
+                                buffer.extend_from_slice(&chunk[..count]);
+                                continue;
+                            }
+                            Err(error)
+                                if matches!(
+                                    error.kind(),
+                                    io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                                ) =>
+                            {
+                                continue;
+                            }
+                            Err(error) => disconnect(&format!("Receive failed: {}", error), false),
+                        }
                         return;
                     }
                 };
