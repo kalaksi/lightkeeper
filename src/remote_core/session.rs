@@ -97,7 +97,9 @@ impl RemoteSession {
                     ServerMessage::error(None, RemoteErrorCode::Internal, "Core runtime crashed")
                 }
                 frontend::UIUpdate::Stop() => return,
-                frontend::UIUpdate::CoreConnectionChanged() | frontend::UIUpdate::CommandResult(..) => continue,
+                frontend::UIUpdate::CoreConnectionChanged()
+                | frontend::UIUpdate::CommandResult(..)
+                | frontend::UIUpdate::ReplaceHosts(_) => continue,
             };
 
             if !Self::queue_update(&outbox, message) {

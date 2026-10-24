@@ -459,6 +459,7 @@ Module {
 
         Signal { name: "criticalityCountsChanged" }
         Signal { name: "updateReceived"; Parameter { name: "host_id"; type: "string" } }
+        Signal { name: "hostsReset" }
         Signal {
             name: "monitorStateChanged"
             Parameter { name: "host_id"; type: "string" }

@@ -802,11 +802,9 @@ impl RemoteCoreClient {
                         });
                     }
                     ServerMessage::InitialState(display_data) => {
-                        for host_display_data in display_data.hosts.into_values() {
-                            if frontend_update_sender.send(frontend::UIUpdate::Host(host_display_data)).is_err() {
-                                disconnect("Failed to deliver initial state update", false);
-                                return;
-                            }
+                        if frontend_update_sender.send(frontend::UIUpdate::ReplaceHosts(display_data)).is_err() {
+                            disconnect("Failed to deliver initial state update", false);
+                            return;
                         }
                     }
                     ServerMessage::HostUpdate(host_display_data) => {

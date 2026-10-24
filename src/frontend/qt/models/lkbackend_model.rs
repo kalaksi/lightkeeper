@@ -17,7 +17,7 @@ use crate::{
     configuration::{self, Configuration},
     connection_manager::ConnectionManager,
     file_handler,
-    frontend::{HostDisplayData, UIUpdate},
+    frontend::{DisplayData, HostDisplayData, UIUpdate},
     host_manager,
     module::command::CommandResult,
     module::monitoring::{DataPoint, MonitoringData},
@@ -158,6 +158,13 @@ impl LkBackend {
         });
 
         let self_ptr = QPointer::from(&*self);
+        let process_hosts_replace = qmetaobject::queued_callback(move |display_data: DisplayData| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned.borrow().hosts.borrow_mut().replace_hosts(display_data);
+            }
+        });
+
+        let self_ptr = QPointer::from(&*self);
         let process_command_result =
             qmetaobject::queued_callback(move |(invocation_id, command_result): (u64, CommandResult)| {
                 if let Some(self_pinned) = self_ptr.as_pinned() {
@@ -254,6 +261,7 @@ impl LkBackend {
                                 }
                                 process_host_update(display_data);
                             }
+                            UIUpdate::ReplaceHosts(display_data) => process_hosts_replace(display_data),
                             UIUpdate::Chart(metrics) => process_chart_update(metrics),
                             UIUpdate::CommandResult(invocation_id, command_result) => {
                                 process_command_result((invocation_id, command_result))

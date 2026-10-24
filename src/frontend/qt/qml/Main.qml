@@ -160,7 +160,11 @@ ApplicationWindow {
         }
 
         function onRestartRequested() {
-            root.quit()
+            root.dialogHandler.openConfirmationDialog(
+                "Lightkeeper will now restart in local mode.",
+                () => root.quit(),
+                true
+            )
         }
 
         function onReloaded(error, resetHosts) {
@@ -192,6 +196,11 @@ ApplicationWindow {
 
     Connections {
         target: LK.hosts
+
+        function onHostsReset() {
+            hostTableModel.displayData = LK.hosts.getDisplayData()
+            root.refreshAlerts()
+        }
 
         function onUpdateReceived(hostId) {
             hostTableModel.updateHostRow(LK.hosts.getHostDisplayData(hostId))

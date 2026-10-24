@@ -31,6 +31,8 @@ pub struct HostDataManagerModel {
     criticalityCountsChanged: qt_signal!(),
 
     updateReceived: qt_signal!(host_id: QString),
+    /// Full host list replaced (e.g. remote core InitialState); UI should rebuild the host table.
+    hostsReset: qt_signal!(),
     monitorStateChanged: qt_signal!(host_id: QString, monitor_id: QString, new_criticality: QString),
     commandResultReceived: qt_signal!(command_result: QString, invocation_id: u64),
     monitoringDataReceived: qt_signal!(host_id: QString, category: QString, monitoring_data_qv: QVariant, invocation_id: u64),
@@ -123,6 +125,12 @@ impl HostDataManagerModel {
     pub fn clear_hosts(&mut self) {
         self.display_data.hosts.clear();
         self.update_criticality_counts();
+    }
+
+    pub fn replace_hosts(&mut self, display_data: frontend::DisplayData) {
+        self.display_data = display_data;
+        self.update_criticality_counts();
+        self.hostsReset();
     }
 
     pub fn set_hosts_config(&mut self, hosts_config: configuration::Hosts) {

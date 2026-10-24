@@ -18,6 +18,8 @@ use crate::utils::ErrorMessage;
 #[derive(Clone)]
 pub enum UIUpdate {
     Host(HostDisplayData),
+    /// Full host list from remote core after connect or config update (replaces, does not merge).
+    ReplaceHosts(DisplayData),
     Chart(lmserver::LMSResponse),
     /// Result for an invocation that runs on the desktop instead of the core (e.g. remote core file transfers).
     CommandResult(u64, CommandResult),

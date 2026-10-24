@@ -610,8 +610,11 @@ impl ConfigManagerModel {
     }
 
     fn writeGroupConfiguration(&mut self) {
+        // While a host dialog is open, hosts_config may contain a draft entry (e.g. "new-host-id").
+        // Persist the last committed hosts so a group write cannot leak that placeholder.
+        let hosts = self.hosts_config_backup.as_ref().unwrap_or(&self.hosts_config).clone();
         if let Err(error) = self.config_backend.as_mut().unwrap()
-            .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+            .update_config(self.main_config.clone(), hosts, self.groups_config.clone())
         {
             self.error(QString::from(error.to_string()));
         }
