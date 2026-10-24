@@ -163,10 +163,15 @@ impl RsyncSsh {
         match &self.custom_known_hosts_path {
             Some(path) => Ok(path.clone()),
             None => {
-                let path = file_handler::get_config_dir().join("known_hosts");
+                let config_dir = file_handler::get_config_dir();
+                let path = config_dir.join("known_hosts");
                 if !path.exists() {
-                    std::fs::File::create(&path)
-                        .map_err(|error| LkError::other(format!("{}", error)))?;
+                    std::fs::create_dir_all(&config_dir).map_err(|error| {
+                        LkError::other(format!("Failed to create config directory '{}': {}", config_dir.display(), error))
+                    })?;
+                    std::fs::File::create(&path).map_err(|error| {
+                        LkError::other(format!("Failed to create known_hosts '{}': {}", path.display(), error))
+                    })?;
                 }
                 Ok(path)
             }

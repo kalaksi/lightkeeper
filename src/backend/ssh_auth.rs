@@ -68,8 +68,12 @@ pub fn known_hosts_path(custom_path: Option<&str>) -> Result<PathBuf, SshAuthErr
         return Ok(path);
     }
 
-    let path = file_handler::get_config_dir().join("known_hosts");
+    let config_dir = file_handler::get_config_dir();
+    let path = config_dir.join("known_hosts");
     if !path.exists() {
+        std::fs::create_dir_all(&config_dir).map_err(|error| {
+            SshAuthError::other(format!("Failed to create config directory {}: {}", config_dir.display(), error))
+        })?;
         std::fs::File::create(&path)
             .map_err(|error| SshAuthError::other(format!("Failed to create known_hosts {}: {}", path.display(), error)))?;
     }
@@ -177,6 +181,9 @@ pub fn authenticate(session: &ssh2::Session, auth: &SshAuthOptions) -> Result<()
 
     if let Some(private_key_path) = auth.private_key_path.as_ref().filter(|value| !value.is_empty()) {
         let path = Path::new(private_key_path);
+        if !path.is_file() {
+            return Err(SshAuthError::other(format!("Private key file not found: '{}'", path.display())));
+        }
         let passphrase = auth
             .private_key_passphrase
             .as_ref()

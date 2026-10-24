@@ -37,6 +37,15 @@ impl EnvVarGuard {
         }
         Self { key, previous }
     }
+
+    pub fn remove(key: &'static str) -> Self {
+        let previous = env::var_os(key);
+        // SAFETY: same as set(); restores prior process state for this key on drop.
+        unsafe {
+            env::remove_var(key);
+        }
+        Self { key, previous }
+    }
 }
 
 impl Drop for EnvVarGuard {

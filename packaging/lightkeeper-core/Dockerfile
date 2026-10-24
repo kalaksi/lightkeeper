@@ -12,6 +12,8 @@ ENV LIGHTKEEPER_UID="63412"
 ENV LIGHTKEEPER_GID="63412"
 # Data directory will be $XDG_DATA_HOME/lightkeeper.
 ENV XDG_DATA_HOME="/data"
+# Keep known_hosts and related paths under the mounted config volume (not $HOME/.config).
+ENV LIGHTKEEPER_CONFIG_DIR="/config"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates libdbus-1-3 && \

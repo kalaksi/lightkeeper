@@ -37,11 +37,6 @@ fn upload_plan() -> FileTransferPlan {
     }
 }
 
-const INNER_SSH: &str = concat!(
-    r#""ssh" "-p" "22" "-i" "/core/key" "-o" "UserKnownHostsFile=/core/known_hosts" "#,
-    r#""-o" "GlobalKnownHostsFile=/dev/null""#,
-);
-
 #[test]
 fn rsync_remote_spec_trailing_slash_by_direction() {
     let ssh = RsyncSsh::new(&HashMap::from([(String::from("username"), String::from("alice"))]));
@@ -55,6 +50,7 @@ fn rsync_remote_spec_trailing_slash_by_direction() {
 
 #[test]
 fn desktop_rsync_rejects_malicious_plan() {
+    let _xdg_config = crate::redirect_xdg_config_home();
     let profile = CoreConnectionProfile::default();
     for address in ["-oProxyCommand=touch /tmp/pwned", "/home/user/.bashrc", "host:", "a b", ""] {
         let plan = FileTransferPlan { address: address.to_string(), ..upload_plan() };
@@ -72,6 +68,7 @@ fn desktop_rsync_rejects_malicious_plan() {
 
 #[test]
 fn desktop_rsync_protects_remote_file_names() {
+    let _xdg_config = crate::redirect_xdg_config_home();
     let command = build_desktop_rsync_command(&CoreConnectionProfile::default(), &upload_plan(), "/local/file")
         .unwrap()
         .to_vec();
@@ -79,12 +76,17 @@ fn desktop_rsync_protects_remote_file_names() {
 }
 
 #[test]
-fn desktop_rsync_uses_inner_ssh_directly_with_local_core() {
+fn desktop_rsync_local_core_uses_desktop_known_hosts() {
+    let _xdg_config = crate::redirect_xdg_config_home();
+    let desktop_known_hosts = lightkeeper::file_handler::get_config_dir().join("known_hosts");
     let command = build_desktop_rsync_command(&CoreConnectionProfile::default(), &upload_plan(), "/local/file")
         .unwrap()
         .to_vec();
-    let rsh_index = command.iter().position(|argument| argument == "-e").unwrap() + 1;
-    assert_eq!(command[rsh_index], INNER_SSH);
+    let rsh = &command[command.iter().position(|argument| argument == "-e").unwrap() + 1];
+
+    assert!(rsh.contains(r#""-i" "/core/key""#));
+    assert!(rsh.contains(&format!("UserKnownHostsFile={}", desktop_known_hosts.display())));
+    assert!(!rsh.contains("/core/known_hosts"), "local core must use desktop known_hosts, not core paths");
 }
 
 #[test]
@@ -101,6 +103,7 @@ fn desktop_rsync_nests_inner_ssh_through_core() {
     let rsh = &command[command.iter().position(|argument| argument == "-e").unwrap() + 1];
 
     assert!(rsh.starts_with(r#""ssh" "-o" "BatchMode=yes" "-o" "UserKnownHostsFile="#));
+    assert!(!rsh[..rsh.find("coreuser@core.example").unwrap()].contains("/core/known_hosts"));
     assert!(rsh.ends_with(concat!(
         r#""-p" "2222" "-i" "/home/user/.ssh/id_ed25519" "coreuser@core.example" "#,
         r#""'ssh' '-p' '22' '-i' '/core/key' '-o' 'UserKnownHostsFile=/core/known_hosts' "#,
@@ -110,6 +113,7 @@ fn desktop_rsync_nests_inner_ssh_through_core() {
 
 #[test]
 fn desktop_rsync_orders_paths_by_direction() {
+    let _xdg_config = crate::redirect_xdg_config_home();
     let profile = CoreConnectionProfile::default();
     let command = build_desktop_rsync_command(&profile, &upload_plan(), "/local/file").unwrap().to_vec();
     assert_eq!(command[command.len() - 2..], [String::from("/local/file"), String::from("user@host:/tmp/")]);

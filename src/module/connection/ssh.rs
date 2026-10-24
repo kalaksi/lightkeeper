@@ -131,7 +131,7 @@ impl Module for Ssh2 {
             port: Arc::new(Mutex::new(settings.get("port").and_then(|value| value.parse::<u16>().ok()).unwrap_or(22))),
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
             password: settings.get("password").cloned(),
-            private_key_path: settings.get("private_key_path").cloned(),
+            private_key_path: settings.get("private_key_path").filter(|path| !path.is_empty()).cloned(),
             private_key_passphrase: settings.get("private_key_passphrase").cloned(),
             agent_key_identifier: settings.get("agent_key_identifier").cloned(),
             connection_timeout: settings.get("connection_timeout").and_then(|value| value.parse::<u16>().ok()).unwrap_or(15),
@@ -501,6 +501,12 @@ impl Ssh2 {
         }
         else if let Some(private_key_path) = &self.private_key_path {
             let path = Path::new(private_key_path);
+            if !path.is_file() {
+                return Err(LkError::other(format!(
+                    "Private key file not found: '{}'",
+                    path.display()
+                )));
+            }
             let passphrase_option = self.private_key_passphrase.as_ref().map(|pass| pass.as_str());
 
             session_data.session.userauth_pubkey_file(self.username.as_str(), None, path, passphrase_option)
@@ -613,7 +619,12 @@ impl Ssh2 {
             // Create known_hosts if it's missing.
             if !known_hosts_path.exists() {
                 log::info!("Creating file '{}'", known_hosts_path.display());
-                let _ = std::fs::File::create(&known_hosts_path)?;
+                std::fs::create_dir_all(&config_dir).map_err(|error| {
+                    LkError::other(format!("Failed to create config directory '{}': {}", config_dir.display(), error))
+                })?;
+                std::fs::File::create(&known_hosts_path).map_err(|error| {
+                    LkError::other(format!("Failed to create known_hosts '{}': {}", known_hosts_path.display(), error))
+                })?;
             }
 
             Ok(known_hosts_path)

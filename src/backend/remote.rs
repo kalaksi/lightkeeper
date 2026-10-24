@@ -365,7 +365,18 @@ pub fn build_desktop_rsync_command(
 
     let is_upload = plan.direction == FileTransferDirection::Upload;
     let remote_spec = plan.ssh.remote_spec(&plan.address, &plan.remote_path, is_upload)?;
-    let inner_ssh = plan.ssh.ssh_arguments()?;
+
+    // Local socket: OpenSSH runs on the desktop, so ignore core-local known_hosts paths (e.g. Docker /config).
+    // Nested SSH: keep the plan paths; they must be valid on the core login host.
+    let inner_ssh = if profile.is_configured() {
+        plan.ssh.ssh_arguments()?
+    }
+    else {
+        let mut ssh = plan.ssh.clone();
+        ssh.custom_known_hosts_path =
+            Some(ssh_auth::known_hosts_path(None).map_err(|error| LkError::other(error.to_ui_message()))?);
+        ssh.ssh_arguments()?
+    };
 
     let remote_shell = if profile.is_configured() {
         let known_hosts_path = ssh_auth::known_hosts_path(None).map_err(|error| LkError::other(error.to_ui_message()))?;

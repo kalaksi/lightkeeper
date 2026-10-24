@@ -28,6 +28,9 @@ pub fn get_config_dir() -> PathBuf {
     if let Some(path) = CONFIG_DIR_OVERRIDE.get() {
         return path.clone();
     }
+    if let Some(path) = env::var_os("LIGHTKEEPER_CONFIG_DIR") {
+        return PathBuf::from(path);
+    }
 
     let mut config_dir = if let Some(path) = env::var_os("XDG_CONFIG_HOME") {
         PathBuf::from(path)
