@@ -1,0 +1,74 @@
+#
+# For development. No source tree in the build context - only this Dockerfile.
+#
+#   docker build -f packaging/lightkeeper-core/Dockerfile.dev \
+#     --build-arg BRANCH=develop \
+#     --build-arg CACHEBUST=$(date +%s) \
+#     -t lightkeeper-core:dev \
+#     packaging/lightkeeper-core
+#
+# CACHEBUST refreshes the git clone / final compile. Dependency layers are reused
+# until BRANCH changes or you rebuild with --no-cache (e.g. after Cargo.lock changes).
+#
+# Not used by release CI; that uses Dockerfile with a prebuilt binary.
+#
+ARG BRANCH=develop
+
+FROM rust:1.88-bookworm AS builder
+ARG BRANCH
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential pkg-config libdbus-1-dev libssl-dev git ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+
+# Manifest-only fetch for a cacheable dependency build.
+RUN curl -fsSL "https://raw.githubusercontent.com/kalaksi/lightkeeper/${BRANCH}/Cargo.toml" \
+      -o Cargo.toml \
+    && curl -fsSL "https://raw.githubusercontent.com/kalaksi/lightkeeper/${BRANCH}/Cargo.lock" \
+      -o Cargo.lock \
+    && mkdir -p macros/lightkeeper_module \
+    && curl -fsSL "https://raw.githubusercontent.com/kalaksi/lightkeeper/${BRANCH}/macros/lightkeeper_module/Cargo.toml" \
+      -o macros/lightkeeper_module/Cargo.toml
+
+RUN mkdir -p src/bin macros/lightkeeper_module/src \
+    && echo 'fn main() {}' > src/main.rs \
+    && echo 'fn main() {}' > src/bin/lightkeeper-core.rs \
+    && touch src/lib.rs macros/lightkeeper_module/src/lib.rs \
+    && cargo build --release --locked \
+        --no-default-features --features core --bin lightkeeper-core \
+    && rm -rf src macros/lightkeeper_module/src
+
+# Clone real sources and rebuild. Change CACHEBUST to avoid a stale cached clone.
+ARG CACHEBUST=0
+RUN git clone --depth 1 --branch "${BRANCH}" \
+      https://github.com/kalaksi/lightkeeper.git /tmp/lk \
+    && rm -rf /tmp/lk/.git \
+    && cp -a /tmp/lk/. ./ \
+    && rm -rf /tmp/lk \
+    && cargo build --release --locked \
+        --no-default-features --features core --bin lightkeeper-core \
+    && cp target/release/lightkeeper-core /lightkeeper-core
+
+FROM debian:13.7-slim
+LABEL org.opencontainers.image.source="https://github.com/kalaksi/lightkeeper"
+LABEL org.opencontainers.image.description="Lightkeeper Core (dev build)"
+LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
+
+ENV LIGHTKEEPER_UID="63412"
+ENV LIGHTKEEPER_GID="63412"
+ENV XDG_DATA_HOME="/data"
+ENV LIGHTKEEPER_CONFIG_DIR="/config"
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates libdbus-1-3 && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p -m 700 /config /data/lightkeeper /socket && \
+    chown ${LIGHTKEEPER_UID}:${LIGHTKEEPER_GID} /config /data/lightkeeper /socket
+
+COPY --from=builder /lightkeeper-core /usr/local/bin/lightkeeper-core
+RUN chmod 755 /usr/local/bin/lightkeeper-core
+
+USER ${LIGHTKEEPER_UID}:${LIGHTKEEPER_GID}
+VOLUME ["/config", "/data/lightkeeper", "/socket"]
+ENTRYPOINT ["/usr/local/bin/lightkeeper-core", "--config-dir", "/config", "--socket-path", "/socket/core.sock"]
