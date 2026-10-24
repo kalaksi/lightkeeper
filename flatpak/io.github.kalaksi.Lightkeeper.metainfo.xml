@@ -44,7 +44,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.49.0" date="2026-10-24">
+    <release version="0.49.1" date="2026-10-24">
       <description>
         <ul>
           <li>Add docker-image-pull for pulling new images</li>
