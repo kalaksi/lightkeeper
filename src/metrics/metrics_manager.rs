@@ -285,7 +285,7 @@ impl MetricsManager {
 
             let mut waited = 0;
             loop {
-                if let Ok(_) = process_handle.try_wait() {
+                if let Ok(Some(_)) = process_handle.try_wait() {
                     stop_success = true;
                     break;
                 }
