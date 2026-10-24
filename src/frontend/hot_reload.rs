@@ -15,9 +15,13 @@ pub fn watch(path: PathBuf, engine: Arc<qmetaobject::QmlEngine>) {
     use notify::{self, Watcher};
 
     // QML engine APIs must run on the Qt GUI thread.
+    // Weak reference so the engine can be dropped on in-process restart (only one engine allowed at a time).
+    let engine = Arc::downgrade(&engine);
     let reload = qmetaobject::queued_callback(move |()| {
-        engine.trim_component_cache();
-        engine.clear_component_cache();
+        if let Some(engine) = engine.upgrade() {
+            engine.trim_component_cache();
+            engine.clear_component_cache();
+        }
     });
 
     thread::spawn(move || {
