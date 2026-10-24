@@ -222,6 +222,11 @@ pub struct Preferences {
     pub show_chart_threshold_lines: bool,
     #[serde(default)]
     pub editor_preferences: EditorPreferences,
+    // Obsolete. Moved to core-connection.yml.
+    #[serde(default, skip_serializing_if = "Configuration::always")]
+    pub saved_core_addresses: Vec<String>,
+    #[serde(default, skip_serializing_if = "Configuration::always")]
+    pub core_connection: CoreConnectionProfile,
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone)]
