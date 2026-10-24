@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+use std::sync::OnceLock;
 use std::{env, fs, io, path::Path, path::PathBuf};
 
 use chrono::{DateTime, Utc};
@@ -17,7 +18,17 @@ const APP_DIR_NAME: &str = "lightkeeper";
 const METADATA_SUFFIX: &str = ".metadata.yml";
 const TEMPORARY_FILE_MAX_AGE_DAYS: i64 = 3;
 
+static CONFIG_DIR_OVERRIDE: OnceLock<PathBuf> = OnceLock::new();
+
+pub fn set_config_dir_override(path: impl Into<PathBuf>) {
+    let _ = CONFIG_DIR_OVERRIDE.set(path.into());
+}
+
 pub fn get_config_dir() -> PathBuf {
+    if let Some(path) = CONFIG_DIR_OVERRIDE.get() {
+        return path.clone();
+    }
+
     let mut config_dir = if let Some(path) = env::var_os("XDG_CONFIG_HOME") {
         PathBuf::from(path)
     }

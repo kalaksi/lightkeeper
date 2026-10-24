@@ -28,6 +28,9 @@ fn main() {
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = Args::parse();
+    if !args.config_dir.is_empty() {
+        file_handler::set_config_dir_override(std::path::PathBuf::from(&args.config_dir));
+    }
 
     if args.monitoring_module_info {
         let module_factory = ModuleFactory::new();

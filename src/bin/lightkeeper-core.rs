@@ -10,6 +10,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
+use lightkeeper::file_handler;
 use lightkeeper::Configuration;
 use lightkeeper::remote_core::runtime::CoreRuntime;
 use lightkeeper::remote_core::server::{CoreServer, ShutdownSignals};
@@ -27,6 +28,9 @@ fn main() {
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = Args::parse();
+    if !args.config_dir.is_empty() {
+        file_handler::set_config_dir_override(PathBuf::from(&args.config_dir));
+    }
 
     log::info!("Lightkeeper Core starting...");
 
