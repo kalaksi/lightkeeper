@@ -55,6 +55,45 @@ pub struct CoreComponents {
     pub monitor_manager: MonitorManager,
 }
 
+impl CoreComponents {
+    /// Reconfigure managers in place, retaining host states for unchanged hosts (same as local reload).
+    /// Returns host IDs whose state was reset due to a configuration change.
+    pub fn reconfigure(
+        &mut self,
+        main_config: &Configuration,
+        hosts_config: &configuration::Hosts,
+        secret_store: Arc<dyn secrets_manager::SecretStore>,
+    ) -> Vec<String> {
+        let mut hosts_config = hosts_config.clone();
+        Configuration::resolve_secrets_in_hosts(&mut hosts_config, secret_store);
+
+        self.connection_manager.configure(&hosts_config);
+        let reset_hosts = self.host_manager.borrow_mut().configure(&hosts_config);
+        self.monitor_manager.configure(
+            &hosts_config,
+            self.connection_manager.new_request_sender(),
+            self.host_manager.borrow().new_state_update_sender(),
+        );
+        self.command_handler.configure(
+            &hosts_config,
+            &main_config.preferences,
+            self.connection_manager.new_request_sender(),
+            self.host_manager.borrow().new_state_update_sender(),
+        );
+
+        self.host_manager.borrow_mut().start_receiving_updates();
+        self.connection_manager.start_processing_requests();
+        self.command_handler.start_processing_responses();
+        self.monitor_manager.start_processing_responses();
+        self.monitor_manager.start_auto_refresh(
+            &hosts_config,
+            main_config.preferences.auto_refresh_interval,
+        );
+
+        reset_hosts
+    }
+}
+
 pub fn initialize_openssl() -> Result<(), error::LkError> {
     // Due to some weirdness between ssh2, openssl and qmetaobject crates, openssl initialization needs to be forced here.
     // Otherwise, there might be a problem in ssh2 handshake with error "Unable to exchange encryption keys" for no apparent reason.
@@ -77,53 +116,30 @@ pub fn initialize_core(
         log::error!("Failed to clean up expired temporary cache files: {}", error);
     }
 
-    let mut hosts_config = hosts_config.clone();
-    Configuration::resolve_secrets_in_hosts(&mut hosts_config, secret_store);
-
     let host_manager = Rc::new(RefCell::new(HostManager::new()));
-    host_manager.borrow_mut().configure(&hosts_config);
-
-    let mut connection_manager = ConnectionManager::new(module_factory.clone());
-    connection_manager.configure(&hosts_config);
-
+    let connection_manager = ConnectionManager::new(module_factory.clone());
     let invocation_id_counter = Arc::new(AtomicU64::new(0));
-
-    let mut monitor_manager = MonitorManager::new(
+    let monitor_manager = MonitorManager::new(
         host_manager.clone(),
         module_factory.clone(),
         invocation_id_counter.clone(),
     );
-    monitor_manager.configure(
-        &hosts_config,
-        connection_manager.new_request_sender(),
-        host_manager.borrow().new_state_update_sender(),
-    );
-
-    let mut command_handler = CommandHandler::new(
+    let command_handler = CommandHandler::new(
         host_manager.clone(),
         module_factory.clone(),
         invocation_id_counter,
     );
-    command_handler.configure(
-        &hosts_config,
-        &main_config.preferences,
-        connection_manager.new_request_sender(),
-        host_manager.borrow().new_state_update_sender(),
-    );
 
-    host_manager.borrow_mut().start_receiving_updates();
-    connection_manager.start_processing_requests();
-    command_handler.start_processing_responses();
-    monitor_manager.start_processing_responses();
-    monitor_manager.start_auto_refresh(&hosts_config, main_config.preferences.auto_refresh_interval);
-
-    Ok(CoreComponents {
+    let mut core = CoreComponents {
         module_factory,
         host_manager,
         connection_manager,
         command_handler,
         monitor_manager,
-    })
+    };
+    core.reconfigure(main_config, hosts_config, secret_store);
+
+    Ok(core)
 }
 
 #[cfg(feature = "gui")]

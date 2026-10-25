@@ -414,62 +414,23 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                     continue;
                 }
 
-                let module_factory = runtime.core.module_factory.clone();
-                runtime.stop();
-
-                let reinit_error = match Configuration::read(&runtime.config_dir) {
-                    Ok((main_read, hosts_read, _groups)) => {
-                        match crate::initialize_core(&main_read, &hosts_read, module_factory.clone(), runtime.secret_store.clone()) {
-                            Ok(core) => {
-                                runtime.core = core;
-                                None
-                            }
-                            Err(error) => Some(error),
+                // Re-read so effective config matches disk (same as local reload), then reconfigure in place.
+                let (main_read, hosts_read) = match Configuration::read(&runtime.config_dir) {
+                    Ok((main_read, hosts_read, _groups)) => (main_read, hosts_read),
+                    Err(error) => {
+                        if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
+                            log::error!("Failed to restore configuration backups: {}", restore_error);
                         }
+                        session.start_update_stream(runtime.new_update_receiver());
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                        continue;
                     }
-                    Err(error) => Some(error.into()),
                 };
 
-                if let Some(error) = reinit_error {
-                    if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
-                        log::error!("Failed to restore configuration backups: {}", restore_error);
-                    }
-                    let recovered = match Configuration::read(&runtime.config_dir) {
-                        Ok((main_read, hosts_read, _groups)) => {
-                            match crate::initialize_core(&main_read, &hosts_read, module_factory, runtime.secret_store.clone()) {
-                                Ok(core) => {
-                                    runtime.core = core;
-                                    if let Err(metrics_error) = runtime.refresh_metrics(&main_read) {
-                                        log::error!("Failed to refresh metrics after config recovery: {}", metrics_error);
-                                    }
-                                    true
-                                }
-                                Err(recover_error) => {
-                                    log::error!("Failed to recover previous core runtime: {}", recover_error);
-                                    false
-                                }
-                            }
-                        }
-                        Err(read_error) => {
-                            log::error!("Failed to read configuration while recovering: {}", read_error);
-                            false
-                        }
-                    };
-                    if !recovered {
-                        let message = format!("Unrecoverable core runtime after config update failure: {}", error,);
-                        let _ = session.send_request_error(request_id, RemoteErrorCode::Internal, &message);
-                        return Err(LkError::new(ErrorKind::Fatal, message));
-                    }
-                    session.start_update_stream(runtime.new_update_receiver());
-                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
-                    continue;
-                }
+                runtime.reconfigure(&main_read, &hosts_read);
 
                 if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
                     log::warn!("Failed to clear configuration backups: {}", error);
-                }
-                if let Err(error) = runtime.refresh_metrics(&main) {
-                    log::error!("Failed to refresh metrics after config update: {}", error);
                 }
                 session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
                 session.start_update_stream(runtime.new_update_receiver());

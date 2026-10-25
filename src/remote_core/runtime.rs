@@ -116,7 +116,7 @@ impl CoreRuntime {
             .get_alerts(host_id, monitor_id, search_text, start_time, end_time)
     }
 
-    /// Restarts metrics ingest after core components are replaced (e.g. config update).
+    /// Attach metrics ingest to the current HostManager (startup, or when charts are enabled).
     pub fn attach_metrics_ingest(&mut self) {
         let Some(metrics_manager) = self.metrics_manager.clone()
         else {
@@ -178,7 +178,25 @@ impl CoreRuntime {
         });
     }
 
+    /// Reconfigure core managers in place (retains host state) and align metrics with preferences.
+    /// Returns host IDs whose state was reset due to a configuration change.
+    pub fn reconfigure(
+        &mut self,
+        main_config: &Configuration,
+        hosts_config: &configuration::Hosts,
+    ) -> Vec<String> {
+        let reset_hosts = self.core.reconfigure(main_config, hosts_config, self.secret_store.clone());
+        if let Err(error) = self.refresh_metrics(main_config) {
+            log::error!("Failed to refresh metrics after config update: {}", error);
+        }
+        for host_id in &reset_hosts {
+            self.core.monitor_manager.refresh_platform_info(host_id);
+        }
+        reset_hosts
+    }
+
     /// Align metrics service with preferences after configuration reload.
+    /// Does not re-attach ingest when charts stay enabled: HostManager observers survive in-place reconfigure.
     pub fn refresh_metrics(&mut self, main_config: &Configuration) -> Result<(), LkError> {
         match (self.metrics_manager.is_some(), main_config.preferences.show_charts) {
             (false, true) => {
@@ -192,10 +210,7 @@ impl CoreRuntime {
                     }
                 }
             }
-            (true, true) => {
-                self.attach_metrics_ingest();
-            }
-            (false, false) => {}
+            (true, true) | (false, false) => {}
         }
         Ok(())
     }
