@@ -547,6 +547,15 @@ impl MetricsManager {
                 log::error!("Metrics server error {}", response.errors.join(". "));
             }
 
+            // Insert ACKs have empty metrics/alerts and are currently unused by the UI,
+            // so skipping them as optimization.
+            if matches!(
+                service_request.request_type,
+                RequestType::MetricsInsert { .. } | RequestType::AlertInsert { .. }
+            ) {
+                continue;
+            }
+
             if let Err(error) = update_sender.send(UIUpdate::Chart(response)) {
                 log::error!("Failed to send update: {}", error);
             }

@@ -67,6 +67,7 @@ impl MetricsManagerModel {
     }
 
     pub fn stop(&mut self) {
+        self.pending_alert_queries.clear();
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
             // TODO: notify UI?
             if let Err(error) = metrics_manager.stop() {
@@ -84,6 +85,7 @@ impl MetricsManagerModel {
     }
 
     pub fn set_remote_client(&mut self, remote_client: Option<Arc<RemoteCoreClient>>) {
+        self.pending_alert_queries.clear();
         self.remote_client = remote_client;
     }
 
