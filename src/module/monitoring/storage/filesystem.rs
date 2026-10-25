@@ -98,7 +98,7 @@ impl MonitoringModule for Filesystem {
             let used_percent = used_percent.trim_end_matches('%');
             let used_percent_float = used_percent.parse::<f32>().map_err(|e| e.to_string())?;
 
-            if self.ignored_filesystems.iter().any(|item| mountpoint.starts_with(item)) {
+            if self.ignored_filesystems.iter().any(|item| mountpoint == item) {
                 continue;
             }
 
