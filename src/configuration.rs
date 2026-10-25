@@ -527,8 +527,21 @@ impl Configuration {
 
         log::info!("Reading group configuration from {}", groups_file_path.display());
         let groups_contents = fs::read_to_string(groups_file_path)?;
-        let all_groups = serde_yaml::from_str::<Groups>(groups_contents.as_str())
+        let mut all_groups = serde_yaml::from_str::<Groups>(groups_contents.as_str())
             .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
+
+        if Self::is_schema_outdated(main_config.schema_version) {
+            Self::upgrade_schema(&mut main_config, &mut all_groups);
+
+            // If writes fail, log errors but continue with the in-memory upgrade.
+            let config_dir_string = config_dir.to_string_lossy().into_owned();
+            if let Err(error) = Self::write_main_config(&config_dir_string, &main_config) {
+                log::error!("Failed to write main configuration after schema upgrade: {}", error);
+            }
+            if let Err(error) = Self::write_groups_config(&config_dir_string, &all_groups) {
+                log::error!("Failed to write groups configuration after schema upgrade: {}", error);
+            }
+        }
 
         // Check there are no invalid group references.
         let invalid_groups = hosts.hosts.values()

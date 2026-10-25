@@ -146,9 +146,9 @@ pub struct ConfigManagerModel {
 impl ConfigManagerModel {
     pub fn new(
         config_dir: String,
-        mut main_config: Configuration,
+        main_config: Configuration,
         hosts_config: Hosts,
-        mut groups_config: Groups,
+        groups_config: Groups,
         module_metadatas: Vec<Metadata>,
         config_backend: Box<dyn ConfigBackend>,
     ) -> Self {
@@ -156,18 +156,6 @@ impl ConfigManagerModel {
             ::log::error!("Failed to read core connection profile: {}", error);
             Default::default()
         });
-        
-        if Configuration::is_schema_outdated(main_config.schema_version) {
-            Configuration::upgrade_schema(&mut main_config, &mut groups_config);
-
-            // If writes fail, log errors but continue nevertheless.
-            if let Err(error) = Configuration::write_main_config(&config_dir, &main_config) {
-                ::log::error!("Failed to write main configuration: {}", error);
-            }
-            if let Err(error) = Configuration::write_groups_config(&config_dir, &groups_config) {
-                ::log::error!("Failed to write groups configuration: {}", error);
-            }
-        }
 
         ConfigManagerModel {
             config_dir: config_dir,
