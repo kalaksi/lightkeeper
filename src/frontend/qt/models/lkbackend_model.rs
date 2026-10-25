@@ -58,6 +58,9 @@ pub struct LkBackend {
     clearCoreHostProbe: qt_method!(fn(&mut self)),
     installCore: qt_method!(fn(&mut self) -> QString),
     connectCore: qt_method!(fn(&mut self) -> QString),
+    cancelConnectCore: qt_method!(fn(&mut self)),
+    dismissCoreConnection: qt_method!(fn(&mut self)),
+    clearFailedCoreConnection: qt_method!(fn(&mut self)),
     disconnectCore: qt_method!(fn(&mut self)),
     getCoreConnectionState: qt_method!(fn(&self) -> QString),
     getCoreConnectionError: qt_method!(fn(&self) -> QString),
@@ -470,17 +473,28 @@ impl LkBackend {
         }
     }
 
+    /// Starts remote core connection on a background thread. Progress and completion are signaled via
+    /// `coreConnectionChanged`. A failed attempt leaves `failed` on the model until dismissed or cleared.
     fn connectCore(&mut self) -> QString {
         self.last_remote_core_host_probe = None;
+        self.last_host_key_challenge = None;
 
         let profile = self.config.borrow().core_connection_profile();
         if !profile.is_configured() {
-            return QString::from("SSH host is required");
+            return self.fail_connect_attempt("SSH host is required");
+        }
+        if let Some(client) = &self.remote_client {
+            match client.connection_state() {
+                CoreConnectionState::ConnectingSsh | CoreConnectionState::Handshaking => {
+                    return QString::from("Already connecting");
+                }
+                _ => {}
+            }
         }
 
         if self.using_remote {
-            if let Some(client) = &self.remote_client {
-                client.stop_connection();
+            if let Some(client) = self.remote_client.take() {
+                Self::stop_client_in_background(client);
             }
         }
 
@@ -488,57 +502,181 @@ impl LkBackend {
         let client = Arc::new(RemoteCoreClient::new(Self::local_core_socket_path()));
         client.set_profile(profile);
         client.set_frontend_update_sender(remote_update_sender);
+        client.set_connection_state(CoreConnectionState::ConnectingSsh);
 
-        let result = client.connect();
-        self.core_version_mismatch = client.status().version_mismatch;
-        if let Err(error) = result {
-            self.last_host_key_challenge = client.host_key_challenge();
-            self.remote_client = Some(client);
-            if self.using_remote {
-                self.hosts.borrow_mut().clear_hosts();
-            }
-            self.coreConnectionChanged();
-            self.reloaded(QString::from(error.clone()), QStringList::default());
-            return QString::from(error);
-        }
-        self.last_host_key_challenge = None;
+        self.remote_client = Some(client.clone());
+        self.emit_core_connection_changed();
 
-        let config_backend = RemoteConfigBackend::new(client.clone());
-        let remote_config = match config_backend.get_config() {
-            Ok(config) => config,
-            Err(error) => {
-                let error = error.to_string();
-                client.stop_connection();
-                self.remote_client = Some(client);
-                if self.using_remote {
-                    self.hosts.borrow_mut().clear_hosts();
-                }
-                self.coreConnectionChanged();
-                self.reloaded(QString::from(error.clone()), QStringList::default());
-                return QString::from(error);
-            }
-        };
-
-        if !self.using_remote {
-            self.detach_local_producers();
-        }
-
-        self.install_remote_backends(client.clone(), config_backend, remote_config);
-        self.hosts.borrow_mut().clear_hosts();
-        self.using_remote = true;
-        let frontend_update_sender = self.new_update_sender();
-        thread::spawn(move || {
-            while let Ok(update) = remote_update_receiver.recv() {
-                if frontend_update_sender.send(update).is_err() {
-                    return;
+        let self_ptr = QPointer::from(&*self);
+        let finish = qmetaobject::queued_callback(move |(expected_client, result): (
+            Arc<RemoteCoreClient>,
+            Result<
+                (mpsc::Receiver<UIUpdate>, (Configuration, configuration::Hosts, configuration::Groups)),
+                String,
+            >,
+        )| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                let reload_hosts = {
+                    let mut backend = self_pinned.borrow_mut();
+                    backend.finish_connect_core(expected_client, result)
+                };
+                self_pinned.borrow().coreConnectionChanged();
+                if reload_hosts {
+                    self_pinned.borrow().reloaded(QString::from(""), QStringList::default());
                 }
             }
         });
 
-        self.remote_client = Some(client);
-        self.coreConnectionChanged();
-        self.reloaded(QString::from(""), QStringList::default());
+        thread::spawn(move || {
+            let result = match client.connect() {
+                Ok(()) => {
+                    let config_backend = RemoteConfigBackend::new(client.clone());
+                    match config_backend.get_config() {
+                        Ok(config) => Ok((remote_update_receiver, config)),
+                        Err(error) => {
+                            client.stop_connection();
+                            Err(error.to_string())
+                        }
+                    }
+                }
+                Err(error) => Err(error),
+            };
+            finish((client, result));
+        });
+
         QString::from("")
+    }
+
+    fn fail_connect_attempt(&mut self, message: &str) -> QString {
+        let client = Arc::new(RemoteCoreClient::new(Self::local_core_socket_path()));
+        client.set_profile(self.config.borrow().core_connection_profile());
+        client.set_connection_failed(message);
+        self.remote_client = Some(client);
+        self.emit_core_connection_changed();
+        QString::from(message)
+    }
+
+    /// Returns whether the host table should be reloaded after the attempt.
+    fn finish_connect_core(
+        &mut self,
+        expected_client: Arc<RemoteCoreClient>,
+        result: Result<
+            (mpsc::Receiver<UIUpdate>, (Configuration, configuration::Hosts, configuration::Groups)),
+            String,
+        >,
+    ) -> bool {
+        let Some(client) = self.remote_client.clone() else {
+            Self::stop_client_in_background(expected_client);
+            return false;
+        };
+        if !Arc::ptr_eq(&client, &expected_client) {
+            Self::stop_client_in_background(expected_client);
+            return false;
+        }
+        self.core_version_mismatch = client.status().version_mismatch;
+
+        match result {
+            Ok((remote_update_receiver, remote_config)) => {
+                if client.is_cancel_requested() {
+                    Self::stop_cancelled_client_in_background(client, self.new_update_sender());
+                    return false;
+                }
+                self.last_host_key_challenge = None;
+                if !self.using_remote {
+                    self.detach_local_producers();
+                }
+
+                let config_backend = RemoteConfigBackend::new(client.clone());
+                self.install_remote_backends(client.clone(), config_backend, remote_config);
+                self.hosts.borrow_mut().clear_hosts();
+                self.using_remote = true;
+                let frontend_update_sender = self.new_update_sender();
+                thread::spawn(move || {
+                    while let Ok(update) = remote_update_receiver.recv() {
+                        if frontend_update_sender.send(update).is_err() {
+                            return;
+                        }
+                    }
+                });
+                true
+            }
+            Err(_) => {
+                self.last_host_key_challenge = client.host_key_challenge();
+                if self.using_remote {
+                    self.hosts.borrow_mut().clear_hosts();
+                    true
+                }
+                else {
+                    false
+                }
+            }
+        }
+    }
+
+    fn cancelConnectCore(&mut self) {
+        let Some(client) = self.remote_client.clone() else {
+            return;
+        };
+        match client.connection_state() {
+            CoreConnectionState::ConnectingSsh | CoreConnectionState::Handshaking => {}
+            _ => return,
+        }
+        client.cancel_connect();
+        // Immediate UI feedback; SSH teardown runs in the background (stop can block on wait_close).
+        client.set_connection_failed("SSH core connection cancelled");
+        self.emit_core_connection_changed();
+        Self::stop_cancelled_client_in_background(client, self.new_update_sender());
+    }
+
+    /// Leave a failed/cancelled connect overlay, or restart locally if remote backends are active.
+    fn dismissCoreConnection(&mut self) {
+        if self.using_remote {
+            self.disconnectCore();
+            return;
+        }
+        if let Some(client) = self.remote_client.take() {
+            client.cancel_connect();
+            Self::stop_client_in_background(client);
+        }
+        self.last_host_key_challenge = None;
+        self.emit_core_connection_changed();
+    }
+
+    /// Drop a sticky failed connect attempt so the main overlay hides, without clearing host-key /
+    /// version-mismatch info the connection dialog may still need.
+    fn clearFailedCoreConnection(&mut self) {
+        if self.using_remote {
+            return;
+        }
+        let Some(client) = self.remote_client.take() else {
+            return;
+        };
+        if client.connection_state() != CoreConnectionState::Failed {
+            self.remote_client = Some(client);
+            return;
+        }
+        Self::stop_client_in_background(client);
+        self.emit_core_connection_changed();
+    }
+
+    fn stop_client_in_background(client: Arc<RemoteCoreClient>) {
+        thread::spawn(move || {
+            client.stop_connection();
+        });
+    }
+
+    /// stop_connection() sets Disconnected; restore Failed so the blocking overlay stays visible.
+    fn stop_cancelled_client_in_background(client: Arc<RemoteCoreClient>, update_sender: mpsc::Sender<UIUpdate>) {
+        thread::spawn(move || {
+            client.stop_connection();
+            client.set_connection_failed("SSH core connection cancelled");
+            let _ = update_sender.send(UIUpdate::CoreConnectionChanged());
+        });
+    }
+
+    fn emit_core_connection_changed(&self) {
+        // Route through the UI update thread so the signal is always delivered asynchronously.
+        let _ = self.new_update_sender().send(UIUpdate::CoreConnectionChanged());
     }
 
     /// Local backends were detached when switching to remote, so the app is restarted to use them again.

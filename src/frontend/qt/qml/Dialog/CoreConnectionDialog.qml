@@ -90,7 +90,37 @@ LightkeeperDialog {
         target: LK
 
         function onCoreConnectionChanged() {
+            if (!root.busy) {
+                root.connectionState = LK.getCoreConnectionState()
+                root.usingRemote = LK.isUsingRemoteCore()
+                return
+            }
             root.refreshStatus()
+            if (root.connectionState === "connecting_ssh"
+                || root.connectionState === "handshaking") {
+                return
+            }
+            root.busy = false
+            if (root.connectionState === "connected") {
+                return
+            }
+            if (root.offerHostKeyChallenge()) {
+                root._pendingRetry = "connect"
+                root.statusText = "Host key verification required"
+                root.statusHint = "Trust the host key to continue"
+            }
+            else if (LK.isCoreVersionMismatch()) {
+                root.statusText = "lightkeeper-core version mismatch"
+                root.statusHint = "Use Test to see upgrade options"
+            }
+            else if (root.connectionState === "failed") {
+                root.statusText = "Connect failed"
+                root.statusHint = "Fix settings and Connect again"
+            }
+            // Do not leave a sticky failed client for the main-window overlay.
+            if (!LK.isUsingRemoteCore() && root.connectionState === "failed") {
+                LK.clearFailedCoreConnection()
+            }
         }
     }
 
@@ -869,9 +899,9 @@ LightkeeperDialog {
         root.probeSummary = ""
         root.probeRecommendation = ""
         let error = LK.connectCore()
-        root.busy = false
         root.refreshStatus()
         if (error !== "") {
+            root.busy = false
             if (root.offerHostKeyChallenge()) {
                 root._pendingRetry = "connect"
                 root.statusText = "Host key verification required"
@@ -886,6 +916,9 @@ LightkeeperDialog {
                 root.statusHint = "Fix settings and Connect again"
             }
             root.errorText = error
+            if (!LK.isUsingRemoteCore()) {
+                LK.clearFailedCoreConnection()
+            }
         }
     }
 

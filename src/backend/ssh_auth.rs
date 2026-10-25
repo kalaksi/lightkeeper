@@ -71,9 +71,8 @@ pub fn known_hosts_path(custom_path: Option<&str>) -> Result<PathBuf, SshAuthErr
     let config_dir = file_handler::get_config_dir();
     let path = config_dir.join("known_hosts");
     if !path.exists() {
-        std::fs::create_dir_all(&config_dir).map_err(|error| {
-            SshAuthError::other(format!("Failed to create config directory {}: {}", config_dir.display(), error))
-        })?;
+        std::fs::create_dir_all(&config_dir)
+            .map_err(|error| SshAuthError::other(format!("Failed to create config directory {}: {}", config_dir.display(), error)))?;
         std::fs::File::create(&path)
             .map_err(|error| SshAuthError::other(format!("Failed to create known_hosts {}: {}", path.display(), error)))?;
     }

@@ -641,6 +641,9 @@ Module {
         Method { name: "clearCoreHostProbe" }
         Method { name: "installCore"; type: "string" }
         Method { name: "connectCore"; type: "string" }
+        Method { name: "cancelConnectCore" }
+        Method { name: "dismissCoreConnection" }
+        Method { name: "clearFailedCoreConnection" }
         Method { name: "disconnectCore" }
         Method { name: "getCoreConnectionState"; type: "string" }
         Method { name: "getCoreConnectionError"; type: "string" }

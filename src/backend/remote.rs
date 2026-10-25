@@ -373,8 +373,7 @@ pub fn build_desktop_rsync_command(
     }
     else {
         let mut ssh = plan.ssh.clone();
-        ssh.custom_known_hosts_path =
-            Some(ssh_auth::known_hosts_path(None).map_err(|error| LkError::other(error.to_ui_message()))?);
+        ssh.custom_known_hosts_path = Some(ssh_auth::known_hosts_path(None).map_err(|error| LkError::other(error.to_ui_message()))?);
         ssh.ssh_arguments()?
     };
 
@@ -514,11 +513,11 @@ impl RemoteCoreClient {
         self.status.lock().unwrap().last_error.clone()
     }
 
-    fn set_connection_state(&self, state: CoreConnectionState) {
+    pub fn set_connection_state(&self, state: CoreConnectionState) {
         self.status.lock().unwrap().set_state(state);
     }
 
-    fn set_connection_failed(&self, message: impl Into<String>) {
+    pub fn set_connection_failed(&self, message: impl Into<String>) {
         self.status.lock().unwrap().set_failed(message);
     }
 
@@ -538,10 +537,24 @@ impl RemoteCoreClient {
             return Ok(());
         }
 
-        self.stopping.store(false, Ordering::SeqCst);
+        // Do not clear a cancel already requested on this in-flight attempt (ConnectingSsh /
+        // Handshaking). Reset stopping only when starting a fresh attempt after stop/disconnect.
+        match self.connection_state() {
+            CoreConnectionState::ConnectingSsh | CoreConnectionState::Handshaking => {
+                if self.stopping.load(Ordering::SeqCst) {
+                    let message = String::from("SSH core connection cancelled");
+                    self.set_connection_failed(message.clone());
+                    return Err(message);
+                }
+            }
+            _ => {
+                self.stopping.store(false, Ordering::SeqCst);
+            }
+        }
+
         let profile = self.profile();
         if profile.is_configured() {
-            self.begin_connecting_ssh();
+            self.set_connection_state(CoreConnectionState::ConnectingSsh);
         }
         else {
             self.set_connection_state(CoreConnectionState::Handshaking);
@@ -580,7 +593,7 @@ impl RemoteCoreClient {
         self.stopping.store(false, Ordering::SeqCst);
         let profile = self.profile();
         if profile.is_configured() {
-            self.begin_connecting_ssh();
+            self.set_connection_state(CoreConnectionState::ConnectingSsh);
         }
         else {
             self.set_connection_state(CoreConnectionState::Handshaking);
@@ -632,6 +645,10 @@ impl RemoteCoreClient {
         self.stopping.store(true, Ordering::SeqCst);
     }
 
+    pub fn is_cancel_requested(&self) -> bool {
+        self.stopping.load(Ordering::SeqCst)
+    }
+
     pub fn connect_stream(&self, stream: UnixStream) -> Result<(), String> {
         self.connect_core_stream(CoreClientStream::Unix(stream))
     }
@@ -660,6 +677,11 @@ impl RemoteCoreClient {
         };
 
         self.set_connection_state(CoreConnectionState::Handshaking);
+        if self.stopping.load(Ordering::SeqCst) {
+            let message = String::from("SSH core connection cancelled");
+            self.set_connection_failed(message.clone());
+            return Err(message);
+        }
 
         if let Some(transport) = self.connection.lock().unwrap().transport.as_ref() {
             transport.set_timeout_ms(REMOTE_HANDSHAKE_TIMEOUT.as_millis() as u32);
@@ -680,6 +702,11 @@ impl RemoteCoreClient {
 
         if let Err(error) = perform_handshake(&mut stream, &mut reader) {
             return Err(self.set_handshake_failed(error));
+        }
+        if self.stopping.load(Ordering::SeqCst) {
+            let message = String::from("SSH core connection cancelled");
+            self.set_connection_failed(message.clone());
+            return Err(message);
         }
 
         if let Some(transport) = self.connection.lock().unwrap().transport.as_ref() {
@@ -1049,10 +1076,6 @@ impl RemoteCoreClient {
 
     pub fn is_connected(&self) -> bool {
         self.connection.lock().unwrap().writer.is_some()
-    }
-
-    pub fn begin_connecting_ssh(&self) {
-        self.set_connection_state(CoreConnectionState::ConnectingSsh);
     }
 
     pub fn build_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<Vec<String>, LkError> {

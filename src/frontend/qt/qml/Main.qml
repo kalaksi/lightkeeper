@@ -24,6 +24,7 @@ ApplicationWindow {
     property string coreConnectionState: "disconnected"
     property string coreConnectionError: ""
     property string remoteCoreStatus: ""
+    property string remoteCoreHostLabel: ""
 
     // For convenience.
     property DialogHandler dialogHandler: dialogHandlerLoader.item as DialogHandler
@@ -157,6 +158,12 @@ ApplicationWindow {
 
         function onCoreConnectionChanged() {
             root.refreshRemoteCoreBlocked()
+            if (root.coreConnectionState === "failed") {
+                let challenge = LK.getCoreHostKeyChallenge()
+                if (challenge && challenge.keyId) {
+                    root.dialogHandler.openCoreConnection()
+                }
+            }
         }
 
         function onRestartRequested() {
@@ -351,18 +358,10 @@ ApplicationWindow {
 
         let coreProfile = LK.config.getCoreConnection()
         if (coreProfile.autoConnect && !LK.isCoreAutoConnectSkipped() && (coreProfile.host || "").trim().length > 0) {
-            let connectError = LK.connectCore()
-            root.refreshRemoteCoreBlocked()
-            if (connectError !== "") {
-                let challenge = LK.getCoreHostKeyChallenge()
-                if (challenge && challenge.keyId) {
-                    root.dialogHandler.openCoreConnection()
-                }
-                else {
-                    root.errorCount += 1
-                    snackbarContainer.addSnackbar("Error", connectError)
-                }
-            }
+            // Defer so the window can paint before connect starts; UI follows model state updates.
+            Qt.callLater(function() {
+                LK.connectCore()
+            })
         }
         else if (LK.hosts.refresh_hosts_on_start()) {
             LK.command.forceInitializeHosts()
@@ -485,6 +484,9 @@ ApplicationWindow {
             z: 100
             visible: root.remoteCoreBlocked
 
+            readonly property bool connecting: root.coreConnectionState === "connecting_ssh"
+                || root.coreConnectionState === "handshaking"
+
             Rectangle {
                 anchors.fill: parent
                 color: "#60000000"
@@ -513,15 +515,32 @@ ApplicationWindow {
 
                     NormalText {
                         Layout.fillWidth: true
-                        text: "Remote core unavailable"
+                        text: remoteCoreOverlay.connecting
+                            ? (root.remoteCoreHostLabel !== ""
+                                ? "Connecting to remote core " + root.remoteCoreHostLabel + "..."
+                                : "Connecting to remote core...")
+                            : "Remote core unavailable"
                         horizontalAlignment: Text.AlignHCenter
-                        font.bold: true
+                        font.bold: !remoteCoreOverlay.connecting
+                    }
+
+                    Item {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: 80
+                        Layout.preferredHeight: 80
+                        visible: remoteCoreOverlay.connecting
+
+                        WorkingSprite {
+                            show: remoteCoreOverlay.connecting
+                            text: ""
+                        }
                     }
 
                     NormalText {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
+                        visible: !remoteCoreOverlay.connecting
                         text: root.coreConnectionError !== ""
                             ? root.coreConnectionError
                             : "Connect to remote Lightkeeper core, or restart to use locally."
@@ -530,6 +549,18 @@ ApplicationWindow {
                     RowLayout {
                         Layout.alignment: Qt.AlignHCenter
                         spacing: Theme.spacingNormal
+                        visible: remoteCoreOverlay.connecting
+
+                        Button {
+                            text: "Cancel"
+                            onClicked: LK.cancelConnectCore()
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: Theme.spacingNormal
+                        visible: !remoteCoreOverlay.connecting
 
                         Button {
                             text: "Open connection settings"
@@ -537,8 +568,8 @@ ApplicationWindow {
                         }
 
                         Button {
-                            text: "Restart locally"
-                            onClicked: LK.disconnectCore()
+                            text: root.usingRemoteCore ? "Restart locally" : "Use locally"
+                            onClicked: root.dismissRemoteCoreOverlay()
                         }
 
                         Button {
@@ -633,18 +664,17 @@ ApplicationWindow {
         root.usingRemoteCore = LK.isUsingRemoteCore()
         root.coreConnectionState = LK.getCoreConnectionState()
         root.coreConnectionError = LK.getCoreConnectionError()
-        root.remoteCoreBlocked = root.usingRemoteCore && root.coreConnectionState !== "connected"
+        root.remoteCoreHostLabel = root.formatCoreHostLabel(LK.config.getCoreConnection())
+
+        let connecting = root.coreConnectionState === "connecting_ssh"
+            || root.coreConnectionState === "handshaking"
+        root.remoteCoreBlocked = connecting
+            || root.coreConnectionState === "failed"
+            || (root.usingRemoteCore && root.coreConnectionState !== "connected")
+
         if (root.usingRemoteCore && root.coreConnectionState === "connected") {
-            let profile = LK.config.getCoreConnection()
-            let host = (profile.host || "").trim()
-            let user = (profile.username || "").trim()
-            let port = (profile.port || "").trim()
-            let address = user !== "" ? (user + "@" + host) : host
-            if (port !== "" && port !== "22") {
-                address += ":" + port
-            }
-            root.remoteCoreStatus = address !== ""
-                ? "Connected to remote core " + address
+            root.remoteCoreStatus = root.remoteCoreHostLabel !== ""
+                ? "Connected to remote core " + root.remoteCoreHostLabel
                 : "Connected to remote core"
         }
         else {
@@ -652,6 +682,28 @@ ApplicationWindow {
         }
         if (root.remoteCoreBlocked) {
             alertDrawer.open = false
+        }
+    }
+
+    function formatCoreHostLabel(profile) {
+        let host = (profile.host || "").trim()
+        if (host === "") {
+            return ""
+        }
+        let user = (profile.username || "").trim()
+        let port = (profile.port || "").trim()
+        let label = user !== "" ? (user + "@" + host) : host
+        if (port !== "" && port !== "22") {
+            label += ":" + port
+        }
+        return label
+    }
+
+    function dismissRemoteCoreOverlay() {
+        let wasRemote = root.usingRemoteCore
+        LK.dismissCoreConnection()
+        if (!wasRemote && LK.hosts.refresh_hosts_on_start()) {
+            LK.command.forceInitializeHosts()
         }
     }
 
