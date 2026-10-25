@@ -4,19 +4,21 @@
  */
 
 extern crate qmetaobject;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::mpsc;
 
 use qmetaobject::*;
 
+use crate::backend::CommandBackend;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
 use crate::connection_manager::ConnectorRequest;
+use crate::error::LkError;
 use crate::frontend::{self, DisplayOptions};
 use crate::host_manager::StateUpdateMessage;
 use crate::module::command::UIAction;
-use crate::backend::CommandBackend;
 
 
 // This should probably be renamed to something like RequestHandlerModel.
@@ -90,6 +92,8 @@ pub struct CommandHandlerModel {
     //
     backend: Option<Box<dyn CommandBackend>>,
     configuration: configuration::Configuration,
+    // Avoids repeated CommandsForHost RPCs when building category UI in remote core mode.
+    commands_cache: RefCell<HashMap<String, HashMap<String, CommandButtonData>>>,
 }
 
 #[allow(non_snake_case)]
@@ -117,6 +121,7 @@ impl CommandHandlerModel {
         update_sender: mpsc::Sender<StateUpdateMessage>,
         frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
     ) {
+        self.commands_cache.borrow_mut().clear();
         self.configuration = main_config.clone();
         self.backend_mut().configure(
             &hosts_config,
@@ -128,6 +133,7 @@ impl CommandHandlerModel {
     }
 
     pub fn set_backend(&mut self, backend: Box<dyn CommandBackend>) {
+        self.commands_cache.borrow_mut().clear();
         if let Some(mut previous) = self.backend.take() {
             previous.stop();
         }
@@ -135,6 +141,7 @@ impl CommandHandlerModel {
     }
 
     pub fn set_configuration(&mut self, configuration: configuration::Configuration) {
+        self.commands_cache.borrow_mut().clear();
         self.backend_mut().update_preferences(&configuration.preferences);
         self.configuration = configuration;
     }
@@ -144,7 +151,20 @@ impl CommandHandlerModel {
     }
 
     pub fn stop(&mut self) {
+        self.commands_cache.borrow_mut().clear();
         self.backend_mut().stop();
+    }
+
+    fn commands_for_host_cached(&self, host_id: &str) -> Result<HashMap<String, CommandButtonData>, LkError> {
+        if let Some(commands) = self.commands_cache.borrow().get(host_id) {
+            return Ok(commands.clone());
+        }
+
+        let commands = self.backend().commands_for_host(host_id)?;
+        self.commands_cache
+            .borrow_mut()
+            .insert(host_id.to_string(), commands.clone());
+        Ok(commands)
     }
 
     pub fn refresh_host_monitors(&mut self, host_id: String) {
@@ -175,7 +195,7 @@ impl CommandHandlerModel {
     fn getCategoryCommands(&self, host_id: QString, category: QString) -> QVariantList {
         let category_string = category.to_string();
 
-        let mut category_commands = match self.backend().commands_for_host(&host_id.to_string()) {
+        let mut category_commands = match self.commands_for_host_cached(&host_id.to_string()) {
             Ok(commands) => commands
                 .into_values()
                 .filter(|data| data.display_options.category == category_string)
@@ -240,7 +260,7 @@ impl CommandHandlerModel {
             }
         };
 
-        let mut all_commands = match self.backend().commands_for_host(&host_id.to_string()) {
+        let mut all_commands = match self.commands_for_host_cached(&host_id.to_string()) {
             Ok(commands) => commands
                 .into_iter()
                 .filter(|(_, data)| {
