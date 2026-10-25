@@ -31,7 +31,7 @@ use crate::module::monitoring::DataPoint;
 
 /// In milliseconds.
 const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
-const LMSERVER_VERSION: &str = "v0.4.4";
+const LMSERVER_VERSION: &str = "v0.4.5";
 
 pub struct MetricsManager {
     process_handle: Option<process::Child>,
@@ -544,7 +544,7 @@ impl MetricsManager {
             }
 
             if response.errors.len() > 0 {
-                log::error!("Service error: {}", response.errors.join(". "));
+                log::error!("Metrics server error {}", response.errors.join(". "));
             }
 
             if let Err(error) = update_sender.send(UIUpdate::Chart(response)) {
