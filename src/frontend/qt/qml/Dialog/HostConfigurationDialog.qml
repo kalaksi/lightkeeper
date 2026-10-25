@@ -211,8 +211,8 @@ LightkeeperDialog {
                 }
             }
 
-            ColumnLayout {
-                spacing: Theme.spacingTight
+            RowLayout {
+                spacing: Theme.spacingLoose
 
                 Layout.row: 1
                 Layout.column: 0
@@ -220,29 +220,69 @@ LightkeeperDialog {
                 Layout.maximumWidth: root._formLeftColumnWidth
                 Layout.alignment: Qt.AlignBottom
 
-                Label {
-                    text: "Domain name"
-                }
+                ColumnLayout {
+                    spacing: Theme.spacingTight
 
-                SmallText {
                     Layout.fillWidth: true
-                    text: "or IP address"
-                    color: Theme.textColorDark
-                    wrapMode: Text.WordWrap
-                }
 
-                TextField {
-                    id: hostAddressField
-                    Layout.fillWidth: true
-                    placeholderText: ""
-                    placeholderTextColor: Theme.textColorDark
-                    text: root.hostSettings.address === undefined ?
-                        (root.hostSettings.fqdn ?? "") :
-                        (root.hostSettings.address ?? "")
-                    validator: RegularExpressionValidator {
-                        regularExpression: /[\.\:a-zA-Z\d\-]+/
+                    Label {
+                        text: "Domain name"
                     }
-                    onTextChanged: root.updateOkButton()
+
+                    SmallText {
+                        Layout.fillWidth: true
+                        text: "or IP address"
+                        color: Theme.textColorDark
+                        wrapMode: Text.WordWrap
+                    }
+
+                    TextField {
+                        id: hostAddressField
+                        Layout.fillWidth: true
+                        placeholderText: ""
+                        placeholderTextColor: Theme.textColorDark
+                        text: root.hostSettings.address === undefined ?
+                            (root.hostSettings.fqdn ?? "") :
+                            (root.hostSettings.address ?? "")
+                        validator: RegularExpressionValidator {
+                            regularExpression: /[\.\:a-zA-Z\d\-]+/
+                        }
+                        onTextChanged: root.updateOkButton()
+                    }
+                }
+
+                ColumnLayout {
+                    spacing: Theme.spacingTight
+
+                    Layout.preferredWidth: 100
+                    Layout.maximumWidth: 100
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: "SSH port"
+                    }
+
+                    SmallText {
+                        Layout.fillWidth: true
+                        text: "Override"
+                        color: Theme.textColorDark
+                        wrapMode: Text.WordWrap
+                    }
+
+                    TextField {
+                        id: sshPortField
+                        Layout.fillWidth: true
+                        placeholderText: root.effectiveSshSetting("port")
+                        placeholderTextColor: Theme.textColorDark
+                        text: {
+                            let port = root._sshModuleSettings.find(setting => setting.key === "port")
+                            return port?.enabled ? port.value : ""
+                        }
+                        validator: RegularExpressionValidator {
+                            regularExpression: /[1-9][0-9]{0,4}/
+                        }
+                        onTextChanged: root.updateOkButton()
+                    }
                 }
             }
 
@@ -255,43 +295,6 @@ LightkeeperDialog {
                 Layout.minimumWidth: root._formRightColumnWidth
                 Layout.maximumWidth: root._formRightColumnWidth
                 Layout.alignment: Qt.AlignBottom
-
-                Label {
-                    Layout.fillWidth: true
-                    text: "SSH port override"
-                }
-
-                SmallText {
-                    Layout.fillWidth: true
-                    text: "Host-level override"
-                    color: Theme.textColorDark
-                    wrapMode: Text.WordWrap
-                }
-
-                TextField {
-                    id: sshPortField
-                    Layout.fillWidth: true
-                    placeholderText: root.effectiveSshSetting("port")
-                    placeholderTextColor: Theme.textColorDark
-                    text: {
-                        let port = root._sshModuleSettings.find(setting => setting.key === "port")
-                        return port?.enabled ? port.value : ""
-                    }
-                    validator: RegularExpressionValidator {
-                        regularExpression: /[1-9][0-9]{0,4}/
-                    }
-                    onTextChanged: root.updateOkButton()
-                }
-            }
-
-            ColumnLayout {
-                spacing: Theme.spacingTight
-
-                Layout.row: 2
-                Layout.column: 1
-                Layout.preferredWidth: root._formRightColumnWidth
-                Layout.minimumWidth: root._formRightColumnWidth
-                Layout.maximumWidth: root._formRightColumnWidth
 
                 Label {
                     Layout.fillWidth: true
