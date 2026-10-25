@@ -31,7 +31,7 @@ use crate::module::monitoring::DataPoint;
 
 /// In milliseconds.
 const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
-const LMSERVER_VERSION: &str = "v0.4.3";
+const LMSERVER_VERSION: &str = "v0.4.4";
 
 pub struct MetricsManager {
     process_handle: Option<process::Child>,
