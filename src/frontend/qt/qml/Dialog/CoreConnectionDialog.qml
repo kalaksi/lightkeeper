@@ -385,6 +385,8 @@ LightkeeperDialog {
                 FilePathField {
                     id: privateKeyPathField
                     visible: methodCombo.currentValue === "key"
+                    // Desktop authenticates to the core host; key path is always local.
+                    allowFileDialog: true
                     Layout.fillWidth: true
                     placeholderText: "Path to private key..."
                     placeholderTextColor: Theme.textColorDark

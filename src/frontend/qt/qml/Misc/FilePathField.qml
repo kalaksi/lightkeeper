@@ -23,17 +23,21 @@ RowLayout {
     property alias text: textField.text
     property alias placeholderText: textField.placeholderText
     property alias placeholderTextColor: textField.placeholderTextColor
+    // Local file picker is only valid for paths on this machine. When using remote core,
+    // host/module paths resolve on the core - force text entry instead.
+    property bool allowFileDialog: !LK.isUsingRemoteCore()
 
     spacing: Theme.spacingNormal
 
     TextField {
         id: textField
-        readOnly: true
-        selectByMouse: false
+        readOnly: root.allowFileDialog
+        selectByMouse: !root.allowFileDialog
         Layout.fillWidth: true
     }
 
     ImageButton {
+        visible: root.allowFileDialog
         imageSource: "qrc:/main/images/button/document-open-folder"
         size: textField.implicitHeight * 0.8
         tooltip: "Choose file"
