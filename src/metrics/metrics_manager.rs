@@ -104,16 +104,15 @@ impl MetricsManager {
         if socket_path.exists() {
             log::debug!("Found existing socket file. Connecting to existing server.");
 
-            let (request_sender, request_receiver) = mpsc::channel();
-            let new_update_sender = self.update_sender.clone();
-            self.request_sender = Some(request_sender);
-
             match lmserver::setup_connection(&socket_path) {
                 Err(_error) => {
                     log::debug!("Failed to connect to metrics server, removing socket file");
                     std::fs::remove_file(&socket_path)?;
                 }
                 Ok(tls_stream) => {
+                    let (request_sender, request_receiver) = mpsc::channel();
+                    let new_update_sender = self.update_sender.clone();
+                    self.request_sender = Some(request_sender);
                     self.request_thread = Some(thread::spawn(move || {
                         Self::process_requests(tls_stream, request_receiver, new_update_sender);
                     }));
@@ -167,21 +166,19 @@ impl MetricsManager {
             // TODO: replace with some kind of signalling.
             thread::sleep(Duration::from_millis(100));
 
-            let (request_sender, request_receiver) = mpsc::channel();
-            let new_update_sender = self.update_sender.clone();
-            self.request_sender = Some(request_sender);
-
-            self.request_thread = Some(thread::spawn(move || {
-                match lmserver::setup_connection(&socket_path) {
-                    Err(error) => {
-                        log::error!("Failed to connect to metrics server: {}", error);
-                        // TODO: send error to UI?
-                    }
-                    Ok(tls_stream) => {
-                        Self::process_requests(tls_stream, request_receiver, new_update_sender);
-                    }
+            match lmserver::setup_connection(&socket_path) {
+                Err(error) => {
+                    log::error!("Failed to connect to metrics server: {}", error);
                 }
-            }));
+                Ok(tls_stream) => {
+                    let (request_sender, request_receiver) = mpsc::channel();
+                    let new_update_sender = self.update_sender.clone();
+                    self.request_sender = Some(request_sender);
+                    self.request_thread = Some(thread::spawn(move || {
+                        Self::process_requests(tls_stream, request_receiver, new_update_sender);
+                    }));
+                }
+            }
         }
 
         Ok(())
@@ -232,19 +229,30 @@ impl MetricsManager {
                 .map(|(b, k)| (b ^ k) as char)
                 .collect::<String>();
 
-            // Built and signed with GitLab CI.
+            // Built and signed with GitLab CI. Artifact names match process arch (x86_64 keeps legacy names).
+            let (remote_binary, remote_signature) = match std::env::consts::ARCH {
+                "x86_64" => ("lmserver", "lmserver.sig"),
+                "aarch64" => ("lmserver-aarch64", "lmserver-aarch64.sig"),
+                arch => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        format!("Unsupported architecture for Light Metrics Server: {}", arch),
+                    ));
+                }
+            };
+
             download_file(
                 &format!(
-                    "https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver.sig/raw?ref={}",
-                    LMSERVER_VERSION
+                    "https://gitlab.com/api/v4/projects/68049585/repository/files/{}/raw?ref={}",
+                    remote_signature, LMSERVER_VERSION
                 ),
                 &token,
                 signature_path,
             )?;
             download_file(
                 &format!(
-                    "https://gitlab.com/api/v4/projects/68049585/repository/files/lmserver/raw?ref={}",
-                    LMSERVER_VERSION
+                    "https://gitlab.com/api/v4/projects/68049585/repository/files/{}/raw?ref={}",
+                    remote_binary, LMSERVER_VERSION
                 ),
                 &token,
                 lmserver_path,
