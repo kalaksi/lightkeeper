@@ -389,8 +389,6 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 hosts_yml,
                 groups_yml,
             } => {
-                session.halt_update_stream();
-
                 let parsed = (|| -> Result<(Configuration, Hosts, Groups), LkError> {
                     Ok((
                         serde_yaml::from_str(&main_yml)?,
@@ -402,14 +400,15 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 let (main, hosts, groups) = match parsed {
                     Ok(configs) => configs,
                     Err(error) => {
-                        session.start_update_stream(runtime.new_update_receiver());
                         session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                         continue;
                     }
                 };
 
+                let previous_config = Configuration::read(&runtime.config_dir).ok()
+                    .and_then(|(main, hosts, _groups)| Some((serde_yaml::to_string(&main).ok()?, hosts.certificate_monitors)));
+
                 if let Err(error) = Configuration::write_all_configs_transactional(&runtime.config_dir, &main, &hosts, &groups) {
-                    session.start_update_stream(runtime.new_update_receiver());
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     continue;
                 }
@@ -421,17 +420,30 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                         if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
                             log::error!("Failed to restore configuration backups: {}", restore_error);
                         }
-                        session.start_update_stream(runtime.new_update_receiver());
                         session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                         continue;
                     }
                 };
 
-                runtime.reconfigure(&main_read, &hosts_read);
+                let mut runtime_hosts = hosts_read.clone();
+                Configuration::resolve_secrets_in_hosts(&mut runtime_hosts, runtime.secret_store.clone());
+                let new_config = serde_yaml::to_string(&main_read).ok().map(|yml| (yml, hosts_read.certificate_monitors.clone()));
+
+                // Alert-ack-only updates: apply in place and stream like local mode, without reconfiguring.
+                let only_alert_acks = previous_config.is_some()
+                    && previous_config == new_config
+                    && runtime.core.host_manager.borrow().apply_monitors_acknowledged(&runtime_hosts);
 
                 if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
                     log::warn!("Failed to clear configuration backups: {}", error);
                 }
+                if only_alert_acks {
+                    session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;
+                    continue;
+                }
+
+                session.halt_update_stream();
+                runtime.reconfigure(&main_read, &hosts_read);
                 session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
                 session.start_update_stream(runtime.new_update_receiver());
                 session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;

@@ -67,6 +67,7 @@ impl HostManager {
     /// Returns the IDs of previously initialized hosts whose configuration changed.
     pub fn configure(&mut self, hosts_config: &configuration::Hosts) -> Vec<String> {
         self.stop();
+        self.apply_monitors_acknowledged(hosts_config);
 
         let mut host_states = self.hosts.lock().unwrap();
         let mut reset_hosts = Vec::new();
@@ -401,6 +402,43 @@ impl HostManager {
                 });
             }
         })
+    }
+
+    /// For hosts that only changed alert acks, updates live monitor data in place (no host reset)
+    /// and refreshes current_config so a following configure() treats them as unchanged.
+    /// Returns true if every host change was alert-ack-only (configure() isn't needed).
+    pub fn apply_monitors_acknowledged(&self, hosts_config: &configuration::Hosts) -> bool {
+        let without_alert_acks = |settings: &HostSettings| {
+            let mut settings = settings.clone();
+            settings.overrides.monitors.values_mut().for_each(|monitor| monitor.acknowledged.clear());
+            settings.overrides.monitors.retain(|_, monitor| !monitor.is_empty_override());
+            settings.effective.monitors.values_mut().for_each(|monitor| monitor.acknowledged.clear());
+            settings
+        };
+
+        let current_config = self.current_config.lock().unwrap().clone();
+        let mut only_alert_acks = current_config.len() == hosts_config.hosts.len();
+        for (host_id, new_settings) in hosts_config.hosts.iter() {
+            let Some(current_settings) = current_config.get(host_id) else {
+                only_alert_acks = false;
+                continue;
+            };
+            if current_settings == new_settings {
+                continue;
+            }
+            if without_alert_acks(current_settings) != without_alert_acks(new_settings) {
+                only_alert_acks = false;
+                continue;
+            }
+            for (monitor_id, monitor) in new_settings.effective.monitors.iter() {
+                let current_alert_acks = current_settings.effective.monitors.get(monitor_id).map(|current| &current.acknowledged);
+                if current_alert_acks != Some(&monitor.acknowledged) {
+                    self.apply_monitor_acknowledged(host_id, monitor_id, new_settings.clone());
+                }
+            }
+            self.current_config.lock().unwrap().insert(host_id.clone(), new_settings.clone());
+        }
+        only_alert_acks
     }
 
     pub fn apply_monitor_acknowledged(&self, host_id: &str, monitor_id: &str, host_settings: HostSettings) {
