@@ -179,6 +179,7 @@ impl ConfigManagerModel {
         self.hosts_config = hosts_config;
         self.groups_config = groups_config;
         self.config_backend = Some(backend);
+        self.apply_preference_restrictions();
     }
 
     pub fn hosts_config(&self) -> &Hosts {
@@ -201,6 +202,7 @@ impl ConfigManagerModel {
         self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config.clone();
         self.groups_config = groups_config;
+        self.apply_preference_restrictions();
         Ok((self.main_config.clone(), hosts_config))
     }
 
@@ -224,10 +226,41 @@ impl ConfigManagerModel {
         main_config
     }
 
+    fn is_remote_config_backend(&self) -> bool {
+        self.config_backend.as_ref().map(|backend| backend.is_remote()).unwrap_or(false)
+    }
+
+    fn allow_external_text_editor(&self) -> bool {
+        !self.main_config.preferences.use_sandbox_mode && !self.is_remote_config_backend()
+    }
+
+    fn allow_external_terminal(&self) -> bool {
+        !self.main_config.preferences.use_sandbox_mode
+    }
+
+    /// Session-only restrictions (sandbox / remote core). Does not overwrite the user's local desktop prefs file.
+    fn apply_preference_restrictions(&mut self) {
+        if !self.allow_external_text_editor() {
+            if self.main_config.preferences.text_editor != configuration::INTERNAL
+                && self.main_config.preferences.text_editor != configuration::INTERNAL_SIMPLE
+            {
+                self.main_config.preferences.text_editor = configuration::INTERNAL.to_string();
+            }
+        }
+        if !self.allow_external_terminal() {
+            self.main_config.preferences.terminal = configuration::INTERNAL.to_string();
+            self.main_config.preferences.terminal_args = Vec::new();
+        }
+    }
+
     /// Desktop preferences are stored locally also when the configuration backend is a remote core.
     fn write_local_desktop_preferences(&mut self) {
+        let remote = self.is_remote_config_backend();
         let result = Configuration::read(&self.config_dir).and_then(|(mut local_config, _, _)| {
-            local_config.preferences.text_editor = self.main_config.preferences.text_editor.clone();
+            // Remote core forces internal text editor in-session, keep the user's local choice on disk.
+            if !remote {
+                local_config.preferences.text_editor = self.main_config.preferences.text_editor.clone();
+            }
             local_config.preferences.terminal = self.main_config.preferences.terminal.clone();
             local_config.preferences.terminal_args = self.main_config.preferences.terminal_args.clone();
             Configuration::write_main_config(&self.config_dir, &local_config)
@@ -238,6 +271,9 @@ impl ConfigManagerModel {
     }
 
     fn getPreferences(&self) -> QVariantMap {
+        let allow_external_text_editor = self.allow_external_text_editor();
+        let allow_external_terminal = self.allow_external_terminal();
+
         let mut preferences = QVariantMap::default();
         preferences.insert("refreshHostsOnStart".into(), self.main_config.preferences.refresh_hosts_on_start.into());
         let auto_refresh_interval = self.main_config.preferences.auto_refresh_interval as i32;
@@ -248,6 +284,20 @@ impl ConfigManagerModel {
         preferences.insert("textEditor".into(), QString::from(self.main_config.preferences.text_editor.clone()).into());
         preferences.insert("terminal".into(), QString::from(self.main_config.preferences.terminal.clone()).into());
         preferences.insert("terminalArgs".into(), QString::from(self.main_config.preferences.terminal_args.join(" ")).into());
+        preferences.insert("allowExternalTextEditor".into(), allow_external_text_editor.into());
+        preferences.insert("allowExternalTerminal".into(), allow_external_terminal.into());
+        preferences.insert("textEditorHelp".into(), QString::from(if allow_external_text_editor {
+            "The text editor to use when editing files locally. Integrated editor is always used with flatpak."
+        } else if self.main_config.preferences.use_sandbox_mode {
+            "The text editor to use when editing files locally. Only integrated editors are available in flatpak."
+        } else {
+            "The text editor to use when editing files locally. Only integrated editors are available with remote core."
+        }).into());
+        preferences.insert("terminalHelp".into(), QString::from(if allow_external_terminal {
+            "Terminal to use when launching a remote shell. Integrated terminal is always used with flatpak."
+        } else {
+            "Terminal to use when launching a remote shell. Only the integrated terminal is available in flatpak."
+        }).into());
         preferences.insert("closeToTray".into(), self.main_config.preferences.close_to_tray.into());
         preferences.insert("showMonitorNotifications".into(), self.main_config.preferences.show_monitor_notifications.into());
 
@@ -273,18 +323,11 @@ impl ConfigManagerModel {
         self.main_config.preferences.remote_text_editor = preferences.value("remoteTextEditor".into(), QString::from("vim").into()).to_qbytearray().to_string();
         self.main_config.preferences.sudo_remote_editor = preferences.value("sudoRemoteEditor".into(), false.into()).to_bool();
         let text_editor = preferences.value("textEditor".into(), QString::from("kate").into()).to_qbytearray().to_string();
-        // In sandboxed mode, only allow "internal" or "internal-simple"
-        if self.main_config.preferences.use_sandbox_mode 
-            && text_editor != configuration::INTERNAL 
-            && text_editor != configuration::INTERNAL_SIMPLE {
-
-            self.main_config.preferences.text_editor = configuration::INTERNAL.to_string();
-        } else {
-            self.main_config.preferences.text_editor = text_editor;
-        }
+        self.main_config.preferences.text_editor = text_editor;
         self.main_config.preferences.terminal = preferences.value("terminal".into(), QString::from("xterm").into()).to_qbytearray().to_string();
         self.main_config.preferences.terminal_args = preferences.value("terminalArgs".into(), QString::from("-e").into()).to_qbytearray().to_string()
                                                                 .split(' ').map(|arg| arg.to_string()).collect();
+        self.apply_preference_restrictions();
         self.main_config.preferences.close_to_tray = preferences.value("closeToTray".into(), true.into()).to_bool();
         self.main_config.preferences.show_monitor_notifications = preferences.value("showMonitorNotifications".into(), true.into()).to_bool();
         self.main_config.preferences.show_charts = preferences.value("showCharts".into(), false.into()).to_bool();
@@ -552,15 +595,7 @@ impl ConfigManagerModel {
     pub fn setSandboxed(&mut self, use_sandbox_mode: bool) -> bool {
         if self.main_config.preferences.use_sandbox_mode != use_sandbox_mode {
             self.main_config.preferences.use_sandbox_mode = use_sandbox_mode;
-            if use_sandbox_mode {
-                if self.main_config.preferences.text_editor != configuration::INTERNAL 
-                    && self.main_config.preferences.text_editor != configuration::INTERNAL_SIMPLE {
-
-                    self.main_config.preferences.text_editor = configuration::INTERNAL.to_string();
-                }
-                self.main_config.preferences.terminal = configuration::INTERNAL.to_string();
-                self.main_config.preferences.terminal_args = Vec::new();
-            }
+            self.apply_preference_restrictions();
 
             self.write_local_desktop_preferences();
             if let Err(error) = self.config_backend.as_mut().unwrap()

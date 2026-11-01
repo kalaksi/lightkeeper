@@ -52,6 +52,7 @@ pub struct CommandHandlerModel {
     removeCachedFile: qt_method!(fn(&self, host_id: QString, remote_file_path: QString)),
     hasFileChanged: qt_method!(fn(&self, host_id: QString, remote_file_path: QString, contents: QString) -> bool),
     verifyHostKey: qt_method!(fn(&self, host_id: QString, connector_id: QString, key_id: QString)),
+    processCommandResult: qt_method!(fn(&mut self, invocation_id: u64, criticality: QString)),
 
     // Host initialization methods.
     initializeHost: qt_method!(fn(&self, host_id: QString)),
@@ -94,6 +95,8 @@ pub struct CommandHandlerModel {
     configuration: configuration::Configuration,
     // Avoids repeated CommandsForHost RPCs when building category UI in remote core mode.
     commands_cache: RefCell<HashMap<String, HashMap<String, CommandButtonData>>>,
+    // Downloads waiting for external text editor. Invocation ID as key, (host ID, command ID, local file path) as value.
+    pending_external_edits: HashMap<u64, (String, String, String)>,
 }
 
 #[allow(non_snake_case)]
@@ -473,27 +476,17 @@ impl CommandHandlerModel {
                         );
                     }
                     else {
-                        let Some(local_backend) = self.backend().local_backend() else {
+                        if self.backend().local_backend().is_none() {
                             self.error(QString::from(
                                 "External text editor is not available with the current backend",
                             ));
                             return;
-                        };
-                        let local_file_path = local_backend.open_external_text_editor(
-                            &host_id,
-                            &command_id,
-                            &remote_file_path,
-                        );
-                        if local_file_path.is_empty() {
-                            self.error(QString::from(
-                                "External text editor is not supported with remote core",
-                            ));
-                            return;
                         }
-                        if let Err(error) =
-                            self.backend_mut().upload_file(&host_id, &command_id, &local_file_path, false)
-                        {
-                            self.error(QString::from(error.to_string()));
+                        match self.backend_mut().download_editable_file(&host_id, &command_id, &remote_file_path) {
+                            Ok((invocation_id, local_file_path)) => {
+                                self.pending_external_edits.insert(invocation_id, (host_id, command_id, local_file_path));
+                            },
+                            Err(error) => self.error(QString::from(error.to_string())),
                         }
                     }
                 }
@@ -616,6 +609,20 @@ impl CommandHandlerModel {
         let connector_id = connector_id.to_string();
         let key_id = key_id.to_string();
         self.backend().verify_host_key(&host_id, &connector_id, &key_id);
+    }
+
+    fn processCommandResult(&mut self, invocation_id: u64, criticality: QString) {
+        let Some((host_id, command_id, local_file_path)) = self.pending_external_edits.remove(&invocation_id) else {
+            return;
+        };
+
+        if criticality.to_string() == "Normal" {
+            if let Some(local_backend) = self.backend().local_backend() {
+                if let Err(error) = local_backend.open_external_text_editor(&host_id, &command_id, &local_file_path) {
+                    self.error(QString::from(error.to_string()));
+                }
+            }
+        }
     }
 
     fn check_config_errors(&self) -> bool {

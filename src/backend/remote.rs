@@ -1315,9 +1315,8 @@ impl LocalBackendApi for RemoteCommandBackend {
         self.fetch_remote_editor_command(host_id, remote_file_path)
     }
 
-    fn open_external_text_editor(&self, _host_id: &str, _command_id: &str, _remote_file_path: &str) -> String {
-        ::log::error!("External text editor is not supported with remote core; use the internal editor or remote editor");
-        String::new()
+    fn open_external_text_editor(&self, _host_id: &str, _command_id: &str, _local_file_path: &str) -> Result<(), LkError> {
+        Err(LkError::other("External text editor is not supported with remote core. Use the internal editor or remote editor"))
     }
 }
 
@@ -1674,6 +1673,10 @@ impl ConfigBackend for RemoteConfigBackend {
             PendingRpcReply::Ack => Ok(()),
             _ => Err(LkError::unexpected()),
         }
+    }
+
+    fn is_remote(&self) -> bool {
+        true
     }
 
     fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError> {

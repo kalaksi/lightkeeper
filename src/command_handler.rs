@@ -550,38 +550,70 @@ impl CommandHandler {
         }
     }
 
-    // TODO: this will block the UI thread? Improve!
-    /// Returns local file path where file was downloaded.
-    pub fn open_external_text_editor(&self, host_id: &String, command_id: &String, remote_file_path: &String) -> String {
+    /// Launches external text editor for an already downloaded file and uploads the file after the editor exits.
+    pub fn open_external_text_editor(&self, host_id: &String, command_id: &String, local_file_path: &String) {
         let Ok(commands) = self.commands.lock() else {
             self.send_state_update(StateUpdateMessage::fatal_error());
-            return String::new();
+            return;
         };
 
         let command = &commands[host_id][command_id];
         let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
             log::error!("Host '{}' not found", host_id);
-            return String::new();
+            return;
         };
 
-        let connector_messages = get_command_connector_messages(&host, command, &[remote_file_path.clone()]).map_err(|error| {
-            log::error!("Command failed: {}", error);
-            return;
-        }).unwrap();
+        let text_editor = self.preferences.text_editor.clone();
+        let local_file_path = local_file_path.clone();
+        let connector_spec = command.get_connector_spec();
+        let source_id = command.get_module_spec().id;
+        let request_sender = self.request_sender.clone().unwrap();
+        let response_sender = self.new_response_sender();
+        let invocation_id = self.next_invocation_id();
 
-        self.send_connector_request(ConnectorRequest {
-            connector_spec: command.get_connector_spec(),
-            source_id: command.get_module_spec().id,
-            host: host.clone(),
-            // TODO: proper invocation id needed?
-            invocation_id: 0,
-            response_sender: self.new_response_sender(),
-            request_type: RequestType::Download {
-                remote_file_path: connector_messages[0].to_owned(),
-            },
+        thread::spawn(move || {
+            log::debug!("Starting local process: {} {}", text_editor, local_file_path);
+
+            // Blocks until finished.
+            if let Err(error) = ShellCommand::new().arguments(vec![&text_editor, &local_file_path]).execute() {
+                log::error!("Couldn't start text editor: {}", error);
+                return;
+            }
+
+            let (mut metadata, contents) = match file_handler::read_file(&local_file_path) {
+                Ok(result) => result,
+                Err(error) => {
+                    log::error!("Error while reading file: {}", error);
+                    return;
+                }
+            };
+
+            let local_file_hash = sha256::hash(&contents);
+            let remote_hash = metadata.remote_file_hash.clone();
+            if local_file_hash == remote_hash {
+                log::debug!("File {} is unchanged", local_file_path);
+                return;
+            }
+            metadata.update_hash(local_file_hash);
+
+            let request = ConnectorRequest {
+                connector_spec,
+                source_id,
+                host,
+                invocation_id,
+                response_sender,
+                request_type: RequestType::Upload {
+                    local_file_path,
+                    metadata,
+                    remote_hash,
+                    force: false,
+                },
+            };
+
+            if let Err(error) = request_sender.send(request) {
+                log::error!("Failed to send connector request: {}", error);
+            }
         });
-
-        file_handler::convert_to_local_paths(&host, remote_file_path).1
     }
 
 
@@ -593,7 +625,6 @@ impl CommandHandler {
         let thread = Self::_start_processing_responses(
             self.commands.clone(),
             self.response_receiver.take().unwrap(),
-            self.preferences.clone(),
             self.state_update_sender.as_ref().unwrap().clone()
         );
 
@@ -603,7 +634,6 @@ impl CommandHandler {
     fn _start_processing_responses(
         commands: Arc<Mutex<HashMap<String, HashMap<String, Command>>>>,
         receiver: mpsc::Receiver<RequestResponse>,
-        preferences: Preferences,
         state_update_sender: mpsc::Sender<StateUpdateMessage>) -> thread::JoinHandle<()> {
 
         thread::spawn(move || {
@@ -659,13 +689,7 @@ impl CommandHandler {
                     UIAction::TextEditor => {
                         match response.request_type.clone() {
                             RequestType::Download { .. } => {
-                                if preferences.text_editor == crate::configuration::INTERNAL 
-                                    || preferences.text_editor == crate::configuration::INTERNAL_SIMPLE {
-                                    Self::process_download_for_internal_editor(command, new_state_update_sender, response);
-                                }
-                                else {
-                                    Self::process_download_for_external_editor(command, &preferences.text_editor, new_state_update_sender, response);
-                                }
+                                Self::process_download_for_internal_editor(command, new_state_update_sender, response);
                             },
                             RequestType::Upload { local_file_path, metadata, .. } => {
                                 Self::process_upload_file_response(command, &local_file_path, metadata, false, new_state_update_sender, response);
@@ -793,45 +817,6 @@ impl CommandHandler {
             invocation_id: response.invocation_id,
             ..Default::default()
         }).unwrap();
-    }
-
-    fn process_download_for_external_editor(
-        command: &Command,
-        text_editor: &String,
-        state_update_sender: mpsc::Sender<StateUpdateMessage>,
-        response: RequestResponse
-    ) {
-        let message_result = &response.responses[0];
-
-        match message_result {
-            Ok(response_message) => {
-                let local_file = response_message.message.clone();
-                log::debug!("Starting local process: {} {}", text_editor, local_file);
-
-                // Blocks until finished.
-                let result = ShellCommand::new()
-                    .arguments(vec![text_editor, &local_file])
-                    .execute();
-
-                if let Err(error) = result {
-                    log::error!("Couldn't start text editor: {}", error);
-                    return;
-                }
-            },
-            Err(error) => {
-                let error_message = format!("Error downloading file: {}", error);
-                log::error!("{}", error_message);
-
-                state_update_sender.send(StateUpdateMessage {
-                    host_name: response.host.name,
-                    display_options: command.get_display_options(),
-                    module_spec: command.get_module_spec(),
-                    command_result: Some(CommandResult::new_critical_error(error_message)),
-                    invocation_id: response.invocation_id,
-                    ..Default::default()
-                }).unwrap();
-            }
-        };
     }
 
     fn process_upload_file_response(

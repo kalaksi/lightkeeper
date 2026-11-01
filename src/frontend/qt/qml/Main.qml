@@ -249,6 +249,8 @@ ApplicationWindow {
                 }
             }
 
+            LK.command.processCommandResult(invocationId, commandResult.criticality)
+
             // No need to check if invocation is relevant to specific dialogs. DialogHandler takes care of that.
             root.dialogHandler.updateTextDialog(invocationId, commandResult.message)
             root.dialogHandler.updateCommandOutputDialog(invocationId, commandResult.message, commandResult.error, commandResult.progress)

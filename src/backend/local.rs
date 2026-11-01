@@ -199,8 +199,9 @@ impl LocalBackendApi for LocalCommandBackend {
         self.command_handler.open_remote_text_editor(&host_id.to_string(), remote_file_path)
     }
 
-    fn open_external_text_editor(&self, host_id: &str, command_id: &str, remote_file_path: &str) -> String {
+    fn open_external_text_editor(&self, host_id: &str, command_id: &str, local_file_path: &str) -> Result<(), LkError> {
         self.command_handler
-            .open_external_text_editor(&host_id.to_string(), &command_id.to_string(), &remote_file_path.to_string())
+            .open_external_text_editor(&host_id.to_string(), &command_id.to_string(), &local_file_path.to_string());
+        Ok(())
     }
 }

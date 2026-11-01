@@ -142,6 +142,11 @@ Module {
             Parameter { name: "connector_id"; type: "string" }
             Parameter { name: "key_id"; type: "string" }
         }
+        Method {
+            name: "processCommandResult"
+            Parameter { name: "invocation_id"; type: "int" }
+            Parameter { name: "criticality"; type: "string" }
+        }
         Method { name: "initializeHost"; Parameter { name: "host_id"; type: "string" } }
         Method { name: "forceInitializeHost"; Parameter { name: "host_id"; type: "string" } }
         Method { name: "forceInitializeHosts" }

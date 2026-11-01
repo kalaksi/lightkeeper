@@ -31,10 +31,9 @@ LightkeeperDialog {
         root._loading = false
         tabBar.currentIndex = 0
 
-        // Update ComboBox when preferences are loaded
         Qt.callLater(function() {
             if (textEditorCombo) {
-                textEditorOther.text = root._preferences.textEditor || ""
+                textEditorCombo._applyPreferences()
             }
         })
     }
@@ -319,9 +318,7 @@ LightkeeperDialog {
 
                         SmallText {
                             width: parent.width
-                            text: LK.config.isSandboxed() ?
-                                  "The text editor to use when editing files locally. Only integrated editors are available in flatpak." :
-                                  "The text editor to use when editing files locally. Integrated editor is always used with flatpak."
+                            text: root._preferences.textEditorHelp || ""
                             color: Theme.textColorDark
                             wrapMode: Text.WordWrap
                         }
@@ -341,7 +338,7 @@ LightkeeperDialog {
                         delegate: ItemDelegate {
                             width: textEditorCombo.width
                             text: model.display
-                            enabled: !LK.config.isSandboxed() || model.value !== "other"
+                            enabled: root._preferences.allowExternalTextEditor || model.value !== "other"
                         }
 
                         function _getValue(index) {
@@ -360,17 +357,18 @@ LightkeeperDialog {
                             }
                         }
 
-                        Component.onCompleted: {
+                        function _applyPreferences() {
                             currentIndex = _determineCurrentIndex()
-                            // If "Other..." is selected but sandboxed, default to "internal"
                             if (currentIndex === 2) {
-                                if (LK.config.isSandboxed()) {
+                                if (!root._preferences.allowExternalTextEditor) {
                                     currentIndex = 0
                                 } else {
                                     textEditorOther.text = root._preferences.textEditor || ""
                                 }
                             }
                         }
+
+                        Component.onCompleted: _applyPreferences()
 
                         Layout.preferredWidth: content.width * 0.35
                     }
@@ -386,7 +384,7 @@ LightkeeperDialog {
 
                     TextField {
                         id: textEditorOther
-                        enabled: !LK.config.isSandboxed()
+                        enabled: root._preferences.allowExternalTextEditor
                         placeholderText: "execute..."
                         validator: RegularExpressionValidator {
                             regularExpression: /^[a-zA-Z0-9_\-\.\/\s]+$/
@@ -410,7 +408,7 @@ LightkeeperDialog {
 
                         SmallText {
                             width: parent.width
-                            text: "Terminal to use when launching a remote shell. Integrated editor is always used with flatpak."
+                            text: root._preferences.terminalHelp || ""
                             color: Theme.textColorDark
                             wrapMode: Text.WordWrap
                         }
@@ -420,7 +418,7 @@ LightkeeperDialog {
                         id: terminalAndArgs
                         text: root._preferences.terminal +
                             (root._preferences.terminalArgs.length > 0 ? " " + root._preferences.terminalArgs.join(" ") : "")
-                        enabled: !LK.config.isSandboxed()
+                        enabled: root._preferences.allowExternalTerminal
                         validator: RegularExpressionValidator {
                             regularExpression: /^(internal|[a-zA-Z0-9_\-\.\/\s]+)$/
                         }

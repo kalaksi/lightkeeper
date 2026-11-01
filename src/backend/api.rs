@@ -72,6 +72,10 @@ pub trait ConfigBackend {
         Ok(())
     }
 
+    fn is_remote(&self) -> bool {
+        false
+    }
+
     /// `source_id` is `host:<id>` or `group:<id>`. Returns plaintext or `None` if missing.
     fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError>;
 
@@ -85,5 +89,5 @@ pub trait LocalBackendApi {
     fn remote_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> crate::utils::ShellCommand;
     fn open_external_terminal(&self, host_id: &str, command_id: &str, parameters: Vec<String>);
     fn remote_text_editor_command(&self, host_id: &str, remote_file_path: &str) -> crate::utils::ShellCommand;
-    fn open_external_text_editor(&self, host_id: &str, command_id: &str, remote_file_path: &str) -> String;
+    fn open_external_text_editor(&self, host_id: &str, command_id: &str, local_file_path: &str) -> Result<(), LkError>;
 }
