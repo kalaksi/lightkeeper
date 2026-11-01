@@ -1644,10 +1644,15 @@ impl ConfigBackend for RemoteConfigBackend {
 
     fn update_config(
         &self,
-        main_config: configuration::Configuration,
+        mut main_config: configuration::Configuration,
         hosts: configuration::Hosts,
         groups: configuration::Groups,
     ) -> Result<(), LkError> {
+        // Desktop launch prefs are stored only locally; write defaults so they are not persisted on the core.
+        main_config.preferences.text_editor = configuration::INTERNAL.to_string();
+        main_config.preferences.terminal = configuration::INTERNAL.to_string();
+        main_config.preferences.terminal_args = Vec::new();
+
         let main_yml = serde_yaml::to_string(&main_config)?;
         let hosts_yml = serde_yaml::to_string(&hosts)?;
         let groups_yml = serde_yaml::to_string(&groups)?;
