@@ -94,6 +94,34 @@ impl CoreComponents {
     }
 }
 
+/// Applies config updates that running managers can take without reconfigure(), like local mode soft writes.
+/// Returns false if reconfigure() is still needed.
+pub fn apply_soft_config_update(
+    host_manager: &HostManager,
+    secret_store: Arc<dyn secrets_manager::SecretStore>,
+    previous_main_config: &Configuration,
+    previous_hosts_config: &configuration::Hosts,
+    main_config: &Configuration,
+    hosts_config: &configuration::Hosts,
+) -> bool {
+    // Only used by the frontend or on startup. show_charts is handled separately by the metrics owner.
+    let previous_preferences = &previous_main_config.preferences;
+    let mut preferences = main_config.preferences.clone();
+    preferences.refresh_hosts_on_start = previous_preferences.refresh_hosts_on_start;
+    preferences.close_to_tray = previous_preferences.close_to_tray;
+    preferences.show_monitor_notifications = previous_preferences.show_monitor_notifications;
+    preferences.show_charts = previous_preferences.show_charts;
+    preferences.show_chart_threshold_lines = previous_preferences.show_chart_threshold_lines;
+    preferences.editor_preferences = previous_preferences.editor_preferences.clone();
+    if preferences != *previous_preferences || hosts_config.certificate_monitors != previous_hosts_config.certificate_monitors {
+        return false;
+    }
+
+    let mut runtime_hosts = hosts_config.clone();
+    Configuration::resolve_secrets_in_hosts(&mut runtime_hosts, secret_store);
+    host_manager.apply_monitors_acknowledged(&runtime_hosts)
+}
+
 pub fn initialize_openssl() -> Result<(), error::LkError> {
     // Due to some weirdness between ssh2, openssl and qmetaobject crates, openssl initialization needs to be forced here.
     // Otherwise, there might be a problem in ssh2 handshake with error "Unable to exchange encryption keys" for no apparent reason.

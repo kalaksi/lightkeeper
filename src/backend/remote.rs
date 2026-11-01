@@ -109,7 +109,7 @@ enum PendingRpcKind {
     HasCachedFileChanged,
     UploadFromCache,
     Config,
-    UpdateConfig,
+    WriteConfig,
     GetSecret,
     StoreSecret,
     RemoveSecret,
@@ -138,7 +138,7 @@ enum PendingRpcReply {
         hosts_yml: String,
         groups_yml: String,
     },
-    UpdateConfigOk,
+    WriteConfigOk,
     GetSecret(Option<String>),
     StoreSecret(String),
     RemoveSecretOk,
@@ -174,7 +174,7 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::HasCachedFileChanged, PendingRpcReply::FileChanged(_)) |
             (PendingRpcKind::UploadFromCache, PendingRpcReply::UploadFromCache(_)) |
             (PendingRpcKind::Config, PendingRpcReply::Config { .. }) |
-            (PendingRpcKind::UpdateConfig, PendingRpcReply::UpdateConfigOk) |
+            (PendingRpcKind::WriteConfig, PendingRpcReply::WriteConfigOk) |
             (PendingRpcKind::GetSecret, PendingRpcReply::GetSecret(_)) |
             (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
             (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
@@ -914,9 +914,9 @@ impl RemoteCoreClient {
                             groups_yml,
                         });
                     }
-                    ServerMessage::UpdateConfigOk { request_id } => {
-                        deliver_response(&pending_rpc, request_id, PendingRpcKind::UpdateConfig, || {
-                            PendingRpcReply::UpdateConfigOk
+                    ServerMessage::WriteConfigOk { request_id } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::WriteConfig, || {
+                            PendingRpcReply::WriteConfigOk
                         });
                     }
                     ServerMessage::GetSecretResult { request_id, value } => {
@@ -1647,13 +1647,20 @@ impl ConfigBackend for RemoteConfigBackend {
         let groups_yml = serde_yaml::to_string(&groups)?;
         match self
             .client
-            .send_message_result(PendingRpcKind::UpdateConfig, |request_id| ClientMessage::UpdateConfig {
+            .send_message_result(PendingRpcKind::WriteConfig, |request_id| ClientMessage::WriteConfig {
                 request_id,
                 main_yml,
                 hosts_yml,
                 groups_yml,
             })? {
-            PendingRpcReply::UpdateConfigOk => Ok(()),
+            PendingRpcReply::WriteConfigOk => Ok(()),
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
+    fn apply_config(&self) -> Result<(), LkError> {
+        match self.client.send_message_result(PendingRpcKind::Ack, |request_id| ClientMessage::ApplyConfig { request_id })? {
+            PendingRpcReply::Ack => Ok(()),
             _ => Err(LkError::unexpected()),
         }
     }

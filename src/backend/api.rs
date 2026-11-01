@@ -67,6 +67,11 @@ pub trait ConfigBackend {
         groups: configuration::Groups,
     ) -> Result<(), LkError>;
 
+    /// Applies written configuration to managers that don't run in this process (remote core).
+    fn apply_config(&self) -> Result<(), LkError> {
+        Ok(())
+    }
+
     /// `source_id` is `host:<id>` or `group:<id>`. Returns plaintext or `None` if missing.
     fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError>;
 

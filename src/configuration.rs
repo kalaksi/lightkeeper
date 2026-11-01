@@ -74,7 +74,7 @@ pub struct Hosts {
     pub certificate_monitors: Vec<String>,
 }
 
-#[derive(Serialize, Debug, Deserialize, Clone)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct EditorPreferences {
     pub edit_mode: EditMode,
@@ -195,7 +195,7 @@ impl CoreConnectionProfile {
     }
 }
 
-#[derive(Serialize, Debug, Deserialize, Clone)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Preferences {
     #[serde(default)]

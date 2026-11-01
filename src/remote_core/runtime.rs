@@ -22,6 +22,8 @@ pub struct CoreRuntime {
     pub core: CoreComponents,
     pub config_dir: String,
     pub secret_store: Arc<dyn SecretStore>,
+    /// Configuration that the running managers were last configured with.
+    applied_config: (Configuration, configuration::Hosts),
     metrics_manager: Option<Arc<Mutex<MetricsManager>>>,
     chart_session_sender: Arc<Mutex<Option<mpsc::Sender<frontend::UIUpdate>>>>,
 }
@@ -64,6 +66,7 @@ impl CoreRuntime {
             core,
             config_dir,
             secret_store,
+            applied_config: (main_config.clone(), hosts_config.clone()),
             metrics_manager,
             chart_session_sender,
         };
@@ -180,12 +183,9 @@ impl CoreRuntime {
 
     /// Reconfigure core managers in place (retains host state) and align metrics with preferences.
     /// Returns host IDs whose state was reset due to a configuration change.
-    pub fn reconfigure(
-        &mut self,
-        main_config: &Configuration,
-        hosts_config: &configuration::Hosts,
-    ) -> Vec<String> {
+    pub fn reconfigure(&mut self, main_config: &Configuration, hosts_config: &configuration::Hosts) -> Vec<String> {
         let reset_hosts = self.core.reconfigure(main_config, hosts_config, self.secret_store.clone());
+        self.applied_config = (main_config.clone(), hosts_config.clone());
         if let Err(error) = self.refresh_metrics(main_config) {
             log::error!("Failed to refresh metrics after config update: {}", error);
         }
@@ -193,6 +193,29 @@ impl CoreRuntime {
             self.core.monitor_manager.refresh_platform_info(host_id);
         }
         reset_hosts
+    }
+
+    /// Soft apply against the last applied configuration (see crate::apply_soft_config_update()), plus metrics alignment.
+    /// Returns false if reconfigure() is still needed.
+    pub fn apply_soft_update(&mut self, main_config: &Configuration, hosts_config: &configuration::Hosts) -> bool {
+        let (previous_main_config, previous_hosts_config) = &self.applied_config;
+        let soft_applied = crate::apply_soft_config_update(
+            &self.core.host_manager.borrow(),
+            self.secret_store.clone(),
+            previous_main_config,
+            previous_hosts_config,
+            main_config,
+            hosts_config,
+        );
+        if !soft_applied {
+            return false;
+        }
+
+        if let Err(error) = self.refresh_metrics(main_config) {
+            log::error!("Failed to refresh metrics after config update: {}", error);
+        }
+        self.applied_config = (main_config.clone(), hosts_config.clone());
+        true
     }
 
     /// Align metrics service with preferences after configuration reload.

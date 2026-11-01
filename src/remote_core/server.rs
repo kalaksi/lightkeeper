@@ -383,7 +383,7 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                     }
                 }
             }
-            ClientMessage::UpdateConfig {
+            ClientMessage::WriteConfig {
                 request_id,
                 main_yml,
                 hosts_yml,
@@ -405,48 +405,42 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                     }
                 };
 
-                let previous_config = Configuration::read(&runtime.config_dir).ok()
-                    .and_then(|(main, hosts, _groups)| Some((serde_yaml::to_string(&main).ok()?, hosts.certificate_monitors)));
-
                 if let Err(error) = Configuration::write_all_configs_transactional(&runtime.config_dir, &main, &hosts, &groups) {
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     continue;
                 }
 
-                // Re-read so effective config matches disk (same as local reload), then reconfigure in place.
-                let (main_read, hosts_read) = match Configuration::read(&runtime.config_dir) {
-                    Ok((main_read, hosts_read, _groups)) => (main_read, hosts_read),
+                // Re-read to validate what was written. Applying is done separately with ApplyConfig, like local reload.
+                if let Err(error) = Configuration::read(&runtime.config_dir) {
+                    if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
+                        log::error!("Failed to restore configuration backups: {}", restore_error);
+                    }
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                    continue;
+                }
+
+                if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
+                    log::warn!("Failed to clear configuration backups: {}", error);
+                }
+                session.send_message(&ServerMessage::WriteConfigOk { request_id })?;
+            }
+            ClientMessage::ApplyConfig { request_id } => {
+                let (main_config, hosts_config) = match Configuration::read(&runtime.config_dir) {
+                    Ok((main_config, hosts_config, _groups)) => (main_config, hosts_config),
                     Err(error) => {
-                        if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
-                            log::error!("Failed to restore configuration backups: {}", restore_error);
-                        }
                         session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                         continue;
                     }
                 };
 
-                let mut runtime_hosts = hosts_read.clone();
-                Configuration::resolve_secrets_in_hosts(&mut runtime_hosts, runtime.secret_store.clone());
-                let new_config = serde_yaml::to_string(&main_read).ok().map(|yml| (yml, hosts_read.certificate_monitors.clone()));
-
-                // Alert-ack-only updates: apply in place and stream like local mode, without reconfiguring.
-                let only_alert_acks = previous_config.is_some()
-                    && previous_config == new_config
-                    && runtime.core.host_manager.borrow().apply_monitors_acknowledged(&runtime_hosts);
-
-                if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
-                    log::warn!("Failed to clear configuration backups: {}", error);
+                // Soft updates (e.g. alert acks, show_charts) are applied in place and streamed like in local mode.
+                if !runtime.apply_soft_update(&main_config, &hosts_config) {
+                    session.halt_update_stream();
+                    runtime.reconfigure(&main_config, &hosts_config);
+                    session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
+                    session.start_update_stream(runtime.new_update_receiver());
                 }
-                if only_alert_acks {
-                    session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;
-                    continue;
-                }
-
-                session.halt_update_stream();
-                runtime.reconfigure(&main_read, &hosts_read);
-                session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
-                session.start_update_stream(runtime.new_update_receiver());
-                session.send_message(&ServerMessage::UpdateConfigOk { request_id })?;
+                session.send_message(&ServerMessage::Ack { request_id })?;
             }
             ClientMessage::GetSecret {
                 request_id,

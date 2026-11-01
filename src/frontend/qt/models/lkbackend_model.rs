@@ -119,7 +119,6 @@ impl LkBackend {
         skip_core_auto_connect: bool,
         restart_local: Rc<Cell<bool>>,
     ) -> LkBackend {
-
         LkBackend {
             hosts: RefCell::new(host_data_model),
             command: RefCell::new(command_model),

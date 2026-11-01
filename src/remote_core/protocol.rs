@@ -16,7 +16,7 @@ use crate::frontend::{DisplayData, HostDisplayData};
 use crate::metrics::lmserver::LMSResponse;
 use crate::module::command::internal::filebrowser::download::RsyncSsh;
 
-pub const PROTOCOL_VERSION: u16 = 13;
+pub const PROTOCOL_VERSION: u16 = 14;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -149,11 +149,15 @@ pub enum ClientMessage {
     GetConfig {
         request_id: u64,
     },
-    UpdateConfig {
+    WriteConfig {
         request_id: u64,
         main_yml: String,
         hosts_yml: String,
         groups_yml: String,
+    },
+    /// Applies configuration on disk to the running managers, like local reload.
+    ApplyConfig {
+        request_id: u64,
     },
     GetSecret {
         request_id: u64,
@@ -289,7 +293,7 @@ pub enum ServerMessage {
         hosts_yml: String,
         groups_yml: String,
     },
-    UpdateConfigOk {
+    WriteConfigOk {
         request_id: u64,
     },
     GetSecretResult {

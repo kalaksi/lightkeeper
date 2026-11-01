@@ -195,7 +195,9 @@ impl ConfigManagerModel {
 
     pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts), LkError> {
         ::log::info!("Reloading configuration...");
-        let (main_config, hosts_config, groups_config) = self.config_backend.as_ref().unwrap().get_config()?;
+        let config_backend = self.config_backend.as_ref().unwrap();
+        config_backend.apply_config()?;
+        let (main_config, hosts_config, groups_config) = config_backend.get_config()?;
         self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config.clone();
         self.groups_config = groups_config;
@@ -485,8 +487,10 @@ impl ConfigManagerModel {
         if self.main_config.preferences.show_charts != show_charts {
             self.main_config.preferences.show_charts = show_charts;
 
-            if let Err(error) = self.config_backend.as_mut().unwrap()
+            let config_backend = self.config_backend.as_mut().unwrap();
+            if let Err(error) = config_backend
                 .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+                .and_then(|_| config_backend.apply_config())
             {
                 self.error(QString::from(error.to_string()));
             }
@@ -752,8 +756,10 @@ impl ConfigManagerModel {
             );
         }
 
-        if let Err(error) = self.config_backend.as_mut().unwrap()
+        let config_backend = self.config_backend.as_mut().unwrap();
+        if let Err(error) = config_backend
             .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
+            .and_then(|_| config_backend.apply_config())
         {
             self.error(QString::from(error.to_string()));
             return None;
