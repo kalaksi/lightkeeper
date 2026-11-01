@@ -766,11 +766,11 @@ impl LkBackend {
                 // Keep UI host list in sync with HostManager (adds/removes).
                 self.hosts.borrow_mut().sync_after_reload(
                     self.host_manager.borrow().get_display_data(),
-                    hosts_config,
+                    hosts_config.clone(),
                     main_config.preferences.clone(),
                 );
-
-                // `self.metrics` doesn't have to be reconfigured.
+                self.metrics.borrow_mut().set_hosts_config(hosts_config);
+                self.metrics.borrow_mut().set_display_options(main_config.display_options);
 
                 self.host_manager.borrow_mut().start_receiving_updates();
                 if !self.skip_connection_processing {
