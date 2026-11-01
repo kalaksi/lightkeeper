@@ -184,7 +184,7 @@ impl CoreRuntime {
     /// Reconfigure core managers in place (retains host state) and align metrics with preferences.
     /// Returns host IDs whose state was reset due to a configuration change.
     pub fn reconfigure(&mut self, main_config: &Configuration, hosts_config: &configuration::Hosts) -> Vec<String> {
-        let reset_hosts = self.core.reconfigure(main_config, hosts_config, self.secret_store.clone());
+        let reset_hosts = self.core.reconfigure(main_config, hosts_config, self.secret_store.clone(), true);
         self.applied_config = (main_config.clone(), hosts_config.clone());
         if let Err(error) = self.refresh_metrics(main_config) {
             log::error!("Failed to refresh metrics after config update: {}", error);

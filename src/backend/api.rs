@@ -4,29 +4,16 @@
  */
 
 use std::collections::HashMap;
-use std::sync::mpsc;
 
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
-use crate::connection_manager::ConnectorRequest;
 use crate::error::LkError;
-use crate::frontend;
-use crate::host_manager::StateUpdateMessage;
 
 //
 // Traits for command backend API and local backend API.
 //
 
 pub trait CommandBackend {
-    fn configure(
-        &mut self,
-        hosts_config: &configuration::Hosts,
-        preferences: &configuration::Preferences,
-        request_sender: mpsc::Sender<ConnectorRequest>,
-        update_sender: mpsc::Sender<StateUpdateMessage>,
-        frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
-    );
-    fn start_processing_responses(&mut self);
     fn stop(&mut self);
     fn refresh_host_monitors(&mut self, host_id: &str);
     fn commands_for_host(&self, host_id: &str) -> Result<HashMap<String, CommandButtonData>, LkError>;

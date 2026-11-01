@@ -9,19 +9,20 @@ use std::{cell::Cell, cell::RefCell, path::PathBuf, rc::Rc, sync::mpsc, sync::Ar
 use qmetaobject::*;
 
 use crate::{
+    apply_soft_config_update,
     backend::{
         accept_remote_core_host_key, install_remote_core, probe_remote_core_host, ConfigBackend, CoreConnectionState,
         HostKeyChallenge, RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient, RemoteCoreHostProbe,
         SshAuthError,
     },
     configuration::{self, Configuration},
-    connection_manager::ConnectionManager,
     file_handler,
     frontend::{DisplayData, HostDisplayData, UIUpdate},
-    host_manager,
     module::command::CommandResult,
     module::monitoring::{DataPoint, MonitoringData},
     metrics,
+    secrets_manager::SecretStore,
+    CoreComponents,
 };
 
 use super::{
@@ -90,8 +91,11 @@ pub struct LkBackend {
     update_receiver: Option<mpsc::Receiver<UIUpdate>>,
     update_receiver_thread: Option<thread::JoinHandle<()>>,
 
-    connection_manager: ConnectionManager,
-    host_manager: Rc<RefCell<host_manager::HostManager>>,
+    /// Local-mode managers. Shared with LocalCommandBackend; unused while using remote core.
+    core: Option<Rc<RefCell<CoreComponents>>>,
+    secret_store: Option<Arc<dyn SecretStore>>,
+    /// Last config applied to local managers (for soft reload), like CoreRuntime::applied_config.
+    applied_config: (Configuration, configuration::Hosts),
     skip_connection_processing: bool,
     skip_core_auto_connect: bool,
     /// Shared with QmlFrontend, which restarts the app in local mode when set.
@@ -109,8 +113,8 @@ impl LkBackend {
     pub fn new(
         update_sender_prototype: mpsc::Sender<UIUpdate>,
         update_receiver: mpsc::Receiver<UIUpdate>,
-        host_manager: Rc<RefCell<host_manager::HostManager>>,
-        connection_manager: ConnectionManager,
+        core: Rc<RefCell<CoreComponents>>,
+        secret_store: Arc<dyn SecretStore>,
         host_data_model: HostDataManagerModel,
         command_model: CommandHandlerModel,
         metrics_model: MetricsManagerModel,
@@ -119,6 +123,7 @@ impl LkBackend {
         skip_core_auto_connect: bool,
         restart_local: Rc<Cell<bool>>,
     ) -> LkBackend {
+        let applied_config = (config_model.main_config_ref().clone(), config_model.hosts_config().clone());
         LkBackend {
             hosts: RefCell::new(host_data_model),
             command: RefCell::new(command_model),
@@ -127,8 +132,9 @@ impl LkBackend {
             update_sender_prototype: Some(update_sender_prototype),
             update_receiver: Some(update_receiver),
             update_receiver_thread: None,
-            host_manager: host_manager,
-            connection_manager: connection_manager,
+            core: Some(core),
+            secret_store: Some(secret_store),
+            applied_config,
             skip_connection_processing,
             skip_core_auto_connect,
             restart_local,
@@ -302,8 +308,11 @@ impl LkBackend {
 
     fn detach_local_producers(&mut self) {
         self.command.borrow_mut().stop();
-        self.host_manager.borrow_mut().stop();
-        self.connection_manager.stop();
+        if let Some(core) = &self.core {
+            let mut core = core.borrow_mut();
+            core.host_manager.borrow_mut().stop();
+            core.connection_manager.stop();
+        }
     }
 
     fn sync_models_from_config(&mut self) {
@@ -730,13 +739,19 @@ impl LkBackend {
         };
 
         if !self.using_remote {
-            self.host_manager.borrow().apply_monitor_acknowledged(&host, &monitor, host_settings);
+            if let Some(core) = &self.core {
+                core.borrow()
+                    .host_manager
+                    .borrow()
+                    .apply_monitor_acknowledged(&host, &monitor, host_settings);
+            }
         }
         true
     }
 
     fn reload(&mut self) {
-        match self.config.borrow_mut().reload_configuration() {
+        let reload_result = self.config.borrow_mut().reload_configuration();
+        match reload_result {
             Ok((main_config, hosts_config, remote_reset_hosts)) => {
                 let reset_hosts = if self.using_remote {
                     self.command.borrow_mut().set_configuration(main_config.clone());
@@ -747,36 +762,7 @@ impl LkBackend {
                     remote_reset_hosts
                 }
                 else {
-                    let mut runtime_hosts = hosts_config.clone();
-                    Configuration::resolve_secrets_in_hosts(
-                        &mut runtime_hosts,
-                        Arc::new(crate::secrets_manager::KeyringSecretStore),
-                    );
-                    self.connection_manager.configure(&runtime_hosts);
-                    let reset_hosts = self.host_manager.borrow_mut().configure(&runtime_hosts);
-                    self.command.borrow_mut().configure(
-                        &main_config,
-                        &runtime_hosts,
-                        self.connection_manager.new_request_sender(),
-                        self.host_manager.borrow().new_state_update_sender(),
-                        self.new_update_sender(),
-                    );
-
-                    // Keep UI host list in sync with HostManager (adds/removes).
-                    self.hosts.borrow_mut().sync_after_reload(
-                        self.host_manager.borrow().get_display_data(),
-                        hosts_config.clone(),
-                        main_config.preferences.clone(),
-                    );
-                    self.metrics.borrow_mut().set_hosts_config(hosts_config);
-                    self.metrics.borrow_mut().set_display_options(main_config.display_options);
-
-                    self.host_manager.borrow_mut().start_receiving_updates();
-                    if !self.skip_connection_processing {
-                        self.connection_manager.start_processing_requests();
-                    }
-                    self.command.borrow_mut().start_processing_responses();
-                    reset_hosts
+                    self.reload_local(main_config, hosts_config)
                 };
 
                 self.command.borrow_mut().initialize_reset_hosts(&reset_hosts);
@@ -789,6 +775,51 @@ impl LkBackend {
                 self.reloaded(QString::from(error), QStringList::default());
             }
         }
+    }
+
+    /// Soft-apply when possible (like remote ApplyConfig), otherwise CoreComponents::reconfigure.
+    fn reload_local(&mut self, main_config: Configuration, hosts_config: configuration::Hosts) -> Vec<String> {
+        let core = self.core.as_ref().expect("local core missing").clone();
+        let secret_store = self.secret_store.as_ref().expect("local secret store missing").clone();
+        let (previous_main, previous_hosts) = &self.applied_config;
+        let soft_applied = apply_soft_config_update(
+            &core.borrow().host_manager.borrow(),
+            secret_store.clone(),
+            previous_main,
+            previous_hosts,
+            &main_config,
+            &hosts_config,
+        );
+
+        let reset_hosts = if soft_applied {
+            Vec::new()
+        }
+        else {
+            core.borrow_mut().reconfigure(
+                &main_config,
+                &hosts_config,
+                secret_store,
+                !self.skip_connection_processing,
+            )
+        };
+
+        self.command.borrow_mut().set_configuration(main_config.clone());
+        if soft_applied {
+            self.hosts.borrow_mut().set_hosts_config(hosts_config.clone());
+            self.hosts.borrow_mut().set_configuration_preferences(main_config.preferences.clone());
+        }
+        else {
+            let display_data = core.borrow().host_manager.borrow().get_display_data();
+            self.hosts.borrow_mut().sync_after_reload(
+                display_data,
+                hosts_config.clone(),
+                main_config.preferences.clone(),
+            );
+        }
+        self.metrics.borrow_mut().set_hosts_config(hosts_config.clone());
+        self.metrics.borrow_mut().set_display_options(main_config.display_options.clone());
+        self.applied_config = (main_config, hosts_config);
+        reset_hosts
     }
 
     pub fn stop(&mut self) {
@@ -808,8 +839,11 @@ impl LkBackend {
 
         self.command.borrow_mut().stop();
         if !self.using_remote {
-            self.host_manager.borrow_mut().stop();
-            self.connection_manager.stop();
+            if let Some(core) = &self.core {
+                let mut core = core.borrow_mut();
+                core.host_manager.borrow_mut().stop();
+                core.connection_manager.stop();
+            }
         }
         self.metrics.borrow_mut().stop();
     }

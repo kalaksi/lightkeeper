@@ -63,6 +63,7 @@ impl CoreComponents {
         main_config: &Configuration,
         hosts_config: &configuration::Hosts,
         secret_store: Arc<dyn secrets_manager::SecretStore>,
+        start_connection_processing: bool,
     ) -> Vec<String> {
         let mut hosts_config = hosts_config.clone();
         Configuration::resolve_secrets_in_hosts(&mut hosts_config, secret_store);
@@ -82,7 +83,9 @@ impl CoreComponents {
         );
 
         self.host_manager.borrow_mut().start_receiving_updates();
-        self.connection_manager.start_processing_requests();
+        if start_connection_processing {
+            self.connection_manager.start_processing_requests();
+        }
         self.command_handler.start_processing_responses();
         self.monitor_manager.start_processing_responses();
         self.monitor_manager.start_auto_refresh(
@@ -165,7 +168,7 @@ pub fn initialize_core(
         command_handler,
         monitor_manager,
     };
-    core.reconfigure(main_config, hosts_config, secret_store);
+    core.reconfigure(main_config, hosts_config, secret_store, true);
 
     Ok(core)
 }
@@ -181,24 +184,21 @@ pub fn run(
 ) -> Result<ExitReason, String> {
 
     let secret_store: Arc<dyn secrets_manager::SecretStore> = Arc::new(secrets_manager::KeyringSecretStore);
-    let CoreComponents {
-        module_factory,
-        host_manager,
-        connection_manager,
-        command_handler,
-        monitor_manager,
-    } = initialize_core(
-        main_config,
-        hosts_config,
-        Arc::new(ModuleFactory::new()),
-        secret_store.clone(),
-    ).map_err(String::from)?;
+    let core = Rc::new(RefCell::new(
+        initialize_core(
+            main_config,
+            hosts_config,
+            Arc::new(ModuleFactory::new()),
+            secret_store.clone(),
+        )
+        .map_err(String::from)?,
+    ));
 
-    let module_metadatas = module_factory.get_module_metadatas();
+    let module_metadatas = core.borrow().module_factory.get_module_metadatas();
     let command_backend: Box<dyn backend::CommandBackend> =
-        Box::new(backend::LocalCommandBackend::new(command_handler, monitor_manager));
+        Box::new(backend::LocalCommandBackend::new(core.clone()));
     let config_backend: Box<dyn backend::ConfigBackend> =
-        Box::new(backend::LocalConfigBackend::new(config_dir.clone(), secret_store));
+        Box::new(backend::LocalConfigBackend::new(config_dir.clone(), secret_store.clone()));
 
     let mut frontend = frontend::qt::QmlFrontend::new(
         config_dir,
@@ -218,13 +218,13 @@ pub fn run(
 
     // Observer has to be added before the frontend takes its initial display data in start(). Otherwise, initial
     // data points processed in between are lost and initial status summary icons are randomly not shown.
-    host_manager.borrow_mut().add_observer(frontend.new_update_sender());
+    core.borrow().host_manager.borrow_mut().add_observer(frontend.new_update_sender());
     if !test {
         Ok(frontend.start(
             command_backend,
             config_backend,
-            connection_manager,
-            host_manager,
+            core,
+            secret_store,
             metrics_manager,
             false,
             skip_core_auto_connect,

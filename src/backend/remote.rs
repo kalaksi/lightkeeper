@@ -21,10 +21,8 @@ use super::ssh_auth::{self, HostKeyChallenge, SshAuthError};
 use super::ssh_transport::Ssh2DirectStreamLocalTransport;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
-use crate::connection_manager::ConnectorRequest;
 use crate::error::{ErrorKind, LkError};
 use crate::frontend;
-use crate::host_manager::StateUpdateMessage;
 use crate::module::command::internal::filebrowser::download::{
     process_rsync_final_response,
     process_rsync_partial_response,
@@ -1190,10 +1188,6 @@ impl RemoteCommandBackend {
         self.preferences = preferences;
     }
 
-    fn connect(&mut self) -> Result<(), String> {
-        self.client.connect()
-    }
-
     pub fn connect_stream(&mut self, stream: UnixStream) -> Result<(), String> {
         self.client.connect_stream(stream)
     }
@@ -1331,26 +1325,9 @@ impl LocalBackendApi for RemoteCommandBackend {
 }
 
 impl CommandBackend for RemoteCommandBackend {
-    fn configure(
-        &mut self,
-        _hosts_config: &configuration::Hosts,
-        preferences: &configuration::Preferences,
-        _request_sender: mpsc::Sender<ConnectorRequest>,
-        _update_sender: mpsc::Sender<StateUpdateMessage>,
-        frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
-    ) {
-        self.preferences = preferences.clone();
-        self.client.set_frontend_update_sender(frontend_update_sender);
-        if let Err(error) = self.connect() {
-            ::log::error!("Request failed: {}", error);
-        }
-    }
-
     fn update_preferences(&mut self, preferences: &configuration::Preferences) {
         self.preferences = preferences.clone();
     }
-
-    fn start_processing_responses(&mut self) {}
 
     fn stop(&mut self) {
         self.stop_connection();

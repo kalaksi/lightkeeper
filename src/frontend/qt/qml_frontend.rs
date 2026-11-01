@@ -5,6 +5,7 @@
 
 use std::env;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::{cell::Cell, cell::RefCell, sync::mpsc};
 extern crate qmetaobject;
 use qmetaobject::*;
@@ -16,12 +17,12 @@ use super::resources_qml;
 use crate::frontend::hot_reload;
 use crate::metrics::MetricsManager;
 use crate::{
-    backend::ConfigBackend,
+    backend::{CommandBackend, ConfigBackend},
     configuration,
-    connection_manager::ConnectionManager,
     frontend,
-    host_manager,
     module::Metadata,
+    secrets_manager::SecretStore,
+    CoreComponents,
     ExitReason,
 };
 
@@ -73,8 +74,8 @@ impl QmlFrontend {
         &mut self,
         command_backend: Box<dyn CommandBackend>,
         config_backend: Box<dyn ConfigBackend>,
-        connection_manager: ConnectionManager,
-        host_manager: Rc<RefCell<host_manager::HostManager>>,
+        core: Rc<RefCell<CoreComponents>>,
+        secret_store: Arc<dyn SecretStore>,
         metrics_manager: Option<MetricsManager>,
         skip_connection_processing: bool,
         skip_core_auto_connect: bool,
@@ -82,14 +83,14 @@ impl QmlFrontend {
         qml_register_type::<PropertyTableModel>(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("PropertyTableModel"));
         qml_register_type::<HostTableModel>(cstr::cstr!("Lightkeeper"), 1, 0, cstr::cstr!("HostTableModel"));
 
-        let display_data = host_manager.borrow().get_display_data();
+        let display_data = core.borrow().host_manager.borrow().get_display_data();
         let file_chooser = FileChooserModel::new();
         let restart_local = Rc::new(Cell::new(false));
         let lk_backend = LkBackend::new(
             self.update_sender_prototype.clone(),
             self.update_receiver.take().unwrap(),
-            host_manager,
-            connection_manager,
+            core,
+            secret_store,
             HostDataManagerModel::new(display_data, self.main_config.clone(), self.hosts_config.clone()),
             CommandHandlerModel::new(command_backend, self.main_config.clone()),
             MetricsManagerModel::new(metrics_manager, self.hosts_config.clone(), self.main_config.display_options.clone()),

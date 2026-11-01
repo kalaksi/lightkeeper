@@ -7,17 +7,14 @@ extern crate qmetaobject;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::mpsc;
 
 use qmetaobject::*;
 
 use crate::backend::CommandBackend;
 use crate::command_handler::CommandButtonData;
 use crate::configuration;
-use crate::connection_manager::ConnectorRequest;
 use crate::error::LkError;
-use crate::frontend::{self, DisplayOptions};
-use crate::host_manager::StateUpdateMessage;
+use crate::frontend::DisplayOptions;
 use crate::module::command::UIAction;
 
 
@@ -117,24 +114,6 @@ impl CommandHandlerModel {
         self.backend.as_deref_mut().unwrap()
     }
 
-    pub fn configure(&mut self,
-        main_config: &configuration::Configuration,
-        hosts_config: &configuration::Hosts,
-        request_sender: mpsc::Sender<ConnectorRequest>,
-        update_sender: mpsc::Sender<StateUpdateMessage>,
-        frontend_update_sender: mpsc::Sender<frontend::UIUpdate>,
-    ) {
-        self.commands_cache.borrow_mut().clear();
-        self.configuration = main_config.clone();
-        self.backend_mut().configure(
-            &hosts_config,
-            &main_config.preferences,
-            request_sender,
-            update_sender,
-            frontend_update_sender,
-        );
-    }
-
     pub fn set_backend(&mut self, backend: Box<dyn CommandBackend>) {
         self.commands_cache.borrow_mut().clear();
         if let Some(mut previous) = self.backend.take() {
@@ -147,10 +126,6 @@ impl CommandHandlerModel {
         self.commands_cache.borrow_mut().clear();
         self.backend_mut().update_preferences(&configuration.preferences);
         self.configuration = configuration;
-    }
-
-    pub fn start_processing_responses(&mut self) {
-        self.backend_mut().start_processing_responses();
     }
 
     pub fn stop(&mut self) {
