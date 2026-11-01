@@ -4,7 +4,6 @@
  */
 
 use std::collections::HashMap;
-use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
@@ -41,7 +40,8 @@ impl CommandModule for Restart {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("refresh"),
             display_text: String::from("Restart"),
-            depends_on_criticality: vec![Criticality::Normal, Criticality::Info, Criticality::Warning],
+            // Only displayed if the service is running.
+            depends_on_tags: vec![String::from("active")],
             confirmation_text: String::from("Really restart service?"),
             ..Default::default()
         }

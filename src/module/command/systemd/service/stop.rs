@@ -4,7 +4,6 @@
  */
 
 use std::collections::HashMap;
-use crate::enums::Criticality;
 use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
@@ -42,7 +41,7 @@ impl CommandModule for Stop {
             display_icon: String::from("stop"),
             display_text: String::from("Stop"),
             // Only displayed if the service is running.
-            depends_on_criticality: vec![Criticality::Normal, Criticality::Info, Criticality::Warning],
+            depends_on_tags: vec![String::from("active")],
             confirmation_text: String::from("Really stop service?"),
             ..Default::default()
         }

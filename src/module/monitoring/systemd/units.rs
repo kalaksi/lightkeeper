@@ -84,12 +84,23 @@ pub fn process_units_response(
 
         match unit.sub_state.as_str() {
             "dead" => {
-                point.criticality = enums::Criticality::Critical;
+                if unit.active_state == "failed" {
+                    point.criticality = enums::Criticality::Critical;
+                    point.value = format!("{} ({})", unit.sub_state, unit.active_state);
+                }
+                else {
+                    // Inactive/dead is normal for stopped services and successful oneshots/timers.
+                    point.criticality = enums::Criticality::Normal;
+                    if unit.active_state != "inactive" {
+                        point.value = format!("{} ({})", unit.sub_state, unit.active_state);
+                    }
+                }
             },
             "exited" => {
                 if unit.active_state == "active" {
                     point.criticality = enums::Criticality::Normal;
-                    point.value = format!("{} ({})", unit.sub_state.clone(), unit.active_state.clone());
+                    point.value = format!("{} ({})", unit.sub_state, unit.active_state);
+                    point.tags.push(String::from("active"));
                 }
                 else {
                     point.criticality = enums::Criticality::Warning;
@@ -97,6 +108,7 @@ pub fn process_units_response(
             },
             "running" => {
                 point.criticality = enums::Criticality::Normal;
+                point.tags.push(String::from("active"));
             },
             _ => {
                 point.criticality = enums::Criticality::Warning;
