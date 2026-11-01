@@ -1,0 +1,102 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+use std::collections::HashMap;
+use crate::error::LkError;
+use crate::frontend;
+use crate::host::*;
+use crate::module::connection::ResponseMessage;
+use crate::module::*;
+use crate::module::command::*;
+use crate::module::command::systemd::user::supports_systemctl_user;
+use crate::utils::ShellCommand;
+use crate::utils::is_valid_journalctl_time;
+use crate::utils::journalctl_json_to_rich_text;
+use crate::utils::string_validation;
+use lightkeeper_module::command_module;
+
+#[command_module(
+    name="systemd-user-service-logs",
+    version="0.0.1",
+    description="Shows journald logs of a SystemD user service.",
+)]
+pub struct Logs;
+
+impl Module for Logs {
+    fn new(_settings: &HashMap<String, String>) -> Self {
+        Logs { }
+    }
+}
+
+impl CommandModule for Logs {
+    fn get_connector_spec(&self) -> Option<ModuleSpecification> {
+        Some(ModuleSpecification::connector("ssh", "0.0.1"))
+    }
+
+    fn get_display_options(&self) -> frontend::DisplayOptions {
+        frontend::DisplayOptions {
+            category: String::from("systemd"),
+            parent_id: String::from("systemd-user-service"),
+            display_style: frontend::DisplayStyle::Icon,
+            display_icon: String::from("view-document"),
+            display_text: String::from("Show logs"),
+            action: UIAction::LogViewWithTimeControls,
+            tab_title: String::from("User service logs"),
+            ..Default::default()
+        }
+    }
+
+    fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
+        let service = parameters.get(0).unwrap();
+        let start_time = parameters.get(1).cloned().unwrap_or(String::from(""));
+        let end_time = parameters.get(2).cloned().unwrap_or(String::from(""));
+        let page_number = parameters.get(3).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1);
+        let page_size = parameters.get(4).unwrap_or(&String::from("")).parse::<i32>().unwrap_or(1000);
+
+        let mut command = ShellCommand::new();
+
+        if !string_validation::is_alphanumeric_with(service, "-_.@\\") ||
+            string_validation::begins_with_dash(service)
+        {
+            return Err(LkError::other_p("Invalid unit name", service));
+        }
+
+        if supports_systemctl_user(&host) {
+            command.arguments(vec!["journalctl", "--user", "-q", "-o", "json", "-u", service]);
+
+            if !start_time.is_empty() {
+                if !is_valid_journalctl_time(&start_time) {
+                    return Err(LkError::other_p("Invalid start time", &start_time));
+                }
+                command.arguments(vec!["--since", &start_time]);
+            }
+            if !end_time.is_empty() && end_time != "now" {
+                if !is_valid_journalctl_time(&end_time) {
+                    return Err(LkError::other_p("Invalid end time", &end_time));
+                }
+                command.arguments(vec!["--until", &end_time]);
+            }
+
+            if page_number > 0 {
+                let row_count = page_number * page_size;
+                command.arguments(vec!["-n", &row_count.to_string()]);
+            }
+
+            Ok(command.to_string())
+        }
+        else {
+            Err(LkError::unsupported_platform())
+        }
+    }
+
+    fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
+        if response.is_error() {
+            Ok(CommandResult::new_error(response.message.clone()))
+        }
+        else {
+            Ok(CommandResult::new_hidden(journalctl_json_to_rich_text(&response.message)))
+        }
+    }
+}

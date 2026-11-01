@@ -54,8 +54,20 @@ display_options:
     systemd:
       priority: 5
       color: "#8030d475"
-      command_order: ["systemd-service-logs", "systemd-service-restart", "systemd-service-stop", "systemd-service-start", "systemd-service-mask", "systemd-service-unmask"]
-      monitor_order: ["systemd-service"]
+      command_order:
+        - systemd-service-logs
+        - systemd-service-restart
+        - systemd-service-stop
+        - systemd-service-start
+        - systemd-service-mask
+        - systemd-service-unmask
+        - systemd-user-service-logs
+        - systemd-user-service-restart
+        - systemd-user-service-stop
+        - systemd-user-service-start
+        - systemd-user-service-mask
+        - systemd-user-service-unmask
+      monitor_order: ["systemd-service", "systemd-user-service"]
     package:
       priority: 6
       command_order: ["linux-packages-logs", "linux-packages-clean", "linux-packages-refresh", "linux-packages-update-all"]
@@ -104,7 +116,7 @@ display_options:
     - name: network
       monitors: ["tcp-connect"]
     - name: systemd
-      monitors: ["systemd-service"]
+      monitors: ["systemd-service", "systemd-user-service"]
     - name: docker-compose
       monitors: ["docker-compose"]
     - name: docker-containers

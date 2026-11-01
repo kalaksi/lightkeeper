@@ -3,9 +3,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-
-use serde::Deserialize;
-use serde_json;
 use std::collections::HashMap;
 use crate::error::LkError;
 use crate::module::connection::ResponseMessage;
@@ -14,11 +11,10 @@ use crate::{
     frontend,
 };
 
-use crate::enums;
 use lightkeeper_module::monitoring_module;
 use crate::module::*;
 use crate::module::monitoring::*;
-use crate::utils::ShellCommand;
+use crate::module::monitoring::systemd::units;
 
 #[monitoring_module(
     name="systemd-service",
@@ -67,141 +63,16 @@ impl MonitoringModule for Service {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
-        let mut command = ShellCommand::new();
-
-        if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::AmazonLinux, "2023") {
-            command.arguments(vec!["busctl", "--no-pager", "call", "org.freedesktop.systemd1",
-                                    "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
-            Ok(command.to_string())
-        }
-        else if host.platform.os == platform_info::OperatingSystem::Linux {
-            command.arguments(vec!["busctl", "--no-pager", "--json=short", "call", "org.freedesktop.systemd1",
-                                    "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "ListUnits"]);
-            Ok(command.to_string())
-        }
-        else {
-            Err(LkError::unsupported_platform())
-        }
+        units::list_units_command(&host, false)
     }
 
     fn process_response(&self, host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if response.is_command_not_found() {
-            return Ok(DataPoint::value_with_level("SystemD not available".to_string(), enums::Criticality::NotAvailable));
-        }
-        if response.is_error() {
-            return Err(response.message);
-        }
-
-        let mut result = DataPoint::empty();
-
-        let all_units = if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "8") ||
-            host.platform.is_same_or_greater(platform_info::Flavor::AmazonLinux, "2023") {
-            // First 2 words are like: a(ssssssouso) 253 
-            let actual_content = response.message.splitn(3, " ").last().unwrap_or("");
-            // Removes first and last quotes and then splits.
-            let fields: Vec<&str> = actual_content[1..actual_content.len() -1]
-                .split("\" ")
-                .map(|field| field.trim_matches('"'))
-                .collect();
-
-            fields.chunks_exact(9).map(|chunk| {
-                UnitData {
-                    id: chunk[0].to_string(),
-                    name: chunk[1].to_string(),
-                    load_state: chunk[2].to_string(),
-                    active_state: chunk[3].to_string(),
-                    sub_state: chunk[4].to_string(),
-                    _follows: chunk[5].to_string(),
-                    _unit_path: chunk[6].to_string(),
-                    // Previous parsing misses unquoted integers.
-                    _job_id: chunk[7].split(" ").next().and_then(|value| value.parse::<u32>().ok()).unwrap_or(0),
-                    _job_type: chunk[7].split(" \"").nth(1).unwrap_or("").to_string(),
-                    _job_path: chunk[8].to_string(),
-                }
-            }).collect::<Vec<UnitData>>()
-        }
-        else if host.platform.os == platform_info::OperatingSystem::Linux {
-            let mut response: DbusResponse = serde_json::from_str(response.message.as_str()).map_err(|e| e.to_string())?;
-            response.data.remove(0)
-        }
-        else {
-            Vec::new()
-        };
-
-        let services = all_units.iter().filter(|unit| unit.id.ends_with(".service"));
-        let mut allowed_services = services
-            .filter(|unit| self.included_services.is_empty() || self.included_services.iter().any(|id| unit.id.starts_with(id)))
-            .filter(|unit| self.excluded_services.is_empty() || !self.excluded_services.iter().any(|id| unit.id.starts_with(id)))
-            .collect::<Vec<&UnitData>>();
-
-        // Sort alphabetically by ID.
-        allowed_services.sort_by_key(|unit| &unit.id);
-
-
-        result.multivalue = allowed_services.iter().map(|unit| {
-            let mut point = DataPoint::labeled_value(unit.id.clone(), unit.sub_state.clone());
-            point.description = unit.name.clone();
-
-            // Add some states as tags for the UI.
-            if ["masked"].contains(&unit.load_state.as_str()) {
-                point.tags.push(unit.load_state.clone());
-            }
-
-            match unit.sub_state.as_str() {
-                "dead" => {
-                    point.criticality = enums::Criticality::Critical;
-                },
-                "exited" => {
-                    if unit.active_state == "active" {
-                        point.criticality = enums::Criticality::Normal;
-                        point.value = format!("{} ({})", unit.sub_state.clone(), unit.active_state.clone());
-                    }
-                    else {
-                        point.criticality = enums::Criticality::Warning;
-                    }
-                },
-                "running" => {
-                    point.criticality = enums::Criticality::Normal;
-                },
-                _ => {
-                    point.criticality = enums::Criticality::Warning;
-                }
-            };
-
-            point.command_params.push(unit.id.clone());
-            point
-        }).collect();
-
-        result.update_criticality_from_children();
-
-        Ok(result)
+        units::process_units_response(
+            &host,
+            response,
+            &self.included_services,
+            &self.excluded_services,
+            "SystemD not available",
+        )
     }
-}
-
-// For deserializing the busctl output.
-#[derive(Deserialize)]
-struct DbusResponse {
-    // type: String,
-    data: Vec<Vec<UnitData>>
-}
-
-#[derive(Deserialize)]
-struct UnitData {
-    id: String,
-    name: String,
-    load_state: String,
-    active_state: String,
-    sub_state: String,
-    _follows: String,
-    _unit_path: String,
-    _job_id: u32,
-    _job_type: String,
-    _job_path: String,
 }

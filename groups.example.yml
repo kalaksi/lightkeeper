@@ -183,6 +183,7 @@ groups:
       systemd-service:
         settings:
           included_services: "cron.,collectd.,dbus.,ntp.,chrony.,systemd-journald.,docker.,ufw.,rsyslog.,nullmailer.,ssh."
+      systemd-user-service: {}
     commands:
       systemd-service-start: {}
       systemd-service-stop: {}
@@ -190,3 +191,9 @@ groups:
       systemd-service-mask: {}
       systemd-service-unmask: {}
       systemd-service-logs: {}
+      systemd-user-service-start: {}
+      systemd-user-service-stop: {}
+      systemd-user-service-restart: {}
+      systemd-user-service-mask: {}
+      systemd-user-service-unmask: {}
+      systemd-user-service-logs: {}

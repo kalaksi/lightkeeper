@@ -348,3 +348,47 @@ fn test_logs_error() {
     });
 }
 
+#[test]
+fn test_user_start_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(r#"'systemctl' '--user' 'start' 'test-service.service'"#, "", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (systemd::user::Start::get_metadata(), systemd::user::Start::new_command_module),
+    );
+
+    let module_id = systemd::user::Start::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["test-service.service".to_string()]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Info);
+        assert_eq!(result.message, "");
+    });
+}
+
+#[test]
+fn test_user_stop_success() {
+    let new_stub_ssh = |_settings: &HashMap<String, String>| {
+        StubSsh2::new(r#"'systemctl' '--user' 'stop' 'test-service.service'"#, "", 0)
+    };
+
+    let mut harness = CommandTestHarness::new_command_tester(
+        PlatformInfo::linux(Flavor::Debian, "12.0"),
+        (StubSsh2::get_metadata(), new_stub_ssh),
+        (systemd::user::Stop::get_metadata(), systemd::user::Stop::new_command_module),
+    );
+
+    let module_id = systemd::user::Stop::get_metadata().module_spec.id.clone();
+
+    harness.execute_command(&module_id, vec!["test-service.service".to_string()]);
+
+    harness.verify_next_command_result(&module_id, |result| {
+        assert_eq!(result.criticality, Criticality::Info);
+        assert_eq!(result.message, "");
+    });
+}
+
