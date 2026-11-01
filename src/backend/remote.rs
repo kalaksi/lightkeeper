@@ -137,6 +137,7 @@ enum PendingRpcReply {
         main_yml: String,
         hosts_yml: String,
         groups_yml: String,
+        config_errors: Vec<String>,
     },
     WriteConfigOk,
     GetSecret(Option<String>),
@@ -907,11 +908,13 @@ impl RemoteCoreClient {
                         main_yml,
                         hosts_yml,
                         groups_yml,
+                        config_errors,
                     } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::Config, || PendingRpcReply::Config {
                             main_yml,
                             hosts_yml,
                             groups_yml,
+                            config_errors,
                         });
                     }
                     ServerMessage::WriteConfigOk { request_id } => {
@@ -1623,14 +1626,17 @@ impl CommandBackend for RemoteCommandBackend {
 
 impl ConfigBackend for RemoteConfigBackend {
     fn get_config(&self) -> Result<(configuration::Configuration, configuration::Hosts, configuration::Groups), LkError> {
-        let (main_yml, hosts_yml, groups_yml) = match self
+        let (main_yml, hosts_yml, groups_yml, config_errors) = match self
             .client
             .send_message_result(PendingRpcKind::Config, |request_id| ClientMessage::GetConfig { request_id })?
         {
-            PendingRpcReply::Config { main_yml, hosts_yml, groups_yml } => (main_yml, hosts_yml, groups_yml),
+            PendingRpcReply::Config { main_yml, hosts_yml, groups_yml, config_errors } => {
+                (main_yml, hosts_yml, groups_yml, config_errors)
+            }
             _ => return Err(LkError::unexpected()),
         };
-        let main_config: configuration::Configuration = serde_yaml::from_str(&main_yml)?;
+        let mut main_config: configuration::Configuration = serde_yaml::from_str(&main_yml)?;
+        main_config.config_errors = config_errors;
         let hosts: configuration::Hosts = serde_yaml::from_str(&hosts_yml)?;
         let groups: configuration::Groups = serde_yaml::from_str(&groups_yml)?;
         Ok((main_config, hosts, groups))

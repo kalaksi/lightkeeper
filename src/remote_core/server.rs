@@ -362,20 +362,21 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 }
             }
             ClientMessage::GetConfig { request_id } => {
-                let result: Result<(String, String, String), LkError> = (|| {
+                let result: Result<(String, String, String, Vec<String>), LkError> = (|| {
                     let (main, hosts, groups) = Configuration::read(&runtime.config_dir)?;
                     let main_yml = serde_yaml::to_string(&main)?;
                     let hosts_yml = serde_yaml::to_string(&hosts)?;
                     let groups_yml = serde_yaml::to_string(&groups)?;
-                    Ok((main_yml, hosts_yml, groups_yml))
+                    Ok((main_yml, hosts_yml, groups_yml, main.config_errors))
                 })();
                 match result {
-                    Ok((main_yml, hosts_yml, groups_yml)) => {
+                    Ok((main_yml, hosts_yml, groups_yml, config_errors)) => {
                         session.send_message(&ServerMessage::Config {
                             request_id,
                             main_yml,
                             hosts_yml,
                             groups_yml,
+                            config_errors,
                         })?;
                     }
                     Err(error) => {

@@ -12,6 +12,7 @@ fn server_config_yaml_payload_bincode_roundtrip() {
         main_yml: String::from("preferences:\n  show_charts: false\n"),
         hosts_yml: String::from("hosts: {}\n"),
         groups_yml: String::from("groups: {}\n"),
+        config_errors: vec![String::from("error")],
     };
     let mut buffer = Vec::new();
     write_message(&mut buffer, &msg).unwrap();

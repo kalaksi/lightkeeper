@@ -292,6 +292,7 @@ pub enum ServerMessage {
         main_yml: String,
         hosts_yml: String,
         groups_yml: String,
+        config_errors: Vec<String>,
     },
     WriteConfigOk {
         request_id: u64,
