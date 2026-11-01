@@ -111,7 +111,7 @@ LightkeeperDialog {
             }
             else if (LK.isCoreVersionMismatch()) {
                 root.statusText = "lightkeeper-core version mismatch"
-                root.statusHint = "Use Test to see upgrade options"
+                root.statusHint = "Use Check to see upgrade options"
             }
             else if (root.connectionState === "failed") {
                 root.statusText = "Connect failed"
@@ -464,7 +464,7 @@ LightkeeperDialog {
             spacing: Theme.spacingNormal
 
             Button {
-                text: "Test"
+                text: "Check"
                 Layout.preferredHeight: 34
                 enabled: !root.busy && hostField.text.trim().length > 0
                 display: AbstractButton.TextBesideIcon
@@ -870,7 +870,7 @@ LightkeeperDialog {
         }
         else {
             root.statusText = "Probe failed"
-            root.statusHint = "Fix settings and Test again"
+            root.statusHint = "Fix settings and Check again"
             root.errorText = error
             root.probeSummary = ""
             root.probeRecommendation = ""
@@ -909,7 +909,7 @@ LightkeeperDialog {
             }
             else if (LK.isCoreVersionMismatch()) {
                 root.statusText = "lightkeeper-core version mismatch"
-                root.statusHint = "Use Test to see upgrade options"
+                root.statusHint = "Use Check to see upgrade options"
             }
             else {
                 root.statusText = "Connect failed"

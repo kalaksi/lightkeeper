@@ -432,7 +432,7 @@ impl LkBackend {
 
     fn installCore(&mut self) -> QString {
         let Some(probe) = &self.last_remote_core_host_probe else {
-            return QString::from("Test the connection before installing");
+            return QString::from("Check the connection before installing");
         };
         let profile = self.config.borrow().core_connection_profile();
         let cancel = std::sync::atomic::AtomicBool::new(false);
