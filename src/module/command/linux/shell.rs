@@ -19,7 +19,7 @@ use lightkeeper_module::command_module;
     description="Opens a shell on a Linux host.",
     uses_sudo=true,
     settings={
-        as_root => "Switch to root user after login. Default: true.",
+        as_root => "Switch to root user after login. Default: false.",
     }
 )]
 pub struct Shell {
@@ -29,7 +29,7 @@ pub struct Shell {
 impl Module for Shell {
     fn new(settings: &HashMap<String, String>) -> Self {
         Shell {
-            as_root: settings.get("as_root").unwrap_or(&String::from("true")).parse::<bool>().unwrap_or(true),
+            as_root: settings.get("as_root").unwrap_or(&String::from("false")).parse::<bool>().unwrap_or(false),
         }
     }
 }
