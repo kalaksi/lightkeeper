@@ -194,16 +194,16 @@ impl ConfigManagerModel {
         self.core_connection.clone()
     }
 
-    pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts), LkError> {
+    pub fn reload_configuration(&mut self) -> Result<(Configuration, Hosts, Vec<String>), LkError> {
         ::log::info!("Reloading configuration...");
         let config_backend = self.config_backend.as_ref().unwrap();
-        config_backend.apply_config()?;
+        let reset_hosts = config_backend.apply_config()?;
         let (main_config, hosts_config, groups_config) = config_backend.get_config()?;
         self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config.clone();
         self.groups_config = groups_config;
         self.apply_preference_restrictions();
-        Ok((self.main_config.clone(), hosts_config))
+        Ok((self.main_config.clone(), hosts_config, reset_hosts))
     }
 
     /// Preferences for launching desktop programs always come from the local config, so that a remote core
@@ -533,7 +533,7 @@ impl ConfigManagerModel {
             let config_backend = self.config_backend.as_mut().unwrap();
             if let Err(error) = config_backend
                 .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
-                .and_then(|_| config_backend.apply_config())
+                .and_then(|_| config_backend.apply_config().map(|_| ()))
             {
                 self.error(QString::from(error.to_string()));
             }
@@ -794,7 +794,7 @@ impl ConfigManagerModel {
         let config_backend = self.config_backend.as_mut().unwrap();
         if let Err(error) = config_backend
             .update_config(self.main_config.clone(), self.hosts_config.clone(), self.groups_config.clone())
-            .and_then(|_| config_backend.apply_config())
+            .and_then(|_| config_backend.apply_config().map(|_| ()))
         {
             self.error(QString::from(error.to_string()));
             return None;

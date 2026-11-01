@@ -737,47 +737,49 @@ impl LkBackend {
 
     fn reload(&mut self) {
         match self.config.borrow_mut().reload_configuration() {
-            Ok((main_config, hosts_config)) => {
-                if self.using_remote {
+            Ok((main_config, hosts_config, remote_reset_hosts)) => {
+                let reset_hosts = if self.using_remote {
                     self.command.borrow_mut().set_configuration(main_config.clone());
                     self.hosts.borrow_mut().set_hosts_config(hosts_config.clone());
                     self.hosts.borrow_mut().set_configuration_preferences(main_config.preferences.clone());
                     self.metrics.borrow_mut().set_hosts_config(hosts_config);
                     self.metrics.borrow_mut().set_display_options(main_config.display_options);
-                    self.reloaded(QString::from(""), QStringList::default());
-                    return;
+                    remote_reset_hosts
                 }
+                else {
+                    let mut runtime_hosts = hosts_config.clone();
+                    Configuration::resolve_secrets_in_hosts(
+                        &mut runtime_hosts,
+                        Arc::new(crate::secrets_manager::KeyringSecretStore),
+                    );
+                    self.connection_manager.configure(&runtime_hosts);
+                    let reset_hosts = self.host_manager.borrow_mut().configure(&runtime_hosts);
+                    self.command.borrow_mut().configure(
+                        &main_config,
+                        &runtime_hosts,
+                        self.connection_manager.new_request_sender(),
+                        self.host_manager.borrow().new_state_update_sender(),
+                        self.new_update_sender(),
+                    );
 
-                let mut runtime_hosts = hosts_config.clone();
-                Configuration::resolve_secrets_in_hosts(
-                    &mut runtime_hosts,
-                    Arc::new(crate::secrets_manager::KeyringSecretStore),
-                );
-                self.connection_manager.configure(&runtime_hosts);
-                let reset_hosts = self.host_manager.borrow_mut().configure(&runtime_hosts);
-                self.command.borrow_mut().configure(
-                    &main_config,
-                    &runtime_hosts,
-                    self.connection_manager.new_request_sender(),
-                    self.host_manager.borrow().new_state_update_sender(),
-                    self.new_update_sender(),
-                );
+                    // Keep UI host list in sync with HostManager (adds/removes).
+                    self.hosts.borrow_mut().sync_after_reload(
+                        self.host_manager.borrow().get_display_data(),
+                        hosts_config.clone(),
+                        main_config.preferences.clone(),
+                    );
+                    self.metrics.borrow_mut().set_hosts_config(hosts_config);
+                    self.metrics.borrow_mut().set_display_options(main_config.display_options);
 
-                // Keep UI host list in sync with HostManager (adds/removes).
-                self.hosts.borrow_mut().sync_after_reload(
-                    self.host_manager.borrow().get_display_data(),
-                    hosts_config.clone(),
-                    main_config.preferences.clone(),
-                );
-                self.metrics.borrow_mut().set_hosts_config(hosts_config);
-                self.metrics.borrow_mut().set_display_options(main_config.display_options);
+                    self.host_manager.borrow_mut().start_receiving_updates();
+                    if !self.skip_connection_processing {
+                        self.connection_manager.start_processing_requests();
+                    }
+                    self.command.borrow_mut().start_processing_responses();
+                    reset_hosts
+                };
 
-                self.host_manager.borrow_mut().start_receiving_updates();
-                if !self.skip_connection_processing {
-                    self.connection_manager.start_processing_requests();
-                }
-                self.command.borrow_mut().start_processing_responses();
-
+                self.command.borrow_mut().initialize_reset_hosts(&reset_hosts);
                 let reset_hosts = reset_hosts.into_iter().map(QString::from).collect::<QStringList>();
                 self.reloaded(QString::from(""), reset_hosts);
             },

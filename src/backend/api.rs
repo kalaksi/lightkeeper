@@ -68,8 +68,9 @@ pub trait ConfigBackend {
     ) -> Result<(), LkError>;
 
     /// Applies written configuration to managers that don't run in this process (remote core).
-    fn apply_config(&self) -> Result<(), LkError> {
-        Ok(())
+    /// Returns host IDs whose state was reset and should be re-initialized, like local reload.
+    fn apply_config(&self) -> Result<Vec<String>, LkError> {
+        Ok(Vec::new())
     }
 
     fn is_remote(&self) -> bool {

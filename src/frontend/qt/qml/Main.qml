@@ -186,7 +186,7 @@ ApplicationWindow {
                 snackbarContainer.addSnackbar("Critical", error)
             }
             else {
-                // Same path as selecting a host again: host state is reset when settings change.
+                // Reset hosts are re-initialized in LkBackend.reload; keep the shown host view in sync.
                 let shownHostId = hostTableModel.getSelectedHostId()
                 if (shownHostId === "") {
                     shownHostId = root.hostDetails.hostId

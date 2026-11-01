@@ -110,6 +110,7 @@ enum PendingRpcKind {
     UploadFromCache,
     Config,
     WriteConfig,
+    ApplyConfig,
     GetSecret,
     StoreSecret,
     RemoveSecret,
@@ -140,6 +141,7 @@ enum PendingRpcReply {
         config_errors: Vec<String>,
     },
     WriteConfigOk,
+    ApplyConfig(Vec<String>),
     GetSecret(Option<String>),
     StoreSecret(String),
     RemoveSecretOk,
@@ -176,6 +178,7 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::UploadFromCache, PendingRpcReply::UploadFromCache(_)) |
             (PendingRpcKind::Config, PendingRpcReply::Config { .. }) |
             (PendingRpcKind::WriteConfig, PendingRpcReply::WriteConfigOk) |
+            (PendingRpcKind::ApplyConfig, PendingRpcReply::ApplyConfig(_)) |
             (PendingRpcKind::GetSecret, PendingRpcReply::GetSecret(_)) |
             (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
             (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
@@ -922,6 +925,11 @@ impl RemoteCoreClient {
                             PendingRpcReply::WriteConfigOk
                         });
                     }
+                    ServerMessage::ApplyConfigResult { request_id, reset_hosts } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::ApplyConfig, || {
+                            PendingRpcReply::ApplyConfig(reset_hosts)
+                        });
+                    }
                     ServerMessage::GetSecretResult { request_id, value } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::GetSecret, || {
                             PendingRpcReply::GetSecret(value)
@@ -1316,7 +1324,9 @@ impl LocalBackendApi for RemoteCommandBackend {
     }
 
     fn open_external_text_editor(&self, _host_id: &str, _command_id: &str, _local_file_path: &str) -> Result<(), LkError> {
-        Err(LkError::other("External text editor is not supported with remote core. Use the internal editor or remote editor"))
+        Err(LkError::other(
+            "External text editor is not supported with remote core. Use the internal editor or remote editor",
+        ))
     }
 }
 
@@ -1629,9 +1639,12 @@ impl ConfigBackend for RemoteConfigBackend {
             .client
             .send_message_result(PendingRpcKind::Config, |request_id| ClientMessage::GetConfig { request_id })?
         {
-            PendingRpcReply::Config { main_yml, hosts_yml, groups_yml, config_errors } => {
-                (main_yml, hosts_yml, groups_yml, config_errors)
-            }
+            PendingRpcReply::Config {
+                main_yml,
+                hosts_yml,
+                groups_yml,
+                config_errors,
+            } => (main_yml, hosts_yml, groups_yml, config_errors),
             _ => return Err(LkError::unexpected()),
         };
         let mut main_config: configuration::Configuration = serde_yaml::from_str(&main_yml)?;
@@ -1668,9 +1681,12 @@ impl ConfigBackend for RemoteConfigBackend {
         }
     }
 
-    fn apply_config(&self) -> Result<(), LkError> {
-        match self.client.send_message_result(PendingRpcKind::Ack, |request_id| ClientMessage::ApplyConfig { request_id })? {
-            PendingRpcReply::Ack => Ok(()),
+    fn apply_config(&self) -> Result<Vec<String>, LkError> {
+        match self
+            .client
+            .send_message_result(PendingRpcKind::ApplyConfig, |request_id| ClientMessage::ApplyConfig { request_id })?
+        {
+            PendingRpcReply::ApplyConfig(reset_hosts) => Ok(reset_hosts),
             _ => Err(LkError::unexpected()),
         }
     }

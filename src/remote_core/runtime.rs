@@ -189,9 +189,6 @@ impl CoreRuntime {
         if let Err(error) = self.refresh_metrics(main_config) {
             log::error!("Failed to refresh metrics after config update: {}", error);
         }
-        for host_id in &reset_hosts {
-            self.core.monitor_manager.refresh_platform_info(host_id);
-        }
         reset_hosts
     }
 

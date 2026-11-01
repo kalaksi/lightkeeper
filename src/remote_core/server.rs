@@ -423,13 +423,18 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 };
 
                 // Soft updates (e.g. alert acks, show_charts) are applied in place and streamed like in local mode.
-                if !runtime.apply_soft_update(&main_config, &hosts_config) {
+                // Reset hosts are returned for the GUI to re-initialize, like local reload.
+                let reset_hosts = if !runtime.apply_soft_update(&main_config, &hosts_config) {
                     session.halt_update_stream();
-                    runtime.reconfigure(&main_config, &hosts_config);
+                    let reset_hosts = runtime.reconfigure(&main_config, &hosts_config);
                     session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
                     session.start_update_stream(runtime.new_update_receiver());
+                    reset_hosts
                 }
-                session.send_message(&ServerMessage::Ack { request_id })?;
+                else {
+                    Vec::new()
+                };
+                session.send_message(&ServerMessage::ApplyConfigResult { request_id, reset_hosts })?;
             }
             ClientMessage::GetSecret {
                 request_id,

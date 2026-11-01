@@ -158,6 +158,14 @@ impl CommandHandlerModel {
         self.backend_mut().stop();
     }
 
+    /// Re-initialize hosts whose state was reset during configure/reload.
+    pub fn initialize_reset_hosts(&mut self, host_ids: &[String]) {
+        for host_id in host_ids {
+            self.backend_mut().initialize_host(host_id);
+            self.hostInitializing(QString::from(host_id.clone()));
+        }
+    }
+
     fn commands_for_host_cached(&self, host_id: &str) -> Result<HashMap<String, CommandButtonData>, LkError> {
         if let Some(commands) = self.commands_cache.borrow().get(host_id) {
             return Ok(commands.clone());
