@@ -998,7 +998,8 @@ impl Configuration {
         Ok(())
     }
 
-    /// Backs up all three config files, then writes them. Restores all backups if any write fails.
+    /// Backs up all three config files, writes them, then re-reads to validate.
+    /// Restores backups if any write or validation fails. Clears backups on success.
     pub fn write_all_configs_transactional(
         config_dir: &String,
         main: &Configuration,
@@ -1016,6 +1017,17 @@ impl Configuration {
                 log::error!("Failed to restore configuration backups: {}", restore_error);
             }
             return Err(error);
+        }
+
+        if let Err(error) = Self::read(config_dir) {
+            if let Err(restore_error) = Self::restore_config_backups(config_dir) {
+                log::error!("Failed to restore configuration backups: {}", restore_error);
+            }
+            return Err(error);
+        }
+
+        if let Err(error) = Self::clear_config_backups(config_dir) {
+            log::warn!("Failed to clear configuration backups: {}", error);
         }
         Ok(())
     }

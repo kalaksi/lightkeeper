@@ -406,22 +406,10 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                     }
                 };
 
+                // Applying is done separately with ApplyConfig, like local reload.
                 if let Err(error) = Configuration::write_all_configs_transactional(&runtime.config_dir, &main, &hosts, &groups) {
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                     continue;
-                }
-
-                // Re-read to validate what was written. Applying is done separately with ApplyConfig, like local reload.
-                if let Err(error) = Configuration::read(&runtime.config_dir) {
-                    if let Err(restore_error) = Configuration::restore_config_backups(&runtime.config_dir) {
-                        log::error!("Failed to restore configuration backups: {}", restore_error);
-                    }
-                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
-                    continue;
-                }
-
-                if let Err(error) = Configuration::clear_config_backups(&runtime.config_dir) {
-                    log::warn!("Failed to clear configuration backups: {}", error);
                 }
                 session.send_message(&ServerMessage::WriteConfigOk { request_id })?;
             }
