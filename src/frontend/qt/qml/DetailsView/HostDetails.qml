@@ -24,12 +24,8 @@ Item {
     property string _previousHostId: ""
     property bool _refreshingHost: false
 
-    readonly property Item currentTabContent: {
-        if (!(root.hostId in root._tabStacks)) {
-            return null
-        }
-        return root._tabStacks[root.hostId].currentContent
-    }
+    // Updated from the active LazyTabStack; not derived from _tabStacks (not reactive).
+    property Item currentTabContent: null
 
 
     signal closeClicked()
@@ -204,15 +200,15 @@ Item {
         showMinimizeButton: true
         showMaximizeButton: true
         showRefreshButton: {
-            const content = root.getCurrentTabContent()
-            return content !== undefined && content.refreshContent !== undefined
+            const content = root.currentTabContent
+            return content !== null && content.refreshContent !== undefined
         }
         showCharts: root.showCharts
         hostId: root.hostId
 
         onRefreshClicked: {
-            const content = root.getCurrentTabContent()
-            if (content !== undefined && content.refreshContent !== undefined) {
+            const content = root.currentTabContent
+            if (content !== null && content.refreshContent !== undefined) {
                 content.refreshContent()
             }
         }
@@ -267,6 +263,12 @@ Item {
             onCurrentIndexChanged: {
                 if (root.hostId in root._tabStacks && root._tabStacks[root.hostId] === this) {
                     mainViewHeader.selectTab(currentIndex)
+                }
+            }
+
+            onCurrentContentChanged: {
+                if (root.hostId in root._tabStacks && root._tabStacks[root.hostId] === this) {
+                    root.currentTabContent = currentContent
                 }
             }
 
@@ -372,8 +374,9 @@ Item {
     }
 
     Shortcut {
-        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && 
-                 !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView) && 
+        // Disabled in terminal so Ctrl+W reaches the shell (delete-word).
+        enabled: !(root.currentTabContent instanceof HostDetailsTerminalView) &&
+                 !(root.currentTabContent instanceof HostDetailsCodeEditorView) &&
                  root.enableShortcuts
         sequences: [StandardKey.Close]
         // Close current tab.
@@ -435,13 +438,13 @@ Item {
     }
 
     Shortcut {
-        enabled: !(root.getCurrentTabContent() instanceof HostDetailsTerminalView) && 
-                 !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView) && 
+        enabled: !(root.currentTabContent instanceof HostDetailsTerminalView) &&
+                 !(root.currentTabContent instanceof HostDetailsCodeEditorView) &&
                  root.enableShortcuts
         sequences: [StandardKey.Refresh, "Ctrl+R"]
         onActivated: {
-            let content = root.getCurrentTabContent()
-            if (content !== undefined && content.refreshContent !== undefined) {
+            let content = root.currentTabContent
+            if (content !== null && content.refreshContent !== undefined) {
                 content.refreshContent()
             }
         }
@@ -454,8 +457,8 @@ Item {
     }
 
     Shortcut {
-        enabled: root.enableShortcuts && 
-                 !(root.getCurrentTabContent() instanceof HostDetailsCodeEditorView)
+        enabled: root.enableShortcuts &&
+                 !(root.currentTabContent instanceof HostDetailsCodeEditorView)
         sequence: "Ctrl+Y"
         onActivated: LK.command.executeConfirmed("", root.hostId, "_internal-filebrowser-ls", ["/"])
     }
@@ -476,6 +479,7 @@ Item {
         tabStackContainer.currentIndex = stack.parentStackIndex
         mainViewHeader.setTabs(stack.tabTitles, savedIdx)
         stack.selectTab(savedIdx)
+        root.currentTabContent = stack.currentContent
         root._tabIndexByHost[root.hostId] = savedIdx
     }
 
@@ -500,10 +504,6 @@ Item {
             return `${title} (${similarTabs + 1})`
         }
         return title
-    }
-
-    function getCurrentTabContent() {
-        return root.currentTabContent === null ? undefined : root.currentTabContent
     }
 
     function close() {

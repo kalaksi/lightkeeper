@@ -43,9 +43,9 @@ LightkeeperDialog {
 
             Repeater {
                 model: [
-                    ["F5, Ctrl + R", "Refresh"],
+                    ["F5, Ctrl + R", "Refresh (not in terminal)"],
                     ["Ctrl or Alt + 1, 2, 3...", "Switch tabs"],
-                    ["Ctrl + W", "Close tab"],
+                    ["Ctrl + W", "Close tab (not in terminal)"],
                     ["Ctrl + T", "Open host shell in new tab\n(if linux-shell module is in use)"],
                     ["Ctrl + Y", "Open file browser in new tab"]
                 ]
