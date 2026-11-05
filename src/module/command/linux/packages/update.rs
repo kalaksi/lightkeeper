@@ -45,6 +45,7 @@ impl CommandModule for Update {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("update"),
             display_text: String::from("Upgrade package"),
+            tab_title: String::from("Upgrade package"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }

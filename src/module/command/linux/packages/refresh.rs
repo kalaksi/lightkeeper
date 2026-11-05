@@ -40,6 +40,7 @@ impl CommandModule for Refresh {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("refresh"),
             display_text: String::from("Refresh package lists"),
+            tab_title: String::from("Package refresh"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }

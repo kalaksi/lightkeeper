@@ -53,6 +53,7 @@ impl CommandModule for Build {
             display_style: frontend::DisplayStyle::Icon,
             display_icon: String::from("build"),
             display_text: String::from("Build"),
+            tab_title: String::from("Compose build"),
             depends_on_tags: vec![String::from("Local")],
             multivalue_level: 2,
             ..Default::default()

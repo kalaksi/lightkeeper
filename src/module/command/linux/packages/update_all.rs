@@ -44,6 +44,7 @@ impl CommandModule for UpdateAll {
             display_icon: String::from("update"),
             display_text: String::from("Upgrade all packages"),
             confirmation_text: String::from("Really upgrade all packages?"),
+            tab_title: String::from("Upgrade packages"),
             action: UIAction::FollowOutput,
             ..Default::default()
         }
