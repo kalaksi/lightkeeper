@@ -822,6 +822,7 @@ impl Configuration {
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
                 else {
+                    fs::set_permissions(&hosts_file_path, fs::Permissions::from_mode(0o600))?;
                     log::info!("Created new host configuration file {}", hosts_file_path.to_string_lossy());
                 }
             }
@@ -847,6 +848,7 @@ impl Configuration {
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
                 else {
+                    fs::set_permissions(&groups_file_path, fs::Permissions::from_mode(0o600))?;
                     log::info!("Created new group configuration file {}", groups_file_path.to_string_lossy());
                 }
             }
@@ -890,6 +892,7 @@ impl Configuration {
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
                 else {
+                    fs::set_permissions(&hosts_file_path, fs::Permissions::from_mode(0o600))?;
                     log::info!("Updated host configuration file {}", hosts_file_path.to_string_lossy());
                 }
             }
@@ -927,6 +930,7 @@ impl Configuration {
                     return Err(io::Error::new(io::ErrorKind::Other, message));
                 }
                 else {
+                    fs::set_permissions(&groups_file_path, fs::Permissions::from_mode(0o600))?;
                     log::info!("Updated group configuration file {}", groups_file_path.to_string_lossy());
                 }
             }

@@ -72,6 +72,7 @@ impl MetricsManager {
 
         // If data directory is missing, this is probably the first run, so create data directory.
         std::fs::create_dir_all(&data_dir)?;
+        std::fs::set_permissions(&data_dir, std::fs::Permissions::from_mode(0o700))?;
 
         // Sometimes there can be a one-time network problem.
         for retry_count in 0..2 {
@@ -262,7 +263,7 @@ impl MetricsManager {
             std::fs::write(&version_file_path, LMSERVER_VERSION)?;
 
             // Make sure lmserver is executable.
-            std::fs::set_permissions(&lmserver_path, std::fs::Permissions::from_mode(0o755))?;
+            std::fs::set_permissions(&lmserver_path, std::fs::Permissions::from_mode(0o700))?;
         }
 
         Ok(())
