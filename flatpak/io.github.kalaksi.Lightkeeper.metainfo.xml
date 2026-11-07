@@ -44,6 +44,19 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.50.0" date="2026-11-07">
+      <description>
+        <ul>
+          <li>Add systemd-user modules</li>
+          <li>Add ARM support to metrics server</li>
+          <li>Default linux-shell as_root to false</li>
+          <li>Optimize host details UI and metrics updates</li>
+          <li>Improve config file handling on errors</li>
+          <li>Fix filesystem ignore path matching</li>
+          <li>Fix hotkeys with terminal view</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.49.1" date="2026-10-24">
       <description>
         <ul>
