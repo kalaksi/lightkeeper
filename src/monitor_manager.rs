@@ -380,7 +380,7 @@ impl MonitorManager {
     }
 
     /// Periodically refreshes host monitors and certificate monitors. Stopped by `stop()`.
-    /// Hosts that haven't been initialized yet (no platform info) are skipped.
+    /// Host selection uses `allow_auto_refresh` (and skips internal `_` host ids).
     pub fn start_timers(
         &mut self,
         hosts_config: &Hosts,
@@ -468,9 +468,6 @@ impl MonitorManager {
                         let (Some(host), Some(host_monitors)) = (get_host(host_id), monitors.get(host_id)) else {
                             continue;
                         };
-                        if !host.platform.is_set() {
-                            continue;
-                        }
 
                         Self::_refresh_monitors(
                             host,
