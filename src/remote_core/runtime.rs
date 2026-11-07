@@ -196,8 +196,10 @@ impl CoreRuntime {
     /// Returns false if reconfigure() is still needed.
     pub fn apply_soft_update(&mut self, main_config: &Configuration, hosts_config: &configuration::Hosts) -> bool {
         let (previous_main_config, previous_hosts_config) = &self.applied_config;
+        let host_manager = self.core.host_manager.clone();
         let soft_applied = crate::apply_soft_config_update(
-            &self.core.host_manager.borrow(),
+            &host_manager.borrow(),
+            &mut self.core.monitor_manager,
             self.secret_store.clone(),
             previous_main_config,
             previous_hosts_config,

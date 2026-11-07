@@ -103,6 +103,7 @@ impl CoreComponents {
 /// Returns false if reconfigure() is still needed.
 pub fn apply_soft_config_update(
     host_manager: &HostManager,
+    monitor_manager: &mut MonitorManager,
     secret_store: Arc<dyn secrets_manager::SecretStore>,
     previous_main_config: &Configuration,
     previous_hosts_config: &configuration::Hosts,
@@ -110,6 +111,7 @@ pub fn apply_soft_config_update(
     hosts_config: &configuration::Hosts,
 ) -> bool {
     // Only used by the frontend or on startup. show_charts is handled separately by the metrics owner.
+    // Timer intervals are applied below via start_timers without a full reconfigure.
     let previous_preferences = &previous_main_config.preferences;
     let mut preferences = main_config.preferences.clone();
     preferences.refresh_hosts_on_start = previous_preferences.refresh_hosts_on_start;
@@ -118,8 +120,21 @@ pub fn apply_soft_config_update(
     preferences.show_charts = previous_preferences.show_charts;
     preferences.show_chart_threshold_lines = previous_preferences.show_chart_threshold_lines;
     preferences.editor_preferences = previous_preferences.editor_preferences.clone();
+    preferences.auto_refresh_interval = previous_preferences.auto_refresh_interval;
+    preferences.cert_monitor_refresh_interval = previous_preferences.cert_monitor_refresh_interval;
     if preferences != *previous_preferences || hosts_config.certificate_monitors != previous_hosts_config.certificate_monitors {
         return false;
+    }
+
+    if main_config.preferences.auto_refresh_interval != previous_preferences.auto_refresh_interval
+        || main_config.preferences.cert_monitor_refresh_interval != previous_preferences.cert_monitor_refresh_interval
+    {
+        monitor_manager.start_timers(
+            hosts_config,
+            main_config.preferences.auto_refresh_interval,
+            main_config.preferences.cert_monitor_refresh_interval,
+            host_manager.frontend_update_senders(),
+        );
     }
 
     let mut runtime_hosts = hosts_config.clone();

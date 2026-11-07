@@ -55,6 +55,9 @@ pub struct MonitorManager {
     next_hosts_refresh_at: Arc<AtomicI64>,
     /// Unix timestamp (seconds) of the next certificate-monitor refresh. 0 means off.
     next_certs_refresh_at: Arc<AtomicI64>,
+    /// Last intervals passed to `start_timers`. Used to preserve deadlines on soft restarts.
+    hosts_timer_interval: u64,
+    certs_timer_interval: u64,
 }
 
 impl MonitorManager {
@@ -133,14 +136,7 @@ impl MonitorManager {
     }
 
     pub fn stop(&mut self) {
-        self.next_hosts_refresh_at.store(0, Ordering::SeqCst);
-        self.next_certs_refresh_at.store(0, Ordering::SeqCst);
-        self.timers_stop_sender = None;
-        if let Some(thread) = self.timers_thread.take() {
-            if let Err(_) = thread.join() {
-                log::warn!("Thread had paniced");
-            }
-        }
+        self.stop_timers();
 
         if let Some(thread) = self.response_receiver_thread.take() {
             if let Err(_) = self.new_response_sender().send(RequestResponse::stop()) {
@@ -379,8 +375,22 @@ impl MonitorManager {
         )
     }
 
+    fn stop_timers(&mut self) {
+        self.next_hosts_refresh_at.store(0, Ordering::SeqCst);
+        self.next_certs_refresh_at.store(0, Ordering::SeqCst);
+        self.timers_stop_sender = None;
+        if let Some(thread) = self.timers_thread.take() {
+            if let Err(_) = thread.join() {
+                log::warn!("Thread had paniced");
+            }
+        }
+        self.hosts_timer_interval = 0;
+        self.certs_timer_interval = 0;
+    }
+
     /// Periodically refreshes host monitors and certificate monitors. Stopped by `stop()`.
     /// Host selection uses `allow_auto_refresh` (and skips internal `_` host ids).
+    /// Unchanged intervals keep their existing deadline so a soft restart does not reset both rings.
     pub fn start_timers(
         &mut self,
         hosts_config: &Hosts,
@@ -388,12 +398,29 @@ impl MonitorManager {
         certs_interval_seconds: u64,
         frontend_update_senders: Arc<Mutex<Vec<mpsc::Sender<UIUpdate>>>>,
     ) {
+        let now = Self::unix_now();
+        let next_hosts_at = Self::next_deadline(
+            now,
+            hosts_interval_seconds,
+            self.hosts_timer_interval,
+            self.next_hosts_refresh_at.load(Ordering::SeqCst),
+        );
+        let next_certs_at = Self::next_deadline(
+            now,
+            certs_interval_seconds,
+            self.certs_timer_interval,
+            self.next_certs_refresh_at.load(Ordering::SeqCst),
+        );
+
+        self.stop_timers();
+
         if hosts_interval_seconds == 0 && certs_interval_seconds == 0 {
-            self.next_hosts_refresh_at.store(0, Ordering::SeqCst);
-            self.next_certs_refresh_at.store(0, Ordering::SeqCst);
             Self::publish_timers(&frontend_update_senders, 0, 0);
             return;
         }
+
+        self.hosts_timer_interval = hosts_interval_seconds;
+        self.certs_timer_interval = certs_interval_seconds;
 
         let host_ids = if hosts_interval_seconds > 0 {
             hosts_config.hosts.iter()
@@ -421,17 +448,8 @@ impl MonitorManager {
                 certs_interval_seconds,
             );
 
-            let now = Self::unix_now();
-            let mut next_hosts_at = if hosts_interval_seconds > 0 {
-                now + hosts_interval_seconds as i64
-            } else {
-                0
-            };
-            let mut next_certs_at = if certs_interval_seconds > 0 {
-                now + certs_interval_seconds as i64
-            } else {
-                0
-            };
+            let mut next_hosts_at = next_hosts_at;
+            let mut next_certs_at = next_certs_at;
             next_hosts_refresh_at.store(next_hosts_at, Ordering::SeqCst);
             next_certs_refresh_at.store(next_certs_at, Ordering::SeqCst);
 
@@ -522,6 +540,16 @@ impl MonitorManager {
             0
         } else {
             (next_at - now).max(0) as u64
+        }
+    }
+
+    fn next_deadline(now: i64, new_interval: u64, previous_interval: u64, previous_deadline: i64) -> i64 {
+        if new_interval == 0 {
+            0
+        } else if new_interval == previous_interval && previous_deadline > now {
+            previous_deadline
+        } else {
+            now + new_interval as i64
         }
     }
 

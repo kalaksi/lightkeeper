@@ -795,14 +795,20 @@ impl LkBackend {
         let core = self.core.as_ref().expect("local core missing").clone();
         let secret_store = self.secret_store.as_ref().expect("local secret store missing").clone();
         let (previous_main, previous_hosts) = &self.applied_config;
-        let soft_applied = apply_soft_config_update(
-            &core.borrow().host_manager.borrow(),
-            secret_store.clone(),
-            previous_main,
-            previous_hosts,
-            &main_config,
-            &hosts_config,
-        );
+        let soft_applied = {
+            let mut core = core.borrow_mut();
+            let host_manager = core.host_manager.clone();
+            let soft_applied = apply_soft_config_update(
+                &host_manager.borrow(),
+                &mut core.monitor_manager,
+                secret_store.clone(),
+                previous_main,
+                previous_hosts,
+                &main_config,
+                &hosts_config,
+            );
+            soft_applied
+        };
 
         let reset_hosts = if soft_applied {
             Vec::new()
