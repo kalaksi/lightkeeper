@@ -461,6 +461,8 @@ Module {
         Property { name: "monitorWarningCount"; type: "int"; isReadonly: false; }
         Property { name: "monitorNormalCount"; type: "int"; isReadonly: false; }
         Property { name: "monitorNoDataCount"; type: "int"; isReadonly: false; }
+        Property { name: "certAlertCount"; type: "int"; isReadonly: false; }
+        Property { name: "certAlertCriticality"; type: "string"; isReadonly: false; }
 
         Signal { name: "criticalityCountsChanged" }
         Signal { name: "updateReceived"; Parameter { name: "host_id"; type: "string" } }

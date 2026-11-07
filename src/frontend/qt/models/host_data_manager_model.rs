@@ -23,6 +23,8 @@ pub struct HostDataManagerModel {
     monitorWarningCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
     monitorNormalCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
     monitorNoDataCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
+    certAlertCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
+    certAlertCriticality: qt_property!(QString; NOTIFY criticalityCountsChanged),
 
     //
     // Signals
@@ -172,11 +174,12 @@ impl HostDataManagerModel {
                             QString::from(new_monitor_data.monitor_id.clone()),
                             QString::from(new_criticality.to_string())
                         );
-
-                        self.update_criticality_counts();
                     }
                 }
             }
+
+            // Also covers multivalue leaf count changes that keep the parent criticality.
+            self.update_criticality_counts();
         }
 
         for error in new_display_data.new_errors {
@@ -547,6 +550,8 @@ impl HostDataManagerModel {
             }
         }
 
+        let (cert_alert_count, cert_alert_criticality) = self.certificate_alert_summary();
+
         let mut state_changed = false;
         if criticals != self.monitorCriticalCount {
             self.monitorCriticalCount = criticals;
@@ -573,9 +578,40 @@ impl HostDataManagerModel {
             state_changed = true;
         }
 
+        if cert_alert_count != self.certAlertCount {
+            self.certAlertCount = cert_alert_count;
+            state_changed = true;
+        }
+
+        let cert_alert_criticality = QString::from(cert_alert_criticality.to_string());
+        if cert_alert_criticality != self.certAlertCriticality {
+            self.certAlertCriticality = cert_alert_criticality;
+            state_changed = true;
+        }
+
         if state_changed {
             self.criticalityCountsChanged();
         }
+    }
+
+    fn certificate_alert_summary(&self) -> (u64, Criticality) {
+        let cert_host_id = crate::monitor_manager::CERT_MONITOR_HOST_ID;
+        let Some(last) = self.display_data.hosts.get(cert_host_id)
+            .and_then(|host| host.host_state.monitor_data.get(cert_host_id))
+            .and_then(|monitor| monitor.values.back())
+        else {
+            return (0, Criticality::Warning);
+        };
+
+        let mut count = 0;
+        let mut worst = Criticality::Warning;
+        for leaf in last.multivalue.iter() {
+            if matches!(leaf.criticality, Criticality::Warning | Criticality::Error) {
+                count += 1;
+                worst = worst.max(leaf.criticality);
+            }
+        }
+        (count, worst)
     }
 }
 

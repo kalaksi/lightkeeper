@@ -719,14 +719,17 @@ ApplicationWindow {
         // getAlerts() sorts by criticality desc; first active entry is the badge color.
         let worst = active.length > 0 ? active[0].criticality : "Warning"
 
-        if (root.menuBar.alertCount !== active.length)
+        if (root.menuBar.alertCount !== active.length) {
             root.menuBar.alertCount = active.length
-        if (root.menuBar.alertCriticality !== worst)
+        }
+        if (root.menuBar.alertCriticality !== worst) {
             root.menuBar.alertCriticality = worst
+        }
 
         // Avoid rewriting the drawer model on every host tick while closed.
-        if (alertDrawer.open)
+        if (alertDrawer.open) {
             alertDrawer.alerts = alerts
+        }
     }
 
     function hotReload() {

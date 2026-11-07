@@ -27,6 +27,8 @@ ToolBar {
     property int iconSize: 24
     property int alertCount: 0
     property string alertCriticality: "Error"
+    readonly property int certAlertCount: LK.hosts.certAlertCount
+    readonly property string certAlertCriticality: LK.hosts.certAlertCriticality
 
     readonly property string coreButtonIcon: {
         if (root.usingRemoteCore
@@ -181,6 +183,30 @@ ToolBar {
             icon.height: root.iconSize
             icon.width: root.iconSize
             padding: 4
+            // Extra right padding so the count badge sits beside the label instead of over it.
+            rightPadding: 12
+
+            Rectangle {
+                visible: root.certAlertCount > 0
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.rightMargin: 2
+                anchors.topMargin: 2
+                width: Math.max(16, certBadgeLabel.implicitWidth + 6)
+                height: 16
+                radius: 8
+                color: Theme.colorForCriticality(root.certAlertCriticality)
+                z: 2
+
+                Label {
+                    id: certBadgeLabel
+                    anchors.centerIn: parent
+                    text: root.certAlertCount > 99 ? "99+" : String(root.certAlertCount)
+                    color: Theme.textColor
+                    font.pixelSize: 10
+                    font.bold: true
+                }
+            }
         }
 
         ToolSeparator { }
