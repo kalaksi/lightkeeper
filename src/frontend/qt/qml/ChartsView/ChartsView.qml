@@ -23,7 +23,10 @@ Item {
     property int chartHeight: 180
     property int columnSpacing: Theme.spacingNormal
     property bool enableShortcuts: false
-    property var _categories: ({})
+    property var _categories: []
+    // Monitor payloads keyed by category. Rebuilt on refresh so charts appear after
+    // host monitoring data arrives (common on first remote-core connect).
+    property var _monitorsByCategory: ({})
     property bool _showEmptyCategories: true
 
     property int _periodSeconds: 7 * 24 * 60 * 60
@@ -36,12 +39,12 @@ Item {
     signal refreshRequested()
 
     Component.onCompleted: {
-        root._categories = []
         if (root.hostId !== "") {
             // TODO: enable more categories later after better support.
             // root._categories = LK.metrics.getCategories(root.hostId)
             root._categories = ["host", "storage"]
         }
+        root.rebuildMonitors()
     }
 
     // ScrollView doesn't have boundsBehavior so this is the workaround.
@@ -236,9 +239,7 @@ Item {
                         columns: 2
 
                         Repeater {
-                            model: LK.metrics.getCategoryMonitorIds(root.hostId, groupBox.categoryName)
-                                             .map(monitorId => JSON.parse(LK.hosts.getMonitoringDataJson(root.hostId, monitorId)))
-                                             .filter(monitor => monitor.display_options.use_with_charts)
+                            model: root._monitorsByCategory[groupBox.categoryName] || []
 
                             Item {
                                 id: chart
@@ -345,11 +346,30 @@ Item {
         }
     }
 
+    function rebuildMonitors() {
+        let monitorsByCategory = {}
+        for (const categoryName of root._categories) {
+            monitorsByCategory[categoryName] = LK.metrics.getCategoryMonitorIds(root.hostId, categoryName)
+                .map(monitorId => JSON.parse(LK.hosts.getMonitoringDataJson(root.hostId, monitorId)))
+                .filter(monitor => monitor.display_options.use_with_charts)
+        }
+
+        let changed = root._categories.some(categoryName => {
+            let nextIds = (monitorsByCategory[categoryName] || []).map(monitor => monitor.monitor_id).join(",")
+            let previousIds = (root._monitorsByCategory[categoryName] || []).map(monitor => monitor.monitor_id).join(",")
+            return nextIds !== previousIds
+        })
+        if (changed) {
+            root._monitorsByCategory = monitorsByCategory
+        }
+    }
+
     function refreshContent() {
         let endSec = Math.floor(Date.now() / 1000)
         root._chartEndTimeSec = endSec
         root._chartStartTimeSec = endSec - root._periodSeconds
         console.log("Refreshing charts for host: " + root.hostId)
+        root.rebuildMonitors()
         root.refreshRequested()
     }
 
