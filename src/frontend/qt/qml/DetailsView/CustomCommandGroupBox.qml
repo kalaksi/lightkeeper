@@ -108,17 +108,6 @@ CategoryGroupBox {
                                 display_style: "button"
                             }
                         }
-                        /* TODO?
-                        {
-                            command_id: "_custom_command",
-                            command_params: [],
-                            display_options: {
-                                display_icon: "stop",
-                                display_text: "Stop",
-                                display_style: "button"
-                            }
-                        }
-                        */
                     ]
 
                     Layout.alignment: Qt.AlignHCenter

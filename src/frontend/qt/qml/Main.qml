@@ -662,10 +662,6 @@ ApplicationWindow {
         Qt.quit()
     }
 
-    function reload() {
-        // todo
-    }
-
     function refreshRemoteCoreBlocked() {
         root.usingRemoteCore = LK.isUsingRemoteCore()
         root.coreConnectionState = LK.getCoreConnectionState()

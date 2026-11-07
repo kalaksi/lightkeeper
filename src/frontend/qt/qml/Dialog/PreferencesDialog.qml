@@ -50,7 +50,7 @@ LightkeeperDialog {
             })(),
             terminal: terminalAndArgs.text.split(" ")[0],
             terminalArgs: terminalAndArgs.text.split(" ").slice(1).join(" "),
-            showStatusBar: showStatusBar.checkState === Qt.Checked,
+            showStatusBar: root._preferences.showStatusBar,
             showCharts: showCharts.checkState === Qt.Checked,
             closeToTray: closeToTray.checkState === Qt.Checked,
             showMonitorNotifications: showMonitorNotifications.checkState === Qt.Checked,
@@ -424,39 +424,6 @@ LightkeeperDialog {
                         }
 
                         Layout.preferredWidth: content.width * 0.35
-                    }
-                }
-
-                RowLayout {
-                    // TODO: remove later if not needed?
-                    visible: false
-
-                    Layout.fillWidth: true
-
-                    Column {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-
-                        Label {
-                            width: parent.width
-                            text: "Show status bar"
-                        }
-
-                        SmallText {
-                            width: parent.width
-                            text: ""
-                            color: Theme.textColorDark
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-
-                    CheckBox {
-                        id: showStatusBar
-                        enabled: false
-                        opacity: 0.5
-                        checkState: root._preferences.showStatusBar ? Qt.Checked : Qt.Unchecked
-
-                        Layout.leftMargin: content.width * 0.30
                     }
                 }
 

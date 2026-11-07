@@ -247,7 +247,7 @@ pub struct DisplayOptions {
     pub show_status_bar: bool,
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub chart_categories: Vec<ChartCategory>,
-    /// TODO/XXX: Obsolete. Moved to Preferences.
+    /// Obsolete. Moved to Preferences.
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub show_charts: bool,
     #[serde(default = "DisplayOptions::default_main_view_split_ratio")]

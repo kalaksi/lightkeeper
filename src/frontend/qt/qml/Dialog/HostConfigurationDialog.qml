@@ -560,13 +560,6 @@ LightkeeperDialog {
         id: groupConfigDialog
         groupName: selectedGroupsList.currentIndex === -1 ? "" : root._selectedGroups[selectedGroupsList.currentIndex].name
         topMargin: 100
-
-        // TODO
-        // This doesn't work correctly on flatpak, maybe different Qt version?
-        // Leaving it centered. It's less pretty but works more reliably for now.
-        // anchors.centerIn: undefined
-        // x: root.x + Theme.marginDialog
-        // y: root.y + Theme.marginDialogTop
     }
 
     GroupConfigurationDialog {
@@ -574,13 +567,6 @@ LightkeeperDialog {
         readOnly: true
         groupName: ""
         title: "Effective configuration"
-
-        // TODO
-        // This doesn't work correctly on flatpak, maybe different Qt version?
-        // Leaving it centered. It's less pretty but works more reliably for now.
-        // anchors.centerIn: undefined
-        // x: root.x + Theme.marginDialog
-        // y: root.y + Theme.marginDialogTop
     }
 
     InputDialog {
