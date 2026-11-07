@@ -25,6 +25,19 @@ Item {
     property int autoRefreshInterval: 0
     /// If false, the timer only shows progress and the refresh is expected to happen elsewhere (e.g. in core).
     property bool clickOnAutoRefresh: true
+    readonly property string autoRefreshLabel: {
+        switch (autoRefreshInterval) {
+            case 0: return "auto-refresh off"
+            case 300: return "every 5 m"
+            case 900: return "every 15 m"
+            case 3600: return "every 1 h"
+            case 10800: return "every 3 h"
+            case 21600: return "every 6 h"
+            case 43200: return "every 12 h"
+            case 86400: return "every 24 h"
+            default: return "every " + autoRefreshInterval + " s"
+        }
+    }
 
     enabled: true
     opacity: enabled ? 1.0 : 0.5
@@ -65,7 +78,7 @@ Item {
 
         ToolTip.visible: hovered
         ToolTip.delay: Theme.tooltipDelay
-        ToolTip.text: "Refresh"
+        ToolTip.text: "Refresh (" + root.autoRefreshLabel + ")"
 
         onClicked: {
             if (root.spinOnClick) {
@@ -189,40 +202,64 @@ Item {
 
                         MenuItem {
                             text: "Auto-refresh off"
+                            checkable: true
+                            autoExclusive: true
+                            checked: root.autoRefreshInterval === 0
                             onClicked: refreshMenu.setTimerInterval(0)
                         }
                         MenuItem {
                             text: "Every 5 m"
+                            checkable: true
+                            autoExclusive: true
+                            checked: root.autoRefreshInterval === 300
                             onClicked: refreshMenu.setTimerInterval(300)
                         }
 
                         MenuItem {
                             text: "Every 15 m"
+                            checkable: true
+                            autoExclusive: true
+                            checked: root.autoRefreshInterval === 900
                             onClicked: refreshMenu.setTimerInterval(900)
                         }
 
                         MenuItem {
                             text: "Every 1 h"
+                            checkable: true
+                            autoExclusive: true
+                            checked: root.autoRefreshInterval === 3600
                             onClicked: refreshMenu.setTimerInterval(3600)
                         }
 
                         MenuItem {
                             text: "Every 3 h"
+                            checkable: true
+                            autoExclusive: true
+                            checked: root.autoRefreshInterval === 10800
                             onClicked: refreshMenu.setTimerInterval(10800)
                         }
 
                         MenuItem {
                             text: "Every 6 h"
+                            checkable: true
+                            autoExclusive: true
+                            checked: root.autoRefreshInterval === 21600
                             onClicked: refreshMenu.setTimerInterval(21600)
                         }
 
                         MenuItem {
                             text: "Every 12 h"
+                            checkable: true
+                            autoExclusive: true
+                            checked: root.autoRefreshInterval === 43200
                             onClicked: refreshMenu.setTimerInterval(43200)
                         }
 
                         MenuItem {
                             text: "Every 24 h"
+                            checkable: true
+                            autoExclusive: true
+                            checked: root.autoRefreshInterval === 86400
                             onClicked: refreshMenu.setTimerInterval(86400)
                         }
                     }
