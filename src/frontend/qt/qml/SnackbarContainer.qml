@@ -13,6 +13,7 @@ Item {
     id: root
     property int spacing: 10
     property int showDuration: 5000
+    property int maximumShowDuration: 30000
     property int snackbarHeight: 100
     property int snackbarMaximumWidth: 600
     property var _instances: []
@@ -50,7 +51,10 @@ Item {
 
     function addSnackbar(criticality, text) {
         // If previous errors exist, give some extra time so boxes won't disappear at the same time.
-        let extraDisplayMs = root._instances.length * 500
+        let extraDisplayMs = Math.min(
+            root._instances.length * 500,
+            root.maximumShowDuration - root.showDuration
+        )
 
         let newSnackbar = snackbarComponent.createObject(root, {
             creationTime: Date.now() + extraDisplayMs,
