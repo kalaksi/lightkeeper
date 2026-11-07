@@ -74,10 +74,6 @@ impl MonitorManager {
         }
     }
 
-    fn next_invocation_id(&self) -> u64 {
-        self.invocation_id_counter.fetch_add(1, Ordering::SeqCst) + 1
-    }
-
     pub fn configure(&mut self,
                      hosts_config: &Hosts,
                      request_sender: mpsc::Sender<ConnectorRequest>,
@@ -214,74 +210,29 @@ impl MonitorManager {
             return;
         };
 
-        let platform_info_providers = self.platform_info_providers.lock().unwrap();
-
-        // Internal modules start with an underscore.
-        let monitors_for_host = monitors.iter()
-            .filter(|(host_id_key, _)| &host_id == host_id_key && !host_id_key.starts_with("_"));
-
-        for (host_name, monitor_collection) in monitors_for_host {
-            let Some(mut host) = self.host_manager.borrow().try_get_host(host_name) else {
-                log::error!("Host '{}' not found", host_name);
-                continue;
-            };
-
-            if let Err(error) = host.resolve_ip() {
-                // TODO: show in UI?
-                log::error!("Failed to resolve IP address for host {}: {}", host_name, error);
-            }
-
-            for info_provider in platform_info_providers.values() {
-                // Executed only if required connector is used on the host.
-                if monitor_collection.values().all(|monitor|
-                    monitor.get_connector_spec().unwrap_or_default().id != info_provider.get_connector_spec().unwrap().id
-                ) {
-                    continue;
-                }
-
-                let commands = match get_monitor_connector_messages(&host, &info_provider, &DataPoint::empty()) {
-                    Ok(messages) => messages,
-                    Err(error) => {
-                        log::error!("Monitor failed: {}", error);
-                        return;
-                    }
-                };
-
-                if !host.settings.contains(&crate::host::HostSetting::UseSudo) && commands.iter().any(|msg| {
-                    // Checking command instead of relying to module metadata is more accurate.
-                    let trimmed = msg.trim_start();
-                    trimmed.starts_with("sudo ") || trimmed.starts_with("'sudo'")
-                }) {
-                    log::warn!("[{}][{}] Skipping, sudo required", host.name, info_provider.get_module_spec().id);
-                    return;
-                }
-
-                let invocation_id = self.next_invocation_id();
-
-                // Notify host state manager about new pending monitor invocation.
-                self.send_state_update(StateUpdateMessage {
-                    host_name: host.name.clone(),
-                    display_options: info_provider.get_display_options(),
-                    module_spec: info_provider.get_module_spec(),
-                    data_point: Some(DataPoint::pending()),
-                    invocation_id,
-                    ..Default::default()
-                });
-
-                self.send_connector_request(ConnectorRequest {
-                    connector_spec: info_provider.get_connector_spec(),
-                    source_id: info_provider.get_module_spec().id,
-                    host: host.clone(),
-                    invocation_id,
-                    response_sender: self.new_response_sender(),
-                    request_type: RequestType::MonitorCommand {
-                        parent_datapoint: None,
-                        extension_monitors: Vec::new(),
-                        commands: commands,
-                    },
-                });
-            }
+        if host_id.starts_with("_") {
+            return;
         }
+
+        let Some(host_monitors) = monitors.get(host_id) else {
+            return;
+        };
+
+        let Some(host) = self.host_manager.borrow().try_get_host(host_id) else {
+            log::error!("Host '{}' not found", host_id);
+            return;
+        };
+
+        let platform_info_providers = self.platform_info_providers.lock().unwrap();
+        Self::_refresh_platform_info(
+            host,
+            host_monitors,
+            &platform_info_providers,
+            &self.invocation_id_counter,
+            self.request_sender.as_ref().unwrap(),
+            self.state_update_sender.as_ref().unwrap(),
+            &self.new_response_sender(),
+        );
     }
 
     pub fn get_all_host_categories(&self, host_id: &str) -> Vec<String> {
@@ -390,7 +341,8 @@ impl MonitorManager {
 
     /// Periodically refreshes host monitors and certificate monitors. Stopped by `stop()`.
     /// Host selection uses `allow_auto_refresh` (and skips internal `_` host ids).
-    /// Unchanged intervals keep their existing deadline so a soft restart does not reset both rings.
+    /// Cold hosts (no platform info yet) get platform-info refresh so they can bootstrap;
+    /// initialized hosts refresh monitors. Soft restart keeps existing deadlines when intervals are unchanged.
     pub fn start_timers(
         &mut self,
         hosts_config: &Hosts,
@@ -432,6 +384,7 @@ impl MonitorManager {
         };
 
         let monitors = self.monitors.clone();
+        let platform_info_providers = self.platform_info_providers.clone();
         let get_host = self.host_manager.borrow().new_host_getter();
         let invocation_id_counter = self.invocation_id_counter.clone();
         let request_sender = self.request_sender.clone().unwrap();
@@ -479,6 +432,9 @@ impl MonitorManager {
                 let Ok(monitors) = monitors.lock() else {
                     break;
                 };
+                let Ok(platform_info_providers) = platform_info_providers.lock() else {
+                    break;
+                };
 
                 let now = Self::unix_now();
                 if next_hosts_at > 0 && now >= next_hosts_at {
@@ -487,14 +443,27 @@ impl MonitorManager {
                             continue;
                         };
 
-                        Self::_refresh_monitors(
-                            host,
-                            host_monitors.iter().collect(),
-                            &invocation_id_counter,
-                            &request_sender,
-                            &state_update_sender,
-                            &response_sender,
-                        );
+                        if !host.platform.is_set() {
+                            Self::_refresh_platform_info(
+                                host,
+                                host_monitors,
+                                &platform_info_providers,
+                                &invocation_id_counter,
+                                &request_sender,
+                                &state_update_sender,
+                                &response_sender,
+                            );
+                        }
+                        else {
+                            Self::_refresh_monitors(
+                                host,
+                                host_monitors.iter().collect(),
+                                &invocation_id_counter,
+                                &request_sender,
+                                &state_update_sender,
+                                &response_sender,
+                            );
+                        }
                     }
                     next_hosts_at = now + hosts_interval_seconds as i64;
                     next_hosts_refresh_at.store(next_hosts_at, Ordering::SeqCst);
@@ -577,6 +546,80 @@ impl MonitorManager {
             self.state_update_sender.as_ref().unwrap(),
             &self.new_response_sender(),
         )
+    }
+
+    fn _refresh_platform_info(
+        mut host: Host,
+        host_monitors: &HashMap<String, Monitor>,
+        platform_info_providers: &HashMap<String, Monitor>,
+        invocation_id_counter: &AtomicU64,
+        request_sender: &mpsc::Sender<ConnectorRequest>,
+        state_update_sender: &mpsc::Sender<StateUpdateMessage>,
+        response_sender: &mpsc::Sender<RequestResponse>,
+    ) {
+        if let Err(error) = host.resolve_ip() {
+            // TODO: show in UI?
+            log::error!("Failed to resolve IP address for host {}: {}", host.name, error);
+        }
+
+        for info_provider in platform_info_providers.values() {
+            // Executed only if required connector is used on the host.
+            if host_monitors.values().all(|monitor|
+                monitor.get_connector_spec().unwrap_or_default().id != info_provider.get_connector_spec().unwrap().id
+            ) {
+                continue;
+            }
+
+            let commands = match get_monitor_connector_messages(&host, info_provider, &DataPoint::empty()) {
+                Ok(messages) => messages,
+                Err(error) => {
+                    log::error!("Monitor failed: {}", error);
+                    return;
+                }
+            };
+
+            if !host.settings.contains(&crate::host::HostSetting::UseSudo) && commands.iter().any(|msg| {
+                // Checking command instead of relying to module metadata is more accurate.
+                let trimmed = msg.trim_start();
+                trimmed.starts_with("sudo ") || trimmed.starts_with("'sudo'")
+            }) {
+                log::warn!("[{}][{}] Skipping, sudo required", host.name, info_provider.get_module_spec().id);
+                return;
+            }
+
+            let invocation_id = invocation_id_counter.fetch_add(1, Ordering::SeqCst) + 1;
+
+            if let Err(error) = state_update_sender.send(StateUpdateMessage {
+                host_name: host.name.clone(),
+                display_options: info_provider.get_display_options(),
+                module_spec: info_provider.get_module_spec(),
+                data_point: Some(DataPoint::pending()),
+                invocation_id,
+                ..Default::default()
+            }) {
+                log::error!("Failed to send state update: {}", error);
+                panic!("Failed to send state update: {}", error);
+            }
+
+            if let Err(error) = request_sender.send(ConnectorRequest {
+                connector_spec: info_provider.get_connector_spec(),
+                source_id: info_provider.get_module_spec().id,
+                host: host.clone(),
+                invocation_id,
+                response_sender: response_sender.clone(),
+                request_type: RequestType::MonitorCommand {
+                    parent_datapoint: None,
+                    extension_monitors: Vec::new(),
+                    commands,
+                },
+            }) {
+                log::error!("Failed to send connector request: {}", error);
+                if let Err(error) = state_update_sender.send(StateUpdateMessage::fatal_error()) {
+                    log::error!("Failed to send state update: {}", error);
+                    panic!("Failed to send state update: {}", error);
+                }
+            }
+        }
     }
 
     fn _refresh_monitors(
@@ -682,13 +725,6 @@ impl MonitorManager {
         }
 
         invocation_ids
-    }
-
-    fn send_connector_request(&self, request: ConnectorRequest) {
-        if let Err(error) = self.request_sender.as_ref().unwrap().send(request) {
-            log::error!("Failed to send connector request: {}", error);
-            self.send_state_update(StateUpdateMessage::fatal_error());
-        }
     }
 
     fn send_state_update(&self, message: StateUpdateMessage) {
