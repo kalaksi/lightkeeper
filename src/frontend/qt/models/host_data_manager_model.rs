@@ -23,6 +23,8 @@ pub struct HostDataManagerModel {
     monitorWarningCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
     monitorNormalCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
     monitorNoDataCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
+    alertCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
+    alertCriticality: qt_property!(QString; NOTIFY criticalityCountsChanged),
     certAlertCount: qt_property!(u64; NOTIFY criticalityCountsChanged),
     certAlertCriticality: qt_property!(QString; NOTIFY criticalityCountsChanged),
 
@@ -550,6 +552,7 @@ impl HostDataManagerModel {
             }
         }
 
+        let (alert_count, alert_criticality) = self.alert_badge_summary();
         let (cert_alert_count, cert_alert_criticality) = self.certificate_alert_summary();
 
         let mut state_changed = false;
@@ -578,6 +581,17 @@ impl HostDataManagerModel {
             state_changed = true;
         }
 
+        if alert_count != self.alertCount {
+            self.alertCount = alert_count;
+            state_changed = true;
+        }
+
+        let alert_criticality = QString::from(alert_criticality.to_string());
+        if alert_criticality != self.alertCriticality {
+            self.alertCriticality = alert_criticality;
+            state_changed = true;
+        }
+
         if cert_alert_count != self.certAlertCount {
             self.certAlertCount = cert_alert_count;
             state_changed = true;
@@ -592,6 +606,36 @@ impl HostDataManagerModel {
         if state_changed {
             self.criticalityCountsChanged();
         }
+    }
+
+    fn alert_badge_summary(&self) -> (u64, Criticality) {
+        let mut count = 0;
+        let mut worst = Criticality::Warning;
+
+        for (host_id, display_data) in self.display_data.hosts.iter() {
+            if host_id.starts_with('_') {
+                continue;
+            }
+
+            for monitor_data in display_data.host_state.monitor_data.values() {
+                let Some(last) = monitor_data.values.back() else {
+                    continue;
+                };
+
+                for leaf in last.collect_alert_leaves(
+                    monitor_data.display_options.use_multivalue,
+                    &monitor_data.display_options.display_text,
+                ) {
+                    if leaf.acknowledged {
+                        continue;
+                    }
+                    count += 1;
+                    worst = worst.max(leaf.criticality);
+                }
+            }
+        }
+
+        (count, worst)
     }
 
     fn certificate_alert_summary(&self) -> (u64, Criticality) {

@@ -714,22 +714,11 @@ ApplicationWindow {
     }
 
     function refreshAlerts() {
-        let alerts = Parse.TryParseJson(LK.hosts.getAlerts()) || []
-        let active = alerts.filter(alert => !alert.acknowledged)
-        // getAlerts() sorts by criticality desc; first active entry is the badge color.
-        let worst = active.length > 0 ? active[0].criticality : "Warning"
-
-        if (root.menuBar.alertCount !== active.length) {
-            root.menuBar.alertCount = active.length
+        // Badge state comes from LK.hosts.alertCount / alertCriticality.
+        if (!alertDrawer.open) {
+            return
         }
-        if (root.menuBar.alertCriticality !== worst) {
-            root.menuBar.alertCriticality = worst
-        }
-
-        // Avoid rewriting the drawer model on every host tick while closed.
-        if (alertDrawer.open) {
-            alertDrawer.alerts = alerts
-        }
+        alertDrawer.alerts = Parse.TryParseJson(LK.hosts.getAlerts()) || []
     }
 
     function hotReload() {

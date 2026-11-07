@@ -25,8 +25,8 @@ ToolBar {
     property alias autoRefreshInterval: autoRefreshButton.autoRefreshInterval
     property alias nextAutoRefreshIn: autoRefreshButton.nextAutoRefreshIn
     property int iconSize: 24
-    property int alertCount: 0
-    property string alertCriticality: "Error"
+    readonly property int alertCount: LK.hosts.alertCount
+    readonly property string alertCriticality: LK.hosts.alertCriticality
     readonly property int certAlertCount: LK.hosts.certAlertCount
     readonly property string certAlertCriticality: LK.hosts.certAlertCriticality
 
