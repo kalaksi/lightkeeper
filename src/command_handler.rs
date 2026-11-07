@@ -135,8 +135,6 @@ impl CommandHandler {
             // TODO: add to config or something?
             let filebrowser_ls = crate::module::command::internal::FileBrowserLs::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_ls);
-            let filebrowser_ls_links = crate::module::command::internal::FileBrowserLsLinks::new_command_module(&HashMap::new());
-            self.add_command(host_id, filebrowser_ls_links);
             let filebrowser_copy = crate::module::command::internal::FileBrowserCopy::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_copy);
             let ssh_settings: HashMap<String, String> = host_config.effective.connectors

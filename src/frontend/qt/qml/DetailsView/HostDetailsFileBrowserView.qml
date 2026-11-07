@@ -163,13 +163,21 @@ Item {
                 }
 
                 let data = JSON.parse(commandResult.message)
-                let browserEntries = data.entries.map(entry => fileBrowser.buildEntry(
-                    pendingPath,
-                    entry.name,
-                    entry.type,
-                    [root.formatSizeKb(Math.round(Number(entry.size) / 1024)), entry.time,
-                        entry.permissions, entry.owner, entry.group]
-                ))
+                let browserEntries = data.entries.map(entry => {
+                    // Symlinks that resolve to directories behave as dirs in the tree/navigation.
+                    let fileType = entry.points_to_dir ? "d" : entry.type
+                    let browserEntry = fileBrowser.buildEntry(
+                        pendingPath,
+                        entry.name,
+                        fileType,
+                        [root.formatSizeKb(Math.round(Number(entry.size) / 1024)), entry.time,
+                            entry.permissions, entry.owner, entry.group]
+                    )
+                    if (browserEntry !== null && entry.link_target) {
+                        browserEntry.linkTarget = entry.link_target
+                    }
+                    return browserEntry
+                })
 
                 fileBrowser.openDirectory(pendingPath, browserEntries)
 

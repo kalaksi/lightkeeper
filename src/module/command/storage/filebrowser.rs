@@ -10,11 +10,10 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::*;
-use crate::utils::ShellCommand;
 use lightkeeper_module::command_module;
 use serde_json::json;
 
-use crate::module::command::internal::filebrowser::ls::parse_ls_output;
+use crate::module::command::internal::filebrowser::ls::{linux_ls_connector_message, parse_ls_output};
 
 #[command_module(
     name="storage-filebrowser",
@@ -50,25 +49,29 @@ impl CommandModule for FileBrowser {
     }
 
     fn get_connector_message(&self, host: Host, parameters: Vec<String>) -> Result<String, LkError> {
-        let mut command = ShellCommand::new();
-        command.use_sudo = false;
-
-        if host.platform.os == platform_info::OperatingSystem::Linux {
-            let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();
-            command.arguments(vec![
-                "ls", "-lAL", "--group-directories-first", "--color=never", "--full-time", path
-            ]);
-        }
-        else {
+        if host.platform.os != platform_info::OperatingSystem::Linux {
             return Err(LkError::unsupported_platform());
         }
-
-        Ok(command.to_string())
+        let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();
+        Ok(linux_ls_connector_message(path, false))
     }
 
     fn process_response(&self, _host: Host, response: &ResponseMessage) -> Result<CommandResult, String> {
-        let entries = parse_ls_output(&response.message)?;
-        let json_result = json!({ "entries": entries });
-        Ok(CommandResult::new_hidden(json_result.to_string()))
+        match parse_ls_output(&response.message) {
+            Ok(entries) => {
+                let json_result = json!({ "entries": entries });
+                Ok(CommandResult::new_hidden(json_result.to_string()))
+            },
+            Err(_) if response.return_code != 0 => {
+                let msg = if response.message.trim().is_empty() {
+                    format!("Failed to list directory (exit code {})", response.return_code)
+                }
+                else {
+                    response.message.clone()
+                };
+                Ok(CommandResult::new_error(msg))
+            },
+            Err(message) => Err(message),
+        }
     }
 }

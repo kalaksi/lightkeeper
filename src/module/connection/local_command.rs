@@ -41,18 +41,15 @@ impl Module for LocalCommand {
 
 impl ConnectionModule for LocalCommand {
     fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
+        // Merge stderr like SSH and send_message_partial so callers always see both streams.
+        let merged_command = format!("{{ {}; }} 2>&1", message);
         let output = process::Command::new("bash")
-            .args(["-c", message])
+            .args(["-c", &merged_command])
             .output()?;
 
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-            Ok(ResponseMessage::new_success(stdout))
-        }
-        else {
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            Ok(ResponseMessage::new(stderr, output.status.code().unwrap_or(1)))
-        }
+        let message = String::from_utf8_lossy(&output.stdout).to_string();
+        let return_code = output.status.code().unwrap_or(if output.status.success() { 0 } else { 1 });
+        Ok(ResponseMessage::new(message, return_code))
     }
 
     fn send_message_partial(&self, message: &str, _invocation_id: u64) -> Result<ResponseMessage, LkError> {
