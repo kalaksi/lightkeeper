@@ -141,6 +141,7 @@ impl HostDataManagerModel {
 
     pub fn set_hosts_config(&mut self, hosts_config: configuration::Hosts) {
         self.hosts_config = hosts_config;
+        self.update_criticality_counts();
     }
 
     pub fn set_configuration_preferences(&mut self, preferences: configuration::Preferences) {
@@ -639,6 +640,11 @@ impl HostDataManagerModel {
     }
 
     fn certificate_alert_summary(&self) -> (u64, Criticality) {
+        let configured = &self.hosts_config.certificate_monitors;
+        if configured.is_empty() {
+            return (0, Criticality::Warning);
+        }
+
         let cert_host_id = crate::monitor_manager::CERT_MONITOR_HOST_ID;
         let Some(last) = self.display_data.hosts.get(cert_host_id)
             .and_then(|host| host.host_state.monitor_data.get(cert_host_id))
@@ -650,6 +656,9 @@ impl HostDataManagerModel {
         let mut count = 0;
         let mut worst = Criticality::Warning;
         for leaf in last.multivalue.iter() {
+            if !configured.iter().any(|address| address == &leaf.label) {
+                continue;
+            }
             if matches!(leaf.criticality, Criticality::Warning | Criticality::Error) {
                 count += 1;
                 worst = worst.max(leaf.criticality);
