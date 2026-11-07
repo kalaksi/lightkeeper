@@ -22,16 +22,15 @@ LightkeeperDialog {
     standardButtons: Dialog.Close
 
     property string certMonitorId: LK.hosts.getCertificateMonitorHostId()
-    property var dataPoints: {}
-    property var certificateMonitors: LK.config.getCertificateMonitors()
+    property var dataPoints: ({})
+    property var certificateMonitors: []
     property int tableRowHeight: 60
     property int buttonSize: 32
     property int refreshProgress: 100
     property int nextAutoRefreshIn: 0
 
-    onOpened: {
-        root.refresh()
-    }
+    Component.onCompleted: root.refresh()
+    onOpened: root.refresh()
 
     Connections {
         target: LK.hosts
@@ -160,6 +159,12 @@ LightkeeperDialog {
                     implicitHeight: root.tableRowHeight
                     width: parent.width
                     highlighted: ListView.isCurrentItem
+                    property var dataPoint: root.dataPoints[modelData] || {
+                        label: modelData,
+                        value: "",
+                        criticality: "nodata",
+                        description: ""
+                    }
                     onClicked: {
                         monitorList.currentIndex = monitorList.currentIndex === index ? -1 : index
                     }
@@ -174,13 +179,11 @@ LightkeeperDialog {
                             anchors.verticalCenter: parent.verticalCenter
 
                             NormalText {
-                                // TODO: produces warnings about undefined value when adding new entries.
-                                text: root.dataPoints[modelData].label
+                                text: dataPoint.label
                             }
 
                             SmallerText {
-                                // TODO: produces warnings about undefined value when adding new entries.
-                                text: root.dataPoints[modelData].description
+                                text: dataPoint.description
                                 visible: text !== ""
                                 wrapMode: Text.WordWrap
                                 width: parent.width
@@ -191,7 +194,7 @@ LightkeeperDialog {
                             width: parent.width * 0.43
                             anchors.verticalCenter: parent.verticalCenter
                             placeholder: "No expiration info"
-                            text: root.dataPoints[modelData].value
+                            text: dataPoint.value
                         }
 
                         OverlayImage {
@@ -200,8 +203,8 @@ LightkeeperDialog {
                             width: 0.45 * parent.height
                             height: 0.45 * parent.height
                             antialiasing: true
-                            color: Theme.criticalityColor(root.dataPoints[modelData].criticality)
-                            source: "qrc:/main/images/criticality/" + (root.dataPoints[modelData].criticality || "nodata").toLowerCase()
+                            color: Theme.criticalityColor(dataPoint.criticality)
+                            source: "qrc:/main/images/criticality/" + dataPoint.criticality.toLowerCase()
                         }
                     }
                 }
@@ -210,27 +213,24 @@ LightkeeperDialog {
     }
 
     function refresh() {
-        root.certificateMonitors = LK.config.getCertificateMonitors()
-        root.refreshProgress = LK.hosts.getPendingMonitorCount(certMonitorId) > 0 ?  0 : 100
+        let monitors = LK.config.getCertificateMonitors()
+        root.refreshProgress = LK.hosts.getPendingMonitorCount(certMonitorId) > 0 ? 0 : 100
 
         let monitoringData = JSON.parse(LK.hosts.getMonitoringDataJson(root.certMonitorId, root.certMonitorId))
         let parentDataPoint = monitoringData.values.slice(-1)[0]
+        let multivalue = parentDataPoint ? parentDataPoint.multivalue : []
 
         let newDataPoints = {}
-        for (const address of root.certificateMonitors) {
-            let dataPoint = parentDataPoint.multivalue.find((item) => item.label === address)
-            if (dataPoint) {
-                newDataPoints[address] = dataPoint
-            }
-            else {
-                newDataPoints[address] = {
-                    label: address,
-                    value: "",
-                    criticality: "nodata",
-                    description: ""
-                }
+        for (const address of monitors) {
+            let dataPoint = multivalue.find((item) => item.label === address)
+            newDataPoints[address] = dataPoint || {
+                label: address,
+                value: "",
+                criticality: "nodata",
+                description: ""
             }
         }
         root.dataPoints = newDataPoints
+        root.certificateMonitors = monitors
     }
 }
