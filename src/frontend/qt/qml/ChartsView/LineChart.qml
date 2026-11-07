@@ -23,10 +23,28 @@ Item {
     property real timeMax: 0
 
     property var _mainData: []
+    // Chart.js often initializes during lazy-tab layout while width is still 0; rebuild once sized.
+    property bool _laidOut: false
 
     onChartDataChanged: root._refreshSeries()
     onTimeMinChanged: root._refreshSeries()
     onTimeMaxChanged: root._refreshSeries()
+    onWidthChanged: root._handleLayoutReady()
+    onHeightChanged: root._handleLayoutReady()
+
+    // Property *Changed handlers do not run for values set during construction.
+    Component.onCompleted: root._refreshSeries()
+
+    function _handleLayoutReady() {
+        if (root._laidOut || root.width <= 1 || root.height <= 1) {
+            return
+        }
+        root._laidOut = true
+        // Force Chart.qml to rebuild jsChart at a real size (resize() alone is not enough).
+        chart.jsChart = undefined
+        root._refreshSeries()
+        chart.requestPaint()
+    }
 
     function _refreshSeries() {
         if (!root.chartData) {

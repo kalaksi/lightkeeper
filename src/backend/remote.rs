@@ -1634,9 +1634,15 @@ impl ConfigBackend for RemoteConfigBackend {
             _ => return Err(LkError::unexpected()),
         };
         let mut main_config: configuration::Configuration = serde_yaml::from_str(&main_yml)?;
+        // chart_categories / categories are skip-serialized (app defaults); restore like Configuration::read().
+        configuration::Configuration::apply_builtin_display_options(&mut main_config);
         main_config.config_errors = config_errors;
-        let hosts: configuration::Hosts = serde_yaml::from_str(&hosts_yml)?;
+        let mut hosts: configuration::Hosts = serde_yaml::from_str(&hosts_yml)?;
         let groups: configuration::Groups = serde_yaml::from_str(&groups_yml)?;
+        // effective is omitted from hosts.yml; recompute so chart monitor lists match local mode.
+        for host_config in hosts.hosts.values_mut() {
+            host_config.effective = configuration::Configuration::get_effective_group_config(host_config, &groups.groups);
+        }
         Ok((main_config, hosts, groups))
     }
 

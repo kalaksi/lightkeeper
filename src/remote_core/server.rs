@@ -137,10 +137,7 @@ fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRunti
     let display_data = runtime.core.host_manager.borrow().get_display_data();
     session.send_message(&ServerMessage::InitialState(display_data))?;
     let (hosts_secs_left, certs_secs_left) = runtime.core.monitor_manager.timers_secs_left();
-    session.send_message(&ServerMessage::Timers {
-        hosts_secs_left,
-        certs_secs_left,
-    })?;
+    session.send_message(&ServerMessage::Timers { hosts_secs_left, certs_secs_left })?;
     session.start_update_stream(update_receiver);
 
     let result = handle_client_messages(stream, runtime, &mut session);

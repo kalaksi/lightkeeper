@@ -515,13 +515,8 @@ impl Configuration {
         let mut main_config = serde_yaml::from_str::<Configuration>(config_contents.as_str())
             .map_err(|error| io::Error::new(io::ErrorKind::Other, error.to_string()))?;
 
-        // Display options are currently defined in the app's defaults and not really user-configurable.
-        let mut actual_display_options = get_default_main_config().display_options;
-
-        // Exceptions. Allow some to be configurable.
-        actual_display_options.show_status_bar = main_config.display_options.show_status_bar;
-        actual_display_options.main_view_split_ratio = main_config.display_options.main_view_split_ratio;
-        main_config.display_options = actual_display_options;
+        // Display options like chart_categories are app defaults and omitted from config files.
+        Self::apply_builtin_display_options(&mut main_config);
 
         log::info!("Reading host configuration from {}", hosts_file_path.display());
         let hosts_contents = fs::read_to_string(hosts_file_path)?;
@@ -1218,6 +1213,15 @@ impl Configuration {
 
     fn always<T>(_t: &T) -> bool {
         true
+    }
+
+    /// Fills display options that are defined by the app and not stored in config files
+    /// (`categories`, `chart_categories`, etc.), keeping the few user-editable fields.
+    pub fn apply_builtin_display_options(main_config: &mut Configuration) {
+        let mut display_options = get_default_main_config().display_options;
+        display_options.show_status_bar = main_config.display_options.show_status_bar;
+        display_options.main_view_split_ratio = main_config.display_options.main_view_split_ratio;
+        main_config.display_options = display_options;
     }
 
     pub fn version_is_latest(version: &str) -> bool {

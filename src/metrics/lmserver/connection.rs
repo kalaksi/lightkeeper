@@ -10,7 +10,7 @@ use std::time::Duration;
 use std::{io, path};
 
 /// In milliseconds.
-const CONNECTION_TIMEOUT: u64 = 5000;
+const CONNECTION_TIMEOUT: u64 = 10000;
 
 pub fn setup_connection(socket_path: &path::Path) -> io::Result<rustls::StreamOwned<rustls::ClientConnection, UnixStream>> {
     let unix_stream = match UnixStream::connect(&socket_path) {

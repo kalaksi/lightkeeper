@@ -105,19 +105,9 @@ impl MetricsManager {
         if socket_path.exists() {
             log::debug!("Found existing socket file. Connecting to existing server.");
 
-            match lmserver::setup_connection(&socket_path) {
-                Err(_error) => {
-                    log::debug!("Failed to connect to metrics server, removing socket file");
-                    std::fs::remove_file(&socket_path)?;
-                }
-                Ok(tls_stream) => {
-                    let (request_sender, request_receiver) = mpsc::channel();
-                    let new_update_sender = self.update_sender.clone();
-                    self.request_sender = Some(request_sender);
-                    self.request_thread = Some(thread::spawn(move || {
-                        Self::process_requests(tls_stream, request_receiver, new_update_sender);
-                    }));
-                }
+            if let Err(_error) = self.attach_client(&socket_path) {
+                log::debug!("Failed to connect to metrics server, removing socket file");
+                std::fs::remove_file(&socket_path)?;
             }
         }
 
@@ -167,21 +157,61 @@ impl MetricsManager {
             // TODO: replace with some kind of signalling.
             thread::sleep(Duration::from_millis(100));
 
-            match lmserver::setup_connection(&socket_path) {
-                Err(error) => {
-                    log::error!("Failed to connect to metrics server: {}", error);
-                }
-                Ok(tls_stream) => {
-                    let (request_sender, request_receiver) = mpsc::channel();
-                    let new_update_sender = self.update_sender.clone();
-                    self.request_sender = Some(request_sender);
-                    self.request_thread = Some(thread::spawn(move || {
-                        Self::process_requests(tls_stream, request_receiver, new_update_sender);
-                    }));
-                }
+            if let Err(error) = self.attach_client(&socket_path) {
+                log::error!("Failed to connect to metrics server: {}", error);
             }
         }
 
+        Ok(())
+    }
+
+    /// Connects (or reconnects) the request thread to an already-running lmserver.
+    fn attach_client(&mut self, socket_path: &Path) -> Result<(), LkError> {
+        let tls_stream = lmserver::setup_connection(socket_path)
+            .map_err(|error| LkError::other(format!("Failed to connect to metrics server: {}", error)))?;
+        let (request_sender, request_receiver) = mpsc::channel();
+        let new_update_sender = self.update_sender.clone();
+        self.request_sender = Some(request_sender);
+        self.request_thread = Some(thread::spawn(move || {
+            Self::process_requests(tls_stream, request_receiver, new_update_sender);
+        }));
+        Ok(())
+    }
+
+    /// Rejoins a dead request thread and re-attaches to lmserver, restarting it if needed.
+    fn reconnect_client(&mut self) -> Result<(), LkError> {
+        self.request_sender = None;
+        if let Some(request_thread) = self.request_thread.take() {
+            if request_thread.join().is_err() {
+                log::error!("Error while waiting for metrics request thread");
+            }
+        }
+
+        let data_dir = file_handler::get_data_dir()?;
+        let socket_path = data_dir.join("lmserver.sock");
+        if socket_path.exists() {
+            log::warn!("Reconnecting metrics client after stream error");
+            if self.attach_client(&socket_path).is_ok() {
+                return Ok(());
+            }
+            log::warn!("Failed to attach to existing metrics server, removing socket");
+            let _ = std::fs::remove_file(&socket_path);
+        }
+
+        // Socket gone or stale (e.g. peer closed lmserver). Clear child handle and spawn again.
+        if let Some(mut process_handle) = self.process_handle.take() {
+            let _ = process_handle.kill();
+            let _ = process_handle.wait();
+        }
+        if let Some(log_thread) = self.log_thread.take() {
+            let _ = log_thread.join();
+        }
+
+        log::warn!("Restarting metrics server after client disconnect");
+        self.start_service()?;
+        if !self.is_running() {
+            return Err(LkError::other("Metrics are not available."));
+        }
         Ok(())
     }
 
@@ -454,29 +484,36 @@ impl MetricsManager {
     }
 
     fn send_request(&mut self, request_type: RequestType) -> Result<u64, LkError> {
-        if let Some(request_sender) = self.request_sender.as_ref() {
-            let invocation_id = self.invocation_id_counter;
-            self.invocation_id_counter += 1;
+        let invocation_id = self.invocation_id_counter;
+        self.invocation_id_counter += 1;
 
-            let current_unix_ms = SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .map_err(|_| LkError::other(format!("Time calculation error")))?
-                .as_millis() as u32;
+        let current_unix_ms = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|_| LkError::other(format!("Time calculation error")))?
+            .as_millis() as u32;
 
-            let service_request = LMSRequest {
-                request_id: invocation_id,
-                time: current_unix_ms,
-                request_type: request_type,
-            };
+        let service_request = LMSRequest {
+            request_id: invocation_id,
+            time: current_unix_ms,
+            request_type,
+        };
 
-            request_sender
-                .send(service_request)
-                .map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
-            Ok(invocation_id)
-        }
-        else {
-            return Err(LkError::other("Metrics are not available."));
-        }
+        let failed_request = match self.request_sender.as_ref() {
+            Some(request_sender) => match request_sender.send(service_request) {
+                Ok(()) => return Ok(invocation_id),
+                Err(error) => error.0,
+            },
+            None => service_request,
+        };
+
+        // Request thread exited after a stream error; reconnect client only and retry once.
+        self.reconnect_client()?;
+        self.request_sender
+            .as_ref()
+            .ok_or_else(|| LkError::other("Metrics are not available."))?
+            .send(failed_request)
+            .map_err(|error| LkError::other(format!("Failed to send request: {}", error)))?;
+        Ok(invocation_id)
     }
 
     fn process_requests(
@@ -492,20 +529,12 @@ impl MetricsManager {
             // TODO: send errors to UI?
             if let Err(error) = tls_stream.write_all(&serialized) {
                 log::error!("Failed to send request: {}", error);
-
-                match service_request.request_type {
-                    RequestType::Exit => break,
-                    _ => continue,
-                };
+                break;
             }
 
             if let Err(error) = tls_stream.flush() {
                 log::error!("Failed to send request: {}", error);
-
-                match service_request.request_type {
-                    RequestType::Exit => break,
-                    _ => continue,
-                };
+                break;
             }
 
             // Server closes the socket on Exit; do not wait for a TLS response (often no close_notify).
@@ -521,19 +550,20 @@ impl MetricsManager {
                 Err(error) => {
                     // Too small buffer may also result in an error.
                     log::error!("Failed to read response: {}", error);
-                    continue;
+                    break;
                 }
             };
 
             if read_count == 0 {
                 log::error!("No data received.");
+                break;
             }
 
             let response = match bincode::deserialize::<LMSResponse>(&buffer[..read_count]) {
                 Ok(response) => response,
                 Err(error) => {
                     log::error!("Failed to deserialize response: {}", error);
-                    continue;
+                    break;
                 }
             };
 
