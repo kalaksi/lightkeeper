@@ -29,7 +29,7 @@ LightkeeperDialog {
     property int refreshProgress: 100
     property int nextAutoRefreshIn: 0
 
-    Component.onCompleted: {
+    onOpened: {
         root.refresh()
     }
 
