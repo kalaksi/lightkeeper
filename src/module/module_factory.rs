@@ -376,6 +376,7 @@ impl ModuleFactory {
             (command::internal::FileBrowserRename::get_metadata(), command::internal::FileBrowserRename::new_command_module),
             (command::internal::FileBrowserChmod::get_metadata(), command::internal::FileBrowserChmod::new_command_module),
             (command::internal::FileBrowserChown::get_metadata(), command::internal::FileBrowserChown::new_command_module),
+            (command::internal::FileBrowserDu::get_metadata(), command::internal::FileBrowserDu::new_command_module),
             (command::internal::FileBrowserEdit::get_metadata(), command::internal::FileBrowserEdit::new_command_module),
             (command::internal::FileBrowserUpload::get_metadata(), command::internal::FileBrowserUpload::new_command_module),
             (command::linux::packages::Clean::get_metadata(), command::linux::packages::Clean::new_command_module),

@@ -157,6 +157,8 @@ impl CommandHandler {
             self.add_command(host_id, filebrowser_chmod);
             let filebrowser_chown = crate::module::command::internal::FileBrowserChown::new_command_module(&HashMap::new());
             self.add_command(host_id, filebrowser_chown);
+            let filebrowser_du = crate::module::command::internal::FileBrowserDu::new_command_module(&HashMap::new());
+            self.add_command(host_id, filebrowser_du);
             let filebrowser_upload = crate::module::command::internal::FileBrowserUpload::new_command_module(&ssh_settings);
             self.add_command(host_id, filebrowser_upload);
         }

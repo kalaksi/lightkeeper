@@ -52,6 +52,9 @@ Item {
     // Paths for which we delete files.
     property var _pendingDeletePaths: []
 
+    // Invocation id for a pending directory size calculation.
+    property int _pendingSizeInvocationId: 0
+
     // Invocation id for a pending mkdir and the path to rename once the refresh completes.
     property int _pendingCreateFolderInvocationId: 0
     property string _pendingRenameAfterRefreshPath: ""
@@ -104,6 +107,28 @@ Item {
                     root.refreshCurrentDirectory()
                 }
             }
+            if (root._pendingSizeInvocationId !== 0
+                && root._pendingSizeInvocationId === invocationId) {
+
+                let result = JSON.parse(commandResultJson)
+                if (result.progress >= 100) {
+                    root._pendingSizeInvocationId = 0
+                    if (result.error) {
+                        console.error("Calculate size error:", result.error)
+                    }
+                    else {
+                        let data = JSON.parse(result.message)
+                        for (let entry of data.sizes) {
+                            let path = entry.path
+                            let sizeText = root.formatSizeKb(entry.size)
+                            if (!fileBrowser.setCellValue(path, 1, sizeText)
+                                && !path.endsWith("/")) {
+                                fileBrowser.setCellValue(path + "/", 1, sizeText)
+                            }
+                        }
+                    }
+                }
+            }
             let transferIndex = root._transferIndex(invocationId)
             if (transferIndex >= 0) {
                 let commandResult = JSON.parse(commandResultJson)
@@ -142,7 +167,8 @@ Item {
                     pendingPath,
                     entry.name,
                     entry.type,
-                    [entry.size, entry.time, entry.permissions, entry.owner, entry.group]
+                    [root.formatSizeKb(Math.round(Number(entry.size) / 1024)), entry.time,
+                        entry.permissions, entry.owner, entry.group]
                 ))
 
                 fileBrowser.openDirectory(pendingPath, browserEntries)
@@ -402,7 +428,13 @@ Item {
 
         MenuSeparator {
         }
-        
+
+        MenuItem {
+            text: "Calculate size"
+            icon.source: "qrc:/main/images/button/search"
+            enabled: fileBrowser.selectedFiles.length > 0
+            onTriggered: root.calculateSelectedSizes()
+        }
         MenuItem {
             text: "Permissions..."
             icon.source: "qrc:/main/images/button/lock"
@@ -420,7 +452,7 @@ Item {
         rootPath: root.initialPath
         directoryTreeRootPath: "/"
         directorySeparator: "/"
-        columnHeaders: ["Size", "Modified", "Permissions", "Owner", "Group"]
+        columnHeaders: ["Size (kB)", "Modified", "Permissions", "Owner", "Group"]
         columnWidths: [0.35, 0.08]
         headerColor: Theme.backgroundColor
         headerBorderColor: Theme.borderColor
@@ -650,7 +682,7 @@ Item {
 
     // Loading animation
     WorkingSprite {
-        show: root._loading
+        show: root._loading || root._pendingSizeInvocationId !== 0
     }
 
     function createFolder() {
@@ -739,6 +771,23 @@ Item {
     function refreshCurrentDirectory() {
         root.pendingPath = fileBrowser.selectedDirectory
         root.pendingInvocation = LK.command.listFiles(root.hostId, fileBrowser.selectedDirectory)
+    }
+
+    function formatSizeKb(sizeKb) {
+        let kilobytes = Math.round(Number(sizeKb))
+        if (!Number.isFinite(kilobytes) || kilobytes < 0) {
+            return String(sizeKb ?? "")
+        }
+        return String(kilobytes).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+    }
+
+    function calculateSelectedSizes() {
+        let paths = fileBrowser.selectedFiles
+        if (paths.length === 0) {
+            return
+        }
+        root._pendingSizeInvocationId = LK.command.executePlain(
+            root.hostId, "_internal-filebrowser-du", paths)
     }
 
     function openPermissionsDialog() {

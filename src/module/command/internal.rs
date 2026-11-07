@@ -10,6 +10,7 @@ pub use filebrowser::FileBrowserChmod;
 pub use filebrowser::FileBrowserChown;
 pub use filebrowser::FileBrowserCopy;
 pub use filebrowser::FileBrowserDownload;
+pub use filebrowser::FileBrowserDu;
 pub use filebrowser::FileBrowserEdit;
 pub use filebrowser::FileBrowserLs;
 pub use filebrowser::FileBrowserLsLinks;

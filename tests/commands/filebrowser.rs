@@ -9,6 +9,7 @@ use lightkeeper::enums::Criticality;
 use lightkeeper::module::*;
 use lightkeeper::module::command::CommandModule;
 use lightkeeper::module::command::internal::FileBrowserChmod;
+use lightkeeper::module::command::internal::filebrowser::du::parse_du_output;
 use lightkeeper::module::command::internal::filebrowser::ls::parse_ls_output;
 use lightkeeper::module::platform_info::*;
 
@@ -43,8 +44,10 @@ fn test_ls_parse_full_time_with_timezone() {
 
     assert_eq!(entries.len(), 2);
     assert_eq!(entries[0]["name"], "directory");
+    assert_eq!(entries[0]["size"], "0");
     assert_eq!(entries[0]["time"], "2026-09-03 10:00:00");
     assert_eq!(entries[1]["name"], "valid file.txt");
+    assert_eq!(entries[1]["size"], "123");
     assert_eq!(entries[1]["time"], "2026-09-03 10:03:45.123456789");
     assert_eq!(entries[1]["owner"], "alice");
 }
@@ -75,6 +78,28 @@ fn test_ls_parse_rejects_error_output() {
 
     let error = parse_ls_output(output).unwrap_err();
     assert!(error.contains("sudo:"));
+}
+
+#[test]
+fn test_ls_parse_tolerates_broken_symlink_with_dereference() {
+    let output = concat!(
+        "ls: cannot access '/etc/request-key.d': No such file or directory\n",
+        "total 4\n",
+        "drwxr-xr-x 2 root root 4096 2026-09-03 10:00:00 +0000 apt\n",
+        "l?????????? ? ?    ?    ?                                   ? request-key.d\n",
+        "-rw-r--r-- 1 root root 123 2026-09-03 10:03:45.123456789 +0000 passwd\n",
+    );
+
+    let entries = parse_ls_output(output).unwrap();
+
+    assert_eq!(entries.len(), 3);
+    assert_eq!(entries[0]["name"], "apt");
+    assert_eq!(entries[0]["type"], "d");
+    assert_eq!(entries[1]["name"], "request-key.d");
+    assert_eq!(entries[1]["type"], "l");
+    assert_eq!(entries[1]["permissions"], "l??????????");
+    assert_eq!(entries[2]["name"], "passwd");
+    assert_eq!(entries[2]["type"], "f");
 }
 
 #[test]
@@ -171,4 +196,20 @@ fn test_chmod_keeps_three_digit_mode() {
     harness.verify_command_result(&module_id, |result| {
         assert_eq!(result.criticality, Criticality::Normal);
     });
+}
+
+#[test]
+fn test_du_parse_output() {
+    let output = concat!(
+        "4\t/tmp/dir\n",
+        "123\t/tmp/file with spaces\n",
+        "du: cannot access '/missing': No such file or directory\n",
+    );
+
+    let sizes = parse_du_output(output);
+    assert_eq!(sizes.len(), 2);
+    assert_eq!(sizes[0]["path"], "/tmp/dir");
+    assert_eq!(sizes[0]["size"], "4");
+    assert_eq!(sizes[1]["path"], "/tmp/file with spaces");
+    assert_eq!(sizes[1]["size"], "123");
 }
