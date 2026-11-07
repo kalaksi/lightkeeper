@@ -23,8 +23,8 @@ Item {
     property int iconHeight: Math.floor(imageRelativeHeight * size)
     /// In seconds. 0 disables auto-refresh.
     property int autoRefreshInterval: 0
-    /// If false, the timer only shows progress and the refresh is expected to happen elsewhere (e.g. in core).
-    property bool clickOnAutoRefresh: true
+    /// Seconds until the next core auto-refresh trigger.
+    property int nextAutoRefreshIn: 0
     readonly property string autoRefreshLabel: {
         switch (autoRefreshInterval) {
             case 0: return "auto-refresh off"
@@ -46,30 +46,6 @@ Item {
 
     signal clicked()
     signal intervalSelected(int intervalSec)
-
-
-
-    // Auto-refresh timer. Triggered for every percentage change in progress.
-    Timer {
-        id: autoRefreshTimer
-        // In other words, (intervalSec * 1000) / 100
-        interval: Math.max(1, root.autoRefreshInterval * 10)
-        running: root.autoRefreshInterval > 0
-        repeat: true
-
-        onTriggered: {
-            refreshTimerCanvas.progressPercent += 1
-
-            if (refreshTimerCanvas.progressPercent >= 100) {
-                refreshTimerCanvas.progressPercent = 0
-                if (root.clickOnAutoRefresh) {
-                    root.clicked()
-                }
-            }
-
-            refreshTimerCanvas.requestPaint()
-        }
-    }
 
     Button {
         flat: root.flatButton
@@ -93,19 +69,42 @@ Item {
             height: parent.height
             padding: 4
 
-            Image {
-                id: image
-                source: root.imageSource
+            Item {
                 width: root.iconWidth
                 height: root.iconHeight
                 anchors.verticalCenter: parent.verticalCenter
 
+                Image {
+                    id: image
+                    anchors.fill: parent
+                    source: root.imageSource
+
+                    NumberAnimation on rotation {
+                        from: 0
+                        to: 360
+                        loops: Animation.Infinite
+                        duration: 1000
+                        running: root.spinning
+                        alwaysRunToEnd: false
+
+                        onStopped: {
+                            image.rotation = 0
+                            readyAnimation.start()
+                        }
+                    }
+                }
+
+                // Keep the progress ring still while the refresh icon spins.
                 Canvas {
                     id: refreshTimerCanvas
-                    property int progressPercent: 0
+                    readonly property int progressPercent: root.autoRefreshInterval > 0
+                        ? Math.round(100 * (1 - root.nextAutoRefreshIn / root.autoRefreshInterval))
+                        : 0
 
-                    visible: autoRefreshTimer.running
+                    visible: root.autoRefreshInterval > 0
                     anchors.fill: parent
+
+                    onProgressPercentChanged: requestPaint()
 
                     onPaint: {
                         let context = getContext("2d")
@@ -124,20 +123,6 @@ Item {
                         context.stroke()
 
                         context.restore()
-                    }
-                }
-
-                NumberAnimation on rotation {
-                    from: 0
-                    to: 360
-                    loops: Animation.Infinite
-                    duration: 1000
-                    running: root.spinning
-                    alwaysRunToEnd: false
-
-                    onStopped: {
-                        image.rotation = 0
-                        readyAnimation.start()
                     }
                 }
             }
@@ -181,22 +166,15 @@ Item {
                     }
 
                     Menu {
-                        id: refreshMenu 
+                        id: refreshMenu
                         title: "Auto-refresh"
                         visible: false
                         x: parent.x - implicitWidth + parent.width
                         y: parent.y + parent.height
 
                         function setTimerInterval(intervalSec) {
-                            // Timer is triggered for every percentage change in progress.
-                            refreshTimerCanvas.progressPercent = 0
-                            refreshTimerCanvas.requestPaint()
                             root.autoRefreshInterval = intervalSec
-                            if (intervalSec > 0) {
-                                autoRefreshTimer.restart()
-                            }
                             root.intervalSelected(intervalSec)
-
                             refreshMenu.close()
                         }
 
@@ -304,5 +282,4 @@ Item {
             }
         }
     }
-
 }

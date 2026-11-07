@@ -278,6 +278,8 @@ impl ConfigManagerModel {
         preferences.insert("refreshHostsOnStart".into(), self.main_config.preferences.refresh_hosts_on_start.into());
         let auto_refresh_interval = self.main_config.preferences.auto_refresh_interval as i32;
         preferences.insert("autoRefreshInterval".into(), auto_refresh_interval.into());
+        let cert_monitor_refresh_interval = self.main_config.preferences.cert_monitor_refresh_interval as i32;
+        preferences.insert("certMonitorRefreshInterval".into(), cert_monitor_refresh_interval.into());
         preferences.insert("useRemoteEditor".into(), self.main_config.preferences.use_remote_editor.into());
         preferences.insert("remoteTextEditor".into(), QString::from(self.main_config.preferences.remote_text_editor.clone()).into());
         preferences.insert("sudoRemoteEditor".into(), self.main_config.preferences.sudo_remote_editor.into());
@@ -319,6 +321,9 @@ impl ConfigManagerModel {
         let auto_refresh_interval = self.main_config.preferences.auto_refresh_interval as i32;
         self.main_config.preferences.auto_refresh_interval =
             preferences.value("autoRefreshInterval".into(), auto_refresh_interval.into()).to_int().max(0) as u64;
+        let cert_monitor_refresh_interval = self.main_config.preferences.cert_monitor_refresh_interval as i32;
+        self.main_config.preferences.cert_monitor_refresh_interval =
+            preferences.value("certMonitorRefreshInterval".into(), cert_monitor_refresh_interval.into()).to_int().max(0) as u64;
         self.main_config.preferences.use_remote_editor = preferences.value("useRemoteEditor".into(), false.into()).to_bool();
         self.main_config.preferences.remote_text_editor = preferences.value("remoteTextEditor".into(), QString::from("vim").into()).to_qbytearray().to_string();
         self.main_config.preferences.sudo_remote_editor = preferences.value("sudoRemoteEditor".into(), false.into()).to_bool();

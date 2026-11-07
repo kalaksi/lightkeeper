@@ -27,6 +27,7 @@ LightkeeperDialog {
     property int tableRowHeight: 60
     property int buttonSize: 32
     property int refreshProgress: 100
+    property int nextAutoRefreshIn: 0
 
     Component.onCompleted: {
         root.refresh()
@@ -39,6 +40,14 @@ LightkeeperDialog {
             if (hostId === root.certMonitorId) {
                 root.refresh()
             }
+        }
+    }
+
+    Connections {
+        target: LK
+
+        function onTimersChanged(_hostsSecsLeft, certsSecsLeft) {
+            root.nextAutoRefreshIn = certsSecsLeft
         }
     }
 
@@ -112,9 +121,17 @@ LightkeeperDialog {
                 spinning: root.refreshProgress < 100
                 size: root.buttonSize
                 flatButton: false
+                autoRefreshInterval: LK.config.getPreferences().certMonitorRefreshInterval
+                nextAutoRefreshIn: root.nextAutoRefreshIn
                 onClicked: {
                     LK.command.refreshCertificateMonitors()
                     root.refreshProgress = 0
+                }
+                onIntervalSelected: function(intervalSec) {
+                    let preferences = LK.config.getPreferences()
+                    preferences.certMonitorRefreshInterval = intervalSec
+                    LK.config.setPreferences(preferences)
+                    LK.reload()
                 }
 
                 Layout.leftMargin: Theme.spacingLoose

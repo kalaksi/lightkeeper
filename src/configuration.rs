@@ -204,6 +204,9 @@ pub struct Preferences {
     /// Interval in seconds for refreshing monitors of hosts that allow it. 0 disables auto-refresh.
     #[serde(default)]
     pub auto_refresh_interval: u64,
+    /// Interval in seconds for refreshing certificate monitors. 0 disables auto-refresh.
+    #[serde(default)]
+    pub cert_monitor_refresh_interval: u64,
     pub use_remote_editor: bool,
     pub sudo_remote_editor: bool,
     pub remote_text_editor: String,

@@ -23,6 +23,11 @@ pub enum UIUpdate {
     Chart(lmserver::LMSResponse),
     /// Result for an invocation that runs on the desktop instead of the core (e.g. remote core file transfers).
     CommandResult(u64, CommandResult),
+    /// Seconds left on core-owned refresh timers. 0 means the trigger is due (or inactive).
+    Timers {
+        hosts_secs_left: u64,
+        certs_secs_left: u64,
+    },
     CoreConnectionChanged(),
     FatalError(),
     Stop(),

@@ -541,6 +541,7 @@ Module {
             type: "int"
             Parameter { name: "host_id"; type: "string" }
         }
+        Method { name: "getPendingMonitorCountTotal"; type: "int" }
         Method {
             name: "getPendingMonitorCountForCategory"
             type: "int"
@@ -671,6 +672,11 @@ Module {
         Signal { name: "crashed" }
         Signal { name: "coreConnectionChanged" }
         Signal { name: "restartRequested" }
+        Signal {
+            name: "timersChanged"
+            Parameter { name: "hosts_secs_left"; type: "double" }
+            Parameter { name: "certs_secs_left"; type: "double" }
+        }
     }
 
     Component {

@@ -16,7 +16,7 @@ use crate::frontend::{DisplayData, HostDisplayData};
 use crate::metrics::lmserver::LMSResponse;
 use crate::module::command::internal::filebrowser::download::RsyncSsh;
 
-pub const PROTOCOL_VERSION: u16 = 14;
+pub const PROTOCOL_VERSION: u16 = 15;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -247,6 +247,11 @@ pub enum ServerMessage {
     },
     InitialState(DisplayData),
     HostUpdate(HostDisplayData),
+    /// Seconds left on core-owned refresh timers. 0 means the trigger is due (or inactive).
+    Timers {
+        hosts_secs_left: u64,
+        certs_secs_left: u64,
+    },
     Chart(LMSResponse),
     MetricsQuery {
         request_id: u64,

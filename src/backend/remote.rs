@@ -853,6 +853,15 @@ impl RemoteCoreClient {
                             return;
                         }
                     }
+                    ServerMessage::Timers { hosts_secs_left, certs_secs_left } => {
+                        if frontend_update_sender
+                            .send(frontend::UIUpdate::Timers { hosts_secs_left, certs_secs_left })
+                            .is_err()
+                        {
+                            disconnect("Failed to deliver timers update", false);
+                            return;
+                        }
+                    }
                     ServerMessage::Chart(response) => {
                         if frontend_update_sender.send(frontend::UIUpdate::Chart(response)).is_err() {
                             disconnect("Failed to deliver chart update", false);

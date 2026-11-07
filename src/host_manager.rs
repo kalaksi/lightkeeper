@@ -191,6 +191,10 @@ impl HostManager {
         self.frontend_state_sender.lock().unwrap().push(sender);
     }
 
+    pub fn frontend_update_senders(&self) -> Arc<Mutex<Vec<mpsc::Sender<frontend::UIUpdate>>>> {
+        self.frontend_state_sender.clone()
+    }
+
     pub fn start_receiving_updates(&mut self) {
         let thread = Self::_start_receiving_updates(
             self.hosts.clone(),

@@ -88,9 +88,11 @@ impl CoreComponents {
         }
         self.command_handler.start_processing_responses();
         self.monitor_manager.start_processing_responses();
-        self.monitor_manager.start_auto_refresh(
+        self.monitor_manager.start_timers(
             &hosts_config,
             main_config.preferences.auto_refresh_interval,
+            main_config.preferences.cert_monitor_refresh_interval,
+            self.host_manager.borrow().frontend_update_senders(),
         );
 
         reset_hosts

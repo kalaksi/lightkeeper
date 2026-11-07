@@ -6,13 +6,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::error::*;
+use crate::frontend::UIUpdate;
 use crate::module::connection::RequestResponse;
 use crate::Host;
 use crate::configuration::Hosts;
@@ -47,9 +48,13 @@ pub struct MonitorManager {
     response_receiver: Option<mpsc::Receiver<RequestResponse>>,
     response_receiver_thread: Option<thread::JoinHandle<()>>,
 
-    /// Dropping the sender stops the auto-refresh thread.
-    auto_refresh_stop_sender: Option<mpsc::Sender<()>>,
-    auto_refresh_thread: Option<thread::JoinHandle<()>>,
+    /// Dropping the sender stops the timers thread.
+    timers_stop_sender: Option<mpsc::Sender<()>>,
+    timers_thread: Option<thread::JoinHandle<()>>,
+    /// Unix timestamp (seconds) of the next hosts auto-refresh. 0 means off.
+    next_hosts_refresh_at: Arc<AtomicI64>,
+    /// Unix timestamp (seconds) of the next certificate-monitor refresh. 0 means off.
+    next_certs_refresh_at: Arc<AtomicI64>,
 }
 
 impl MonitorManager {
@@ -128,8 +133,10 @@ impl MonitorManager {
     }
 
     pub fn stop(&mut self) {
-        self.auto_refresh_stop_sender = None;
-        if let Some(thread) = self.auto_refresh_thread.take() {
+        self.next_hosts_refresh_at.store(0, Ordering::SeqCst);
+        self.next_certs_refresh_at.store(0, Ordering::SeqCst);
+        self.timers_stop_sender = None;
+        if let Some(thread) = self.timers_thread.take() {
             if let Err(_) = thread.join() {
                 log::warn!("Thread had paniced");
             }
@@ -363,17 +370,39 @@ impl MonitorManager {
         self.refresh_monitors(host, monitor)
     }
 
-    /// Periodically refreshes monitors of hosts that allow auto-refresh. Stopped by `stop()`.
+    /// Seconds until the next hosts / certificate timer triggers. 0 means due (or inactive).
+    pub fn timers_secs_left(&self) -> (u64, u64) {
+        let now = Self::unix_now();
+        (
+            Self::secs_until(self.next_hosts_refresh_at.load(Ordering::SeqCst), now),
+            Self::secs_until(self.next_certs_refresh_at.load(Ordering::SeqCst), now),
+        )
+    }
+
+    /// Periodically refreshes host monitors and certificate monitors. Stopped by `stop()`.
     /// Hosts that haven't been initialized yet (no platform info) are skipped.
-    pub fn start_auto_refresh(&mut self, hosts_config: &Hosts, interval_seconds: u64) {
-        if interval_seconds == 0 {
+    pub fn start_timers(
+        &mut self,
+        hosts_config: &Hosts,
+        hosts_interval_seconds: u64,
+        certs_interval_seconds: u64,
+        frontend_update_senders: Arc<Mutex<Vec<mpsc::Sender<UIUpdate>>>>,
+    ) {
+        if hosts_interval_seconds == 0 && certs_interval_seconds == 0 {
+            self.next_hosts_refresh_at.store(0, Ordering::SeqCst);
+            self.next_certs_refresh_at.store(0, Ordering::SeqCst);
+            Self::publish_timers(&frontend_update_senders, 0, 0);
             return;
         }
 
-        let host_ids = hosts_config.hosts.iter()
-            .filter(|(host_id, host_config)| host_config.allow_auto_refresh && !host_id.starts_with("_"))
-            .map(|(host_id, _)| host_id.clone())
-            .collect::<Vec<_>>();
+        let host_ids = if hosts_interval_seconds > 0 {
+            hosts_config.hosts.iter()
+                .filter(|(host_id, host_config)| host_config.allow_auto_refresh && !host_id.starts_with("_"))
+                .map(|(host_id, _)| host_id.clone())
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
 
         let monitors = self.monitors.clone();
         let get_host = self.host_manager.borrow().new_host_getter();
@@ -381,41 +410,137 @@ impl MonitorManager {
         let request_sender = self.request_sender.clone().unwrap();
         let state_update_sender = self.state_update_sender.clone().unwrap();
         let response_sender = self.new_response_sender();
+        let next_hosts_refresh_at = self.next_hosts_refresh_at.clone();
+        let next_certs_refresh_at = self.next_certs_refresh_at.clone();
         let (stop_sender, stop_receiver) = mpsc::channel::<()>();
 
         let thread = thread::spawn(move || {
-            log::debug!("Started auto-refresh with interval of {} seconds", interval_seconds);
-            let interval = Duration::from_secs(interval_seconds);
+            log::debug!(
+                "Started timers (hosts: {}s, certs: {}s)",
+                hosts_interval_seconds,
+                certs_interval_seconds,
+            );
 
-            while let Err(mpsc::RecvTimeoutError::Timeout) = stop_receiver.recv_timeout(interval) {
+            let now = Self::unix_now();
+            let mut next_hosts_at = if hosts_interval_seconds > 0 {
+                now + hosts_interval_seconds as i64
+            } else {
+                0
+            };
+            let mut next_certs_at = if certs_interval_seconds > 0 {
+                now + certs_interval_seconds as i64
+            } else {
+                0
+            };
+            next_hosts_refresh_at.store(next_hosts_at, Ordering::SeqCst);
+            next_certs_refresh_at.store(next_certs_at, Ordering::SeqCst);
+
+            loop {
+                let now = Self::unix_now();
+                Self::publish_timers(
+                    &frontend_update_senders,
+                    Self::secs_until(next_hosts_at, now),
+                    Self::secs_until(next_certs_at, now),
+                );
+
+                let until_trigger = [next_hosts_at, next_certs_at]
+                    .into_iter()
+                    .filter(|&next_at| next_at > 0)
+                    .map(|next_at| (next_at - now).max(0) as u64)
+                    .min();
+                let Some(until_trigger) = until_trigger else {
+                    break;
+                };
+                let sleep_secs = until_trigger.min(5);
+
+                match stop_receiver.recv_timeout(Duration::from_secs(sleep_secs)) {
+                    Err(mpsc::RecvTimeoutError::Timeout) => {}
+                    _ => break,
+                }
+
                 let Ok(monitors) = monitors.lock() else {
                     break;
                 };
 
-                for host_id in host_ids.iter() {
-                    let (Some(host), Some(host_monitors)) = (get_host(host_id), monitors.get(host_id)) else {
-                        continue;
-                    };
-                    if !host.platform.is_set() {
-                        continue;
-                    }
+                let now = Self::unix_now();
+                if next_hosts_at > 0 && now >= next_hosts_at {
+                    for host_id in host_ids.iter() {
+                        let (Some(host), Some(host_monitors)) = (get_host(host_id), monitors.get(host_id)) else {
+                            continue;
+                        };
+                        if !host.platform.is_set() {
+                            continue;
+                        }
 
-                    Self::_refresh_monitors(
-                        host,
-                        host_monitors.iter().collect(),
-                        &invocation_id_counter,
-                        &request_sender,
-                        &state_update_sender,
-                        &response_sender,
-                    );
+                        Self::_refresh_monitors(
+                            host,
+                            host_monitors.iter().collect(),
+                            &invocation_id_counter,
+                            &request_sender,
+                            &state_update_sender,
+                            &response_sender,
+                        );
+                    }
+                    next_hosts_at = now + hosts_interval_seconds as i64;
+                    next_hosts_refresh_at.store(next_hosts_at, Ordering::SeqCst);
+                }
+
+                if next_certs_at > 0 && now >= next_certs_at {
+                    if let (Some(host), Some(host_monitors)) =
+                        (get_host(CERT_MONITOR_HOST_ID), monitors.get(CERT_MONITOR_HOST_ID))
+                    {
+                        Self::_refresh_monitors(
+                            host,
+                            host_monitors.iter().collect(),
+                            &invocation_id_counter,
+                            &request_sender,
+                            &state_update_sender,
+                            &response_sender,
+                        );
+                    }
+                    next_certs_at = now + certs_interval_seconds as i64;
+                    next_certs_refresh_at.store(next_certs_at, Ordering::SeqCst);
                 }
             }
 
-            log::debug!("Stopped auto-refresh");
+            next_hosts_refresh_at.store(0, Ordering::SeqCst);
+            next_certs_refresh_at.store(0, Ordering::SeqCst);
+            Self::publish_timers(&frontend_update_senders, 0, 0);
+            log::debug!("Stopped timers");
         });
 
-        self.auto_refresh_stop_sender = Some(stop_sender);
-        self.auto_refresh_thread = Some(thread);
+        self.timers_stop_sender = Some(stop_sender);
+        self.timers_thread = Some(thread);
+    }
+
+    fn unix_now() -> i64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs() as i64)
+            .unwrap_or(0)
+    }
+
+    fn secs_until(next_at: i64, now: i64) -> u64 {
+        if next_at <= 0 {
+            0
+        } else {
+            (next_at - now).max(0) as u64
+        }
+    }
+
+    fn publish_timers(
+        senders: &Arc<Mutex<Vec<mpsc::Sender<UIUpdate>>>>,
+        hosts_secs_left: u64,
+        certs_secs_left: u64,
+    ) {
+        let update = UIUpdate::Timers {
+            hosts_secs_left,
+            certs_secs_left,
+        };
+        let Ok(mut senders) = senders.lock() else {
+            return;
+        };
+        senders.retain(|sender| sender.send(update.clone()).is_ok());
     }
 
     fn refresh_monitors(&self, host: Host, monitors: HashMap<&String, &Monitor>) -> Vec<u64> {

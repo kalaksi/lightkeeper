@@ -23,6 +23,7 @@ ToolBar {
     property string coreConnectionState: "disconnected"
     property int refreshProgress: 100
     property alias autoRefreshInterval: autoRefreshButton.autoRefreshInterval
+    property alias nextAutoRefreshIn: autoRefreshButton.nextAutoRefreshIn
     property int iconSize: 24
     property int alertCount: 0
     property string alertCriticality: "Error"
@@ -163,7 +164,6 @@ ToolBar {
                     enabled: !root.remoteCoreBlocked && root.refreshProgress === 100
                     spinning: root.refreshProgress < 100
                     size: certMonitorButton.height
-                    clickOnAutoRefresh: false
                     onClicked: root.clickedAutoRefresh()
                     onIntervalSelected: function(intervalSec) {
                         root.autoRefreshIntervalSelected(intervalSec)

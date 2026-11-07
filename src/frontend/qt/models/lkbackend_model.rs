@@ -82,6 +82,9 @@ pub struct LkBackend {
     coreConnectionChanged: qt_signal!(),
     // App should quit so it can be restarted in local mode.
     restartRequested: qt_signal!(),
+    /// Seconds left on core-owned refresh timers. 0 means the trigger is due (or inactive).
+    /// Whether a timer is configured off comes from the refresh-interval preference, not this signal.
+    timersChanged: qt_signal!(hosts_secs_left: u64, certs_secs_left: u64),
 
     //
     // Private properties
@@ -231,6 +234,13 @@ impl LkBackend {
             }
         });
 
+        let self_ptr = QPointer::from(&*self);
+        let process_timers = qmetaobject::queued_callback(move |(hosts_secs_left, certs_secs_left): (u64, u64)| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned.borrow().timersChanged(hosts_secs_left, certs_secs_left);
+            }
+        });
+
         let thread = std::thread::spawn(move || {
             loop {
                 match update_receiver.recv() {
@@ -270,6 +280,9 @@ impl LkBackend {
                                 process_host_update(display_data);
                             }
                             UIUpdate::ReplaceHosts(display_data) => process_hosts_replace(display_data),
+                            UIUpdate::Timers { hosts_secs_left, certs_secs_left } => {
+                                process_timers((hosts_secs_left, certs_secs_left))
+                            }
                             UIUpdate::Chart(metrics) => process_chart_update(metrics),
                             UIUpdate::CommandResult(invocation_id, command_result) => {
                                 process_command_result((invocation_id, command_result))

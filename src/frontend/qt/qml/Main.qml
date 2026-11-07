@@ -174,6 +174,10 @@ ApplicationWindow {
             )
         }
 
+        function onTimersChanged(hostsSecsLeft, _certsSecsLeft) {
+            root.menuBar.nextAutoRefreshIn = hostsSecsLeft
+        }
+
         function onReloaded(error, resetHosts) {
             hostTableModel.displayData = LK.hosts.getDisplayData()
             root.menuBar.autoRefreshInterval = LK.config.getPreferences().autoRefreshInterval
@@ -214,10 +218,10 @@ ApplicationWindow {
             root.refreshAlerts()
 
             if (hostId === hostTableModel.getSelectedHostId()) {
-                let jobsLeft = LK.hosts.getPendingCommandCount(hostId) + LK.hosts.getPendingMonitorCount(hostId)
-                statusBar.jobsLeft = jobsLeft
-                root.menuBar.refreshProgress = jobsLeft > 0 ? 0 : 100
+                statusBar.jobsLeft = LK.hosts.getPendingCommandCount(hostId) + LK.hosts.getPendingMonitorCount(hostId)
             }
+
+            root.menuBar.refreshProgress = LK.hosts.getPendingMonitorCountTotal() > 0 ? 0 : 100
         }
 
         function onMonitorStateChanged(hostId, monitorId, newCriticality) {

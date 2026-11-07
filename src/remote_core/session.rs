@@ -91,6 +91,9 @@ impl RemoteSession {
 
             let message = match update {
                 frontend::UIUpdate::Host(host_update) => ServerMessage::HostUpdate(host_update),
+                frontend::UIUpdate::Timers { hosts_secs_left, certs_secs_left } => {
+                    ServerMessage::Timers { hosts_secs_left, certs_secs_left }
+                }
                 frontend::UIUpdate::Chart(response) => ServerMessage::Chart(response),
                 frontend::UIUpdate::FatalError() => {
                     log::error!("Stopping client session after a fatal core error");

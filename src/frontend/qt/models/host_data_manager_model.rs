@@ -62,6 +62,8 @@ pub struct HostDataManagerModel {
     removeHost: qt_method!(fn(&self, host_id: QString)),
 
     getPendingMonitorCount: qt_method!(fn(&self, host_id: QString) -> u64),
+    /// Pending monitor invocations across all hosts except the certificate-monitor host.
+    getPendingMonitorCountTotal: qt_method!(fn(&self) -> u64),
     getPendingMonitorCountForCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
     getPendingCommandCount: qt_method!(fn(&self, host_id: QString) -> u64),
     getPendingCommandCountForCategory: qt_method!(fn(&self, host_id: QString, category: QString) -> u64),
@@ -341,6 +343,13 @@ impl HostDataManagerModel {
         else {
             0
         }
+    }
+
+    fn getPendingMonitorCountTotal(&self) -> u64 {
+        self.display_data.hosts.iter()
+            .filter(|(host_id, _)| host_id.as_str() != crate::monitor_manager::CERT_MONITOR_HOST_ID)
+            .map(|(_, host_display_data)| host_display_data.host_state.monitor_invocations.len() as u64)
+            .sum()
     }
 
     fn getPendingMonitorCountForCategory(&self, host_id: QString, category: QString) -> u64 {
