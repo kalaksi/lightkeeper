@@ -28,9 +28,13 @@ LightkeeperDialog {
     property int buttonSize: 32
     property int refreshProgress: 100
     property int nextAutoRefreshIn: 0
+    property alias autoRefreshInterval: autoRefreshButton.autoRefreshInterval
 
-    Component.onCompleted: root.refresh()
-    onOpened: root.refresh()
+    Component.onCompleted: root.syncAutoRefreshInterval()
+    onOpened: {
+        root.syncAutoRefreshInterval()
+        root.refresh()
+    }
 
     Connections {
         target: LK.hosts
@@ -47,6 +51,11 @@ LightkeeperDialog {
 
         function onTimersChanged(_hostsSecsLeft, certsSecsLeft) {
             root.nextAutoRefreshIn = certsSecsLeft
+        }
+
+        // getPreferences() is not a notifiable binding; re-sync after reload / remote reconnect.
+        function onReloaded(_error, _resetHosts) {
+            root.syncAutoRefreshInterval()
         }
     }
 
@@ -116,11 +125,11 @@ LightkeeperDialog {
             }
 
             AutoRefreshButton {
+                id: autoRefreshButton
                 enabled: root.refreshProgress === 100
                 spinning: root.refreshProgress < 100
                 size: root.buttonSize
                 flatButton: false
-                autoRefreshInterval: LK.config.getPreferences().certMonitorRefreshInterval
                 nextAutoRefreshIn: root.nextAutoRefreshIn
                 onClicked: {
                     LK.command.refreshCertificateMonitors()
@@ -212,9 +221,13 @@ LightkeeperDialog {
         }
     }
 
+    function syncAutoRefreshInterval() {
+        root.autoRefreshInterval = LK.config.getPreferences().certMonitorRefreshInterval || 0
+    }
+
     function refresh() {
         let monitors = LK.config.getCertificateMonitors()
-        root.refreshProgress = LK.hosts.getPendingMonitorCount(certMonitorId) > 0 ? 0 : 100
+        root.refreshProgress = LK.hosts.getPendingMonitorCount(root.certMonitorId) > 0 ? 0 : 100
 
         let monitoringData = JSON.parse(LK.hosts.getMonitoringDataJson(root.certMonitorId, root.certMonitorId))
         let parentDataPoint = monitoringData.values.slice(-1)[0]
