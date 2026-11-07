@@ -101,7 +101,7 @@ CategoryGroupBox {
                     commands: [
                         {
                             command_id: "_custom-command",
-                            command_params: [item.modelData.command],
+                            command_params: [item.modelData.name],
                             display_options: {
                                 display_icon: "start",
                                 display_text: "run",

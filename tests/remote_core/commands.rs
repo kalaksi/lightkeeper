@@ -243,7 +243,7 @@ fn remote_core_execute_command() {
             .execute_command(
                 TEST_HOST,
                 &custom_id,
-                &["echo test-service".to_string()],
+                &["custom-1".to_string()],
             )
             .unwrap();
         assert!(invocation_id > 0, "expected invocation id");

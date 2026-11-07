@@ -46,11 +46,7 @@ impl CommandBackend for LocalCommandBackend {
     }
 
     fn commands_for_host(&self, host_id: &str) -> Result<HashMap<String, CommandButtonData>, LkError> {
-        Ok(self
-            .core
-            .borrow()
-            .command_handler
-            .get_commands_for_host(host_id.to_string()))
+        Ok(self.core.borrow().command_handler.get_commands_for_host(host_id.to_string()))
     }
 
     fn command_for_host(&self, host_id: &str, command_id: &str) -> Result<Option<CommandButtonData>, LkError> {
@@ -82,11 +78,10 @@ impl CommandBackend for LocalCommandBackend {
     }
 
     fn verify_host_key(&self, host_id: &str, connector_id: &str, key_id: &str) {
-        self.core.borrow().command_handler.verify_host_key(
-            &host_id.to_string(),
-            &connector_id.to_string(),
-            &key_id.to_string(),
-        );
+        self.core
+            .borrow()
+            .command_handler
+            .verify_host_key(&host_id.to_string(), &connector_id.to_string(), &key_id.to_string());
     }
 
     fn initialize_host(&mut self, host_id: &str) {
@@ -202,19 +197,17 @@ impl CommandBackend for LocalCommandBackend {
 
 impl LocalBackendApi for LocalCommandBackend {
     fn remote_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> crate::utils::ShellCommand {
-        self.core.borrow().command_handler.open_remote_terminal_command(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            parameters,
-        )
+        self.core
+            .borrow()
+            .command_handler
+            .open_remote_terminal_command(&host_id.to_string(), &command_id.to_string(), parameters)
     }
 
     fn open_external_terminal(&self, host_id: &str, command_id: &str, parameters: Vec<String>) {
-        self.core.borrow().command_handler.open_external_terminal(
-            &host_id.to_string(),
-            &command_id.to_string(),
-            parameters,
-        );
+        self.core
+            .borrow()
+            .command_handler
+            .open_external_terminal(&host_id.to_string(), &command_id.to_string(), parameters);
     }
 
     fn remote_text_editor_command(&self, host_id: &str, remote_file_path: &str) -> crate::utils::ShellCommand {

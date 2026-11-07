@@ -210,9 +210,9 @@ impl CommandHandler {
         }
 
         let command = &commands[host_id][command_id];
+        let parameters = self.resolve_custom_command_parameters(host_id, command_id, parameters)?;
 
-
-        let messages = match get_command_connector_messages(&host, command, parameters) {
+        let messages = match get_command_connector_messages(&host, command, &parameters) {
             Ok(messages) => messages,
             Err(error) => {
                 log::error!("Command failed: {}", error);
@@ -428,7 +428,8 @@ impl CommandHandler {
             .ok_or_else(|| LkError::other(format!("Command '{}' not found for host '{}'", command_id, host_id)))?;
         let host = self.host_manager.borrow().try_get_host(host_id)
             .ok_or_else(|| LkError::other(format!("Host '{}' not found", host_id)))?;
-        let connector_messages = get_command_connector_messages(&host, command_module, parameters)?;
+        let parameters = self.resolve_custom_command_parameters(host_id, command_id, parameters)?;
+        let connector_messages = get_command_connector_messages(&host, command_module, &parameters)?;
 
         let command = if command_module.get_connector_spec().as_ref().map(|spec| spec.id.as_str()) == Some("local-command") {
             if let Some(message) = connector_messages.first() {
@@ -879,6 +880,31 @@ impl CommandHandler {
             Some(commands) => commands.clone(),
             None => HashMap::new()
         }
+    }
+
+    /// For `_custom-command`, `parameters[0]` is the configured command name; replace it with the command text.
+    fn resolve_custom_command_parameters(
+        &self,
+        host_id: &str,
+        command_id: &str,
+        parameters: &[String],
+    ) -> Result<Vec<String>, LkError> {
+        if command_id != "_custom-command" {
+            return Ok(parameters.to_vec());
+        }
+
+        let name = parameters
+            .first()
+            .ok_or_else(|| LkError::other("No custom command specified"))?;
+        let command_text = self
+            .custom_commands
+            .get(host_id)
+            .and_then(|commands| commands.get(name))
+            .map(|config| config.command.clone())
+            .ok_or_else(|| {
+                LkError::other(format!("Custom command '{}' not found for host '{}'", name, host_id))
+            })?;
+        Ok(vec![command_text])
     }
 
     // Return value contains host's commands. `parameters` is not set since provided by data point later on.
