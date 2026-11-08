@@ -40,7 +40,9 @@ Item {
             root._tabStacks[root._previousHostId].deactivateAll()
         }
 
-        if (!(root.hostId in root._tabStacks)) {
+        // Cached stacks stay mounted and already receive monitor updates; only rebuild content on first create.
+        let refreshContent = !(root.hostId in root._tabStacks)
+        if (refreshContent) {
             let stack = hostTabStackComponent.createObject(tabStackContainer, {
                 parentStackIndex: tabStackContainer.children.length,
             })
@@ -68,7 +70,7 @@ Item {
             })
         }
 
-        root.refresh()
+        root.refresh(refreshContent)
         root._previousHostId = root.hostId
     }
 
@@ -464,14 +466,17 @@ Item {
     }
 
 
-    function refresh() {
+    function refresh(refreshContent) {
+        if (refreshContent === undefined) {
+            refreshContent = true
+        }
         if (!(root.hostId in root._tabStacks)) {
             return
         }
         let stack = root._tabStacks[root.hostId]
         let hostTabIndex = root.showCharts ? 1 : 0
         let hostContent = stack.contentAt(hostTabIndex)
-        if (hostContent !== null) {
+        if (refreshContent && hostContent !== null) {
             hostContent.refresh()
         }
 
