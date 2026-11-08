@@ -2,7 +2,7 @@
 %global licdir %{_defaultlicensedir}/%{name}
 
 Name:           lightkeeper
-Version:        0.51.1
+Version:        0.51.2
 Release:        1%{?dist}
 Summary:        Customizable Linux server management tool over SSH
 
@@ -162,6 +162,8 @@ install -Dpm644 third_party/qmltermwidget/LICENSE.LGPL2+ \
 %{_datadir}/lightkeeper/
 
 %changelog
+* Sun Nov  8 2026 kalaksi <kalaksi@users.noreply.github.com> - 0.51.2-1
+  - New upstream release
 * Sun Nov  8 2026 kalaksi <kalaksi@users.noreply.github.com> - 0.51.1-1
   - New upstream release
 * Sun Nov  8 2026 kalaksi <kalaksi@users.noreply.github.com> - 0.51.0-1
