@@ -44,6 +44,19 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.51.0" date="2026-11-08">
+      <description>
+        <ul>
+          <li>Optimize GUI performance and memory use for charts and host switching</li>
+          <li>Improve auto-refresh and show selected interval</li>
+          <li>Fix desync problem and large reads breaking with metrics server</li>
+          <li>Show symlinks and improve their handling in file browser</li>
+          <li>Add dir size calculation to file browser</li>
+          <li>Show warning/error count badge on Cert. monitor button</li>
+          <li>Tighten config file permissions</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.50.0" date="2026-11-07">
       <description>
         <ul>
