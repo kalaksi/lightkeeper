@@ -62,7 +62,7 @@ Item {
         }
 
         if (chart.jsChart !== undefined) {
-            chart.animateToNewData()
+            chart.applyNewData()
         }
     }
 

@@ -276,6 +276,7 @@ Item {
                                                 return
                                             }
 
+                                            let nextDatas = []
                                             if (chart.monitoringData.display_options.use_multivalue) {
                                                 let labeledData = {};
                                                 let validData = chartData.filter(item => item.label !== "")
@@ -287,7 +288,7 @@ Item {
                                                     labeledData[data.label].push({"t": data.time * 1000, "y": data.value});
                                                 }
 
-                                                chart.chartDatas = Object.keys(labeledData).map(label => {
+                                                nextDatas = Object.keys(labeledData).map(label => {
                                                     return {
                                                         label: chart.monitoringData.display_options.display_text + ": " + label,
                                                         data: labeledData[label]
@@ -296,11 +297,13 @@ Item {
                                             }
                                             else {
                                                 let newValues = chartData.map(item => { return {"t": item.time * 1000, "y": item.value} })
-                                                chart.chartDatas = [{
+                                                nextDatas = [{
                                                     label: chart.monitoringData.display_options.display_text,
                                                     data: newValues
                                                 }]
                                             }
+
+                                            chart.applySeriesData(nextDatas)
 
                                             // console.log("Chart data for " + chart.monitoringData.display_options.display_text + ":" + JSON.stringify(chart.chartDatas))
                                         }
@@ -317,6 +320,7 @@ Item {
                                     property int rowCount: Math.ceil(chart.chartDatas.length / 2)
 
                                     Repeater {
+                                        id: seriesRepeater
                                         model: chart.chartDatas
 
                                         LineChart {
@@ -336,6 +340,23 @@ Item {
                                             timeMin: root._chartStartTimeSec * 1000
                                             timeMax: root._chartEndTimeSec * 1000
                                         }
+                                    }
+                                }
+
+                                // Keep LineChart delegates alive on refresh so Chart create animation
+                                // only runs on first paint (or when series count changes), and to avoid
+                                // the cost of destroying/recreating Chart.js canvases.
+                                function applySeriesData(nextDatas) {
+                                    if (chart.chartDatas.length === nextDatas.length && nextDatas.length > 0) {
+                                        for (let i = 0; i < nextDatas.length; i++) {
+                                            let lineChart = seriesRepeater.itemAt(i)
+                                            if (lineChart !== null) {
+                                                lineChart.title = nextDatas[i].label
+                                                lineChart.chartData = nextDatas[i].data
+                                            }
+                                        }
+                                    } else {
+                                        chart.chartDatas = nextDatas
                                     }
                                 }
                             }
@@ -375,7 +396,8 @@ Item {
 
     function activate() {
         root.enableShortcuts = true
-        root.refreshContent()
+        // Keep any already-drawn charts visible; refresh on the next tick.
+        Qt.callLater(root.refreshContent)
     }
 
     function deactivate() {
