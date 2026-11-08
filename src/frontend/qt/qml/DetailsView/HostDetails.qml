@@ -23,7 +23,7 @@ Item {
     property var _tabIndexByHost: ({})
     // Oldest host id first; touched hosts move to the end.
     property var _hostStackOrder: []
-    property int _maxCachedHostStacks: 5
+    property int _maxCachedHostStacks: 3
     property string _previousHostId: ""
     property bool _refreshingHost: false
 
