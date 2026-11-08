@@ -20,7 +20,8 @@ use crate::module::monitoring::*;
     version="0.0.1",
     description="Shows filesystem usage in a progress bar.",
     settings={
-        ignored_filesystems => "Comma-separated list of filesystems to ignore. Default: /run,/dev,/dev/shm,/sys/fs,/var/lib/docker",
+        ignored_filesystems => "Comma-separated list of filesystems to ignore. Wildcards are supported.
+ Default: /run*,/dev*,/sys/*,/var/lib/docker/*",
         warning_threshold => "Warning threshold in percent. Default: 80",
         error_threshold => "Error threshold in percent. Default: 90",
         critical_threshold => "Critical threshold in percent. Default: 95",
@@ -37,7 +38,7 @@ impl Module for Filesystem {
     fn new(settings: &HashMap<String, String>) -> Self {
         Filesystem {
             ignored_filesystems: settings.get("ignored_filesystems")
-                .unwrap_or(&String::from("/run,/dev,/dev/shm,/sys/fs,/var/lib/docker"))
+                .unwrap_or(&String::from("/run*,/dev*,/sys/*,/var/lib/docker/*"))
                 .split(',')
                 .filter(|s| !s.is_empty())
                 .map(|s| s.to_string())
@@ -98,7 +99,7 @@ impl MonitoringModule for Filesystem {
             let used_percent = used_percent.trim_end_matches('%');
             let used_percent_float = used_percent.parse::<f32>().map_err(|e| e.to_string())?;
 
-            if self.ignored_filesystems.iter().any(|item| mountpoint == item) {
+            if self.ignored_filesystems.iter().any(|item| matches_wildcard(item, mountpoint)) {
                 continue;
             }
 
@@ -125,4 +126,40 @@ impl MonitoringModule for Filesystem {
 
         Ok(result)
     }
+}
+
+/// `*` matches any sequence of characters (including `/`). Patterns without wildcards require an exact match.
+fn matches_wildcard(pattern: &str, value: &str) -> bool {
+    let pattern = pattern.as_bytes();
+    let value = value.as_bytes();
+    let mut pattern_index = 0;
+    let mut value_index = 0;
+    let mut star_pattern_index = None;
+    let mut star_value_index = 0;
+
+    while value_index < value.len() {
+        if pattern_index < pattern.len() && pattern[pattern_index] == value[value_index] {
+            pattern_index += 1;
+            value_index += 1;
+        }
+        else if pattern_index < pattern.len() && pattern[pattern_index] == b'*' {
+            star_pattern_index = Some(pattern_index);
+            star_value_index = value_index;
+            pattern_index += 1;
+        }
+        else if let Some(star_index) = star_pattern_index {
+            pattern_index = star_index + 1;
+            star_value_index += 1;
+            value_index = star_value_index;
+        }
+        else {
+            return false;
+        }
+    }
+
+    while pattern_index < pattern.len() && pattern[pattern_index] == b'*' {
+        pattern_index += 1;
+    }
+
+    pattern_index == pattern.len()
 }
