@@ -542,29 +542,41 @@ impl MetricsManager {
                 break;
             }
 
-            // 16 MB buffer.
-            let mut buffer = vec![0; 16777216];
+            // lmserver has no length prefix; TLS often returns 16 KiB records, so larger
+            // responses (e.g. multivalue filesystem charts) need multiple reads.
+            const MAX_RESPONSE_SIZE: usize = 16 * 1024 * 1024;
+            let mut buffer = Vec::new();
+            let mut chunk = vec![0; 64 * 1024];
+            let response = loop {
+                let read_count = match tls_stream.read(&mut chunk) {
+                    Ok(count) => count,
+                    Err(error) => {
+                        // Too small buffer / incomplete read may also result in an error.
+                        log::error!("Failed to read response: {}", error);
+                        break None;
+                    }
+                };
 
-            let read_count = match tls_stream.read(&mut buffer) {
-                Ok(count) => count,
-                Err(error) => {
-                    // Too small buffer may also result in an error.
-                    log::error!("Failed to read response: {}", error);
-                    break;
+                if read_count == 0 {
+                    log::error!("No data received.");
+                    break None;
+                }
+
+                buffer.extend_from_slice(&chunk[..read_count]);
+                match bincode::deserialize::<LMSResponse>(&buffer) {
+                    Ok(response) => break Some(response),
+                    Err(error) => {
+                        if buffer.len() >= MAX_RESPONSE_SIZE {
+                            log::error!("Failed to deserialize response: {}", error);
+                            break None;
+                        }
+                    }
                 }
             };
 
-            if read_count == 0 {
-                log::error!("No data received.");
+            let Some(response) = response
+            else {
                 break;
-            }
-
-            let response = match bincode::deserialize::<LMSResponse>(&buffer[..read_count]) {
-                Ok(response) => response,
-                Err(error) => {
-                    log::error!("Failed to deserialize response: {}", error);
-                    break;
-                }
             };
 
             if response.lag > 100 {
