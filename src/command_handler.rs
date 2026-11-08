@@ -11,9 +11,11 @@ use std::sync::mpsc;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::thread;
-use serde::{Serialize, Deserialize};
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use base64::Engine;
+use serde::{Serialize, Deserialize};
 
 use crate::configuration::CustomCommandConfig;
 use crate::module::command::CommandModule;
@@ -972,7 +974,7 @@ impl CommandHandler {
             .hosts
             .get(&host.name)
             .and_then(|host_config| host_config.effective.connectors.get("ssh"))
-            .map(|connector| connector.settings.clone())
+            .map(|connector| connector.settings.clone().into_iter().collect())
             .ok_or_else(|| LkError::other(format!("No SSH connector configured for host '{}'", host.name)))?;
 
         let remote_address = if !host.fqdn.is_empty() {
@@ -982,20 +984,70 @@ impl CommandHandler {
             host.ip_address.to_string()
         };
 
+        let ssh = RsyncSsh::new(&ssh_settings);
+        let username = ssh_settings
+            .get("username")
+            .map(|value| value.as_str())
+            .filter(|value| !value.is_empty())
+            .unwrap_or("root");
+        let port = ssh_settings
+            .get("port")
+            .map(|value| value.as_str())
+            .filter(|value| !value.is_empty())
+            .unwrap_or("22");
+
         let mut command = ShellCommand::new();
         command.arguments(vec![
             String::from("ssh"),
             String::from("-t"),
             String::from("-p"),
-            ssh_settings.get("port").unwrap_or(&String::from("22")).clone(),
+            String::from(port),
+            String::from("-l"),
+            String::from(username),
         ]);
 
-        if let Some(username) = ssh_settings.get("username") {
-            command.arguments(vec![String::from("-l"), username.clone()]);
+        if let Some(private_key_path) = ssh.private_key_path.as_ref().filter(|path| !path.is_empty()) {
+            command.arguments(vec![
+                String::from("-o"),
+                String::from("IdentitiesOnly=yes"),
+                String::from("-i"),
+                private_key_path.clone(),
+            ]);
+        }
+        else {
+            let agent_key_identifier = ssh_settings
+                .get("agent_key_identifier")
+                .map(|value| value.as_str())
+                .filter(|value| !value.is_empty());
+            if let Some(identifier) = agent_key_identifier {
+                command.arguments(vec![
+                    String::from("-o"),
+                    String::from("IdentitiesOnly=yes"),
+                    String::from("-i"),
+                    agent_public_key_path(identifier)?,
+                ]);
+            }
+            if let Some(agent_socket) = std::env::var("SSH_AUTH_SOCK").ok().filter(|path| !path.is_empty()) {
+                command.arguments(vec![String::from("-o"), format!("IdentityAgent={}", agent_socket)]);
+            }
         }
 
-        if let Some(private_key_path) = ssh_settings.get("private_key_path") {
-            command.arguments(vec![String::from("-i"), private_key_path.clone()]);
+        if ssh.verify_host_key {
+            let known_hosts_path = ssh.known_hosts_path()?;
+            command.arguments(vec![
+                String::from("-o"),
+                format!("UserKnownHostsFile={}", known_hosts_path.to_string_lossy()),
+                String::from("-o"),
+                String::from("GlobalKnownHostsFile=/dev/null"),
+            ]);
+        }
+        else {
+            command.arguments(vec![
+                String::from("-o"),
+                String::from("StrictHostKeyChecking=no"),
+                String::from("-o"),
+                String::from("UserKnownHostsFile=/dev/null"),
+            ]);
         }
 
         command.argument(remote_address);
@@ -1027,6 +1079,55 @@ impl CommandHandler {
             panic!("Failed to send state update message: {}", error);
         }
     }
+}
+
+fn agent_public_key_path(identifier: &str) -> Result<String, LkError> {
+    let session = ssh2::Session::new().map_err(|error| LkError::other(error.to_string()))?;
+    let mut agent = session
+        .agent()
+        .map_err(|error| LkError::other(format!("Failed to open SSH agent: {}", error)))?;
+    agent
+        .connect()
+        .map_err(|error| LkError::other(format!("Failed to connect to SSH agent: {}", error)))?;
+    agent
+        .list_identities()
+        .map_err(|error| LkError::other(format!("Failed to list SSH agent identities: {}", error)))?;
+    let identities = agent.identities().map_err(|error| LkError::other(error.to_string()))?;
+    let identity = identities
+        .iter()
+        .find(|identity| identity.comment() == identifier)
+        .ok_or_else(|| LkError::other(format!("SSH agent has no key with comment '{}'", identifier)))?;
+    let public_key = openssh_public_key_line(identity.blob(), identity.comment())?;
+
+    let config_dir = file_handler::get_config_dir();
+    std::fs::create_dir_all(&config_dir).map_err(|error| {
+        LkError::other(format!("Failed to create config directory '{}': {}", config_dir.display(), error))
+    })?;
+    let path = config_dir.join(format!("agent-{}.pub", sha256::hash(identifier.as_bytes())));
+    std::fs::write(&path, public_key).map_err(|error| {
+        LkError::other(format!("Failed to write agent public key '{}': {}", path.display(), error))
+    })?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+fn openssh_public_key_line(blob: &[u8], comment: &str) -> Result<String, LkError> {
+    if blob.len() < 4 {
+        return Err(LkError::other("SSH agent public key is empty"));
+    }
+    let type_length = u32::from_be_bytes([blob[0], blob[1], blob[2], blob[3]]) as usize;
+    if blob.len() < 4 + type_length {
+        return Err(LkError::other("SSH agent public key is truncated"));
+    }
+    let key_type = std::str::from_utf8(&blob[4..4 + type_length])
+        .map_err(|_| LkError::other("SSH agent public key type is not UTF-8"))?;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(blob);
+    let mut line = format!("{} {}", key_type, encoded);
+    if !comment.is_empty() {
+        line.push(' ');
+        line.push_str(&comment.replace(['\r', '\n'], " "));
+    }
+    line.push('\n');
+    Ok(line)
 }
 
 /// NOTE: Panics are not handled gracefully since this runs in main UI thread.

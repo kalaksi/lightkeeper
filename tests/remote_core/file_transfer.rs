@@ -93,7 +93,7 @@ fn desktop_rsync_local_core_uses_desktop_known_hosts() {
 fn desktop_rsync_nests_inner_ssh_through_core() {
     let _xdg_config = crate::redirect_xdg_config_home();
     let profile = CoreConnectionProfile {
-        host: String::from("core.example"),
+        host: String::from("example.invalid"),
         port: Some(2222),
         username: Some(String::from("coreuser")),
         private_key_path: Some(String::from("/home/user/.ssh/id_ed25519")),
@@ -103,9 +103,9 @@ fn desktop_rsync_nests_inner_ssh_through_core() {
     let rsh = &command[command.iter().position(|argument| argument == "-e").unwrap() + 1];
 
     assert!(rsh.starts_with(r#""ssh" "-o" "BatchMode=yes" "-o" "UserKnownHostsFile="#));
-    assert!(!rsh[..rsh.find("coreuser@core.example").unwrap()].contains("/core/known_hosts"));
+    assert!(!rsh[..rsh.find("coreuser@example.invalid").unwrap()].contains("/core/known_hosts"));
     assert!(rsh.ends_with(concat!(
-        r#""-p" "2222" "-i" "/home/user/.ssh/id_ed25519" "coreuser@core.example" "#,
+        r#""-p" "2222" "-o" "IdentitiesOnly=yes" "-i" "/home/user/.ssh/id_ed25519" "coreuser@example.invalid" "#,
         r#""'ssh' '-p' '22' '-i' '/core/key' '-o' 'UserKnownHostsFile=/core/known_hosts' "#,
         r#"'-o' 'GlobalKnownHostsFile=/dev/null'""#,
     )));

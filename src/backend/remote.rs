@@ -343,7 +343,12 @@ fn core_ssh_arguments(profile: &configuration::CoreConnectionProfile) -> Vec<Str
 
     let mut arguments = vec![String::from("-p"), profile.port.unwrap_or(22).to_string()];
     if let Some(private_key_path) = profile.private_key_path.as_ref().filter(|path| !path.is_empty()) {
-        arguments.extend([String::from("-i"), private_key_path.clone()]);
+        arguments.extend([
+            String::from("-o"),
+            String::from("IdentitiesOnly=yes"),
+            String::from("-i"),
+            private_key_path.clone(),
+        ]);
     }
     arguments.push(format!("{}@{}", username, profile.host));
     arguments

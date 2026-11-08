@@ -12,7 +12,7 @@ use lightkeeper::module::platform_info::{Architecture, Flavor, OperatingSystem, 
 
 fn sample_profile() -> CoreConnectionProfile {
     CoreConnectionProfile {
-        host: String::from("remote-core.example"),
+        host: String::from("example.invalid"),
         port: Some(2222),
         username: Some(String::from("ops")),
         remote_socket_path: Some(String::from("/var/tmp/lightkeeper/core.sock")),
@@ -34,7 +34,7 @@ fn resolve_remote_socket_path_uses_override() {
 #[test]
 fn resolve_remote_socket_path_without_override_is_discovered_at_connect() {
     let profile = CoreConnectionProfile {
-        host: String::from("remote-core.example"),
+        host: String::from("example.invalid"),
         ..CoreConnectionProfile::default()
     };
     let error = resolve_remote_socket_path(&profile).unwrap_err();

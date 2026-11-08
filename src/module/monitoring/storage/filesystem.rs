@@ -20,8 +20,8 @@ use crate::module::monitoring::*;
     version="0.0.1",
     description="Shows filesystem usage in a progress bar.",
     settings={
-        ignored_filesystems => "Comma-separated list of filesystems to ignore. Wildcards are supported.
- Default: /run*,/dev*,/sys/*,/var/lib/docker/*",
+        ignored_filesystems => "Comma-separated list of filesystems to ignore. Wildcards are supported. \
+                                Default: /run*,/dev*,/sys/*,/var/lib/docker/*",
         warning_threshold => "Warning threshold in percent. Default: 80",
         error_threshold => "Error threshold in percent. Default: 90",
         critical_threshold => "Critical threshold in percent. Default: 95",

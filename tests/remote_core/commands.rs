@@ -157,6 +157,7 @@ fn with_remote_core_session(
     client_body: impl FnOnce(RemoteCommandBackend, RemoteConfigBackend, mpsc::Receiver<UIUpdate>) + Send + 'static,
 ) {
     let _xdg_cache = crate::redirect_xdg_cache_home();
+    let _xdg_config = crate::redirect_xdg_config_home();
     let (config_dir, main_config, hosts) = temp_config_dir_for_remote_core();
     let factory = Arc::new(stub_ssh_factory());
     let secret_store = Arc::new(MemorySecretStore::new());
@@ -446,6 +447,9 @@ fn remote_core_build_terminal_and_editor_commands() {
         let terminal_command = terminal.to_vec();
         assert!(!terminal_command.is_empty(), "expected terminal command");
         assert_eq!(terminal_command[0], "ssh");
+        assert!(terminal_command.windows(2).any(|pair| pair[0] == "-l" && pair[1] == "root"));
+        assert!(terminal_command.iter().any(|arg| arg.starts_with("UserKnownHostsFile=")));
+        assert!(terminal_command.iter().any(|arg| arg == "GlobalKnownHostsFile=/dev/null"));
         assert!(terminal_command.iter().any(|arg| arg == "127.0.0.1"));
 
         let editor = backend.remote_text_editor_command(TEST_HOST, "/tmp/lk-edit-target");
