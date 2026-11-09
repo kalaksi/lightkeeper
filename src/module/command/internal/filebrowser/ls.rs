@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use crate::error::LkError;
 use crate::frontend;
 use crate::host::*;
@@ -13,8 +13,6 @@ use crate::module::command::*;
 use crate::utils::sh_single_quoted;
 use lightkeeper_module::command_module;
 use serde_json::{json, Value};
-
-pub const RESOLVED_DIRECTORIES_MARKER: &str = "Resolved directories:";
 
 #[command_module(
     name="_internal-filebrowser-ls",
@@ -80,23 +78,16 @@ impl CommandModule for FileBrowserLs {
     }
 }
 
-/// Shared listing used by the file browser: `ls` without `-L` (keeps `name -> target`), then
-/// names of symlinks that resolve to directories for the left-hand tree.
+/// Shared listing used by the file browser. `-F` marks directory symlink targets with a trailing
+/// `/` (keeps `name -> target`) so the left-hand tree can treat them as directories.
 pub fn linux_ls_connector_message(path: &str, use_sudo: bool) -> String {
     let sudo = if use_sudo { "sudo " } else { "" };
     let path = sh_single_quoted(path);
     // --full-time works on both GNU coreutils and BusyBox; --time-style does not.
     format!(
-        concat!(
-            "{sudo}ls -lA --group-directories-first --color=never --full-time -- {path} && ",
-            "echo '{marker}' && ",
-            "for f in {path}/.* {path}/*; do ",
-            "{sudo}test -h \"$f\" && {sudo}test -d \"$f\" && printf '%s\\n' \"${{f##*/}}\"; ",
-            "done"
-        ),
+        "{sudo}ls -lAF --group-directories-first --color=never --full-time -- {path}",
         sudo = sudo,
         path = path,
-        marker = RESOLVED_DIRECTORIES_MARKER,
     )
 }
 
@@ -120,17 +111,7 @@ pub fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
     }
 
     let mut saw_invalid_row = false;
-    let mut resolved_directories = HashSet::new();
     while let Some(line) = lines.next() {
-        if line == RESOLVED_DIRECTORIES_MARKER {
-            for name in lines {
-                if name != "." && name != ".." {
-                    resolved_directories.insert(name.to_string());
-                }
-            }
-            break;
-        }
-
         let parts: Vec<&str> = line.split_whitespace().collect();
         // permissions links owner group size date time [timezone] name...
         if parts.len() < 8 {
@@ -189,6 +170,15 @@ pub fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
             _ => "f",          // default to file
         };
 
+        // `-F` appends type indicators; strip the ones that belong to this file type.
+        let name = match file_type {
+            "d" => name.strip_suffix('/').unwrap_or(&name).to_string(),
+            "f" => name.strip_suffix('*').unwrap_or(&name).to_string(),
+            "p" => name.strip_suffix('|').unwrap_or(&name).to_string(),
+            "s" => name.strip_suffix('=').unwrap_or(&name).to_string(),
+            _ => name,
+        };
+
         // Directory size from `ls` is only metadata; show 0 until `du` is used.
         let size = if file_type == "d" { "0" } else { size };
 
@@ -203,18 +193,14 @@ pub fn parse_ls_output(output: &str) -> Result<Vec<Value>, String> {
             "links": links
         });
         if let Some(target) = link_target {
-            entry["link_target"] = json!(target);
+            // `-F` appends `/` to symlink targets that resolve to directories.
+            let points_to_dir = target.ends_with('/');
+            entry["link_target"] = json!(target.strip_suffix('/').unwrap_or(&target));
+            if points_to_dir {
+                entry["points_to_dir"] = json!(true);
+            }
         }
         entries.push(entry);
-    }
-
-    for entry in &mut entries {
-        let Some(name) = entry.get("name").and_then(|value| value.as_str()) else {
-            continue;
-        };
-        if resolved_directories.contains(name) {
-            entry["points_to_dir"] = json!(true);
-        }
     }
 
     if entries.is_empty() && saw_invalid_row {

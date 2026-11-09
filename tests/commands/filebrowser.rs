@@ -81,18 +81,18 @@ fn test_ls_parse_rejects_error_output() {
 }
 
 #[test]
-fn test_ls_parse_symlink_target_and_resolved_directories() {
+fn test_ls_parse_symlink_target_and_classify_indicators() {
+    // `ls -lAF`: directories get a trailing `/`, directory symlink targets do too, executables get `*`.
     let output = concat!(
         "total 8\n",
-        "drwxr-xr-x 2 root root 40 2025-05-22 01:17:00 +0000 real-dir\n",
-        "lrwxrwxrwx 1 root root 8 2025-05-22 01:17:00 +0000 dir-link -> real-dir\n",
+        "drwxr-xr-x 2 root root 40 2025-05-22 01:17:00 +0000 real-dir/\n",
+        "lrwxrwxrwx 1 root root 8 2025-05-22 01:17:00 +0000 dir-link -> real-dir/\n",
         "lrwxrwxrwx 1 root root 9 2025-05-22 01:17:00 +0000 file-link -> somewhere\n",
-        "Resolved directories:\n",
-        "dir-link\n",
+        "-rwxr-xr-x 1 root root 12 2025-05-22 01:17:00 +0000 run-me*\n",
     );
 
     let entries = parse_ls_output(output).unwrap();
-    assert_eq!(entries.len(), 3);
+    assert_eq!(entries.len(), 4);
     assert_eq!(entries[0]["name"], "real-dir");
     assert_eq!(entries[0]["type"], "d");
     assert!(entries[0].get("points_to_dir").is_none());
@@ -103,6 +103,8 @@ fn test_ls_parse_symlink_target_and_resolved_directories() {
     assert_eq!(entries[2]["name"], "file-link");
     assert_eq!(entries[2]["link_target"], "somewhere");
     assert!(entries[2].get("points_to_dir").is_none());
+    assert_eq!(entries[3]["name"], "run-me");
+    assert_eq!(entries[3]["type"], "f");
 }
 
 #[test]
