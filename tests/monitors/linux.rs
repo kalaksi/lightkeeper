@@ -266,7 +266,7 @@ fn test_uptime() {
 #[test]
 fn test_who() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new("who -s", "user     pts/0        2025-12-04 20:27 (10.0.0.2)", 0)
+        StubSsh2::new("who", "user     pts/0        2025-12-04 20:27 (10.0.0.2)", 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(

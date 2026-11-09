@@ -144,6 +144,8 @@ impl ResponseMessage {
     }
 
     pub fn is_command_not_found(&self) -> bool {
-        self.message.is_empty() && self.return_code == 127
+        // Exit 127 is the shell convention for missing command. Stderr is often merged into
+        // the message (e.g. "sh: who: not found"), so do not require an empty message.
+        self.return_code == 127
     }
 }

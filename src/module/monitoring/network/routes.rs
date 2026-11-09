@@ -50,17 +50,17 @@ impl MonitoringModule for Routes {
     }
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
+        // BusyBox ip does not accept "route ls"; plain "route" works on both BusyBox and iproute2.
+        // RHEL-family often lacks /sbin on non-root PATH, so use the absolute path there.
+        // Elsewhere prefer bare "ip" so NixOS (no /sbin/ip) and similar still work.
         if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "7") {
-            Ok(String::from("/sbin/ip route ls"))
-        }
-        else if host.platform.os_flavor == platform_info::Flavor::Alpine {
-            Ok(String::from("ip route"))
+            Ok(String::from("/sbin/ip route"))
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
-            Ok(String::from("ip route ls"))
+            Ok(String::from("ip route"))
         }
         else {
             Err(LkError::unsupported_platform())
@@ -68,6 +68,9 @@ impl MonitoringModule for Routes {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_command_not_found() {
+            return Ok(DataPoint::not_available("ip not available"));
+        }
         if response.is_error() {
             return Err(response.message);
         }

@@ -46,12 +46,9 @@ impl MonitoringModule for Who {
     }
 
     fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, LkError> {
-        if host.platform.os_flavor == platform_info::Flavor::Alpine {
-            // BusyBox who has no -s.
+        if host.platform.os == platform_info::OperatingSystem::Linux {
+            // BusyBox who has no -s; GNU who already defaults to short output.
             Ok(String::from("who"))
-        }
-        else if host.platform.os == platform_info::OperatingSystem::Linux {
-            Ok(String::from("who -s"))
         }
         else {
             Err(LkError::unsupported_platform())
@@ -59,6 +56,9 @@ impl MonitoringModule for Who {
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _parent_result: DataPoint) -> Result<DataPoint, String> {
+        if response.is_command_not_found() {
+            return Ok(DataPoint::not_available("who not available"));
+        }
         if response.is_error() {
             return Err(response.message);
         }

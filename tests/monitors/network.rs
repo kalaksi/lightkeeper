@@ -41,7 +41,7 @@ rtt min/avg/max/mdev = 0.123/0.134/0.145/0.011 ms"#, 0)
 #[test]
 fn test_routes() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new("ip route ls",
+        StubSsh2::new("ip route",
 r#"default via 192.168.1.1 dev eth0 proto static
 10.0.0.0/8 dev eth1 proto kernel scope link src 10.0.0.1
 192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.100"#, 0)
