@@ -84,16 +84,26 @@ impl CommandModule for FileBrowserMove {
 
         // If every source is on the same filesystem as the destination, use a single mv.
         // If any source is on a different filesystem, use a single rsync instead.
+        // One `stat` of every path. `stat -c` is missing on some BusyBox builds; both
+        // GNU and BusyBox print a "Device:" line (LANG=C keeps GNU from translating it).
+        // A newline in a path can make `stat` emit a fake "Device:" line and break this
+        // check. The quoted path is still passed through correctly to mv, rsync, and find.
         let out_format = sh_single_quoted(download::RSYNC_OUT_FORMAT);
         let script = format!(
             concat!(
-                "dst={dest} && ",
-                "dst_dev=$({sudo}stat -c %d -- \"$dst\") && ",
-                "need_rsync=0 && ",
-                "for src in {quoted_sources}; do ",
-                    "src_dev=$({sudo}stat -c %d -- \"$src\") || exit 1; ",
-                    "if [ \"$src_dev\" != \"$dst_dev\" ]; then need_rsync=1; break; fi; ",
-                "done && ",
+                "same_fs() {{ ",
+                    "first=; ",
+                    "while read -r key value _; do ",
+                        "[ \"$key\" = \"Device:\" ] || continue; ",
+                        "if [ -z \"$first\" ]; then first=$value; ",
+                        "elif [ \"$value\" != \"$first\" ]; then return 1; fi; ",
+                    "done; ",
+                    "[ -n \"$first\" ] || return 2; ",
+                "}}; ",
+                "dst={dest}; ",
+                "out=$({sudo}env LANG=C LC_ALL=C stat -- \"$dst\" {quoted_sources}) || exit 1; ",
+                "printf '%s\\n' \"$out\" | same_fs; ",
+                "case $? in 0) need_rsync=0 ;; 1) need_rsync=1 ;; *) exit 1 ;; esac; ",
                 "if [ \"$need_rsync\" = 0 ]; then ",
                     "{sudo}mv -n -- {quoted_sources} \"$dst\" || exit $?; ",
                 "else ",
