@@ -20,6 +20,15 @@ fn lightkeeper_config_dir_env_overrides_xdg() {
 }
 
 #[test]
+fn lightkeeper_data_dir_env_overrides_xdg() {
+    let data_dir = unique_target_dir("lk-data-env");
+    let _wrong_xdg = EnvVarGuard::set("XDG_DATA_HOME", unique_target_dir("wrong-xdg-data"));
+    let _lk_data = EnvVarGuard::set("LIGHTKEEPER_DATA_DIR", &data_dir);
+
+    assert_eq!(file_handler::get_data_dir().unwrap(), data_dir);
+}
+
+#[test]
 fn known_hosts_path_creates_missing_parents_under_config_dir() {
     let config_dir = unique_target_dir("lk-known-hosts").join("nested").join("config");
     assert!(!config_dir.exists());

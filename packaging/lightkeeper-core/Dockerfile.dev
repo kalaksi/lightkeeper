@@ -57,18 +57,18 @@ LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
 
 ENV LIGHTKEEPER_UID="63412"
 ENV LIGHTKEEPER_GID="63412"
-ENV XDG_DATA_HOME="/data"
 ENV LIGHTKEEPER_CONFIG_DIR="/config"
+ENV LIGHTKEEPER_DATA_DIR="/data"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates libdbus-1-3 && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p -m 700 /config /data/lightkeeper /socket && \
-    chown ${LIGHTKEEPER_UID}:${LIGHTKEEPER_GID} /config /data/lightkeeper /socket
+    mkdir -p -m 700 /config /data && \
+    chown ${LIGHTKEEPER_UID}:${LIGHTKEEPER_GID} /config /data
 
 COPY --from=builder /lightkeeper-core /usr/local/bin/lightkeeper-core
 RUN chmod 755 /usr/local/bin/lightkeeper-core
 
 USER ${LIGHTKEEPER_UID}:${LIGHTKEEPER_GID}
-VOLUME ["/config", "/data/lightkeeper", "/socket"]
-ENTRYPOINT ["/usr/local/bin/lightkeeper-core", "--config-dir", "/config", "--socket-path", "/socket/core.sock"]
+VOLUME ["/config", "/data"]
+ENTRYPOINT ["/usr/local/bin/lightkeeper-core", "--config-dir", "/config", "--socket-path", "/data/core.sock"]

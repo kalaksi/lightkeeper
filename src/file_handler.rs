@@ -107,6 +107,10 @@ pub fn effective_uid() -> io::Result<u32> {
 }
 
 pub fn get_data_dir() -> io::Result<PathBuf> {
+    if let Some(path) = env::var_os("LIGHTKEEPER_DATA_DIR") {
+        return Ok(PathBuf::from(path));
+    }
+
     let mut data_dir = if let Some(path) = env::var_os("XDG_DATA_HOME") {
         PathBuf::from(path)
     }
