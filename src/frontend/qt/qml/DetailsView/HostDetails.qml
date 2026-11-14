@@ -46,41 +46,24 @@ Item {
         // Cached stacks stay mounted and already receive monitor updates; only rebuild content on first create.
         let refreshContent = !(root.hostId in root._tabStacks)
         if (refreshContent) {
-            // Evict before create so peak cache size stays at _maxCachedHostStacks.
-            while (root._hostStackOrder.length >= root._maxCachedHostStacks) {
-                root._destroyHostStack(root._hostStackOrder[0])
-            }
-
-            let stack = hostTabStackComponent.createObject(tabStackContainer, {
-                parentStackIndex: tabStackContainer.children.length,
-            })
-            root._tabStacks[root.hostId] = stack
-
-            // Create default tabs for host.
-            if (root.showCharts) {
-                let chartsHostId = root.hostId
-                stack.addLazyTab("qrc:/main/images/button/charts", function(shell) {
-                    let component = chartsView.createObject(shell, {
-                        hostId: chartsHostId,
-                    })
-                    component.anchors.fill = shell
-                    return component
-                }, {
-                    select: false,
-                    canClose: false,
-                })
-            }
-
-            stack.addTab(hostId, detailsMainView.createObject(null, {
-                hostId: hostId,
-            }), {
-                select: false,
-            })
+            root._createHostStack(root.hostId)
         }
 
         root.refresh(refreshContent)
         root._touchHostStackOrder(root.hostId)
         root._previousHostId = root.hostId
+    }
+
+    onShowChartsChanged: {
+        // Tab layout depends on showCharts (e.g. after connecting to a remote core).
+        let hostIds = root._hostStackOrder.slice()
+        for (let hostId of hostIds) {
+            root._destroyHostStack(hostId)
+        }
+        root._previousHostId = ""
+        if (root.hostId !== "") {
+            root.hostIdChanged()
+        }
     }
 
     Connections {
@@ -536,6 +519,37 @@ Item {
         for (let i = 0; i < tabStackContainer.children.length; i++) {
             tabStackContainer.children[i].parentStackIndex = i
         }
+    }
+
+    function _createHostStack(hostId) {
+        // Evict before create so peak cache size stays at _maxCachedHostStacks.
+        while (root._hostStackOrder.length >= root._maxCachedHostStacks) {
+            root._destroyHostStack(root._hostStackOrder[0])
+        }
+
+        let stack = hostTabStackComponent.createObject(tabStackContainer, {
+            parentStackIndex: tabStackContainer.children.length,
+        })
+        root._tabStacks[hostId] = stack
+
+        if (root.showCharts) {
+            stack.addLazyTab("qrc:/main/images/button/charts", function(shell) {
+                let component = chartsView.createObject(shell, {
+                    hostId: hostId,
+                })
+                component.anchors.fill = shell
+                return component
+            }, {
+                select: false,
+                canClose: false,
+            })
+        }
+
+        stack.addTab(hostId, detailsMainView.createObject(null, {
+            hostId: hostId,
+        }), {
+            select: false,
+        })
     }
 
     function _destroyHostStack(hostId) {

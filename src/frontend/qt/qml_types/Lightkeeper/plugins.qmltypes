@@ -242,6 +242,7 @@ Module {
         Property { name: "mainViewSplitRatio"; type: "double"; isReadonly: false; }
 
         Signal { name: "hostConfigurationChanged" }
+        Signal { name: "showChartsChanged" }
         Signal { name: "showChartThresholdLinesChanged" }
         Signal { name: "error"; Parameter { name: "message"; type: "string" } }
 

@@ -30,6 +30,7 @@ pub struct ConfigManagerModel {
     //
     error: qt_signal!(message: QString),
     hostConfigurationChanged: qt_signal!(),
+    showChartsChanged: qt_signal!(),
     showChartThresholdLinesChanged: qt_signal!(),
 
     //
@@ -37,7 +38,7 @@ pub struct ConfigManagerModel {
     //
     showStatusBar: qt_property!(bool; READ showStatusBar),
     // Called only from QML.
-    showCharts: qt_property!(bool; READ showCharts WRITE setShowCharts),
+    showCharts: qt_property!(bool; READ showCharts WRITE setShowCharts NOTIFY showChartsChanged),
     // Called only from QML.
     showChartThresholdLines: qt_property!(bool; READ showChartThresholdLines WRITE setShowChartThresholdLines NOTIFY showChartThresholdLinesChanged),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
@@ -175,11 +176,15 @@ impl ConfigManagerModel {
         backend: Box<dyn ConfigBackend>,
         (main_config, hosts_config, groups_config): (Configuration, Hosts, Groups),
     ) {
+        let previous_show_charts = self.main_config.preferences.show_charts;
         self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config;
         self.groups_config = groups_config;
         self.config_backend = Some(backend);
         self.apply_preference_restrictions();
+        if self.main_config.preferences.show_charts != previous_show_charts {
+            self.showChartsChanged();
+        }
     }
 
     pub fn hosts_config(&self) -> &Hosts {
@@ -199,10 +204,14 @@ impl ConfigManagerModel {
         let config_backend = self.config_backend.as_ref().unwrap();
         let reset_hosts = config_backend.apply_config()?;
         let (main_config, hosts_config, groups_config) = config_backend.get_config()?;
+        let previous_show_charts = self.main_config.preferences.show_charts;
         self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config.clone();
         self.groups_config = groups_config;
         self.apply_preference_restrictions();
+        if self.main_config.preferences.show_charts != previous_show_charts {
+            self.showChartsChanged();
+        }
         Ok((self.main_config.clone(), hosts_config, reset_hosts))
     }
 
@@ -335,9 +344,17 @@ impl ConfigManagerModel {
         self.apply_preference_restrictions();
         self.main_config.preferences.close_to_tray = preferences.value("closeToTray".into(), true.into()).to_bool();
         self.main_config.preferences.show_monitor_notifications = preferences.value("showMonitorNotifications".into(), true.into()).to_bool();
-        self.main_config.preferences.show_charts = preferences.value("showCharts".into(), true.into()).to_bool();
-        self.main_config.preferences.show_chart_threshold_lines =
+        let show_charts = preferences.value("showCharts".into(), true.into()).to_bool();
+        if self.main_config.preferences.show_charts != show_charts {
+            self.main_config.preferences.show_charts = show_charts;
+            self.showChartsChanged();
+        }
+        let show_chart_threshold_lines =
             preferences.value("showChartThresholdLines".into(), true.into()).to_bool();
+        if self.main_config.preferences.show_chart_threshold_lines != show_chart_threshold_lines {
+            self.main_config.preferences.show_chart_threshold_lines = show_chart_threshold_lines;
+            self.showChartThresholdLinesChanged();
+        }
 
         self.main_config.display_options.show_status_bar = preferences.value("showStatusBar".into(), true.into()).to_bool();
 
@@ -534,6 +551,7 @@ impl ConfigManagerModel {
     fn setShowCharts(&mut self, show_charts: bool) {
         if self.main_config.preferences.show_charts != show_charts {
             self.main_config.preferences.show_charts = show_charts;
+            self.showChartsChanged();
 
             let config_backend = self.config_backend.as_mut().unwrap();
             if let Err(error) = config_backend
