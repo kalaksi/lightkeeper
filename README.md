@@ -74,7 +74,7 @@ Just press Ctrl-T to open a terminal in a new tab.
 - Monitor status changes periodically and get alert notifications.
 - Monitor certificate validity and expiration.
 - Status summary in host table for quick status view.
-- Charts for visualizing historical values (not yet complete!).
+- Charts for visualizing historical values.
 - Log viewer with regex search and hotkeys similar to less/vim.
 - Text file editor for editing remote files (with built-in editor or using CLI over SSH).
 - Follow console output for longer running commands such as container builds and package updates.

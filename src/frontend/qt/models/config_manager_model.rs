@@ -335,7 +335,7 @@ impl ConfigManagerModel {
         self.apply_preference_restrictions();
         self.main_config.preferences.close_to_tray = preferences.value("closeToTray".into(), true.into()).to_bool();
         self.main_config.preferences.show_monitor_notifications = preferences.value("showMonitorNotifications".into(), true.into()).to_bool();
-        self.main_config.preferences.show_charts = preferences.value("showCharts".into(), false.into()).to_bool();
+        self.main_config.preferences.show_charts = preferences.value("showCharts".into(), true.into()).to_bool();
         self.main_config.preferences.show_chart_threshold_lines =
             preferences.value("showChartThresholdLines".into(), true.into()).to_bool();
 

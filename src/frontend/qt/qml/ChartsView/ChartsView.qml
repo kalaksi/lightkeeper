@@ -12,7 +12,6 @@ import Lightkeeper 1.0
 
 import ".."
 import "../Misc"
-import "../Text"
 import "../js/TextTransform.js" as TextTransform
 import "../StyleOverride"
 
@@ -62,7 +61,6 @@ Item {
 
     ToolBar {
         id: chartsToolBar
-        visible: LK.config.showCharts
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
@@ -137,55 +135,8 @@ Item {
         }
     }
 
-    Rectangle {
-        visible: !LK.config.showCharts
-        anchors.centerIn: parent
-        anchors.verticalCenterOffset: -parent.height * 0.1
-        width: parent.width * 0.6
-        height: parent.height * 0.6
-        color: Theme.categoryBackgroundColor
-        radius: 6
-
-        Column {
-            anchors.horizontalCenter: parent.horizontalCenter
-            topPadding: 0.2 * parent.height
-            height: parent.height
-            width: parent.width * 0.8
-            spacing: Theme.spacingLoose
-
-            NormalText {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Charts is still an experimental feature, but can be enabled. Requires restart to take effect."
-            }
-
-            Row {
-                anchors.horizontalCenter: parent.horizontalCenter
-                height: 40
-                spacing: Theme.spacingLoose
-
-                Switch {
-                    id: toggleSwitch
-                    checked: false
-                    Layout.alignment: Qt.AlignVCenter
-
-                    onCheckedChanged: {
-                        LK.config.showCharts = toggleSwitch.checked
-                        toggleLabel.text = toggleSwitch.checked ? "Charts are enabled" : "Charts are disabled"
-                    }
-                }
-
-                Label {
-                    id: toggleLabel
-                    text: "Charts are disabled"
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
-        }
-    }
-
     ScrollView {
         id: rootScrollView
-        visible: LK.config.showCharts
         anchors.top: chartsToolBar.bottom
         anchors.topMargin: Theme.spacingNormal
         anchors.left: parent.left

@@ -16,7 +16,7 @@ preferences:
   # If set to "internal", will use the integrated terminal.
   terminal: "internal"
   terminal_args: [""]
-  show_charts: false
+  show_charts: true
 
 # Control category order, command buttons orders, colors. Defaults should be good.
 # NOTE: Currently, you shouldn't manually edit display_options at all.

@@ -436,7 +436,7 @@ LightkeeperDialog {
 
                         Label {
                             width: parent.width
-                            text: "Enable charts (experimental, requires restart)"
+                            text: "Enable charts (requires restart)"
                         }
 
                         SmallText {

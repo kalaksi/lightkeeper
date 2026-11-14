@@ -18,7 +18,7 @@ Item {
     id: root
     required property string hostId
     property bool enableShortcuts: root.visible
-    property bool showCharts: true
+    property bool showCharts: LK.config.showCharts
     property var _tabStacks: ({})
     property var _tabIndexByHost: ({})
     // Oldest host id first; touched hosts move to the end.

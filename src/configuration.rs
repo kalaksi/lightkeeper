@@ -219,7 +219,7 @@ pub struct Preferences {
     pub close_to_tray: bool,
     #[serde(default = "DisplayOptions::default_to_true")]
     pub show_monitor_notifications: bool,
-    #[serde(default)]
+    #[serde(default = "DisplayOptions::default_to_true")]
     pub show_charts: bool,
     #[serde(default = "DisplayOptions::default_to_true")]
     pub show_chart_threshold_lines: bool,
