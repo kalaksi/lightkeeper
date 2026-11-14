@@ -50,7 +50,7 @@ impl CommandModule for Prune {
         command.use_sudo = !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "-X", "POST", "http://localhost/images/prune"]);
+            command.arguments(vec!["curl", "-q", "-s", "--unix-socket", "/var/run/docker.sock", "-X", "POST", "http://localhost/images/prune"]);
             Ok(command.to_string())
         }
         else {

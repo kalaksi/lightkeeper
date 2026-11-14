@@ -56,7 +56,9 @@ impl CommandModule for Inspect {
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             let url = format!("http://localhost/containers/{}/json?all=true", target_id);
-            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", &url]);
+            // -q first disables curlrc (e.g. write-out transfer stats appended after the JSON body).
+            command.arguments(vec!["curl", "-q", "-s", "--unix-socket", "/var/run/docker.sock", &url]);
+            command.ignore_stderr = true;
             Ok(command.to_string())
         }
         else {

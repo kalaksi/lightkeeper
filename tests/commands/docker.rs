@@ -13,7 +13,7 @@ use crate::{CommandTestHarness, StubSsh2};
 #[test]
 fn test_inspect() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#"'sudo' 'curl' '-s' '--unix-socket' '/var/run/docker.sock' 'http://localhost/containers/test-container/json?all=true'"#,
+        StubSsh2::new(r#"'sudo' 'curl' '-q' '-s' '--unix-socket' '/var/run/docker.sock' 'http://localhost/containers/test-container/json?all=true' 2>/dev/null"#,
 r#"{
   "Id": "8001819398ea4b320c0604a26f0d0f15ebd0353bc76f113f1d9ac629a83458d8",
   "Created": "2025-11-16T10:49:42.466460495Z",

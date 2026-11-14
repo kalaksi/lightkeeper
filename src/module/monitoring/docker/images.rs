@@ -70,7 +70,7 @@ impl MonitoringModule for Images {
         command.use_sudo = !host.is_root;
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
-            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);
+            command.arguments(vec!["curl", "-q", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/images/json"]);
             Ok(command.to_string())
         }
         else {

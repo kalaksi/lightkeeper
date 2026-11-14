@@ -61,7 +61,7 @@ impl CommandModule for Remove {
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
             let url = format!("http://localhost/images/{}", target_id);
-            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "-X", "DELETE", &url]);
+            command.arguments(vec!["curl", "-q", "-s", "--unix-socket", "/var/run/docker.sock", "-X", "DELETE", &url]);
             Ok(command.to_string())
         }
         else {

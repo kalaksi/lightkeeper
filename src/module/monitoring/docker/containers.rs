@@ -60,7 +60,8 @@ impl MonitoringModule for Containers {
 
         if host.platform.os == platform_info::OperatingSystem::Linux {
             // TODO: somehow connect directly to the unix socket instead of using curl?
-            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
+            // -q first disables curlrc (e.g. write-out transfer stats after the JSON body).
+            command.arguments(vec!["curl", "-q", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
             Ok(command.to_string())
         }
         else {

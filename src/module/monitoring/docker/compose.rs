@@ -68,7 +68,7 @@ impl MonitoringModule for Compose {
         if host.platform.os == platform_info::OperatingSystem::Linux {
             // Docker API is much better suited for this than using the docker-compose CLI. More effective too.
             // TODO: find down-status compose-projects with find-command?
-            command.arguments(vec!["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
+            command.arguments(vec!["curl", "-q", "-s", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json?all=true"]);
             Ok(command.to_string())
         }
         else {
