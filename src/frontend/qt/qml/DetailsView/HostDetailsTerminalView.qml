@@ -15,6 +15,10 @@ import "../Button"
 Item {
     id: root
     property bool enableShortcuts: false
+    // HostDetails Close/Refresh shortcuts must not steal shell bindings (Ctrl+W / Ctrl+R).
+    // Use a flag instead of instanceof; ComponentBehavior Bound makes type checks fail.
+    readonly property bool disableCloseShortcut: true
+    readonly property bool disableRefreshShortcut: true
     property string workDir: LK.config.getCurrentWorkDir()
     property var _searchMatches: []
 

@@ -29,6 +29,11 @@ Item {
     property bool _fileReady: false
     property bool _loading: pendingInvocation > 0
     property var textEditorItem: null
+    // HostDetails shortcuts must not steal editor bindings. Flag instead of instanceof;
+    // ComponentBehavior Bound makes type checks fail.
+    readonly property bool disableCloseShortcut: true
+    readonly property bool disableRefreshShortcut: true
+    readonly property bool disableFileBrowserShortcut: true
     property bool disableSaveButton: true
     property string editMode: "regular"
     property int fontSize: 12

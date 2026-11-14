@@ -386,9 +386,9 @@ Item {
 
     Shortcut {
         // Disabled in terminal so Ctrl+W reaches the shell (delete-word).
-        enabled: !(root.currentTabContent instanceof HostDetailsTerminalView) &&
-                 !(root.currentTabContent instanceof HostDetailsCodeEditorView) &&
-                 root.enableShortcuts
+        // Check a content flag; instanceof fails under ComponentBehavior Bound.
+        enabled: root.enableShortcuts &&
+                 !(root.currentTabContent && root.currentTabContent.disableCloseShortcut === true)
         sequences: [StandardKey.Close]
         // Close current tab.
         onActivated: root.closeTab(mainViewHeader.tabIndex)
@@ -449,9 +449,8 @@ Item {
     }
 
     Shortcut {
-        enabled: !(root.currentTabContent instanceof HostDetailsTerminalView) &&
-                 !(root.currentTabContent instanceof HostDetailsCodeEditorView) &&
-                 root.enableShortcuts
+        enabled: root.enableShortcuts &&
+                 !(root.currentTabContent && root.currentTabContent.disableRefreshShortcut === true)
         sequences: [StandardKey.Refresh, "Ctrl+R"]
         onActivated: {
             let content = root.currentTabContent
@@ -469,7 +468,7 @@ Item {
 
     Shortcut {
         enabled: root.enableShortcuts &&
-                 !(root.currentTabContent instanceof HostDetailsCodeEditorView)
+                 !(root.currentTabContent && root.currentTabContent.disableFileBrowserShortcut === true)
         sequence: "Ctrl+Y"
         onActivated: LK.command.executeConfirmed("", root.hostId, "_internal-filebrowser-ls", ["/"])
     }
