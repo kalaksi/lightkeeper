@@ -243,7 +243,7 @@ LightkeeperDialog {
                 Layout.fillWidth: true
                 text: "Connect to lightkeeper-core on a remote host.<br>"
                     + "Lightkeeper-core is the backend that runs the monitoring, commands and stores configuration,"
-                    + " while this application is the user interface."
+                    + " while this application acts only as the user interface."
                     + " Use a host that can reach your monitored hosts, e.g. a jump host or an always-on server. "
                     + "<b>Lightkeeper-core will listen on a unix socket and not on any port.</b>"
                 textFormat: Text.RichText
