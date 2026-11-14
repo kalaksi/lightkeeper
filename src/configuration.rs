@@ -30,7 +30,7 @@ pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
-pub const MIGRATION_VERSION: u16 = 8;
+pub const MIGRATION_VERSION: u16 = 9;
 
 #[derive(Serialize, Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -1184,6 +1184,10 @@ impl Configuration {
                             }
                         }
                     }
+                }
+                8 => {
+                    // Charts were experimental and opt-in, but not anymore. Enable once for existing installs.
+                    main_config.preferences.show_charts = true;
                 }
                 _ => {}
             }

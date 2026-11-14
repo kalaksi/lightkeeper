@@ -28,6 +28,7 @@ fn configuration_read_upgrades_outdated_schema_and_persists() {
 
     let (main, _hosts, groups) = Configuration::read(&dir_str).unwrap();
     assert_eq!(main.schema_version, Some(MIGRATION_VERSION));
+    assert!(main.preferences.show_charts);
     assert!(groups.groups.contains_key("nixos"));
     assert!(groups.groups.contains_key("host"));
     assert!(groups.groups.contains_key("storage"));
@@ -37,6 +38,7 @@ fn configuration_read_upgrades_outdated_schema_and_persists() {
 
     let (main_reread, _hosts_reread, groups_reread) = Configuration::read(&dir_str).unwrap();
     assert_eq!(main_reread.schema_version, Some(MIGRATION_VERSION));
+    assert!(main_reread.preferences.show_charts);
     assert!(groups_reread.groups.contains_key("host"));
     assert!(groups_reread.groups.contains_key("network"));
 }

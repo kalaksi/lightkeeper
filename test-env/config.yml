@@ -21,4 +21,4 @@ display_options:
   hide_info_notifications: false
   show_status_bar: true
   main_view_split_ratio: 0.8
-schema_version: 8
+schema_version: 9
