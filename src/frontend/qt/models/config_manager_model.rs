@@ -296,9 +296,9 @@ impl ConfigManagerModel {
             "The text editor to use when editing files locally. Only integrated editors are available with remote core."
         }).into());
         preferences.insert("terminalHelp".into(), QString::from(if allow_external_terminal {
-            "Terminal to use when launching a remote shell. Integrated terminal is always used with flatpak."
+            "Terminal to use when launching a remote shell. 'internal' is always used with flatpak."
         } else {
-            "Terminal to use when launching a remote shell. Only the integrated terminal is available in flatpak."
+            "Terminal to use when launching a remote shell. Only 'internal' is available in flatpak."
         }).into());
         preferences.insert("closeToTray".into(), self.main_config.preferences.close_to_tray.into());
         preferences.insert("showMonitorNotifications".into(), self.main_config.preferences.show_monitor_notifications.into());
