@@ -4,7 +4,7 @@
   <name>LightkeeperRM</name>
   <summary>Linux server management tool</summary>
   <metadata_license>CC-BY-SA-4.0</metadata_license>
-  <project_license>GPL-3.0-or-later</project_license>
+  <project_license>AGPL-3.0-or-later</project_license>
   <developer id="io.github.kalaksi">
     <name>Kalaksi</name>
   </developer>

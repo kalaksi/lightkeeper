@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: Copyright (C) 2026 kalaksi@users.noreply.github.com
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 use lightkeeper::remote_core::protocol::{read_message, write_message, ServerMessage, MAX_FRAME_SIZE};

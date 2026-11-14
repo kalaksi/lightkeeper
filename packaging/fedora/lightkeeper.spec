@@ -6,7 +6,7 @@ Version:        0.51.2
 Release:        1%{?dist}
 Summary:        Customizable Linux server management tool over SSH
 
-License:        GPL-3.0-or-later AND GPL-2.0-only AND MIT AND BSD-3-Clause AND LGPL-2.0-or-later
+License:        AGPL-3.0-or-later AND GPL-3.0-or-later AND GPL-2.0-or-later AND MIT AND BSD-3-Clause AND LGPL-2.0-or-later
 URL:            https://github.com/kalaksi/lightkeeper
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 

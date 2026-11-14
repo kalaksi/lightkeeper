@@ -193,8 +193,8 @@ You can use `--config-dir` to load the test configuration for manual testing. Fo
 ## Lightkeeper
 Copyright © 2023 kalaksi@users.noreply.github.com.  
   
-This software is licensed under GNU General Public License 3.  
-Dual-licensing is possible if your organization needs something else than GPL. Get in contact.  
+This software is licensed under GNU Affero General Public License 3 or later.  
+Dual-licensing is possible if your organization needs something else than AGPL. Get in contact.  
 
 
 ## Crate dependencies

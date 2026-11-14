@@ -4,7 +4,7 @@ FROM debian:13.7-slim
 ARG TARGETARCH
 LABEL org.opencontainers.image.source="https://github.com/kalaksi/lightkeeper"
 LABEL org.opencontainers.image.description="Lightkeeper Core"
-LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 # Data directory (and core.sock) has to be owned by the UID the core runs as. The SSH user connecting from
 # Lightkeeper needs access to the socket, so you will probably want to override this with that user's UID/GID.

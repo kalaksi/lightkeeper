@@ -53,7 +53,7 @@ RUN git clone --depth 1 --branch "${BRANCH}" \
 FROM debian:13.7-slim
 LABEL org.opencontainers.image.source="https://github.com/kalaksi/lightkeeper"
 LABEL org.opencontainers.image.description="Lightkeeper Core (dev build)"
-LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 ENV LIGHTKEEPER_UID="63412"
 ENV LIGHTKEEPER_GID="63412"

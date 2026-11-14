@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: Copyright (C) 2025 kalaksi@users.noreply.github.com
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 import QtQuick
@@ -500,7 +500,7 @@ LightkeeperDialog {
                 }
 
                 SmallText {
-                    text: "Licensed under GNU General Public License 3 or later."
+                    text: "Licensed under GNU Affero General Public License 3 or later."
                     color: Theme.textColorDark
                     horizontalAlignment: Text.AlignHCenter
 

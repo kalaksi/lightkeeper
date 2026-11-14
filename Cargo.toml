@@ -3,6 +3,7 @@ name = "lightkeeper"
 version = "0.51.2"
 edition = "2021"
 rust-version = "1.88"
+license = "AGPL-3.0-or-later"
 
 [[bin]]
 name = "lightkeeper"
