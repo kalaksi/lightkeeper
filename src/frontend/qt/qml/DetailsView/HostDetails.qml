@@ -23,7 +23,7 @@ Item {
     property var _tabIndexByHost: ({})
     // Oldest host id first; touched hosts move to the end.
     property var _hostStackOrder: []
-    property int _maxCachedHostStacks: 3
+    property int _maxCachedHostStacks: 5
     property string _previousHostId: ""
     property bool _refreshingHost: false
 
@@ -521,10 +521,33 @@ Item {
         }
     }
 
+    // True if any loaded tab content opted out of host-stack cache eviction.
+    function _hostStackBlocksCacheEviction(hostId) {
+        let stack = root._tabStacks[hostId]
+        for (let i = 0; i < stack.tabTitles.length; i++) {
+            let content = stack.contentAt(i)
+            if (content !== null && content.blocksCacheEviction === true) {
+                return true
+            }
+        }
+        return false
+    }
+
     function _createHostStack(hostId) {
         // Evict before create so peak cache size stays at _maxCachedHostStacks.
+        // Tabs with blocksCacheEviction (terminal, file browser, etc.) keep the host cached.
         while (root._hostStackOrder.length >= root._maxCachedHostStacks) {
-            root._destroyHostStack(root._hostStackOrder[0])
+            let evictHostId = ""
+            for (let candidateHostId of root._hostStackOrder) {
+                if (!root._hostStackBlocksCacheEviction(candidateHostId)) {
+                    evictHostId = candidateHostId
+                    break
+                }
+            }
+            if (evictHostId === "") {
+                break
+            }
+            root._destroyHostStack(evictHostId)
         }
 
         let stack = hostTabStackComponent.createObject(tabStackContainer, {

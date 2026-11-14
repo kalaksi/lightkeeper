@@ -29,6 +29,7 @@ Item {
     property string errorText: ""
     property var pendingInvocation: 0
     property bool _loading: pendingInvocation > 0
+    readonly property bool blocksCacheEviction: true
 
     Component.onCompleted: {
         root.refresh()

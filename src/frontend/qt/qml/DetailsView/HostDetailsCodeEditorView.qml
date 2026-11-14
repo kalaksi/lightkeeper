@@ -34,6 +34,7 @@ Item {
     readonly property bool disableCloseShortcut: true
     readonly property bool disableRefreshShortcut: true
     readonly property bool disableFileBrowserShortcut: true
+    readonly property bool blocksCacheEviction: true
     property bool disableSaveButton: true
     property string editMode: "regular"
     property int fontSize: 12

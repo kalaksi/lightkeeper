@@ -19,6 +19,7 @@ Item {
     // Use a flag instead of instanceof; ComponentBehavior Bound makes type checks fail.
     readonly property bool disableCloseShortcut: true
     readonly property bool disableRefreshShortcut: true
+    readonly property bool blocksCacheEviction: true
     property string workDir: LK.config.getCurrentWorkDir()
     property var _searchMatches: []
 

@@ -20,6 +20,7 @@ Item {
     property int progress: 0
     property bool enableShortcuts: false
     property int pendingInvocation: 0
+    readonly property bool blocksCacheEviction: true
 
     onTextChanged: {
         commandOutput.rows = root.text.split("\n")

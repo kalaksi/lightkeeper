@@ -38,6 +38,7 @@ Item {
     property string pendingPath: ""
     property bool enableShortcuts: false
     property bool _loading: pendingInvocation > 0
+    readonly property bool blocksCacheEviction: true
 
     // Invocation ids for which we refresh the file list when they complete (rename, copy, move).
     property var _pendingRefreshInvocationIds: []
