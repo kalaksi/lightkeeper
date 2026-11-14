@@ -10,6 +10,7 @@ import Lightkeeper 1.0
 
 import ".."
 import "../Text"
+import "../StyleOverride" as StyleOverride
 
 Item {
     id: root
@@ -59,9 +60,11 @@ Item {
         visible: root._loading
     }
 
-    ScrollView {
+    StyleOverride.ScrollView {
         visible: !root._loading && root.jsonText !== ""
         anchors.fill: parent
+        contentWidth: availableWidth
+        clip: true
 
         JsonTextFormat {
             anchors.fill: parent
@@ -70,9 +73,11 @@ Item {
         }
     }
 
-    ScrollView {
+    StyleOverride.ScrollView {
         visible: !root._loading && root.text !== ""
         anchors.fill: parent
+        contentWidth: availableWidth
+        clip: true
 
         NormalText {
             anchors.fill: parent
