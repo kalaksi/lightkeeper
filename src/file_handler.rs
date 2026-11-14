@@ -51,6 +51,17 @@ pub fn get_config_dir() -> PathBuf {
 }
 
 pub fn get_cache_dir() -> PathBuf {
+    if let Some(path) = env::var_os("LIGHTKEEPER_CACHE_DIR") {
+        return PathBuf::from(path);
+    }
+
+    // Prefer data dir over HOME/XDG so containerized core never writes under HOME.
+    if env::var_os("LIGHTKEEPER_DATA_DIR").is_some() {
+        if let Ok(data_dir) = get_data_dir() {
+            return data_dir.join("cache");
+        }
+    }
+
     let mut cache_dir = if let Some(path) = env::var_os("XDG_CACHE_HOME") {
         PathBuf::from(path)
     }
@@ -63,7 +74,7 @@ pub fn get_cache_dir() -> PathBuf {
 
     // If not running inside flatpak, we need to add a separate subdir for the app.
     if env::var("FLATPAK_ID").is_err() {
-        cache_dir = cache_dir.join(APP_DIR_NAME)
+        cache_dir = cache_dir.join(APP_DIR_NAME);
     }
 
     cache_dir

@@ -62,6 +62,8 @@ fn authenticate_reports_missing_private_key_path() {
 #[test]
 fn cache_dir_with_home_root_resolves_under_slash_cache() {
     let _clear_xdg = EnvVarGuard::remove("XDG_CACHE_HOME");
+    let _clear_lk_cache = EnvVarGuard::remove("LIGHTKEEPER_CACHE_DIR");
+    let _clear_lk_data = EnvVarGuard::remove("LIGHTKEEPER_DATA_DIR");
     let _home = EnvVarGuard::set("HOME", "/");
 
     assert_eq!(file_handler::get_cache_dir(), PathBuf::from("/.cache/lightkeeper"));
@@ -71,7 +73,30 @@ fn cache_dir_with_home_root_resolves_under_slash_cache() {
 fn cache_dir_respects_xdg_cache_home_even_with_home_root() {
     let cache_root = unique_target_dir("xdg-cache-home");
     let _home = EnvVarGuard::set("HOME", "/");
+    let _clear_lk_cache = EnvVarGuard::remove("LIGHTKEEPER_CACHE_DIR");
+    let _clear_lk_data = EnvVarGuard::remove("LIGHTKEEPER_DATA_DIR");
     let _xdg_cache = EnvVarGuard::set("XDG_CACHE_HOME", &cache_root);
 
     assert_eq!(file_handler::get_cache_dir(), cache_root.join("lightkeeper"));
+}
+
+#[test]
+fn cache_dir_uses_data_dir_over_home_and_xdg() {
+    let data_dir = unique_target_dir("lk-data-for-cache");
+    let _wrong_xdg = EnvVarGuard::set("XDG_CACHE_HOME", unique_target_dir("wrong-xdg-cache"));
+    let _clear_lk_cache = EnvVarGuard::remove("LIGHTKEEPER_CACHE_DIR");
+    let _home = EnvVarGuard::set("HOME", "/");
+    let _lk_data = EnvVarGuard::set("LIGHTKEEPER_DATA_DIR", &data_dir);
+
+    assert_eq!(file_handler::get_cache_dir(), data_dir.join("cache"));
+}
+
+#[test]
+fn lightkeeper_cache_dir_env_overrides_data_and_xdg() {
+    let cache_dir = unique_target_dir("lk-cache-env");
+    let _wrong_xdg = EnvVarGuard::set("XDG_CACHE_HOME", unique_target_dir("wrong-xdg-cache"));
+    let _wrong_data = EnvVarGuard::set("LIGHTKEEPER_DATA_DIR", unique_target_dir("wrong-data"));
+    let _lk_cache = EnvVarGuard::set("LIGHTKEEPER_CACHE_DIR", &cache_dir);
+
+    assert_eq!(file_handler::get_cache_dir(), cache_dir);
 }
