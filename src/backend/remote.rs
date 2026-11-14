@@ -16,6 +16,13 @@ use ssh2;
 
 use super::api::{CommandBackend, ConfigBackend, LocalBackendApi};
 use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
+use super::docker_path_maps::{
+    docker_mounts_shell,
+    rewrite_args_with_bind_maps,
+    rewrite_path_value,
+    select_bind_maps_for_socket,
+    BindPathMap,
+};
 use super::remote_config::RemoteConfigBackend;
 use super::ssh_auth::{self, HostKeyChallenge, SshAuthError};
 use super::ssh_transport::Ssh2DirectStreamLocalTransport;
@@ -363,6 +370,15 @@ pub fn build_desktop_rsync_command(
     plan: &FileTransferPlan,
     local_path: &str,
 ) -> Result<ShellCommand, LkError> {
+    build_desktop_rsync_command_with_maps(profile, plan, local_path, &BindPathMap::new())
+}
+
+fn build_desktop_rsync_command_with_maps(
+    profile: &configuration::CoreConnectionProfile,
+    plan: &FileTransferPlan,
+    local_path: &str,
+    host_path_maps: &BindPathMap,
+) -> Result<ShellCommand, LkError> {
     if local_path.is_empty() {
         return Err(LkError::other("Local path is empty"));
     }
@@ -374,9 +390,16 @@ pub fn build_desktop_rsync_command(
     let remote_spec = plan.ssh.remote_spec(&plan.address, &plan.remote_path, is_upload)?;
 
     // Local socket: OpenSSH runs on the desktop, so ignore core-local known_hosts paths (e.g. Docker /config).
-    // Nested SSH: keep the plan paths; they must be valid on the core login host.
+    // Nested SSH: rewrite container paths to login-host paths when maps are available.
     let inner_ssh = if profile.is_configured() {
-        plan.ssh.ssh_arguments()?
+        let mut ssh = plan.ssh.clone();
+        if let Some(key_path) = ssh.private_key_path.as_mut() {
+            *key_path = rewrite_path_value(key_path, host_path_maps);
+        }
+        if let Some(known_hosts) = ssh.custom_known_hosts_path.as_mut() {
+            *known_hosts = PathBuf::from(rewrite_path_value(&known_hosts.to_string_lossy(), host_path_maps));
+        }
+        ssh.ssh_arguments()?
     }
     else {
         let mut ssh = plan.ssh.clone();
@@ -452,6 +475,7 @@ pub struct RemoteCoreClient {
     profile: Mutex<configuration::CoreConnectionProfile>,
     status: Arc<Mutex<CoreConnectionStatus>>,
     host_key_challenge: Mutex<Option<HostKeyChallenge>>,
+    host_path_maps: Mutex<Option<BindPathMap>>,
 }
 
 impl RemoteCoreClient {
@@ -471,6 +495,7 @@ impl RemoteCoreClient {
             profile: Mutex::new(configuration::CoreConnectionProfile::default()),
             status: Arc::new(Mutex::new(CoreConnectionStatus::default())),
             host_key_challenge: Mutex::new(None),
+            host_path_maps: Mutex::new(None),
         }
     }
 
@@ -484,6 +509,16 @@ impl RemoteCoreClient {
 
     pub fn set_profile(&self, profile: configuration::CoreConnectionProfile) {
         *self.profile.lock().unwrap() = profile;
+        *self.host_path_maps.lock().unwrap() = None;
+    }
+
+    fn cached_host_path_maps(&self) -> BindPathMap {
+        if let Some(maps) = self.host_path_maps.lock().unwrap().clone() {
+            return maps;
+        }
+        let maps = resolve_host_path_maps(&self.profile());
+        *self.host_path_maps.lock().unwrap() = Some(maps.clone());
+        maps
     }
 
     pub fn host_key_challenge(&self) -> Option<HostKeyChallenge> {
@@ -1172,6 +1207,7 @@ impl RemoteCoreClient {
     }
 
     fn desktop_shell_command(&self, remote_command: Vec<String>) -> ShellCommand {
+        let remote_command = rewrite_args_with_bind_maps(remote_command, &self.cached_host_path_maps());
         match wrap_command_via_core_ssh(&self.profile(), remote_command) {
             Ok(command) => command,
             Err(error) => {
@@ -1180,6 +1216,107 @@ impl RemoteCoreClient {
             }
         }
     }
+}
+
+fn resolve_host_path_maps(profile: &configuration::CoreConnectionProfile) -> BindPathMap {
+    let Some(socket_path) = profile.remote_socket_path.as_ref().filter(|path| !path.is_empty())
+    else {
+        return Vec::new();
+    };
+
+    match discover_docker_bind_maps(profile, socket_path) {
+        Ok(maps) if !maps.is_empty() => {
+            ::log::debug!("Remapping core SSH paths from container host paths");
+            maps
+        }
+        Ok(_) => {
+            ::log::debug!("No container host paths; skipping SSH path remap");
+            Vec::new()
+        }
+        Err(error) => {
+            ::log::debug!("Container host path discovery failed: {}", error);
+            Vec::new()
+        }
+    }
+}
+
+const NO_CONTAINER_CLI: &str = "docker/podman not found";
+
+fn discover_docker_bind_maps(profile: &configuration::CoreConnectionProfile, socket_path: &str) -> Result<BindPathMap, String> {
+    match try_docker_bind_maps(profile, socket_path, false) {
+        Ok(maps) => Ok(maps),
+        // sudo cannot create a missing binary
+        Err(error) if error == NO_CONTAINER_CLI => Err(error),
+        Err(without_sudo_error) => {
+            // Passwordless sudo assumed when the login user needs it for docker/podman.
+            match try_docker_bind_maps(profile, socket_path, true) {
+                Ok(maps) => {
+                    ::log::debug!("Using sudo to discover container host paths");
+                    Ok(maps)
+                }
+                Err(_) => Err(without_sudo_error),
+            }
+        }
+    }
+}
+
+fn try_docker_bind_maps(
+    profile: &configuration::CoreConnectionProfile,
+    socket_path: &str,
+    use_sudo: bool,
+) -> Result<BindPathMap, String> {
+    let output = if profile.is_configured() {
+        docker_mounts_over_ssh(profile, use_sudo)?
+    }
+    else {
+        docker_mounts_local(use_sudo)?
+    };
+    let trimmed = output.trim();
+    if trimmed.is_empty() {
+        return Err(String::from("empty inspect output"));
+    }
+    if trimmed.starts_with("LK_NO_CONTAINERS") {
+        return Err(String::from("no containers"));
+    }
+    select_bind_maps_for_socket(&output, socket_path).ok_or_else(|| String::from("no matching bind mount"))
+}
+
+fn docker_mounts_status_error(prefix: &str, output: &std::process::Output) -> String {
+    if output.status.code() == Some(127) {
+        return String::from(NO_CONTAINER_CLI);
+    }
+    format!("{prefix}{}", String::from_utf8_lossy(&output.stderr).trim())
+}
+
+fn docker_mounts_local(use_sudo: bool) -> Result<String, String> {
+    let output = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(docker_mounts_shell(use_sudo))
+        .output()
+        .map_err(|error| error.to_string())?;
+    if !output.status.success() {
+        return Err(docker_mounts_status_error("docker inspect failed: ", &output));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+fn docker_mounts_over_ssh(profile: &configuration::CoreConnectionProfile, use_sudo: bool) -> Result<String, String> {
+    let known_hosts_path = ssh_auth::known_hosts_path(None).map_err(|error| error.to_ui_message())?;
+    let mut command = ShellCommand::new();
+    command.arguments(vec![
+        String::from("ssh"),
+        String::from("-o"),
+        String::from("BatchMode=yes"),
+        String::from("-o"),
+        format!("UserKnownHostsFile={}", known_hosts_path.to_string_lossy()),
+    ]);
+    command.arguments(core_ssh_arguments(profile));
+    command.argument(docker_mounts_shell(use_sudo));
+    let output = command.execute().map_err(|error| error.to_string())?;
+    if !output.status.success() {
+        return Err(docker_mounts_status_error("remote docker inspect failed: ", &output));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 pub struct RemoteCommandBackend {
@@ -1216,7 +1353,8 @@ impl RemoteCommandBackend {
         let (local_path, remote_path) = if is_upload { (first, second) } else { (second, first) };
 
         let plan = self.client.build_file_transfer_plan(host_id, command_id, remote_path)?;
-        let command = build_desktop_rsync_command(&self.client.profile(), &plan, local_path)?.to_string();
+        let maps = self.client.cached_host_path_maps();
+        let command = build_desktop_rsync_command_with_maps(&self.client.profile(), &plan, local_path, &maps)?.to_string();
         let invocation_id = plan.invocation_id;
         let (operation, partial_operation) = if is_upload {
             ("Upload", "Uploading")

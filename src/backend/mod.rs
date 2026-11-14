@@ -5,6 +5,7 @@
 
 mod api;
 mod core_connection;
+mod docker_path_maps;
 mod local;
 mod local_config;
 mod remote;
