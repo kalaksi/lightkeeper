@@ -450,7 +450,7 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 let lookup_key = secrets_manager::secret_lookup_key(&module_id, &source_id, &setting_key);
                 match runtime.secret_store.set(&lookup_key, &secret_value) {
                     Ok(()) => {
-                        let placeholder = format!("{}{}", secrets_manager::KEYRING_PREFIX, lookup_key);
+                        let placeholder = format!("{}{}", runtime.secret_store.identifier_prefix(), lookup_key);
                         session.send_message(&ServerMessage::StoreSecretResult { request_id, placeholder })?;
                     }
                     Err(error) => {

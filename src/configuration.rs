@@ -580,9 +580,9 @@ impl Configuration {
         for (group_id, group) in &all_groups.groups {
             for (connector_id, connector) in &group.connectors {
                 for (key, value) in &connector.settings {
-                    if value.starts_with(secrets_manager::INACTIVE_KEYRING_PREFIX) {
+                    if secrets_manager::uses_inactive_backend(value, secrets_manager::KEYRING_PREFIX) {
                         main_config.config_errors.push(format!(
-                            "Secret '{}/{}/{}' uses an incompatible keyring backend and needs to be re-entered",
+                            "Secret '{}/{}/{}' uses an incompatible secrets backend and needs to be re-entered",
                             group_id, connector_id, key
                         ));
                     }
@@ -593,51 +593,52 @@ impl Configuration {
         Ok((main_config, hosts, all_groups))
     }
 
-    /// Resolves keyring placeholders in `hosts.*.effective` for runtime connector use.
+    /// Resolves secret placeholders in `hosts.*.effective` for runtime connector use.
     pub fn resolve_secrets_in_hosts(hosts: &mut Hosts, secret_store: Arc<dyn SecretStore>) {
+        let active_prefix = secret_store.identifier_prefix();
         let mut secrets = secrets_manager::SecretsManager::new(secret_store);
         for host_config in hosts.hosts.values_mut() {
-            Self::resolve_secrets_in_effective_config(&mut host_config.effective, &mut secrets);
+            Self::resolve_secrets_in_effective_config(&mut host_config.effective, &mut secrets, active_prefix);
         }
     }
 
     fn resolve_secrets_in_effective_config(
         effective: &mut ConfigGroup,
         secrets: &mut secrets_manager::SecretsManager,
+        active_prefix: &str,
     ) {
         for (_connector_id, connector_config) in effective.connectors.iter_mut() {
             let to_resolve: Vec<(String, String)> = connector_config.settings.iter()
-                .filter(|(_, value)| value.starts_with(secrets_manager::KEYRING_PREFIX))
+                .filter(|(_, value)| value.starts_with(active_prefix))
                 .map(|(key, value)| (key.clone(), value.clone()))
                 .collect();
 
             for (key, placeholder_value) in to_resolve {
-                let lookup_key = placeholder_value[secrets_manager::KEYRING_PREFIX.len()..].to_string();
-
-                match secrets.get(&lookup_key) {
+                let lookup_key = &placeholder_value[active_prefix.len()..];
+                match secrets.get(lookup_key) {
                     Ok(Some(secret)) => {
                         connector_config.settings.insert(key, secret);
                     }
                     Ok(None) => {
-                        log::warn!("Keyring secret not found for {}", lookup_key);
-                        connector_config.settings.insert(key, format!("{}error", secrets_manager::KEYRING_PREFIX));
+                        log::warn!("Secret not found for {}", lookup_key);
+                        connector_config.settings.insert(key, format!("{}error", active_prefix));
                     }
-                    Err(e) => {
-                        log::warn!("Failed to get keyring secret for {}: {}", lookup_key, e);
-                        connector_config.settings.insert(key, format!("{}error", secrets_manager::KEYRING_PREFIX));
+                    Err(error) => {
+                        log::warn!("Failed to get secret for {}: {}", lookup_key, error);
+                        connector_config.settings.insert(key, format!("{}error", active_prefix));
                     }
                 }
             }
 
             // Mark settings that use an incompatible secrets backend as errors.
             let incompatible: Vec<String> = connector_config.settings.iter()
-                .filter(|(_, value)| value.starts_with(secrets_manager::INACTIVE_KEYRING_PREFIX))
+                .filter(|(_, value)| secrets_manager::uses_inactive_backend(value, active_prefix))
                 .map(|(key, _)| key.clone())
                 .collect();
 
             for key in incompatible {
-                log::warn!("Secret '{}' uses an incompatible keyring backend", key);
-                connector_config.settings.insert(key, format!("{}error", secrets_manager::KEYRING_PREFIX));
+                log::warn!("Secret '{}' uses an incompatible secrets backend", key);
+                connector_config.settings.insert(key, format!("{}error", active_prefix));
             }
         }
     }

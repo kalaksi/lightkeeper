@@ -26,10 +26,7 @@ pub const KEYRING_PREFIX: &str = NATIVE_KEYRING_PREFIX;
 #[cfg(feature = "flatpak")]
 pub const KEYRING_PREFIX: &str = PORTAL_KEYRING_PREFIX;
 
-#[cfg(feature = "native")]
-pub const INACTIVE_KEYRING_PREFIX: &str = PORTAL_KEYRING_PREFIX;
-#[cfg(feature = "flatpak")]
-pub const INACTIVE_KEYRING_PREFIX: &str = NATIVE_KEYRING_PREFIX;
+const ALL_SECRET_PREFIXES: &[&str] = &[NATIVE_KEYRING_PREFIX, PORTAL_KEYRING_PREFIX];
 
 #[cfg(feature = "flatpak")]
 static TOKIO_RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
@@ -56,11 +53,18 @@ pub trait SecretStore: Send + Sync {
     fn get(&self, key: &str) -> Result<Option<String>, LkError>;
     fn set(&self, key: &str, value: &str) -> Result<(), LkError>;
     fn delete(&self, key: &str) -> Result<(), LkError>;
+
+    /// Prefix written into config for secrets held by this store (e.g. `keyring:`).
+    fn identifier_prefix(&self) -> &'static str;
 }
 
 pub struct KeyringSecretStore;
 
 impl SecretStore for KeyringSecretStore {
+    fn identifier_prefix(&self) -> &'static str {
+        KEYRING_PREFIX
+    }
+
     #[cfg(feature = "native")]
     fn get(&self, key: &str) -> Result<Option<String>, LkError> {
         let entry = Entry::new(SERVICE_NAME, key)?;
@@ -169,6 +173,11 @@ pub fn detect_secret_backend(value: &str) -> &'static str {
     } else {
         "plaintext"
     }
+}
+
+/// True if `value` is a placeholder of some other secrets backend than the active one.
+pub fn uses_inactive_backend(value: &str, active_prefix: &str) -> bool {
+    ALL_SECRET_PREFIXES.iter().any(|prefix| *prefix != active_prefix && value.starts_with(prefix))
 }
 
 /// Keyring key for placeholder "keyring:SOURCE_ID". Works for any module and setting.

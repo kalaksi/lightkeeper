@@ -10,7 +10,7 @@ use hex::FromHex;
 use ssh2;
 
 use crate::file_handler;
-use crate::secrets_manager::{self, SecretStore, KEYRING_PREFIX};
+use crate::secrets_manager::{self, SecretStore};
 use crate::utils::sha256;
 
 /// Auth material for a remote core host SSH session (parity with the ssh connector).
@@ -219,12 +219,12 @@ pub fn authenticate(session: &ssh2::Session, auth: &SshAuthOptions) -> Result<()
     Err(SshAuthError::other("Failed to authenticate with SSH agent"))
 }
 
-/// Resolves a profile secret field that may be plaintext or a `keyring:` placeholder.
+/// Resolves a profile secret field that may be plaintext or a stored-secret placeholder.
 pub fn resolve_secret_value(store: &dyn SecretStore, stored: &str) -> Result<Option<String>, SshAuthError> {
     if stored.is_empty() {
         return Ok(None);
     }
-    if let Some(lookup_key) = stored.strip_prefix(KEYRING_PREFIX) {
+    if let Some(lookup_key) = stored.strip_prefix(store.identifier_prefix()) {
         if lookup_key.is_empty() || lookup_key == "error" {
             return Err(SshAuthError::other("Core SSH secret placeholder is invalid"));
         }
@@ -233,10 +233,8 @@ pub fn resolve_secret_value(store: &dyn SecretStore, stored: &str) -> Result<Opt
             .map_err(|error| SshAuthError::other(error.to_string()))
             .map(|value| value.filter(|text| !text.is_empty()));
     }
-    if stored.starts_with(secrets_manager::INACTIVE_KEYRING_PREFIX) {
-        return Err(SshAuthError::other(
-            "Core SSH secret uses the inactive keyring prefix for this build",
-        ));
+    if secrets_manager::uses_inactive_backend(stored, store.identifier_prefix()) {
+        return Err(SshAuthError::other("Core SSH secret uses an incompatible secrets backend"));
     }
     Ok(Some(stored.to_string()))
 }
@@ -246,7 +244,7 @@ pub fn store_core_secret(store: &dyn SecretStore, setting_key: &str, secret_valu
     store
         .set(&lookup_key, secret_value)
         .map_err(|error| SshAuthError::other(error.to_string()))?;
-    Ok(format!("{}{}", KEYRING_PREFIX, lookup_key))
+    Ok(format!("{}{}", store.identifier_prefix(), lookup_key))
 }
 
 pub fn get_core_secret(store: &dyn SecretStore, setting_key: &str) -> Result<Option<String>, SshAuthError> {

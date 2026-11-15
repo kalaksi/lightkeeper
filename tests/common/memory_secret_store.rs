@@ -22,6 +22,10 @@ impl MemorySecretStore {
 }
 
 impl SecretStore for MemorySecretStore {
+    fn identifier_prefix(&self) -> &'static str {
+        lightkeeper::secrets_manager::KEYRING_PREFIX
+    }
+
     fn get(&self, key: &str) -> Result<Option<String>, LkError> {
         Ok(self.entries.lock().unwrap().get(key).cloned())
     }
