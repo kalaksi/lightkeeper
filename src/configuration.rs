@@ -624,6 +624,7 @@ impl Configuration {
                     }
                     Err(e) => {
                         log::warn!("Failed to get keyring secret for {}: {}", lookup_key, e);
+                        connector_config.settings.insert(key, format!("{}error", secrets_manager::KEYRING_PREFIX));
                     }
                 }
             }
