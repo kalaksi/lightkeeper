@@ -34,6 +34,17 @@ Item {
     // Extra lookback so charts can continue the line toward samples just
     // outside the selected period.
     property int _chartLookbackSeconds: 7 * 24 * 60 * 60
+    readonly property string _chartRangeText: {
+        if (root._chartStartTimeSec <= 0 || root._chartEndTimeSec <= 0) {
+            return ""
+        }
+        // Prefer Locale.toString over Qt.formatDateTime(..., Locale.ShortFormat):
+        // ShortFormat == 1 == Qt.ISODate, so formatDateTime treats it as ISO.
+        let locale = Qt.locale()
+        let start = locale.toString(new Date(root._chartStartTimeSec * 1000), Locale.ShortFormat)
+        let end = locale.toString(new Date(root._chartEndTimeSec * 1000), Locale.ShortFormat)
+        return start + " - " + end
+    }
 
     signal refreshRequested()
 
@@ -70,6 +81,16 @@ Item {
             backgroundColor: Theme.backgroundColor
             borderColor: Theme.borderColor
             borderBottom: 1
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            text: root._chartRangeText
+            visible: root._chartRangeText !== ""
+            color: Theme.textColor
+            font.pointSize: Theme.fontSize
+            z: 1
         }
 
         RowLayout {

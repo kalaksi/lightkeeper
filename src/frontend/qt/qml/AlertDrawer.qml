@@ -327,7 +327,7 @@ Item {
                                     spacing: Theme.spacingTight
 
                                     SmallText {
-                                        text: Qt.formatDateTime(new Date(modelData.time * 1000), "yyyy-MM-dd hh:mm:ss")
+                                        text: Qt.locale().toString(new Date(modelData.time * 1000), Locale.ShortFormat)
                                         color: Theme.textColorDark
                                         Layout.fillWidth: true
                                     }
