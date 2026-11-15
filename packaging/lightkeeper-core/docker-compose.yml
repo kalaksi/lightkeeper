@@ -12,6 +12,7 @@ services:
     volumes:
       # Lightkeeper configuration files, SSH keys, known_hosts.
       - ./config:/config
-      # Data and the unix socket (core.sock). For Docker, set Socket path in the
-      # core connection dialog to the absolute host path, e.g. /.../data/core.sock.
+      # When using a container, set "Socket path" in Lightkeeper's core connection dialog to
+      # the absolute host path, e.g. /example/lightkeeper-core/data/core.sock.
+      # Data and the unix socket (core.sock).
       - ./data:/data
