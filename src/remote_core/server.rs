@@ -491,18 +491,16 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                 }
             },
-            ClientMessage::RemoteEditorShellPlan { request_id, host_id, remote_file_path } => match runtime
-                .core
-                .command_handler
-                .build_editor_shell_plan(&host_id, &remote_file_path)
-            {
-                Ok(plan) => {
-                    session.send_message(&ServerMessage::RemoteShellPlanResult { request_id, plan })?;
+            ClientMessage::RemoteEditorShellPlan { request_id, host_id, remote_file_path } => {
+                match runtime.core.command_handler.build_editor_shell_plan(&host_id, &remote_file_path) {
+                    Ok(plan) => {
+                        session.send_message(&ServerMessage::RemoteShellPlanResult { request_id, plan })?;
+                    }
+                    Err(error) => {
+                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                    }
                 }
-                Err(error) => {
-                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
-                }
-            },
+            }
             ClientMessage::FileTransferPlan {
                 request_id,
                 host_id,
@@ -576,10 +574,10 @@ impl CoreListener {
             let stream = match listener.accept() {
                 Ok((stream, _)) => stream,
                 Err(error) => match error.kind() {
-                    io::ErrorKind::Interrupted |
-                    io::ErrorKind::ConnectionAborted |
-                    io::ErrorKind::ConnectionReset |
-                    io::ErrorKind::WouldBlock => {
+                    io::ErrorKind::Interrupted
+                    | io::ErrorKind::ConnectionAborted
+                    | io::ErrorKind::ConnectionReset
+                    | io::ErrorKind::WouldBlock => {
                         log::debug!("Ignoring transient accept error: {}", error);
                         continue;
                     }

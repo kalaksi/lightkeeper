@@ -46,11 +46,7 @@ pub fn set_socket_permissions(socket_path: &Path) -> io::Result<()> {
 /// Rejects peers whose kernel-attested UID differs from this process (Linux `SO_PEERCRED`).
 #[cfg(target_os = "linux")]
 pub fn verify_peer_uid(stream: &UnixStream) -> io::Result<()> {
-    let mut cred = libc::ucred {
-        pid: 0,
-        uid: 0,
-        gid: 0,
-    };
+    let mut cred = libc::ucred { pid: 0, uid: 0, gid: 0 };
     let mut length = std::mem::size_of_val(&cred) as libc::socklen_t;
     let result = unsafe {
         libc::getsockopt(
@@ -69,10 +65,7 @@ pub fn verify_peer_uid(stream: &UnixStream) -> io::Result<()> {
     if cred.uid != our_uid {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
-            format!(
-                "peer uid {} does not match effective uid {}",
-                cred.uid, our_uid
-            ),
+            format!("peer uid {} does not match effective uid {}", cred.uid, our_uid),
         ));
     }
     Ok(())

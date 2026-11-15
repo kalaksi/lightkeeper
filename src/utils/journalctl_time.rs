@@ -34,25 +34,25 @@ fn is_relative_journalctl_time(value: &str) -> bool {
 
     matches!(
         &rest[digit_end..],
-        "s" | "sec" |
-            "secs" |
-            "second" |
-            "seconds" |
-            "m" |
-            "min" |
-            "mins" |
-            "minute" |
-            "minutes" |
-            "h" |
-            "hr" |
-            "hrs" |
-            "hour" |
-            "hours" |
-            "d" |
-            "day" |
-            "days" |
-            "w" |
-            "week" |
-            "weeks"
+        "s" | "sec"
+            | "secs"
+            | "second"
+            | "seconds"
+            | "m"
+            | "min"
+            | "mins"
+            | "minute"
+            | "minutes"
+            | "h"
+            | "hr"
+            | "hrs"
+            | "hour"
+            | "hours"
+            | "d"
+            | "day"
+            | "days"
+            | "w"
+            | "week"
+            | "weeks"
     )
 }

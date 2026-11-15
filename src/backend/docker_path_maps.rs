@@ -75,8 +75,8 @@ pub fn select_bind_maps_for_socket(inspect_output: &str, socket_path: &str) -> O
         let binds: BindPathMap = mounts
             .into_iter()
             .filter(|mount| {
-                mount.source.as_deref().is_some_and(|source| source.starts_with('/')) &&
-                    mount.destination.as_deref().is_some_and(|destination| !destination.is_empty())
+                mount.source.as_deref().is_some_and(|source| source.starts_with('/'))
+                    && mount.destination.as_deref().is_some_and(|destination| !destination.is_empty())
             })
             .filter_map(|mount| Some((mount.destination?, mount.source?)))
             .collect();

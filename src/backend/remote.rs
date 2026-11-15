@@ -16,12 +16,7 @@ use ssh2;
 
 use super::api::{CommandBackend, ConfigBackend, LocalBackendApi};
 use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
-use super::docker_path_maps::{
-    docker_mounts_shell,
-    rewrite_path_value,
-    select_bind_maps_for_socket,
-    BindPathMap,
-};
+use super::docker_path_maps::{docker_mounts_shell, rewrite_path_value, select_bind_maps_for_socket, BindPathMap};
 use super::remote_config::RemoteConfigBackend;
 use super::ssh_auth::{self, HostKeyChallenge, SshAuthError};
 use super::ssh_transport::Ssh2DirectStreamLocalTransport;
@@ -165,28 +160,28 @@ struct PendingRpc {
 fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
     matches!(
         (kind, reply),
-        (PendingRpcKind::ExecuteCommand, PendingRpcReply::ExecuteCommand(_)) |
-            (PendingRpcKind::CommandsForHost, PendingRpcReply::CommandsForHost(_)) |
-            (PendingRpcKind::CommandForHost, PendingRpcReply::CommandForHost(_)) |
-            (PendingRpcKind::CustomCommandsForHost, PendingRpcReply::CustomCommandsForHost(_)) |
-            (PendingRpcKind::AllHostCategories, PendingRpcReply::AllHostCategories(_)) |
-            (PendingRpcKind::RefreshInvocationIds, PendingRpcReply::RefreshInvocationIds(_)) |
-            (PendingRpcKind::InitializeHosts, PendingRpcReply::InitializeHosts(_)) |
-            (PendingRpcKind::ResolveTextEditorPath, PendingRpcReply::ResolveTextEditorPath(_)) |
-            (PendingRpcKind::DownloadEditable, PendingRpcReply::DownloadEditable(_)) |
-            (PendingRpcKind::WriteCachedFile, PendingRpcReply::FileOpDone) |
-            (PendingRpcKind::RemoveCachedFile, PendingRpcReply::FileOpDone) |
-            (PendingRpcKind::HasCachedFileChanged, PendingRpcReply::FileChanged(_)) |
-            (PendingRpcKind::UploadFromCache, PendingRpcReply::UploadFromCache(_)) |
-            (PendingRpcKind::Config, PendingRpcReply::Config { .. }) |
-            (PendingRpcKind::WriteConfig, PendingRpcReply::WriteConfigOk) |
-            (PendingRpcKind::ApplyConfig, PendingRpcReply::ApplyConfig(_)) |
-            (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
-            (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
-            (PendingRpcKind::Ack, PendingRpcReply::Ack) |
-            (PendingRpcKind::ShellPlan, PendingRpcReply::ShellPlan(_)) |
-            (PendingRpcKind::FileTransfer, PendingRpcReply::FileTransfer(_)) |
-            (PendingRpcKind::MetricsQuery, PendingRpcReply::MetricsQuery(_))
+        (PendingRpcKind::ExecuteCommand, PendingRpcReply::ExecuteCommand(_))
+            | (PendingRpcKind::CommandsForHost, PendingRpcReply::CommandsForHost(_))
+            | (PendingRpcKind::CommandForHost, PendingRpcReply::CommandForHost(_))
+            | (PendingRpcKind::CustomCommandsForHost, PendingRpcReply::CustomCommandsForHost(_))
+            | (PendingRpcKind::AllHostCategories, PendingRpcReply::AllHostCategories(_))
+            | (PendingRpcKind::RefreshInvocationIds, PendingRpcReply::RefreshInvocationIds(_))
+            | (PendingRpcKind::InitializeHosts, PendingRpcReply::InitializeHosts(_))
+            | (PendingRpcKind::ResolveTextEditorPath, PendingRpcReply::ResolveTextEditorPath(_))
+            | (PendingRpcKind::DownloadEditable, PendingRpcReply::DownloadEditable(_))
+            | (PendingRpcKind::WriteCachedFile, PendingRpcReply::FileOpDone)
+            | (PendingRpcKind::RemoveCachedFile, PendingRpcReply::FileOpDone)
+            | (PendingRpcKind::HasCachedFileChanged, PendingRpcReply::FileChanged(_))
+            | (PendingRpcKind::UploadFromCache, PendingRpcReply::UploadFromCache(_))
+            | (PendingRpcKind::Config, PendingRpcReply::Config { .. })
+            | (PendingRpcKind::WriteConfig, PendingRpcReply::WriteConfigOk)
+            | (PendingRpcKind::ApplyConfig, PendingRpcReply::ApplyConfig(_))
+            | (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_))
+            | (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk)
+            | (PendingRpcKind::Ack, PendingRpcReply::Ack)
+            | (PendingRpcKind::ShellPlan, PendingRpcReply::ShellPlan(_))
+            | (PendingRpcKind::FileTransfer, PendingRpcReply::FileTransfer(_))
+            | (PendingRpcKind::MetricsQuery, PendingRpcReply::MetricsQuery(_))
     )
 }
 
@@ -1579,8 +1574,8 @@ impl CommandBackend for RemoteCommandBackend {
     }
 
     fn execute_command(&mut self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<u64, LkError> {
-        if *command_id == FileBrowserUpload::get_metadata().module_spec.id ||
-            *command_id == FileBrowserDownload::get_metadata().module_spec.id
+        if *command_id == FileBrowserUpload::get_metadata().module_spec.id
+            || *command_id == FileBrowserDownload::get_metadata().module_spec.id
         {
             return self.start_desktop_file_transfer(host_id, command_id, parameters);
         }

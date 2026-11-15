@@ -17,7 +17,9 @@ pub fn is_alphanumeric_with(string: &str, allowed_chars: &str) -> bool {
 }
 
 pub fn is_ascii_alphanumeric_with(string: &str, allowed_chars: &str) -> bool {
-    string.chars().all(|char| char.is_ascii_alphanumeric() || allowed_chars.contains(char))
+    string
+        .chars()
+        .all(|char| char.is_ascii_alphanumeric() || allowed_chars.contains(char))
 }
 
 pub fn begins_with_dash(string: &str) -> bool {
@@ -39,10 +41,7 @@ pub fn is_ssh_username(value: &str) -> bool {
 
 /// DNS-like hostname (ASCII); not an IP literal.
 pub fn is_hostname(value: &str) -> bool {
-    !value.is_empty()
-        && !begins_with_dash(value)
-        && is_ascii_alphanumeric_with(value, ".-_")
-        && !is_ipv4_host(value)
+    !value.is_empty() && !begins_with_dash(value) && is_ascii_alphanumeric_with(value, ".-_") && !is_ipv4_host(value)
 }
 
 pub fn is_ipv4_host(value: &str) -> bool {
@@ -66,9 +65,7 @@ pub fn is_ipv6_host(value: &str) -> bool {
         None => true,
         Some(zone) => {
             !zone.is_empty()
-                && !zone.contains(|c: char| {
-                    matches!(c, ':' | '@' | '/' | '%' | '[' | ']') || c.is_whitespace() || c.is_control()
-                })
+                && !zone.contains(|c: char| matches!(c, ':' | '@' | '/' | '%' | '[' | ']') || c.is_whitespace() || c.is_control())
         }
     }
 }
