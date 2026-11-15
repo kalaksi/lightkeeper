@@ -111,14 +111,13 @@ Item {
 
             ComboBox {
                 id: periodComboBox
-                model: ["24 hours", "7 days", "14 days", "30 days"]
+                model: ["24 hours", "3 days", "7 days"]
                 property var _periodSecondsList: [
                     24 * 60 * 60,
+                    3 * 24 * 60 * 60,
                     7 * 24 * 60 * 60,
-                    14 * 24 * 60 * 60,
-                    30 * 24 * 60 * 60,
                 ]
-                currentIndex: 1
+                currentIndex: 2
                 onCurrentIndexChanged: {
                     root._periodSeconds = _periodSecondsList[currentIndex]
                     if (root.hostId !== "") {
