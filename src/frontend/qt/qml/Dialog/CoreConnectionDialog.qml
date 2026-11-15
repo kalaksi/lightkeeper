@@ -34,8 +34,6 @@ LightkeeperDialog {
     // Install replaces an existing user-local core with the version matching this desktop.
     property bool installIsUpgrade: false
     property bool _loadingProfile: false
-    property var _pendingPassword: null
-    property var _pendingPassphrase: null
     property string _passwordSaveValue: ""
     property string _passphraseSaveValue: ""
     // "connect", "test", or "" - retry after trusting a host key.
@@ -400,17 +398,16 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     settingKey: "password"
                     saveValue: root._passwordSaveValue
+                    warningText: LK.config.coreSecretsBackendWarning(root._passwordSaveValue)
                     onRevealRequested: passwordField.revealSecret(root.resolveCoreSecret(passwordField))
                     onEditRequested: passwordField.openEditor(root.resolveCoreSecret(passwordField))
-                    storeSecret: function(value) { return LK.config.storeCoreSecret("password", value) }
-                    onSecretSubmitted: function(value, backend, placeholder) {
-                        if (placeholder !== "") {
-                            root._passwordSaveValue = placeholder
-                            root._pendingPassword = null
+                    onSecretSubmitted: function(value) {
+                        let result = LK.config.storeCoreSecret("password", value)
+                        if (!result.ok) {
+                            passwordField.openEditor(value, "Failed to store secret.")
+                            return
                         }
-                        else {
-                            root._pendingPassword = { value: value, backend: backend }
-                        }
+                        root._passwordSaveValue = result.value
                         root.saveProfile()
                     }
                 }
@@ -443,17 +440,16 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     settingKey: "private_key_passphrase"
                     saveValue: root._passphraseSaveValue
+                    warningText: LK.config.coreSecretsBackendWarning(root._passphraseSaveValue)
                     onRevealRequested: passphraseField.revealSecret(root.resolveCoreSecret(passphraseField))
                     onEditRequested: passphraseField.openEditor(root.resolveCoreSecret(passphraseField))
-                    storeSecret: function(value) { return LK.config.storeCoreSecret("private_key_passphrase", value) }
-                    onSecretSubmitted: function(value, backend, placeholder) {
-                        if (placeholder !== "") {
-                            root._passphraseSaveValue = placeholder
-                            root._pendingPassphrase = null
+                    onSecretSubmitted: function(value) {
+                        let result = LK.config.storeCoreSecret("private_key_passphrase", value)
+                        if (!result.ok) {
+                            passphraseField.openEditor(value, "Failed to store secret.")
+                            return
                         }
-                        else {
-                            root._pendingPassphrase = { value: value, backend: backend }
-                        }
+                        root._passphraseSaveValue = result.value
                         root.saveProfile()
                     }
                 }
@@ -592,8 +588,6 @@ LightkeeperDialog {
         agentKeyField.text = profile.agentKeyIdentifier || ""
         root._passwordSaveValue = profile.password || ""
         root._passphraseSaveValue = profile.privateKeyPassphrase || ""
-        root._pendingPassword = null
-        root._pendingPassphrase = null
         passwordField._revealedSecret = ""
         passphraseField._revealedSecret = ""
 
@@ -620,24 +614,7 @@ LightkeeperDialog {
     }
 
     function resolveCoreSecret(field) {
-        let pending = field.settingKey === "password" ? root._pendingPassword : root._pendingPassphrase
-        if (pending && pending.backend === "plaintext") {
-            return pending.value || ""
-        }
-        if ((field.saveValue || "").indexOf("keyring:") === 0 || (field.saveValue || "").indexOf("pkeyring:") === 0) {
-            return LK.config.getCoreSecret(field.settingKey) || ""
-        }
-        return field.saveValue || ""
-    }
-
-    function effectiveSecretValue(field, pending) {
-        if (pending) {
-            if (pending.backend === "plaintext") {
-                return pending.value
-            }
-            return LK.config.storeCoreSecret(field.settingKey, pending.value)
-        }
-        return field.saveValue || ""
+        return LK.config.revealCoreSecret(field.settingKey, field.saveValue || "")
     }
 
     function saveProfile() {
@@ -648,9 +625,7 @@ LightkeeperDialog {
         let agentKey = ""
 
         if (method === "password") {
-            password = root.effectiveSecretValue(passwordField, root._pendingPassword)
-            root._passwordSaveValue = password
-            root._pendingPassword = null
+            password = root._passwordSaveValue || ""
             if (root._passphraseSaveValue !== "") {
                 LK.config.removeCoreSecret("private_key_passphrase")
                 root._passphraseSaveValue = ""
@@ -658,9 +633,7 @@ LightkeeperDialog {
         }
         else if (method === "key") {
             privateKeyPath = privateKeyPathField.text.trim()
-            passphrase = root.effectiveSecretValue(passphraseField, root._pendingPassphrase)
-            root._passphraseSaveValue = passphrase
-            root._pendingPassphrase = null
+            passphrase = root._passphraseSaveValue || ""
             if (root._passwordSaveValue !== "") {
                 LK.config.removeCoreSecret("password")
                 root._passwordSaveValue = ""

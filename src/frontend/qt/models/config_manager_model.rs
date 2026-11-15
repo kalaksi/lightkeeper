@@ -65,9 +65,11 @@ pub struct ConfigManagerModel {
     addSavedCoreAddress: qt_method!(fn(&self, address: QString)),
     getCoreConnection: qt_method!(fn(&self) -> QVariantMap),
     setCoreConnection: qt_method!(fn(&self, profile: QVariantMap)),
-    storeCoreSecret: qt_method!(fn(&self, setting_key: QString, secret_value: QString) -> QString),
-    getCoreSecret: qt_method!(fn(&self, setting_key: QString) -> QString),
+    storeCoreSecret: qt_method!(fn(&self, setting_key: QString, secret_value: QString) -> QVariantMap),
+    revealCoreSecret: qt_method!(fn(&self, setting_key: QString, config_value: QString) -> QString),
     removeCoreSecret: qt_method!(fn(&self, setting_key: QString)),
+    secretsBackendWarning: qt_method!(fn(&self, config_value: QString) -> QString),
+    coreSecretsBackendWarning: qt_method!(fn(&self, config_value: QString) -> QString),
 
     //
     // Host configuration
@@ -119,15 +121,26 @@ pub struct ConfigManagerModel {
     addGroupModule: qt_method!(fn(&self, group_name: QString, module_id: QString, module_type: QString)),
     getGroupModuleSettings: qt_method!(fn(&self, group_id: QString, module_id: QString) -> QStringList),
     getHostModuleSettings: qt_method!(fn(&self, host_id: QString, module_id: QString) -> QStringList),
-    detectSecretBackend: qt_method!(fn(&self, value: QString) -> QString),
+    prepareHostSecretOverride: qt_method!(fn(&self, inherited_value: QString) -> QString),
     getEffectiveModuleSettings: qt_method!(fn(&self, host_id: QString, grouplist: QStringList, module_type: QString) -> QString),
     getHostCategoryModuleSettings: qt_method!(fn(&self, host_id: QString, category: QString, module_type: QString) -> QString),
     updateHostCategoryModuleSettings: qt_method!(fn(&self, host_id: QString, monitor_settings: QString, command_settings: QString)),
-    storeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
-    getGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString),
+    storeGroupSecret: qt_method!(
+        fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QVariantMap
+    ),
+    revealGroupSecret: qt_method!(
+        fn(&self, group_id: QString, module_id: QString, setting_key: QString, config_value: QString) -> QString
+    ),
     removeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString)),
-    storeHostSecret: qt_method!(fn(&self, host_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString),
-    getHostSecret: qt_method!(fn(&self, host_id: QString, module_id: QString, setting_key: QString) -> QString),
+    storeHostSecret: qt_method!(
+        fn(&self, host_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QVariantMap
+    ),
+    revealHostSecret: qt_method!(
+        fn(&self, host_id: QString, module_id: QString, setting_key: QString, config_value: QString) -> QString
+    ),
+    discardHostSecret: qt_method!(
+        fn(&self, host_id: QString, module_id: QString, setting_key: QString, config_value: QString)
+    ),
     removeHostSecret: qt_method!(fn(&self, host_id: QString, module_id: QString, setting_key: QString)),
     checkConfigErrors: qt_method!(fn(&self) -> QStringList),
 
@@ -270,6 +283,16 @@ impl ConfigManagerModel {
             secrets_manager::SECRETSFILE_BACKEND
         }
         else if self.main_config.preferences.secrets_backend == secrets_manager::PLAINTEXT_BACKEND {
+            secrets_manager::PLAINTEXT_BACKEND
+        }
+        else {
+            secrets_manager::KEYRING_BACKEND
+        }
+    }
+
+    /// Backend used for core-connection SSH secrets (always local desktop store).
+    fn effective_core_secrets_backend(&self) -> &'static str {
+        if self.main_config.preferences.secrets_backend == secrets_manager::PLAINTEXT_BACKEND {
             secrets_manager::PLAINTEXT_BACKEND
         }
         else {
@@ -558,22 +581,37 @@ impl ConfigManagerModel {
         }
     }
 
-    fn storeCoreSecret(&self, setting_key: QString, secret_value: QString) -> QString {
-        // Always use the desktop keyring; remote core host SSH credentials must not go to remote core.
-        match crate::backend::ssh_auth::store_core_secret(
-            &crate::secrets_manager::KeyringSecretStore,
-            &setting_key.to_string(),
-            &secret_value.to_string(),
-        ) {
-            Ok(placeholder) => QString::from(placeholder),
-            Err(error) => {
-                self.error(QString::from(error.to_ui_message()));
-                QString::default()
-            }
-        }
+    fn storeCoreSecret(&self, setting_key: QString, secret_value: QString) -> QVariantMap {
+        // Desktop keyring only; remote core host SSH credentials must not go to remote core.
+        let setting_key = setting_key.to_string();
+        let secret_value = secret_value.to_string();
+        let backend = self.effective_core_secrets_backend();
+        let store = crate::secrets_manager::KeyringSecretStore;
+        self.secret_store_result(
+            &setting_key,
+            Self::config_value_for_secret(
+                backend,
+                &secret_value,
+                || {
+                    crate::backend::ssh_auth::store_core_secret(&store, &setting_key, &secret_value)
+                        .map_err(|error| error.to_ui_message())
+                },
+                || {
+                    crate::backend::ssh_auth::remove_core_secret(&store, &setting_key)
+                        .map_err(|error| error.to_ui_message())
+                },
+            ),
+        )
     }
 
-    fn getCoreSecret(&self, setting_key: QString) -> QString {
+    fn revealCoreSecret(&self, setting_key: QString, config_value: QString) -> QString {
+        let config_value = config_value.to_string();
+        if config_value.is_empty() {
+            return QString::default();
+        }
+        if !secrets_manager::is_stored_secrets_backend(secrets_manager::detect_secret_backend(&config_value)) {
+            return QString::from(config_value);
+        }
         match crate::backend::ssh_auth::get_core_secret(
             &crate::secrets_manager::KeyringSecretStore,
             &setting_key.to_string(),
@@ -584,6 +622,37 @@ impl ConfigManagerModel {
                 self.error(QString::from(error.to_ui_message()));
                 QString::default()
             }
+        }
+    }
+
+    fn secretsBackendWarning(&self, config_value: QString) -> QString {
+        QString::from(Self::secrets_backend_mismatch_warning(
+            &config_value.to_string(),
+            self.effective_secrets_backend(),
+        ))
+    }
+
+    fn coreSecretsBackendWarning(&self, config_value: QString) -> QString {
+        QString::from(Self::secrets_backend_mismatch_warning(
+            &config_value.to_string(),
+            self.effective_core_secrets_backend(),
+        ))
+    }
+
+    /// Empty when the config value already matches the active write backend (or is unset).
+    fn secrets_backend_mismatch_warning(config_value: &str, effective_backend: &str) -> String {
+        if config_value.is_empty() {
+            return String::new();
+        }
+        let stored = secrets_manager::detect_secret_backend(config_value);
+        if stored == effective_backend {
+            String::new()
+        }
+        else {
+            format!(
+                "Currently stored with {}. New save will use {}.",
+                stored, effective_backend
+            )
         }
     }
 
@@ -1024,8 +1093,16 @@ impl ConfigManagerModel {
         )
     }
 
-    fn detectSecretBackend(&self, value: QString) -> QString {
-        QString::from(secrets_manager::detect_secret_backend(&value.to_string()))
+    /// Config value to use when enabling a host override of an inherited secret.
+    fn prepareHostSecretOverride(&self, inherited_value: QString) -> QString {
+        let value = inherited_value.to_string();
+        if secrets_manager::is_stored_secrets_backend(secrets_manager::detect_secret_backend(&value)) {
+            // Don't reuse a group stored placeholder as a host override.
+            QString::from("")
+        }
+        else {
+            inherited_value
+        }
     }
 
     /// Returns a map with module IDs as keys and array of ModuleSettings as values.
@@ -1046,7 +1123,6 @@ impl ConfigManagerModel {
                         description: "".into(),
                         enabled: true,
                         is_secret: false,
-                        secret_backend: "plaintext".into(),
                         inherited_value: String::new(),
                         inherited_enabled: false,
                     }
@@ -1060,7 +1136,6 @@ impl ConfigManagerModel {
                         description: "".into(),
                         enabled: true,
                         is_secret: false,
-                        secret_backend: "plaintext".into(),
                         inherited_value: String::new(),
                         inherited_enabled: false,
                     }
@@ -1074,7 +1149,6 @@ impl ConfigManagerModel {
                         description: "".into(),
                         enabled: true,
                         is_secret: false,
-                        secret_backend: "plaintext".into(),
                         inherited_value: String::new(),
                         inherited_enabled: false,
                     }
@@ -1214,18 +1288,89 @@ impl ConfigManagerModel {
         }
     }
 
-    fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> QString {
-        match self.config_backend.as_ref().unwrap().store_secret(source_id, module_id, setting_key, secret_value) {
-            Ok(placeholder) => QString::from(placeholder),
-            Err(e) => {
-                ::log::warn!("Failed to store secret for {} {}: {}", module_id, setting_key, e);
-                self.error(QString::from(format!("Failed to store secret: {}", e)));
-                QString::default()
+    /// Turns UI `(secret, backend)` into the config string (placeholder, plaintext, or empty).
+    fn config_value_for_secret(
+        backend: &str,
+        secret_value: &str,
+        store: impl FnOnce() -> Result<String, String>,
+        clear: impl FnOnce() -> Result<(), String>,
+    ) -> Result<String, String> {
+        if secret_value.is_empty() || backend == secrets_manager::PLAINTEXT_BACKEND {
+            // Clear managed entry only when nothing will replace it in the active store.
+            if let Err(error) = clear() {
+                ::log::warn!("Failed to clear previous managed secret: {}", error);
             }
+            return Ok(if secret_value.is_empty() {
+                String::new()
+            }
+            else {
+                secret_value.to_string()
+            });
         }
+        if !secrets_manager::is_stored_secrets_backend(backend) {
+            return Err(format!("Unknown secrets backend '{}'", backend));
+        }
+        store()
     }
 
-    fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> QString {
+    fn secret_store_result(&self, setting_key: &str, result: Result<String, String>) -> QVariantMap {
+        let mut map = QVariantMap::default();
+        match result {
+            Ok(value) => {
+                map.insert("ok".into(), true.into());
+                map.insert("value".into(), QString::from(value).into());
+            },
+            Err(message) => {
+                ::log::warn!("{} ({})", message, setting_key);
+                self.error(QString::from(message));
+                map.insert("ok".into(), false.into());
+                map.insert("value".into(), QString::from("").into());
+            }
+        }
+        map
+    }
+
+    fn store_secret(
+        &self,
+        source_id: &str,
+        module_id: &str,
+        setting_key: &str,
+        secret_value: &str,
+    ) -> QVariantMap {
+        let backend = self.effective_secrets_backend();
+        let backend_ref = self.config_backend.as_ref().unwrap();
+        self.secret_store_result(
+            setting_key,
+            Self::config_value_for_secret(
+                backend,
+                secret_value,
+                || {
+                    backend_ref
+                        .store_secret(source_id, module_id, setting_key, secret_value)
+                        .map_err(|error| format!("Failed to store secret: {}", error))
+                },
+                || {
+                    backend_ref
+                        .remove_secret(source_id, module_id, setting_key)
+                        .map_err(|error| error.to_string())
+                },
+            ),
+        )
+    }
+
+    fn reveal_secret(
+        &self,
+        source_id: &str,
+        module_id: &str,
+        setting_key: &str,
+        config_value: &str,
+    ) -> QString {
+        if config_value.is_empty() {
+            return QString::default();
+        }
+        if !secrets_manager::is_stored_secrets_backend(secrets_manager::detect_secret_backend(config_value)) {
+            return QString::from(config_value);
+        }
         match self.config_backend.as_ref().unwrap().get_secret(source_id, module_id, setting_key) {
             Ok(Some(value)) => QString::from(value),
             Ok(None) => QString::default(),
@@ -1243,14 +1388,36 @@ impl ConfigManagerModel {
         }
     }
 
-    fn storeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString {
+    fn storeGroupSecret(
+        &self,
+        group_id: QString,
+        module_id: QString,
+        setting_key: QString,
+        secret_value: QString,
+    ) -> QVariantMap {
         let source_id = format!("group:{}", group_id.to_string());
-        self.store_secret(&source_id, &module_id.to_string(), &setting_key.to_string(), &secret_value.to_string())
+        self.store_secret(
+            &source_id,
+            &module_id.to_string(),
+            &setting_key.to_string(),
+            &secret_value.to_string(),
+        )
     }
 
-    fn getGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) -> QString {
+    fn revealGroupSecret(
+        &self,
+        group_id: QString,
+        module_id: QString,
+        setting_key: QString,
+        config_value: QString,
+    ) -> QString {
         let source_id = format!("group:{}", group_id.to_string());
-        self.get_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
+        self.reveal_secret(
+            &source_id,
+            &module_id.to_string(),
+            &setting_key.to_string(),
+            &config_value.to_string(),
+        )
     }
 
     fn removeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) {
@@ -1258,14 +1425,54 @@ impl ConfigManagerModel {
         self.remove_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
     }
 
-    fn storeHostSecret(&self, host_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QString {
+    fn storeHostSecret(
+        &self,
+        host_id: QString,
+        module_id: QString,
+        setting_key: QString,
+        secret_value: QString,
+    ) -> QVariantMap {
         let source_id = format!("host:{}", host_id.to_string());
-        self.store_secret(&source_id, &module_id.to_string(), &setting_key.to_string(), &secret_value.to_string())
+        self.store_secret(
+            &source_id,
+            &module_id.to_string(),
+            &setting_key.to_string(),
+            &secret_value.to_string(),
+        )
     }
 
-    fn getHostSecret(&self, host_id: QString, module_id: QString, setting_key: QString) -> QString {
+    fn revealHostSecret(
+        &self,
+        host_id: QString,
+        module_id: QString,
+        setting_key: QString,
+        config_value: QString,
+    ) -> QString {
         let source_id = format!("host:{}", host_id.to_string());
-        self.get_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
+        self.reveal_secret(
+            &source_id,
+            &module_id.to_string(),
+            &setting_key.to_string(),
+            &config_value.to_string(),
+        )
+    }
+
+    fn discardHostSecret(
+        &self,
+        host_id: QString,
+        module_id: QString,
+        setting_key: QString,
+        config_value: QString,
+    ) {
+        let config_value = config_value.to_string();
+        if config_value.is_empty() {
+            return;
+        }
+        if !secrets_manager::is_stored_secrets_backend(secrets_manager::detect_secret_backend(&config_value)) {
+            return;
+        }
+        let source_id = format!("host:{}", host_id.to_string());
+        self.remove_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
     }
 
     fn removeHostSecret(&self, host_id: QString, module_id: QString, setting_key: QString) {
@@ -1413,13 +1620,12 @@ impl ConfigManagerModel {
                 };
                 ModuleSetting {
                     key: setting_key.clone(),
-                    value: value.clone(),
+                    value,
                     inherited_value,
                     inherited_enabled,
                     description: description.clone(),
                     enabled,
                     is_secret: metadata.secrets.contains_key(setting_key),
-                    secret_backend: secrets_manager::detect_secret_backend(&value).to_string(),
                 }
             })
             .collect()
@@ -1471,8 +1677,6 @@ struct ModuleSetting {
     pub description: String,
     #[serde(rename = "isSecret", default)]
     pub is_secret: bool,
-    #[serde(rename = "secretBackend", default)]
-    pub secret_backend: String,
     /// Group-derived value for host-override editing (ignored when deserializing saves).
     #[serde(rename = "inheritedValue", default)]
     pub inherited_value: String,

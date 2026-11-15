@@ -241,7 +241,6 @@ ColumnLayout {
             if (found) {
                 fullSettings[i].value = found.value
                 fullSettings[i].enabled = found.enabled
-                fullSettings[i].secretBackend = LK.config.detectSecretBackend(found.value)
             }
         }
         return fullSettings

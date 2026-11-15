@@ -186,7 +186,7 @@ pub fn detect_secret_backend(value: &str) -> &'static str {
     }
 }
 
-pub fn is_stored_secret_backend(backend: &str) -> bool {
+pub fn is_stored_secrets_backend(backend: &str) -> bool {
     backend == KEYRING_BACKEND || backend == SECRETSFILE_BACKEND
 }
 

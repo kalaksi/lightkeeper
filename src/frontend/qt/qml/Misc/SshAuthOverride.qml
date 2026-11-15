@@ -146,25 +146,21 @@ Item {
                         SecretValueField {
                             id: passwordField
 
-                            // Pending edit: null = unchanged, otherwise { value, backend }.
+                            // Pending edit: null = unchanged, otherwise the new secret value.
                             property var _pending: null
-                            property string _initialBackend: "keyring"
                             property string _initialValue: ""
 
                             visible: methodCombo.currentValue === "password"
                             settingKey: "password"
                             description: "Password for the SSH connection."
                             saveValue: root._effectiveSaveValue(passwordField)
-                            backend: _pending !== null ? _pending.backend : _initialBackend
+                            warningText: LK.config.secretsBackendWarning(passwordField._initialValue)
                             allowReveal: !LK.isUsingRemoteCore()
                             onRevealRequested: passwordField.revealSecret(root._resolveSecret(passwordField))
                             onEditRequested: passwordField.openEditor(
                                 LK.isUsingRemoteCore() ? "" : root._resolveSecret(passwordField))
-                            onSecretSubmitted: function(value, backend) {
-                                if (value === undefined) {
-                                    return
-                                }
-                                passwordField._pending = { value: value, backend: backend }
+                            onSecretSubmitted: function(value) {
+                                passwordField._pending = value
                             }
 
                             Layout.fillWidth: true
@@ -182,25 +178,21 @@ Item {
                         SecretValueField {
                             id: passphraseField
 
-                            // Pending edit: null = unchanged, otherwise { value, backend }.
+                            // Pending edit: null = unchanged, otherwise the new secret value.
                             property var _pending: null
-                            property string _initialBackend: "keyring"
                             property string _initialValue: ""
 
                             visible: methodCombo.currentValue === "key"
                             settingKey: "private_key_passphrase"
                             description: "Passphrase for the private key file."
                             saveValue: root._effectiveSaveValue(passphraseField)
-                            backend: _pending !== null ? _pending.backend : _initialBackend
+                            warningText: LK.config.secretsBackendWarning(passphraseField._initialValue)
                             allowReveal: !LK.isUsingRemoteCore()
                             onRevealRequested: passphraseField.revealSecret(root._resolveSecret(passphraseField))
                             onEditRequested: passphraseField.openEditor(
                                 LK.isUsingRemoteCore() ? "" : root._resolveSecret(passphraseField))
-                            onSecretSubmitted: function(value, backend) {
-                                if (value === undefined) {
-                                    return
-                                }
-                                passphraseField._pending = { value: value, backend: backend }
+                            onSecretSubmitted: function(value) {
+                                passphraseField._pending = value
                             }
 
                             Layout.fillWidth: true
@@ -262,35 +254,30 @@ Item {
     }
 
     function _commitOneSecret(finalHostId, sshSettings, field, methodActive) {
-        let hadKeyringSecret = field._initialBackend === "keyring" && field._initialValue !== ""
-
         if (!methodActive) {
-            if (hadKeyringSecret) {
-                LK.config.removeHostSecret(finalHostId, "ssh", field.settingKey)
-            }
+            LK.config.discardHostSecret(
+                finalHostId, "ssh", field.settingKey, field._initialValue)
+            return
         }
-        else if (field._pending === null) {
-            // Untouched: keep original value (plaintext or keyring placeholder).
+
+        if (field._pending === null) {
             if (field._initialValue !== "") {
                 sshSettings[field.settingKey] = field._initialValue
             }
+            return
         }
-        else if (field._pending.value === "") {
-            if (hadKeyringSecret) {
-                LK.config.removeHostSecret(finalHostId, "ssh", field.settingKey)
+
+        // Late store: host id may only be final at save time.
+        let result = LK.config.storeHostSecret(
+            finalHostId, "ssh", field.settingKey, field._pending)
+        if (!result.ok) {
+            if (field._initialValue !== "") {
+                sshSettings[field.settingKey] = field._initialValue
             }
+            return
         }
-        else if (field._pending.backend === "keyring") {
-            let placeholder = LK.config.storeHostSecret(finalHostId, "ssh", field.settingKey, field._pending.value)
-            if (placeholder !== "") {
-                sshSettings[field.settingKey] = placeholder
-            }
-        }
-        else {
-            sshSettings[field.settingKey] = field._pending.value
-            if (hadKeyringSecret) {
-                LK.config.removeHostSecret(finalHostId, "ssh", field.settingKey)
-            }
+        if (result.value !== "") {
+            sshSettings[field.settingKey] = result.value
         }
     }
 
@@ -309,12 +296,10 @@ Item {
         let password = root._setting("password")
         passwordField._pending = null
         passwordField._initialValue = password.value
-        passwordField._initialBackend = password.secretBackend
 
         let passphrase = root._setting("private_key_passphrase")
         passphraseField._pending = null
         passphraseField._initialValue = passphrase.value
-        passphraseField._initialBackend = passphrase.secretBackend
     }
 
     function _setting(key) {
@@ -323,7 +308,12 @@ Item {
                 return root.moduleSettings[i]
             }
         }
-        return { key: key, value: "", enabled: false, secretBackend: "keyring", isSecret: false }
+        return {
+            key: key,
+            value: "",
+            enabled: false,
+            isSecret: false,
+        }
     }
 
     function _detectInitialMethodIndex() {
@@ -344,21 +334,16 @@ Item {
 
     function _effectiveSaveValue(field) {
         if (field._pending !== null) {
-            return field._pending.value !== "" ? "••••••" : ""
+            return field._pending !== "" ? "••••••" : ""
         }
         return field._initialValue !== "" ? "••••••" : ""
     }
 
     function _resolveSecret(field) {
         if (field._pending !== null) {
-            return field._pending.value
+            return field._pending
         }
-        if (field._initialValue === "") {
-            return ""
-        }
-        if (field._initialBackend === "keyring") {
-            return LK.config.getHostSecret(root.hostId, "ssh", field.settingKey) || ""
-        }
-        return field._initialValue
+        return LK.config.revealHostSecret(
+            root.hostId, "ssh", field.settingKey, field._initialValue)
     }
 }

@@ -263,16 +263,27 @@ Module {
             name: "storeCoreSecret"
             Parameter { name: "setting_key"; type: "string" }
             Parameter { name: "secret_value"; type: "string" }
-            type: "string"
+            type: "QVariantMap"
         }
         Method {
-            name: "getCoreSecret"
+            name: "revealCoreSecret"
             Parameter { name: "setting_key"; type: "string" }
+            Parameter { name: "config_value"; type: "string" }
             type: "string"
         }
         Method {
             name: "removeCoreSecret"
             Parameter { name: "setting_key"; type: "string" }
+        }
+        Method {
+            name: "secretsBackendWarning"
+            Parameter { name: "config_value"; type: "string" }
+            type: "string"
+        }
+        Method {
+            name: "coreSecretsBackendWarning"
+            Parameter { name: "config_value"; type: "string" }
+            type: "string"
         }
         Method { name: "addHost"; Parameter { name: "host_name"; type: "string" } }
         Method { name: "removeHost"; Parameter { name: "host_name"; type: "string" } }
@@ -384,9 +395,9 @@ Module {
             Parameter { name: "module_id"; type: "string" }
         }
         Method {
-            name: "detectSecretBackend"
+            name: "prepareHostSecretOverride"
             type: "string"
-            Parameter { name: "value"; type: "string" }
+            Parameter { name: "inherited_value"; type: "string" }
         }
         Method {
             name: "getEffectiveModuleSettings"
@@ -410,18 +421,19 @@ Module {
         }
         Method {
             name: "storeGroupSecret"
-            type: "string"
+            type: "QVariantMap"
             Parameter { name: "group_id"; type: "string" }
             Parameter { name: "module_id"; type: "string" }
             Parameter { name: "setting_key"; type: "string" }
             Parameter { name: "secret_value"; type: "string" }
         }
         Method {
-            name: "getGroupSecret"
+            name: "revealGroupSecret"
             type: "string"
             Parameter { name: "group_id"; type: "string" }
             Parameter { name: "module_id"; type: "string" }
             Parameter { name: "setting_key"; type: "string" }
+            Parameter { name: "config_value"; type: "string" }
         }
         Method {
             name: "removeGroupSecret"
@@ -431,18 +443,26 @@ Module {
         }
         Method {
             name: "storeHostSecret"
-            type: "string"
+            type: "QVariantMap"
             Parameter { name: "host_id"; type: "string" }
             Parameter { name: "module_id"; type: "string" }
             Parameter { name: "setting_key"; type: "string" }
             Parameter { name: "secret_value"; type: "string" }
         }
         Method {
-            name: "getHostSecret"
+            name: "revealHostSecret"
             type: "string"
             Parameter { name: "host_id"; type: "string" }
             Parameter { name: "module_id"; type: "string" }
             Parameter { name: "setting_key"; type: "string" }
+            Parameter { name: "config_value"; type: "string" }
+        }
+        Method {
+            name: "discardHostSecret"
+            Parameter { name: "host_id"; type: "string" }
+            Parameter { name: "module_id"; type: "string" }
+            Parameter { name: "setting_key"; type: "string" }
+            Parameter { name: "config_value"; type: "string" }
         }
         Method {
             name: "removeHostSecret"

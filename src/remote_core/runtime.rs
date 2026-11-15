@@ -13,10 +13,10 @@ use crate::error::LkError;
 use crate::file_handler;
 use crate::frontend;
 use crate::metrics::MetricsManager;
-#[cfg(feature = "core")]
-use crate::secrets_manager::{self, SecretStore};
 #[cfg(not(feature = "core"))]
 use crate::secrets_manager::SecretStore;
+#[cfg(feature = "core")]
+use crate::secrets_manager::{self, SecretStore};
 use crate::Configuration;
 use crate::CoreComponents;
 use crate::ModuleFactory;
@@ -40,9 +40,8 @@ impl CoreRuntime {
         secrets_key_file: Option<PathBuf>,
     ) -> Result<Self, LkError> {
         let data_dir = file_handler::get_data_dir()?;
-        let secret_store: Arc<dyn SecretStore> = Arc::new(
-            crate::file_secret_store::FileSecretStore::open(data_dir, secrets_key_file)?,
-        );
+        let secret_store: Arc<dyn SecretStore> =
+            Arc::new(crate::file_secret_store::FileSecretStore::open(data_dir, secrets_key_file)?);
         let active_prefix = secret_store.identifier_prefix();
         for (host_id, host_config) in &hosts_config.hosts {
             for (connector_id, connector_config) in &host_config.effective.connectors {

@@ -20,17 +20,15 @@ RowLayout {
     property string settingKey: ""
     property string description: ""
     property string saveValue: ""
-    property string backend: "keyring"
+    property string warningText: ""
     property bool allowReveal: true
-    // See SecretEditDialog.storeSecret.
-    property var storeSecret: null
     property string _revealedSecret: ""
 
     spacing: Theme.spacingNormal
 
     signal revealRequested()
     signal editRequested()
-    signal secretSubmitted(string value, string backend, string placeholder)
+    signal secretSubmitted(string value)
 
     TextField {
         id: maskedField
@@ -90,10 +88,9 @@ RowLayout {
 
     SecretEditDialog {
         id: secretDialog
-        storeSecret: root.storeSecret
 
-        onSecretSubmitted: function(value, backend, placeholder) {
-            root.secretSubmitted(value, backend, placeholder)
+        onSecretSubmitted: function(value) {
+            root.secretSubmitted(value)
             root._revealedSecret = ""
         }
     }
@@ -102,11 +99,13 @@ RowLayout {
         root._revealedSecret = value
     }
 
-    function openEditor(initialValue) {
+    function openEditor(initialValue, warningText) {
         secretDialog.settingKey = root.settingKey
         secretDialog.description = root.description
-        secretDialog.initialBackend = root.backend
         secretDialog.initialValue = initialValue
+        secretDialog.warningText = warningText !== undefined && warningText !== null
+            ? warningText
+            : root.warningText
         secretDialog.open()
     }
 }

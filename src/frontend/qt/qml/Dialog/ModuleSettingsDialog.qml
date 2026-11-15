@@ -115,9 +115,6 @@ LightkeeperDialog {
                     property string _inheritedValue: modelData.inheritedValue ?? ""
                     property bool _inheritedEnabled: modelData.inheritedEnabled === true
                     property string _secretSaveValue: modelData.isSecret === true ? modelData.value : ""
-                    property string _lastSecretBackend: ""
-                    property string _effectiveSecretBackend: _lastSecretBackend !== ""
-                        ? _lastSecretBackend : (modelData.secretBackend === "keyring" ? "keyring" : "plaintext")
                     property bool _enabled: toggleSwitch.checked
                     property bool _isSecret: modelData.isSecret === true
 
@@ -172,17 +169,13 @@ LightkeeperDialog {
                                     return
                                 }
                                 if (settingColumn._isSecret) {
-                                    if (toggleSwitch.checked
-                                        && LK.config.detectSecretBackend(settingColumn._inheritedValue) === "keyring") {
-                                        // Don't reuse a group keyring placeholder as a host override.
-                                        settingColumn._secretSaveValue = ""
-                                        settingColumn._lastSecretBackend = "plaintext"
+                                    if (toggleSwitch.checked) {
+                                        settingColumn._secretSaveValue =
+                                            LK.config.prepareHostSecretOverride(
+                                                settingColumn._inheritedValue)
                                     }
                                     else {
                                         settingColumn._secretSaveValue = settingColumn._inheritedValue
-                                        if (!toggleSwitch.checked) {
-                                            settingColumn._lastSecretBackend = ""
-                                        }
                                     }
                                 }
                                 else {
@@ -232,38 +225,25 @@ LightkeeperDialog {
                                 saveValue: toggleSwitch.checked || root._hostScoped
                                     ? settingColumn._secretSaveValue
                                     : ""
-                                backend: settingColumn._effectiveSecretBackend
+                                warningText: LK.config.secretsBackendWarning(
+                                    settingColumn._secretSaveValue !== ""
+                                        ? settingColumn._secretSaveValue
+                                        : (modelData.value ?? ""))
                                 allowReveal: !LK.isUsingRemoteCore()
                                 onRevealRequested: secretField.revealSecret(settingColumn.secretValue())
                                 onEditRequested: secretField.openEditor(
                                     LK.isUsingRemoteCore() ? "" : settingColumn.secretValue())
-                                storeSecret: function(value) {
-                                    // Errors also result in empty string.
-                                    return root._hostScoped
-                                        ? LK.config.storeHostSecret(root.hostId, root.moduleId, modelData.key, value)
-                                        : LK.config.storeGroupSecret(root.groupName, root.moduleId, modelData.key, value)
-                                }
-                                onSecretSubmitted: function(value, backend, placeholder) {
-                                    let wasSecretBackend = settingColumn._effectiveSecretBackend
-
-                                    if (root._hostScoped) {
-                                        if (value === "" || (backend === "plaintext" && wasSecretBackend === "keyring")) {
-                                            LK.config.removeHostSecret(root.hostId, root.moduleId, modelData.key)
-                                        }
+                                onSecretSubmitted: function(value) {
+                                    let result = root._hostScoped
+                                        ? LK.config.storeHostSecret(
+                                            root.hostId, root.moduleId, modelData.key, value)
+                                        : LK.config.storeGroupSecret(
+                                            root.groupName, root.moduleId, modelData.key, value)
+                                    if (!result.ok) {
+                                        secretField.openEditor(value, "Failed to store secret.")
+                                        return
                                     }
-                                    else if (root.groupName !== "") {
-                                        if (value === "" || (backend === "plaintext" && wasSecretBackend === "keyring")) {
-                                            LK.config.removeGroupSecret(root.groupName, root.moduleId, modelData.key)
-                                        }
-                                    }
-
-                                    if (backend === "keyring" && value !== "") {
-                                        settingColumn._secretSaveValue = placeholder
-                                    }
-                                    else {
-                                        settingColumn._secretSaveValue = value
-                                    }
-                                    settingColumn._lastSecretBackend = backend
+                                    settingColumn._secretSaveValue = result.value
                                 }
 
                                 Layout.fillWidth: true
@@ -310,15 +290,18 @@ LightkeeperDialog {
                         if (!toggleSwitch.checked && root._hostScoped) {
                             return settingColumn._inheritedValue
                         }
-                        if (settingColumn._effectiveSecretBackend === "keyring") {
-                            if (root._hostScoped) {
-                                return LK.config.getHostSecret(root.hostId, root.moduleId, modelData.key) || ""
-                            }
-                            if (root.groupName !== "") {
-                                return LK.config.getGroupSecret(root.groupName, root.moduleId, modelData.key) || ""
-                            }
+                        let configValue = settingColumn._secretSaveValue !== ""
+                            ? settingColumn._secretSaveValue
+                            : (modelData.value ?? "")
+                        if (root._hostScoped) {
+                            return LK.config.revealHostSecret(
+                                root.hostId, root.moduleId, modelData.key, configValue)
                         }
-                        return settingColumn._secretSaveValue !== "" ? settingColumn._secretSaveValue : (modelData.value ?? "")
+                        if (root.groupName !== "") {
+                            return LK.config.revealGroupSecret(
+                                root.groupName, root.moduleId, modelData.key, configValue)
+                        }
+                        return configValue
                     }
                 }
             }
