@@ -22,13 +22,15 @@ RowLayout {
     property string saveValue: ""
     property string backend: "keyring"
     property bool allowReveal: true
+    // See SecretEditDialog.storeSecret.
+    property var storeSecret: null
     property string _revealedSecret: ""
 
     spacing: Theme.spacingNormal
 
     signal revealRequested()
     signal editRequested()
-    signal secretSubmitted(string value, string backend)
+    signal secretSubmitted(string value, string backend, string placeholder)
 
     TextField {
         id: maskedField
@@ -88,9 +90,10 @@ RowLayout {
 
     SecretEditDialog {
         id: secretDialog
+        storeSecret: root.storeSecret
 
-        onSecretSubmitted: function(value, backend) {
-            root.secretSubmitted(value, backend)
+        onSecretSubmitted: function(value, backend, placeholder) {
+            root.secretSubmitted(value, backend, placeholder)
             root._revealedSecret = ""
         }
     }

@@ -537,6 +537,7 @@ impl ConfigManagerModel {
             &setting_key.to_string(),
         ) {
             ::log::warn!("Failed to remove core secret: {}", error.to_ui_message());
+            self.error(QString::from(format!("Failed to remove secret: {}", error.to_ui_message())));
         }
     }
 
@@ -1182,6 +1183,7 @@ impl ConfigManagerModel {
     fn remove_secret(&self, source_id: &str, module_id: &str, setting_key: &str) {
         if let Err(e) = self.config_backend.as_ref().unwrap().remove_secret(source_id, module_id, setting_key) {
             ::log::warn!("Failed to remove secret for {} {}: {}", module_id, setting_key, e);
+            self.error(QString::from(format!("Failed to remove secret: {}", e)));
         }
     }
 

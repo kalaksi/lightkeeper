@@ -402,8 +402,15 @@ LightkeeperDialog {
                     saveValue: root._passwordSaveValue
                     onRevealRequested: passwordField.revealSecret(root.resolveCoreSecret(passwordField))
                     onEditRequested: passwordField.openEditor(root.resolveCoreSecret(passwordField))
-                    onSecretSubmitted: function(value, backend) {
-                        root._pendingPassword = { value: value, backend: backend }
+                    storeSecret: function(value) { return LK.config.storeCoreSecret("password", value) }
+                    onSecretSubmitted: function(value, backend, placeholder) {
+                        if (placeholder !== "") {
+                            root._passwordSaveValue = placeholder
+                            root._pendingPassword = null
+                        }
+                        else {
+                            root._pendingPassword = { value: value, backend: backend }
+                        }
                         root.saveProfile()
                     }
                 }
@@ -438,8 +445,15 @@ LightkeeperDialog {
                     saveValue: root._passphraseSaveValue
                     onRevealRequested: passphraseField.revealSecret(root.resolveCoreSecret(passphraseField))
                     onEditRequested: passphraseField.openEditor(root.resolveCoreSecret(passphraseField))
-                    onSecretSubmitted: function(value, backend) {
-                        root._pendingPassphrase = { value: value, backend: backend }
+                    storeSecret: function(value) { return LK.config.storeCoreSecret("private_key_passphrase", value) }
+                    onSecretSubmitted: function(value, backend, placeholder) {
+                        if (placeholder !== "") {
+                            root._passphraseSaveValue = placeholder
+                            root._pendingPassphrase = null
+                        }
+                        else {
+                            root._pendingPassphrase = { value: value, backend: backend }
+                        }
                         root.saveProfile()
                     }
                 }

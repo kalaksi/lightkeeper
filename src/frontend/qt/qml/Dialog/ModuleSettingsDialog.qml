@@ -237,7 +237,13 @@ LightkeeperDialog {
                                 onRevealRequested: secretField.revealSecret(settingColumn.secretValue())
                                 onEditRequested: secretField.openEditor(
                                     LK.isUsingRemoteCore() ? "" : settingColumn.secretValue())
-                                onSecretSubmitted: function(value, backend) {
+                                storeSecret: function(value) {
+                                    // Errors also result in empty string.
+                                    return root._hostScoped
+                                        ? LK.config.storeHostSecret(root.hostId, root.moduleId, modelData.key, value)
+                                        : LK.config.storeGroupSecret(root.groupName, root.moduleId, modelData.key, value)
+                                }
+                                onSecretSubmitted: function(value, backend, placeholder) {
                                     let wasSecretBackend = settingColumn._effectiveSecretBackend
 
                                     if (root._hostScoped) {
@@ -252,13 +258,7 @@ LightkeeperDialog {
                                     }
 
                                     if (backend === "keyring" && value !== "") {
-                                        let placeholder = root._hostScoped
-                                            ? LK.config.storeHostSecret(root.hostId, root.moduleId, modelData.key, value)
-                                            : LK.config.storeGroupSecret(root.groupName, root.moduleId, modelData.key, value)
-                                        // Errors also result in empty string.
-                                        if (placeholder !== "") {
-                                            settingColumn._secretSaveValue = placeholder
-                                        }
+                                        settingColumn._secretSaveValue = placeholder
                                     }
                                     else {
                                         settingColumn._secretSaveValue = value
