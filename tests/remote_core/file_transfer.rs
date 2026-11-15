@@ -49,23 +49,41 @@ fn rsync_remote_spec_trailing_slash_by_direction() {
     assert_eq!(ssh.remote_spec("host.example", "/var/tmp", true).unwrap(), "alice@host.example:/var/tmp/");
     assert_eq!(ssh.remote_spec("host.example", "/var/tmp/", false).unwrap(), "alice@host.example:/var/tmp");
     assert_eq!(ssh.remote_spec("host.example", "/", false).unwrap(), "alice@host.example:/");
-
-    let ssh = RsyncSsh::new(&HashMap::new());
-    assert_eq!(ssh.remote_spec("10.0.0.1", "/var/tmp/", true).unwrap(), "10.0.0.1:/var/tmp/");
+    assert_eq!(ssh.remote_spec("[::1]", "/var/tmp", true).unwrap(), "alice@[::1]:/var/tmp/");
+    assert_eq!(
+        ssh.remote_spec("[2001:db8::1]", "/tmp/a:b", false).unwrap(),
+        "alice@[2001:db8::1]:/tmp/a:b"
+    );
+    assert!(ssh.remote_spec("::1", "/var/tmp", true).is_err());
+    assert!(RsyncSsh::new(&HashMap::new()).remote_spec("10.0.0.1", "/var/tmp/", true).is_err());
 }
 
 #[test]
 fn desktop_rsync_rejects_malicious_plan() {
     let _xdg_config = crate::redirect_xdg_config_home();
     let profile = CoreConnectionProfile::default();
-    for address in ["-oProxyCommand=touch /tmp/pwned", "/home/user/.bashrc", "host:", "a b", ""] {
+    for address in ["-oProxyCommand=touch /tmp/pwned", "/home/user/.bashrc", "host:", "::1", "a b", ""] {
         let plan = FileTransferPlan { address: address.to_string(), ..upload_plan() };
         assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_err());
     }
+    let plan = FileTransferPlan { address: String::from("[::1]"), ..upload_plan() };
+    assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_ok());
 
     let mut plan = upload_plan();
     plan.ssh.username = String::from("--rsh=touch /tmp/pwned");
     assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_err());
+    let mut plan = upload_plan();
+    plan.ssh.username.clear();
+    assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_err());
+
+    for remote_path in ["-rf", "/tmp/a b", ":module", ""] {
+        let plan = FileTransferPlan { remote_path: remote_path.to_string(), ..upload_plan() };
+        assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_err());
+    }
+    for remote_path in ["/tmp/a:b", "/tmp/a@b", "/tmp/file(1).txt", "/tmp/foo[bar]"] {
+        let plan = FileTransferPlan { remote_path: remote_path.to_string(), ..upload_plan() };
+        assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_ok());
+    }
 
     let mut plan = upload_plan();
     plan.ssh.private_key_path = Some(String::from(r#"x" "-oProxyCommand=touch /tmp/pwned"#));

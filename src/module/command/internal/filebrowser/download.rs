@@ -13,6 +13,7 @@ use crate::host::*;
 use crate::module::connection::ResponseMessage;
 use crate::module::*;
 use crate::module::command::{UIAction, *};
+use crate::utils::string_validation::*;
 use crate::utils::ShellCommand;
 use serde::{Deserialize, Serialize};
 use lightkeeper_module::command_module;
@@ -125,14 +126,20 @@ impl RsyncSsh {
     }
 
     /// Builds the remote `user@host:path` side of an rsync transfer.
-    /// Address and username are validated so the spec can't become an rsync option or a local path.
+    /// Address, username, and path are validated so the spec can't become an rsync option, daemon URL, or local path.
     pub fn remote_spec(&self, address: &str, remote_path: &str, for_upload: bool) -> Result<String, LkError> {
-        let is_invalid = |value: &str| {
-            value.starts_with('-') ||
-                value.contains(|c: char| matches!(c, ':' | '@' | '/') || c.is_whitespace() || c.is_control())
-        };
-        if address.is_empty() || is_invalid(address) || is_invalid(&self.username) {
+        // Username is required so the spec can't collapse into `rsync://...` daemon URL form.
+        if !is_ssh_username(&self.username) {
+            return Err(LkError::other("Invalid or empty SSH username"));
+        }
+        // Bracketed IPv6 is valid in `user@[::1]:path`; bare IPv6 is not (becomes daemon `::`).
+        let address_ok =
+            is_hostname(address) || is_ipv4_host(address) || is_bracketed_ipv6_host(address);
+        if !address_ok {
             return Err(LkError::other("Invalid host address or username"));
+        }
+        if !is_rsync_remote_path(remote_path) {
+            return Err(LkError::other("Invalid remote path"));
         }
 
         let path = if for_upload {
@@ -150,12 +157,7 @@ impl RsyncSsh {
             if trimmed.is_empty() { remote_path.to_string() } else { trimmed.to_string() }
         };
 
-        if self.username.is_empty() {
-            Ok(format!("{}:{}", address, path))
-        }
-        else {
-            Ok(format!("{}@{}:{}", self.username, address, path))
-        }
+        Ok(format!("{}@{}:{}", self.username, address, path))
     }
 
     /// Custom known hosts path or the default one, which is created if missing.

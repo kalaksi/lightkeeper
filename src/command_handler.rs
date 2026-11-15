@@ -1082,23 +1082,11 @@ pub fn shell_command_from_plan(plan: &RemoteShellPlan) -> Result<ShellCommand, L
         return Ok(ShellCommand::new_from(vec!["bash", "-c", script.as_str()]));
     }
 
-    let is_invalid_username = |value: &str| {
-        value.starts_with('-')
-            || value.contains(|c: char| matches!(c, ':' | '@' | '/') || c.is_whitespace() || c.is_control())
-    };
     // ssh takes the host as its own argv; bare or bracketed IPv6 are both fine.
-    let is_invalid_address = |value: &str| {
-        if string_validation::is_ipv6_host(value) {
-            return false;
-        }
-        value.starts_with('-')
-            || value.contains(|c: char| matches!(c, ':' | '@' | '/') || c.is_whitespace() || c.is_control())
-    };
-    if plan.address.is_empty() || is_invalid_address(&plan.address) || is_invalid_username(&plan.ssh.username) {
+    let address_ok =
+        string_validation::is_hostname(&plan.address) || string_validation::is_ip_address(&plan.address);
+    if !address_ok || !string_validation::is_ssh_username(&plan.ssh.username) {
         return Err(LkError::other("Invalid host address or username"));
-    }
-    if plan.ssh.username.is_empty() {
-        return Err(LkError::other("SSH username is empty"));
     }
 
     let mut command = ShellCommand::new();
