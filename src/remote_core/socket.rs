@@ -5,8 +5,9 @@
 
 use std::fs;
 use std::io;
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
-use std::os::unix::net::UnixListener;
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 
 use crate::error::LkError;
@@ -40,6 +41,46 @@ pub fn bind_listener(socket_path: &Path) -> io::Result<UnixListener> {
 
 pub fn set_socket_permissions(socket_path: &Path) -> io::Result<()> {
     fs::set_permissions(socket_path, fs::Permissions::from_mode(SOCKET_FILE_MODE))
+}
+
+/// Rejects peers whose kernel-attested UID differs from this process (Linux `SO_PEERCRED`).
+#[cfg(target_os = "linux")]
+pub fn verify_peer_uid(stream: &UnixStream) -> io::Result<()> {
+    let mut cred = libc::ucred {
+        pid: 0,
+        uid: 0,
+        gid: 0,
+    };
+    let mut length = std::mem::size_of_val(&cred) as libc::socklen_t;
+    let result = unsafe {
+        libc::getsockopt(
+            stream.as_raw_fd(),
+            libc::SOL_SOCKET,
+            libc::SO_PEERCRED,
+            &mut cred as *mut _ as *mut libc::c_void,
+            &mut length,
+        )
+    };
+    if result != 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    let our_uid = file_handler::effective_uid()?;
+    if cred.uid != our_uid {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            format!(
+                "peer uid {} does not match effective uid {}",
+                cred.uid, our_uid
+            ),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn verify_peer_uid(_stream: &UnixStream) -> io::Result<()> {
+    Ok(())
 }
 
 pub fn remove_stale_socket(socket_path: &Path) -> io::Result<()> {

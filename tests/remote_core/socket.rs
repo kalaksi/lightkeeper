@@ -50,6 +50,21 @@ fn bind_sets_socket_file_mode() {
 }
 
 #[test]
+fn verify_peer_uid_accepts_same_uid() {
+    let dir = crate::unique_target_dir("core-sock-peercred");
+    let socket_path = dir.join("core.sock");
+    socket::prepare_socket_path(&socket_path).unwrap();
+    let listener = socket::bind_listener(&socket_path).unwrap();
+
+    let connect_path = socket_path.clone();
+    let client = thread::spawn(move || UnixStream::connect(&connect_path).unwrap());
+
+    let (server_stream, _) = listener.accept().unwrap();
+    socket::verify_peer_uid(&server_stream).unwrap();
+    drop(client.join().unwrap());
+}
+
+#[test]
 fn second_client_is_rejected_while_first_is_connected() {
     let _ = env_logger::Builder::from_default_env().is_test(true).try_init();
 

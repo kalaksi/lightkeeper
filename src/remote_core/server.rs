@@ -590,6 +590,12 @@ impl CoreListener {
                 },
             };
 
+            if let Err(error) = socket::verify_peer_uid(&stream) {
+                log::warn!("Rejecting core client: {}", error);
+                let _ = stream.shutdown(Shutdown::Both);
+                continue;
+            }
+
             {
                 let mut active = accept_active.lock().unwrap();
                 if *active {
