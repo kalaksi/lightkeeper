@@ -44,6 +44,19 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.52.0" date="2026-11-15">
+      <description>
+        <ul>
+          <li>Publish remote core feature</li>
+          <li>Enable now non-experimental charts by default</li>
+          <li>Improve busybox support and file browser compatibility</li>
+          <li>Optimize symlink handling in file browser</li>
+          <li>Use correct scrollbar style in docker inspect</li>
+          <li>Prevent curl showing unneeded transfer stats</li>
+          <li>Change license from GPL to AGPL</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.51.2" date="2026-11-08">
       <description>
         <ul>

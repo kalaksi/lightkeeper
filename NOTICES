@@ -75,7 +75,7 @@ libc v0.2.182 MIT OR Apache-2.0
 libdbus-sys v0.2.7 Apache-2.0/MIT
 libssh2-sys v0.3.1 MIT OR Apache-2.0
 libz-sys v1.1.24 MIT OR Apache-2.0
-lightkeeper_module v0.1.0 (/home/user/git/lightkeeper/macros/lightkeeper_module) 
+lightkeeper_module v0.1.0 (/home/user/git/lightkeeper/macros/lightkeeper_module) AGPL-3.0-or-later
 lock_api v0.4.14 MIT OR Apache-2.0
 log v0.4.29 MIT OR Apache-2.0
 memchr v2.8.0 Unlicense OR MIT
