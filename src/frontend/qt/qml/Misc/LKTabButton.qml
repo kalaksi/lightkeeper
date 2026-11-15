@@ -78,7 +78,7 @@ TabButton {
             anchors.fill: parent 
             acceptedButtons: Qt.MiddleButton
             onClicked: function(mouse) {
-                if (mouse.button === Qt.MiddleButton) {
+                if (mouse.button === Qt.MiddleButton && root.showCloseButton) {
                     root.tabClosed()
                 }
             }

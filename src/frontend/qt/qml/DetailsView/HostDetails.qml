@@ -572,6 +572,7 @@ Item {
             hostId: hostId,
         }), {
             select: false,
+            canClose: false,
         })
     }
 
