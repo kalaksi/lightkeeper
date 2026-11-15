@@ -16,7 +16,7 @@ import ".."
 
 LightkeeperDialog {
     id: root
-    title: "Lightkeeper Core"
+    title: "Connect to Lightkeeper Core"
     implicitWidth: 580
     implicitHeight: 800
     standardButtons: Dialog.Close
