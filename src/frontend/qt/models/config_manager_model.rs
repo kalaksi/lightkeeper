@@ -224,12 +224,16 @@ impl ConfigManagerModel {
                 preferences.text_editor = local_config.preferences.text_editor;
                 preferences.terminal = local_config.preferences.terminal;
                 preferences.terminal_args = local_config.preferences.terminal_args;
+                preferences.secrets_backend = Self::sanitize_local_secrets_backend(
+                    &local_config.preferences.secrets_backend,
+                );
             }
             Err(error) => {
                 ::log::error!("Failed to read local configuration, using internal editor and terminal: {}", error);
                 preferences.text_editor = configuration::INTERNAL.to_string();
                 preferences.terminal = configuration::INTERNAL.to_string();
                 preferences.terminal_args = Vec::new();
+                preferences.secrets_backend = configuration::Preferences::default_secrets_backend();
             }
         }
         main_config
@@ -247,6 +251,32 @@ impl ConfigManagerModel {
         !self.main_config.preferences.use_sandbox_mode
     }
 
+    fn allow_secrets_backend_choice(&self) -> bool {
+        !self.is_remote_config_backend()
+    }
+
+    fn sanitize_local_secrets_backend(backend: &str) -> String {
+        if backend == secrets_manager::PLAINTEXT_BACKEND {
+            secrets_manager::PLAINTEXT_BACKEND.to_string()
+        }
+        else {
+            secrets_manager::KEYRING_BACKEND.to_string()
+        }
+    }
+
+    /// Backend used for new module/host/group secret writes this session.
+    fn effective_secrets_backend(&self) -> &'static str {
+        if self.is_remote_config_backend() {
+            secrets_manager::SECRETSFILE_BACKEND
+        }
+        else if self.main_config.preferences.secrets_backend == secrets_manager::PLAINTEXT_BACKEND {
+            secrets_manager::PLAINTEXT_BACKEND
+        }
+        else {
+            secrets_manager::KEYRING_BACKEND
+        }
+    }
+
     /// Session-only restrictions (sandbox / remote core). Does not overwrite the user's local desktop prefs file.
     fn apply_preference_restrictions(&mut self) {
         if !self.allow_external_text_editor() {
@@ -260,6 +290,10 @@ impl ConfigManagerModel {
             self.main_config.preferences.terminal = configuration::INTERNAL.to_string();
             self.main_config.preferences.terminal_args = Vec::new();
         }
+        // secrets_backend stays as the local keyring/plaintext choice; effective_secrets_backend()
+        // returns secretsfile while a remote config backend is active.
+        self.main_config.preferences.secrets_backend =
+            Self::sanitize_local_secrets_backend(&self.main_config.preferences.secrets_backend);
     }
 
     /// Desktop preferences are stored locally also when the configuration backend is a remote core.
@@ -269,6 +303,7 @@ impl ConfigManagerModel {
             // Remote core forces internal text editor in-session, keep the user's local choice on disk.
             if !remote {
                 local_config.preferences.text_editor = self.main_config.preferences.text_editor.clone();
+                local_config.preferences.secrets_backend = self.main_config.preferences.secrets_backend.clone();
             }
             local_config.preferences.terminal = self.main_config.preferences.terminal.clone();
             local_config.preferences.terminal_args = self.main_config.preferences.terminal_args.clone();
@@ -282,6 +317,7 @@ impl ConfigManagerModel {
     fn getPreferences(&self) -> QVariantMap {
         let allow_external_text_editor = self.allow_external_text_editor();
         let allow_external_terminal = self.allow_external_terminal();
+        let allow_secrets_backend_choice = self.allow_secrets_backend_choice();
 
         let mut preferences = QVariantMap::default();
         preferences.insert("refreshHostsOnStart".into(), self.main_config.preferences.refresh_hosts_on_start.into());
@@ -308,6 +344,16 @@ impl ConfigManagerModel {
             "Terminal to use when launching a remote shell. 'internal' is always used with flatpak."
         } else {
             "Terminal to use when launching a remote shell. Only 'internal' is available in flatpak."
+        }).into());
+        preferences.insert("secretsBackend".into(), QString::from(self.effective_secrets_backend()).into());
+        preferences.insert("allowSecretsBackendChoice".into(), allow_secrets_backend_choice.into());
+        preferences.insert("secretsBackendHelp".into(), QString::from(if allow_secrets_backend_choice {
+            "How new secrets are stored on this machine. Existing secrets keep their storage until re-entered."
+        } else {
+            concat!(
+                "Remote core stores secrets in an encrypted secrets file on the core host. ",
+                "Your local keyring/plaintext preference is kept for when you disconnect.",
+            )
         }).into());
         preferences.insert("closeToTray".into(), self.main_config.preferences.close_to_tray.into());
         preferences.insert("showMonitorNotifications".into(), self.main_config.preferences.show_monitor_notifications.into());
@@ -341,6 +387,16 @@ impl ConfigManagerModel {
         self.main_config.preferences.terminal = preferences.value("terminal".into(), QString::from("xterm").into()).to_qbytearray().to_string();
         self.main_config.preferences.terminal_args = preferences.value("terminalArgs".into(), QString::from("-e").into()).to_qbytearray().to_string()
                                                                 .split(' ').map(|arg| arg.to_string()).collect();
+        if self.allow_secrets_backend_choice() {
+            let secrets_backend = preferences
+                .value(
+                    "secretsBackend".into(),
+                    QString::from(configuration::Preferences::default_secrets_backend()).into(),
+                )
+                .to_qbytearray()
+                .to_string();
+            self.main_config.preferences.secrets_backend = Self::sanitize_local_secrets_backend(&secrets_backend);
+        }
         self.apply_preference_restrictions();
         self.main_config.preferences.close_to_tray = preferences.value("closeToTray".into(), true.into()).to_bool();
         self.main_config.preferences.show_monitor_notifications = preferences.value("showMonitorNotifications".into(), true.into()).to_bool();

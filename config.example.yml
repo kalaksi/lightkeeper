@@ -16,6 +16,9 @@ preferences:
   # If set to "internal", will use the integrated terminal.
   terminal: "internal"
   terminal_args: [""]
+  # How new secrets are stored on this machine: "keyring" or "plaintext".
+  # Existing secrets keep their storage until re-entered. Remote core uses an encrypted secrets file instead.
+  secrets_backend: "keyring"
   show_charts: true
 
 # Control category order, command buttons orders, colors. Defaults should be good.

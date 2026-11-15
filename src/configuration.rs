@@ -56,6 +56,12 @@ impl Default for Preferences {
     }
 }
 
+impl Preferences {
+    pub fn default_secrets_backend() -> String {
+        String::from("keyring")
+    }
+}
+
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Groups {
@@ -215,6 +221,9 @@ pub struct Preferences {
     /// Command to run when launching a terminal. "internal" is a special value that uses the internal terminal.
     pub terminal: String,
     pub terminal_args: Vec<String>,
+    /// Local desktop secrets backend for new writes: "keyring" or "plaintext". Remote core forces secretsfile in-session.
+    #[serde(default = "Preferences::default_secrets_backend")]
+    pub secrets_backend: String,
     #[serde(default = "DisplayOptions::default_to_true")]
     pub close_to_tray: bool,
     #[serde(default = "DisplayOptions::default_to_true")]

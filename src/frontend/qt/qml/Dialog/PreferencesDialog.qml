@@ -35,6 +35,9 @@ LightkeeperDialog {
             if (textEditorCombo) {
                 textEditorCombo._applyPreferences()
             }
+            if (secretsBackendCombo) {
+                secretsBackendCombo._applyPreferences()
+            }
         })
     }
 
@@ -50,6 +53,7 @@ LightkeeperDialog {
             })(),
             terminal: terminalAndArgs.text.split(" ")[0],
             terminalArgs: terminalAndArgs.text.split(" ").slice(1).join(" "),
+            secretsBackend: secretsBackendCombo.currentValue || root._preferences.secretsBackend || "keyring",
             showStatusBar: root._preferences.showStatusBar,
             showCharts: showCharts.checkState === Qt.Checked,
             closeToTray: closeToTray.checkState === Qt.Checked,
@@ -301,6 +305,60 @@ LightkeeperDialog {
                         checkState: root._preferences.sudoRemoteEditor ? Qt.Checked : Qt.Unchecked
 
                         Layout.leftMargin: content.width * 0.30
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Column {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Label {
+                            width: parent.width
+                            text: "Secrets backend"
+                        }
+
+                        SmallText {
+                            width: parent.width
+                            text: root._preferences.secretsBackendHelp || ""
+                            color: Theme.textColorDark
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    ComboBox {
+                        id: secretsBackendCombo
+                        textRole: "label"
+                        valueRole: "backendId"
+                        model: ListModel {
+                            ListElement { backendId: "keyring"; label: "keyring" }
+                            ListElement { backendId: "plaintext"; label: "plaintext" }
+                            ListElement { backendId: "secretsfile"; label: "secretsfile" }
+                        }
+                        delegate: ItemDelegate {
+                            required property string label
+                            required property string backendId
+                            width: ListView.view ? ListView.view.width : implicitWidth
+                            text: label
+                            enabled: root._preferences.allowSecretsBackendChoice
+                                ? backendId !== "secretsfile"
+                                : backendId === "secretsfile"
+                        }
+
+                        function _applyPreferences() {
+                            let backend = root._preferences.secretsBackend || "keyring"
+                            let index = ["keyring", "plaintext", "secretsfile"].indexOf(backend)
+                            currentIndex = index >= 0 ? index : 0
+                            if (!root._preferences.allowSecretsBackendChoice) {
+                                currentIndex = 2
+                            }
+                        }
+
+                        Component.onCompleted: _applyPreferences()
+
+                        Layout.preferredWidth: content.width * 0.35
                     }
                 }
 
