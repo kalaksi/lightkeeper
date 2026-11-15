@@ -676,6 +676,11 @@ Module {
         }
         Signal { name: "crashed" }
         Signal { name: "coreConnectionChanged" }
+        Signal {
+            name: "coreDialogOpFinished"
+            Parameter { name: "operation"; type: "string" }
+            Parameter { name: "error"; type: "string" }
+        }
         Signal { name: "restartRequested" }
         Signal {
             name: "timersChanged"

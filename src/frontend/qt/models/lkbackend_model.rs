@@ -80,6 +80,8 @@ pub struct LkBackend {
     // Somewhere, a panic has occurred and app needs to be reloaded.
     crashed: qt_signal!(),
     coreConnectionChanged: qt_signal!(),
+    /// Dialog Check / Install / host-key trust finished. `operation` is probeHost, probe, install, or verifyHostKey.
+    coreDialogOpFinished: qt_signal!(operation: QString, error: QString),
     // App should quit so it can be restarted in local mode.
     restartRequested: qt_signal!(),
     /// Seconds left on core-owned refresh timers. 0 means the trigger is due (or inactive).
@@ -353,28 +355,47 @@ impl LkBackend {
         self.sync_models_from_config();
     }
 
+    /// Starts a core handshake probe on a background thread; result via `coreDialogOpFinished("probe", ...)`.
     fn probeCore(&mut self) -> QString {
         let profile = self.config.borrow().core_connection_profile();
         if !profile.is_configured() {
             return QString::from("SSH host is required");
         }
 
-        let client = RemoteCoreClient::new(Self::local_core_socket_path());
-        client.set_profile(profile);
-        let result = client.probe();
-        self.core_version_mismatch = client.status().version_mismatch;
-        match result {
-            Ok(()) => {
-                self.last_host_key_challenge = None;
-                QString::from("")
+        let socket_path = Self::local_core_socket_path();
+        let self_ptr = QPointer::from(&*self);
+        let finish = qmetaobject::queued_callback(move |(version_mismatch, challenge, error): (
+            bool,
+            Option<HostKeyChallenge>,
+            String,
+        )| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                {
+                    let mut backend = self_pinned.borrow_mut();
+                    backend.core_version_mismatch = version_mismatch;
+                    backend.last_host_key_challenge = challenge;
+                }
+                self_pinned
+                    .borrow()
+                    .coreDialogOpFinished(QString::from("probe"), QString::from(error));
             }
-            Err(error) => {
-                self.last_host_key_challenge = client.host_key_challenge();
-                QString::from(error)
+        });
+
+        thread::spawn(move || {
+            let client = RemoteCoreClient::new(socket_path);
+            client.set_profile(profile);
+            let result = client.probe();
+            let version_mismatch = client.status().version_mismatch;
+            match result {
+                Ok(()) => finish((version_mismatch, None, String::new())),
+                Err(error) => finish((version_mismatch, client.host_key_challenge(), error)),
             }
-        }
+        });
+
+        QString::from("")
     }
 
+    /// Starts an SSH host probe on a background thread; result via `coreDialogOpFinished("probeHost", ...)`.
     fn probeCoreHost(&mut self) -> QString {
         let profile = self.config.borrow().core_connection_profile();
         if !profile.is_configured() {
@@ -382,25 +403,42 @@ impl LkBackend {
             return QString::from("SSH host is required");
         }
 
-        let cancel = std::sync::atomic::AtomicBool::new(false);
-        match probe_remote_core_host(&profile, &cancel) {
-            Ok(probe) => {
-                self.last_remote_core_host_probe = Some(probe);
-                self.last_host_key_challenge = None;
-                QString::from("")
+        let self_ptr = QPointer::from(&*self);
+        let finish = qmetaobject::queued_callback(move |result: Result<RemoteCoreHostProbe, SshAuthError>| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                let error = {
+                    let mut backend = self_pinned.borrow_mut();
+                    match result {
+                        Ok(probe) => {
+                            backend.last_remote_core_host_probe = Some(probe);
+                            backend.last_host_key_challenge = None;
+                            String::new()
+                        }
+                        Err(SshAuthError::HostKeyUnverified(challenge)) => {
+                            backend.last_remote_core_host_probe = None;
+                            let message = challenge.message.clone();
+                            backend.last_host_key_challenge = Some(challenge);
+                            message
+                        }
+                        Err(error) => {
+                            backend.last_remote_core_host_probe = None;
+                            backend.last_host_key_challenge = None;
+                            error.to_ui_message()
+                        }
+                    }
+                };
+                self_pinned
+                    .borrow()
+                    .coreDialogOpFinished(QString::from("probeHost"), QString::from(error));
             }
-            Err(SshAuthError::HostKeyUnverified(challenge)) => {
-                self.last_remote_core_host_probe = None;
-                let message = challenge.message.clone();
-                self.last_host_key_challenge = Some(challenge);
-                QString::from(message)
-            }
-            Err(error) => {
-                self.last_remote_core_host_probe = None;
-                self.last_host_key_challenge = None;
-                QString::from(error.to_ui_message())
-            }
-        }
+        });
+
+        thread::spawn(move || {
+            let cancel = std::sync::atomic::AtomicBool::new(false);
+            finish(probe_remote_core_host(&profile, &cancel));
+        });
+
+        QString::from("")
     }
 
     fn getCoreHostProbe(&self) -> QVariantMap {
@@ -452,16 +490,31 @@ impl LkBackend {
         self.last_remote_core_host_probe = None;
     }
 
+    /// Starts remote core install on a background thread; result via `coreDialogOpFinished("install", ...)`.
     fn installCore(&mut self) -> QString {
-        let Some(probe) = &self.last_remote_core_host_probe else {
+        let Some(probe) = self.last_remote_core_host_probe.clone() else {
             return QString::from("Check the connection before installing");
         };
         let profile = self.config.borrow().core_connection_profile();
-        let cancel = std::sync::atomic::AtomicBool::new(false);
-        match install_remote_core(&profile, probe, &cancel) {
-            Ok(()) => QString::from(""),
-            Err(error) => QString::from(error.to_ui_message()),
-        }
+
+        let self_ptr = QPointer::from(&*self);
+        let finish = qmetaobject::queued_callback(move |error: String| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned
+                    .borrow()
+                    .coreDialogOpFinished(QString::from("install"), QString::from(error));
+            }
+        });
+
+        thread::spawn(move || {
+            let cancel = std::sync::atomic::AtomicBool::new(false);
+            match install_remote_core(&profile, &probe, &cancel) {
+                Ok(()) => finish(String::new()),
+                Err(error) => finish(error.to_ui_message()),
+            }
+        });
+
+        QString::from("")
     }
 
     fn getCoreHostKeyChallenge(&self) -> QVariantMap {
@@ -478,20 +531,35 @@ impl LkBackend {
         self.last_host_key_challenge = None;
     }
 
+    /// Accepts a host key on a background thread; result via `coreDialogOpFinished("verifyHostKey", ...)`.
     fn verifyCoreHostKey(&mut self, key_id: QString) -> QString {
         let profile = self.config.borrow().core_connection_profile();
         if !profile.is_configured() {
             return QString::from("SSH host is required");
         }
         let key_id = key_id.to_string();
-        let cancel = std::sync::atomic::AtomicBool::new(false);
-        match accept_remote_core_host_key(&profile, &key_id, &cancel) {
-            Ok(()) => {
-                self.last_host_key_challenge = None;
-                QString::from("")
+
+        let self_ptr = QPointer::from(&*self);
+        let finish = qmetaobject::queued_callback(move |error: String| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                if error.is_empty() {
+                    self_pinned.borrow_mut().last_host_key_challenge = None;
+                }
+                self_pinned
+                    .borrow()
+                    .coreDialogOpFinished(QString::from("verifyHostKey"), QString::from(error));
             }
-            Err(error) => QString::from(error.to_ui_message()),
-        }
+        });
+
+        thread::spawn(move || {
+            let cancel = std::sync::atomic::AtomicBool::new(false);
+            match accept_remote_core_host_key(&profile, &key_id, &cancel) {
+                Ok(()) => finish(String::new()),
+                Err(error) => finish(error.to_ui_message()),
+            }
+        });
+
+        QString::from("")
     }
 
     /// Starts remote core connection on a background thread. Progress and completion are signaled via

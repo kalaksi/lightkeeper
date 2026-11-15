@@ -122,6 +122,21 @@ LightkeeperDialog {
                 LK.clearFailedCoreConnection()
             }
         }
+
+        function onCoreDialogOpFinished(operation, error) {
+            if (operation === "probeHost") {
+                root.onProbeHostFinished(error)
+            }
+            else if (operation === "probe") {
+                root.onProbeFinished(error)
+            }
+            else if (operation === "install") {
+                root.onInstallFinished(error)
+            }
+            else if (operation === "verifyHostKey") {
+                root.onVerifyHostKeyFinished(error)
+            }
+        }
     }
 
     ConfirmationDialog {
@@ -139,22 +154,8 @@ LightkeeperDialog {
             }
             root.busy = true
             let error = LK.verifyCoreHostKey(challenge.keyId)
-            root.busy = false
-            if (error === "") {
-                root.statusText = "Host key trusted"
-                root.statusHint = ""
-                root.errorText = ""
-                LK.clearCoreHostKeyChallenge()
-                let retry = root._pendingRetry
-                root._pendingRetry = ""
-                if (retry === "connect") {
-                    root.runConnect()
-                }
-                else if (retry === "test") {
-                    root.runCoreProbe()
-                }
-            }
-            else {
+            if (error !== "") {
+                root.busy = false
                 root.statusText = "Failed to trust host key"
                 root.statusHint = "Fix the problem and try again"
                 root.errorText = error
@@ -783,7 +784,12 @@ LightkeeperDialog {
         root.installIsUpgrade = false
         root.saveProfile()
         let error = LK.probeCoreHost()
-        root.busy = false
+        if (error !== "") {
+            root.onProbeHostFinished(error)
+        }
+    }
+
+    function onProbeHostFinished(error) {
         root.refreshProbeSummary()
         if (error === "") {
             let probe = LK.getCoreHostProbe()
@@ -791,48 +797,17 @@ LightkeeperDialog {
             let customSocketPath = socketPathField.text.trim() !== ""
             if (probe.socketPath) {
                 let coreError = LK.probeCore()
-                if (coreError === "") {
-                    root.statusText = "SSH connection works"
-                    root.statusHint = ""
-                    root.errorText = ""
-                    root.probeRecommendation = "Ready to Connect."
-                    root.coreStatus = "installed"
-                }
-                else if (root.offerHostKeyChallenge()) {
-                    root._pendingRetry = "test"
-                    root.statusText = "Host key verification required"
-                    root.statusHint = "Trust the host key to continue"
+                if (coreError !== "") {
+                    root.busy = false
+                    root.statusText = "Probe failed"
+                    root.statusHint = "Fix settings and Check again"
                     root.errorText = coreError
                     root.probeRecommendation = ""
                 }
-                else if (LK.isCoreVersionMismatch()) {
-                    root.statusText = "SSH connection works"
-                    root.statusHint = ""
-                    root.errorText = coreError
-                    root.coreStatus = "different version installed"
-                    if (customSocketPath) {
-                        root.probeRecommendation = "Upgrade the lightkeeper-core serving the configured socket "
-                            + "path, e.g. by updating the container image."
-                    }
-                    else if (probe.binaryPath === probe.installBinaryPath) {
-                        root.probeRecommendation = "Use Upgrade to install the matching user-local version."
-                        root.canInstall = true
-                        root.installIsUpgrade = true
-                    }
-                    else {
-                        root.probeRecommendation = "Upgrade lightkeeper-core at " + probe.binaryPath
-                            + " with the method it was installed with, e.g. the system package manager."
-                    }
-                }
-                else {
-                    root.statusText = "SSH connection works"
-                    root.statusHint = ""
-                    root.errorText = coreError
-                    root.probeRecommendation = "Socket is present but the core handshake failed."
-                    root.coreStatus = "installed, not responding"
-                }
+                return
             }
-            else if (customSocketPath) {
+            root.busy = false
+            if (customSocketPath) {
                 root.statusText = "SSH connection works"
                 root.statusHint = ""
                 root.errorText = ""
@@ -861,6 +836,7 @@ LightkeeperDialog {
             }
         }
         else if (root.offerHostKeyChallenge()) {
+            root.busy = false
             root._pendingRetry = "test"
             root.statusText = "Host key verification required"
             root.statusHint = "Trust the host key to continue"
@@ -869,6 +845,7 @@ LightkeeperDialog {
             root.probeRecommendation = ""
         }
         else {
+            root.busy = false
             root.statusText = "Probe failed"
             root.statusHint = "Fix settings and Check again"
             root.errorText = error
@@ -877,18 +854,97 @@ LightkeeperDialog {
         }
     }
 
+    function onProbeFinished(error) {
+        root.busy = false
+        let probe = LK.getCoreHostProbe()
+        let customSocketPath = socketPathField.text.trim() !== ""
+        if (error === "") {
+            root.statusText = "SSH connection works"
+            root.statusHint = ""
+            root.errorText = ""
+            root.probeRecommendation = "Ready to Connect."
+            root.coreStatus = "installed"
+        }
+        else if (root.offerHostKeyChallenge()) {
+            root._pendingRetry = "test"
+            root.statusText = "Host key verification required"
+            root.statusHint = "Trust the host key to continue"
+            root.errorText = error
+            root.probeRecommendation = ""
+        }
+        else if (LK.isCoreVersionMismatch()) {
+            root.statusText = "SSH connection works"
+            root.statusHint = ""
+            root.errorText = error
+            root.coreStatus = "different version installed"
+            if (customSocketPath) {
+                root.probeRecommendation = "Upgrade the lightkeeper-core serving the configured socket "
+                    + "path, e.g. by updating the container image."
+            }
+            else if (probe.binaryPath === probe.installBinaryPath) {
+                root.probeRecommendation = "Use Upgrade to install the matching user-local version."
+                root.canInstall = true
+                root.installIsUpgrade = true
+            }
+            else {
+                root.probeRecommendation = "Upgrade lightkeeper-core at " + probe.binaryPath
+                    + " with the method it was installed with, e.g. the system package manager."
+            }
+        }
+        else {
+            root.statusText = "SSH connection works"
+            root.statusHint = ""
+            root.errorText = error
+            root.probeRecommendation = "Socket is present but the core handshake failed."
+            root.coreStatus = "installed, not responding"
+        }
+    }
+
     function runInstall() {
         root.busy = true
         root.errorText = ""
         let error = LK.installCore()
-        root.busy = false
+        if (error !== "") {
+            root.onInstallFinished(error)
+        }
+    }
+
+    function onInstallFinished(error) {
         if (error === "") {
             root.runCoreProbe()
         }
         else {
+            root.busy = false
             root.statusText = "Install failed"
             root.statusHint = "Fix the problem and try again"
             root.errorText = error
+        }
+    }
+
+    function onVerifyHostKeyFinished(error) {
+        if (error === "") {
+            root.statusText = "Host key trusted"
+            root.statusHint = ""
+            root.errorText = ""
+            LK.clearCoreHostKeyChallenge()
+            let retry = root._pendingRetry
+            root._pendingRetry = ""
+            if (retry === "connect") {
+                root.runConnect()
+            }
+            else if (retry === "test") {
+                root.runCoreProbe()
+            }
+            else {
+                root.busy = false
+            }
+        }
+        else {
+            root.busy = false
+            root.statusText = "Failed to trust host key"
+            root.statusHint = "Fix the problem and try again"
+            root.errorText = error
+            root._pendingRetry = ""
         }
     }
 
