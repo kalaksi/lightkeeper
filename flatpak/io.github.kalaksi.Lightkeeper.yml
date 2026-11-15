@@ -108,3 +108,4 @@ modules:
       - install -Dm644 ./flatpak/${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo
       - install -Dm644 ./flatpak/${FLATPAK_ID}.desktop -t /app/share/applications
       - install -Dm644 ./flatpak/${FLATPAK_ID}-rounded.png /app/share/icons/hicolor/128x128/apps/${FLATPAK_ID}.png
+      - install -Dm644 ./src/frontend/qt/images/lightkeeper-tray-icon.png /app/share/icons/hicolor/32x32/apps/io.github.kalaksi.Lightkeeper-tray.png

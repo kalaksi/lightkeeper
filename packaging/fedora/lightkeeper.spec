@@ -84,9 +84,11 @@ install -Dm644 flatpak/%{app_id}.desktop \
 install -Dm644 flatpak/%{app_id}.metainfo.xml \
     %{buildroot}%{_metainfodir}/%{app_id}.metainfo.xml
 
-# Icon
+# Icons
 install -Dm644 flatpak/%{app_id}-rounded.png \
     %{buildroot}%{_datadir}/icons/hicolor/128x128/apps/%{app_id}.png
+install -Dm644 src/frontend/qt/images/lightkeeper-tray-icon.png \
+    %{buildroot}%{_datadir}/icons/hicolor/32x32/apps/%{app_id}-tray.png
 
 # --- QML modules ---
 
@@ -158,6 +160,7 @@ install -Dpm644 third_party/qmltermwidget/LICENSE.LGPL2+ \
 %{_datadir}/applications/%{app_id}.desktop
 %{_metainfodir}/%{app_id}.metainfo.xml
 %{_datadir}/icons/hicolor/128x128/apps/%{app_id}.png
+%{_datadir}/icons/hicolor/32x32/apps/%{app_id}-tray.png
 %{_libdir}/lightkeeper/
 %{_datadir}/lightkeeper/
 

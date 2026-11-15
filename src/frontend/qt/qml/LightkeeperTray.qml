@@ -18,6 +18,7 @@ SystemTrayIcon {
     property int nodataCount: 0
 
     visible: true
+    icon.name: "io.github.kalaksi.Lightkeeper-tray"
     icon.source: "qrc:/main/images/tray-icon"
     tooltip: {
         let texts = [];

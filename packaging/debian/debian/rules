@@ -20,6 +20,8 @@ override_dh_auto_install:
 	install -Dm644 flatpak/$(APP_ID).desktop debian/lightkeeper/usr/share/applications/$(APP_ID).desktop
 	install -Dm644 flatpak/$(APP_ID).metainfo.xml debian/lightkeeper/usr/share/metainfo/$(APP_ID).metainfo.xml
 	install -Dm644 flatpak/$(APP_ID)-rounded.png debian/lightkeeper/usr/share/icons/hicolor/128x128/apps/$(APP_ID).png
+	install -Dm644 src/frontend/qt/images/lightkeeper-tray-icon.png \
+	    debian/lightkeeper/usr/share/icons/hicolor/32x32/apps/$(APP_ID)-tray.png
 
 	# qmltermwidget (native plugin)
 	tmpdir=$$(mktemp -d) && \
