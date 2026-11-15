@@ -116,7 +116,6 @@ enum PendingRpcKind {
     Config,
     WriteConfig,
     ApplyConfig,
-    GetSecret,
     StoreSecret,
     RemoveSecret,
     Ack,
@@ -147,7 +146,6 @@ enum PendingRpcReply {
     },
     WriteConfigOk,
     ApplyConfig(Vec<String>),
-    GetSecret(Option<String>),
     StoreSecret(String),
     RemoveSecretOk,
     Ack,
@@ -184,7 +182,6 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::Config, PendingRpcReply::Config { .. }) |
             (PendingRpcKind::WriteConfig, PendingRpcReply::WriteConfigOk) |
             (PendingRpcKind::ApplyConfig, PendingRpcReply::ApplyConfig(_)) |
-            (PendingRpcKind::GetSecret, PendingRpcReply::GetSecret(_)) |
             (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
             (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
             (PendingRpcKind::Ack, PendingRpcReply::Ack) |
@@ -975,11 +972,6 @@ impl RemoteCoreClient {
                     ServerMessage::ApplyConfigResult { request_id, reset_hosts } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::ApplyConfig, || {
                             PendingRpcReply::ApplyConfig(reset_hosts)
-                        });
-                    }
-                    ServerMessage::GetSecretResult { request_id, value } => {
-                        deliver_response(&pending_rpc, request_id, PendingRpcKind::GetSecret, || {
-                            PendingRpcReply::GetSecret(value)
                         });
                     }
                     ServerMessage::StoreSecretResult { request_id, placeholder } => {
@@ -1830,18 +1822,8 @@ impl ConfigBackend for RemoteConfigBackend {
         true
     }
 
-    fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError> {
-        match self
-            .client
-            .send_message_result(PendingRpcKind::GetSecret, |request_id| ClientMessage::GetSecret {
-                request_id,
-                source_id: source_id.to_string(),
-                module_id: module_id.to_string(),
-                setting_key: setting_key.to_string(),
-            })? {
-            PendingRpcReply::GetSecret(value) => Ok(value),
-            _ => Err(LkError::unexpected()),
-        }
+    fn get_secret(&self, _source_id: &str, _module_id: &str, _setting_key: &str) -> Result<Option<String>, LkError> {
+        Ok(None)
     }
 
     fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> Result<String, LkError> {

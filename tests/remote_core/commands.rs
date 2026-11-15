@@ -405,7 +405,7 @@ fn remote_core_get_update_config() {
 }
 
 #[test]
-fn remote_core_secret_store_get_remove() {
+fn remote_core_secret_store_remove() {
     init_log();
 
     with_remote_core_session(move |mut backend, config, _ui_rx| {
@@ -419,12 +419,9 @@ fn remote_core_secret_store_get_remove() {
             .unwrap();
         assert!(placeholder.starts_with(lightkeeper::secrets_manager::KEYRING_PREFIX));
 
-        let got = config.get_secret(&source_id, module_id, setting_key).unwrap();
-        assert_eq!(got.as_deref(), Some(secret_value.as_str()));
+        assert!(config.get_secret(&source_id, module_id, setting_key).unwrap().is_none());
 
         config.remove_secret(&source_id, module_id, setting_key).unwrap();
-        let after_remove = config.get_secret(&source_id, module_id, setting_key).unwrap();
-        assert!(after_remove.is_none());
 
         backend.stop();
     });

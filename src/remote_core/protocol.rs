@@ -16,7 +16,7 @@ use crate::frontend::{DisplayData, HostDisplayData};
 use crate::metrics::lmserver::LMSResponse;
 use crate::module::command::internal::filebrowser::download::RsyncSsh;
 
-pub const PROTOCOL_VERSION: u16 = 15;
+pub const PROTOCOL_VERSION: u16 = 16;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -159,12 +159,6 @@ pub enum ClientMessage {
     ApplyConfig {
         request_id: u64,
     },
-    GetSecret {
-        request_id: u64,
-        source_id: String,
-        module_id: String,
-        setting_key: String,
-    },
     StoreSecret {
         request_id: u64,
         source_id: String,
@@ -306,10 +300,6 @@ pub enum ServerMessage {
     ApplyConfigResult {
         request_id: u64,
         reset_hosts: Vec<String>,
-    },
-    GetSecretResult {
-        request_id: u64,
-        value: Option<String>,
     },
     StoreSecretResult {
         request_id: u64,

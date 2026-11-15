@@ -156,8 +156,10 @@ Item {
                             description: "Password for the SSH connection."
                             saveValue: root._effectiveSaveValue(passwordField)
                             backend: _pending !== null ? _pending.backend : _initialBackend
+                            allowReveal: !LK.isUsingRemoteCore()
                             onRevealRequested: passwordField.revealSecret(root._resolveSecret(passwordField))
-                            onEditRequested: passwordField.openEditor( root._resolveSecret(passwordField))
+                            onEditRequested: passwordField.openEditor(
+                                LK.isUsingRemoteCore() ? "" : root._resolveSecret(passwordField))
                             onSecretSubmitted: function(value, backend) {
                                 if (value === undefined) {
                                     return
@@ -190,8 +192,10 @@ Item {
                             description: "Passphrase for the private key file."
                             saveValue: root._effectiveSaveValue(passphraseField)
                             backend: _pending !== null ? _pending.backend : _initialBackend
+                            allowReveal: !LK.isUsingRemoteCore()
                             onRevealRequested: passphraseField.revealSecret(root._resolveSecret(passphraseField))
-                            onEditRequested: passphraseField.openEditor(root._resolveSecret(passphraseField))
+                            onEditRequested: passphraseField.openEditor(
+                                LK.isUsingRemoteCore() ? "" : root._resolveSecret(passphraseField))
                             onSecretSubmitted: function(value, backend) {
                                 if (value === undefined) {
                                     return

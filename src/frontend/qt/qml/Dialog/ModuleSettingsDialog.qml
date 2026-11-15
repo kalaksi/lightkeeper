@@ -233,8 +233,10 @@ LightkeeperDialog {
                                     ? settingColumn._secretSaveValue
                                     : ""
                                 backend: settingColumn._effectiveSecretBackend
+                                allowReveal: !LK.isUsingRemoteCore()
                                 onRevealRequested: secretField.revealSecret(settingColumn.secretValue())
-                                onEditRequested: secretField.openEditor(settingColumn.secretValue())
+                                onEditRequested: secretField.openEditor(
+                                    LK.isUsingRemoteCore() ? "" : settingColumn.secretValue())
                                 onSecretSubmitted: function(value, backend) {
                                     let wasSecretBackend = settingColumn._effectiveSecretBackend
 

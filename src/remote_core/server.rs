@@ -440,22 +440,6 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 };
                 session.send_message(&ServerMessage::ApplyConfigResult { request_id, reset_hosts })?;
             }
-            ClientMessage::GetSecret {
-                request_id,
-                source_id,
-                module_id,
-                setting_key,
-            } => {
-                let lookup_key = secrets_manager::secret_lookup_key(&module_id, &source_id, &setting_key);
-                match runtime.secret_store.get(&lookup_key) {
-                    Ok(value) => {
-                        session.send_message(&ServerMessage::GetSecretResult { request_id, value })?;
-                    }
-                    Err(error) => {
-                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
-                    }
-                }
-            }
             ClientMessage::StoreSecret {
                 request_id,
                 source_id,

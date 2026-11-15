@@ -21,6 +21,7 @@ RowLayout {
     property string description: ""
     property string saveValue: ""
     property string backend: "keyring"
+    property bool allowReveal: true
     property string _revealedSecret: ""
 
     spacing: Theme.spacingNormal
@@ -56,6 +57,7 @@ RowLayout {
     }
 
     ImageButton {
+        visible: root.allowReveal
         imageSource: "qrc:/main/images/button/view-visible"
         size: maskedField.implicitHeight * 0.8
         tooltip: root._revealedSecret !== "" ? "Hide password" : "Show password"
