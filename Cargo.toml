@@ -54,6 +54,8 @@ keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"], op
 # Used for Flatpak secrets management through portal service.
 oo7 = { version = "0.6", optional = true }
 tokio = { version = "1", optional = true, features = ["rt"] }
+# Encrypted file secrets store (lightkeeper-core only).
+chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["alloc", "getrandom"], optional = true }
 
 [features]
 default = ["native", "oping", "gui"]
@@ -61,5 +63,5 @@ native = ["dep:keyring"]
 flatpak = ["gui", "dep:oo7", "dep:tokio"]
 hot-reload = ["dep:notify", "gui"]
 gui = ["dep:qmetaobject"]
-core = ["native"]
+core = ["native", "dep:chacha20poly1305"]
 
