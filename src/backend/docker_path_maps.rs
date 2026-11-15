@@ -16,13 +16,6 @@ struct DockerMount {
     destination: Option<String>,
 }
 
-pub fn rewrite_args_with_bind_maps(arguments: Vec<String>, maps: &BindPathMap) -> Vec<String> {
-    if maps.is_empty() {
-        return arguments;
-    }
-    arguments.into_iter().map(|argument| rewrite_path_value(&argument, maps)).collect()
-}
-
 pub fn rewrite_path_value(value: &str, maps: &BindPathMap) -> String {
     if maps.is_empty() {
         return value.to_string();

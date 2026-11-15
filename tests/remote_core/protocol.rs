@@ -229,9 +229,9 @@ fn file_transfer_command_result_server_roundtrip() {
 }
 
 #[test]
-fn build_terminal_command_client_roundtrip() {
+fn terminal_shell_plan_client_roundtrip() {
     let mut buffer = Vec::new();
-    let message = ClientMessage::BuildTerminalCommand {
+    let message = ClientMessage::TerminalShellPlan {
         request_id: 3,
         host_id: "h1".to_string(),
         command_id: "linux-shell".to_string(),
@@ -241,7 +241,7 @@ fn build_terminal_command_client_roundtrip() {
     write_message(&mut buffer, &message).unwrap();
     let decoded: ClientMessage = read_message(&mut buffer.as_slice()).unwrap();
     match decoded {
-        ClientMessage::BuildTerminalCommand {
+        ClientMessage::TerminalShellPlan {
             request_id,
             host_id,
             command_id,
@@ -257,19 +257,32 @@ fn build_terminal_command_client_roundtrip() {
 }
 
 #[test]
-fn shell_command_result_server_roundtrip() {
+fn remote_shell_plan_result_server_roundtrip() {
+    use lightkeeper::module::command::internal::filebrowser::download::RsyncSsh;
+    use lightkeeper::remote_core::protocol::RemoteShellPlan;
+    use std::collections::HashMap;
+
     let mut buffer = Vec::new();
-    let message = ServerMessage::ShellCommandResult {
+    let message = ServerMessage::RemoteShellPlanResult {
         request_id: 4,
-        arguments: vec![String::from("ssh"), String::from("-t"), String::from("host")],
+        plan: RemoteShellPlan {
+            local_on_core: false,
+            address: String::from("127.0.0.1"),
+            ssh: RsyncSsh::new(&HashMap::new()),
+            agent_public_key_path: None,
+            identity_agent: None,
+            allocate_tty: true,
+            remote_command: vec![String::from("uptime")],
+        },
     };
 
     write_message(&mut buffer, &message).unwrap();
     let decoded: ServerMessage = read_message(&mut buffer.as_slice()).unwrap();
     match decoded {
-        ServerMessage::ShellCommandResult { request_id, arguments } => {
+        ServerMessage::RemoteShellPlanResult { request_id, plan } => {
             assert_eq!(request_id, 4);
-            assert_eq!(arguments, vec![String::from("ssh"), String::from("-t"), String::from("host")]);
+            assert_eq!(plan.address, "127.0.0.1");
+            assert_eq!(plan.remote_command, vec![String::from("uptime")]);
         }
         _ => panic!("Invalid message"),
     }

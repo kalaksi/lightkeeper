@@ -18,7 +18,6 @@ use super::api::{CommandBackend, ConfigBackend, LocalBackendApi};
 use super::core_connection::{CoreConnectionState, CoreConnectionStatus};
 use super::docker_path_maps::{
     docker_mounts_shell,
-    rewrite_args_with_bind_maps,
     rewrite_path_value,
     select_bind_maps_for_socket,
     BindPathMap,
@@ -26,7 +25,7 @@ use super::docker_path_maps::{
 use super::remote_config::RemoteConfigBackend;
 use super::ssh_auth::{self, HostKeyChallenge, SshAuthError};
 use super::ssh_transport::Ssh2DirectStreamLocalTransport;
-use crate::command_handler::CommandButtonData;
+use crate::command_handler::{shell_command_from_plan, CommandButtonData};
 use crate::configuration;
 use crate::error::{ErrorKind, LkError};
 use crate::frontend;
@@ -119,7 +118,7 @@ enum PendingRpcKind {
     StoreSecret,
     RemoveSecret,
     Ack,
-    ShellCommand,
+    ShellPlan,
     FileTransfer,
     MetricsQuery,
 }
@@ -149,7 +148,7 @@ enum PendingRpcReply {
     StoreSecret(String),
     RemoveSecretOk,
     Ack,
-    ShellCommand(Vec<String>),
+    ShellPlan(RemoteShellPlan),
     FileTransfer(FileTransferPlan),
     MetricsQuery(u64),
     Error {
@@ -185,7 +184,7 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_)) |
             (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk) |
             (PendingRpcKind::Ack, PendingRpcReply::Ack) |
-            (PendingRpcKind::ShellCommand, PendingRpcReply::ShellCommand(_)) |
+            (PendingRpcKind::ShellPlan, PendingRpcReply::ShellPlan(_)) |
             (PendingRpcKind::FileTransfer, PendingRpcReply::FileTransfer(_)) |
             (PendingRpcKind::MetricsQuery, PendingRpcReply::MetricsQuery(_))
     )
@@ -987,9 +986,9 @@ impl RemoteCoreClient {
                     ServerMessage::Ack { request_id } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::Ack, || PendingRpcReply::Ack);
                     }
-                    ServerMessage::ShellCommandResult { request_id, arguments } => {
-                        deliver_response(&pending_rpc, request_id, PendingRpcKind::ShellCommand, || {
-                            PendingRpcReply::ShellCommand(arguments)
+                    ServerMessage::RemoteShellPlanResult { request_id, plan } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::ShellPlan, || {
+                            PendingRpcReply::ShellPlan(plan)
                         });
                     }
                     ServerMessage::FileTransferPlanResult { request_id, plan } => {
@@ -1128,25 +1127,30 @@ impl RemoteCoreClient {
         self.connection.lock().unwrap().writer.is_some()
     }
 
-    pub fn build_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> Result<Vec<String>, LkError> {
-        match self.send_message_result(PendingRpcKind::ShellCommand, |request_id| ClientMessage::BuildTerminalCommand {
+    pub fn fetch_terminal_shell_plan(
+        &self,
+        host_id: &str,
+        command_id: &str,
+        parameters: &[String],
+    ) -> Result<RemoteShellPlan, LkError> {
+        match self.send_message_result(PendingRpcKind::ShellPlan, |request_id| ClientMessage::TerminalShellPlan {
             request_id,
             host_id: host_id.to_string(),
             command_id: command_id.to_string(),
             parameters: parameters.to_vec(),
         })? {
-            PendingRpcReply::ShellCommand(arguments) => Ok(arguments),
+            PendingRpcReply::ShellPlan(plan) => Ok(plan),
             _ => Err(LkError::unexpected()),
         }
     }
 
-    pub fn build_remote_editor_command(&self, host_id: &str, remote_file_path: &str) -> Result<Vec<String>, LkError> {
-        match self.send_message_result(PendingRpcKind::ShellCommand, |request_id| ClientMessage::BuildRemoteEditorCommand {
+    pub fn fetch_editor_shell_plan(&self, host_id: &str, remote_file_path: &str) -> Result<RemoteShellPlan, LkError> {
+        match self.send_message_result(PendingRpcKind::ShellPlan, |request_id| ClientMessage::RemoteEditorShellPlan {
             request_id,
             host_id: host_id.to_string(),
             remote_file_path: remote_file_path.to_string(),
         })? {
-            PendingRpcReply::ShellCommand(arguments) => Ok(arguments),
+            PendingRpcReply::ShellPlan(plan) => Ok(plan),
             _ => Err(LkError::unexpected()),
         }
     }
@@ -1198,16 +1202,53 @@ impl RemoteCoreClient {
         }
     }
 
-    fn desktop_shell_command(&self, remote_command: Vec<String>) -> ShellCommand {
-        let remote_command = rewrite_args_with_bind_maps(remote_command, &self.cached_host_path_maps());
-        match wrap_command_via_core_ssh(&self.profile(), remote_command) {
+    fn desktop_shell_command(&self, plan: RemoteShellPlan) -> ShellCommand {
+        match build_desktop_shell_command_with_maps(&self.profile(), &plan, &self.cached_host_path_maps()) {
             Ok(command) => command,
             Err(error) => {
-                ::log::error!("Failed to wrap remote shell command: {}", error);
+                ::log::error!("Failed to build remote shell command: {}", error);
                 ShellCommand::new()
             }
         }
     }
+}
+
+/// Builds a desktop-owned interactive shell/editor command from a core-provided plan.
+pub fn build_desktop_shell_command(
+    profile: &configuration::CoreConnectionProfile,
+    plan: &RemoteShellPlan,
+) -> Result<ShellCommand, LkError> {
+    build_desktop_shell_command_with_maps(profile, plan, &BindPathMap::new())
+}
+
+fn build_desktop_shell_command_with_maps(
+    profile: &configuration::CoreConnectionProfile,
+    plan: &RemoteShellPlan,
+    host_path_maps: &BindPathMap,
+) -> Result<ShellCommand, LkError> {
+    let mut plan = plan.clone();
+    if profile.is_configured() {
+        if let Some(key_path) = plan.ssh.private_key_path.as_mut() {
+            *key_path = rewrite_path_value(key_path, host_path_maps);
+        }
+        if let Some(known_hosts) = plan.ssh.custom_known_hosts_path.as_mut() {
+            *known_hosts = PathBuf::from(rewrite_path_value(&known_hosts.to_string_lossy(), host_path_maps));
+        }
+        if let Some(agent_key) = plan.agent_public_key_path.as_mut() {
+            *agent_key = rewrite_path_value(agent_key, host_path_maps);
+        }
+        if let Some(identity_agent) = plan.identity_agent.as_mut() {
+            *identity_agent = rewrite_path_value(identity_agent, host_path_maps);
+        }
+    }
+    else if !plan.local_on_core {
+        // Local socket: OpenSSH runs on the desktop, so ignore core-local known_hosts paths.
+        plan.ssh.custom_known_hosts_path =
+            Some(ssh_auth::known_hosts_path(None).map_err(|error| LkError::other(error.to_ui_message()))?);
+    }
+
+    let inner = shell_command_from_plan(&plan)?;
+    wrap_command_via_core_ssh(profile, inner.to_vec()).map_err(LkError::other)
 }
 
 fn resolve_host_path_maps(profile: &configuration::CoreConnectionProfile) -> BindPathMap {
@@ -1419,8 +1460,8 @@ impl RemoteCommandBackend {
     }
 
     fn fetch_terminal_command(&self, host_id: &str, command_id: &str, parameters: &[String]) -> ShellCommand {
-        match self.client.build_terminal_command(host_id, command_id, parameters) {
-            Ok(arguments) => self.client.desktop_shell_command(arguments),
+        match self.client.fetch_terminal_shell_plan(host_id, command_id, parameters) {
+            Ok(plan) => self.client.desktop_shell_command(plan),
             Err(error) => {
                 ::log::error!("Request failed: {}", error);
                 ShellCommand::new()
@@ -1429,8 +1470,8 @@ impl RemoteCommandBackend {
     }
 
     fn fetch_remote_editor_command(&self, host_id: &str, remote_file_path: &str) -> ShellCommand {
-        match self.client.build_remote_editor_command(host_id, remote_file_path) {
-            Ok(arguments) => self.client.desktop_shell_command(arguments),
+        match self.client.fetch_editor_shell_plan(host_id, remote_file_path) {
+            Ok(plan) => self.client.desktop_shell_command(plan),
             Err(error) => {
                 ::log::error!("Request failed: {}", error);
                 ShellCommand::new()

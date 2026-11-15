@@ -16,7 +16,7 @@ use crate::frontend::{DisplayData, HostDisplayData};
 use crate::metrics::lmserver::LMSResponse;
 use crate::module::command::internal::filebrowser::download::RsyncSsh;
 
-pub const PROTOCOL_VERSION: u16 = 16;
+pub const PROTOCOL_VERSION: u16 = 17;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -172,15 +172,15 @@ pub enum ClientMessage {
         module_id: String,
         setting_key: String,
     },
-    /// Builds a host shell/terminal command (`ssh -t ...`) that the desktop runs on the core host over SSH.
-    BuildTerminalCommand {
+    /// Returns data for an interactive terminal. The desktop builds the shell command itself.
+    TerminalShellPlan {
         request_id: u64,
         host_id: String,
         command_id: String,
         parameters: Vec<String>,
     },
-    /// Builds a remote-file editor command that the desktop runs on the core host over SSH.
-    BuildRemoteEditorCommand {
+    /// Returns data for a remote-file editor. The desktop builds the shell command itself.
+    RemoteEditorShellPlan {
         request_id: u64,
         host_id: String,
         remote_file_path: String,
@@ -311,14 +311,31 @@ pub enum ServerMessage {
     Ack {
         request_id: u64,
     },
-    ShellCommandResult {
+    RemoteShellPlanResult {
         request_id: u64,
-        arguments: Vec<String>,
+        plan: RemoteShellPlan,
     },
     FileTransferPlanResult {
         request_id: u64,
         plan: FileTransferPlan,
     },
+}
+
+/// Core-provided data for a desktop-owned interactive shell/editor command.
+/// Only plain data is sent so the desktop builds (and validates) all commands itself.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RemoteShellPlan {
+    /// Run `bash -c` on the core host (local-command modules) instead of SSH to a managed host.
+    pub local_on_core: bool,
+    pub address: String,
+    pub ssh: RsyncSsh,
+    /// When set with no private key, desktop uses IdentitiesOnly + this agent public key path.
+    pub agent_public_key_path: Option<String>,
+    /// `SSH_AUTH_SOCK` value for `-o IdentityAgent=` (core-local when nested through SSH).
+    pub identity_agent: Option<String>,
+    pub allocate_tty: bool,
+    /// For SSH: argv after the host destination. For `local_on_core`: single script for `bash -c`.
+    pub remote_command: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]

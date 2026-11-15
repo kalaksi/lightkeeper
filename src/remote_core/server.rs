@@ -474,7 +474,7 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                     }
                 }
             }
-            ClientMessage::BuildTerminalCommand {
+            ClientMessage::TerminalShellPlan {
                 request_id,
                 host_id,
                 command_id,
@@ -482,22 +482,22 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
             } => match runtime
                 .core
                 .command_handler
-                .build_remote_terminal_command(&host_id, &command_id, &parameters)
+                .build_terminal_shell_plan(&host_id, &command_id, &parameters)
             {
-                Ok(command) => {
-                    session.send_message(&ServerMessage::ShellCommandResult { request_id, arguments: command.to_vec() })?;
+                Ok(plan) => {
+                    session.send_message(&ServerMessage::RemoteShellPlanResult { request_id, plan })?;
                 }
                 Err(error) => {
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
                 }
             },
-            ClientMessage::BuildRemoteEditorCommand { request_id, host_id, remote_file_path } => match runtime
+            ClientMessage::RemoteEditorShellPlan { request_id, host_id, remote_file_path } => match runtime
                 .core
                 .command_handler
-                .build_remote_editor_command(&host_id, &remote_file_path)
+                .build_editor_shell_plan(&host_id, &remote_file_path)
             {
-                Ok(command) => {
-                    session.send_message(&ServerMessage::ShellCommandResult { request_id, arguments: command.to_vec() })?;
+                Ok(plan) => {
+                    session.send_message(&ServerMessage::RemoteShellPlanResult { request_id, plan })?;
                 }
                 Err(error) => {
                     session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;

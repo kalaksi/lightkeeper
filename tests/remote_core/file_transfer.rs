@@ -10,10 +10,16 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use lightkeeper::backend::{build_desktop_rsync_command, CommandBackend, RemoteCommandBackend, RemoteCoreClient};
+use lightkeeper::backend::{
+    build_desktop_rsync_command,
+    build_desktop_shell_command,
+    CommandBackend,
+    RemoteCommandBackend,
+    RemoteCoreClient,
+};
 use lightkeeper::configuration::CoreConnectionProfile;
 use lightkeeper::module::command::internal::filebrowser::download::RsyncSsh;
-use lightkeeper::remote_core::protocol::{FileTransferDirection, FileTransferPlan};
+use lightkeeper::remote_core::protocol::{FileTransferDirection, FileTransferPlan, RemoteShellPlan};
 use lightkeeper::remote_core::runtime::CoreRuntime;
 use lightkeeper::remote_core::server::run_remote_client_session;
 
@@ -64,6 +70,59 @@ fn desktop_rsync_rejects_malicious_plan() {
     let mut plan = upload_plan();
     plan.ssh.private_key_path = Some(String::from(r#"x" "-oProxyCommand=touch /tmp/pwned"#));
     assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_err());
+}
+
+fn shell_plan() -> RemoteShellPlan {
+    RemoteShellPlan {
+        local_on_core: false,
+        address: String::from("host"),
+        ssh: RsyncSsh {
+            username: String::from("user"),
+            port: 22,
+            private_key_path: Some(String::from("/core/key")),
+            verify_host_key: true,
+            custom_known_hosts_path: Some(PathBuf::from("/core/known_hosts")),
+        },
+        agent_public_key_path: None,
+        identity_agent: None,
+        allocate_tty: true,
+        remote_command: vec![String::from("uptime")],
+    }
+}
+
+#[test]
+fn desktop_shell_rejects_malicious_plan() {
+    let _xdg_config = crate::redirect_xdg_config_home();
+    let profile = CoreConnectionProfile::default();
+    for address in ["-oProxyCommand=touch /tmp/pwned", "/home/user/.bashrc", "host:", "a b", ""] {
+        let plan = RemoteShellPlan { address: address.to_string(), ..shell_plan() };
+        assert!(build_desktop_shell_command(&profile, &plan).is_err());
+    }
+    for address in ["[::1]", "::1", "2001:db8::1", "[fe80::1%lo]"] {
+        let plan = RemoteShellPlan { address: address.to_string(), ..shell_plan() };
+        assert!(build_desktop_shell_command(&profile, &plan).is_ok());
+    }
+
+    let mut plan = shell_plan();
+    plan.ssh.username = String::from("--option");
+    assert!(build_desktop_shell_command(&profile, &plan).is_err());
+
+    let mut plan = shell_plan();
+    plan.local_on_core = true;
+    plan.remote_command = vec![String::from("true"), String::from("extra")];
+    assert!(build_desktop_shell_command(&profile, &plan).is_err());
+}
+
+#[test]
+fn desktop_shell_uses_desktop_owned_ssh() {
+    let _xdg_config = crate::redirect_xdg_config_home();
+    let command = build_desktop_shell_command(&CoreConnectionProfile::default(), &shell_plan())
+        .unwrap()
+        .to_vec();
+    assert_eq!(command[0], "ssh");
+    assert!(command.windows(2).any(|pair| pair[0] == "-l" && pair[1] == "user"));
+    assert!(command.iter().any(|arg| arg == "host"));
+    assert!(command.iter().any(|arg| arg == "uptime"));
 }
 
 #[test]

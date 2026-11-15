@@ -45,7 +45,7 @@ use crate::module::{
     platform_info,
     MetadataSupport,
 };
-use crate::remote_core::protocol::{FileTransferDirection, FileTransferPlan};
+use crate::remote_core::protocol::{FileTransferDirection, FileTransferPlan, RemoteShellPlan};
 
 // Default needs to be implemented because of Qt QObject requirements.
 #[derive(Default)]
@@ -415,14 +415,13 @@ impl CommandHandler {
         });
     }
 
-    /// Builds a host shell/terminal command as if executed on this machine
-    /// (typically `ssh -t ...`). Used by the desktop UI and by remote-core RPC.
-    pub fn build_remote_terminal_command(
+    /// Builds plan data for an interactive terminal. Desktop (or local UI) assembles the command.
+    pub fn build_terminal_shell_plan(
         &self,
         host_id: &str,
         command_id: &str,
         parameters: &[String],
-    ) -> Result<ShellCommand, LkError> {
+    ) -> Result<RemoteShellPlan, LkError> {
         let commands = self.commands.lock().map_err(|_| LkError::other("Commands lock poisoned"))?;
         let command_module = commands
             .get(host_id)
@@ -433,23 +432,67 @@ impl CommandHandler {
         let parameters = self.resolve_custom_command_parameters(host_id, command_id, parameters)?;
         let connector_messages = get_command_connector_messages(&host, command_module, &parameters)?;
 
-        let command = if command_module.get_connector_spec().as_ref().map(|spec| spec.id.as_str()) == Some("local-command") {
-            if let Some(message) = connector_messages.first() {
-                ShellCommand::new_from(vec!["bash", "-c", message.as_str()])
-            }
-            else {
-                return Err(LkError::other("Local command produced no connector message"));
-            }
+        if command_module.get_connector_spec().as_ref().map(|spec| spec.id.as_str()) == Some("local-command") {
+            let script = connector_messages
+                .first()
+                .ok_or_else(|| LkError::other("Local command produced no connector message"))?
+                .clone();
+            return Ok(RemoteShellPlan {
+                local_on_core: true,
+                address: String::new(),
+                ssh: RsyncSsh::new(&HashMap::new()),
+                agent_public_key_path: None,
+                identity_agent: None,
+                allocate_tty: false,
+                remote_command: vec![script],
+            });
         }
-        else {
-            let mut cmd = self.remote_ssh_command(&host)?;
-            cmd.arguments(connector_messages);
-            cmd
-        };
 
-        if command.to_vec().is_empty() {
-            return Err(LkError::other("Built an empty terminal command"));
+        let (address, ssh, agent_public_key_path, identity_agent) = self.remote_shell_ssh_plan(&host)?;
+        Ok(RemoteShellPlan {
+            local_on_core: false,
+            address,
+            ssh,
+            agent_public_key_path,
+            identity_agent,
+            allocate_tty: true,
+            remote_command: connector_messages,
+        })
+    }
+
+    /// Builds plan data for a remote text editor over SSH.
+    pub fn build_editor_shell_plan(&self, host_id: &str, remote_file_path: &str) -> Result<RemoteShellPlan, LkError> {
+        let host = self.host_manager.borrow().try_get_host(host_id)
+            .ok_or_else(|| LkError::other(format!("Host '{}' not found", host_id)))?;
+        let (address, ssh, agent_public_key_path, identity_agent) = self.remote_shell_ssh_plan(&host)?;
+
+        let mut remote_command = Vec::new();
+        if self.preferences.sudo_remote_editor {
+            remote_command.push(String::from("sudo"));
         }
+        remote_command.push(self.preferences.remote_text_editor.clone());
+        remote_command.push(remote_file_path.to_string());
+
+        Ok(RemoteShellPlan {
+            local_on_core: false,
+            address,
+            ssh,
+            agent_public_key_path,
+            identity_agent,
+            allocate_tty: true,
+            remote_command,
+        })
+    }
+
+    /// Builds a host shell/terminal command as if executed on this machine.
+    pub fn build_remote_terminal_command(
+        &self,
+        host_id: &str,
+        command_id: &str,
+        parameters: &[String],
+    ) -> Result<ShellCommand, LkError> {
+        let plan = self.build_terminal_shell_plan(host_id, command_id, parameters)?;
+        let command = shell_command_from_plan(&plan)?;
         ::log::debug!("Opening terminal with command: {}", command.to_string());
         Ok(command)
     }
@@ -481,20 +524,7 @@ impl CommandHandler {
 
     /// Builds a remote text editor command over SSH as if executed on this machine.
     pub fn build_remote_editor_command(&self, host_id: &str, remote_file_path: &str) -> Result<ShellCommand, LkError> {
-        let host = self.host_manager.borrow().try_get_host(host_id)
-            .ok_or_else(|| LkError::other(format!("Host '{}' not found", host_id)))?;
-        let mut command = self.remote_ssh_command(&host)?;
-
-        if self.preferences.sudo_remote_editor {
-            command.argument("sudo");
-        }
-
-        command.argument(self.preferences.remote_text_editor.clone());
-        command.argument(remote_file_path);
-        if command.to_vec().is_empty() {
-            return Err(LkError::other("Built an empty remote editor command"));
-        }
-        Ok(command)
+        shell_command_from_plan(&self.build_editor_shell_plan(host_id, remote_file_path)?)
     }
 
     /// Builds desktop-owned rsync transfer pieces for file-browser upload/download.
@@ -968,8 +998,11 @@ impl CommandHandler {
         Ok(file_handler::convert_to_local_paths(&host, remote_file_path).1)
     }
 
-    fn remote_ssh_command(&self, host: &Host) -> Result<ShellCommand, LkError> {
-        let ssh_settings = self
+    fn remote_shell_ssh_plan(
+        &self,
+        host: &Host,
+    ) -> Result<(String, RsyncSsh, Option<String>, Option<String>), LkError> {
+        let ssh_settings: HashMap<String, String> = self
             .hosts_config
             .hosts
             .get(&host.name)
@@ -977,81 +1010,34 @@ impl CommandHandler {
             .map(|connector| connector.settings.clone().into_iter().collect())
             .ok_or_else(|| LkError::other(format!("No SSH connector configured for host '{}'", host.name)))?;
 
-        let remote_address = if !host.fqdn.is_empty() {
+        let address = if !host.fqdn.is_empty() {
             host.fqdn.clone()
         }
         else {
             host.ip_address.to_string()
         };
 
-        let ssh = RsyncSsh::new(&ssh_settings);
-        let username = ssh_settings
-            .get("username")
-            .map(|value| value.as_str())
-            .filter(|value| !value.is_empty())
-            .unwrap_or("root");
-        let port = ssh_settings
-            .get("port")
-            .map(|value| value.as_str())
-            .filter(|value| !value.is_empty())
-            .unwrap_or("22");
-
-        let mut command = ShellCommand::new();
-        command.arguments(vec![
-            String::from("ssh"),
-            String::from("-t"),
-            String::from("-p"),
-            String::from(port),
-            String::from("-l"),
-            String::from(username),
-        ]);
-
-        if let Some(private_key_path) = ssh.private_key_path.as_ref().filter(|path| !path.is_empty()) {
-            command.arguments(vec![
-                String::from("-o"),
-                String::from("IdentitiesOnly=yes"),
-                String::from("-i"),
-                private_key_path.clone(),
-            ]);
+        let mut ssh = RsyncSsh::new(&ssh_settings);
+        if ssh.username.is_empty() {
+            ssh.username = String::from("root");
         }
-        else {
+        // Resolved here since the default known hosts file lives on the core (or local process).
+        ssh.custom_known_hosts_path = Some(ssh.known_hosts_path()?);
+
+        let mut agent_public_key_path_value = None;
+        let mut identity_agent = None;
+        if ssh.private_key_path.as_ref().filter(|path| !path.is_empty()).is_none() {
             let agent_key_identifier = ssh_settings
                 .get("agent_key_identifier")
                 .map(|value| value.as_str())
                 .filter(|value| !value.is_empty());
             if let Some(identifier) = agent_key_identifier {
-                command.arguments(vec![
-                    String::from("-o"),
-                    String::from("IdentitiesOnly=yes"),
-                    String::from("-i"),
-                    agent_public_key_path(identifier)?,
-                ]);
-            }
-            if let Some(agent_socket) = std::env::var("SSH_AUTH_SOCK").ok().filter(|path| !path.is_empty()) {
-                command.arguments(vec![String::from("-o"), format!("IdentityAgent={}", agent_socket)]);
+                agent_public_key_path_value = Some(agent_public_key_path(identifier)?);
+                identity_agent = std::env::var("SSH_AUTH_SOCK").ok().filter(|path| !path.is_empty());
             }
         }
 
-        if ssh.verify_host_key {
-            let known_hosts_path = ssh.known_hosts_path()?;
-            command.arguments(vec![
-                String::from("-o"),
-                format!("UserKnownHostsFile={}", known_hosts_path.to_string_lossy()),
-                String::from("-o"),
-                String::from("GlobalKnownHostsFile=/dev/null"),
-            ]);
-        }
-        else {
-            command.arguments(vec![
-                String::from("-o"),
-                String::from("StrictHostKeyChecking=no"),
-                String::from("-o"),
-                String::from("UserKnownHostsFile=/dev/null"),
-            ]);
-        }
-
-        command.argument(remote_address);
-        Ok(command)
+        Ok((address, ssh, agent_public_key_path_value, identity_agent))
     }
 
     pub fn interrupt_invocation(&self, invocation_id: u64) {
@@ -1079,6 +1065,99 @@ impl CommandHandler {
             panic!("Failed to send state update message: {}", error);
         }
     }
+}
+
+/// Assembles an interactive shell/editor command from plan data. Always uses desktop-owned binaries
+/// (`ssh` or `bash`); the plan only supplies connection data and remote argv / script.
+pub fn shell_command_from_plan(plan: &RemoteShellPlan) -> Result<ShellCommand, LkError> {
+    if plan.local_on_core {
+        let script = plan
+            .remote_command
+            .first()
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| LkError::other("Local-on-core shell plan has no script"))?;
+        if plan.remote_command.len() != 1 {
+            return Err(LkError::other("Local-on-core shell plan must have exactly one script"));
+        }
+        return Ok(ShellCommand::new_from(vec!["bash", "-c", script.as_str()]));
+    }
+
+    let is_invalid_username = |value: &str| {
+        value.starts_with('-')
+            || value.contains(|c: char| matches!(c, ':' | '@' | '/') || c.is_whitespace() || c.is_control())
+    };
+    // ssh takes the host as its own argv; bare or bracketed IPv6 are both fine.
+    let is_invalid_address = |value: &str| {
+        if string_validation::is_ipv6_host(value) {
+            return false;
+        }
+        value.starts_with('-')
+            || value.contains(|c: char| matches!(c, ':' | '@' | '/') || c.is_whitespace() || c.is_control())
+    };
+    if plan.address.is_empty() || is_invalid_address(&plan.address) || is_invalid_username(&plan.ssh.username) {
+        return Err(LkError::other("Invalid host address or username"));
+    }
+    if plan.ssh.username.is_empty() {
+        return Err(LkError::other("SSH username is empty"));
+    }
+
+    let mut command = ShellCommand::new();
+    command.argument("ssh");
+    if plan.allocate_tty {
+        command.argument("-t");
+    }
+    command.arguments(vec![
+        String::from("-p"),
+        plan.ssh.port.to_string(),
+        String::from("-l"),
+        plan.ssh.username.clone(),
+    ]);
+
+    if let Some(private_key_path) = plan.ssh.private_key_path.as_ref().filter(|path| !path.is_empty()) {
+        command.arguments(vec![
+            String::from("-o"),
+            String::from("IdentitiesOnly=yes"),
+            String::from("-i"),
+            private_key_path.clone(),
+        ]);
+    }
+    else if let Some(agent_public_key_path) = plan.agent_public_key_path.as_ref().filter(|path| !path.is_empty()) {
+        command.arguments(vec![
+            String::from("-o"),
+            String::from("IdentitiesOnly=yes"),
+            String::from("-i"),
+            agent_public_key_path.clone(),
+        ]);
+        if let Some(identity_agent) = plan.identity_agent.as_ref().filter(|path| !path.is_empty()) {
+            command.arguments(vec![String::from("-o"), format!("IdentityAgent={}", identity_agent)]);
+        }
+    }
+
+    if plan.ssh.verify_host_key {
+        let known_hosts_path = plan.ssh.known_hosts_path()?;
+        command.arguments(vec![
+            String::from("-o"),
+            format!("UserKnownHostsFile={}", known_hosts_path.to_string_lossy()),
+            String::from("-o"),
+            String::from("GlobalKnownHostsFile=/dev/null"),
+        ]);
+    }
+    else {
+        command.arguments(vec![
+            String::from("-o"),
+            String::from("StrictHostKeyChecking=no"),
+            String::from("-o"),
+            String::from("UserKnownHostsFile=/dev/null"),
+        ]);
+    }
+
+    command.argument(plan.address.clone());
+    command.arguments(plan.remote_command.clone());
+
+    if command.to_vec().is_empty() {
+        return Err(LkError::other("Built an empty shell command"));
+    }
+    Ok(command)
 }
 
 fn agent_public_key_path(identifier: &str) -> Result<String, LkError> {
