@@ -13,7 +13,10 @@ use crate::error::LkError;
 use crate::file_handler;
 use crate::frontend;
 use crate::metrics::MetricsManager;
-use crate::secrets_manager::{KeyringSecretStore, SecretStore};
+#[cfg(feature = "core")]
+use crate::secrets_manager::{self, SecretStore};
+#[cfg(not(feature = "core"))]
+use crate::secrets_manager::SecretStore;
 use crate::Configuration;
 use crate::CoreComponents;
 use crate::ModuleFactory;
@@ -29,14 +32,34 @@ pub struct CoreRuntime {
 }
 
 impl CoreRuntime {
-    pub fn new(main_config: &Configuration, hosts_config: &configuration::Hosts, config_dir: String) -> Result<Self, LkError> {
-        Self::new_with(
-            main_config,
-            hosts_config,
-            Arc::new(ModuleFactory::new()),
-            config_dir,
-            Arc::new(KeyringSecretStore),
-        )
+    #[cfg(feature = "core")]
+    pub fn new(
+        main_config: &Configuration,
+        hosts_config: &configuration::Hosts,
+        config_dir: String,
+        secrets_key_file: Option<PathBuf>,
+    ) -> Result<Self, LkError> {
+        let data_dir = file_handler::get_data_dir()?;
+        let secret_store: Arc<dyn SecretStore> = Arc::new(
+            crate::file_secret_store::FileSecretStore::open(data_dir, secrets_key_file)?,
+        );
+        let active_prefix = secret_store.identifier_prefix();
+        for (host_id, host_config) in &hosts_config.hosts {
+            for (connector_id, connector_config) in &host_config.effective.connectors {
+                for (setting_key, value) in &connector_config.settings {
+                    if secrets_manager::uses_inactive_backend(value, active_prefix) {
+                        log::error!(
+                            "Host '{}' secret '{}/{}' uses an incompatible secrets backend. \
+                             Re-enter the secret for the secretsfile backend.",
+                            host_id,
+                            connector_id,
+                            setting_key
+                        );
+                    }
+                }
+            }
+        }
+        Self::new_with(main_config, hosts_config, Arc::new(ModuleFactory::new()), config_dir, secret_store)
     }
 
     pub fn new_with(

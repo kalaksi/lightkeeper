@@ -6,11 +6,6 @@
 use lightkeeper::secrets_manager::detect_secret_backend;
 
 #[test]
-fn detect_secret_backend_empty_is_keyring() {
-    assert_eq!(detect_secret_backend(""), "keyring");
-}
-
-#[test]
 fn detect_secret_backend_native_placeholder_is_keyring() {
     assert_eq!(detect_secret_backend("keyring:abc"), "keyring");
 }
@@ -18,6 +13,11 @@ fn detect_secret_backend_native_placeholder_is_keyring() {
 #[test]
 fn detect_secret_backend_portal_placeholder_is_keyring() {
     assert_eq!(detect_secret_backend("pkeyring:abc"), "keyring");
+}
+
+#[test]
+fn detect_secret_backend_secretsfile() {
+    assert_eq!(detect_secret_backend("secretsfile:abc"), "secretsfile");
 }
 
 #[test]

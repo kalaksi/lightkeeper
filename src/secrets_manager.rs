@@ -18,15 +18,24 @@ use crate::error::LkError;
 use crate::utils::strip_unprintable;
 
 const SERVICE_NAME: &str = "lightkeeper";
+
+/// UI / config identifier for the OS keyring secrets backend.
+pub const KEYRING_BACKEND: &str = "keyring";
+/// UI / config identifier for the encrypted file secrets backend.
+pub const SECRETSFILE_BACKEND: &str = "secretsfile";
+/// UI / config identifier for plaintext secrets (stored in config as-is).
+pub const PLAINTEXT_BACKEND: &str = "plaintext";
+
 pub const NATIVE_KEYRING_PREFIX: &str = "keyring:";
 pub const PORTAL_KEYRING_PREFIX: &str = "pkeyring:";
+pub const SECRETSFILE_PREFIX: &str = "secretsfile:";
 
 #[cfg(feature = "native")]
 pub const KEYRING_PREFIX: &str = NATIVE_KEYRING_PREFIX;
 #[cfg(feature = "flatpak")]
 pub const KEYRING_PREFIX: &str = PORTAL_KEYRING_PREFIX;
 
-const ALL_SECRET_PREFIXES: &[&str] = &[NATIVE_KEYRING_PREFIX, PORTAL_KEYRING_PREFIX];
+const ALL_SECRET_PREFIXES: &[&str] = &[NATIVE_KEYRING_PREFIX, PORTAL_KEYRING_PREFIX, SECRETSFILE_PREFIX];
 
 #[cfg(feature = "flatpak")]
 static TOKIO_RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
@@ -54,7 +63,7 @@ pub trait SecretStore: Send + Sync {
     fn set(&self, key: &str, value: &str) -> Result<(), LkError>;
     fn delete(&self, key: &str) -> Result<(), LkError>;
 
-    /// Prefix written into config for secrets held by this store (e.g. `keyring:`).
+    /// Prefix written into config for secrets held by this store (e.g. `keyring:` / `secretsfile:`).
     fn identifier_prefix(&self) -> &'static str;
 }
 
@@ -163,16 +172,22 @@ impl SecretsManager {
     }
 }
 
-/// Returns `"keyring"` or `"plaintext"` for a stored secret value or placeholder.
+/// Returns [`KEYRING_BACKEND`], [`SECRETSFILE_BACKEND`], or [`PLAINTEXT_BACKEND`] for a config secret value.
+/// Empty / non-prefixed values are plaintext; UI defaults for unset secrets come from supported backends.
 pub fn detect_secret_backend(value: &str) -> &'static str {
-    if value.is_empty()
-        || value.starts_with(NATIVE_KEYRING_PREFIX)
-        || value.starts_with(PORTAL_KEYRING_PREFIX)
-    {
-        "keyring"
-    } else {
-        "plaintext"
+    if value.starts_with(SECRETSFILE_PREFIX) {
+        SECRETSFILE_BACKEND
     }
+    else if value.starts_with(NATIVE_KEYRING_PREFIX) || value.starts_with(PORTAL_KEYRING_PREFIX) {
+        KEYRING_BACKEND
+    }
+    else {
+        PLAINTEXT_BACKEND
+    }
+}
+
+pub fn is_stored_secret_backend(backend: &str) -> bool {
+    backend == KEYRING_BACKEND || backend == SECRETSFILE_BACKEND
 }
 
 /// True if `value` is a placeholder of some other secrets backend than the active one.

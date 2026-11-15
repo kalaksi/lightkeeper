@@ -21,6 +21,12 @@ pub struct Args {
     pub config_dir: String,
     #[clap(long, default_value = "")]
     pub socket_path: String,
+    /// Optional path to the secrets wrapping key (file backend only).
+    /// Defaults to $LIGHTKEEPER_SECRETS_KEY_FILE, then `<data-dir>/secret.key`. The key is base64 of 32 bytes.
+    /// To keep the key encrypted at rest, use systemd `LoadCredentialEncrypted=` and point this to
+    /// `$CREDENTIALS_DIRECTORY/<name>`.
+    #[clap(long)]
+    pub secrets_key_file: Option<PathBuf>,
 }
 
 fn main() {
@@ -63,7 +69,13 @@ fn main() {
         PathBuf::from(args.socket_path.clone())
     };
 
-    let runtime = match CoreRuntime::new(&main_config, &hosts_config, args.config_dir.clone()) {
+    let secrets_key_file = args.secrets_key_file.filter(|path| !path.as_os_str().is_empty());
+    let runtime = match CoreRuntime::new(
+        &main_config,
+        &hosts_config,
+        args.config_dir.clone(),
+        secrets_key_file,
+    ) {
         Ok(runtime) => runtime,
         Err(error) => {
             log::error!("Failed to start backend runtime: {}", error);
