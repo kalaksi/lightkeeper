@@ -340,7 +340,6 @@ LightkeeperDialog {
                         delegate: ItemDelegate {
                             required property string label
                             required property string backendId
-                            width: secretsBackendCombo.width
                             text: label
                             enabled: root._preferences.allowSecretsBackendChoice
                                 ? backendId !== "secretsfile"
@@ -394,7 +393,6 @@ LightkeeperDialog {
                         textRole: "display"
 
                         delegate: ItemDelegate {
-                            width: textEditorCombo.width
                             text: model.display
                             enabled: root._preferences.allowExternalTextEditor || model.value !== "other"
                         }

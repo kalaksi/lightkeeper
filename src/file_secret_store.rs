@@ -22,7 +22,7 @@ use crate::secrets_manager::{SecretStore, SECRETSFILE_PREFIX};
 use crate::utils::strip_unprintable;
 
 const STORE_FILE_NAME: &str = "secrets.enc";
-const KEY_FILE_NAME: &str = "secret.key";
+const KEY_FILE_NAME: &str = "secrets.key";
 const KEY_FILE_ENV: &str = "LIGHTKEEPER_SECRETS_KEY_FILE";
 const STORE_VERSION: u32 = 1;
 const AAD: &[u8] = b"lightkeeper-core-secrets-v1";
@@ -41,22 +41,25 @@ struct EncryptedStoreFile {
 pub struct FileSecretStore {
     store_path: PathBuf,
     key_path: PathBuf,
-    /// Only the default `<data-dir>/secret.key` may be created automatically.
+    /// Only the default `<config-dir>/secrets.key` may be created automatically.
     allow_generate_key: bool,
     /// Also serializes all store file access.
     key: Mutex<Option<Key>>,
 }
 
 impl FileSecretStore {
-    /// Opens a store under `data_dir`. An explicit key file (argument or environment) overrides the default key path.
-    pub fn open(data_dir: PathBuf, key_file_override: Option<PathBuf>) -> Result<Self, LkError> {
+    /// Opens a store under `data_dir` with the wrapping key under `config_dir` by default.
+    /// An explicit key file (argument or environment) overrides the default key path.
+    pub fn open(data_dir: PathBuf, config_dir: PathBuf, key_file_override: Option<PathBuf>) -> Result<Self, LkError> {
         fs::create_dir_all(&data_dir).map_err(context(format!("Failed to create data directory {}", data_dir.display())))?;
+        fs::create_dir_all(&config_dir)
+            .map_err(context(format!("Failed to create config directory {}", config_dir.display())))?;
 
         let store_path = data_dir.join(STORE_FILE_NAME);
         let explicit_key_path = key_file_override
             .or_else(|| std::env::var(KEY_FILE_ENV).ok().filter(|path| !path.is_empty()).map(PathBuf::from));
         let allow_generate_key = explicit_key_path.is_none();
-        let key_path = explicit_key_path.unwrap_or_else(|| data_dir.join(KEY_FILE_NAME));
+        let key_path = explicit_key_path.unwrap_or_else(|| config_dir.join(KEY_FILE_NAME));
 
         let key = if key_path.exists() { Some(read_key_file(&key_path)?) } else { None };
 

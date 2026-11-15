@@ -131,7 +131,7 @@ impl SecretStore for KeyringSecretStore {
     fn delete(&self, key: &str) -> Result<(), LkError> {
         let entry = Entry::new(SERVICE_NAME, key)?;
         match entry.delete_credential() {
-            Ok(()) => Ok(()),
+            Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
             Err(error) => {
                 log::warn!("Failed to remove keyring secret for {}: {}", key, error);
                 Err(error.into())

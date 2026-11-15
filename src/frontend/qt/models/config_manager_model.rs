@@ -1610,7 +1610,8 @@ impl ConfigManagerModel {
                 } else {
                     String::new()
                 };
-                let enabled = settings.contains_key(setting_key);
+                let is_secret = metadata.secrets.contains_key(setting_key);
+                let mut enabled = settings.contains_key(setting_key);
                 let value = if enabled {
                     settings.get(setting_key).cloned().unwrap_or_default()
                 } else if inherited_enabled {
@@ -1618,6 +1619,10 @@ impl ConfigManagerModel {
                 } else {
                     String::new()
                 };
+                // Empty secret values are unset (e.g. after a clear that left `password: ""` in config).
+                if is_secret && enabled && value.is_empty() {
+                    enabled = false;
+                }
                 ModuleSetting {
                     key: setting_key.clone(),
                     value,
@@ -1625,7 +1630,7 @@ impl ConfigManagerModel {
                     inherited_enabled,
                     description: description.clone(),
                     enabled,
-                    is_secret: metadata.secrets.contains_key(setting_key),
+                    is_secret,
                 }
             })
             .collect()

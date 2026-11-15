@@ -182,7 +182,8 @@ ColumnLayout {
             }
 
             Repeater {
-                model: root.settingsByModule[modelData].filter((setting) => setting.enabled === true)
+                model: root.settingsByModule[modelData].filter((setting) =>
+                    setting.enabled === true && !(setting.isSecret === true && setting.value === ""))
 
                 RowLayout {
                     opacity: _moduleEnabled ? 1.0 : 0.45

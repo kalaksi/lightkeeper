@@ -38,15 +38,20 @@ LightkeeperDialog {
         for (let i = 0; i < repeater.model.length; i++) {
             let nextItem = repeater.itemAt(i)
             // See `ModuleSetting` in ConfigManagerModel for the model.
+            let priorSecret = nextItem["_secretSaveValue"]
             let moduleSetting = {
                 "key": nextItem["_settingKey"],
                 "value": nextItem["settingValue"](),
                 "enabled": nextItem["_enabled"],
                 "isSecret": nextItem["_isSecret"],
             }
+            // Cleared secrets must not stay enabled with an empty value (summary would still show dots).
+            if (moduleSetting.isSecret && moduleSetting.value === "") {
+                moduleSetting.enabled = false
+            }
             moduleSettings.push(moduleSetting)
 
-            if (!moduleSetting.enabled && nextItem["_isSecret"]) {
+            if (!moduleSetting.enabled && moduleSetting.isSecret && priorSecret !== "") {
                 if (root._hostScoped) {
                     LK.config.removeHostSecret(root.hostId, root.moduleId, moduleSetting.key)
                 }

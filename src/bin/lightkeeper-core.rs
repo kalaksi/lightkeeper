@@ -22,7 +22,7 @@ pub struct Args {
     #[clap(long, default_value = "")]
     pub socket_path: String,
     /// Optional path to the secrets wrapping key (file backend only).
-    /// Defaults to $LIGHTKEEPER_SECRETS_KEY_FILE, then `<data-dir>/secret.key`. The key is base64 of 32 bytes.
+    /// Defaults to $LIGHTKEEPER_SECRETS_KEY_FILE, then `<config-dir>/secrets.key`. The key is base64 of 32 bytes.
     /// To keep the key encrypted at rest, use systemd `LoadCredentialEncrypted=` and point this to
     /// `$CREDENTIALS_DIRECTORY/<name>`.
     #[clap(long)]
