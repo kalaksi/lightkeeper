@@ -113,10 +113,6 @@ Item {
                                 text: label
                             }
                             Layout.preferredWidth: 150
-                            onCurrentValueChanged: {
-                                passwordField._revealedSecret = ""
-                                passphraseField._revealedSecret = ""
-                            }
                         }
                     }
 
@@ -146,22 +142,15 @@ Item {
                         SecretValueField {
                             id: passwordField
 
-                            // Pending edit: null = unchanged, otherwise the new secret value.
-                            property var _pending: null
                             property string _initialValue: ""
 
                             visible: methodCombo.currentValue === "password"
                             settingKey: "password"
-                            description: "Password for the SSH connection."
-                            saveValue: root._effectiveSaveValue(passwordField)
+                            saveValue: passwordField._initialValue
                             warningText: LK.config.secretsBackendWarning(passwordField._initialValue)
                             allowReveal: !LK.isUsingRemoteCore()
-                            onRevealRequested: passwordField.revealSecret(root._resolveSecret(passwordField))
-                            onEditRequested: passwordField.openEditor(
-                                LK.isUsingRemoteCore() ? "" : root._resolveSecret(passwordField))
-                            onSecretSubmitted: function(value) {
-                                passwordField._pending = value
-                            }
+                            onRevealRequested: passwordField.revealSecret(LK.config.revealHostSecret(
+                                root.hostId, "ssh", passwordField.settingKey, passwordField._initialValue))
 
                             Layout.fillWidth: true
                         }
@@ -178,22 +167,15 @@ Item {
                         SecretValueField {
                             id: passphraseField
 
-                            // Pending edit: null = unchanged, otherwise the new secret value.
-                            property var _pending: null
                             property string _initialValue: ""
 
                             visible: methodCombo.currentValue === "key"
                             settingKey: "private_key_passphrase"
-                            description: "Passphrase for the private key file."
-                            saveValue: root._effectiveSaveValue(passphraseField)
+                            saveValue: passphraseField._initialValue
                             warningText: LK.config.secretsBackendWarning(passphraseField._initialValue)
                             allowReveal: !LK.isUsingRemoteCore()
-                            onRevealRequested: passphraseField.revealSecret(root._resolveSecret(passphraseField))
-                            onEditRequested: passphraseField.openEditor(
-                                LK.isUsingRemoteCore() ? "" : root._resolveSecret(passphraseField))
-                            onSecretSubmitted: function(value) {
-                                passphraseField._pending = value
-                            }
+                            onRevealRequested: passphraseField.revealSecret(LK.config.revealHostSecret(
+                                root.hostId, "ssh", passphraseField.settingKey, passphraseField._initialValue))
 
                             Layout.fillWidth: true
                         }
@@ -240,7 +222,7 @@ Item {
         return out
     }
 
-    // Persists keyring writes/removals and mutates sshSettings in place to insert
+    // Persists secret writes/removals and mutates sshSettings in place to insert
     // password/passphrase values or placeholders for the chosen method. Removes secrets
     // for any method other than the active one.
     function commitSecrets(finalHostId, sshSettings) {
@@ -260,7 +242,7 @@ Item {
             return
         }
 
-        if (field._pending === null) {
+        if (!field.modified) {
             if (field._initialValue !== "") {
                 sshSettings[field.settingKey] = field._initialValue
             }
@@ -269,7 +251,7 @@ Item {
 
         // Late store: host id may only be final at save time.
         let result = LK.config.storeHostSecret(
-            finalHostId, "ssh", field.settingKey, field._pending)
+            finalHostId, "ssh", field.settingKey, field.text)
         if (!result.ok) {
             if (field._initialValue !== "") {
                 sshSettings[field.settingKey] = field._initialValue
@@ -294,11 +276,11 @@ Item {
         methodCombo.currentIndex = root._detectInitialMethodIndex()
 
         let password = root._setting("password")
-        passwordField._pending = null
+        passwordField.reset()
         passwordField._initialValue = password.value
 
         let passphrase = root._setting("private_key_passphrase")
-        passphraseField._pending = null
+        passphraseField.reset()
         passphraseField._initialValue = passphrase.value
     }
 
@@ -330,20 +312,5 @@ Item {
             return 1
         }
         return 0
-    }
-
-    function _effectiveSaveValue(field) {
-        if (field._pending !== null) {
-            return field._pending !== "" ? "••••••" : ""
-        }
-        return field._initialValue !== "" ? "••••••" : ""
-    }
-
-    function _resolveSecret(field) {
-        if (field._pending !== null) {
-            return field._pending
-        }
-        return LK.config.revealHostSecret(
-            root.hostId, "ssh", field.settingKey, field._initialValue)
     }
 }

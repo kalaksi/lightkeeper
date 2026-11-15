@@ -378,12 +378,6 @@ LightkeeperDialog {
                         width: methodCombo.width
                         text: label
                     }
-                    onCurrentValueChanged: {
-                        if (!root._loadingProfile) {
-                            passwordField._revealedSecret = ""
-                            passphraseField._revealedSecret = ""
-                        }
-                    }
                 }
 
                 Label {
@@ -399,17 +393,8 @@ LightkeeperDialog {
                     settingKey: "password"
                     saveValue: root._passwordSaveValue
                     warningText: LK.config.coreSecretsBackendWarning(root._passwordSaveValue)
-                    onRevealRequested: passwordField.revealSecret(root.resolveCoreSecret(passwordField))
-                    onEditRequested: passwordField.openEditor(root.resolveCoreSecret(passwordField))
-                    onSecretSubmitted: function(value) {
-                        let result = LK.config.storeCoreSecret("password", value)
-                        if (!result.ok) {
-                            passwordField.openEditor(value, "Failed to store secret.")
-                            return
-                        }
-                        root._passwordSaveValue = result.value
-                        root.saveProfile()
-                    }
+                    onRevealRequested: passwordField.revealSecret(
+                        LK.config.revealCoreSecret("password", root._passwordSaveValue))
                 }
 
                 Label {
@@ -441,17 +426,8 @@ LightkeeperDialog {
                     settingKey: "private_key_passphrase"
                     saveValue: root._passphraseSaveValue
                     warningText: LK.config.coreSecretsBackendWarning(root._passphraseSaveValue)
-                    onRevealRequested: passphraseField.revealSecret(root.resolveCoreSecret(passphraseField))
-                    onEditRequested: passphraseField.openEditor(root.resolveCoreSecret(passphraseField))
-                    onSecretSubmitted: function(value) {
-                        let result = LK.config.storeCoreSecret("private_key_passphrase", value)
-                        if (!result.ok) {
-                            passphraseField.openEditor(value, "Failed to store secret.")
-                            return
-                        }
-                        root._passphraseSaveValue = result.value
-                        root.saveProfile()
-                    }
+                    onRevealRequested: passphraseField.revealSecret(
+                        LK.config.revealCoreSecret("private_key_passphrase", root._passphraseSaveValue))
                 }
 
                 Label {
@@ -588,8 +564,8 @@ LightkeeperDialog {
         agentKeyField.text = profile.agentKeyIdentifier || ""
         root._passwordSaveValue = profile.password || ""
         root._passphraseSaveValue = profile.privateKeyPassphrase || ""
-        passwordField._revealedSecret = ""
-        passphraseField._revealedSecret = ""
+        passwordField.reset()
+        passphraseField.reset()
 
         if ((profile.password || "") !== "") {
             methodCombo.currentIndex = methodCombo.indexOfValue("password")
@@ -613,8 +589,17 @@ LightkeeperDialog {
         root.probeRecommendation = ""
     }
 
-    function resolveCoreSecret(field) {
-        return LK.config.revealCoreSecret(field.settingKey, field.saveValue || "")
+    // Stores an edited secret and returns the new config value. On failure keeps the edit for retry.
+    function storeEditedCoreSecret(field, saveValue) {
+        if (!field.modified) {
+            return saveValue
+        }
+        let result = LK.config.storeCoreSecret(field.settingKey, field.text)
+        if (!result.ok) {
+            return saveValue
+        }
+        field.reset()
+        return result.value
     }
 
     function saveProfile() {
@@ -625,6 +610,7 @@ LightkeeperDialog {
         let agentKey = ""
 
         if (method === "password") {
+            root._passwordSaveValue = root.storeEditedCoreSecret(passwordField, root._passwordSaveValue)
             password = root._passwordSaveValue || ""
             if (root._passphraseSaveValue !== "") {
                 LK.config.removeCoreSecret("private_key_passphrase")
@@ -633,6 +619,7 @@ LightkeeperDialog {
         }
         else if (method === "key") {
             privateKeyPath = privateKeyPathField.text.trim()
+            root._passphraseSaveValue = root.storeEditedCoreSecret(passphraseField, root._passphraseSaveValue)
             passphrase = root._passphraseSaveValue || ""
             if (root._passwordSaveValue !== "") {
                 LK.config.removeCoreSecret("password")

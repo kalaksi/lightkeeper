@@ -169,6 +169,7 @@ LightkeeperDialog {
                                     return
                                 }
                                 if (settingColumn._isSecret) {
+                                    secretField.reset()
                                     if (toggleSwitch.checked) {
                                         settingColumn._secretSaveValue =
                                             LK.config.prepareHostSecretOverride(
@@ -221,30 +222,12 @@ LightkeeperDialog {
                                 visible: modelData.isSecret === true
                                 enabled: toggleSwitch.checked
                                 settingKey: modelData.key
-                                description: modelData.description ?? ""
                                 saveValue: toggleSwitch.checked || root._hostScoped
                                     ? settingColumn._secretSaveValue
                                     : ""
-                                warningText: LK.config.secretsBackendWarning(
-                                    settingColumn._secretSaveValue !== ""
-                                        ? settingColumn._secretSaveValue
-                                        : (modelData.value ?? ""))
+                                warningText: LK.config.secretsBackendWarning(settingColumn._secretSaveValue)
                                 allowReveal: !LK.isUsingRemoteCore()
                                 onRevealRequested: secretField.revealSecret(settingColumn.secretValue())
-                                onEditRequested: secretField.openEditor(
-                                    LK.isUsingRemoteCore() ? "" : settingColumn.secretValue())
-                                onSecretSubmitted: function(value) {
-                                    let result = root._hostScoped
-                                        ? LK.config.storeHostSecret(
-                                            root.hostId, root.moduleId, modelData.key, value)
-                                        : LK.config.storeGroupSecret(
-                                            root.groupName, root.moduleId, modelData.key, value)
-                                    if (!result.ok) {
-                                        secretField.openEditor(value, "Failed to store secret.")
-                                        return
-                                    }
-                                    settingColumn._secretSaveValue = result.value
-                                }
 
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
@@ -277,7 +260,14 @@ LightkeeperDialog {
 
                     function settingValue() {
                         if (settingColumn._isSecret) {
-                            return settingColumn._secretSaveValue
+                            if (!secretField.modified) {
+                                return settingColumn._secretSaveValue
+                            }
+                            // Stored only on save. On failure the error is shown and the old value is kept.
+                            let result = root._hostScoped
+                                ? LK.config.storeHostSecret(root.hostId, root.moduleId, modelData.key, secretField.text)
+                                : LK.config.storeGroupSecret(root.groupName, root.moduleId, modelData.key, secretField.text)
+                            return result.ok ? result.value : settingColumn._secretSaveValue
                         }
                         if (modelData.key.endsWith("_path")) {
                             return filePathField.text
@@ -290,9 +280,7 @@ LightkeeperDialog {
                         if (!toggleSwitch.checked && root._hostScoped) {
                             return settingColumn._inheritedValue
                         }
-                        let configValue = settingColumn._secretSaveValue !== ""
-                            ? settingColumn._secretSaveValue
-                            : (modelData.value ?? "")
+                        let configValue = settingColumn._secretSaveValue
                         if (root._hostScoped) {
                             return LK.config.revealHostSecret(
                                 root.hostId, root.moduleId, modelData.key, configValue)

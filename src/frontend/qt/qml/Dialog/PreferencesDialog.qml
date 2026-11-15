@@ -340,7 +340,7 @@ LightkeeperDialog {
                         delegate: ItemDelegate {
                             required property string label
                             required property string backendId
-                            width: ListView.view ? ListView.view.width : implicitWidth
+                            width: secretsBackendCombo.width
                             text: label
                             enabled: root._preferences.allowSecretsBackendChoice
                                 ? backendId !== "secretsfile"

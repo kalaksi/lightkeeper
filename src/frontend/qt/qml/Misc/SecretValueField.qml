@@ -10,7 +10,6 @@ import QtQuick.Layouts
 import Lightkeeper 1.0
 
 import "../Button"
-import "../Dialog"
 import "../StyleOverride"
 
 
@@ -18,39 +17,27 @@ RowLayout {
     id: root
 
     property string settingKey: ""
-    property string description: ""
+    // Current config value: placeholder, plaintext or empty.
     property string saveValue: ""
     property string warningText: ""
     property bool allowReveal: true
-    property string _revealedSecret: ""
+    // Set when the user has typed or deleted. Parent stores `text` on save only if modified.
+    property bool modified: false
+    property alias text: field.text
+    property bool _revealed: false
 
     spacing: Theme.spacingNormal
 
     signal revealRequested()
-    signal editRequested()
-    signal secretSubmitted(string value)
 
     TextField {
-        id: maskedField
-        visible: root._revealedSecret === ""
+        id: field
         enabled: root.enabled
-        readOnly: true
-        selectByMouse: false
-        text: root.saveValue
-        echoMode: TextInput.Password
-        placeholderText: root.enabled ? "" : "unset"
+        selectByMouse: true
+        echoMode: root._revealed ? TextInput.Normal : TextInput.Password
+        placeholderText: root.placeholder()
         placeholderTextColor: Theme.textColorDark
-
-        Layout.fillWidth: true
-        Layout.alignment: Qt.AlignVCenter
-    }
-
-    TextField {
-        visible: root._revealedSecret !== ""
-        enabled: root.enabled
-        readOnly: true
-        selectByMouse: false
-        text: root._revealedSecret
+        onTextEdited: root.modified = true
 
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignVCenter
@@ -59,53 +46,74 @@ RowLayout {
     ImageButton {
         visible: root.allowReveal
         imageSource: "qrc:/main/images/button/view-visible"
-        size: maskedField.implicitHeight * 0.8
-        tooltip: root._revealedSecret !== "" ? "Hide password" : "Show password"
+        size: field.implicitHeight * 0.8
+        tooltip: root._revealed ? "Hide secret" : "Show secret"
         enabled: root.enabled
         onClicked: {
-            if (root._revealedSecret !== "") {
-                root._revealedSecret = ""
-            }
-            else {
-                root.revealRequested()
+            root._revealed = !root._revealed
+            if (!root.modified) {
+                field.text = ""
+                if (root._revealed && root.saveValue !== "") {
+                    root.revealRequested()
+                }
             }
         }
 
-        Layout.preferredWidth: maskedField.implicitHeight
+        Layout.preferredWidth: field.implicitHeight
         Layout.alignment: Qt.AlignVCenter
     }
 
     ImageButton {
-        imageSource: "qrc:/main/images/button/entry-edit"
-        size: maskedField.implicitHeight * 0.8
-        tooltip: "Edit secret"
-        enabled: root.enabled
-        onClicked: root.editRequested()
+        imageSource: "qrc:/main/images/button/delete"
+        size: field.implicitHeight * 0.8
+        tooltip: "Remove secret"
+        enabled: root.enabled && (field.text !== "" || (!root.modified && root.saveValue !== ""))
+        onClicked: {
+            field.text = ""
+            root.modified = true
+        }
 
-        Layout.preferredWidth: maskedField.implicitHeight
+        Layout.preferredWidth: field.implicitHeight
         Layout.alignment: Qt.AlignVCenter
     }
 
-    SecretEditDialog {
-        id: secretDialog
+    ImageButton {
+        id: infoButton
+        imageSource: "qrc:/main/images/alert/info"
+        size: field.implicitHeight * 0.8
+        color: root.warningText !== "" ? Theme.criticalityColor("warning") : "transparent"
+        onClicked: infoTip.visible ? infoTip.close() : infoTip.open()
 
-        onSecretSubmitted: function(value) {
-            root.secretSubmitted(value)
-            root._revealedSecret = ""
+        Layout.preferredWidth: field.implicitHeight
+        Layout.alignment: Qt.AlignVCenter
+
+        ToolTip {
+            id: infoTip
+            parent: infoButton
+            delay: 0
+            timeout: -1
+            text: "Secrets use the backend configured in Preferences."
+                + (root.warningText !== "" ? "\n" + root.warningText : "")
         }
     }
 
-    function revealSecret(value) {
-        root._revealedSecret = value
+    function placeholder() {
+        if (root.modified) {
+            return root.saveValue !== "" && field.text === "" ? "(will be removed)" : ""
+        }
+        if (root.saveValue !== "") {
+            return "(stored)"
+        }
+        return root.enabled ? "" : "unset"
     }
 
-    function openEditor(initialValue, warningText) {
-        secretDialog.settingKey = root.settingKey
-        secretDialog.description = root.description
-        secretDialog.initialValue = initialValue
-        secretDialog.warningText = warningText !== undefined && warningText !== null
-            ? warningText
-            : root.warningText
-        secretDialog.open()
+    function revealSecret(value) {
+        field.text = value
+    }
+
+    function reset() {
+        field.text = ""
+        root.modified = false
+        root._revealed = false
     }
 }
