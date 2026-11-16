@@ -33,7 +33,8 @@ if [ ! -z "$(git status -s)" ]; then
         src/frontend/qt/resources_qml.rs \
         src/backend/* \
         src/remote_core/* \
-        src/file_handler.rs
+        src/file_handler.rs \
+        src/file_secret_store.rs
 fi
 
 cargo build --features hot-reload

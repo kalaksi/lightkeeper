@@ -46,8 +46,11 @@ impl CoreRuntime {
         else {
             PathBuf::from(&config_dir)
         };
-        let secret_store: Arc<dyn SecretStore> =
-            Arc::new(crate::file_secret_store::FileSecretStore::open(data_dir, config_path, secrets_key_file)?);
+        let secret_store: Arc<dyn SecretStore> = Arc::new(crate::file_secret_store::FileSecretStore::open(
+            data_dir,
+            config_path,
+            secrets_key_file,
+        )?);
         let active_prefix = secret_store.identifier_prefix();
         for (host_id, host_config) in &hosts_config.hosts {
             for (connector_id, connector_config) in &host_config.effective.connectors {

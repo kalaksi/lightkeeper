@@ -4,18 +4,21 @@
  */
 
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
+use std::ops::RangeInclusive;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use argon2::{Algorithm, Argon2, Params, Version};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
+use chacha20poly1305::aead::rand_core::RngCore;
 use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng, Payload};
 use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroizing;
 
 use crate::error::LkError;
 use crate::secrets_manager::{SecretStore, SECRETSFILE_PREFIX};
@@ -26,8 +29,20 @@ const KEY_FILE_NAME: &str = "secrets.key";
 const KEY_FILE_ENV: &str = "LIGHTKEEPER_SECRETS_KEY_FILE";
 const STORE_VERSION: u32 = 1;
 const AAD: &[u8] = b"lightkeeper-core-secrets-v1";
-const KEY_LEN: usize = 32;
-const NONCE_LEN: usize = 24;
+const KEY_LENGTH: usize = 32;
+const NONCE_LENGTH: usize = 24;
+const PROTECTED_KEY_FORMAT: &str = "lightkeeper-secrets-key";
+const PROTECTED_KEY_VERSION: u32 = 1;
+const PROTECTED_KEY_KDF: &str = "argon2id";
+const SALT_LENGTH: usize = 16;
+const PASSPHRASE_LENGTH: RangeInclusive<usize> = 8..=1024;
+/// Minimums prevent weakening a re-wrapped key via a doctored file, maximums prevent memory and CPU exhaustion.
+const KDF_M_COST_KIB: RangeInclusive<u32> = 19 * 1024..=1024 * 1024;
+const KDF_T_COST: RangeInclusive<u32> = 2..=10;
+const KDF_P_COST: RangeInclusive<u32> = 1..=8;
+const DEFAULT_KDF_M_COST_KIB: u32 = 64 * 1024;
+const DEFAULT_KDF_T_COST: u32 = 3;
+const DEFAULT_KDF_P_COST: u32 = 1;
 
 type Entries = HashMap<String, String>;
 
@@ -38,102 +53,266 @@ struct EncryptedStoreFile {
     ciphertext: String,
 }
 
+/// Passphrase-protected `secrets.key`. Argon2id derives a wrapping key that encrypts the store key.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProtectedKeyFile {
+    format: String,
+    version: u32,
+    kdf: String,
+    m_cost: u32,
+    t_cost: u32,
+    p_cost: u32,
+    salt: String,
+    nonce: String,
+    wrapped_key: String,
+}
+
+impl ProtectedKeyFile {
+    /// Binds all header fields to the wrapped key so that any modification fails decryption.
+    fn associated_data(&self) -> Vec<u8> {
+        format!(
+            "{}\n{}\n{}\n{}\n{}\n{}\n{}",
+            self.format, self.version, self.kdf, self.m_cost, self.t_cost, self.p_cost, self.salt
+        )
+        .into_bytes()
+    }
+
+    /// Validates the header before running the KDF so that hostile parameters are rejected early.
+    fn derive_wrapping_key(&self, passphrase: &str) -> Result<Zeroizing<[u8; KEY_LENGTH]>, LkError> {
+        if self.format != PROTECTED_KEY_FORMAT || self.version != PROTECTED_KEY_VERSION || self.kdf != PROTECTED_KEY_KDF {
+            return Err(LkError::other("Unsupported protected secret key format"));
+        }
+        if !KDF_M_COST_KIB.contains(&self.m_cost) || !KDF_T_COST.contains(&self.t_cost) || !KDF_P_COST.contains(&self.p_cost) {
+            return Err(LkError::other("Protected secret key has KDF parameters outside of allowed limits"));
+        }
+        if passphrase.len() > *PASSPHRASE_LENGTH.end() {
+            return Err(LkError::other("Passphrase is too long"));
+        }
+        let salt = BASE64
+            .decode(self.salt.as_bytes())
+            .map_err(|error| LkError::other_p("Invalid protected secret key salt", error))?;
+        if salt.len() != SALT_LENGTH {
+            return Err(LkError::other("Invalid protected secret key salt length"));
+        }
+
+        let params = Params::new(self.m_cost, self.t_cost, self.p_cost, Some(KEY_LENGTH))
+            .map_err(|error| LkError::other_p("Invalid KDF parameters", error))?;
+        let mut wrapping_key = Zeroizing::new([0u8; KEY_LENGTH]);
+        Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
+            .hash_password_into(passphrase.as_bytes(), &salt, wrapping_key.as_mut_slice())
+            .map_err(|error| LkError::other_p("Failed to derive wrapping key", error))?;
+        Ok(wrapping_key)
+    }
+
+    fn wrap_key(key: &Key, passphrase: &str) -> Result<Self, LkError> {
+        if !PASSPHRASE_LENGTH.contains(&passphrase.len()) {
+            return Err(LkError::other(format!("Passphrase must be {}-{} bytes", PASSPHRASE_LENGTH.start(), PASSPHRASE_LENGTH.end())));
+        }
+        let mut salt = [0u8; SALT_LENGTH];
+        OsRng.fill_bytes(&mut salt);
+        let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
+        let mut file = Self {
+            format: PROTECTED_KEY_FORMAT.to_string(),
+            version: PROTECTED_KEY_VERSION,
+            kdf: PROTECTED_KEY_KDF.to_string(),
+            m_cost: DEFAULT_KDF_M_COST_KIB,
+            t_cost: DEFAULT_KDF_T_COST,
+            p_cost: DEFAULT_KDF_P_COST,
+            salt: BASE64.encode(salt),
+            nonce: BASE64.encode(nonce),
+            wrapped_key: String::new(),
+        };
+
+        let wrapping_key = file.derive_wrapping_key(passphrase)?;
+        let wrapped_key = XChaCha20Poly1305::new(Key::from_slice(wrapping_key.as_slice()))
+            .encrypt(&nonce, Payload { msg: key, aad: &file.associated_data() })
+            .map_err(|_| LkError::other("Failed to wrap secret key"))?;
+        file.wrapped_key = BASE64.encode(wrapped_key);
+        Ok(file)
+    }
+
+    fn unwrap_key(&self, passphrase: &str) -> Result<Key, LkError> {
+        let wrapping_key = self.derive_wrapping_key(passphrase)?;
+        let nonce = BASE64
+            .decode(self.nonce.as_bytes())
+            .map_err(|error| LkError::other_p("Invalid protected secret key nonce", error))?;
+        if nonce.len() != NONCE_LENGTH {
+            return Err(LkError::other("Invalid protected secret key nonce length"));
+        }
+        let wrapped_key = BASE64
+            .decode(self.wrapped_key.as_bytes())
+            .map_err(|error| LkError::other_p("Invalid protected secret key", error))?;
+
+        let associated_data = self.associated_data();
+        let payload = Payload { msg: &wrapped_key, aad: &associated_data };
+        let key = Zeroizing::new(
+            XChaCha20Poly1305::new(Key::from_slice(wrapping_key.as_slice()))
+                .decrypt(XNonce::from_slice(&nonce), payload)
+                .map_err(|_| LkError::other("Failed to unlock secret key (wrong passphrase or tampered file)"))?,
+        );
+        if key.len() != KEY_LENGTH {
+            return Err(LkError::other("Invalid unwrapped secret key length"));
+        }
+        Ok(*Key::from_slice(&key))
+    }
+}
+
+enum KeyFile {
+    Raw(Key),
+    Protected(ProtectedKeyFile),
+}
+
+enum KeyState {
+    NoKey,
+    Unlocked(Key),
+    Locked,
+}
+
+impl From<KeyFile> for KeyState {
+    fn from(key_file: KeyFile) -> Self {
+        match key_file {
+            KeyFile::Raw(key) => KeyState::Unlocked(key),
+            KeyFile::Protected(_) => KeyState::Locked,
+        }
+    }
+}
+
 pub struct FileSecretStore {
     store_path: PathBuf,
     key_path: PathBuf,
     /// Only the default `<config-dir>/secrets.key` may be created automatically.
     allow_generate_key: bool,
-    /// Also serializes all store file access.
-    key: Mutex<Option<Key>>,
+    /// Also serializes all store file access and unlocking.
+    state: Mutex<KeyState>,
 }
 
 impl FileSecretStore {
     /// Opens a store under `data_dir` with the wrapping key under `config_dir` by default.
     /// An explicit key file (argument or environment) overrides the default key path.
     pub fn open(data_dir: PathBuf, config_dir: PathBuf, key_file_override: Option<PathBuf>) -> Result<Self, LkError> {
-        fs::create_dir_all(&data_dir).map_err(context(format!("Failed to create data directory {}", data_dir.display())))?;
+        fs::create_dir_all(&data_dir)
+            .map_err(|error| LkError::other(format!("Failed to create data directory {}: {}", data_dir.display(), error)))?;
         fs::create_dir_all(&config_dir)
-            .map_err(context(format!("Failed to create config directory {}", config_dir.display())))?;
+            .map_err(|error| LkError::other(format!("Failed to create config directory {}: {}", config_dir.display(), error)))?;
 
         let store_path = data_dir.join(STORE_FILE_NAME);
-        let explicit_key_path = key_file_override
-            .or_else(|| std::env::var(KEY_FILE_ENV).ok().filter(|path| !path.is_empty()).map(PathBuf::from));
+        let explicit_key_path =
+            key_file_override.or_else(|| std::env::var(KEY_FILE_ENV).ok().filter(|path| !path.is_empty()).map(PathBuf::from));
         let allow_generate_key = explicit_key_path.is_none();
         let key_path = explicit_key_path.unwrap_or_else(|| config_dir.join(KEY_FILE_NAME));
 
-        let key = if key_path.exists() { Some(read_key_file(&key_path)?) } else { None };
+        let state = if key_path.exists() { KeyState::from(read_key_file(&key_path)?) } else { KeyState::NoKey };
 
-        match (&key, allow_generate_key) {
-            (Some(_), _) => log::info!("Using encrypted file secret store at {}", store_path.display()),
-            (None, _) if store_path.exists() => log::warn!(
+        match (&state, allow_generate_key) {
+            (KeyState::Unlocked(_), _) => log::info!("Using encrypted file secret store at {}", store_path.display()),
+            (KeyState::Locked, _) => log::info!(
+                "Using encrypted file secret store at {} (locked until unlocked with passphrase)",
+                store_path.display()
+            ),
+            (KeyState::NoKey, _) if store_path.exists() => log::warn!(
                 "Secret key not found at {} but {} exists; secrets unavailable until the key is provided",
                 key_path.display(),
                 store_path.display()
             ),
-            (None, true) => log::info!(
+            (KeyState::NoKey, true) => log::info!(
                 "Using encrypted file secret store at {} (key will be created on first write)",
                 store_path.display()
             ),
-            (None, false) => log::info!(
+            (KeyState::NoKey, false) => log::info!(
                 "Using encrypted file secret store at {} (waiting for key at {})",
                 store_path.display(),
                 key_path.display()
             ),
         }
 
-        Ok(Self { store_path, key_path, allow_generate_key, key: Mutex::new(key) })
+        Ok(Self {
+            store_path,
+            key_path,
+            allow_generate_key,
+            state: Mutex::new(state),
+        })
+    }
+
+    /// Unlocks a passphrase-protected key and keeps it in memory until exit.
+    /// Blocks while the KDF runs, so call from a blocking thread in async contexts.
+    pub fn unlock(&self, passphrase: &str) -> Result<(), LkError> {
+        let mut state = self.state.lock()?;
+        if !matches!(*state, KeyState::Locked) {
+            return Ok(());
+        }
+        let KeyFile::Protected(protected) = read_key_file(&self.key_path)? else {
+            return Err(LkError::other(format!("Secret key {} is no longer passphrase-protected", self.key_path.display())));
+        };
+        let key = protected.unwrap_key(passphrase).map_err(|error| {
+            log::debug!("Unlocking secret key failed: {}", error);
+            LkError::other("Failed to unlock secret key")
+        })?;
+        *state = KeyState::Unlocked(key);
+        log::info!("Unlocked secret store key {}", self.key_path.display());
+        Ok(())
     }
 
     fn modify_entries(&self, modify: impl FnOnce(&mut Entries)) -> Result<(), LkError> {
-        let mut key = self.key.lock()?;
-        let mut entries = self.read_entries(&mut key)?;
+        let mut state = self.state.lock()?;
+        let mut entries = self.read_entries(&mut state)?;
         modify(&mut entries);
-        let key = self.ensure_key(&mut key)?;
+        let key = self.ensure_key(&mut state)?;
         self.write_entries(&key, &entries)
     }
 
     /// Loads the key lazily so that a key file provided after startup is picked up.
-    fn read_entries(&self, key: &mut Option<Key>) -> Result<Entries, LkError> {
-        if key.is_none() && self.key_path.exists() {
-            *key = Some(read_key_file(&self.key_path)?);
+    fn read_entries(&self, state: &mut KeyState) -> Result<Entries, LkError> {
+        if matches!(state, KeyState::NoKey) && self.key_path.exists() {
+            *state = KeyState::from(read_key_file(&self.key_path)?);
         }
-        if !self.store_path.exists() {
-            return Ok(Entries::new());
-        }
-        let key = key.as_ref().ok_or_else(|| {
-            LkError::other(format!(
-                "Secret key not found at {} but {} exists; secrets unavailable",
-                self.key_path.display(),
-                self.store_path.display()
-            ))
-        })?;
+        let key = match state {
+            KeyState::Locked => return Err(LkError::other("Secret store is locked")),
+            _ if !self.store_path.exists() => return Ok(Entries::new()),
+            KeyState::Unlocked(key) => key,
+            KeyState::NoKey => {
+                return Err(LkError::other(format!(
+                    "Secret key not found at {} but {} exists; secrets unavailable",
+                    self.key_path.display(),
+                    self.store_path.display()
+                )))
+            }
+        };
 
-        let raw = fs::read(&self.store_path).map_err(context(format!("Failed to read secret store {}", self.store_path.display())))?;
-        let envelope: EncryptedStoreFile = serde_json::from_slice(&raw).map_err(context("Invalid secret store format"))?;
+        let raw = fs::read(&self.store_path)
+            .map_err(|error| LkError::other(format!("Failed to read secret store {}: {}", self.store_path.display(), error)))?;
+        let envelope: EncryptedStoreFile = serde_json::from_slice(&raw)
+            .map_err(|error| LkError::other_p("Invalid secret store format", error))?;
         if envelope.version != STORE_VERSION {
             return Err(LkError::other(format!("Unsupported secret store version {}", envelope.version)));
         }
 
-        let nonce = BASE64.decode(envelope.nonce.as_bytes()).map_err(context("Invalid secret store nonce"))?;
-        if nonce.len() != NONCE_LEN {
+        let nonce = BASE64
+            .decode(envelope.nonce.as_bytes())
+            .map_err(|error| LkError::other_p("Invalid secret store nonce", error))?;
+        if nonce.len() != NONCE_LENGTH {
             return Err(LkError::other("Invalid secret store nonce length"));
         }
-        let ciphertext = BASE64.decode(envelope.ciphertext.as_bytes()).map_err(context("Invalid secret store ciphertext"))?;
+        let ciphertext = BASE64
+            .decode(envelope.ciphertext.as_bytes())
+            .map_err(|error| LkError::other_p("Invalid secret store ciphertext", error))?;
 
         let plaintext = XChaCha20Poly1305::new(key)
             .decrypt(XNonce::from_slice(&nonce), Payload { msg: &ciphertext, aad: AAD })
             .map_err(|_| {
                 LkError::other(
                     "Failed to decrypt secret store (wrong key or tampered file). \
-                     Do not regenerate the key while secrets.enc exists."
+                     Do not regenerate the key while secrets.enc exists.",
                 )
             })?;
 
-        serde_json::from_slice(&plaintext).map_err(context("Invalid decrypted secret store payload"))
+        serde_json::from_slice(&plaintext)
+            .map_err(|error| LkError::other_p("Invalid decrypted secret store payload", error))
     }
 
     fn write_entries(&self, key: &Key, entries: &Entries) -> Result<(), LkError> {
-        let plaintext = serde_json::to_vec(entries).map_err(context("Failed to serialize secret store"))?;
+        let plaintext = serde_json::to_vec(entries)
+            .map_err(|error| LkError::other_p("Failed to serialize secret store", error))?;
         let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
         let ciphertext = XChaCha20Poly1305::new(key)
             .encrypt(&nonce, Payload { msg: &plaintext, aad: AAD })
@@ -144,13 +323,19 @@ impl FileSecretStore {
             nonce: BASE64.encode(nonce),
             ciphertext: BASE64.encode(&ciphertext),
         };
-        let raw = serde_json::to_vec(&envelope).map_err(context("Failed to serialize encrypted secret store"))?;
+        let raw = serde_json::to_vec(&envelope)
+            .map_err(|error| LkError::other_p("Failed to serialize encrypted secret store", error))?;
         atomic_write(&self.store_path, &raw)
     }
 
-    fn ensure_key(&self, key: &mut Option<Key>) -> Result<Key, LkError> {
-        if let Some(key) = key {
-            return Ok(*key);
+    fn ensure_key(&self, state: &mut KeyState) -> Result<Key, LkError> {
+        match state {
+            KeyState::Unlocked(key) => return Ok(*key),
+            KeyState::Locked => return Err(LkError::other("Secret store is locked")),
+            KeyState::NoKey => {}
+        }
+        if self.key_path.exists() {
+            return Err(LkError::other(format!("Refusing to overwrite existing secret key {}", self.key_path.display())));
         }
         if self.store_path.exists() {
             return Err(LkError::other(format!(
@@ -169,14 +354,15 @@ impl FileSecretStore {
 
         let new_key = XChaCha20Poly1305::generate_key(&mut OsRng);
         if let Some(parent) = self.key_path.parent() {
-            fs::create_dir_all(parent).map_err(context(format!("Failed to create key directory {}", parent.display())))?;
+            fs::create_dir_all(parent)
+                .map_err(|error| LkError::other(format!("Failed to create key directory {}: {}", parent.display(), error)))?;
         }
         atomic_write(&self.key_path, BASE64.encode(new_key).as_bytes())?;
         log::warn!(
             "Generated secret store key at {}. Back it up separately from config; losing it loses all stored secrets.",
             self.key_path.display()
         );
-        *key = Some(new_key);
+        *state = KeyState::Unlocked(new_key);
         Ok(new_key)
     }
 }
@@ -187,8 +373,8 @@ impl SecretStore for FileSecretStore {
     }
 
     fn get(&self, key: &str) -> Result<Option<String>, LkError> {
-        let mut store_key = self.key.lock()?;
-        Ok(self.read_entries(&mut store_key)?.get(key).cloned())
+        let mut state = self.state.lock()?;
+        Ok(self.read_entries(&mut state)?.get(key).cloned())
     }
 
     fn set(&self, key: &str, value: &str) -> Result<(), LkError> {
@@ -208,21 +394,29 @@ impl SecretStore for FileSecretStore {
     }
 }
 
-fn context<E: Display>(message: impl Display) -> impl FnOnce(E) -> LkError {
-    move |error| LkError::other(format!("{}: {}", message, error))
-}
-
-fn read_key_file(path: &Path) -> Result<Key, LkError> {
-    let raw = fs::read(path).map_err(context(format!("Failed to read secret key {}", path.display())))?;
-    let decoded = BASE64.decode(raw.trim_ascii()).map_err(context(format!("Failed to decode secret key {}", path.display())))?;
-    if decoded.len() != KEY_LEN {
+fn read_key_file(path: &Path) -> Result<KeyFile, LkError> {
+    let raw = Zeroizing::new(
+        fs::read(path).map_err(|error| LkError::other(format!("Failed to read secret key {}: {}", path.display(), error)))?,
+    );
+    // Raw keys are base64 and can't start with '{', so a malformed protected key never falls back to a raw key.
+    if raw.trim_ascii().starts_with(b"{") {
+        let protected = serde_json::from_slice(&raw)
+            .map_err(|error| LkError::other(format!("Invalid protected secret key {}: {}", path.display(), error)))?;
+        return Ok(KeyFile::Protected(protected));
+    }
+    let decoded = Zeroizing::new(
+        BASE64
+            .decode(raw.trim_ascii())
+            .map_err(|error| LkError::other(format!("Failed to decode secret key {}: {}", path.display(), error)))?,
+    );
+    if decoded.len() != KEY_LENGTH {
         return Err(LkError::other(format!(
             "Secret key {} must be base64 of {} bytes",
             path.display(),
-            KEY_LEN
+            KEY_LENGTH
         )));
     }
-    Ok(*Key::from_slice(&decoded))
+    Ok(KeyFile::Raw(*Key::from_slice(&decoded)))
 }
 
 fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), LkError> {
@@ -231,23 +425,29 @@ fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), LkError> {
     match fs::remove_file(&temp_path) {
         Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
             return Err(LkError::other(format!("Failed to remove {}: {}", temp_path.display(), error)));
-        },
-        _ => {},
+        }
+        _ => {}
     }
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
         .mode(0o600)
         .open(&temp_path)
-        .map_err(context(format!("Failed to create {}", temp_path.display())))?;
-    file.write_all(contents).map_err(context(format!("Failed to write {}", temp_path.display())))?;
-    file.sync_all().map_err(context(format!("Failed to sync {}", temp_path.display())))?;
+        .map_err(|error| LkError::other(format!("Failed to create {}: {}", temp_path.display(), error)))?;
+    file.write_all(contents)
+        .map_err(|error| LkError::other(format!("Failed to write {}: {}", temp_path.display(), error)))?;
+    file.sync_all()
+        .map_err(|error| LkError::other(format!("Failed to sync {}: {}", temp_path.display(), error)))?;
     drop(file);
 
-    fs::rename(&temp_path, path).map_err(context(format!("Failed to replace {} with {}", path.display(), temp_path.display())))?;
+    fs::rename(&temp_path, path)
+        .map_err(|error| LkError::other(format!("Failed to replace {} with {}: {}", path.display(), temp_path.display(), error)))?;
     // Directory sync makes the rename durable, so the key can't be lost while the store survives.
-    let parent = path.parent().filter(|parent| !parent.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
     File::open(parent)
         .and_then(|directory| directory.sync_all())
-        .map_err(context(format!("Failed to sync directory {}", parent.display())))
+        .map_err(|error| LkError::other(format!("Failed to sync directory {}: {}", parent.display(), error)))
 }
