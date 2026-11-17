@@ -26,7 +26,7 @@ pub struct CoreRuntime {
     pub config_dir: String,
     pub secret_store: Arc<dyn SecretStore>,
     /// Configuration that the running managers were last configured with.
-    applied_config: (Configuration, configuration::Hosts),
+    pub applied_config: (Configuration, configuration::Hosts),
     metrics_manager: Option<Arc<Mutex<MetricsManager>>>,
     chart_session_sender: Arc<Mutex<Option<mpsc::Sender<frontend::UIUpdate>>>>,
 }

@@ -15,8 +15,9 @@ use crate::configuration::CustomCommandConfig;
 use crate::frontend::{DisplayData, HostDisplayData};
 use crate::metrics::lmserver::LMSResponse;
 use crate::module::command::internal::filebrowser::download::RsyncSsh;
+use crate::secrets_manager::SecretStoreStatus;
 
-pub const PROTOCOL_VERSION: u16 = 17;
+pub const PROTOCOL_VERSION: u16 = 18;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -33,6 +34,7 @@ pub enum RemoteErrorCode {
     UnsupportedVersion = 1,
     InvalidRequest = 2,
     Internal = 3,
+    SecretStoreLocked = 4,
 }
 
 impl fmt::Display for RemoteErrorCode {
@@ -42,6 +44,7 @@ impl fmt::Display for RemoteErrorCode {
             RemoteErrorCode::UnsupportedVersion => write!(formatter, "unsupported_version"),
             RemoteErrorCode::InvalidRequest => write!(formatter, "invalid_request"),
             RemoteErrorCode::Internal => write!(formatter, "internal"),
+            RemoteErrorCode::SecretStoreLocked => write!(formatter, "secret_store_locked"),
         }
     }
 }
@@ -172,6 +175,10 @@ pub enum ClientMessage {
         module_id: String,
         setting_key: String,
     },
+    SecretStoreAction {
+        request_id: u64,
+        action: SecretStoreAction,
+    },
     /// Returns data for an interactive terminal. The desktop builds the shell command itself.
     TerminalShellPlan {
         request_id: u64,
@@ -213,6 +220,7 @@ pub enum ClientMessage {
 pub enum ServerMessage {
     Connect {
         protocol_version: u16,
+        secret_store_status: SecretStoreStatus,
     },
     ExecuteCommand {
         request_id: u64,
@@ -308,6 +316,10 @@ pub enum ServerMessage {
     RemoveSecretResult {
         request_id: u64,
     },
+    SecretStoreActionResult {
+        request_id: u64,
+        status: SecretStoreStatus,
+    },
     Ack {
         request_id: u64,
     },
@@ -336,6 +348,15 @@ pub struct RemoteShellPlan {
     pub allocate_tty: bool,
     /// For SSH: argv after the host destination. For `local_on_core`: single script for `bash -c`.
     pub remote_command: Vec<String>,
+}
+
+/// Intentionally not `Debug` so passphrases can't end up in logs.
+#[derive(Clone, Serialize, Deserialize)]
+pub enum SecretStoreAction {
+    Unlock { passphrase: String },
+    Protect { passphrase: String },
+    ChangePassphrase { old_passphrase: String, new_passphrase: String },
+    Unprotect { passphrase: String },
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]

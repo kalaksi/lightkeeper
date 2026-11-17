@@ -41,8 +41,9 @@ const PASSPHRASE_LENGTH: RangeInclusive<usize> = 8..=1024;
 const KDF_M_COST_KIB: RangeInclusive<u32> = 19 * 1024..=1024 * 1024;
 const KDF_T_COST: RangeInclusive<u32> = 2..=10;
 const KDF_P_COST: RangeInclusive<u32> = 1..=8;
-const DEFAULT_KDF_M_COST_KIB: u32 = 64 * 1024;
-const DEFAULT_KDF_T_COST: u32 = 3;
+/// About 1-2 s per attempt on a modern CPU, while keeping memory use modest for small hosts and containers.
+const DEFAULT_KDF_M_COST_KIB: u32 = 256 * 1024;
+const DEFAULT_KDF_T_COST: u32 = 6;
 const DEFAULT_KDF_P_COST: u32 = 1;
 
 type Entries = HashMap<String, String>;

@@ -250,7 +250,7 @@ fn perform_handshake(writer: &mut CoreClientStream, reader: &mut CoreClientStrea
 
     loop {
         match read_message::<ServerMessage, _>(reader) {
-            Ok(ServerMessage::Connect { protocol_version }) => {
+            Ok(ServerMessage::Connect { protocol_version, .. }) => {
                 if protocol_version != PROTOCOL_VERSION {
                     return Err(HandshakeError {
                         message: format!("Protocol mismatch: expected {}, got {}", PROTOCOL_VERSION, protocol_version),
@@ -839,7 +839,7 @@ impl RemoteCoreClient {
                 };
 
                 match message {
-                    ServerMessage::Connect { protocol_version } => {
+                    ServerMessage::Connect { protocol_version, .. } => {
                         ::log::warn!("Ignoring unexpected Connect after handshake (protocol {})", protocol_version,);
                     }
                     ServerMessage::ExecuteCommand { request_id, invocation_id } => {
@@ -978,6 +978,7 @@ impl RemoteCoreClient {
                             PendingRpcReply::RemoveSecretOk
                         });
                     }
+                    ServerMessage::SecretStoreActionResult { .. } => {}
                     ServerMessage::Ack { request_id } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::Ack, || PendingRpcReply::Ack);
                     }

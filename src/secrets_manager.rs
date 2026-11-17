@@ -14,6 +14,8 @@ use keyring::Error as KeyringError;
 #[cfg(feature = "flatpak")]
 use std::sync::OnceLock;
 
+use serde::{Deserialize, Serialize};
+
 use crate::error::LkError;
 use crate::utils::strip_unprintable;
 
@@ -58,7 +60,7 @@ fn keyring() -> &'static oo7::Keyring {
     })
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SecretStoreStatus {
     NoKey,
     Unlocked,

@@ -15,11 +15,13 @@ use std::time::Duration;
 
 use crate::configuration::{Configuration, Groups, Hosts};
 use crate::error::{ErrorKind, LkError};
-use crate::remote_core::protocol::{read_message, ClientMessage, RemoteErrorCode, ServerMessage, PROTOCOL_VERSION};
+use crate::remote_core::protocol::{
+    read_message, ClientMessage, RemoteErrorCode, SecretStoreAction, ServerMessage, PROTOCOL_VERSION,
+};
 use crate::remote_core::runtime::CoreRuntime;
 use crate::remote_core::session::RemoteSession;
 use crate::remote_core::socket;
-use crate::secrets_manager;
+use crate::secrets_manager::{self, SecretStoreStatus};
 
 const HANDSHAKE_READ_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -122,6 +124,22 @@ fn run_remote_client_session_with_claim(
     handle_connected_client_loop(&mut stream, runtime)
 }
 
+/// Returns hosts whose state was reset, for the GUI to re-initialize like local reload.
+fn reconfigure_and_resend_state(
+    runtime: &mut CoreRuntime,
+    session: &mut RemoteSession,
+    main_config: &Configuration,
+    hosts_config: &Hosts,
+) -> Result<Vec<String>, LkError> {
+    session.halt_update_stream();
+    // Attach the observer before reconfigure so start_timers' first Timers push is not missed.
+    let update_receiver = runtime.new_update_receiver();
+    let reset_hosts = runtime.reconfigure(main_config, hosts_config);
+    session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
+    session.start_update_stream(update_receiver);
+    Ok(reset_hosts)
+}
+
 fn reject_busy_client(stream: UnixStream) {
     if let Ok(clone) = stream.try_clone() {
         let session = RemoteSession::new(clone);
@@ -132,7 +150,10 @@ fn reject_busy_client(stream: UnixStream) {
 fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRuntime) -> Result<(), LkError> {
     let update_receiver = runtime.new_update_receiver();
     let mut session = RemoteSession::new(stream.try_clone()?);
-    session.send_message(&ServerMessage::Connect { protocol_version: PROTOCOL_VERSION })?;
+    session.send_message(&ServerMessage::Connect {
+        protocol_version: PROTOCOL_VERSION,
+        secret_store_status: runtime.secret_store.status()?,
+    })?;
 
     let display_data = runtime.core.host_manager.borrow().get_display_data();
     session.send_message(&ServerMessage::InitialState(display_data))?;
@@ -427,13 +448,7 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 // Soft updates (e.g. alert acks, show_charts) are applied in place and streamed like in local mode.
                 // Reset hosts are returned for the GUI to re-initialize, like local reload.
                 let reset_hosts = if !runtime.apply_soft_update(&main_config, &hosts_config) {
-                    session.halt_update_stream();
-                    // Attach the observer before reconfigure so start_timers' first Timers push is not missed.
-                    let update_receiver = runtime.new_update_receiver();
-                    let reset_hosts = runtime.reconfigure(&main_config, &hosts_config);
-                    session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
-                    session.start_update_stream(update_receiver);
-                    reset_hosts
+                    reconfigure_and_resend_state(runtime, session, &main_config, &hosts_config)?
                 }
                 else {
                     Vec::new()
@@ -454,7 +469,11 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                         session.send_message(&ServerMessage::StoreSecretResult { request_id, placeholder })?;
                     }
                     Err(error) => {
-                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                        let code = match runtime.secret_store.status() {
+                            Ok(SecretStoreStatus::Locked) => RemoteErrorCode::SecretStoreLocked,
+                            _ => RemoteErrorCode::Internal,
+                        };
+                        session.send_request_error(request_id, code, error.to_string())?;
                     }
                 }
             }
@@ -470,9 +489,38 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                         session.send_message(&ServerMessage::RemoveSecretResult { request_id })?;
                     }
                     Err(error) => {
-                        session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                        let code = match runtime.secret_store.status() {
+                            Ok(SecretStoreStatus::Locked) => RemoteErrorCode::SecretStoreLocked,
+                            _ => RemoteErrorCode::Internal,
+                        };
+                        session.send_request_error(request_id, code, error.to_string())?;
                     }
                 }
+            }
+            ClientMessage::SecretStoreAction { request_id, action } => {
+                let was_locked = matches!(runtime.secret_store.status(), Ok(SecretStoreStatus::Locked));
+                let result = match &action {
+                    SecretStoreAction::Unlock { passphrase } => runtime.secret_store.unlock_store(passphrase),
+                    SecretStoreAction::Protect { passphrase } => runtime.secret_store.protect_store(passphrase),
+                    SecretStoreAction::ChangePassphrase { old_passphrase, new_passphrase } => {
+                        runtime.secret_store.change_store_passphrase(old_passphrase, new_passphrase)
+                    }
+                    SecretStoreAction::Unprotect { passphrase } => runtime.secret_store.unprotect_store(passphrase),
+                };
+
+                if let Err(error) = result {
+                    log::warn!("Secret store action failed: {}", error);
+                    session.send_request_error(request_id, RemoteErrorCode::Internal, error.to_string())?;
+                    continue;
+                }
+
+                // Secrets are resolved when hosts are configured, so reconfigure to pick up the now readable ones.
+                // Reset hosts are intentionally not re-initialized; user or timer refreshes them.
+                if was_locked {
+                    let (main_config, hosts_config) = runtime.applied_config.clone();
+                    reconfigure_and_resend_state(runtime, session, &main_config, &hosts_config)?;
+                }
+                session.send_message(&ServerMessage::SecretStoreActionResult { request_id, status: runtime.secret_store.status()? })?;
             }
             ClientMessage::TerminalShellPlan {
                 request_id,
