@@ -71,6 +71,7 @@ impl HostManager {
 
         let mut host_states = self.hosts.lock().unwrap();
         let mut reset_hosts = Vec::new();
+        let mut previous_states = HashMap::new();
 
         let new_host_configs = if host_states.hosts.is_empty() {
             // For certificate monitoring.
@@ -88,12 +89,12 @@ impl HostManager {
                     if current_host_settings != new_host_settings {
                         // Only flag hosts that were already initialized, so we don't trigger
                         // connections to hosts the user never connected to.
-                        if let Some(old_state) = host_states.hosts.get(host_id) {
+                        if let Some(old_state) = host_states.hosts.remove(host_id) {
                             if old_state.is_initialized {
                                 reset_hosts.push(host_id.clone());
                             }
+                            previous_states.insert(host_id.clone(), old_state);
                         }
-                        host_states.hosts.remove(host_id);
                     }
                 }
             }
@@ -130,10 +131,9 @@ impl HostManager {
                     new_state.host.platform = platform.clone();
                 }
                 // Re-use existing platform info, since it should rarely change.
-                else if let Some(old_state) = host_states.hosts.get(&host.name) {
+                else if let Some(old_state) = previous_states.get(&host.name) {
                     new_state.host.platform = old_state.host.platform.clone()
                 }
-
                 host_states.hosts.insert(host.name.clone(), new_state.clone());
             }
             else {

@@ -304,7 +304,7 @@ pub enum ServerMessage {
     WriteConfigOk {
         request_id: u64,
     },
-    /// Hosts whose state was reset and should be re-initialized by the GUI, like local reload.
+    /// Hosts whose state was reset, like local reload. GUI refreshes only the shown host right away.
     ApplyConfigResult {
         request_id: u64,
         reset_hosts: Vec<String>,

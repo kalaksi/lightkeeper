@@ -190,14 +190,14 @@ ApplicationWindow {
                 snackbarContainer.addSnackbar("Critical", error)
             }
             else {
-                // Reset hosts are re-initialized in LkBackend.reload; keep the shown host view in sync.
+                // Only the shown host is refreshed right away; other reset hosts wait for user or timer.
                 let shownHostId = hostTableModel.getSelectedHostId()
                 if (shownHostId === "") {
                     shownHostId = root.hostDetails.hostId
                 }
                 if (shownHostId !== "") {
                     root.hostDetails.hostId = shownHostId
-                    if (!LK.hosts.isHostInitialized(shownHostId)) {
+                    if (resetHosts.includes(shownHostId) || !LK.hosts.isHostInitialized(shownHostId)) {
                         LK.command.initializeHost(shownHostId)
                     }
                 }

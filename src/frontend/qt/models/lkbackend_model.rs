@@ -846,7 +846,6 @@ impl LkBackend {
                     self.reload_local(main_config, hosts_config)
                 };
 
-                self.command.borrow_mut().initialize_reset_hosts(&reset_hosts);
                 let reset_hosts = reset_hosts.into_iter().map(QString::from).collect::<QStringList>();
                 self.reloaded(QString::from(""), reset_hosts);
             },
