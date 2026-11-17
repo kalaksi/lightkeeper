@@ -58,6 +58,15 @@ fn keyring() -> &'static oo7::Keyring {
     })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecretStoreStatus {
+    NoKey,
+    Unlocked,
+    UnlockedWithPassphrase,
+    Locked,
+}
+
+/// Passphrase methods may block for a while (KDF), so don't call them from the UI thread.
 pub trait SecretStore: Send + Sync {
     fn get(&self, key: &str) -> Result<Option<String>, LkError>;
     fn set(&self, key: &str, value: &str) -> Result<(), LkError>;
@@ -65,6 +74,26 @@ pub trait SecretStore: Send + Sync {
 
     /// Prefix written into config for secrets held by this store (e.g. `keyring:` / `secretsfile:`).
     fn identifier_prefix(&self) -> &'static str;
+
+    fn status(&self) -> Result<SecretStoreStatus, LkError> {
+        Ok(SecretStoreStatus::Unlocked)
+    }
+
+    fn unlock_store(&self, _passphrase: &str) -> Result<(), LkError> {
+        Err(LkError::other("Not supported"))
+    }
+
+    fn protect_store(&self, _passphrase: &str) -> Result<(), LkError> {
+        Err(LkError::other("Not supported"))
+    }
+
+    fn change_store_passphrase(&self, _old_passphrase: &str, _new_passphrase: &str) -> Result<(), LkError> {
+        Err(LkError::other("Not supported"))
+    }
+
+    fn unprotect_store(&self, _passphrase: &str) -> Result<(), LkError> {
+        Err(LkError::other("Not supported"))
+    }
 }
 
 pub struct KeyringSecretStore;

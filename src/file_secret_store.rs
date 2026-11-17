@@ -21,10 +21,11 @@ use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
 use crate::error::LkError;
-use crate::secrets_manager::{SecretStore, SECRETSFILE_PREFIX};
+use crate::secrets_manager::{SecretStore, SecretStoreStatus, SECRETSFILE_PREFIX};
 use crate::utils::strip_unprintable;
 
 const STORE_FILE_NAME: &str = "secrets.enc";
+const PENDING_STORE_FILE_NAME: &str = "secrets.enc.pending";
 const KEY_FILE_NAME: &str = "secrets.key";
 const KEY_FILE_ENV: &str = "LIGHTKEEPER_SECRETS_KEY_FILE";
 const STORE_VERSION: u32 = 1;
@@ -165,14 +166,14 @@ enum KeyFile {
 
 enum KeyState {
     NoKey,
-    Unlocked(Key),
+    Unlocked { key: Key, protected: bool },
     Locked,
 }
 
 impl From<KeyFile> for KeyState {
     fn from(key_file: KeyFile) -> Self {
         match key_file {
-            KeyFile::Raw(key) => KeyState::Unlocked(key),
+            KeyFile::Raw(key) => KeyState::Unlocked { key, protected: false },
             KeyFile::Protected(_) => KeyState::Locked,
         }
     }
@@ -180,6 +181,8 @@ impl From<KeyFile> for KeyState {
 
 pub struct FileSecretStore {
     store_path: PathBuf,
+    /// Store re-encrypted with a rotated key. Replaces the store only after the new key file has been written.
+    pending_store_path: PathBuf,
     key_path: PathBuf,
     /// Only the default `<config-dir>/secrets.key` may be created automatically.
     allow_generate_key: bool,
@@ -205,7 +208,7 @@ impl FileSecretStore {
         let state = if key_path.exists() { KeyState::from(read_key_file(&key_path)?) } else { KeyState::NoKey };
 
         match (&state, allow_generate_key) {
-            (KeyState::Unlocked(_), _) => log::info!("Using encrypted file secret store at {}", store_path.display()),
+            (KeyState::Unlocked { .. }, _) => log::info!("Using encrypted file secret store at {}", store_path.display()),
             (KeyState::Locked, _) => log::info!(
                 "Using encrypted file secret store at {} (locked until unlocked with passphrase)",
                 store_path.display()
@@ -227,6 +230,7 @@ impl FileSecretStore {
         }
 
         Ok(Self {
+            pending_store_path: data_dir.join(PENDING_STORE_FILE_NAME),
             store_path,
             key_path,
             allow_generate_key,
@@ -234,23 +238,15 @@ impl FileSecretStore {
         })
     }
 
-    /// Unlocks a passphrase-protected key and keeps it in memory until exit.
-    /// Blocks while the KDF runs, so call from a blocking thread in async contexts.
-    pub fn unlock(&self, passphrase: &str) -> Result<(), LkError> {
-        let mut state = self.state.lock()?;
-        if !matches!(*state, KeyState::Locked) {
-            return Ok(());
-        }
+    /// Wrong passphrase and corrupt key file result in the same error.
+    fn unwrap_key_file(&self, passphrase: &str) -> Result<Key, LkError> {
         let KeyFile::Protected(protected) = read_key_file(&self.key_path)? else {
-            return Err(LkError::other(format!("Secret key {} is no longer passphrase-protected", self.key_path.display())));
+            return Err(LkError::other(format!("Secret key {} is not passphrase-protected", self.key_path.display())));
         };
-        let key = protected.unwrap_key(passphrase).map_err(|error| {
+        protected.unwrap_key(passphrase).map_err(|error| {
             log::debug!("Unlocking secret key failed: {}", error);
             LkError::other("Failed to unlock secret key")
-        })?;
-        *state = KeyState::Unlocked(key);
-        log::info!("Unlocked secret store key {}", self.key_path.display());
-        Ok(())
+        })
     }
 
     fn modify_entries(&self, modify: impl FnOnce(&mut Entries)) -> Result<(), LkError> {
@@ -258,7 +254,7 @@ impl FileSecretStore {
         let mut entries = self.read_entries(&mut state)?;
         modify(&mut entries);
         let key = self.ensure_key(&mut state)?;
-        self.write_entries(&key, &entries)
+        write_store_file(&self.store_path, &key, &entries)
     }
 
     /// Loads the key lazily so that a key file provided after startup is picked up.
@@ -269,7 +265,7 @@ impl FileSecretStore {
         let key = match state {
             KeyState::Locked => return Err(LkError::other("Secret store is locked")),
             _ if !self.store_path.exists() => return Ok(Entries::new()),
-            KeyState::Unlocked(key) => key,
+            KeyState::Unlocked { key, .. } => key,
             KeyState::NoKey => {
                 return Err(LkError::other(format!(
                     "Secret key not found at {} but {} exists; secrets unavailable",
@@ -279,58 +275,29 @@ impl FileSecretStore {
             }
         };
 
-        let raw = fs::read(&self.store_path)
-            .map_err(|error| LkError::other(format!("Failed to read secret store {}: {}", self.store_path.display(), error)))?;
-        let envelope: EncryptedStoreFile = serde_json::from_slice(&raw)
-            .map_err(|error| LkError::other_p("Invalid secret store format", error))?;
-        if envelope.version != STORE_VERSION {
-            return Err(LkError::other(format!("Unsupported secret store version {}", envelope.version)));
+        match read_store_file(&self.store_path, key) {
+            Ok(entries) => {
+                if self.pending_store_path.exists() {
+                    fs::remove_file(&self.pending_store_path).map_err(|error| {
+                        LkError::other(format!("Failed to remove {}: {}", self.pending_store_path.display(), error))
+                    })?;
+                }
+                Ok(entries)
+            }
+            Err(error) if self.pending_store_path.exists() => {
+                let entries = read_store_file(&self.pending_store_path, key).map_err(|_| error)?;
+                fs::rename(&self.pending_store_path, &self.store_path)
+                    .map_err(|error| LkError::other(format!("Failed to replace {}: {}", self.store_path.display(), error)))?;
+                log::warn!("Recovered secret store from interrupted key rotation");
+                Ok(entries)
+            }
+            Err(error) => Err(error),
         }
-
-        let nonce = BASE64
-            .decode(envelope.nonce.as_bytes())
-            .map_err(|error| LkError::other_p("Invalid secret store nonce", error))?;
-        if nonce.len() != NONCE_LENGTH {
-            return Err(LkError::other("Invalid secret store nonce length"));
-        }
-        let ciphertext = BASE64
-            .decode(envelope.ciphertext.as_bytes())
-            .map_err(|error| LkError::other_p("Invalid secret store ciphertext", error))?;
-
-        let plaintext = XChaCha20Poly1305::new(key)
-            .decrypt(XNonce::from_slice(&nonce), Payload { msg: &ciphertext, aad: AAD })
-            .map_err(|_| {
-                LkError::other(
-                    "Failed to decrypt secret store (wrong key or tampered file). \
-                     Do not regenerate the key while secrets.enc exists.",
-                )
-            })?;
-
-        serde_json::from_slice(&plaintext)
-            .map_err(|error| LkError::other_p("Invalid decrypted secret store payload", error))
-    }
-
-    fn write_entries(&self, key: &Key, entries: &Entries) -> Result<(), LkError> {
-        let plaintext = serde_json::to_vec(entries)
-            .map_err(|error| LkError::other_p("Failed to serialize secret store", error))?;
-        let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
-        let ciphertext = XChaCha20Poly1305::new(key)
-            .encrypt(&nonce, Payload { msg: &plaintext, aad: AAD })
-            .map_err(|_| LkError::other("Failed to encrypt secret store"))?;
-
-        let envelope = EncryptedStoreFile {
-            version: STORE_VERSION,
-            nonce: BASE64.encode(nonce),
-            ciphertext: BASE64.encode(&ciphertext),
-        };
-        let raw = serde_json::to_vec(&envelope)
-            .map_err(|error| LkError::other_p("Failed to serialize encrypted secret store", error))?;
-        atomic_write(&self.store_path, &raw)
     }
 
     fn ensure_key(&self, state: &mut KeyState) -> Result<Key, LkError> {
         match state {
-            KeyState::Unlocked(key) => return Ok(*key),
+            KeyState::Unlocked { key, .. } => return Ok(*key),
             KeyState::Locked => return Err(LkError::other("Secret store is locked")),
             KeyState::NoKey => {}
         }
@@ -362,7 +329,7 @@ impl FileSecretStore {
             "Generated secret store key at {}. Back it up separately from config; losing it loses all stored secrets.",
             self.key_path.display()
         );
-        *state = KeyState::Unlocked(new_key);
+        *state = KeyState::Unlocked { key: new_key, protected: false };
         Ok(new_key)
     }
 }
@@ -392,6 +359,127 @@ impl SecretStore for FileSecretStore {
             entries.remove(key);
         })
     }
+
+    fn status(&self) -> Result<SecretStoreStatus, LkError> {
+        let mut state = self.state.lock()?;
+        if matches!(*state, KeyState::NoKey) && self.key_path.exists() {
+            *state = KeyState::from(read_key_file(&self.key_path)?);
+        }
+        Ok(match *state {
+            KeyState::NoKey => SecretStoreStatus::NoKey,
+            KeyState::Unlocked { protected: false, .. } => SecretStoreStatus::Unlocked,
+            KeyState::Unlocked { protected: true, .. } => SecretStoreStatus::UnlockedWithPassphrase,
+            KeyState::Locked => SecretStoreStatus::Locked,
+        })
+    }
+
+    /// Unlocks a passphrase-protected key and keeps it in memory until exit.
+    fn unlock_store(&self, passphrase: &str) -> Result<(), LkError> {
+        let mut state = self.state.lock()?;
+        if !matches!(*state, KeyState::Locked) {
+            return Ok(());
+        }
+        let key = self.unwrap_key_file(passphrase)?;
+        *state = KeyState::Unlocked { key, protected: true };
+        log::info!("Unlocked secret store key {}", self.key_path.display());
+        Ok(())
+    }
+
+    /// Protects a raw key with a passphrase. The key is rotated since the old raw key may exist in backups.
+    fn protect_store(&self, passphrase: &str) -> Result<(), LkError> {
+        let mut state = self.state.lock()?;
+        let entries = self.read_entries(&mut state)?;
+        self.ensure_key(&mut state)?;
+        if matches!(*state, KeyState::Unlocked { protected: true, .. }) {
+            return Err(LkError::other("Secret key is already passphrase-protected"));
+        }
+
+        let new_key = XChaCha20Poly1305::generate_key(&mut OsRng);
+        let protected = ProtectedKeyFile::wrap_key(&new_key, passphrase)?;
+        let protected_raw = serde_json::to_vec_pretty(&protected)
+            .map_err(|error| LkError::other_p("Failed to serialize protected secret key", error))?;
+        // A crash between these writes is recovered in `read_entries` by promoting the pending store.
+        write_store_file(&self.pending_store_path, &new_key, &entries)?;
+        atomic_write(&self.key_path, &protected_raw)?;
+        *state = KeyState::Unlocked { key: new_key, protected: true };
+        fs::rename(&self.pending_store_path, &self.store_path)
+            .map_err(|error| LkError::other(format!("Failed to replace {}: {}", self.store_path.display(), error)))?;
+        log::info!("Secret key {} is now passphrase-protected", self.key_path.display());
+        Ok(())
+    }
+
+    /// Requires the current passphrase even when unlocked. Only re-wraps the key.
+    fn change_store_passphrase(&self, old_passphrase: &str, new_passphrase: &str) -> Result<(), LkError> {
+        let mut state = self.state.lock()?;
+        let key = self.unwrap_key_file(old_passphrase)?;
+        let protected = ProtectedKeyFile::wrap_key(&key, new_passphrase)?;
+        let protected_raw = serde_json::to_vec_pretty(&protected)
+            .map_err(|error| LkError::other_p("Failed to serialize protected secret key", error))?;
+        atomic_write(&self.key_path, &protected_raw)?;
+        *state = KeyState::Unlocked { key, protected: true };
+        log::info!("Changed passphrase of secret key {}", self.key_path.display());
+        Ok(())
+    }
+
+    /// Requires the current passphrase. Confirmation is the caller's responsibility.
+    fn unprotect_store(&self, passphrase: &str) -> Result<(), LkError> {
+        let mut state = self.state.lock()?;
+        let key = self.unwrap_key_file(passphrase)?;
+        atomic_write(&self.key_path, BASE64.encode(key).as_bytes())?;
+        *state = KeyState::Unlocked { key, protected: false };
+        log::warn!("Removed passphrase from secret key {}; the key is now stored unencrypted", self.key_path.display());
+        Ok(())
+    }
+}
+
+fn read_store_file(path: &Path, key: &Key) -> Result<Entries, LkError> {
+    let raw = fs::read(path)
+        .map_err(|error| LkError::other(format!("Failed to read secret store {}: {}", path.display(), error)))?;
+    let envelope: EncryptedStoreFile = serde_json::from_slice(&raw)
+        .map_err(|error| LkError::other_p("Invalid secret store format", error))?;
+    if envelope.version != STORE_VERSION {
+        return Err(LkError::other(format!("Unsupported secret store version {}", envelope.version)));
+    }
+
+    let nonce = BASE64
+        .decode(envelope.nonce.as_bytes())
+        .map_err(|error| LkError::other_p("Invalid secret store nonce", error))?;
+    if nonce.len() != NONCE_LENGTH {
+        return Err(LkError::other("Invalid secret store nonce length"));
+    }
+    let ciphertext = BASE64
+        .decode(envelope.ciphertext.as_bytes())
+        .map_err(|error| LkError::other_p("Invalid secret store ciphertext", error))?;
+
+    let plaintext = XChaCha20Poly1305::new(key)
+        .decrypt(XNonce::from_slice(&nonce), Payload { msg: &ciphertext, aad: AAD })
+        .map_err(|_| {
+            LkError::other(
+                "Failed to decrypt secret store (wrong key or tampered file). \
+                 Do not regenerate the key while secrets.enc exists.",
+            )
+        })?;
+
+    serde_json::from_slice(&plaintext)
+        .map_err(|error| LkError::other_p("Invalid decrypted secret store payload", error))
+}
+
+fn write_store_file(path: &Path, key: &Key, entries: &Entries) -> Result<(), LkError> {
+    let plaintext = serde_json::to_vec(entries)
+        .map_err(|error| LkError::other_p("Failed to serialize secret store", error))?;
+    let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
+    let ciphertext = XChaCha20Poly1305::new(key)
+        .encrypt(&nonce, Payload { msg: &plaintext, aad: AAD })
+        .map_err(|_| LkError::other("Failed to encrypt secret store"))?;
+
+    let envelope = EncryptedStoreFile {
+        version: STORE_VERSION,
+        nonce: BASE64.encode(nonce),
+        ciphertext: BASE64.encode(&ciphertext),
+    };
+    let raw = serde_json::to_vec(&envelope)
+        .map_err(|error| LkError::other_p("Failed to serialize encrypted secret store", error))?;
+    atomic_write(path, &raw)
 }
 
 fn read_key_file(path: &Path) -> Result<KeyFile, LkError> {
