@@ -14,6 +14,7 @@ use lightkeeper::file_handler;
 use lightkeeper::Configuration;
 use lightkeeper::remote_core::runtime::CoreRuntime;
 use lightkeeper::remote_core::server::{CoreServer, ShutdownSignals};
+use lightkeeper::utils;
 
 #[derive(Parser, Clone)]
 pub struct Args {
@@ -39,6 +40,10 @@ fn main() {
     }
 
     log::info!("Lightkeeper Core starting...");
+
+    if let Err(error) = utils::disable_process_dumping() {
+        log::warn!("Failed to disable process dumping: {}", error);
+    }
 
     let shutdown_signals = match ShutdownSignals::block() {
         Ok(shutdown_signals) => shutdown_signals,

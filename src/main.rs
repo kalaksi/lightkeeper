@@ -48,6 +48,10 @@ fn main() {
         return;
     }
 
+    if let Err(error) = utils::disable_process_dumping() {
+        log::warn!("Failed to disable process dumping: {}", error);
+    }
+
     let mut skip_core_auto_connect = false;
     loop {
         log::info!("Lightkeeper starting...");

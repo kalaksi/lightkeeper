@@ -24,3 +24,12 @@ pub use journalctl_time::is_valid_journalctl_time;
 
 pub mod journalctl_format;
 pub use journalctl_format::journalctl_json_to_rich_text;
+
+/// Disables core dumps and same-user ptrace so that unlocked secrets can't be read from process memory.
+pub fn disable_process_dumping() -> std::io::Result<()> {
+    #[cfg(target_os = "linux")]
+    if unsafe { libc::prctl(libc::PR_SET_DUMPABLE, 0) } != 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(())
+}

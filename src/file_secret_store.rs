@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::ops::RangeInclusive;
-use std::os::unix::fs::OpenOptionsExt;
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -18,7 +18,7 @@ use chacha20poly1305::aead::rand_core::RngCore;
 use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng, Payload};
 use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::error::LkError;
 use crate::secrets_manager::{SecretStore, SecretStoreStatus, SECRETSFILE_PREFIX};
@@ -46,7 +46,19 @@ const DEFAULT_KDF_M_COST_KIB: u32 = 256 * 1024;
 const DEFAULT_KDF_T_COST: u32 = 6;
 const DEFAULT_KDF_P_COST: u32 = 1;
 
-type Entries = HashMap<String, String>;
+/// Plain `Key` would leave unwiped copies in memory.
+type SecretKey = Zeroizing<[u8; KEY_LENGTH]>;
+
+/// Secret values are wiped on drop.
+#[derive(Default, Serialize, Deserialize)]
+#[serde(transparent)]
+struct Entries(HashMap<String, String>);
+
+impl Drop for Entries {
+    fn drop(&mut self) {
+        self.0.values_mut().for_each(|value| value.zeroize());
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 struct EncryptedStoreFile {
@@ -107,7 +119,7 @@ impl ProtectedKeyFile {
         Ok(wrapping_key)
     }
 
-    fn wrap_key(key: &Key, passphrase: &str) -> Result<Self, LkError> {
+    fn wrap_key(key: &SecretKey, passphrase: &str) -> Result<Self, LkError> {
         if !PASSPHRASE_LENGTH.contains(&passphrase.len()) {
             return Err(LkError::other(format!("Passphrase must be {}-{} bytes", PASSPHRASE_LENGTH.start(), PASSPHRASE_LENGTH.end())));
         }
@@ -128,13 +140,13 @@ impl ProtectedKeyFile {
 
         let wrapping_key = file.derive_wrapping_key(passphrase)?;
         let wrapped_key = XChaCha20Poly1305::new(Key::from_slice(wrapping_key.as_slice()))
-            .encrypt(&nonce, Payload { msg: key, aad: &file.associated_data() })
+            .encrypt(&nonce, Payload { msg: key.as_slice(), aad: &file.associated_data() })
             .map_err(|_| LkError::other("Failed to wrap secret key"))?;
         file.wrapped_key = BASE64.encode(wrapped_key);
         Ok(file)
     }
 
-    fn unwrap_key(&self, passphrase: &str) -> Result<Key, LkError> {
+    fn unwrap_key(&self, passphrase: &str) -> Result<SecretKey, LkError> {
         let wrapping_key = self.derive_wrapping_key(passphrase)?;
         let nonce = BASE64
             .decode(self.nonce.as_bytes())
@@ -156,18 +168,20 @@ impl ProtectedKeyFile {
         if key.len() != KEY_LENGTH {
             return Err(LkError::other("Invalid unwrapped secret key length"));
         }
-        Ok(*Key::from_slice(&key))
+        let mut unwrapped_key = SecretKey::default();
+        unwrapped_key.copy_from_slice(&key);
+        Ok(unwrapped_key)
     }
 }
 
 enum KeyFile {
-    Raw(Key),
+    Raw(SecretKey),
     Protected(ProtectedKeyFile),
 }
 
 enum KeyState {
     NoKey,
-    Unlocked { key: Key, protected: bool },
+    Unlocked { key: SecretKey, protected: bool },
     Locked,
 }
 
@@ -188,7 +202,8 @@ pub struct FileSecretStore {
     /// Only the default `<config-dir>/secrets.key` may be created automatically.
     allow_generate_key: bool,
     /// Also serializes all store file access and unlocking.
-    state: Mutex<KeyState>,
+    /// Boxed so that the memory locked in `open` stays where the key is.
+    state: Box<Mutex<KeyState>>,
 }
 
 impl FileSecretStore {
@@ -230,17 +245,24 @@ impl FileSecretStore {
             ),
         }
 
+        let state = Box::new(Mutex::new(state));
+        // Best-effort, keeps the key out of swap.
+        let state_pointer = (&*state as *const Mutex<KeyState>).cast();
+        if unsafe { libc::mlock(state_pointer, std::mem::size_of::<Mutex<KeyState>>()) } != 0 {
+            log::warn!("Failed to lock secret key memory: {}", std::io::Error::last_os_error());
+        }
+
         Ok(Self {
             pending_store_path: data_dir.join(PENDING_STORE_FILE_NAME),
             store_path,
             key_path,
             allow_generate_key,
-            state: Mutex::new(state),
+            state,
         })
     }
 
     /// Wrong passphrase and corrupt key file result in the same error.
-    fn unwrap_key_file(&self, passphrase: &str) -> Result<Key, LkError> {
+    fn unwrap_key_file(&self, passphrase: &str) -> Result<SecretKey, LkError> {
         let KeyFile::Protected(protected) = read_key_file(&self.key_path)? else {
             return Err(LkError::other(format!("Secret key {} is not passphrase-protected", self.key_path.display())));
         };
@@ -265,7 +287,7 @@ impl FileSecretStore {
         }
         let key = match state {
             KeyState::Locked => return Err(LkError::other("Secret store is locked")),
-            _ if !self.store_path.exists() => return Ok(Entries::new()),
+            _ if !self.store_path.exists() => return Ok(Entries::default()),
             KeyState::Unlocked { key, .. } => key,
             KeyState::NoKey => {
                 return Err(LkError::other(format!(
@@ -296,9 +318,9 @@ impl FileSecretStore {
         }
     }
 
-    fn ensure_key(&self, state: &mut KeyState) -> Result<Key, LkError> {
+    fn ensure_key(&self, state: &mut KeyState) -> Result<SecretKey, LkError> {
         match state {
-            KeyState::Unlocked { key, .. } => return Ok(*key),
+            KeyState::Unlocked { key, .. } => return Ok(key.clone()),
             KeyState::Locked => return Err(LkError::other("Secret store is locked")),
             KeyState::NoKey => {}
         }
@@ -320,17 +342,18 @@ impl FileSecretStore {
             )));
         }
 
-        let new_key = XChaCha20Poly1305::generate_key(&mut OsRng);
+        let mut new_key = SecretKey::default();
+        OsRng.fill_bytes(new_key.as_mut_slice());
         if let Some(parent) = self.key_path.parent() {
             fs::create_dir_all(parent)
                 .map_err(|error| LkError::other(format!("Failed to create key directory {}: {}", parent.display(), error)))?;
         }
-        atomic_write(&self.key_path, BASE64.encode(new_key).as_bytes())?;
+        atomic_write(&self.key_path, Zeroizing::new(BASE64.encode(new_key.as_slice())).as_bytes())?;
         log::warn!(
             "Generated secret store key at {}. Back it up separately from config; losing it loses all stored secrets.",
             self.key_path.display()
         );
-        *state = KeyState::Unlocked { key: new_key, protected: false };
+        *state = KeyState::Unlocked { key: new_key.clone(), protected: false };
         Ok(new_key)
     }
 }
@@ -342,13 +365,15 @@ impl SecretStore for FileSecretStore {
 
     fn get(&self, key: &str) -> Result<Option<String>, LkError> {
         let mut state = self.state.lock()?;
-        Ok(self.read_entries(&mut state)?.get(key).cloned())
+        Ok(self.read_entries(&mut state)?.0.get(key).cloned())
     }
 
     fn set(&self, key: &str, value: &str) -> Result<(), LkError> {
         let value = strip_unprintable(value);
         self.modify_entries(|entries| {
-            entries.insert(key.to_string(), value);
+            if let Some(mut old_value) = entries.0.insert(key.to_string(), value) {
+                old_value.zeroize();
+            }
         })
     }
 
@@ -357,7 +382,9 @@ impl SecretStore for FileSecretStore {
             return Ok(());
         }
         self.modify_entries(|entries| {
-            entries.remove(key);
+            if let Some(mut old_value) = entries.0.remove(key) {
+                old_value.zeroize();
+            }
         })
     }
 
@@ -395,7 +422,8 @@ impl SecretStore for FileSecretStore {
             return Err(LkError::other("Secret key is already passphrase-protected"));
         }
 
-        let new_key = XChaCha20Poly1305::generate_key(&mut OsRng);
+        let mut new_key = SecretKey::default();
+        OsRng.fill_bytes(new_key.as_mut_slice());
         let protected = ProtectedKeyFile::wrap_key(&new_key, passphrase)?;
         let protected_raw = serde_json::to_vec_pretty(&protected)
             .map_err(|error| LkError::other_p("Failed to serialize protected secret key", error))?;
@@ -426,14 +454,14 @@ impl SecretStore for FileSecretStore {
     fn unprotect_store(&self, passphrase: &str) -> Result<(), LkError> {
         let mut state = self.state.lock()?;
         let key = self.unwrap_key_file(passphrase)?;
-        atomic_write(&self.key_path, BASE64.encode(key).as_bytes())?;
+        atomic_write(&self.key_path, Zeroizing::new(BASE64.encode(key.as_slice())).as_bytes())?;
         *state = KeyState::Unlocked { key, protected: false };
         log::warn!("Removed passphrase from secret key {}; the key is now stored unencrypted", self.key_path.display());
         Ok(())
     }
 }
 
-fn read_store_file(path: &Path, key: &Key) -> Result<Entries, LkError> {
+fn read_store_file(path: &Path, key: &SecretKey) -> Result<Entries, LkError> {
     let raw = fs::read(path)
         .map_err(|error| LkError::other(format!("Failed to read secret store {}: {}", path.display(), error)))?;
     let envelope: EncryptedStoreFile = serde_json::from_slice(&raw)
@@ -452,24 +480,27 @@ fn read_store_file(path: &Path, key: &Key) -> Result<Entries, LkError> {
         .decode(envelope.ciphertext.as_bytes())
         .map_err(|error| LkError::other_p("Invalid secret store ciphertext", error))?;
 
-    let plaintext = XChaCha20Poly1305::new(key)
-        .decrypt(XNonce::from_slice(&nonce), Payload { msg: &ciphertext, aad: AAD })
-        .map_err(|_| {
-            LkError::other(
-                "Failed to decrypt secret store (wrong key or tampered file). \
-                 Do not regenerate the key while secrets.enc exists.",
-            )
-        })?;
+    let plaintext = Zeroizing::new(
+        XChaCha20Poly1305::new(Key::from_slice(key.as_slice()))
+            .decrypt(XNonce::from_slice(&nonce), Payload { msg: &ciphertext, aad: AAD })
+            .map_err(|_| {
+                LkError::other(
+                    "Failed to decrypt secret store (wrong key or tampered file). \
+                     Do not regenerate the key while secrets.enc exists.",
+                )
+            })?,
+    );
 
     serde_json::from_slice(&plaintext)
         .map_err(|error| LkError::other_p("Invalid decrypted secret store payload", error))
 }
 
-fn write_store_file(path: &Path, key: &Key, entries: &Entries) -> Result<(), LkError> {
-    let plaintext = serde_json::to_vec(entries)
-        .map_err(|error| LkError::other_p("Failed to serialize secret store", error))?;
+fn write_store_file(path: &Path, key: &SecretKey, entries: &Entries) -> Result<(), LkError> {
+    let plaintext = Zeroizing::new(
+        serde_json::to_vec(entries).map_err(|error| LkError::other_p("Failed to serialize secret store", error))?,
+    );
     let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
-    let ciphertext = XChaCha20Poly1305::new(key)
+    let ciphertext = XChaCha20Poly1305::new(Key::from_slice(key.as_slice()))
         .encrypt(&nonce, Payload { msg: &plaintext, aad: AAD })
         .map_err(|_| LkError::other("Failed to encrypt secret store"))?;
 
@@ -484,6 +515,13 @@ fn write_store_file(path: &Path, key: &Key, entries: &Entries) -> Result<(), LkE
 }
 
 fn read_key_file(path: &Path) -> Result<KeyFile, LkError> {
+    // Only warns, since refusing would lock the user out of their secrets.
+    if let Ok(metadata) = fs::metadata(path) {
+        let mode = metadata.permissions().mode() & 0o777;
+        if mode & 0o077 != 0 {
+            log::warn!("Secret key {} is accessible by other users (mode {:o}). Restrict it with `chmod 600`.", path.display(), mode);
+        }
+    }
     let raw = Zeroizing::new(
         fs::read(path).map_err(|error| LkError::other(format!("Failed to read secret key {}: {}", path.display(), error)))?,
     );
@@ -505,7 +543,9 @@ fn read_key_file(path: &Path) -> Result<KeyFile, LkError> {
             KEY_LENGTH
         )));
     }
-    Ok(KeyFile::Raw(*Key::from_slice(&decoded)))
+    let mut key = SecretKey::default();
+    key.copy_from_slice(&decoded);
+    Ok(KeyFile::Raw(key))
 }
 
 fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), LkError> {
