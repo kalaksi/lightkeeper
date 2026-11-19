@@ -284,6 +284,7 @@ Item {
                 text: "Upload"
                 display: AbstractButton.IconOnly
                 onClicked: uploadFileDialogLoader.active = true
+                enabled: fileBrowser.selectedDirectory !== ""
                 icon.height: 24
                 icon.width: 24
                 padding: 4
@@ -299,6 +300,7 @@ Item {
                 text: "Upload folder"
                 display: AbstractButton.IconOnly
                 onClicked: uploadFolderDialogLoader.active = true
+                enabled: fileBrowser.selectedDirectory !== ""
                 icon.height: 24
                 icon.width: 24
                 padding: 4
@@ -392,6 +394,7 @@ Item {
         MenuItem {
             text: "Create folder"
             icon.source: "qrc:/main/images/button/folder-new"
+            enabled: fileBrowser.selectedDirectory !== ""
             onTriggered: root.createFolder()
         }
         MenuItem {
@@ -425,7 +428,7 @@ Item {
         MenuItem {
             text: "Paste"
             icon.source: "qrc:/main/images/button/edit-paste"
-            enabled: root._fileClipboardPaths.length > 0
+            enabled: root._fileClipboardPaths.length > 0 && fileBrowser.selectedDirectory !== ""
             onTriggered: root.paste()
         }
         MenuItem {
@@ -562,6 +565,10 @@ Item {
 
                 onAccepted: {
                     let remoteDir = fileBrowser.selectedDirectory
+                    if (remoteDir === "") {
+                        uploadFileDialogLoader.active = false
+                        return
+                    }
                     for (let i = 0; i < selectedFiles.length; i++) {
                         let url = selectedFiles[i]
                         let localPath = url.toString()
@@ -604,11 +611,11 @@ Item {
                     if (path.indexOf("file://") === 0) {
                         path = path.substring(7)
                     }
-                    if (path.length === 0) {
+                    let remoteDir = fileBrowser.selectedDirectory
+                    if (path.length === 0 || remoteDir === "") {
                         uploadFolderDialogLoader.active = false
                         return
                     }
-                    let remoteDir = fileBrowser.selectedDirectory
                     let invocationId = LK.command.executePlain(root.hostId, "_internal-filebrowser-upload",
                         [path, remoteDir])
                     root._addTransfer(invocationId)
@@ -675,6 +682,7 @@ Item {
     }
     Shortcut {
         enabled: root.enableShortcuts && root._fileClipboardPaths.length > 0
+            && fileBrowser.selectedDirectory !== ""
         sequences: [StandardKey.Paste]
         onActivated: root.paste()
     }
@@ -695,6 +703,9 @@ Item {
     }
 
     function createFolder() {
+        if (fileBrowser.selectedDirectory === "") {
+            return
+        }
         let id = LK.command.executePlain(root.hostId,
             "_internal-filebrowser-mkdir", [fileBrowser.selectedDirectory, "New folder"])
         root._pendingCreateFolderInvocationId = id
@@ -711,7 +722,7 @@ Item {
     }
 
     function paste() {
-        if (root._fileClipboardPaths.length === 0) {
+        if (root._fileClipboardPaths.length === 0 || fileBrowser.selectedDirectory === "") {
             return
         }
         let dest = fileBrowser.selectedDirectory
@@ -778,8 +789,11 @@ Item {
     }
 
     function refreshCurrentDirectory() {
-        root.pendingPath = fileBrowser.selectedDirectory
-        root.pendingInvocation = LK.command.listFiles(root.hostId, fileBrowser.selectedDirectory)
+        let path = fileBrowser.selectedDirectory !== ""
+            ? fileBrowser.selectedDirectory
+            : fileBrowser.rootPath
+        root.pendingPath = path
+        root.pendingInvocation = LK.command.listFiles(root.hostId, path)
     }
 
     function formatSizeKb(sizeKb) {
