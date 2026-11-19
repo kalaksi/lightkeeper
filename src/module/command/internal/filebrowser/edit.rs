@@ -44,6 +44,9 @@ impl CommandModule for FileBrowserEdit {
 
     fn get_connector_message(&self, _host: Host, parameters: Vec<String>) -> Result<String, LkError> {
         let path = parameters.first().ok_or(LkError::other("No path specified"))?.clone();
+        if path.is_empty() {
+            return Err(LkError::other("Path is empty"));
+        }
         Ok(path)
     }
 }

@@ -52,6 +52,9 @@ impl CommandModule for FileBrowserLs {
             return Err(LkError::unsupported_platform());
         }
         let path = parameters.first().ok_or(LkError::other("No path specified"))?.as_str();
+        if path.is_empty() {
+            return Err(LkError::other("Path is empty"));
+        }
         Ok(linux_ls_connector_message(path, host.should_use_sudo()))
     }
 
