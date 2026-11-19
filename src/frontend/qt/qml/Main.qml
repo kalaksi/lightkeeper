@@ -159,7 +159,12 @@ ApplicationWindow {
         }
 
         function onCoreConnectionChanged() {
+            let wasConnected = root.coreConnectionState === "connected"
             root.refreshRemoteCoreBlocked()
+            if (!wasConnected && root.usingRemoteCore && root.coreConnectionState === "connected" &&
+                ["Uninitialized", "NoKey", "Locked"].includes(LK.getSecretStoreStatus())) {
+                root.dialogHandler.openSecretStoreDialog()
+            }
             if (root.coreConnectionState === "failed") {
                 let challenge = LK.getCoreHostKeyChallenge()
                 if (challenge && challenge.keyId) {
@@ -174,6 +179,16 @@ ApplicationWindow {
                 () => root.quit(),
                 true
             )
+        }
+
+        function onSecretStoreActionFinished(error, message) {
+            if (error !== "") {
+                // SecretStoreDialog shows the error while open.
+                root.errorCount += 1;
+            }
+            else if (message !== "") {
+                snackbarContainer.addSnackbar("Info", message)
+            }
         }
 
         function onTimersChanged(hostsSecsLeft, _certsSecsLeft) {

@@ -44,6 +44,12 @@ Item {
         bottomMargin: 0.10 * parent.height
 
         onConfigurationChanged: LK.reload()
+        onSecretStoreDialogRequested: root.openSecretStoreDialog()
+    }
+
+    SecretStoreDialog {
+        id: secretStoreDialog
+        bottomMargin: 0.10 * parent.height
     }
 
     HotkeyHelp {
@@ -154,8 +160,10 @@ Item {
     }
 
 
-    function openInput(inputSpecs, onInputValuesGiven) {
+    function openInput(inputSpecs, onInputValuesGiven, title = "", infoText = "") {
         inputDialog.inputSpecs = inputSpecs
+        inputDialog.title = title
+        inputDialog.infoText = infoText
 
         // Removes connection after triggering once.
         var connectOnce = function(inputValues) {
@@ -168,6 +176,10 @@ Item {
             inputDialog.inputValuesGiven.disconnect(connectOnce)
         })
         inputDialog.open()
+    }
+
+    function openSecretStoreDialog() {
+        secretStoreDialog.open()
     }
 
     function openNewHostConfig(hostId) {

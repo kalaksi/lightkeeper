@@ -688,6 +688,16 @@ Module {
             Parameter { name: "key_id"; type: "string" }
             type: "string"
         }
+        Method { name: "getSecretStoreStatus"; type: "string" }
+        Method {
+            name: "unlockSecretStore"
+            Parameter { name: "passphrase"; type: "string" }
+        }
+        Method {
+            name: "setSecretStorePassphrase"
+            Parameter { name: "current_passphrase"; type: "string" }
+            Parameter { name: "new_passphrase"; type: "string" }
+        }
 
         Signal {
             name: "reloaded"
@@ -700,6 +710,11 @@ Module {
             name: "coreDialogOpFinished"
             Parameter { name: "operation"; type: "string" }
             Parameter { name: "error"; type: "string" }
+        }
+        Signal {
+            name: "secretStoreActionFinished"
+            Parameter { name: "error"; type: "string" }
+            Parameter { name: "message"; type: "string" }
         }
         Signal { name: "restartRequested" }
         Signal {

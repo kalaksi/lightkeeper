@@ -11,6 +11,7 @@ import Lightkeeper 1.0
 
 import "../Text"
 import "../Misc"
+import "../Button"
 import ".."
 import "../StyleOverride"
 
@@ -25,6 +26,7 @@ LightkeeperDialog {
     standardButtons: Dialog.Ok | Dialog.Cancel
 
     signal configurationChanged()
+    signal secretStoreDialogRequested()
 
     onOpened: {
         root._preferences = LK.config.getPreferences()
@@ -67,6 +69,16 @@ LightkeeperDialog {
 
     onRejected: {
         root._loading = true
+    }
+
+    Connections {
+        target: LK
+
+        function onCoreConnectionChanged() {
+            if (root.visible && LK.isUsingRemoteCore() && LK.getCoreConnectionState() !== "connected") {
+                root.reject()
+            }
+        }
     }
 
     Shortcut {
@@ -310,6 +322,7 @@ LightkeeperDialog {
 
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: Theme.spacingNormal
 
                     Column {
                         Layout.fillWidth: true
@@ -328,14 +341,55 @@ LightkeeperDialog {
                         }
                     }
 
+                    ImageButton {
+                        id: secretsBackendInfoButton
+                        property bool _infoPinned: false
+
+                        imageSource: "qrc:/main/images/alert/info"
+                        flatButton: true
+                        roundButton: true
+                        size: secretsBackendCombo.implicitHeight
+                        onClicked: {
+                            _infoPinned = !_infoPinned
+                            if (_infoPinned) {
+                                secretsBackendInfoTip.open()
+                            }
+                            else {
+                                secretsBackendInfoTip.close()
+                            }
+                        }
+
+                        Layout.preferredWidth: size
+                        Layout.alignment: Qt.AlignVCenter
+
+                        ToolTip {
+                            id: secretsBackendInfoTip
+                            parent: secretsBackendInfoButton
+                            delay: Theme.tooltipDelay
+                            timeout: -1
+                            text: root._preferences.secretsBackendInfo || ""
+                        }
+
+                        HoverHandler {
+                            onHoveredChanged: {
+                                if (hovered) {
+                                    secretsBackendInfoTip.open()
+                                }
+                                else if (!secretsBackendInfoButton._infoPinned) {
+                                    secretsBackendInfoTip.close()
+                                }
+                            }
+                        }
+                    }
+
                     ComboBox {
                         id: secretsBackendCombo
                         textRole: "label"
                         valueRole: "backendId"
                         model: ListModel {
-                            ListElement { backendId: "keyring"; label: "keyring" }
+                            ListElement { backendId: "keyring"; label: "Desktop keyring" }
                             ListElement { backendId: "plaintext"; label: "plaintext" }
-                            ListElement { backendId: "secretsfile"; label: "secretsfile" }
+                            ListElement { backendId: "secretsfile"; label: "Lightkeeper" }
                         }
                         delegate: ItemDelegate {
                             required property string label
@@ -357,7 +411,20 @@ LightkeeperDialog {
 
                         Component.onCompleted: _applyPreferences()
 
-                        Layout.preferredWidth: content.width * 0.35
+                        Layout.preferredWidth: content.width * 0.25
+                    }
+
+                    ImageButton {
+                        visible: secretsBackendCombo.currentValue === "secretsfile"
+                        imageSource: "qrc:/main/images/button/configure"
+                        size: secretsBackendCombo.implicitHeight
+                        flatButton: false
+                        tooltip: "Configure secret store"
+                        onClicked: root.secretStoreDialogRequested()
+
+                        Layout.preferredWidth: secretsBackendCombo.implicitHeight
+                        Layout.preferredHeight: secretsBackendCombo.implicitHeight
+                        Layout.alignment: Qt.AlignVCenter
                     }
                 }
 

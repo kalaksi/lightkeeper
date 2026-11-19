@@ -72,6 +72,7 @@ pub fn init_resources() {
             "Dialog/ModuleConfigSection.qml",
             "Dialog/ModuleSettingsDialog.qml",
             "Dialog/PreferencesDialog.qml",
+            "Dialog/SecretStoreDialog.qml",
             "Dialog/TextDialog.qml",
             "js/Parse.js",
             "js/TextTransform.js",

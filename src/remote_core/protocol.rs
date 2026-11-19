@@ -17,7 +17,7 @@ use crate::metrics::lmserver::LMSResponse;
 use crate::module::command::internal::filebrowser::download::RsyncSsh;
 use crate::secrets_manager::SecretStoreStatus;
 
-pub const PROTOCOL_VERSION: u16 = 18;
+pub const PROTOCOL_VERSION: u16 = 19;
 pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024;
 
 /// Wire encoding matching historical `bincode::serialize`/`deserialize` (fixint, little-endian).
@@ -353,10 +353,23 @@ pub struct RemoteShellPlan {
 /// Intentionally not `Debug` so passphrases can't end up in logs.
 #[derive(Clone, Serialize, Deserialize)]
 pub enum SecretStoreAction {
-    Unlock { passphrase: String },
-    Protect { passphrase: String },
-    ChangePassphrase { old_passphrase: String, new_passphrase: String },
-    Unprotect { passphrase: String },
+    Unlock {
+        passphrase: String,
+    },
+    Protect {
+        passphrase: String,
+    },
+    ChangePassphrase {
+        old_passphrase: String,
+        new_passphrase: String,
+    },
+    Unprotect {
+        passphrase: String,
+    },
+    /// Empty passphrase leaves the new key unencrypted.
+    Initialize {
+        passphrase: String,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]

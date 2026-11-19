@@ -35,6 +35,7 @@ use crate::module::command::CommandResult;
 use crate::module::connection::{ConnectionModule, LocalCommand, ResponseMessage};
 use crate::module::{MetadataSupport, Module};
 use crate::remote_core::protocol::*;
+use crate::secrets_manager::{SecretStore, SecretStoreStatus, SECRETSFILE_PREFIX};
 use crate::utils::{sh_single_quoted, sha256, ShellCommand};
 
 enum CoreClientStream {
@@ -112,6 +113,7 @@ enum PendingRpcKind {
     ApplyConfig,
     StoreSecret,
     RemoveSecret,
+    SecretStoreAction,
     Ack,
     ShellPlan,
     FileTransfer,
@@ -142,6 +144,7 @@ enum PendingRpcReply {
     ApplyConfig(Vec<String>),
     StoreSecret(String),
     RemoveSecretOk,
+    SecretStoreAction(SecretStoreStatus),
     Ack,
     ShellPlan(RemoteShellPlan),
     FileTransfer(FileTransferPlan),
@@ -178,6 +181,7 @@ fn reply_matches(kind: &PendingRpcKind, reply: &PendingRpcReply) -> bool {
             | (PendingRpcKind::ApplyConfig, PendingRpcReply::ApplyConfig(_))
             | (PendingRpcKind::StoreSecret, PendingRpcReply::StoreSecret(_))
             | (PendingRpcKind::RemoveSecret, PendingRpcReply::RemoveSecretOk)
+            | (PendingRpcKind::SecretStoreAction, PendingRpcReply::SecretStoreAction(_))
             | (PendingRpcKind::Ack, PendingRpcReply::Ack)
             | (PendingRpcKind::ShellPlan, PendingRpcReply::ShellPlan(_))
             | (PendingRpcKind::FileTransfer, PendingRpcReply::FileTransfer(_))
@@ -245,19 +249,19 @@ impl From<String> for HandshakeError {
     }
 }
 
-fn perform_handshake(writer: &mut CoreClientStream, reader: &mut CoreClientStream) -> Result<(), HandshakeError> {
+fn perform_handshake(writer: &mut CoreClientStream, reader: &mut CoreClientStream) -> Result<SecretStoreStatus, HandshakeError> {
     write_message(writer, &ClientMessage::Connect { protocol_version: PROTOCOL_VERSION }).map_err(|error| error.to_string())?;
 
     loop {
         match read_message::<ServerMessage, _>(reader) {
-            Ok(ServerMessage::Connect { protocol_version, .. }) => {
+            Ok(ServerMessage::Connect { protocol_version, secret_store_status }) => {
                 if protocol_version != PROTOCOL_VERSION {
                     return Err(HandshakeError {
                         message: format!("Protocol mismatch: expected {}, got {}", PROTOCOL_VERSION, protocol_version),
                         version_mismatch: true,
                     });
                 }
-                return Ok(());
+                return Ok(secret_store_status);
             }
             Ok(ServerMessage::Error { code, message, .. }) => {
                 return Err(HandshakeError {
@@ -546,6 +550,23 @@ impl RemoteCoreClient {
         self.status.lock().unwrap().last_error.clone()
     }
 
+    pub fn secret_store_status(&self) -> Option<SecretStoreStatus> {
+        self.status.lock().unwrap().secret_store_status
+    }
+
+    fn secret_store_action(&self, action: SecretStoreAction) -> Result<(), LkError> {
+        match self.send_message_result(PendingRpcKind::SecretStoreAction, |request_id| ClientMessage::SecretStoreAction {
+            request_id,
+            action,
+        })? {
+            PendingRpcReply::SecretStoreAction(status) => {
+                self.status.lock().unwrap().secret_store_status = Some(status);
+                Ok(())
+            }
+            _ => Err(LkError::unexpected()),
+        }
+    }
+
     pub fn set_connection_state(&self, state: CoreConnectionState) {
         self.status.lock().unwrap().set_state(state);
     }
@@ -666,7 +687,7 @@ impl RemoteCoreClient {
         }
 
         match handshake_result {
-            Ok(()) => {
+            Ok(_) => {
                 self.set_connection_state(CoreConnectionState::Disconnected);
                 Ok(())
             }
@@ -733,8 +754,9 @@ impl RemoteCoreClient {
             return Err(error);
         }
 
-        if let Err(error) = perform_handshake(&mut stream, &mut reader) {
-            return Err(self.set_handshake_failed(error));
+        match perform_handshake(&mut stream, &mut reader) {
+            Ok(secret_store_status) => self.status.lock().unwrap().secret_store_status = Some(secret_store_status),
+            Err(error) => return Err(self.set_handshake_failed(error)),
         }
         if self.stopping.load(Ordering::SeqCst) {
             let message = String::from("SSH core connection cancelled");
@@ -978,7 +1000,11 @@ impl RemoteCoreClient {
                             PendingRpcReply::RemoveSecretOk
                         });
                     }
-                    ServerMessage::SecretStoreActionResult { .. } => {}
+                    ServerMessage::SecretStoreActionResult { request_id, status } => {
+                        deliver_response(&pending_rpc, request_id, PendingRpcKind::SecretStoreAction, || {
+                            PendingRpcReply::SecretStoreAction(status)
+                        });
+                    }
                     ServerMessage::Ack { request_id } => {
                         deliver_response(&pending_rpc, request_id, PendingRpcKind::Ack, || PendingRpcReply::Ack);
                     }
@@ -1063,7 +1089,7 @@ impl RemoteCoreClient {
         }
 
         match receiver.recv_timeout(REMOTE_COMMAND_TIMEOUT) {
-            Ok(PendingRpcReply::Error { code, message }) => Err(LkError::other(format!("{}: {}", code, message))),
+            Ok(PendingRpcReply::Error { message, .. }) => Err(LkError::other(message)),
             Ok(reply) => {
                 if reply_matches(&kind, &reply) {
                     Ok(reply)
@@ -1206,6 +1232,69 @@ impl RemoteCoreClient {
                 ShellCommand::new()
             }
         }
+    }
+}
+
+/// Forwards passphrase / status calls to the remote core's [`SecretStore`].
+/// Host secret get/set/delete go through [`super::ConfigBackend`], not this type.
+pub struct RemoteSecretStore {
+    client: Arc<RemoteCoreClient>,
+}
+
+impl RemoteSecretStore {
+    pub fn new(client: Arc<RemoteCoreClient>) -> Self {
+        Self { client }
+    }
+}
+
+impl SecretStore for RemoteSecretStore {
+    fn identifier_prefix(&self) -> &'static str {
+        SECRETSFILE_PREFIX
+    }
+
+    fn get(&self, _key: &str) -> Result<Option<String>, LkError> {
+        Err(LkError::other("Secrets stay on the remote core"))
+    }
+
+    fn set(&self, _key: &str, _value: &str) -> Result<(), LkError> {
+        Err(LkError::other("Secrets stay on the remote core"))
+    }
+
+    fn delete(&self, _key: &str) -> Result<(), LkError> {
+        Err(LkError::other("Secrets stay on the remote core"))
+    }
+
+    fn status(&self) -> Result<SecretStoreStatus, LkError> {
+        self.client
+            .secret_store_status()
+            .ok_or_else(|| LkError::other("Not connected to remote core"))
+    }
+
+    fn initialize_store(&self, passphrase: &str) -> Result<(), LkError> {
+        self.client
+            .secret_store_action(SecretStoreAction::Initialize { passphrase: passphrase.to_string() })
+    }
+
+    fn unlock_store(&self, passphrase: &str) -> Result<(), LkError> {
+        self.client
+            .secret_store_action(SecretStoreAction::Unlock { passphrase: passphrase.to_string() })
+    }
+
+    fn protect_store(&self, passphrase: &str) -> Result<(), LkError> {
+        self.client
+            .secret_store_action(SecretStoreAction::Protect { passphrase: passphrase.to_string() })
+    }
+
+    fn change_store_passphrase(&self, old_passphrase: &str, new_passphrase: &str) -> Result<(), LkError> {
+        self.client.secret_store_action(SecretStoreAction::ChangePassphrase {
+            old_passphrase: old_passphrase.to_string(),
+            new_passphrase: new_passphrase.to_string(),
+        })
+    }
+
+    fn unprotect_store(&self, passphrase: &str) -> Result<(), LkError> {
+        self.client
+            .secret_store_action(SecretStoreAction::Unprotect { passphrase: passphrase.to_string() })
     }
 }
 

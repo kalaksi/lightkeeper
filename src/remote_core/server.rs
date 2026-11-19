@@ -15,9 +15,7 @@ use std::time::Duration;
 
 use crate::configuration::{Configuration, Groups, Hosts};
 use crate::error::{ErrorKind, LkError};
-use crate::remote_core::protocol::{
-    read_message, ClientMessage, RemoteErrorCode, SecretStoreAction, ServerMessage, PROTOCOL_VERSION,
-};
+use crate::remote_core::protocol::{read_message, ClientMessage, RemoteErrorCode, SecretStoreAction, ServerMessage, PROTOCOL_VERSION};
 use crate::remote_core::runtime::CoreRuntime;
 use crate::remote_core::session::RemoteSession;
 use crate::remote_core::socket;
@@ -498,7 +496,11 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                 }
             }
             ClientMessage::SecretStoreAction { request_id, action } => {
-                let was_locked = matches!(runtime.secret_store.status(), Ok(SecretStoreStatus::Locked));
+                // Unlock / first init / re-init make secrets available for host config resolution.
+                let needs_reconfigure = matches!(
+                    runtime.secret_store.status(),
+                    Ok(SecretStoreStatus::Locked | SecretStoreStatus::Uninitialized | SecretStoreStatus::NoKey)
+                );
                 let result = match &action {
                     SecretStoreAction::Unlock { passphrase } => runtime.secret_store.unlock_store(passphrase),
                     SecretStoreAction::Protect { passphrase } => runtime.secret_store.protect_store(passphrase),
@@ -506,6 +508,7 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                         runtime.secret_store.change_store_passphrase(old_passphrase, new_passphrase)
                     }
                     SecretStoreAction::Unprotect { passphrase } => runtime.secret_store.unprotect_store(passphrase),
+                    SecretStoreAction::Initialize { passphrase } => runtime.secret_store.initialize_store(passphrase),
                 };
 
                 if let Err(error) = result {
@@ -514,13 +517,15 @@ fn handle_client_messages(stream: &mut UnixStream, runtime: &mut CoreRuntime, se
                     continue;
                 }
 
-                // Secrets are resolved when hosts are configured, so reconfigure to pick up the now readable ones.
                 // Reset hosts are intentionally not re-initialized; user or timer refreshes them.
-                if was_locked {
+                if needs_reconfigure {
                     let (main_config, hosts_config) = runtime.applied_config.clone();
                     reconfigure_and_resend_state(runtime, session, &main_config, &hosts_config)?;
                 }
-                session.send_message(&ServerMessage::SecretStoreActionResult { request_id, status: runtime.secret_store.status()? })?;
+                session.send_message(&ServerMessage::SecretStoreActionResult {
+                    request_id,
+                    status: runtime.secret_store.status()?,
+                })?;
             }
             ClientMessage::TerminalShellPlan {
                 request_id,

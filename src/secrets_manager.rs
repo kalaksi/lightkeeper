@@ -60,12 +60,15 @@ fn keyring() -> &'static oo7::Keyring {
     })
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
 pub enum SecretStoreStatus {
+    /// Key is missing while a store may still exist; re-init backs the store up and starts fresh.
     NoKey,
     Unlocked,
     UnlockedWithPassphrase,
     Locked,
+    /// No key or store yet; ready for first-time setup.
+    Uninitialized,
 }
 
 /// Passphrase methods may block for a while (KDF), so don't call them from the UI thread.
@@ -81,8 +84,13 @@ pub trait SecretStore: Send + Sync {
         Ok(SecretStoreStatus::Unlocked)
     }
 
+    /// Creates a new key. Empty passphrase stores it unencrypted.
+    fn initialize_store(&self, _passphrase: &str) -> Result<(), LkError> {
+        Ok(())
+    }
+
     fn unlock_store(&self, _passphrase: &str) -> Result<(), LkError> {
-        Err(LkError::other("Not supported"))
+        Ok(())
     }
 
     fn protect_store(&self, _passphrase: &str) -> Result<(), LkError> {
@@ -95,6 +103,21 @@ pub trait SecretStore: Send + Sync {
 
     fn unprotect_store(&self, _passphrase: &str) -> Result<(), LkError> {
         Err(LkError::other("Not supported"))
+    }
+}
+
+/// Empty `new_passphrase` removes protection, or initializes without one. `current_passphrase` is ignored if
+/// the store is not passphrase-protected yet. May block on the KDF.
+pub fn set_store_passphrase(store: &dyn SecretStore, current_passphrase: &str, new_passphrase: &str) -> Result<(), LkError> {
+    match (store.status()?, new_passphrase.is_empty()) {
+        (SecretStoreStatus::Uninitialized | SecretStoreStatus::NoKey, _) => store.initialize_store(new_passphrase),
+        (SecretStoreStatus::UnlockedWithPassphrase, true) => store.unprotect_store(current_passphrase),
+        (SecretStoreStatus::UnlockedWithPassphrase, false) => {
+            store.change_store_passphrase(current_passphrase, new_passphrase)
+        }
+        (SecretStoreStatus::Unlocked, false) => store.protect_store(new_passphrase),
+        (SecretStoreStatus::Locked, _) => Err(LkError::other("Secret store is locked")),
+        (_, true) => Err(LkError::other("Secret store is not passphrase-protected")),
     }
 }
 

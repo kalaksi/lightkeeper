@@ -17,6 +17,7 @@ LightkeeperDialog {
     id: root
     // See UserInputField from rust-side for input spec format.
     property var inputSpecs: []
+    property string infoText: ""
     property string _errorText: ""
     title: ""
     modal: true
@@ -38,6 +39,14 @@ LightkeeperDialog {
         anchors.topMargin: Theme.marginDialogTop
         anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
+
+        NormalText {
+            width: parent.width
+            visible: root.infoText !== ""
+            text: root.infoText
+            wrapMode: Text.WordWrap
+            color: Theme.colorForCriticality("Warning")
+        }
 
         Repeater {
             id: inputRepeater
@@ -148,6 +157,7 @@ LightkeeperDialog {
 
     function resetFields() {
         root._errorText = ""
+        root.infoText = ""
         root.inputSpecs = []
     }
 }

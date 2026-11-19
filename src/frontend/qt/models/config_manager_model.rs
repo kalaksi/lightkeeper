@@ -370,14 +370,26 @@ impl ConfigManagerModel {
         }).into());
         preferences.insert("secretsBackend".into(), QString::from(self.effective_secrets_backend()).into());
         preferences.insert("allowSecretsBackendChoice".into(), allow_secrets_backend_choice.into());
-        preferences.insert("secretsBackendHelp".into(), QString::from(if allow_secrets_backend_choice {
-            "How new secrets are stored on this machine. Existing secrets keep their storage until re-entered."
-        } else {
-            concat!(
-                "Remote core stores secrets in an encrypted secrets file on the core host. ",
-                "Your local keyring/plaintext preference is kept for when you disconnect.",
-            )
-        }).into());
+        preferences.insert(
+            "secretsBackendHelp".into(),
+            QString::from(concat!(
+                "Backend used to store configuration secrets such as passwords. ",
+                "In lightkeeper-core, only Lightkeeper's secret store is supported but can utilize systemd credentials.",
+            ))
+            .into(),
+        );
+        preferences.insert(
+            "secretsBackendInfo".into(),
+            QString::from(concat!(
+                "Desktop keyring: stores secrets in the OS/desktop secret service.\n\n",
+                "plaintext: stores secrets in configuration files (not recommended).\n\n",
+                "Lightkeeper: Lightkeeper's encrypted secret store (used by lightkeeper-core; ",
+                "the key can be provided via systemd credentials).\n\n",
+                "Existing secrets keep their storage until re-entered.\n",
+                "The local Desktop keyring/plaintext preference is kept when disconnecting from a remote core.",
+            ))
+            .into(),
+        );
         preferences.insert("closeToTray".into(), self.main_config.preferences.close_to_tray.into());
         preferences.insert("showMonitorNotifications".into(), self.main_config.preferences.show_monitor_notifications.into());
 
@@ -640,6 +652,15 @@ impl ConfigManagerModel {
     }
 
     /// Empty when the config value already matches the active write backend (or is unset).
+    fn secrets_backend_label(backend: &str) -> String {
+        match backend {
+            secrets_manager::KEYRING_BACKEND => String::from("Desktop keyring"),
+            secrets_manager::SECRETSFILE_BACKEND => String::from("Lightkeeper"),
+            secrets_manager::PLAINTEXT_BACKEND => String::from("plaintext"),
+            other => other.to_string(),
+        }
+    }
+
     fn secrets_backend_mismatch_warning(config_value: &str, effective_backend: &str) -> String {
         if config_value.is_empty() {
             return String::new();
@@ -651,7 +672,8 @@ impl ConfigManagerModel {
         else {
             format!(
                 "Currently stored with {}. New save will use {}.",
-                stored, effective_backend
+                Self::secrets_backend_label(stored),
+                Self::secrets_backend_label(effective_backend)
             )
         }
     }

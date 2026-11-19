@@ -13,7 +13,7 @@ use crate::{
     backend::{
         accept_remote_core_host_key, install_remote_core, probe_remote_core_host, ConfigBackend, CoreConnectionState,
         HostKeyChallenge, RemoteCommandBackend, RemoteConfigBackend, RemoteCoreClient, RemoteCoreHostProbe,
-        SshAuthError,
+        RemoteSecretStore, SshAuthError,
     },
     configuration::{self, Configuration},
     file_handler,
@@ -21,7 +21,7 @@ use crate::{
     module::command::CommandResult,
     module::monitoring::{DataPoint, MonitoringData},
     metrics,
-    secrets_manager::SecretStore,
+    secrets_manager::{self, SecretStore},
     CoreComponents,
 };
 
@@ -71,6 +71,9 @@ pub struct LkBackend {
     getCoreHostKeyChallenge: qt_method!(fn(&self) -> QVariantMap),
     clearCoreHostKeyChallenge: qt_method!(fn(&mut self)),
     verifyCoreHostKey: qt_method!(fn(&mut self, key_id: QString) -> QString),
+    getSecretStoreStatus: qt_method!(fn(&self) -> QString),
+    unlockSecretStore: qt_method!(fn(&mut self, passphrase: QString)),
+    setSecretStorePassphrase: qt_method!(fn(&mut self, current_passphrase: QString, new_passphrase: QString)),
 
     //
     // Signals
@@ -82,6 +85,8 @@ pub struct LkBackend {
     coreConnectionChanged: qt_signal!(),
     /// Dialog Check / Install / host-key trust finished. `operation` is probeHost, probe, install, or verifyHostKey.
     coreDialogOpFinished: qt_signal!(operation: QString, error: QString),
+    /// Result of unlocking or setting the remote core's secret store passphrase.
+    secretStoreActionFinished: qt_signal!(error: QString, message: QString),
     // App should quit so it can be restarted in local mode.
     restartRequested: qt_signal!(),
     /// Seconds left on core-owned refresh timers. 0 means the trigger is due (or inactive).
@@ -346,6 +351,8 @@ impl LkBackend {
         config_backend: RemoteConfigBackend,
         config: (Configuration, configuration::Hosts, configuration::Groups),
     ) {
+        // Same handle the UI uses in local mode; disconnect restarts the app so the local store returns.
+        self.secret_store = Some(Arc::new(RemoteSecretStore::new(client.clone())));
         self.config.borrow_mut().set_config_backend(Box::new(config_backend), config);
         let mut command_backend = RemoteCommandBackend::new(client.clone());
         command_backend.set_preferences(self.config.borrow().main_config_ref().preferences.clone());
@@ -793,6 +800,58 @@ impl LkBackend {
         }
     }
 
+    fn getSecretStoreStatus(&self) -> QString {
+        match self.secret_store.as_ref().and_then(|store| store.status().ok()) {
+            Some(status) => QString::from(status.to_string()),
+            None => QString::from(""),
+        }
+    }
+
+    fn unlockSecretStore(&mut self, passphrase: QString) {
+        let passphrase = passphrase.to_string();
+        let store = self.secret_store.as_ref().expect("secret store missing").clone();
+        let self_ptr = QPointer::from(&*self);
+        let finish = qmetaobject::queued_callback(move |(error, message): (String, String)| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned
+                    .borrow()
+                    .secretStoreActionFinished(QString::from(error), QString::from(message));
+            }
+        });
+        thread::spawn(move || {
+            match store.unlock_store(&passphrase) {
+                Ok(()) => finish((String::new(), String::from("Secret store unlocked"))),
+                Err(error) => finish((error.to_string(), String::new())),
+            }
+        });
+    }
+
+    /// Empty `new_passphrase` removes protection. Runs on a background thread; result via `secretStoreActionFinished`.
+    fn setSecretStorePassphrase(&mut self, current_passphrase: QString, new_passphrase: QString) {
+        let (current_passphrase, new_passphrase) = (current_passphrase.to_string(), new_passphrase.to_string());
+        let store = self.secret_store.as_ref().expect("secret store missing").clone();
+        let message = match store.status() {
+            Ok(secrets_manager::SecretStoreStatus::Uninitialized | secrets_manager::SecretStoreStatus::NoKey) => {
+                "Secret store set up"
+            }
+            _ => "Secret store passphrase updated",
+        }
+        .to_string();
+        let self_ptr = QPointer::from(&*self);
+        let finish = qmetaobject::queued_callback(move |(error, message): (String, String)| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned
+                    .borrow()
+                    .secretStoreActionFinished(QString::from(error), QString::from(message));
+            }
+        });
+        thread::spawn(move || {
+            match secrets_manager::set_store_passphrase(store.as_ref(), &current_passphrase, &new_passphrase) {
+                Ok(()) => finish((String::new(), message)),
+                Err(error) => finish((error.to_string(), String::new())),
+            }
+        });
+    }
     fn isCoreVersionMismatch(&self) -> bool {
         self.core_version_mismatch
     }

@@ -36,7 +36,7 @@ const PROTECTED_KEY_FORMAT: &str = "lightkeeper-secrets-key";
 const PROTECTED_KEY_VERSION: u32 = 1;
 const PROTECTED_KEY_KDF: &str = "argon2id";
 const SALT_LENGTH: usize = 16;
-const PASSPHRASE_LENGTH: RangeInclusive<usize> = 8..=1024;
+const PASSPHRASE_LENGTH: RangeInclusive<usize> = 4..=1024;
 /// Minimums prevent weakening a re-wrapped key via a doctored file, maximums prevent memory and CPU exhaustion.
 const KDF_M_COST_KIB: RangeInclusive<u32> = 19 * 1024..=1024 * 1024;
 const KDF_T_COST: RangeInclusive<u32> = 2..=10;
@@ -100,7 +100,7 @@ impl ProtectedKeyFile {
         if !KDF_M_COST_KIB.contains(&self.m_cost) || !KDF_T_COST.contains(&self.t_cost) || !KDF_P_COST.contains(&self.p_cost) {
             return Err(LkError::other("Protected secret key has KDF parameters outside of allowed limits"));
         }
-        if passphrase.len() > *PASSPHRASE_LENGTH.end() {
+        if passphrase.chars().count() > *PASSPHRASE_LENGTH.end() {
             return Err(LkError::other("Passphrase is too long"));
         }
         let salt = BASE64
@@ -120,8 +120,12 @@ impl ProtectedKeyFile {
     }
 
     fn wrap_key(key: &SecretKey, passphrase: &str) -> Result<Self, LkError> {
-        if !PASSPHRASE_LENGTH.contains(&passphrase.len()) {
-            return Err(LkError::other(format!("Passphrase must be {}-{} bytes", PASSPHRASE_LENGTH.start(), PASSPHRASE_LENGTH.end())));
+        if !PASSPHRASE_LENGTH.contains(&passphrase.chars().count()) {
+            return Err(LkError::other(format!(
+                "Passphrase must be {}-{} characters",
+                PASSPHRASE_LENGTH.start(),
+                PASSPHRASE_LENGTH.end()
+            )));
         }
         let mut salt = [0u8; SALT_LENGTH];
         OsRng.fill_bytes(&mut salt);
@@ -140,7 +144,13 @@ impl ProtectedKeyFile {
 
         let wrapping_key = file.derive_wrapping_key(passphrase)?;
         let wrapped_key = XChaCha20Poly1305::new(Key::from_slice(wrapping_key.as_slice()))
-            .encrypt(&nonce, Payload { msg: key.as_slice(), aad: &file.associated_data() })
+            .encrypt(
+                &nonce,
+                Payload {
+                    msg: key.as_slice(),
+                    aad: &file.associated_data(),
+                },
+            )
             .map_err(|_| LkError::other("Failed to wrap secret key"))?;
         file.wrapped_key = BASE64.encode(wrapped_key);
         Ok(file)
@@ -221,7 +231,12 @@ impl FileSecretStore {
         let allow_generate_key = explicit_key_path.is_none();
         let key_path = explicit_key_path.unwrap_or_else(|| config_dir.join(KEY_FILE_NAME));
 
-        let state = if key_path.exists() { KeyState::from(read_key_file(&key_path)?) } else { KeyState::NoKey };
+        let state = if key_path.exists() {
+            KeyState::from(read_key_file(&key_path)?)
+        }
+        else {
+            KeyState::NoKey
+        };
 
         match (&state, allow_generate_key) {
             (KeyState::Unlocked { .. }, _) => log::info!("Using encrypted file secret store at {}", store_path.display()),
@@ -263,12 +278,16 @@ impl FileSecretStore {
 
     /// Wrong passphrase and corrupt key file result in the same error.
     fn unwrap_key_file(&self, passphrase: &str) -> Result<SecretKey, LkError> {
-        let KeyFile::Protected(protected) = read_key_file(&self.key_path)? else {
-            return Err(LkError::other(format!("Secret key {} is not passphrase-protected", self.key_path.display())));
+        let KeyFile::Protected(protected) = read_key_file(&self.key_path)?
+        else {
+            return Err(LkError::other(format!(
+                "Secret key {} is not passphrase-protected",
+                self.key_path.display()
+            )));
         };
         protected.unwrap_key(passphrase).map_err(|error| {
             log::debug!("Unlocking secret key failed: {}", error);
-            LkError::other("Failed to unlock secret key")
+            LkError::other("Failed to unlock secret store")
         })
     }
 
@@ -276,8 +295,23 @@ impl FileSecretStore {
         let mut state = self.state.lock()?;
         let mut entries = self.read_entries(&mut state)?;
         modify(&mut entries);
-        let key = self.ensure_key(&mut state)?;
-        write_store_file(&self.store_path, &key, &entries)
+        let KeyState::Unlocked { key, .. } = &*state
+        else {
+            return Err(self.unavailable_error(&state));
+        };
+        write_store_file(&self.store_path, key, &entries)
+    }
+
+    fn unavailable_error(&self, state: &KeyState) -> LkError {
+        match state {
+            KeyState::Locked => LkError::other("Secret store is locked"),
+            KeyState::Unlocked { .. } => LkError::other(""),
+            KeyState::NoKey if self.store_path.exists() => LkError::other(format!(
+                "Secret key {} is missing; restore the key or re-initialize the secret store",
+                self.key_path.display()
+            )),
+            KeyState::NoKey => LkError::other("Secret store is not initialized"),
+        }
     }
 
     /// Loads the key lazily so that a key file provided after startup is picked up.
@@ -286,16 +320,9 @@ impl FileSecretStore {
             *state = KeyState::from(read_key_file(&self.key_path)?);
         }
         let key = match state {
-            KeyState::Locked => return Err(LkError::other("Secret store is locked")),
+            KeyState::Locked | KeyState::NoKey => return Err(self.unavailable_error(state)),
             _ if !self.store_path.exists() => return Ok(Entries::default()),
             KeyState::Unlocked { key, .. } => key,
-            KeyState::NoKey => {
-                return Err(LkError::other(format!(
-                    "Secret key not found at {} but {} exists; secrets unavailable",
-                    self.key_path.display(),
-                    self.store_path.display()
-                )))
-            }
         };
 
         match read_store_file(&self.store_path, key) {
@@ -318,43 +345,86 @@ impl FileSecretStore {
         }
     }
 
-    fn ensure_key(&self, state: &mut KeyState) -> Result<SecretKey, LkError> {
-        match state {
-            KeyState::Unlocked { key, .. } => return Ok(key.clone()),
-            KeyState::Locked => return Err(LkError::other("Secret store is locked")),
-            KeyState::NoKey => {}
-        }
+    /// Empty passphrase stores the key unencrypted. Caller must move any existing store aside first when re-initializing.
+    fn generate_key(&self, state: &mut KeyState, passphrase: &str) -> Result<(), LkError> {
         if self.key_path.exists() {
-            return Err(LkError::other(format!("Refusing to overwrite existing secret key {}", self.key_path.display())));
+            let message = format!("Refusing to overwrite existing secret key {}", self.key_path.display());
+            return Err(LkError::other(message));
         }
         if self.store_path.exists() {
             return Err(LkError::other(format!(
-                "Secret key not found at {} but {} exists; refusing to create a new key",
-                self.key_path.display(),
+                "Refusing to create a new key while {} still exists",
                 self.store_path.display()
             )));
         }
         if !self.allow_generate_key {
-            return Err(LkError::other(format!(
+            let message = format!(
                 "Secrets key file {} does not exist; create it or omit --secrets-key-file / {} to auto-generate",
                 self.key_path.display(),
                 KEY_FILE_ENV
-            )));
+            );
+            return Err(LkError::other(message));
         }
 
         let mut new_key = SecretKey::default();
         OsRng.fill_bytes(new_key.as_mut_slice());
+        let key_file_contents = if passphrase.is_empty() {
+            Zeroizing::new(BASE64.encode(new_key.as_slice()).into_bytes())
+        }
+        else {
+            let protected = ProtectedKeyFile::wrap_key(&new_key, passphrase)?;
+            Zeroizing::new(
+                serde_json::to_vec_pretty(&protected)
+                    .map_err(|error| LkError::other_p("Failed to serialize protected secret key", error))?,
+            )
+        };
         if let Some(parent) = self.key_path.parent() {
             fs::create_dir_all(parent)
                 .map_err(|error| LkError::other(format!("Failed to create key directory {}: {}", parent.display(), error)))?;
         }
-        atomic_write(&self.key_path, Zeroizing::new(BASE64.encode(new_key.as_slice())).as_bytes())?;
-        log::warn!(
-            "Generated secret store key at {}. Back it up separately from config; losing it loses all stored secrets.",
-            self.key_path.display()
-        );
-        *state = KeyState::Unlocked { key: new_key.clone(), protected: false };
-        Ok(new_key)
+        atomic_write(&self.key_path, &key_file_contents)?;
+        log::warn!("Generated secret store key at {}", self.key_path.display());
+        *state = KeyState::Unlocked {
+            key: new_key,
+            protected: !passphrase.is_empty(),
+        };
+        Ok(())
+    }
+
+    /// Moves an existing store aside as `secrets.old-YYYY-MM-DDTHH-MM-SS.enc` so re-init can create a fresh one.
+    fn backup_store_files(&self) -> Result<(), LkError> {
+        if self.store_path.exists() {
+            let backup_path = self.next_store_backup_path();
+            fs::rename(&self.store_path, &backup_path).map_err(|error| {
+                let message = format!(
+                    "Failed to back up {} to {}: {}",
+                    self.store_path.display(),
+                    backup_path.display(),
+                    error
+                );
+                LkError::other(message)
+            })?;
+            log::warn!(
+                "Re-initializing secret store: backed up {} to {} because the key is missing",
+                self.store_path.display(),
+                backup_path.display()
+            );
+        }
+        match fs::remove_file(&self.pending_store_path) {
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+                let message = format!("Failed to remove {}: {}", self.pending_store_path.display(), error);
+                return Err(LkError::other(message));
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn next_store_backup_path(&self) -> PathBuf {
+        let timestamp = chrono::Local::now().format("%Y-%m-%dT%H-%M-%S");
+        let stem = self.store_path.file_stem().and_then(|stem| stem.to_str()).unwrap_or("secrets");
+        let parent = self.store_path.parent().unwrap_or(Path::new("."));
+        parent.join(format!("{}.old-{}.enc", stem, timestamp))
     }
 }
 
@@ -394,11 +464,38 @@ impl SecretStore for FileSecretStore {
             *state = KeyState::from(read_key_file(&self.key_path)?);
         }
         Ok(match *state {
+            KeyState::NoKey if self.allow_generate_key && !self.store_path.exists() => SecretStoreStatus::Uninitialized,
             KeyState::NoKey => SecretStoreStatus::NoKey,
             KeyState::Unlocked { protected: false, .. } => SecretStoreStatus::Unlocked,
             KeyState::Unlocked { protected: true, .. } => SecretStoreStatus::UnlockedWithPassphrase,
             KeyState::Locked => SecretStoreStatus::Locked,
         })
+    }
+
+    /// Creates a new key. Empty passphrase stores it unencrypted.
+    /// If a store file remains without a key, it is renamed to `secrets.old-YYYY-MM-DDTHH-MM-SS.enc` first.
+    fn initialize_store(&self, passphrase: &str) -> Result<(), LkError> {
+        let mut state = self.state.lock()?;
+        if !matches!(*state, KeyState::NoKey) {
+            return Err(LkError::other("Secret store is already initialized"));
+        }
+        // Validate before backing up the store so a refused re-init leaves secrets.enc in place.
+        if self.key_path.exists() {
+            let message = format!("Refusing to overwrite existing secret key {}", self.key_path.display());
+            return Err(LkError::other(message));
+        }
+        if !self.allow_generate_key {
+            let message = format!(
+                "Secrets key file {} does not exist; create it or omit --secrets-key-file / {} to auto-generate",
+                self.key_path.display(),
+                KEY_FILE_ENV
+            );
+            return Err(LkError::other(message));
+        }
+        if self.store_path.exists() || self.pending_store_path.exists() {
+            self.backup_store_files()?;
+        }
+        self.generate_key(&mut state, passphrase)
     }
 
     /// Unlocks a passphrase-protected key and keeps it in memory until exit.
@@ -413,13 +510,16 @@ impl SecretStore for FileSecretStore {
         Ok(())
     }
 
-    /// Protects a raw key with a passphrase. The key is rotated since the old raw key may exist in backups.
+    /// Protects an unlocked raw key with a passphrase. The key is rotated since the old raw key may exist in backups.
     fn protect_store(&self, passphrase: &str) -> Result<(), LkError> {
         let mut state = self.state.lock()?;
         let entries = self.read_entries(&mut state)?;
-        self.ensure_key(&mut state)?;
-        if matches!(*state, KeyState::Unlocked { protected: true, .. }) {
-            return Err(LkError::other("Secret key is already passphrase-protected"));
+        match &*state {
+            KeyState::Unlocked { protected: false, .. } => {}
+            KeyState::Unlocked { protected: true, .. } => {
+                return Err(LkError::other("Secret key is already passphrase-protected"));
+            }
+            other => return Err(self.unavailable_error(other)),
         }
 
         let mut new_key = SecretKey::default();
@@ -456,16 +556,18 @@ impl SecretStore for FileSecretStore {
         let key = self.unwrap_key_file(passphrase)?;
         atomic_write(&self.key_path, Zeroizing::new(BASE64.encode(key.as_slice())).as_bytes())?;
         *state = KeyState::Unlocked { key, protected: false };
-        log::warn!("Removed passphrase from secret key {}; the key is now stored unencrypted", self.key_path.display());
+        log::warn!(
+            "Removed passphrase from secret key {}; the key is now stored unencrypted",
+            self.key_path.display()
+        );
         Ok(())
     }
 }
 
 fn read_store_file(path: &Path, key: &SecretKey) -> Result<Entries, LkError> {
-    let raw = fs::read(path)
-        .map_err(|error| LkError::other(format!("Failed to read secret store {}: {}", path.display(), error)))?;
-    let envelope: EncryptedStoreFile = serde_json::from_slice(&raw)
-        .map_err(|error| LkError::other_p("Invalid secret store format", error))?;
+    let raw = fs::read(path).map_err(|error| LkError::other(format!("Failed to read secret store {}: {}", path.display(), error)))?;
+    let envelope: EncryptedStoreFile =
+        serde_json::from_slice(&raw).map_err(|error| LkError::other_p("Invalid secret store format", error))?;
     if envelope.version != STORE_VERSION {
         return Err(LkError::other(format!("Unsupported secret store version {}", envelope.version)));
     }
@@ -491,14 +593,12 @@ fn read_store_file(path: &Path, key: &SecretKey) -> Result<Entries, LkError> {
             })?,
     );
 
-    serde_json::from_slice(&plaintext)
-        .map_err(|error| LkError::other_p("Invalid decrypted secret store payload", error))
+    serde_json::from_slice(&plaintext).map_err(|error| LkError::other_p("Invalid decrypted secret store payload", error))
 }
 
 fn write_store_file(path: &Path, key: &SecretKey, entries: &Entries) -> Result<(), LkError> {
-    let plaintext = Zeroizing::new(
-        serde_json::to_vec(entries).map_err(|error| LkError::other_p("Failed to serialize secret store", error))?,
-    );
+    let plaintext =
+        Zeroizing::new(serde_json::to_vec(entries).map_err(|error| LkError::other_p("Failed to serialize secret store", error))?);
     let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
     let ciphertext = XChaCha20Poly1305::new(Key::from_slice(key.as_slice()))
         .encrypt(&nonce, Payload { msg: &plaintext, aad: AAD })
@@ -509,8 +609,7 @@ fn write_store_file(path: &Path, key: &SecretKey, entries: &Entries) -> Result<(
         nonce: BASE64.encode(nonce),
         ciphertext: BASE64.encode(&ciphertext),
     };
-    let raw = serde_json::to_vec(&envelope)
-        .map_err(|error| LkError::other_p("Failed to serialize encrypted secret store", error))?;
+    let raw = serde_json::to_vec(&envelope).map_err(|error| LkError::other_p("Failed to serialize encrypted secret store", error))?;
     atomic_write(path, &raw)
 }
 
@@ -519,7 +618,11 @@ fn read_key_file(path: &Path) -> Result<KeyFile, LkError> {
     if let Ok(metadata) = fs::metadata(path) {
         let mode = metadata.permissions().mode() & 0o777;
         if mode & 0o077 != 0 {
-            log::warn!("Secret key {} is accessible by other users (mode {:o}). Restrict it with `chmod 600`.", path.display(), mode);
+            log::warn!(
+                "Secret key {} is accessible by other users (mode {:o}). Restrict it with `chmod 600`.",
+                path.display(),
+                mode
+            );
         }
     }
     let raw = Zeroizing::new(
@@ -569,8 +672,14 @@ fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), LkError> {
         .map_err(|error| LkError::other(format!("Failed to sync {}: {}", temp_path.display(), error)))?;
     drop(file);
 
-    fs::rename(&temp_path, path)
-        .map_err(|error| LkError::other(format!("Failed to replace {} with {}: {}", path.display(), temp_path.display(), error)))?;
+    fs::rename(&temp_path, path).map_err(|error| {
+        LkError::other(format!(
+            "Failed to replace {} with {}: {}",
+            path.display(),
+            temp_path.display(),
+            error
+        ))
+    })?;
     // Directory sync makes the rename durable, so the key can't be lost while the store survives.
     let parent = path
         .parent()
