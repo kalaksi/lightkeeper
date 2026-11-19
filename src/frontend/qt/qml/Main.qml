@@ -25,6 +25,8 @@ ApplicationWindow {
     property string coreConnectionError: ""
     property string remoteCoreStatus: ""
     property string remoteCoreHostLabel: ""
+    property string lastHostId: ""
+    property string previousHostId: ""
 
     // For convenience.
     property DialogHandler dialogHandler: dialogHandlerLoader.item as DialogHandler
@@ -419,14 +421,20 @@ ApplicationWindow {
                     displayData: LK.hosts.getDisplayData()
 
                     onSelectedRowChanged: {
-                        root.hostDetails.hostId = hostTableModel.getSelectedHostId()
+                        let hostId = hostTableModel.getSelectedHostId()
+                        root.hostDetails.hostId = hostId
 
-                        if (root.hostDetails.hostId !== "") {
-                            if (!LK.hosts.isHostInitialized(root.hostDetails.hostId)) {
-                                LK.command.initializeHost(root.hostDetails.hostId)
+                        if (hostId !== "" && hostId !== root.lastHostId) {
+                            root.previousHostId = root.lastHostId
+                            root.lastHostId = hostId
+                        }
+
+                        if (hostId !== "") {
+                            if (!LK.hosts.isHostInitialized(hostId)) {
+                                LK.command.initializeHost(hostId)
                             }
-                            statusBar.jobsLeft = LK.hosts.getPendingCommandCount(root.hostDetails.hostId) +
-                                                 LK.hosts.getPendingMonitorCount(root.hostDetails.hostId)
+                            statusBar.jobsLeft = LK.hosts.getPendingCommandCount(hostId) +
+                                                 LK.hosts.getPendingMonitorCount(hostId)
                         }
                     }
 
@@ -633,6 +641,12 @@ ApplicationWindow {
     Shortcut {
         sequence: StandardKey.Quit
         onActivated: root.quit()
+    }
+
+    Shortcut {
+        enabled: !root.remoteCoreBlocked && root.previousHostId !== ""
+        sequence: "Ctrl+Tab"
+        onActivated: hostTableModel.selectHostById(root.previousHostId)
     }
 
     LightkeeperTray {
