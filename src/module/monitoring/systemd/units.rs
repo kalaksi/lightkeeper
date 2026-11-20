@@ -106,7 +106,7 @@ pub fn process_units_response(
                     point.criticality = enums::Criticality::Warning;
                 }
             },
-            "running" => {
+            "running" | "start" => {
                 point.criticality = enums::Criticality::Normal;
                 point.tags.push(String::from("active"));
             },
