@@ -383,6 +383,7 @@ impl FileSecretStore {
                 .map_err(|error| LkError::other(format!("Failed to create key directory {}: {}", parent.display(), error)))?;
         }
         atomic_write(&self.key_path, &key_file_contents)?;
+        write_store_file(&self.store_path, &new_key, &Entries::default())?;
         log::warn!("Generated secret store key at {}", self.key_path.display());
         *state = KeyState::Unlocked {
             key: new_key,

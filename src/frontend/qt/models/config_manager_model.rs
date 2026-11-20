@@ -372,21 +372,17 @@ impl ConfigManagerModel {
         preferences.insert("allowSecretsBackendChoice".into(), allow_secrets_backend_choice.into());
         preferences.insert(
             "secretsBackendHelp".into(),
-            QString::from(concat!(
-                "Backend used to store configuration secrets such as passwords. ",
-                "In lightkeeper-core, only Lightkeeper's secret store is supported but can utilize systemd credentials.",
-            ))
-            .into(),
+            QString::from("Backend used to store configuration secrets such as passwords.").into(),
         );
         preferences.insert(
             "secretsBackendInfo".into(),
             QString::from(concat!(
                 "Desktop keyring: stores secrets in the OS/desktop secret service.\n\n",
                 "plaintext: stores secrets in configuration files (not recommended).\n\n",
-                "Lightkeeper: Lightkeeper's encrypted secret store (used by lightkeeper-core; ",
-                "the key can be provided via systemd credentials).\n\n",
-                "Existing secrets keep their storage until re-entered.\n",
-                "The local Desktop keyring/plaintext preference is kept when disconnecting from a remote core.",
+                "Lightkeeper: Lightkeeper's secret store (internal encrypted file).\n\n",
+                "Existing secrets are not moved when you change backend. Re-enter them to use the new one.\n",
+                "Lightkeeper Core supports only \"Lightkeeper\" which uses an encrypted file stored to ",
+                "core's data directory.",
             ))
             .into(),
         );

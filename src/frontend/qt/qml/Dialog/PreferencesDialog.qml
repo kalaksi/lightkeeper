@@ -8,6 +8,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 import Lightkeeper 1.0
+import Lighthouse.InfoBalloon 1.0
 
 import "../Text"
 import "../Misc"
@@ -343,43 +344,27 @@ LightkeeperDialog {
 
                     ImageButton {
                         id: secretsBackendInfoButton
-                        property bool _infoPinned: false
-
                         imageSource: "qrc:/main/images/alert/info"
                         flatButton: true
                         roundButton: true
                         size: secretsBackendCombo.implicitHeight
-                        onClicked: {
-                            _infoPinned = !_infoPinned
-                            if (_infoPinned) {
-                                secretsBackendInfoTip.open()
-                            }
-                            else {
-                                secretsBackendInfoTip.close()
-                            }
-                        }
+                        onClicked: secretsBackendInfoBalloon.toggle()
 
                         Layout.preferredWidth: size
                         Layout.alignment: Qt.AlignVCenter
+                    }
 
-                        ToolTip {
-                            id: secretsBackendInfoTip
-                            parent: secretsBackendInfoButton
-                            delay: Theme.tooltipDelay
-                            timeout: -1
-                            text: root._preferences.secretsBackendInfo || ""
-                        }
-
-                        HoverHandler {
-                            onHoveredChanged: {
-                                if (hovered) {
-                                    secretsBackendInfoTip.open()
-                                }
-                                else if (!secretsBackendInfoButton._infoPinned) {
-                                    secretsBackendInfoTip.close()
-                                }
-                            }
-                        }
+                    InfoBalloon {
+                        id: secretsBackendInfoBalloon
+                        anchor: secretsBackendInfoButton
+                        text: root._preferences.secretsBackendInfo || ""
+                        backgroundColor: Theme.backgroundColor
+                        borderColor: Theme.borderColor
+                        textColor: Theme.textColor
+                        contentPadding: Theme.spacingLoose
+                        edgeMargin: Theme.spacingNormal
+                        placementGap: Theme.spacingTight
+                        fontPointSize: Theme.fontSize
                     }
 
                     ComboBox {

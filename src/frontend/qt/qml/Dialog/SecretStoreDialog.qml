@@ -37,11 +37,11 @@ LightkeeperDialog {
 
     title: root.locked ? "Unlock Lightkeeper's secret store"
         : root.storeStatus === "NoKey" ? "Re-initialize Lightkeeper's secret store"
-        : root.storeStatus === "Uninitialized" ? "Set up Lightkeeper's secret store"
+        : root.storeStatus === "Uninitialized" ? "Set up Lightkeeper Core"
         : root.isProtected ? "Change Lightkeeper's secret store passphrase"
         : "Set new passphrase"
     modal: true
-    implicitWidth: 440
+    implicitWidth: 520
     implicitHeight: rootColumn.implicitHeight + Theme.marginDialogTop + Theme.marginDialogBottom
     standardButtons: Dialog.Ok | Dialog.Cancel
 
@@ -127,7 +127,10 @@ LightkeeperDialog {
             Layout.fillWidth: true
             visible: root.storeStatus === "Uninitialized"
             wrapMode: Text.WordWrap
-            text: "Cancel to continue without initializing Lightkeeper's secret store. " +
+            text: "Seems that this Lightkeeper Core has not yet been set up.\n" +
+                  "Provide a password to set up Lightkeeper's encrypted secret store. " +
+                  "Leave it empty to set up with no password protection.\n\n" +
+                  "Cancel to continue without initializing Lightkeeper's secret store. " +
                   "You will be prompted again on the next connect."
         }
 
