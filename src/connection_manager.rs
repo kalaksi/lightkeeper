@@ -215,6 +215,12 @@ impl ConnectionManager {
         host_connectors.insert(connector_spec, connector);
     }
 
+    /// Test helper to fetch a host's stateful connector (cloned).
+    pub fn get_connector(&self, host_name: &str, connector_spec: &ModuleSpecification) -> Option<Connector> {
+        let stateful_connectors = self.stateful_connectors.lock().unwrap();
+        Some(stateful_connectors.get(host_name)?.get(connector_spec)?.box_clone())
+    }
+
     /// Main loop processing incoming connector requests.
     fn process_requests(
         stateful_connectors: Arc<Mutex<HashMap<String, ConnectorStates>>>,

@@ -52,6 +52,11 @@ pub trait ConnectionModule: BoxCloneableConnector + MetadataSupport + Module {
         Err(LkError::not_implemented())
     }
 
+    /// Settings used to construct this connector, if the implementation retains them (test stubs).
+    fn get_settings(&self) -> Option<&HashMap<String, String>> {
+        None
+    }
+
     fn new_connection_module(settings: &HashMap<String, String>) -> Connector
     where
         Self: Sized + 'static + Send + Sync,

@@ -27,6 +27,7 @@ pub struct StubSsh2 {
     responses: HashMap<&'static str, ResponseMessage>,
     partial_message_size: usize,
     partial_responses: Arc<Mutex<HashMap<u64, ResponseMessage>>>,
+    settings: HashMap<String, String>,
 }
 
 impl StubSsh2 {
@@ -53,21 +54,27 @@ impl Default for StubSsh2 {
             responses: HashMap::new(),
             partial_message_size: DEFAULT_PARTIAL_MESSAGE_SIZE,
             partial_responses: Arc::new(Mutex::new(HashMap::new())),
+            settings: HashMap::new(),
         }
     }
 }
 
 impl Module for StubSsh2 {
-    fn new(_settings: &HashMap<String, String>) -> Self {
+    fn new(settings: &HashMap<String, String>) -> Self {
         StubSsh2 {
             responses: HashMap::new(),
-            partial_message_size: 20,
+            partial_message_size: DEFAULT_PARTIAL_MESSAGE_SIZE,
             partial_responses: Arc::new(Mutex::new(HashMap::new())),
+            settings: settings.clone(),
         }
     }
 }
 
 impl ConnectionModule for StubSsh2 {
+    fn get_settings(&self) -> Option<&HashMap<String, String>> {
+        Some(&self.settings)
+    }
+
     fn send_message(&self, message: &str) -> Result<ResponseMessage, LkError> {
         let response = match self.responses.get(message) {
             Some(response) => response.clone(),
@@ -136,4 +143,3 @@ impl ConnectionModule for StubSsh2 {
         Ok(ResponseMessage::new_binary(response.message.into_bytes(), response.return_code))
     }
 }
-

@@ -69,7 +69,7 @@ impl CoreComponents {
         start_connection_processing: bool,
     ) -> Vec<String> {
         let mut hosts_config = hosts_config.clone();
-        let runtime_secrets = Configuration::resolve_secrets_in_hosts(&mut hosts_config, secret_store);
+        let runtime_secrets = Configuration::prepare_host_secrets(&mut hosts_config, secret_store);
 
         self.connection_manager.configure(&hosts_config, &runtime_secrets);
         drop(runtime_secrets);
@@ -142,7 +142,7 @@ pub fn apply_soft_config_update(
     }
 
     let mut runtime_hosts = hosts_config.clone();
-    Configuration::resolve_secrets_in_hosts(&mut runtime_hosts, secret_store);
+    Configuration::prepare_host_secrets(&mut runtime_hosts, secret_store);
     host_manager.apply_monitors_acknowledged(&runtime_hosts)
 }
 

@@ -30,7 +30,7 @@ pub const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
 pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
 
-/// Plaintext connector secrets keyed by the fingerprinted placeholders that `resolve_secrets_in_hosts` leaves in config.
+/// Plaintext connector secrets keyed by the fingerprinted placeholders that `prepare_host_secrets` leaves in config.
 pub type RuntimeSecrets = HashMap<String, Secret>;
 
 /// Randomly keyed per process so that fingerprints can't be compared against precomputed values.
@@ -568,7 +568,7 @@ impl Configuration {
         }
 
         // Merge config groups to form the final, effective config.
-        // Keyring placeholders are left unresolved here; call resolve_secrets_in_hosts before
+        // Keyring placeholders are left unresolved here; call prepare_host_secrets before
         // runtime connector setup. Only connectors receive the plaintext so config/UI paths do not hold it.
         for (_, host_config) in hosts.hosts.iter_mut() {
             host_config.effective = Self::get_effective_group_config(host_config, &all_groups.groups);
@@ -609,15 +609,15 @@ impl Configuration {
         Ok((main_config, hosts, all_groups))
     }
 
-    /// Resolves secret placeholders in `hosts.*.effective` connectors for runtime use.
+    /// Looks up secret placeholders in `hosts.*.effective` connectors for runtime use.
     /// Placeholders get a fingerprint suffix so that config comparisons still notice changed secrets,
     /// while plaintext is returned separately and should only be handed to connectors.
-    pub fn resolve_secrets_in_hosts(hosts: &mut Hosts, secret_store: Arc<dyn SecretStore>) -> RuntimeSecrets {
+    pub fn prepare_host_secrets(hosts: &mut Hosts, secret_store: Arc<dyn SecretStore>) -> RuntimeSecrets {
         let active_prefix = secret_store.identifier_prefix();
         let mut secrets = secrets_manager::SecretsManager::new(secret_store);
         let mut runtime_secrets = RuntimeSecrets::new();
         for host_config in hosts.hosts.values_mut() {
-            Self::resolve_secrets_in_effective_config(
+            Self::prepare_effective_config_secrets(
                 &mut host_config.effective,
                 &mut secrets,
                 &mut runtime_secrets,
@@ -627,7 +627,7 @@ impl Configuration {
         runtime_secrets
     }
 
-    fn resolve_secrets_in_effective_config(
+    fn prepare_effective_config_secrets(
         effective: &mut ConfigGroup,
         secrets: &mut secrets_manager::SecretsManager,
         runtime_secrets: &mut RuntimeSecrets,
