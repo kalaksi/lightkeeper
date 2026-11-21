@@ -257,182 +257,228 @@ impl HostManager {
                     }
                 };
 
-                if state_update.stop {
-                    log::debug!("Gracefully stopping receiver thread");
-                    return;
-                }
-
-                if state_update.fatal_error {
-                    let mut observers = observers.lock().unwrap();
-                    observers.retain(|observer| {
-                        match observer.send(frontend::UIUpdate::FatalError()) {
-                            Ok(()) => true,
-                            Err(error) => {
-                                log::debug!("Removing closed host observer: {}", error);
-                                false
-                            }
-                        }
-                    });
-                    continue;
-                }
-
-                let mut host_states = hosts.lock().unwrap();
-                let host_state = match host_states.hosts.get_mut(&state_update.host_name) {
-                    Some(host_state) => host_state,
-                    // It's possible that we receive state update from host that was just removed.
-                    None => {
-                        ::log::debug!("Host {} not found", state_update.host_name);
-                        continue;
-                    },
-                };
-
-                host_state.just_initialized = false;
-                let mut new_monitoring_data: Option<(u64, MonitoringData)> = None;
-                let mut new_command_results: Option<(u64, CommandResult)> = None;
-
-                if let Some(mut message_data_point) = state_update.data_point {
-                    let host_config = current_config.lock().unwrap()
-                        .get(&state_update.host_name)
-                        .cloned();
-
-                    if let Some(ref host_config) = host_config {
-                        if state_update.module_spec.module_type == crate::module::ModuleType::Monitor &&
-                           !message_data_point.is_platform_info()
-                        {
-                            let acknowledged = Self::get_acknowledged_entries(
-                                host_config,
-                                &state_update.module_spec.id,
-                            );
-                            if !acknowledged.is_empty() {
-                                message_data_point.apply_acknowledged_entries(&acknowledged);
-                            }
-                        }
+                match state_update {
+                    StateUpdateMessage::Stop => {
+                        log::debug!("Gracefully stopping receiver thread");
+                        return;
                     }
-
-                    // Specially structured data point for passing platform info here.
-                    if message_data_point.is_platform_info() {
-                        host_state.monitor_invocations.remove(&state_update.invocation_id);
-
-                        if let Ok((platform, ip_address)) = Self::read_platform_info(&message_data_point) {
-                            host_state.host.platform = platform;
-                            host_state.host.ip_address = ip_address;
-                            log::debug!("[{}] Platform info updated", host_state.host.name);
-
-                            // TODO: handle multiple platform info's.
-                            host_state.just_initialized = true;
-                            host_state.is_initialized = true;
-                        }
-                        else {
-                            log::error!("[{}] Invalid platform info received", host_state.host.name);
-                        }
-                    }
-                    else {
-                        // Initial NoData point will have invocation ID 0.
-                        if state_update.invocation_id == 0 {
-                            if !host_state.monitor_data.contains_key(&state_update.module_spec.id) {
-                                let mut new_data = MonitoringData::new(state_update.module_spec.id.clone(), state_update.display_options);
-                                new_data.values.push_back(message_data_point.clone());
-                                host_state.monitor_data.insert(state_update.module_spec.id.clone(), new_data);
-                            }
-                        }
-                        else if message_data_point.criticality == Criticality::NoData {
-                            host_state.monitor_invocations
-                                .entry(state_update.invocation_id)
-                                .or_insert(InvocationDetails::new(state_update.invocation_id, state_update.display_options.category));
-                        }
-                        else {
-                            host_state.monitor_invocations.remove(&state_update.invocation_id);
-
-                            // Monitoring data for platform info providers / internal modules won't exist in `monitor_data`.
-                            if let Some(monitoring_data) = host_state.monitor_data.get_mut(&state_update.module_spec.id) {
-                                monitoring_data.values.push_back(message_data_point.clone());
-
-                                if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
-                                    monitoring_data.values.pop_front();
+                    StateUpdateMessage::FatalError => {
+                        let mut observers = observers.lock().unwrap();
+                        observers.retain(|observer| {
+                            match observer.send(frontend::UIUpdate::FatalError()) {
+                                Ok(()) => true,
+                                Err(error) => {
+                                    log::debug!("Removing closed host observer: {}", error);
+                                    false
                                 }
+                            }
+                        });
+                    }
+                    StateUpdateMessage::Monitor {
+                        invocation_id,
+                        host_name,
+                        display_options,
+                        module_spec,
+                        data_point,
+                        errors,
+                    } => {
+                        let mut host_states = hosts.lock().unwrap();
+                        let Some(host_state) = host_states.hosts.get_mut(&host_name) else {
+                            // It's possible that we receive state update from host that was just removed.
+                            ::log::debug!("Host {} not found", host_name);
+                            continue;
+                        };
 
-                                // Also add to a list of new data points.
-                                let mut new = monitoring_data.clone();
-                                new.values = VecDeque::from(vec![message_data_point.clone()]);
-                                new_monitoring_data = Some((state_update.invocation_id, new));
+                        host_state.just_initialized = false;
+                        let mut new_monitoring_data: Option<(u64, MonitoringData)> = None;
+
+                        if let Some(mut message_data_point) = data_point {
+                            let host_config = current_config.lock().unwrap().get(&host_name).cloned();
+
+                            if let Some(ref host_config) = host_config {
+                                if !message_data_point.is_platform_info() {
+                                    let acknowledged = Self::get_acknowledged_entries(host_config, &module_spec.id);
+                                    if !acknowledged.is_empty() {
+                                        message_data_point.apply_acknowledged_entries(&acknowledged);
+                                    }
+                                }
+                            }
+
+                            // Specially structured data point for passing platform info here.
+                            if message_data_point.is_platform_info() {
+                                host_state.monitor_invocations.remove(&invocation_id);
+
+                                if let Ok((platform, ip_address)) = Self::read_platform_info(&message_data_point) {
+                                    host_state.host.platform = platform;
+                                    host_state.host.ip_address = ip_address;
+                                    log::debug!("[{}] Platform info updated", host_state.host.name);
+
+                                    // TODO: handle multiple platform info's.
+                                    host_state.just_initialized = true;
+                                    host_state.is_initialized = true;
+                                }
+                                else {
+                                    log::error!("[{}] Invalid platform info received", host_state.host.name);
+                                }
+                            }
+                            else {
+                                // Initial NoData point will have invocation ID 0.
+                                if invocation_id == 0 {
+                                    if !host_state.monitor_data.contains_key(&module_spec.id) {
+                                        let mut new_data = MonitoringData::new(
+                                            module_spec.id.clone(),
+                                            display_options,
+                                        );
+                                        new_data.values.push_back(message_data_point.clone());
+                                        host_state.monitor_data.insert(module_spec.id.clone(), new_data);
+                                    }
+                                }
+                                else if message_data_point.criticality == Criticality::NoData {
+                                    host_state.monitor_invocations
+                                        .entry(invocation_id)
+                                        .or_insert(InvocationDetails::new(
+                                            invocation_id,
+                                            display_options.category,
+                                        ));
+                                }
+                                else {
+                                    host_state.monitor_invocations.remove(&invocation_id);
+
+                                    // Monitoring data for platform info providers / internal modules won't exist
+                                    // in `monitor_data`.
+                                    if let Some(monitoring_data) = host_state.monitor_data.get_mut(&module_spec.id) {
+                                        monitoring_data.values.push_back(message_data_point.clone());
+
+                                        if monitoring_data.values.len() > DATA_POINT_BUFFER_SIZE {
+                                            monitoring_data.values.pop_front();
+                                        }
+
+                                        // Also add to a list of new data points.
+                                        let mut new = monitoring_data.clone();
+                                        new.values = VecDeque::from(vec![message_data_point.clone()]);
+                                        new_monitoring_data = Some((invocation_id, new));
+                                    }
+                                }
                             }
                         }
+                        else {
+                            // Error-only update; still need to remove invocation data.
+                            host_state.monitor_invocations.remove(&invocation_id);
+                        }
+
+                        host_state.update_status();
+                        Self::notify_host_observers(
+                            &observers,
+                            host_state,
+                            invocation_id,
+                            new_monitoring_data,
+                            None,
+                            errors,
+                        );
                     }
-                }
-                else if let Some(command_result) = state_update.command_result {
-                    if command_result.criticality == Criticality::NoData {
-                        host_state.command_invocations
-                            .entry(state_update.invocation_id)
-                            .or_insert(InvocationDetails::new(state_update.invocation_id, state_update.display_options.category));
-                    }
-                    else {
-                        // Can be a partial result.
-                        if command_result.progress < 100 {
-                            host_state.command_invocations
-                                .entry(state_update.invocation_id)
-                                .and_modify(|invocation| invocation.progress = command_result.progress);
+                    StateUpdateMessage::Command {
+                        invocation_id,
+                        host_name,
+                        display_options,
+                        module_spec,
+                        command_result,
+                        errors,
+                    } => {
+                        let mut host_states = hosts.lock().unwrap();
+                        let Some(host_state) = host_states.hosts.get_mut(&host_name) else {
+                            // It's possible that we receive state update from host that was just removed.
+                            ::log::debug!("Host {} not found", host_name);
+                            continue;
+                        };
+
+                        host_state.just_initialized = false;
+                        let mut new_command_results: Option<(u64, CommandResult)> = None;
+
+                        if let Some(command_result) = command_result {
+                            if command_result.criticality == Criticality::NoData {
+                                host_state.command_invocations
+                                    .entry(invocation_id)
+                                    .or_insert(InvocationDetails::new(
+                                        invocation_id,
+                                        display_options.category,
+                                    ));
+                            }
+                            else {
+                                // Can be a partial result.
+                                if command_result.progress < 100 {
+                                    host_state.command_invocations
+                                        .entry(invocation_id)
+                                        .and_modify(|invocation| invocation.progress = command_result.progress);
+                                }
+                                else {
+                                    host_state.command_invocations.remove(&invocation_id);
+                                }
+                                host_state.command_results.insert(module_spec.id, command_result.clone());
+                                // Also add to a list of new command results.
+                                new_command_results = Some((invocation_id, command_result));
+                            }
                         }
                         else {
-                            host_state.command_invocations.remove(&state_update.invocation_id);
+                            // Error-only update; still need to remove invocation data.
+                            host_state.command_invocations.remove(&invocation_id);
                         }
-                        host_state.command_results.insert(state_update.module_spec.id, command_result.clone());
-                        // Also add to a list of new command results.
-                        new_command_results = Some((state_update.invocation_id, command_result));
+
+                        host_state.update_status();
+                        Self::notify_host_observers(
+                            &observers,
+                            host_state,
+                            invocation_id,
+                            None,
+                            new_command_results,
+                            errors,
+                        );
                     }
                 }
-                else {
-                    // Not all state updates will have valid data points or command results.
-                    // Still need to remove invocation data.
-                    match state_update.module_spec.module_type {
-                        crate::module::ModuleType::Command => {
-                            host_state.command_invocations.remove(&state_update.invocation_id);
-                        },
-                        crate::module::ModuleType::Monitor => {
-                            host_state.monitor_invocations.remove(&state_update.invocation_id);
-                        },
-                        crate::module::ModuleType::Unknown |
-                        crate::module::ModuleType::Connector => {},
-                    }
-                }
-
-                host_state.update_status();
-
-                let (confirmation_requests, unhandled_errors): (Vec<_>, Vec<_>) = state_update.errors.into_iter()
-                    .partition(|error| matches!(
-                        error.kind,
-                        crate::error::ErrorKind::HostKeyNotVerified | crate::error::ErrorKind::RemoteFileChanged
-                    ));
-
-                let confirmation_requests: Vec<_> = confirmation_requests.into_iter()
-                    .map(|error| ConfirmationRequest {
-                        kind: error.kind.to_string(),
-                        invocation_id: state_update.invocation_id,
-                        source_id: error.source_id,
-                        message: error.message,
-                        parameter: error.parameter.unwrap_or_default(),
-                    }).collect();
-
-                // Send the state update to the front end.
-                let update = frontend::UIUpdate::Host(frontend::HostDisplayData {
-                    host_state: host_state.clone(),
-                    new_monitoring_data: new_monitoring_data.clone(),
-                    new_command_result: new_command_results.clone(),
-                    new_errors: unhandled_errors.iter().cloned().map(ErrorMessage::from).collect(),
-                    confirmation_requests: confirmation_requests,
-                    ..Default::default()
-                });
-                let mut observers = observers.lock().unwrap();
-                observers.retain(|observer| {
-                    match observer.send(update.clone()) {
-                        Ok(()) => true,
-                        Err(error) => {
-                            log::debug!("Removing closed host observer: {}", error);
-                            false
-                        }
-                    }
-                });
             }
         })
+    }
+
+    fn notify_host_observers(
+        observers: &Arc<Mutex<Vec<mpsc::Sender<frontend::UIUpdate>>>>,
+        host_state: &HostState,
+        invocation_id: u64,
+        new_monitoring_data: Option<(u64, MonitoringData)>,
+        new_command_result: Option<(u64, CommandResult)>,
+        errors: Vec<LkError>,
+    ) {
+        let (confirmation_requests, unhandled_errors): (Vec<_>, Vec<_>) = errors.into_iter()
+            .partition(|error| matches!(
+                error.kind,
+                crate::error::ErrorKind::HostKeyNotVerified | crate::error::ErrorKind::RemoteFileChanged
+            ));
+
+        let confirmation_requests: Vec<_> = confirmation_requests.into_iter()
+            .map(|error| ConfirmationRequest {
+                kind: error.kind.to_string(),
+                invocation_id,
+                source_id: error.source_id,
+                message: error.message,
+                parameter: error.parameter.unwrap_or_default(),
+            }).collect();
+
+        let update = frontend::UIUpdate::Host(frontend::HostDisplayData {
+            host_state: host_state.clone(),
+            new_monitoring_data,
+            new_command_result,
+            new_errors: unhandled_errors.into_iter().map(ErrorMessage::from).collect(),
+            confirmation_requests,
+            ..Default::default()
+        });
+        let mut observers = observers.lock().unwrap();
+        observers.retain(|observer| {
+            match observer.send(update.clone()) {
+                Ok(()) => true,
+                Err(error) => {
+                    log::debug!("Removing closed host observer: {}", error);
+                    false
+                }
+            }
+        });
     }
 
     /// For hosts that only changed alert acks, updates live monitor data in place (no host reset)
@@ -583,38 +629,38 @@ impl Default for HostManager {
     }
 }
 
-#[derive(Default)]
-pub struct StateUpdateMessage {
-    /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
-    pub invocation_id: u64,
-    pub host_name: String,
-    pub display_options: frontend::DisplayOptions,
-    pub module_spec: ModuleSpecification,
-    // TODO: use an enum.
-    /// Only used with monitors.
-    pub data_point: Option<DataPoint>,
-    /// Only used with commands.
-    pub command_result: Option<CommandResult>,
-    pub errors: Vec<LkError>,
-    /// Signals fatal error has happened and app needs to be reloaded.
-    pub fatal_error: bool,
+pub enum StateUpdateMessage {
     /// Stops the receiver thread.
-    pub stop: bool,
+    Stop,
+    /// Fatal error has happened and app needs to be reloaded.
+    FatalError,
+    Monitor {
+        /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
+        invocation_id: u64,
+        host_name: String,
+        display_options: frontend::DisplayOptions,
+        module_spec: ModuleSpecification,
+        data_point: Option<DataPoint>,
+        errors: Vec<LkError>,
+    },
+    Command {
+        /// Unique invocation ID. Used as an identifier for asynchronously executed requests and received results.
+        invocation_id: u64,
+        host_name: String,
+        display_options: frontend::DisplayOptions,
+        module_spec: ModuleSpecification,
+        command_result: Option<CommandResult>,
+        errors: Vec<LkError>,
+    },
 }
 
 impl StateUpdateMessage {
     pub fn stop() -> Self {
-        StateUpdateMessage {
-            stop: true,
-            ..Default::default()
-        }
+        StateUpdateMessage::Stop
     }
 
     pub fn fatal_error() -> Self {
-        StateUpdateMessage {
-            fatal_error: true,
-            ..Default::default()
-        }
+        StateUpdateMessage::FatalError
     }
 }
 

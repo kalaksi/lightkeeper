@@ -218,12 +218,13 @@ impl CommandHandler {
             Ok(messages) => messages,
             Err(error) => {
                 log::error!("Command failed: {}", error);
-                self.send_state_update(StateUpdateMessage {
+                self.send_state_update(StateUpdateMessage::Command {
                     host_name: host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_error(error.clone())),
-                    ..Default::default()
+                    invocation_id: 0,
+                    errors: Vec::new(),
                 });
 
                 return Err(error);
@@ -246,13 +247,13 @@ impl CommandHandler {
         let invocation_id = self.next_invocation_id();
 
         // Notify host state manager about new command, so it can keep track of pending invocations.
-        self.send_state_update(StateUpdateMessage {
+        self.send_state_update(StateUpdateMessage::Command {
             host_name: host.name.clone(),
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: Some(CommandResult::pending()),
             invocation_id,
-            ..Default::default()
+            errors: Vec::new(),
         });
 
         let request_type = match command.get_display_options().action == UIAction::FollowOutput {
@@ -303,12 +304,13 @@ impl CommandHandler {
             Ok(messages) => messages,
             Err(error) => {
                 log::error!("Command failed: {}", error);
-                self.send_state_update(StateUpdateMessage {
+                self.send_state_update(StateUpdateMessage::Command {
                     host_name: host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_error(error.clone())),
-                    ..Default::default()
+                    invocation_id: 0,
+                    errors: Vec::new(),
                 });
                 return Err(error);
             }
@@ -352,13 +354,13 @@ impl CommandHandler {
                 let remote_hash = metadata.remote_file_hash.clone();
 
                 if !force && local_file_hash == remote_hash {
-                    self.send_state_update(StateUpdateMessage {
+                    self.send_state_update(StateUpdateMessage::Command {
                         host_name: host.name,
                         display_options: command.get_display_options(),
                         module_spec: command.get_module_spec(),
                         command_result: Some(CommandResult::new_error("File is unchanged")),
                         invocation_id,
-                        ..Default::default()
+                        errors: Vec::new(),
                     });
                 }
                 else {
@@ -382,13 +384,13 @@ impl CommandHandler {
             },
             Err(error) => {
                 log::error!("Error while reading file: {}", error);
-                self.send_state_update(StateUpdateMessage {
+                self.send_state_update(StateUpdateMessage::Command {
                     host_name: host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
                     command_result: Some(CommandResult::new_critical_error(&error)),
                     invocation_id,
-                    ..Default::default()
+                    errors: Vec::new(),
                 });
                 Err(error.into())
             }
@@ -811,14 +813,13 @@ impl CommandHandler {
             }
         }
 
-        state_update_sender.send(StateUpdateMessage {
+        state_update_sender.send(StateUpdateMessage::Command {
             invocation_id: response.invocation_id,
             host_name: response.host.name,
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: new_command_result,
             errors: errors,
-            ..Default::default()
         }).unwrap();
     }
 
@@ -842,13 +843,13 @@ impl CommandHandler {
             }
         };
 
-        state_update_sender.send(StateUpdateMessage {
+        state_update_sender.send(StateUpdateMessage::Command {
             host_name: response.host.name,
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: Some(command_result),
             invocation_id: response.invocation_id,
-            ..Default::default()
+            errors: Vec::new(),
         }).unwrap();
     }
 
@@ -875,13 +876,13 @@ impl CommandHandler {
                 CommandResult::new_info("File updated")
             },
             Err(error) if error.kind == ErrorKind::RemoteFileChanged => {
-                state_update_sender.send(StateUpdateMessage {
+                state_update_sender.send(StateUpdateMessage::Command {
                     host_name: response.host.name,
                     display_options: command.get_display_options(),
                     module_spec: command.get_module_spec(),
+                    command_result: None,
                     errors: vec![error.clone()],
                     invocation_id: response.invocation_id,
-                    ..Default::default()
                 }).unwrap();
                 return;
             },
@@ -892,13 +893,13 @@ impl CommandHandler {
             }
         };
 
-        state_update_sender.send(StateUpdateMessage {
+        state_update_sender.send(StateUpdateMessage::Command {
             host_name: response.host.name,
             display_options: command.get_display_options(),
             module_spec: command.get_module_spec(),
             command_result: Some(command_result),
             invocation_id: response.invocation_id,
-            ..Default::default()
+            errors: Vec::new(),
         }).unwrap();
     }
 

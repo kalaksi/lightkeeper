@@ -164,13 +164,13 @@ impl MonitorManager {
 
             if send_initial_value {
                 // Add initial state value indicating no data as been received yet.
-                self.send_state_update(StateUpdateMessage {
+                self.send_state_update(StateUpdateMessage::Monitor {
                     host_name: host_id,
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
                     data_point: Some(DataPoint::pending()),
                     invocation_id: 0,
-                    ..Default::default()
+                    errors: Vec::new(),
                 });
             }
 
@@ -589,13 +589,13 @@ impl MonitorManager {
 
             let invocation_id = invocation_id_counter.fetch_add(1, Ordering::SeqCst) + 1;
 
-            if let Err(error) = state_update_sender.send(StateUpdateMessage {
+            if let Err(error) = state_update_sender.send(StateUpdateMessage::Monitor {
                 host_name: host.name.clone(),
                 display_options: info_provider.get_display_options(),
                 module_spec: info_provider.get_module_spec(),
                 data_point: Some(DataPoint::pending()),
                 invocation_id,
-                ..Default::default()
+                errors: Vec::new(),
             }) {
                 log::error!("Failed to send state update: {}", error);
                 panic!("Failed to send state update: {}", error);
@@ -658,13 +658,13 @@ impl MonitorManager {
                 .map(|ext| ext.get_module_spec().id.clone()).collect();
 
             // Notify host state manager about new pending monitor invocation.
-            send_state_update(StateUpdateMessage {
+            send_state_update(StateUpdateMessage::Monitor {
                 host_name: host.name.clone(),
                 display_options: monitor.get_display_options(),
                 module_spec: monitor.get_module_spec(),
                 data_point: Some(DataPoint::pending()),
                 invocation_id: current_invocation_id,
-                ..Default::default()
+                errors: Vec::new(),
             });
 
             let messages = match get_monitor_connector_messages(&host, &monitor, &DataPoint::empty()) {
@@ -672,13 +672,13 @@ impl MonitorManager {
                 Err(error) => {
                     log::error!("Monitor failed: {}", error);
 
-                    send_state_update(StateUpdateMessage {
+                    send_state_update(StateUpdateMessage::Monitor {
                         host_name: host.name.clone(),
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
+                        data_point: None,
                         errors: vec![error],
                         invocation_id: current_invocation_id,
-                        ..Default::default()
                     });
 
                     continue;
@@ -692,16 +692,16 @@ impl MonitorManager {
             }) {
                 log::warn!("[{}][{}] Skipping, sudo required", host.name, monitor.get_module_spec().id);
 
-                send_state_update(StateUpdateMessage {
+                send_state_update(StateUpdateMessage::Monitor {
                     host_name: host.name.clone(),
                     display_options: monitor.get_display_options(),
                     module_spec: monitor.get_module_spec(),
+                    data_point: None,
                     errors: vec![
                         LkError::new(ErrorKind::SudoRequired, "Sudo is required but is disabled for this host")
                             .set_source(monitor.get_module_spec().id),
                     ],
                     invocation_id: current_invocation_id,
-                    ..Default::default()
                 });
 
                 continue;
@@ -883,14 +883,13 @@ impl MonitorManager {
                                     ).set_source(next_monitor.get_module_spec().id),
                                 );
 
-                                if let Err(error) = state_update_sender.send(StateUpdateMessage {
+                                if let Err(error) = state_update_sender.send(StateUpdateMessage::Monitor {
                                     host_name: response.host.name.clone(),
                                     display_options: monitor.get_display_options(),
                                     module_spec: monitor.get_module_spec(),
                                     data_point: new_data_point,
                                     errors: errors,
                                     invocation_id: response.invocation_id,
-                                    ..Default::default()
                                 }) {
                                     log::error!("Failed to send state update: {}", error);
                                     panic!("Failed to send state update: {}", error);
@@ -902,13 +901,13 @@ impl MonitorManager {
                         Err(error1) => {
                             log::error!("[{}][{}] Monitor failed: {}", response.host.name, monitor_id, error1);
 
-                            if let Err(error2) = state_update_sender.send(StateUpdateMessage {
+                            if let Err(error2) = state_update_sender.send(StateUpdateMessage::Monitor {
                                 host_name: response.host.name.clone(),
                                 display_options: next_monitor.get_display_options(),
                                 module_spec: next_monitor.get_module_spec(),
+                                data_point: None,
                                 errors: vec![error1],
                                 invocation_id: response.invocation_id,
-                                ..Default::default()
                             }) {
                                 log::error!("Failed to send state update: {}", error2);
                                 panic!("Failed to send state update: {}", error2);
@@ -939,14 +938,13 @@ impl MonitorManager {
                     }
                 }
                 else {
-                    if let Err(error) = state_update_sender.send(StateUpdateMessage {
+                    if let Err(error) = state_update_sender.send(StateUpdateMessage::Monitor {
                         host_name: response.host.name.clone(),
                         display_options: monitor.get_display_options(),
                         module_spec: monitor.get_module_spec(),
                         data_point: new_data_point,
                         errors: errors,
                         invocation_id: response.invocation_id,
-                        ..Default::default()
                     }) {
                         log::error!("Failed to send state update: {}", error);
                         panic!("Failed to send state update: {}", error);

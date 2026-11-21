@@ -620,8 +620,7 @@ fn write_secrets_file(path: &Path, key: &SecretKey, entries: &Entries) -> Result
 }
 
 fn ensure_private_dir(path: &Path) -> Result<(), LkError> {
-    fs::create_dir_all(path)
-        .map_err(|error| LkError::other(format!("Failed to create directory {}: {}", path.display(), error)))?;
+    fs::create_dir_all(path).map_err(|error| LkError::other(format!("Failed to create directory {}: {}", path.display(), error)))?;
     fs::set_permissions(path, fs::Permissions::from_mode(0o700))
         .map_err(|error| LkError::other(format!("Failed to set permissions on {}: {}", path.display(), error)))
 }
