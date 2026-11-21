@@ -157,13 +157,20 @@ docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.
 #[test]
 fn test_package_fedora_dnf_check_update() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(
+        let mut ssh = StubSsh2::default();
+        ssh.add_response(
             r#"'sudo' 'dnf' 'check-update' '--quiet' '--assumeno'"#,
             r#"Last metadata expiration check: 0:05:00 ago on Sun 01 Jan 2000.
 systemd-shared.aarch64             258.7-1.fc43                updates
 systemd-sysusers.aarch64           258.7-1.fc43                updates-archive"#,
             100,
-        )
+        );
+        ssh.add_response(
+            r#"'sudo' 'dnf' 'check-update' '--security' '--quiet' '--assumeno'"#,
+            "",
+            0,
+        );
+        Box::new(ssh) as connection::Connector
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -181,8 +188,10 @@ systemd-sysusers.aarch64           258.7-1.fc43                updates-archive"#
         assert_eq!(datapoint.multivalue[0].value, "258.7-1.fc43");
         assert_eq!(datapoint.multivalue[0].description, "updates");
         assert_eq!(datapoint.multivalue[0].command_params, vec!["systemd-shared.aarch64"]);
+        assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
         assert_eq!(datapoint.multivalue[1].label, "systemd-sysusers.aarch64");
         assert_eq!(datapoint.multivalue[1].description, "updates-archive");
+        assert_eq!(datapoint.criticality, Criticality::Normal);
     });
 }
 
