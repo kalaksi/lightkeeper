@@ -4,10 +4,11 @@
  */
 
 use std::collections::BTreeMap;
+use std::hash::{BuildHasher, RandomState};
 use std::io::Write;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::{collections::HashMap, fs, io};
 
 use serde::{Deserialize, Serialize};
@@ -18,7 +19,7 @@ use crate::file_handler;
 use crate::host::HostSetting;
 use crate::module::PlatformInfo;
 use crate::secrets_manager;
-use crate::secrets_manager::SecretStore;
+use crate::secrets_manager::{Secret, SecretStore};
 
 const MAIN_CONFIG_FILE: &str = "config.yml";
 const HOSTS_FILE: &str = "hosts.yml";
@@ -28,6 +29,12 @@ const CONFIG_BACKUP_SUFFIX: &str = ".prev";
 pub const DEFAULT_GROUPS_CONFIG: &str = include_str!("../groups.example.yml");
 pub const DEFAULT_MAIN_CONFIG: &str = include_str!("../config.example.yml");
 pub const DEFAULT_HOSTS_CONFIG: &str = include_str!("../hosts.example.yml");
+
+/// Plaintext connector secrets keyed by the fingerprinted placeholders that `resolve_secrets_in_hosts` leaves in config.
+pub type RuntimeSecrets = HashMap<String, Secret>;
+
+/// Randomly keyed per process so that fingerprints can't be compared against precomputed values.
+static SECRET_FINGERPRINT_HASHER: OnceLock<RandomState> = OnceLock::new();
 pub const INTERNAL: &str = "internal";
 pub const INTERNAL_SIMPLE: &str = "internal-simple";
 pub const MIGRATION_VERSION: u16 = 9;
@@ -562,7 +569,7 @@ impl Configuration {
 
         // Merge config groups to form the final, effective config.
         // Keyring placeholders are left unresolved here; call resolve_secrets_in_hosts before
-        // runtime connector setup so config/UI paths do not hold plaintext secrets.
+        // runtime connector setup. Only connectors receive the plaintext so config/UI paths do not hold it.
         for (_, host_config) in hosts.hosts.iter_mut() {
             host_config.effective = Self::get_effective_group_config(host_config, &all_groups.groups);
 
@@ -602,20 +609,31 @@ impl Configuration {
         Ok((main_config, hosts, all_groups))
     }
 
-    /// Resolves secret placeholders in `hosts.*.effective` for runtime connector use.
-    pub fn resolve_secrets_in_hosts(hosts: &mut Hosts, secret_store: Arc<dyn SecretStore>) {
+    /// Resolves secret placeholders in `hosts.*.effective` connectors for runtime use.
+    /// Placeholders get a fingerprint suffix so that config comparisons still notice changed secrets,
+    /// while plaintext is returned separately and should only be handed to connectors.
+    pub fn resolve_secrets_in_hosts(hosts: &mut Hosts, secret_store: Arc<dyn SecretStore>) -> RuntimeSecrets {
         let active_prefix = secret_store.identifier_prefix();
         let mut secrets = secrets_manager::SecretsManager::new(secret_store);
+        let mut runtime_secrets = RuntimeSecrets::new();
         for host_config in hosts.hosts.values_mut() {
-            Self::resolve_secrets_in_effective_config(&mut host_config.effective, &mut secrets, active_prefix);
+            Self::resolve_secrets_in_effective_config(
+                &mut host_config.effective,
+                &mut secrets,
+                &mut runtime_secrets,
+                active_prefix,
+            );
         }
+        runtime_secrets
     }
 
     fn resolve_secrets_in_effective_config(
         effective: &mut ConfigGroup,
         secrets: &mut secrets_manager::SecretsManager,
+        runtime_secrets: &mut RuntimeSecrets,
         active_prefix: &str,
     ) {
+        let hasher = SECRET_FINGERPRINT_HASHER.get_or_init(RandomState::new);
         for (_connector_id, connector_config) in effective.connectors.iter_mut() {
             let to_resolve: Vec<(String, String)> = connector_config.settings.iter()
                 .filter(|(_, value)| value.starts_with(active_prefix))
@@ -626,7 +644,9 @@ impl Configuration {
                 let lookup_key = &placeholder_value[active_prefix.len()..];
                 match secrets.get(lookup_key) {
                     Ok(Some(secret)) => {
-                        connector_config.settings.insert(key, secret);
+                        let tagged_placeholder = format!("{}#{:016x}", placeholder_value, hasher.hash_one(&*secret));
+                        connector_config.settings.insert(key, tagged_placeholder.clone());
+                        runtime_secrets.insert(tagged_placeholder, secret);
                     }
                     Ok(None) => {
                         log::warn!("Secret not found for {}", lookup_key);

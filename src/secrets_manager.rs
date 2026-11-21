@@ -15,9 +15,13 @@ use keyring::Error as KeyringError;
 use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::error::LkError;
 use crate::utils::strip_unprintable;
+
+/// Plaintext secret value wiped on drop.
+pub type Secret = Zeroizing<String>;
 
 const SERVICE_NAME: &str = "lightkeeper";
 
@@ -73,7 +77,7 @@ pub enum SecretStoreStatus {
 
 /// Passphrase methods may block for a while (KDF), so don't call them from the UI thread.
 pub trait SecretStore: Send + Sync {
-    fn get(&self, key: &str) -> Result<Option<String>, LkError>;
+    fn get(&self, key: &str) -> Result<Option<Secret>, LkError>;
     fn set(&self, key: &str, value: &str) -> Result<(), LkError>;
     fn delete(&self, key: &str) -> Result<(), LkError>;
 
@@ -129,10 +133,14 @@ impl SecretStore for KeyringSecretStore {
     }
 
     #[cfg(feature = "native")]
-    fn get(&self, key: &str) -> Result<Option<String>, LkError> {
+    fn get(&self, key: &str) -> Result<Option<Secret>, LkError> {
         let entry = Entry::new(SERVICE_NAME, key)?;
         match entry.get_password() {
-            Ok(value) => Ok(Some(strip_unprintable(&value))),
+            Ok(mut value) => {
+                let cleaned = Secret::new(strip_unprintable(&value));
+                value.zeroize();
+                Ok(Some(cleaned))
+            }
             Err(KeyringError::NoEntry) => {
                 log::warn!("Secret not found in keyring: {}", key);
                 Ok(None)
@@ -142,17 +150,19 @@ impl SecretStore for KeyringSecretStore {
     }
 
     #[cfg(feature = "flatpak")]
-    fn get(&self, key: &str) -> Result<Option<String>, LkError> {
+    fn get(&self, key: &str) -> Result<Option<Secret>, LkError> {
         let attributes = [("service", SERVICE_NAME), ("key", key)];
         let items = runtime().block_on(keyring().search_items(&attributes))?;
         match items.first() {
             Some(item) => {
                 let secret = runtime().block_on(item.secret())?;
-                let value = match &secret {
+                let mut value = match &secret {
                     oo7::Secret::Text(text) => text.clone(),
                     oo7::Secret::Blob(bytes) => String::from_utf8_lossy(bytes).to_string(),
                 };
-                Ok(Some(strip_unprintable(&value)))
+                let cleaned = Secret::new(strip_unprintable(&value));
+                value.zeroize();
+                Ok(Some(cleaned))
             }
             None => {
                 log::warn!("Secret not found in keyring: {}", key);
@@ -204,7 +214,7 @@ impl SecretStore for KeyringSecretStore {
 /// Cached reads against a [`SecretStore`].
 pub struct SecretsManager {
     store: Arc<dyn SecretStore>,
-    cache: HashMap<String, Option<String>>,
+    cache: HashMap<String, Option<Secret>>,
 }
 
 impl SecretsManager {
@@ -215,7 +225,7 @@ impl SecretsManager {
         }
     }
 
-    pub fn get(&mut self, key: &str) -> Result<Option<String>, LkError> {
+    pub fn get(&mut self, key: &str) -> Result<Option<Secret>, LkError> {
         if let Some(cached) = self.cache.get(key) {
             return Ok(cached.clone());
         }
@@ -223,6 +233,12 @@ impl SecretsManager {
         let value = self.store.get(key)?;
         self.cache.insert(key.to_string(), value.clone());
         Ok(value)
+    }
+}
+
+impl Drop for SecretsManager {
+    fn drop(&mut self) {
+        self.cache.values_mut().flatten().for_each(|value| value.zeroize());
     }
 }
 

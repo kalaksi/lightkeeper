@@ -21,6 +21,7 @@ use hex::FromHex;
 use chrono::Utc;
 use ssh2;
 use crate::{error::*, file_handler};
+use crate::secrets_manager::Secret;
 use crate::file_handler::FileMetadata;
 use crate::utils::{sha256, strip_newline};
 use lightkeeper_module::connection_module;
@@ -57,9 +58,9 @@ pub struct Ssh2 {
     address: Arc<Mutex<String>>,
     port: Arc<Mutex<u16>>,
     username: String,
-    password: Option<String>,
+    password: Option<Secret>,
     private_key_path: Option<String>,
-    private_key_passphrase: Option<String>,
+    private_key_passphrase: Option<Secret>,
     agent_key_identifier: Option<String>,
     connection_timeout: u16,
     verify_host_key: bool,
@@ -130,9 +131,9 @@ impl Module for Ssh2 {
             address: Arc::new(Mutex::new(String::from("0.0.0.0"))),
             port: Arc::new(Mutex::new(settings.get("port").and_then(|value| value.parse::<u16>().ok()).unwrap_or(22))),
             username: settings.get("username").unwrap_or(&String::from("root")).clone(),
-            password: settings.get("password").cloned(),
+            password: settings.get("password").cloned().map(Secret::new),
             private_key_path: settings.get("private_key_path").filter(|path| !path.is_empty()).cloned(),
-            private_key_passphrase: settings.get("private_key_passphrase").cloned(),
+            private_key_passphrase: settings.get("private_key_passphrase").cloned().map(Secret::new),
             agent_key_identifier: settings.get("agent_key_identifier").cloned(),
             connection_timeout: settings.get("connection_timeout").and_then(|value| value.parse::<u16>().ok()).unwrap_or(15),
             verify_host_key: settings.get("verify_host_key").and_then(|value| value.parse::<bool>().ok()).unwrap_or(true),

@@ -69,9 +69,10 @@ impl CoreComponents {
         start_connection_processing: bool,
     ) -> Vec<String> {
         let mut hosts_config = hosts_config.clone();
-        Configuration::resolve_secrets_in_hosts(&mut hosts_config, secret_store);
+        let runtime_secrets = Configuration::resolve_secrets_in_hosts(&mut hosts_config, secret_store);
 
-        self.connection_manager.configure(&hosts_config);
+        self.connection_manager.configure(&hosts_config, &runtime_secrets);
+        drop(runtime_secrets);
         let reset_hosts = self.host_manager.borrow_mut().configure(&hosts_config);
         self.monitor_manager.configure(
             &hosts_config,

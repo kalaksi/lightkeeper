@@ -5,6 +5,8 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use zeroize::Zeroize;
+
 use super::{
     command,
     command::CommandModule,
@@ -65,10 +67,12 @@ impl ModuleFactory {
 
         if let Some(constructor) = self.connector_modules.iter()
             .find(|(metadata, _ctor)| metadata.module_spec == normalized_spec)
-            .map(|(_, ctor)| ctor) 
+            .map(|(_, ctor)| ctor)
         {
-            let settings: HashMap<String, String> = settings.clone().into_iter().collect();
-            Some(constructor(&settings))
+            let mut settings: HashMap<String, String> = settings.clone().into_iter().collect();
+            let connector = constructor(&settings);
+            settings.values_mut().for_each(|value| value.zeroize());
+            Some(connector)
         }
         else {
             None

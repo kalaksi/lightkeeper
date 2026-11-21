@@ -59,7 +59,8 @@ tokio = { version = "1", optional = true, features = ["rt"] }
 # For Lightkeeper-managed encrypted secrets store.
 chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["alloc", "getrandom"], optional = true }
 argon2 = { version = "0.6", default-features = false, features = ["alloc", "zeroize"], optional = true }
-zeroize = { version = "1", features = ["std"], optional = true }
+# Wipes resolved secrets also in the GUI process.
+zeroize = { version = "1", features = ["std"] }
 
 [features]
 default = ["native", "oping", "gui"]
@@ -67,5 +68,5 @@ native = ["dep:keyring"]
 flatpak = ["gui", "dep:oo7", "dep:tokio"]
 hot-reload = ["dep:notify", "gui"]
 gui = ["dep:qmetaobject"]
-core = ["native", "dep:chacha20poly1305", "dep:argon2", "dep:zeroize"]
+core = ["native", "dep:chacha20poly1305", "dep:argon2"]
 

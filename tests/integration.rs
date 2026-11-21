@@ -63,7 +63,7 @@ impl MonitorTestHarness {
         host_manager.borrow_mut().configure(&hosts_config);
 
         let mut connection_manager = ConnectionManager::new(module_factory.clone());
-        connection_manager.configure(&hosts_config);
+        connection_manager.configure(&hosts_config, &Default::default());
 
         let invocation_id_counter = Arc::new(AtomicU64::new(0));
         let mut monitor_manager = MonitorManager::new(
@@ -114,7 +114,7 @@ impl MonitorTestHarness {
         host_manager.borrow_mut().configure(&hosts_config);
 
         let mut connection_manager = ConnectionManager::new(module_factory.clone());
-        connection_manager.configure(&hosts_config);
+        connection_manager.configure(&hosts_config, &Default::default());
 
         let invocation_id_counter = Arc::new(AtomicU64::new(0));
         let mut monitor_manager = MonitorManager::new(
@@ -356,7 +356,7 @@ impl CommandTestHarness {
         host_manager.borrow_mut().configure(&hosts_config);
 
         let mut connection_manager = ConnectionManager::new(module_factory.clone());
-        connection_manager.configure(&hosts_config);
+        connection_manager.configure(&hosts_config, &Default::default());
 
         let invocation_id_counter = Arc::new(AtomicU64::new(0));
         let mut command_handler = CommandHandler::new(

@@ -67,14 +67,14 @@ fn uninitialized_then_raw_key_roundtrip() {
     assert!(!key_raw.trim_ascii().starts_with(b"{"));
 
     fixture.store.set("alpha", "one").unwrap();
-    assert_eq!(fixture.store.get("alpha").unwrap().as_deref(), Some("one"));
+    assert_eq!(fixture.store.get("alpha").unwrap().as_ref().map(|s| s.as_str()), Some("one"));
     fixture.store.delete("alpha").unwrap();
     assert_eq!(fixture.store.get("alpha").unwrap(), None);
 
     let reopened = fixture.reopen();
     assert_eq!(reopened.status().unwrap(), SecretStoreStatus::Unlocked);
     reopened.set("beta", "two").unwrap();
-    assert_eq!(reopened.get("beta").unwrap().as_deref(), Some("two"));
+    assert_eq!(reopened.get("beta").unwrap().as_ref().map(|s| s.as_str()), Some("two"));
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn passphrase_init_locks_until_unlock() {
     assert!(reopened.unlock_store("wrong-pass").unwrap_err().to_string().contains("Failed to unlock"));
     reopened.unlock_store("correct-pass").unwrap();
     assert_eq!(reopened.status().unwrap(), SecretStoreStatus::UnlockedWithPassphrase);
-    assert_eq!(reopened.get("token").unwrap().as_deref(), Some("secret-value"));
+    assert_eq!(reopened.get("token").unwrap().as_ref().map(|s| s.as_str()), Some("secret-value"));
 }
 
 #[test]
@@ -105,19 +105,19 @@ fn protect_change_and_unprotect() {
     fixture.store.protect_store("first-pass").unwrap();
     assert_eq!(fixture.store.status().unwrap(), SecretStoreStatus::UnlockedWithPassphrase);
     assert!(fs::read(&fixture.key_path).unwrap().trim_ascii().starts_with(b"{"));
-    assert_eq!(fixture.store.get("keep").unwrap().as_deref(), Some("alive"));
+    assert_eq!(fixture.store.get("keep").unwrap().as_ref().map(|s| s.as_str()), Some("alive"));
 
     fixture.store.change_store_passphrase("first-pass", "second-pass").unwrap();
     let reopened = fixture.reopen();
     assert!(reopened.unlock_store("first-pass").is_err());
     reopened.unlock_store("second-pass").unwrap();
-    assert_eq!(reopened.get("keep").unwrap().as_deref(), Some("alive"));
+    assert_eq!(reopened.get("keep").unwrap().as_ref().map(|s| s.as_str()), Some("alive"));
 
     reopened.unprotect_store("second-pass").unwrap();
     assert_eq!(reopened.status().unwrap(), SecretStoreStatus::Unlocked);
     let raw_again = fixture.reopen();
     assert_eq!(raw_again.status().unwrap(), SecretStoreStatus::Unlocked);
-    assert_eq!(raw_again.get("keep").unwrap().as_deref(), Some("alive"));
+    assert_eq!(raw_again.get("keep").unwrap().as_ref().map(|s| s.as_str()), Some("alive"));
 }
 
 #[test]
@@ -229,6 +229,6 @@ fn interrupted_protect_recovers_pending_store() {
 
     let reopened = fixture.reopen();
     reopened.unlock_store("passphrase").unwrap();
-    assert_eq!(reopened.get("recover-me").unwrap().as_deref(), Some("yes"));
+    assert_eq!(reopened.get("recover-me").unwrap().as_ref().map(|s| s.as_str()), Some("yes"));
     assert!(!fixture.pending_path.exists());
 }

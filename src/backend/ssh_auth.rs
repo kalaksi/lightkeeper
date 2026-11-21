@@ -10,16 +10,16 @@ use hex::FromHex;
 use ssh2;
 
 use crate::file_handler;
-use crate::secrets_manager::{self, SecretStore};
+use crate::secrets_manager::{self, Secret, SecretStore};
 use crate::utils::sha256;
 
 /// Auth material for a remote core host SSH session (parity with the ssh connector).
 #[derive(Clone, Default)]
 pub struct SshAuthOptions {
     pub username: String,
-    pub password: Option<String>,
+    pub password: Option<Secret>,
     pub private_key_path: Option<String>,
-    pub private_key_passphrase: Option<String>,
+    pub private_key_passphrase: Option<Secret>,
     pub agent_key_identifier: Option<String>,
 }
 
@@ -220,7 +220,7 @@ pub fn authenticate(session: &ssh2::Session, auth: &SshAuthOptions) -> Result<()
 }
 
 /// Resolves a profile secret field that may be plaintext or a stored-secret placeholder.
-pub fn resolve_secret_value(store: &dyn SecretStore, stored: &str) -> Result<Option<String>, SshAuthError> {
+pub fn resolve_secret_value(store: &dyn SecretStore, stored: &str) -> Result<Option<Secret>, SshAuthError> {
     if stored.is_empty() {
         return Ok(None);
     }
@@ -236,7 +236,7 @@ pub fn resolve_secret_value(store: &dyn SecretStore, stored: &str) -> Result<Opt
     if secrets_manager::uses_inactive_backend(stored, store.identifier_prefix()) {
         return Err(SshAuthError::other("Core SSH secret uses an incompatible secrets backend"));
     }
-    Ok(Some(stored.to_string()))
+    Ok(Some(Secret::new(stored.to_string())))
 }
 
 pub fn store_core_secret(store: &dyn SecretStore, setting_key: &str, secret_value: &str) -> Result<String, SshAuthError> {

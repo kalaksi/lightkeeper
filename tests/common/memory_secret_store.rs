@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use lightkeeper::error::LkError;
-use lightkeeper::secrets_manager::SecretStore;
+use lightkeeper::secrets_manager::{Secret, SecretStore};
 use lightkeeper::utils::strip_unprintable;
 
 #[derive(Default)]
@@ -26,8 +26,8 @@ impl SecretStore for MemorySecretStore {
         lightkeeper::secrets_manager::KEYRING_PREFIX
     }
 
-    fn get(&self, key: &str) -> Result<Option<String>, LkError> {
-        Ok(self.entries.lock().unwrap().get(key).cloned())
+    fn get(&self, key: &str) -> Result<Option<Secret>, LkError> {
+        Ok(self.entries.lock().unwrap().get(key).cloned().map(Secret::new))
     }
 
     fn set(&self, key: &str, value: &str) -> Result<(), LkError> {

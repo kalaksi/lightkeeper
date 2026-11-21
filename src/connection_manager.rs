@@ -14,12 +14,13 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroize;
 
 use crate::error::LkError;
 use crate::module::monitoring::DataPoint;
 use crate::monitor_manager::CERT_MONITOR_HOST_ID;
 use crate::Host;
-use crate::configuration::{HostSettings, Hosts};
+use crate::configuration::{HostSettings, Hosts, RuntimeSecrets};
 use crate::file_handler::{self, FileMetadata};
 use crate::module::{ModuleFactory, ModuleSpecification, ModuleType};
 use crate::module::connection::*;
@@ -58,7 +59,7 @@ impl ConnectionManager {
         }
     }
 
-    pub fn configure(&mut self, hosts_config: &Hosts) {
+    pub fn configure(&mut self, hosts_config: &Hosts, runtime_secrets: &RuntimeSecrets) {
         self.stop();
 
         self.interrupt_pending = Some(Arc::new(Mutex::new(Vec::new())));
@@ -110,8 +111,20 @@ impl ConnectionManager {
         };
 
         // For regular host monitoring.
+        let empty_settings = BTreeMap::new();
         for (host_id, host_config) in new_host_configs {
             let host_connectors = stateful_connectors.entry(host_id.clone()).or_insert(HashMap::new());
+            let mut resolved_connector_settings = host_config.effective.connectors.iter()
+                .map(|(connector_id, connector_config)| {
+                    let settings = connector_config.settings.iter()
+                        .map(|(key, value)| {
+                            let value = runtime_secrets.get(value).map(|secret| secret.to_string()).unwrap_or_else(|| value.clone());
+                            (key.clone(), value)
+                        })
+                        .collect::<BTreeMap<String, String>>();
+                    (connector_id.clone(), settings)
+                })
+                .collect::<HashMap<String, BTreeMap<String, String>>>();
 
             for (monitor_id, monitor_config) in host_config.effective.monitors.iter() {
                 let monitor_spec = ModuleSpecification::monitor(monitor_id.as_str(), monitor_config.version.as_str());
@@ -123,12 +136,8 @@ impl ConnectionManager {
                 if let Some(mut connector_spec) = monitor.get_connector_spec() {
                     connector_spec.module_type = ModuleType::Connector;
 
-                    let connector_settings = match host_config.effective.connectors.get(&connector_spec.id) {
-                        Some(config) => config.settings.clone(),
-                        None => BTreeMap::new(),
-                    };
-
-                    let connector = match self.module_factory.new_connector(&connector_spec, &connector_settings) {
+                    let connector_settings = resolved_connector_settings.get(&connector_spec.id).unwrap_or(&empty_settings);
+                    let connector = match self.module_factory.new_connector(&connector_spec, connector_settings) {
                         Some(connector) => connector,
                         None => continue,
                     };
@@ -147,12 +156,8 @@ impl ConnectionManager {
                 };
 
                 if let Some(connector_spec) = command.get_connector_spec() {
-                    let connector_settings = match host_config.effective.connectors.get(&connector_spec.id) {
-                        Some(config) => config.settings.clone(),
-                        None => BTreeMap::new(),
-                    };
-
-                    let connector = match self.module_factory.new_connector(&connector_spec, &connector_settings) {
+                    let connector_settings = resolved_connector_settings.get(&connector_spec.id).unwrap_or(&empty_settings);
+                    let connector = match self.module_factory.new_connector(&connector_spec, connector_settings) {
                         Some(connector) => connector,
                         None => continue,
                     };
@@ -162,6 +167,10 @@ impl ConnectionManager {
                     }
                 }
             }
+
+            resolved_connector_settings.values_mut()
+                .flat_map(|settings| settings.values_mut())
+                .for_each(|value| value.zeroize());
         }
 
         self.current_config = hosts_config.hosts.clone();

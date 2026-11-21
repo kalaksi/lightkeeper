@@ -35,7 +35,7 @@ use crate::module::command::CommandResult;
 use crate::module::connection::{ConnectionModule, LocalCommand, ResponseMessage};
 use crate::module::{MetadataSupport, Module};
 use crate::remote_core::protocol::*;
-use crate::secrets_manager::{SecretStore, SecretStoreStatus, SECRETSFILE_PREFIX};
+use crate::secrets_manager::{Secret, SecretStore, SecretStoreStatus, SECRETSFILE_PREFIX};
 use crate::utils::{sh_single_quoted, sha256, ShellCommand};
 
 enum CoreClientStream {
@@ -1252,7 +1252,7 @@ impl SecretStore for RemoteSecretStore {
         SECRETSFILE_PREFIX
     }
 
-    fn get(&self, _key: &str) -> Result<Option<String>, LkError> {
+    fn get(&self, _key: &str) -> Result<Option<Secret>, LkError> {
         Err(LkError::other("Secrets stay on the remote core"))
     }
 

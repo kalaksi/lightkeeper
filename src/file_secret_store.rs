@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::error::LkError;
-use crate::secrets_manager::{SecretStore, SecretStoreStatus, SECRETSFILE_PREFIX};
+use crate::secrets_manager::{Secret, SecretStore, SecretStoreStatus, SECRETSFILE_PREFIX};
 use crate::utils::strip_unprintable;
 
 const STORE_FILE_NAME: &str = "secrets.enc";
@@ -434,9 +434,9 @@ impl SecretStore for FileSecretStore {
         SECRETSFILE_PREFIX
     }
 
-    fn get(&self, key: &str) -> Result<Option<String>, LkError> {
+    fn get(&self, key: &str) -> Result<Option<Secret>, LkError> {
         let mut state = self.state.lock()?;
-        Ok(self.read_entries(&mut state)?.0.get(key).cloned())
+        Ok(self.read_entries(&mut state)?.0.get(key).cloned().map(Secret::new))
     }
 
     fn set(&self, key: &str, value: &str) -> Result<(), LkError> {
