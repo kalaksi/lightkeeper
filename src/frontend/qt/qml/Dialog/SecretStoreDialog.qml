@@ -19,56 +19,40 @@ LightkeeperDialog {
     property string storeStatus: ""
     property bool _busy: false
     property string _errorText: ""
-    /// Skip clearing fields when reopening after Ok (Dialog closes before async finishes).
-    property bool _preserveOnOpen: false
 
     readonly property bool locked: root.storeStatus === "Locked"
     readonly property bool needsSetup: root.storeStatus === "Uninitialized" || root.storeStatus === "NoKey"
     readonly property bool isProtected: root.storeStatus === "UnlockedWithPassphrase"
-    readonly property string _passphraseHint: root.needsSetup ? "Leave empty for no passphrase protection."
+    readonly property string _passwordHint: root.needsSetup ? "Leave empty for no password protection."
         : root.isProtected ? "Leave empty to remove protection."
         : ""
-    readonly property string _okText: root._busy ? (root.locked ? "Unlocking..." : "Working...")
-        : root.locked ? "Unlock"
+    readonly property string _okText: root.locked ? "Unlock"
         : root.storeStatus === "NoKey" ? "Re-initialize"
         : root.storeStatus === "Uninitialized" ? "Set up"
-        : root.isProtected ? "Change passphrase"
-        : "Set passphrase"
+        : root.isProtected ? "Change password"
+        : "Set password"
 
     title: root.locked ? "Unlock Lightkeeper's secret store"
         : root.storeStatus === "NoKey" ? "Re-initialize Lightkeeper's secret store"
         : root.storeStatus === "Uninitialized" ? "Set up Lightkeeper Core"
-        : root.isProtected ? "Change Lightkeeper's secret store passphrase"
-        : "Set new passphrase"
+        : root.isProtected ? "Change password"
+        : "Set password"
     modal: true
     implicitWidth: 520
     implicitHeight: rootColumn.implicitHeight + Theme.marginDialogTop + Theme.marginDialogBottom
-    standardButtons: Dialog.Ok | Dialog.Cancel
+    // ApplyRole applies without closing (unlike Ok / AcceptRole). Native DialogButtonBox footer.
+    standardButtons: Dialog.Apply | Dialog.Cancel
+    showCloseButton: !root._busy
+    closePolicy: root._busy ? Popup.NoAutoClose : Popup.CloseOnEscape
 
     onOpened: {
-        if (!root._preserveOnOpen) {
-            root.storeStatus = LK.getSecretStoreStatus()
-            root._busy = false
-            root._errorText = ""
-            currentField.text = ""
-            newField.text = ""
-            confirmField.text = ""
-            unlockField.text = ""
-        }
-        root._preserveOnOpen = false
+        root.storeStatus = LK.getSecretStoreStatus()
         root._updateButtons()
     }
 
-    onAccepted: {
-        root.submit()
-        // Ok closes the dialog; reopen after that if work is still in progress or failed.
-        Qt.callLater(function() {
-            if (root._busy || root._errorText !== "" || unprotectConfirmDialog.visible) {
-                root._preserveOnOpen = true
-                root.open()
-            }
-        })
-    }
+    onClosed: root._clearForm()
+
+    onApplied: root.submit()
 
     on_BusyChanged: root._updateButtons()
     onStoreStatusChanged: root._updateButtons()
@@ -85,10 +69,6 @@ LightkeeperDialog {
             root._updateButtons()
             if (error !== "") {
                 root._errorText = error
-                if (!root.visible) {
-                    root._preserveOnOpen = true
-                    root.open()
-                }
             }
             else {
                 root.close()
@@ -103,6 +83,7 @@ LightkeeperDialog {
         anchors.top: parent.top
         anchors.margins: Theme.marginDialog
         anchors.topMargin: Theme.marginDialogTop
+        anchors.bottomMargin: Theme.marginDialogBottom
         spacing: Theme.spacingLoose
 
         NormalText {
@@ -119,7 +100,7 @@ LightkeeperDialog {
             Layout.fillWidth: true
             visible: root.locked
             wrapMode: Text.WordWrap
-            text: "Enter the passphrase to unlock Lightkeeper's secret store. Cancel to continue without it, " +
+            text: "Enter the password to unlock Lightkeeper's secret store. Cancel to continue without it, " +
                   "but hosts that need stored secrets will fail until the store is unlocked."
         }
 
@@ -138,7 +119,15 @@ LightkeeperDialog {
             Layout.fillWidth: true
             visible: !root.locked && !root.needsSetup && !root.isProtected
             wrapMode: Text.WordWrap
-            text: "Set a passphrase for Lightkeeper's secret store."
+            text: "Set a password to protect Lightkeeper's encrypted secret store."
+        }
+
+        NormalText {
+            Layout.fillWidth: true
+            visible: root.isProtected
+            wrapMode: Text.WordWrap
+            text: "Enter the current password and a new one for Lightkeeper's encrypted secret store.\n" +
+                  "Leave the new password empty to remove password protection."
         }
 
         GridLayout {
@@ -150,7 +139,7 @@ LightkeeperDialog {
 
             Label {
                 visible: root.isProtected
-                text: "Current passphrase"
+                text: "Current password"
             }
 
             TextField {
@@ -159,11 +148,11 @@ LightkeeperDialog {
                 echoMode: TextInput.Password
                 enabled: !root._busy
                 Layout.fillWidth: true
-                onAccepted: root.accept()
+                onAccepted: root.submit()
             }
 
             Label {
-                text: "New passphrase"
+                text: "New password"
             }
 
             TextField {
@@ -171,11 +160,11 @@ LightkeeperDialog {
                 echoMode: TextInput.Password
                 enabled: !root._busy
                 Layout.fillWidth: true
-                onAccepted: root.accept()
+                onAccepted: root.submit()
             }
 
             Label {
-                text: "Confirm passphrase"
+                text: "Confirm password"
             }
 
             TextField {
@@ -183,7 +172,7 @@ LightkeeperDialog {
                 echoMode: TextInput.Password
                 enabled: !root._busy
                 Layout.fillWidth: true
-                onAccepted: root.accept()
+                onAccepted: root.submit()
             }
         }
 
@@ -195,7 +184,7 @@ LightkeeperDialog {
             visible: root.locked
 
             Label {
-                text: "Passphrase"
+                text: "Password"
             }
 
             TextField {
@@ -203,14 +192,14 @@ LightkeeperDialog {
                 echoMode: TextInput.Password
                 enabled: !root._busy
                 Layout.fillWidth: true
-                onAccepted: root.accept()
+                onAccepted: root.submit()
             }
         }
 
         SmallText {
             Layout.fillWidth: true
-            visible: !root.locked && root._passphraseHint !== ""
-            text: root._passphraseHint
+            visible: !root.locked && root._passwordHint !== ""
+            text: root._passwordHint
             color: Theme.textColorDark
             wrapMode: Text.WordWrap
         }
@@ -222,21 +211,31 @@ LightkeeperDialog {
             color: "red"
             wrapMode: Text.WordWrap
         }
-    }
 
-    ConfirmationDialog {
-        id: unprotectConfirmDialog
-        keepHidden: true
-        text: "Are you sure you want to remove passphrase protection from Lightkeeper's secret store?"
+        // Reserved slot so showing the sprite does not resize the dialog.
+        Item {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 36
+            opacity: root._busy ? 1 : 0
 
-        onAccepted: {
-            root._busy = true
-            root._updateButtons()
-            LK.setSecretStorePassphrase(currentField.text, "")
+            WorkingSprite {
+            }
         }
     }
 
+    function _clearForm() {
+        root._busy = false
+        root._errorText = ""
+        currentField.text = ""
+        newField.text = ""
+        confirmField.text = ""
+        unlockField.text = ""
+    }
+
     function submit() {
+        if (root._busy) {
+            return
+        }
         root._errorText = ""
         if (root.locked) {
             root._busy = true
@@ -245,11 +244,7 @@ LightkeeperDialog {
             return
         }
         if (newField.text !== confirmField.text) {
-            root._errorText = "Passphrases don't match"
-            return
-        }
-        if (newField.text === "" && root.isProtected) {
-            unprotectConfirmDialog.open()
+            root._errorText = "Passwords don't match"
             return
         }
         root._busy = true
@@ -258,10 +253,10 @@ LightkeeperDialog {
     }
 
     function _updateButtons() {
-        let okButton = root.standardButton(Dialog.Ok)
-        if (okButton) {
-            okButton.text = root._okText
-            okButton.enabled = !root._busy
+        let applyButton = root.standardButton(Dialog.Apply)
+        if (applyButton) {
+            applyButton.text = root._okText
+            applyButton.enabled = !root._busy
         }
         let cancelButton = root.standardButton(Dialog.Cancel)
         if (cancelButton) {

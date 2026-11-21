@@ -101,7 +101,7 @@ impl ProtectedKeyFile {
             return Err(LkError::other("Protected secret key has KDF parameters outside of allowed limits"));
         }
         if passphrase.chars().count() > *PASSPHRASE_LENGTH.end() {
-            return Err(LkError::other("Passphrase is too long"));
+            return Err(LkError::other("Password is too long"));
         }
         let salt = BASE64
             .decode(self.salt.as_bytes())
@@ -122,7 +122,7 @@ impl ProtectedKeyFile {
     fn wrap_key(key: &SecretKey, passphrase: &str) -> Result<Self, LkError> {
         if !PASSPHRASE_LENGTH.contains(&passphrase.chars().count()) {
             return Err(LkError::other(format!(
-                "Passphrase must be {}-{} characters",
+                "Password must be {}-{} characters",
                 PASSPHRASE_LENGTH.start(),
                 PASSPHRASE_LENGTH.end()
             )));
@@ -279,7 +279,7 @@ impl FileSecretStore {
         let KeyFile::Protected(protected) = read_key_file(&self.key_path)?
         else {
             return Err(LkError::other(format!(
-                "Secret key {} is not passphrase-protected",
+                "Secret key {} is not password-protected",
                 self.key_path.display()
             )));
         };
@@ -493,7 +493,7 @@ impl SecretStore for FileSecretStore {
         // Reject before backup so a short passphrase does not rename secrets.enc aside.
         if !passphrase.is_empty() && !PASSPHRASE_LENGTH.contains(&passphrase.chars().count()) {
             return Err(LkError::other(format!(
-                "Passphrase must be {}-{} characters",
+                "Password must be {}-{} characters",
                 PASSPHRASE_LENGTH.start(),
                 PASSPHRASE_LENGTH.end()
             )));
@@ -523,7 +523,7 @@ impl SecretStore for FileSecretStore {
         match &*state {
             KeyState::Unlocked { protected: false, .. } => {}
             KeyState::Unlocked { protected: true, .. } => {
-                return Err(LkError::other("Secret key is already passphrase-protected"));
+                return Err(LkError::other("Secret key is already password-protected"));
             }
             other => return Err(self.unavailable_error(other)),
         }

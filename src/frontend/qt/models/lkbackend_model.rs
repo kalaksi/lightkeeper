@@ -834,7 +834,7 @@ impl LkBackend {
             Ok(secrets_manager::SecretStoreStatus::Uninitialized | secrets_manager::SecretStoreStatus::NoKey) => {
                 "Secret store set up"
             }
-            _ => "Secret store passphrase updated",
+            _ => "Secret store password updated",
         }
         .to_string();
         let self_ptr = QPointer::from(&*self);

@@ -121,7 +121,7 @@ pub fn set_store_passphrase(store: &dyn SecretStore, current_passphrase: &str, n
         }
         (SecretStoreStatus::Unlocked, false) => store.protect_store(new_passphrase),
         (SecretStoreStatus::Locked, _) => Err(LkError::other("Secret store is locked")),
-        (_, true) => Err(LkError::other("Secret store is not passphrase-protected")),
+        (_, true) => Err(LkError::other("Secret store is not password-protected")),
     }
 }
 

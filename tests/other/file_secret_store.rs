@@ -172,7 +172,7 @@ fn short_passphrase_rejected_before_backup() {
     let store_bytes = fs::read(&fixture.store_path).unwrap();
 
     let orphaned = fixture.reopen();
-    assert!(orphaned.initialize_store("abc").unwrap_err().to_string().contains("Passphrase must be"));
+    assert!(orphaned.initialize_store("abc").unwrap_err().to_string().contains("Password must be"));
     assert_eq!(fs::read(&fixture.store_path).unwrap(), store_bytes);
     assert_eq!(fixture.store_backup_count(), 0);
 }
