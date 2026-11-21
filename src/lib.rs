@@ -14,8 +14,9 @@ pub mod connection_manager;
 pub mod command_handler;
 pub mod monitor_manager;
 pub mod secrets_manager;
+// Made public for integration tests
 #[cfg(feature = "core")]
-mod file_secret_store;
+pub mod file_secret_store;
 mod host;
 pub use host::HostSetting;
 pub mod utils;

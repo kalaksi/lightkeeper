@@ -493,6 +493,14 @@ impl SecretStore for FileSecretStore {
             );
             return Err(LkError::other(message));
         }
+        // Reject before backup so a short passphrase does not rename secrets.enc aside.
+        if !passphrase.is_empty() && !PASSPHRASE_LENGTH.contains(&passphrase.chars().count()) {
+            return Err(LkError::other(format!(
+                "Passphrase must be {}-{} characters",
+                PASSPHRASE_LENGTH.start(),
+                PASSPHRASE_LENGTH.end()
+            )));
+        }
         if self.store_path.exists() || self.pending_store_path.exists() {
             self.backup_store_files()?;
         }
