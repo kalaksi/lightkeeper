@@ -4,6 +4,7 @@
  */
 
 use std::io::{self, BufRead, Read, Write};
+use std::net::Shutdown;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
 use std::path::Path;
@@ -29,9 +30,9 @@ use crate::module::monitoring::DataPoint;
 // The metrics server does not require network access (it uses unix sockets) and if using flatpak, this is enforced.
 //
 
-/// In milliseconds.
-const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
-/// Extra wait after SIGTERM before SIGKILL (flatpak-spawn needs time to forward TERM).
+/// In milliseconds. Enough for Exit or disconnect after socket shutdown, plus lmserver idle watchdog.
+const SERVICE_EXIT_WAIT_TIME: u64 = 2000;
+/// Extra wait after SIGTERM (flatpak-spawn needs time to forward it).
 const SERVICE_TERM_WAIT_TIME: u64 = 2000;
 const LMSERVER_VERSION: &str = "v0.4.6";
 
@@ -40,6 +41,8 @@ pub struct MetricsManager {
     log_thread: Option<thread::JoinHandle<()>>,
     request_thread: Option<thread::JoinHandle<()>>,
     request_sender: Option<mpsc::Sender<LMSRequest>>,
+    /// Clone of the client unix socket; shutdown() unblocks a stuck request-thread read.
+    request_stream: Option<UnixStream>,
 
     /// Every request gets an invocation ID. Valid numbers begin from 1.
     invocation_id_counter: u64,
@@ -54,6 +57,7 @@ impl MetricsManager {
             log_thread: None,
             request_thread: None,
             request_sender: None,
+            request_stream: None,
             invocation_id_counter: 1,
             update_sender: update_sender,
         }
@@ -118,7 +122,7 @@ impl MetricsManager {
             // Logs are printed to stderr by default. With flatpak, access is further restricted.
             let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
             let mut process_handle = if is_flatpak {
-                // --watch-bus: portal kills lmserver if flatpak-spawn disappears (e.g. SIGKILL).
+                // --watch-bus: portal tears down lmserver if flatpak-spawn disappears from the bus.
                 Command::new("flatpak-spawn")
                     .arg("--no-network")
                     .arg("--watch-bus")
@@ -171,11 +175,12 @@ impl MetricsManager {
 
     /// Connects (or reconnects) the request thread to an already-running lmserver.
     fn attach_client(&mut self, socket_path: &Path) -> Result<(), LkError> {
-        let tls_stream = lmserver::setup_connection(socket_path)
+        let (tls_stream, shutdown_stream) = lmserver::setup_connection(socket_path)
             .map_err(|error| LkError::other(format!("Failed to connect to metrics server: {}", error)))?;
         let (request_sender, request_receiver) = mpsc::channel();
         let new_update_sender = self.update_sender.clone();
         self.request_sender = Some(request_sender);
+        self.request_stream = Some(shutdown_stream);
         self.request_thread = Some(thread::spawn(move || {
             Self::process_requests(tls_stream, request_receiver, new_update_sender);
         }));
@@ -185,6 +190,7 @@ impl MetricsManager {
     /// Rejoins a dead request thread and re-attaches to lmserver, restarting it if needed.
     fn reconnect_client(&mut self) -> Result<(), LkError> {
         self.request_sender = None;
+        self.request_stream = None;
         if let Some(request_thread) = self.request_thread.take() {
             if request_thread.join().is_err() {
                 log::error!("Error while waiting for metrics request thread");
@@ -308,55 +314,32 @@ impl MetricsManager {
     }
 
     pub fn stop(&mut self) -> Result<(), LkError> {
-        let mut stop_success = false;
-
+        // Exit first while the request thread may still be idle on recv(); then shutdown so a
+        // mid-read unblocks and drops the client (lmserver idle-exits when the last client leaves).
         if let Some(request_sender) = self.request_sender.take() {
-            let exit_request = LMSRequest::exit();
-            if request_sender.send(exit_request).is_ok() {
-                // May not really be completely successful, but we can try.
-                stop_success = true;
-            }
+            let _ = request_sender.send(LMSRequest::exit());
+        }
+        if let Some(stream) = self.request_stream.take() {
+            let _ = stream.shutdown(Shutdown::Both);
         }
 
-        if let Some(mut process_handle) = self.process_handle.take() {
-            if !stop_success {
+        let stop_success = if let Some(mut process_handle) = self.process_handle.take() {
+            let mut exited = Self::wait_for_child_exit(&mut process_handle, SERVICE_EXIT_WAIT_TIME);
+            if !exited {
+                log::warn!("Metrics server still running, sending SIGTERM.");
                 Self::terminate_child(&mut process_handle);
+                exited = Self::wait_for_child_exit(&mut process_handle, SERVICE_TERM_WAIT_TIME);
+                if !exited {
+                    log::error!("Metrics server did not exit after SIGTERM; may still be running.");
+                }
             }
-
-            let mut waited = 0;
-            let mut sent_term = false;
-            loop {
-                if let Ok(Some(_)) = process_handle.try_wait() {
-                    stop_success = true;
-                    break;
-                }
-
-                if waited >= SERVICE_EXIT_WAIT_TIME && !sent_term {
-                    // SIGTERM so flatpak-spawn can forward to lmserver (SIGKILL cannot).
-                    log::warn!("Metrics server still running, sending SIGTERM.");
-                    Self::terminate_child(&mut process_handle);
-                    sent_term = true;
-                    waited = 0;
-                    continue;
-                }
-
-                if sent_term && waited >= SERVICE_TERM_WAIT_TIME {
-                    // SIGKILL is not forwarded by flatpak-spawn. With --watch-bus, killing the
-                    // wrapper drops its bus connection so the portal can tear down lmserver.
-                    log::warn!("Forcing metrics server to stop.");
-                    if let Err(error) = process_handle.kill() {
-                        log::error!("Failed to kill process: {}", error);
-                    }
-                    stop_success = true;
-                    break;
-                }
-
-                thread::sleep(Duration::from_millis(100));
-                waited += 100;
-            }
+            exited
         }
+        else {
+            // Attached to an existing server without a child handle; Exit/shutdown is best-effort.
+            true
+        };
 
-        // Remove socket file.
         if stop_success {
             let data_dir = file_handler::get_data_dir()?;
             let socket_path = data_dir.join("lmserver.sock");
@@ -380,7 +363,21 @@ impl MetricsManager {
         Ok(())
     }
 
-    /// Prefer SIGTERM over Child::kill() (SIGKILL): flatpak-spawn only forwards catchable signals.
+    fn wait_for_child_exit(child: &mut process::Child, wait_ms: u64) -> bool {
+        let mut waited = 0;
+        loop {
+            if let Ok(Some(_)) = child.try_wait() {
+                return true;
+            }
+            if waited >= wait_ms {
+                return false;
+            }
+            thread::sleep(Duration::from_millis(100));
+            waited += 100;
+        }
+    }
+
+    /// SIGTERM so flatpak-spawn can forward to lmserver (SIGKILL cannot).
     fn terminate_child(child: &mut process::Child) {
         let pid = child.id() as libc::pid_t;
         if pid > 0 {

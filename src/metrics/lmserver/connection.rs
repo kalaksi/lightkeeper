@@ -12,7 +12,10 @@ use std::{io, path};
 /// In milliseconds.
 const CONNECTION_TIMEOUT: u64 = 10000;
 
-pub fn setup_connection(socket_path: &path::Path) -> io::Result<rustls::StreamOwned<rustls::ClientConnection, UnixStream>> {
+/// Returns the TLS client stream and a cloned unix socket for interrupting a blocked request thread.
+pub fn setup_connection(
+    socket_path: &path::Path,
+) -> io::Result<(rustls::StreamOwned<rustls::ClientConnection, UnixStream>, UnixStream)> {
     let unix_stream = match UnixStream::connect(&socket_path) {
         Ok(stream) => stream,
         Err(_) => {
@@ -24,6 +27,7 @@ pub fn setup_connection(socket_path: &path::Path) -> io::Result<rustls::StreamOw
 
     unix_stream.set_read_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
     unix_stream.set_write_timeout(Some(Duration::from_millis(CONNECTION_TIMEOUT)))?;
+    let shutdown_stream = unix_stream.try_clone()?;
 
     let ca_cert_pem = include_str!("../../../certs/ca.crt");
     let tls_config = setup_client_tls(ca_cert_pem, None, None).map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
@@ -32,7 +36,7 @@ pub fn setup_connection(socket_path: &path::Path) -> io::Result<rustls::StreamOw
     let tls_connection = rustls::ClientConnection::new(Arc::new(tls_config.clone()), server_name)
         .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
 
-    Ok(rustls::StreamOwned::new(tls_connection, unix_stream))
+    Ok((rustls::StreamOwned::new(tls_connection, unix_stream), shutdown_stream))
 }
 
 fn setup_client_tls(
