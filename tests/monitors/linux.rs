@@ -132,10 +132,12 @@ fn test_load() {
 #[test]
 fn test_package() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new(r#"'sudo' 'apt' 'list' '--upgradable'"#, 
+        StubSsh2::new(r#"'apt' 'list' '--upgradable'"#,
 r#"Listing... Done
 docker-ce-cli/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]
-docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]"#, 0)
+docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.1-1~debian.12~bookworm]
+zlib1g/stable,stable-security,stable,stable-security 1:1.3.dfsg+really1.3.1-1+deb13u1 amd64 [upgradable from: 1:1.3.dfsg+really1.3.1-1+b1]
+openssl/stable,stable 3.5.9-1~deb13u1 amd64 [upgradable from: 3.5.7-1~deb13u3]"#, 0)
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -148,9 +150,16 @@ docker-ce/bookworm 5:29.0.3-1~debian.12~bookworm amd64 [upgradable from: 5:29.0.
 
     harness.verify_next_datapoint(&linux::Package::get_metadata().module_spec.id, |datapoint| {
         let datapoint = datapoint.expect("Should have datapoint");
-        assert_eq!(datapoint.multivalue.len(), 2);
+        assert_eq!(datapoint.multivalue.len(), 4);
         assert_eq!(datapoint.multivalue[0].label, "docker-ce-cli");
+        assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
         assert_eq!(datapoint.multivalue[1].label, "docker-ce");
+        assert_eq!(datapoint.multivalue[2].label, "zlib1g");
+        assert_eq!(datapoint.multivalue[2].criticality, Criticality::Normal);
+        assert!(datapoint.multivalue[2].tags.contains(&String::from("Security")));
+        assert_eq!(datapoint.multivalue[3].label, "openssl");
+        assert!(!datapoint.multivalue[3].tags.contains(&String::from("Security")));
+        assert_eq!(datapoint.criticality, Criticality::Normal);
     });
 }
 

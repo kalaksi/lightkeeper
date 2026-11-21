@@ -59,11 +59,9 @@ impl MonitoringModule for Package {
 
     fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
         let mut command = ShellCommand::new();
-        command.use_sudo = !host.is_root;
 
         if host.platform.is_same_or_greater(Flavor::Debian, "9") ||
            host.platform.is_same_or_greater(Flavor::Ubuntu, "20") {
-
             command.arguments(vec!["apt", "list", "--upgradable"]);
             Ok(command.to_string())
         }
@@ -74,6 +72,7 @@ impl MonitoringModule for Package {
             Ok(String::new())
         }
         else if host.platform.os_flavor == Flavor::Alpine {
+            command.use_sudo = !host.is_root;
             command.arguments(vec!["apk", "list", "--upgradable"]);
             Ok(command.to_string())
         }
@@ -135,7 +134,9 @@ impl MonitoringModule for Package {
                 let full_package = parts.next().ok_or(LkError::unexpected())?.to_string();
                 let package = full_package.split(',').nth(0).map(|s| s.to_string())
                                           .unwrap_or(full_package.clone());
-                let package_name = full_package.split('/').next().ok_or(LkError::unexpected())?.to_string();
+                let (package_name, archives) = full_package.split_once('/')
+                    .map(|(name, archives)| (name.to_string(), archives))
+                    .unwrap_or((full_package.clone(), ""));
                 let new_version = parts.next().unwrap_or_default().to_string();
 
                 let old_version = string_manipulation::get_string_between(&line, "[upgradable from: ", "]")
@@ -143,6 +144,9 @@ impl MonitoringModule for Package {
                 let mut data_point = DataPoint::labeled_value(package_name, new_version);
                 data_point.description = old_version;
                 data_point.command_params = vec![package];
+                if archives.contains("-security") {
+                    data_point.tags.push(String::from("Security"));
+                }
                 result.multivalue.push(data_point);
             }
         }

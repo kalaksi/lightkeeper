@@ -29,17 +29,20 @@ struct VersionFile {
 /// Returns `(cached_version, cache_is_fresh)`.
 pub fn load_cache() -> (Option<String>, bool) {
     let path = file_handler::get_cache_dir().join(CACHE_FILE);
-    let Ok(contents) = fs::read_to_string(&path) else {
+    let Ok(contents) = fs::read_to_string(&path)
+    else {
         return (None, false);
     };
-    let Ok(cache) = serde_yaml::from_str::<Cache>(&contents) else {
+    let Ok(cache) = serde_yaml::from_str::<Cache>(&contents)
+    else {
         return (None, false);
     };
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
     let fresh = now.saturating_sub(cache.checked_at) < MAX_AGE.as_secs();
     let version = if cache.latest_version.is_empty() {
         None
-    } else {
+    }
+    else {
         Some(cache.latest_version)
     };
     (version, fresh)

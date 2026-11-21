@@ -75,8 +75,7 @@ impl Host {
                     Err(error) => return Err(format!("Failed to resolve {}: {}", self.fqdn, error)),
                 };
 
-                let address = addresses.iter().find(|address| address.is_ipv6())
-                    .or_else(|| addresses.first());
+                let address = addresses.iter().find(|address| address.is_ipv6()).or_else(|| addresses.first());
                 if let Some(address) = address {
                     self.ip_address = address.ip();
                 }
