@@ -231,8 +231,6 @@ LightkeeperDialog {
                                     ? settingColumn._secretSaveValue
                                     : ""
                                 warningText: LK.config.secretsBackendWarning(settingColumn._secretSaveValue)
-                                allowReveal: !LK.isUsingRemoteCore()
-                                onRevealRequested: secretField.revealSecret(settingColumn.secretValue())
 
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
@@ -278,23 +276,6 @@ LightkeeperDialog {
                             return filePathField.text
                         }
                         return textField.text
-                    }
-
-                    function secretValue() {
-                        // Inherited host row: do not look up host keyring (secret lives on the group).
-                        if (!toggleSwitch.checked && root._hostScoped) {
-                            return settingColumn._inheritedValue
-                        }
-                        let configValue = settingColumn._secretSaveValue
-                        if (root._hostScoped) {
-                            return LK.config.revealHostSecret(
-                                root.hostId, root.moduleId, modelData.key, configValue)
-                        }
-                        if (root.groupName !== "") {
-                            return LK.config.revealGroupSecret(
-                                root.groupName, root.moduleId, modelData.key, configValue)
-                        }
-                        return configValue
                     }
                 }
             }

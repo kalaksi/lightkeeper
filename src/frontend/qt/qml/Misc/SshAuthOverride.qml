@@ -148,9 +148,6 @@ Item {
                             settingKey: "password"
                             saveValue: passwordField._initialValue
                             warningText: LK.config.secretsBackendWarning(passwordField._initialValue)
-                            allowReveal: !LK.isUsingRemoteCore()
-                            onRevealRequested: passwordField.revealSecret(LK.config.revealHostSecret(
-                                root.hostId, "ssh", passwordField.settingKey, passwordField._initialValue))
 
                             Layout.fillWidth: true
                         }
@@ -173,9 +170,6 @@ Item {
                             settingKey: "private_key_passphrase"
                             saveValue: passphraseField._initialValue
                             warningText: LK.config.secretsBackendWarning(passphraseField._initialValue)
-                            allowReveal: !LK.isUsingRemoteCore()
-                            onRevealRequested: passphraseField.revealSecret(LK.config.revealHostSecret(
-                                root.hostId, "ssh", passphraseField.settingKey, passphraseField._initialValue))
 
                             Layout.fillWidth: true
                         }

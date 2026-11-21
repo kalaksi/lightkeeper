@@ -393,8 +393,6 @@ LightkeeperDialog {
                     settingKey: "password"
                     saveValue: root._passwordSaveValue
                     warningText: LK.config.coreSecretsBackendWarning(root._passwordSaveValue)
-                    onRevealRequested: passwordField.revealSecret(
-                        LK.config.revealCoreSecret("password", root._passwordSaveValue))
                 }
 
                 Label {
@@ -426,8 +424,6 @@ LightkeeperDialog {
                     settingKey: "private_key_passphrase"
                     saveValue: root._passphraseSaveValue
                     warningText: LK.config.coreSecretsBackendWarning(root._passphraseSaveValue)
-                    onRevealRequested: passphraseField.revealSecret(
-                        LK.config.revealCoreSecret("private_key_passphrase", root._passphraseSaveValue))
                 }
 
                 Label {

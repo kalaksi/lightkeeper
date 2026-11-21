@@ -64,11 +64,8 @@ pub trait ConfigBackend {
         false
     }
 
-    /// `source_id` is `host:<id>` or `group:<id>`. Returns plaintext or `None` if missing.
-    /// Remote backends return `None` (secrets stay on the core; UI uses replace-only edit).
-    fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError>;
-
     /// Stores the secret and returns the keyring placeholder to write into configuration.
+    /// `source_id` is `host:<id>` or `group:<id>`. Secrets can't be read back, so UI uses replace-only edit.
     fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> Result<String, LkError>;
 
     fn remove_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<(), LkError>;

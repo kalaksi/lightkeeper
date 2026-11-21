@@ -66,7 +66,6 @@ pub struct ConfigManagerModel {
     getCoreConnection: qt_method!(fn(&self) -> QVariantMap),
     setCoreConnection: qt_method!(fn(&self, profile: QVariantMap)),
     storeCoreSecret: qt_method!(fn(&self, setting_key: QString, secret_value: QString) -> QVariantMap),
-    revealCoreSecret: qt_method!(fn(&self, setting_key: QString, config_value: QString) -> QString),
     removeCoreSecret: qt_method!(fn(&self, setting_key: QString)),
     secretsBackendWarning: qt_method!(fn(&self, config_value: QString) -> QString),
     coreSecretsBackendWarning: qt_method!(fn(&self, config_value: QString) -> QString),
@@ -128,15 +127,9 @@ pub struct ConfigManagerModel {
     storeGroupSecret: qt_method!(
         fn(&self, group_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QVariantMap
     ),
-    revealGroupSecret: qt_method!(
-        fn(&self, group_id: QString, module_id: QString, setting_key: QString, config_value: QString) -> QString
-    ),
     removeGroupSecret: qt_method!(fn(&self, group_id: QString, module_id: QString, setting_key: QString)),
     storeHostSecret: qt_method!(
         fn(&self, host_id: QString, module_id: QString, setting_key: QString, secret_value: QString) -> QVariantMap
-    ),
-    revealHostSecret: qt_method!(
-        fn(&self, host_id: QString, module_id: QString, setting_key: QString, config_value: QString) -> QString
     ),
     discardHostSecret: qt_method!(
         fn(&self, host_id: QString, module_id: QString, setting_key: QString, config_value: QString)
@@ -610,27 +603,6 @@ impl ConfigManagerModel {
                 },
             ),
         )
-    }
-
-    fn revealCoreSecret(&self, setting_key: QString, config_value: QString) -> QString {
-        let config_value = config_value.to_string();
-        if config_value.is_empty() {
-            return QString::default();
-        }
-        if !secrets_manager::is_stored_secrets_backend(secrets_manager::detect_secret_backend(&config_value)) {
-            return QString::from(config_value);
-        }
-        match crate::backend::ssh_auth::get_core_secret(
-            &crate::secrets_manager::KeyringSecretStore,
-            &setting_key.to_string(),
-        ) {
-            Ok(Some(value)) => QString::from(value),
-            Ok(None) => QString::default(),
-            Err(error) => {
-                self.error(QString::from(error.to_ui_message()));
-                QString::default()
-            }
-        }
     }
 
     fn secretsBackendWarning(&self, config_value: QString) -> QString {
@@ -1376,29 +1348,6 @@ impl ConfigManagerModel {
         )
     }
 
-    fn reveal_secret(
-        &self,
-        source_id: &str,
-        module_id: &str,
-        setting_key: &str,
-        config_value: &str,
-    ) -> QString {
-        if config_value.is_empty() {
-            return QString::default();
-        }
-        if !secrets_manager::is_stored_secrets_backend(secrets_manager::detect_secret_backend(config_value)) {
-            return QString::from(config_value);
-        }
-        match self.config_backend.as_ref().unwrap().get_secret(source_id, module_id, setting_key) {
-            Ok(Some(value)) => QString::from(value),
-            Ok(None) => QString::default(),
-            Err(e) => {
-                self.error(QString::from(format!("Failed to retrieve secret: {}", e)));
-                QString::default()
-            }
-        }
-    }
-
     fn remove_secret(&self, source_id: &str, module_id: &str, setting_key: &str) {
         if let Err(e) = self.config_backend.as_ref().unwrap().remove_secret(source_id, module_id, setting_key) {
             ::log::warn!("Failed to remove secret for {} {}: {}", module_id, setting_key, e);
@@ -1422,22 +1371,6 @@ impl ConfigManagerModel {
         )
     }
 
-    fn revealGroupSecret(
-        &self,
-        group_id: QString,
-        module_id: QString,
-        setting_key: QString,
-        config_value: QString,
-    ) -> QString {
-        let source_id = format!("group:{}", group_id.to_string());
-        self.reveal_secret(
-            &source_id,
-            &module_id.to_string(),
-            &setting_key.to_string(),
-            &config_value.to_string(),
-        )
-    }
-
     fn removeGroupSecret(&self, group_id: QString, module_id: QString, setting_key: QString) {
         let source_id = format!("group:{}", group_id.to_string());
         self.remove_secret(&source_id, &module_id.to_string(), &setting_key.to_string())
@@ -1456,22 +1389,6 @@ impl ConfigManagerModel {
             &module_id.to_string(),
             &setting_key.to_string(),
             &secret_value.to_string(),
-        )
-    }
-
-    fn revealHostSecret(
-        &self,
-        host_id: QString,
-        module_id: QString,
-        setting_key: QString,
-        config_value: QString,
-    ) -> QString {
-        let source_id = format!("host:{}", host_id.to_string());
-        self.reveal_secret(
-            &source_id,
-            &module_id.to_string(),
-            &setting_key.to_string(),
-            &config_value.to_string(),
         )
     }
 

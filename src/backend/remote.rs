@@ -1954,10 +1954,6 @@ impl ConfigBackend for RemoteConfigBackend {
         true
     }
 
-    fn get_secret(&self, _source_id: &str, _module_id: &str, _setting_key: &str) -> Result<Option<String>, LkError> {
-        Ok(None)
-    }
-
     fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> Result<String, LkError> {
         match self
             .client

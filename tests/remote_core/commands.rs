@@ -419,8 +419,6 @@ fn remote_core_secret_store_remove() {
             .unwrap();
         assert!(placeholder.starts_with(lightkeeper::secrets_manager::KEYRING_PREFIX));
 
-        assert!(config.get_secret(&source_id, module_id, setting_key).unwrap().is_none());
-
         config.remove_secret(&source_id, module_id, setting_key).unwrap();
 
         backend.stop();

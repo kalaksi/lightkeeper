@@ -20,15 +20,12 @@ RowLayout {
     // Current config value: placeholder, plaintext or empty.
     property string saveValue: ""
     property string warningText: ""
-    property bool allowReveal: true
     // Set when the user has typed or deleted. Parent stores `text` on save only if modified.
     property bool modified: false
     property alias text: field.text
     property bool _revealed: false
 
     spacing: Theme.spacingNormal
-
-    signal revealRequested()
 
     TextField {
         id: field
@@ -43,21 +40,13 @@ RowLayout {
         Layout.alignment: Qt.AlignVCenter
     }
 
+    // Only shows typed text. Stored secrets are never read back into the UI.
     ImageButton {
-        visible: root.allowReveal
         imageSource: "qrc:/main/images/button/view-visible"
         size: field.implicitHeight * 0.8
-        tooltip: root._revealed ? "Hide secret" : "Show secret"
-        enabled: root.enabled
-        onClicked: {
-            root._revealed = !root._revealed
-            if (!root.modified) {
-                field.text = ""
-                if (root._revealed && root.saveValue !== "") {
-                    root.revealRequested()
-                }
-            }
-        }
+        tooltip: root._revealed ? "Hide typed text" : "Show typed text"
+        enabled: root.enabled && field.text !== ""
+        onClicked: root._revealed = !root._revealed
 
         Layout.preferredWidth: field.implicitHeight
         Layout.alignment: Qt.AlignVCenter
@@ -105,10 +94,6 @@ RowLayout {
             return "(stored)"
         }
         return root.enabled ? "" : "unset"
-    }
-
-    function revealSecret(value) {
-        field.text = value
     }
 
     function reset() {

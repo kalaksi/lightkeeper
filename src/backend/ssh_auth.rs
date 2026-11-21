@@ -247,11 +247,6 @@ pub fn store_core_secret(store: &dyn SecretStore, setting_key: &str, secret_valu
     Ok(format!("{}{}", store.identifier_prefix(), lookup_key))
 }
 
-pub fn get_core_secret(store: &dyn SecretStore, setting_key: &str) -> Result<Option<String>, SshAuthError> {
-    let lookup_key = secrets_manager::secret_lookup_key("ssh", "core", setting_key);
-    store.get(&lookup_key).map_err(|error| SshAuthError::other(error.to_string()))
-}
-
 pub fn remove_core_secret(store: &dyn SecretStore, setting_key: &str) -> Result<(), SshAuthError> {
     let lookup_key = secrets_manager::secret_lookup_key("ssh", "core", setting_key);
     store.delete(&lookup_key).map_err(|error| SshAuthError::other(error.to_string()))

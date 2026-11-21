@@ -266,12 +266,6 @@ Module {
             type: "QVariantMap"
         }
         Method {
-            name: "revealCoreSecret"
-            Parameter { name: "setting_key"; type: "string" }
-            Parameter { name: "config_value"; type: "string" }
-            type: "string"
-        }
-        Method {
             name: "removeCoreSecret"
             Parameter { name: "setting_key"; type: "string" }
         }
@@ -428,14 +422,6 @@ Module {
             Parameter { name: "secret_value"; type: "string" }
         }
         Method {
-            name: "revealGroupSecret"
-            type: "string"
-            Parameter { name: "group_id"; type: "string" }
-            Parameter { name: "module_id"; type: "string" }
-            Parameter { name: "setting_key"; type: "string" }
-            Parameter { name: "config_value"; type: "string" }
-        }
-        Method {
             name: "removeGroupSecret"
             Parameter { name: "group_id"; type: "string" }
             Parameter { name: "module_id"; type: "string" }
@@ -448,14 +434,6 @@ Module {
             Parameter { name: "module_id"; type: "string" }
             Parameter { name: "setting_key"; type: "string" }
             Parameter { name: "secret_value"; type: "string" }
-        }
-        Method {
-            name: "revealHostSecret"
-            type: "string"
-            Parameter { name: "host_id"; type: "string" }
-            Parameter { name: "module_id"; type: "string" }
-            Parameter { name: "setting_key"; type: "string" }
-            Parameter { name: "config_value"; type: "string" }
         }
         Method {
             name: "discardHostSecret"

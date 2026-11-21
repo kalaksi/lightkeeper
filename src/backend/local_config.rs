@@ -36,11 +36,6 @@ impl ConfigBackend for LocalConfigBackend {
         Ok(())
     }
 
-    fn get_secret(&self, source_id: &str, module_id: &str, setting_key: &str) -> Result<Option<String>, LkError> {
-        let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
-        self.secret_store.get(&lookup_key)
-    }
-
     fn store_secret(&self, source_id: &str, module_id: &str, setting_key: &str, secret_value: &str) -> Result<String, LkError> {
         let lookup_key = secret_lookup_key(module_id, source_id, setting_key);
         self.secret_store.set(&lookup_key, secret_value)?;
