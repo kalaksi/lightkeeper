@@ -190,6 +190,8 @@ Item {
     // Returns only the auth-related fields this widget currently expresses,
     // as a partial dict to be merged into overrides.connectors.ssh.settings.
     // Secrets are NOT placed here; parent must call commitSecrets() to fill them in.
+    // Non-inherit methods write empty strings for inactive keys so host overrides can
+    // clear credentials inherited from groups (merge cannot delete keys).
     function buildAuthFields() {
         let out = {}
 
@@ -199,6 +201,15 @@ Item {
         }
 
         let method = methodCombo.currentValue
+        if (method === "inherit") {
+            return out
+        }
+
+        out.password = ""
+        out.private_key_path = ""
+        out.private_key_passphrase = ""
+        out.agent_key_identifier = ""
+
         if (method === "key") {
             let path = keyPathField.text.trim()
             if (path !== "") {
@@ -206,19 +217,24 @@ Item {
             }
         }
         else if (method === "agent") {
-            let agentId = agentIdField.text.trim()
-            if (agentId !== "") {
-                out.agent_key_identifier = agentId
-            }
+            out.agent_key_identifier = agentIdField.text.trim()
         }
         return out
     }
 
     // Persists secret writes/removals and mutates sshSettings in place to insert
-    // password/passphrase values or placeholders for the chosen method. Removes secrets
-    // for any method other than the active one.
+    // password/passphrase values or placeholders for the chosen method. Inactive secrets
+    // are discarded and written as "" so they override group values. Inherit omits them.
     function commitSecrets(finalHostId, sshSettings) {
         let method = methodCombo.currentValue
+        if (method === "inherit") {
+            for (let field of [passwordField, passphraseField]) {
+                LK.config.discardHostSecret(
+                    finalHostId, "ssh", field.settingKey, field._initialValue)
+            }
+            return
+        }
+
         let activeKey = method === "password" ? "password"
             : method === "key" ? "private_key_passphrase" : ""
 
@@ -231,13 +247,12 @@ Item {
         if (!methodActive) {
             LK.config.discardHostSecret(
                 finalHostId, "ssh", field.settingKey, field._initialValue)
+            sshSettings[field.settingKey] = ""
             return
         }
 
         if (!field.modified) {
-            if (field._initialValue !== "") {
-                sshSettings[field.settingKey] = field._initialValue
-            }
+            sshSettings[field.settingKey] = field._initialValue
             return
         }
 
@@ -245,14 +260,10 @@ Item {
         let result = LK.config.storeHostSecret(
             finalHostId, "ssh", field.settingKey, field.text)
         if (!result.ok) {
-            if (field._initialValue !== "") {
-                sshSettings[field.settingKey] = field._initialValue
-            }
+            sshSettings[field.settingKey] = field._initialValue
             return
         }
-        if (result.value !== "") {
-            sshSettings[field.settingKey] = result.value
-        }
+        sshSettings[field.settingKey] = result.value
     }
 
     function _initFields() {
@@ -295,13 +306,17 @@ Item {
         if (keyPath.enabled && keyPath.value.trim() !== "") {
             return 2
         }
+        let password = root._setting("password")
+        if (password.enabled && password.value !== "") {
+            return 1
+        }
         let agentId = root._setting("agent_key_identifier")
         if (agentId.enabled && agentId.value.trim() !== "") {
             return 3
         }
-        let password = root._setting("password")
-        if (password.enabled && password.value !== "") {
-            return 1
+        // Empty private_key_path / agent_key_identifier overrides clear group credentials.
+        if (keyPath.enabled || agentId.enabled) {
+            return 3
         }
         return 0
     }
