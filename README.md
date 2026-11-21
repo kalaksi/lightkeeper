@@ -1,19 +1,50 @@
 # LightkeeperRM
 
-**LightkeeperRM (Remote Management) is a customizable server management tool for maintaining servers over SSH.**
-Lightkeeper provides efficient view over server's resources and reduces repetitive typing.
-It simplifies general maintenance tasks such as upgrades, monitoring, debugging and configuration.
-  
-**Agentless monitoring of hosts and certificates.**  
-No additional daemons, agents or other software is needed on target hosts. LightkeeperRM will only run standard Linux commands already available on the host.
-You can see executed commands through debug log and on target hosts's logs (depending on setup), so it's easy to audit and debug.
+LightkeeperRM is a customizable server management and monitoring tool that works over SSH.
+It gives a clear view of host resources and simplifies upgrades, monitoring, debugging, and configuration.
 
-**Extensive keyboard shortcuts**.  
-Lightkeeper uses hotkeys extensively and gets out of the way in case you need to use terminal.  
-Just press Ctrl-T to open a terminal in a new tab.
-  
-**LightkeeperRM is customizable**, modular and easily extendable, so that it can be modified for different needs.  
-  
+- **Agentless** - Uses standard Linux commands over SSH. No daemons or agents on the monitored host. Commands are easy to audit via debug log and host logs.
+- **Keyboard-driven** - Extensive hotkeys. Press Ctrl-T for a terminal tab when you need the shell.
+- **Modular** - Customizable and extendable for different workflows.
+
+# Table of contents
+
+- [Features](#features)
+- [Why](#why)
+- [Installing](#installing)
+   - [Flatpak](#flatpak)
+   - [Debian 14](#debian-14)
+   - [Fedora 43/44](#fedora-4344)
+- [Building from source](#building-from-source)
+   - [Dependencies](#dependencies)
+   - [Building](#building)
+   - [Post-install](#post-install)
+- [Server OS support](#server-os-support)
+- [Configuration](#configuration)
+   - [Configuration files](#configuration-files)
+- [Debug logging](#debug-logging)
+- [Testing](#testing)
+- [License](#license)
+   - [Lightkeeper](#lightkeeper)
+   - [Crate dependencies](#crate-dependencies)
+   - [Liboping](#liboping)
+
+## Features
+- Monitor status changes periodically and get alert notifications.
+- Monitor certificate validity and expiration.
+- Status summary in host table for quick status view.
+- Charts for visualizing historical values.
+- Integrated terminal (Ctrl-T opens a new tab).
+- File browser for remote files.
+- Log viewer with regex search and hotkeys similar to less/vim.
+- Text file editor for editing remote files (with built-in editor or using CLI over SSH).
+- Follow console output for longer running commands such as container builds and package updates.
+
+## Why
+Repeating the same SSH commands gets tiresome, even with shell history.
+A full monitoring stack (CollectD, InfluxDB, Grafana etc.) is often heavier and more complicated than needed for graphs and alerts.
+
+Lightkeeper is meant for power users who want that workflow without installing agents or extra daemons on the servers.
 
 <table>
   <tr>
@@ -47,44 +78,6 @@ Just press Ctrl-T to open a terminal in a new tab.
     </td>
   </tr>
 </table>
-
-# Table of contents
-
-- [Some features](#some-features)
-- [Some background](#some-background)
-- [Installing](#installing)
-   - [Flatpak](#flatpak)
-   - [Debian 14](#debian-14)
-   - [Fedora 43/44](#fedora-4344)
-- [Building from source](#building-from-source)
-   - [Dependencies](#dependencies)
-   - [Building](#building)
-   - [Post-install](#post-install)
-- [Server OS support](#server-os-support)
-- [Configuration](#configuration)
-   - [Configuration files](#configuration-files)
-- [Debug logging](#debug-logging)
-- [Testing](#testing)
-- [License](#license)
-   - [Lightkeeper](#lightkeeper)
-   - [Crate dependencies](#crate-dependencies)
-   - [Liboping](#liboping)
-
-## Some features
-- Monitor status changes periodically and get alert notifications.
-- Monitor certificate validity and expiration.
-- Status summary in host table for quick status view.
-- Charts for visualizing historical values.
-- Log viewer with regex search and hotkeys similar to less/vim.
-- Text file editor for editing remote files (with built-in editor or using CLI over SSH).
-- Follow console output for longer running commands such as container builds and package updates.
-
-## Some background
-Writing the same commands over the years can get tiresome and feel slow, even if utilizing shell's command history.  
-Another pain point is monitoring. Configuring and maintaining a software stack for relatively simple monitoring needs (graphs, alerts) can get needlessly heavy. Specifically, in my case, I aim to replace CollectD, InfluxDB and Grafana.  
-  
-Lightkeeper is an maintenance tool for power users to simplify everything. At the same time, deploying should be as simple as possible since the aim is to streamline. The plain old shell doesn't need additional daemons on the servers so Lightkeeper shouldn't either.  
-
 
 # Installing
 ## Flatpak
@@ -194,7 +187,7 @@ You can use `--config-dir` to load the test configuration for manual testing. Fo
 Copyright © 2023 kalaksi@users.noreply.github.com.  
   
 This software is licensed under GNU Affero General Public License 3 or later.  
-Dual-licensing is possible if your organization needs something else than AGPL. Get in contact.  
+**Dual-licensing is possible if your organization needs something else than AGPL. Get in contact.**  
 
 
 ## Crate dependencies
