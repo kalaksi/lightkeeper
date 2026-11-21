@@ -13,10 +13,7 @@ use crate::error::LkError;
 use crate::file_handler;
 use crate::frontend;
 use crate::metrics::MetricsManager;
-#[cfg(not(feature = "core"))]
 use crate::secrets_manager::SecretStore;
-#[cfg(feature = "core")]
-use crate::secrets_manager::{self, SecretStore};
 use crate::Configuration;
 use crate::CoreComponents;
 use crate::ModuleFactory;
@@ -51,22 +48,6 @@ impl CoreRuntime {
             config_path,
             secrets_key_file,
         )?);
-        let active_prefix = secret_store.identifier_prefix();
-        for (host_id, host_config) in &hosts_config.hosts {
-            for (connector_id, connector_config) in &host_config.effective.connectors {
-                for (setting_key, value) in &connector_config.settings {
-                    if secrets_manager::uses_inactive_backend(value, active_prefix) {
-                        log::error!(
-                            "Host '{}' secret '{}/{}' uses an incompatible secrets backend. \
-                             Re-enter the secret for the secretsfile backend.",
-                            host_id,
-                            connector_id,
-                            setting_key
-                        );
-                    }
-                }
-            }
-        }
         Self::new_with(main_config, hosts_config, Arc::new(ModuleFactory::new()), config_dir, secret_store)
     }
 
@@ -110,9 +91,13 @@ impl CoreRuntime {
         Ok(file_handler::get_data_dir()?.join("core.sock"))
     }
 
-    pub fn new_update_receiver(&mut self) -> mpsc::Receiver<frontend::UIUpdate> {
+    /// `send_config_errors` should be false when reconfigure follows, since it sends the new errors itself.
+    pub fn new_update_receiver(&mut self, send_config_errors: bool) -> mpsc::Receiver<frontend::UIUpdate> {
         let (sender, receiver) = mpsc::channel();
         self.core.host_manager.borrow_mut().add_observer(sender.clone());
+        if send_config_errors {
+            self.core.host_manager.borrow().send_config_errors(&sender);
+        }
         *self.chart_session_sender.lock().unwrap() = Some(sender);
         receiver
     }

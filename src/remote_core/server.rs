@@ -131,7 +131,7 @@ fn reconfigure_and_resend_state(
 ) -> Result<Vec<String>, LkError> {
     session.halt_update_stream();
     // Attach the observer before reconfigure so start_timers' first Timers push is not missed.
-    let update_receiver = runtime.new_update_receiver();
+    let update_receiver = runtime.new_update_receiver(false);
     let reset_hosts = runtime.reconfigure(main_config, hosts_config);
     session.send_message(&ServerMessage::InitialState(runtime.core.host_manager.borrow().get_display_data()))?;
     session.start_update_stream(update_receiver);
@@ -146,7 +146,7 @@ fn reject_busy_client(stream: UnixStream) {
 }
 
 fn handle_connected_client_loop(stream: &mut UnixStream, runtime: &mut CoreRuntime) -> Result<(), LkError> {
-    let update_receiver = runtime.new_update_receiver();
+    let update_receiver = runtime.new_update_receiver(true);
     let mut session = RemoteSession::new(stream.try_clone()?);
     session.send_message(&ServerMessage::Connect {
         protocol_version: PROTOCOL_VERSION,

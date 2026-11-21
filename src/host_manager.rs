@@ -47,6 +47,8 @@ pub struct HostManager {
     data_receiver: Option<mpsc::Receiver<StateUpdateMessage>>,
     receiver_thread: Option<thread::JoinHandle<()>>,
     frontend_state_sender: Arc<Mutex<Vec<mpsc::Sender<frontend::UIUpdate>>>>,
+    /// Errors from the latest configuration, paired with host IDs. Kept so they can be sent to observers added later.
+    config_errors: Vec<(String, LkError)>,
 }
 
 impl HostManager {
@@ -61,6 +63,7 @@ impl HostManager {
             data_receiver: None,
             data_sender_prototype: None,
             receiver_thread: None,
+            config_errors: Vec::new(),
         }
     }
 
@@ -189,6 +192,30 @@ impl HostManager {
 
     pub fn add_observer(&mut self, sender: mpsc::Sender<frontend::UIUpdate>) {
         self.frontend_state_sender.lock().unwrap().push(sender);
+    }
+
+    /// Replaces configuration errors and sends them to current observers.
+    pub fn set_config_errors(&mut self, errors: Vec<(String, LkError)>) {
+        self.config_errors = errors;
+        // Cloned so the observer lock isn't held while locking host states.
+        let observers = self.frontend_state_sender.lock().unwrap().clone();
+        for observer in observers.iter() {
+            self.send_config_errors(observer);
+        }
+    }
+
+    /// Sends the latest configuration errors to an observer, e.g. one that was added after configuration.
+    pub fn send_config_errors(&self, observer: &mpsc::Sender<frontend::UIUpdate>) {
+        let host_states = self.hosts.lock().unwrap();
+        for (host_id, error) in self.config_errors.iter() {
+            if let Some(host_state) = host_states.hosts.get(host_id) {
+                let _ = observer.send(frontend::UIUpdate::Host(frontend::HostDisplayData {
+                    host_state: host_state.clone(),
+                    new_errors: vec![ErrorMessage::from(error.clone())],
+                    ..Default::default()
+                }));
+            }
+        }
     }
 
     pub fn frontend_update_senders(&self) -> Arc<Mutex<Vec<mpsc::Sender<frontend::UIUpdate>>>> {

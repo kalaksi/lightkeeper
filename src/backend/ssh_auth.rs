@@ -225,7 +225,7 @@ pub fn resolve_secret_value(store: &dyn SecretStore, stored: &str) -> Result<Opt
         return Ok(None);
     }
     if let Some(lookup_key) = stored.strip_prefix(store.identifier_prefix()) {
-        if lookup_key.is_empty() || lookup_key == "error" {
+        if lookup_key.is_empty() {
             return Err(SshAuthError::other("Core SSH secret placeholder is invalid"));
         }
         return store

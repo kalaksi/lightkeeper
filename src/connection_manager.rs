@@ -135,6 +135,9 @@ impl ConnectionManager {
 
                 if let Some(mut connector_spec) = monitor.get_connector_spec() {
                     connector_spec.module_type = ModuleType::Connector;
+                    if host_config.effective.connectors.get(&connector_spec.id).is_some_and(|config| config.disabled) {
+                        continue;
+                    }
 
                     let connector_settings = resolved_connector_settings.get(&connector_spec.id).unwrap_or(&empty_settings);
                     let connector = match self.module_factory.new_connector(&connector_spec, connector_settings) {
@@ -156,6 +159,9 @@ impl ConnectionManager {
                 };
 
                 if let Some(connector_spec) = command.get_connector_spec() {
+                    if host_config.effective.connectors.get(&connector_spec.id).is_some_and(|config| config.disabled) {
+                        continue;
+                    }
                     let connector_settings = resolved_connector_settings.get(&connector_spec.id).unwrap_or(&empty_settings);
                     let connector = match self.module_factory.new_connector(&connector_spec, connector_settings) {
                         Some(connector) => connector,

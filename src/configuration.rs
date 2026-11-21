@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_yaml;
 
 use crate::enums::{CoreTransportPreference, EditMode};
+use crate::error::LkError;
 use crate::file_handler;
 use crate::host::HostSetting;
 use crate::module::PlatformInfo;
@@ -486,6 +487,9 @@ pub struct CustomCommandConfig {
 pub struct ConnectorConfig {
     #[serde(default, skip_serializing_if = "Configuration::is_default")]
     pub settings: BTreeMap<String, String>,
+    /// Runtime-only. Set when the connector's secrets can't be resolved.
+    #[serde(skip)]
+    pub disabled: bool,
 }
 
 impl Configuration {
@@ -612,64 +616,69 @@ impl Configuration {
     /// Looks up secret placeholders in `hosts.*.effective` connectors for runtime use.
     /// Placeholders get a fingerprint suffix so that config comparisons still notice changed secrets,
     /// while plaintext is returned separately and should only be handed to connectors.
-    pub fn prepare_host_secrets(hosts: &mut Hosts, secret_store: Arc<dyn SecretStore>) -> RuntimeSecrets {
+    /// Connectors with secrets that can't be resolved are marked disabled. Returns errors paired with host IDs.
+    pub fn prepare_host_secrets(hosts: &mut Hosts, secret_store: Arc<dyn SecretStore>) -> (RuntimeSecrets, Vec<(String, LkError)>) {
         let active_prefix = secret_store.identifier_prefix();
         let mut secrets = secrets_manager::SecretsManager::new(secret_store);
         let mut runtime_secrets = RuntimeSecrets::new();
-        for host_config in hosts.hosts.values_mut() {
-            Self::prepare_effective_config_secrets(
+        let mut errors = Vec::new();
+        for (host_id, host_config) in hosts.hosts.iter_mut() {
+            let host_errors = Self::prepare_effective_config_secrets(
+                host_id,
                 &mut host_config.effective,
                 &mut secrets,
                 &mut runtime_secrets,
                 active_prefix,
             );
+            errors.extend(host_errors.into_iter().map(|error| (host_id.clone(), error)));
         }
-        runtime_secrets
+        (runtime_secrets, errors)
     }
 
     fn prepare_effective_config_secrets(
+        host_id: &str,
         effective: &mut ConfigGroup,
         secrets: &mut secrets_manager::SecretsManager,
         runtime_secrets: &mut RuntimeSecrets,
         active_prefix: &str,
-    ) {
+    ) -> Vec<LkError> {
         let hasher = SECRET_FINGERPRINT_HASHER.get_or_init(RandomState::new);
-        for (_connector_id, connector_config) in effective.connectors.iter_mut() {
-            let to_resolve: Vec<(String, String)> = connector_config.settings.iter()
-                .filter(|(_, value)| value.starts_with(active_prefix))
-                .map(|(key, value)| (key.clone(), value.clone()))
-                .collect();
-
-            for (key, placeholder_value) in to_resolve {
-                let lookup_key = &placeholder_value[active_prefix.len()..];
-                match secrets.get(lookup_key) {
-                    Ok(Some(secret)) => {
-                        let tagged_placeholder = format!("{}#{:016x}", placeholder_value, hasher.hash_one(&*secret));
-                        connector_config.settings.insert(key, tagged_placeholder.clone());
-                        runtime_secrets.insert(tagged_placeholder, secret);
+        let mut errors = Vec::new();
+        for (connector_id, connector_config) in effective.connectors.iter_mut() {
+            let mut resolved = Vec::new();
+            let mut connector_errors = Vec::new();
+            for (key, value) in connector_config.settings.iter() {
+                let prefix = format!("Host {}, connector {} secret '{}'", host_id, connector_id, key);
+                if let Some(lookup_key) = value.strip_prefix(active_prefix) {
+                    match secrets.get(lookup_key) {
+                        Ok(Some(secret)) => {
+                            let tagged_placeholder = format!("{}#{:016x}", value, hasher.hash_one(&*secret));
+                            resolved.push((key.clone(), tagged_placeholder, secret));
+                        }
+                        Ok(None) => connector_errors.push(format!("{} not found", prefix)),
+                        Err(error) => connector_errors.push(format!("{} could not be read: {}", prefix, error)),
                     }
-                    Ok(None) => {
-                        log::warn!("Secret not found for {}", lookup_key);
-                        connector_config.settings.insert(key, format!("{}error", active_prefix));
-                    }
-                    Err(error) => {
-                        log::warn!("Failed to get secret for {}: {}", lookup_key, error);
-                        connector_config.settings.insert(key, format!("{}error", active_prefix));
-                    }
+                }
+                else if secrets_manager::uses_inactive_backend(value, active_prefix) {
+                    connector_errors.push(format!("{} uses an incompatible secrets backend", prefix));
                 }
             }
 
-            // Mark settings that use an incompatible secrets backend as errors.
-            let incompatible: Vec<String> = connector_config.settings.iter()
-                .filter(|(_, value)| secrets_manager::uses_inactive_backend(value, active_prefix))
-                .map(|(key, _)| key.clone())
-                .collect();
+            if !connector_errors.is_empty() {
+                for message in connector_errors {
+                    log::error!("{}", message);
+                    errors.push(LkError::other(message));
+                }
+                connector_config.disabled = true;
+                continue;
+            }
 
-            for key in incompatible {
-                log::warn!("Secret '{}' uses an incompatible secrets backend", key);
-                connector_config.settings.insert(key, format!("{}error", active_prefix));
+            for (key, tagged_placeholder, secret) in resolved {
+                connector_config.settings.insert(key, tagged_placeholder.clone());
+                runtime_secrets.insert(tagged_placeholder, secret);
             }
         }
+        errors
     }
 
     /// Merge groups and host overrides. Does not drop disabled modules.

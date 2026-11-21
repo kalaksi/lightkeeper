@@ -69,7 +69,7 @@ impl CoreComponents {
         start_connection_processing: bool,
     ) -> Vec<String> {
         let mut hosts_config = hosts_config.clone();
-        let runtime_secrets = Configuration::prepare_host_secrets(&mut hosts_config, secret_store);
+        let (runtime_secrets, secret_errors) = Configuration::prepare_host_secrets(&mut hosts_config, secret_store);
 
         self.connection_manager.configure(&hosts_config, &runtime_secrets);
         drop(runtime_secrets);
@@ -98,6 +98,8 @@ impl CoreComponents {
             main_config.preferences.cert_monitor_refresh_interval,
             self.host_manager.borrow().frontend_update_senders(),
         );
+
+        self.host_manager.borrow_mut().set_config_errors(secret_errors);
 
         reset_hosts
     }
@@ -239,7 +241,9 @@ pub fn run(
 
     // Observer has to be added before the frontend takes its initial display data in start(). Otherwise, initial
     // data points processed in between are lost and initial status summary icons are randomly not shown.
-    core.borrow().host_manager.borrow_mut().add_observer(frontend.new_update_sender());
+    let update_sender = frontend.new_update_sender();
+    core.borrow().host_manager.borrow_mut().add_observer(update_sender.clone());
+    core.borrow().host_manager.borrow().send_config_errors(&update_sender);
     if !test {
         Ok(frontend.start(
             command_backend,
