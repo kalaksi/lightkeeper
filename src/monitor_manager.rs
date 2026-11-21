@@ -743,6 +743,7 @@ impl MonitorManager {
         let thread = Self::_start_processing_responses(
             self.monitors.clone(),
             self.platform_info_providers.clone(),
+            self.invocation_id_counter.clone(),
             self.request_sender.as_ref().unwrap().clone(),
             self.state_update_sender.as_ref().unwrap().clone(),
             self.response_sender_prototype.as_ref().unwrap().clone(),
@@ -755,6 +756,7 @@ impl MonitorManager {
     fn _start_processing_responses(
         monitors: Arc<Mutex<HashMap<String, HashMap<String, Monitor>>>>,
         platform_info_providers: Arc<Mutex<HashMap<String, Monitor>>>,
+        invocation_id_counter: Arc<AtomicU64>,
         request_sender: mpsc::Sender<ConnectorRequest>,
         state_update_sender: mpsc::Sender<StateUpdateMessage>,
         response_sender: mpsc::Sender<RequestResponse>,
@@ -938,6 +940,18 @@ impl MonitorManager {
                     }
                 }
                 else {
+                    // Refresh monitors in-core after platform info.
+                    let refresh_host_after_platform_info = new_data_point
+                        .as_ref()
+                        .filter(|data_point| data_point.is_platform_info())
+                        .and_then(|data_point| HostManager::read_platform_info(data_point).ok())
+                        .map(|(platform, ip_address)| {
+                            let mut host = response.host.clone();
+                            host.platform = platform;
+                            host.ip_address = ip_address;
+                            host
+                        });
+
                     if let Err(error) = state_update_sender.send(StateUpdateMessage::Monitor {
                         host_name: response.host.name.clone(),
                         display_options: monitor.get_display_options(),
@@ -948,6 +962,19 @@ impl MonitorManager {
                     }) {
                         log::error!("Failed to send state update: {}", error);
                         panic!("Failed to send state update: {}", error);
+                    }
+
+                    if let Some(host) = refresh_host_after_platform_info {
+                        if let Some(host_monitors) = monitors.get(&host.name) {
+                            Self::_refresh_monitors(
+                                host,
+                                host_monitors.iter().collect(),
+                                &invocation_id_counter,
+                                &request_sender,
+                                &state_update_sender,
+                                &response_sender,
+                            );
+                        }
                     }
                 }
             }

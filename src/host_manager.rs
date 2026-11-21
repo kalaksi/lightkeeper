@@ -590,7 +590,7 @@ impl HostManager {
         display_data
     }
 
-    fn read_platform_info(data_point: &DataPoint) -> Result<(platform_info::PlatformInfo, std::net::IpAddr), String> {
+    pub(crate) fn read_platform_info(data_point: &DataPoint) -> Result<(platform_info::PlatformInfo, std::net::IpAddr), String> {
         let mut ip_address = std::net::IpAddr::V4(std::net::Ipv4Addr::new(0, 0, 0, 0));
         let mut platform = platform_info::PlatformInfo::default();
         for data in data_point.multivalue.iter() {

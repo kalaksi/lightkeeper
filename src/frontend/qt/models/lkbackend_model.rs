@@ -163,14 +163,6 @@ impl LkBackend {
         let self_ptr = QPointer::from(&*self);
         let process_host_update = qmetaobject::queued_callback(move |new_data: HostDisplayData| {
             if let Some(self_pinned) = self_ptr.as_pinned() {
-
-                // Special case for host initialization. Proper monitor processing is started after initialization step.
-                if new_data.host_state.just_initialized {
-                    ::log::debug!("Host {} initialized", new_data.host_state.host.name);
-                    self_pinned.borrow().command.borrow_mut().refresh_host_monitors(new_data.host_state.host.name);
-                    return;
-                }
-
                 self_pinned.borrow().hosts.borrow_mut().process_update(new_data);
             }
         });

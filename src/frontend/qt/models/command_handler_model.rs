@@ -145,10 +145,6 @@ impl CommandHandlerModel {
         Ok(commands)
     }
 
-    pub fn refresh_host_monitors(&mut self, host_id: String) {
-        self.backend_mut().refresh_host_monitors(&host_id);
-    }
-
     fn build_editor_header_text(&self, display_options: &DisplayOptions, command_id: &str, file_path: &str) -> QString {
         let file_name = Path::new(file_path)
             .file_name()
