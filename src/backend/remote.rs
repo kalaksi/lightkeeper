@@ -330,13 +330,23 @@ fn wrap_command_via_core_ssh(
 
     let mut command = ShellCommand::new();
     command.arguments(vec!["ssh", "-t"]);
-    command.arguments(core_ssh_arguments(profile));
+    command.arguments(core_ssh_arguments(profile)?);
     command.argument(remote_command);
     Ok(command)
 }
 
-/// OpenSSH arguments (after `ssh`) for logging in to the core host, ending with the destination.
-fn core_ssh_arguments(profile: &configuration::CoreConnectionProfile) -> Vec<String> {
+/// OpenSSH arguments (after `ssh`) for the desktop -> core host hop, ending with the destination.
+/// Used by terminal wrap, rsync's outer ssh, and docker bind-mount lookup for path remapping.
+/// Rejects a password profile because those callers invoke non-interactive OpenSSH and cannot
+/// supply a password (key or agent only).
+fn core_ssh_arguments(profile: &configuration::CoreConnectionProfile) -> Result<Vec<String>, String> {
+    if profile.password.as_ref().is_some_and(|password| !password.is_empty()) {
+        return Err(String::from(concat!(
+            "Password authentication while using remote core is not yet supported for terminal, file transfer, or ",
+            "related actions. Prefer a private key or SSH agent",
+        )));
+    }
+
     let username = profile
         .username
         .clone()
@@ -353,7 +363,7 @@ fn core_ssh_arguments(profile: &configuration::CoreConnectionProfile) -> Vec<Str
         ]);
     }
     arguments.push(format!("{}@{}", username, profile.host));
-    arguments
+    Ok(arguments)
 }
 
 /// Builds the desktop rsync command from a core-provided transfer plan. The plan only contains data, so a
@@ -411,7 +421,7 @@ fn build_desktop_rsync_command_with_maps(
             String::from("-o"),
             format!("UserKnownHostsFile={}", known_hosts_path.to_string_lossy()),
         ];
-        arguments.extend(core_ssh_arguments(profile));
+        arguments.extend(core_ssh_arguments(profile).map_err(LkError::other)?);
         // Inner ssh is run by the core's shell. Quoting also keeps outer ssh from parsing it as options.
         arguments.push(
             inner_ssh
@@ -1428,7 +1438,7 @@ fn docker_mounts_over_ssh(profile: &configuration::CoreConnectionProfile, use_su
         String::from("-o"),
         format!("UserKnownHostsFile={}", known_hosts_path.to_string_lossy()),
     ]);
-    command.arguments(core_ssh_arguments(profile));
+    command.arguments(core_ssh_arguments(profile)?);
     command.argument(docker_mounts_shell(use_sudo));
     let output = command.execute().map_err(|error| error.to_string())?;
     if !output.status.success() {
