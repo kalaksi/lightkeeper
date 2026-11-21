@@ -292,7 +292,17 @@ impl ConnectionManager {
                         if connector_metadata.is_stateless {
                             match module_factory.new_connector(&connector_spec, &BTreeMap::new()) {
                                 Some(connector) => connector,
-                                None => return,
+                                None => {
+                                    let message = format!("Connector '{}' was not found", connector_spec.id);
+                                    log::error!("[{}][{}] {}", request.host.name, request.source_id, message);
+                                    let error = LkError::other(message).set_source(&connector_spec.id);
+                                    if let Err(error) = request.response_sender.send(
+                                        RequestResponse::new_error(&request, error),
+                                    ) {
+                                        log::error!("Failed to send response: {}", error);
+                                    }
+                                    return;
+                                }
                             }
                         }
                         // Stateful connectors.
@@ -302,7 +312,15 @@ impl ConnectionManager {
                             {
                                 Some(connector) => connector.box_clone(),
                                 None => {
-                                    log::error!("[{}][{}] host connection is not configured", request.host.name, request.source_id);
+                                    // E.g. skipped because secrets could not be resolved.
+                                    let message = format!("Host connection '{}' is not configured", connector_spec.id);
+                                    log::error!("[{}][{}] {}", request.host.name, request.source_id, message);
+                                    let error = LkError::other(message).set_source(&connector_spec.id);
+                                    if let Err(error) = request.response_sender.send(
+                                        RequestResponse::new_error(&request, error),
+                                    ) {
+                                        log::error!("Failed to send response: {}", error);
+                                    }
                                     return;
                                 }
                             }
