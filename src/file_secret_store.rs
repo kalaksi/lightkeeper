@@ -562,10 +562,7 @@ impl SecretStore for FileSecretStore {
         let key = self.unwrap_key_file(passphrase)?;
         atomic_write(&self.key_path, Zeroizing::new(BASE64.encode(key.as_slice())).as_bytes())?;
         *state = KeyState::Unlocked { key, protected: false };
-        log::warn!(
-            "Removed passphrase from secret key {}",
-            self.key_path.display()
-        );
+        log::warn!("Removed passphrase from secret key {}", self.key_path.display());
         Ok(())
     }
 }

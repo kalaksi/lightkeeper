@@ -314,17 +314,21 @@ impl MetricsManager {
     }
 
     pub fn stop(&mut self) -> Result<(), LkError> {
-        // Exit first while the request thread may still be idle on recv(); then shutdown so a
-        // mid-read unblocks and drops the client (lmserver idle-exits when the last client leaves).
+        // Prefer a clean Exit write. Only shutdown the socket if that does not stop the process
+        // (e.g. request thread blocked mid-read); immediate shutdown races Exit and causes EPIPE.
         if let Some(request_sender) = self.request_sender.take() {
             let _ = request_sender.send(LMSRequest::exit());
         }
-        if let Some(stream) = self.request_stream.take() {
-            let _ = stream.shutdown(Shutdown::Both);
-        }
+        let mut shutdown_stream = self.request_stream.take();
 
         let stop_success = if let Some(mut process_handle) = self.process_handle.take() {
             let mut exited = Self::wait_for_child_exit(&mut process_handle, SERVICE_EXIT_WAIT_TIME);
+            if !exited {
+                if let Some(stream) = shutdown_stream.take() {
+                    let _ = stream.shutdown(Shutdown::Both);
+                }
+                exited = Self::wait_for_child_exit(&mut process_handle, SERVICE_EXIT_WAIT_TIME);
+            }
             if !exited {
                 log::warn!("Metrics server still running, sending SIGTERM.");
                 Self::terminate_child(&mut process_handle);
@@ -336,7 +340,10 @@ impl MetricsManager {
             exited
         }
         else {
-            // Attached to an existing server without a child handle; Exit/shutdown is best-effort.
+            // No child handle to wait on; shut down so a stuck reader cannot hang the join.
+            if let Some(stream) = shutdown_stream.take() {
+                let _ = stream.shutdown(Shutdown::Both);
+            }
             true
         };
 
