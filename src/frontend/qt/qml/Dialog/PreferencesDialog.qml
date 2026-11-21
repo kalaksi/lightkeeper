@@ -587,6 +587,15 @@ LightkeeperDialog {
                 }
 
                 SmallText {
+                    visible: LK.config.updateAvailable
+                    text: "Update available: " + LK.config.latestReleaseVersion
+                    color: Theme.textColorDark
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.fillWidth: true
+                }
+
+                SmallText {
                     text: "A customizable server management tool for maintaining servers over SSH."
                     color: Theme.textColorDark
                     wrapMode: Text.WordWrap
@@ -613,6 +622,18 @@ LightkeeperDialog {
                     horizontalAlignment: Text.AlignHCenter
 
                     Layout.fillWidth: true
+                }
+
+                SmallText {
+                    text: "Dual-licensing is possible if your organization needs something else than AGPL. Get in contact."
+                    color: Theme.textColorDark
+                    font.bold: true
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Theme.spacingLoose
+                    Layout.rightMargin: Theme.spacingLoose
                 }
 
                 NormalText {

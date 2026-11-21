@@ -240,16 +240,20 @@ Module {
         Property { name: "showChartThresholdLines"; type: "bool"; isReadonly: false; }
         Property { name: "showInfoNotifications"; type: "bool"; isReadonly: true; }
         Property { name: "mainViewSplitRatio"; type: "double"; isReadonly: false; }
+        Property { name: "latestReleaseVersion"; type: "string"; isReadonly: true; }
+        Property { name: "updateAvailable"; type: "bool"; isReadonly: true; }
 
         Signal { name: "hostConfigurationChanged" }
         Signal { name: "showChartsChanged" }
         Signal { name: "showChartThresholdLinesChanged" }
+        Signal { name: "updateCheckChanged" }
         Signal { name: "error"; Parameter { name: "message"; type: "string" } }
 
         Method { name: "isSandboxed"; type: "bool" }
         Method { name: "isDevBuild"; type: "bool" }
         Method { name: "getVersion"; type: "string" }
         Method { name: "getCurrentWorkDir"; type: "string" }
+        Method { name: "startUpdateCheck" }
         Method { name: "getPreferences"; type: "QVariantMap" }
         Method { name: "setPreferences"; Parameter { name: "preferences"; type: "QVariantMap" } }
         Method { name: "getCertificateMonitors"; type: "QStringList" }

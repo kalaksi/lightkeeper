@@ -372,6 +372,8 @@ ApplicationWindow {
         // Starts the thread that receives portal responses from D-Bus.
         DesktopPortal.receiveResponses()
 
+        LK.config.startUpdateCheck()
+
         root.refreshAlerts()
         root.refreshRemoteCoreBlocked()
 

@@ -50,11 +50,14 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s globstar nullglob
+          version="${GITHUB_REF_NAME#v}"
+          printf '%s\n' "{\"version\":\"${version}\"}" > version.json
           files=(
             artifacts/**/lightkeeper-*.rpm
             artifacts/**/lightkeeper_*.deb
             artifacts/**/lightkeeper-core-*.tar.gz
             artifacts/**/lightkeeper-core-*.tar.gz.sha256
+            version.json
           )
           files=($(printf '%s\n' "${files[@]}" | grep -vE 'debug(info|source)|dbgsym' || true))
           [ "${#files[@]}" -gt 0 ] || { echo "No release assets found" >&2; exit 1; }

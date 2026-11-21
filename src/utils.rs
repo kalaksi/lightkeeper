@@ -9,6 +9,8 @@ pub use string_manipulation::*;
 pub mod version_number;
 pub use version_number::VersionNumber;
 
+pub mod update_check;
+
 pub mod string_validation;
 
 pub mod host_address;

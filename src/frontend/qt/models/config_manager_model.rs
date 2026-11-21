@@ -12,6 +12,7 @@ use std::str::FromStr;
 use crate::backend::ConfigBackend;
 use crate::error::LkError;
 use crate::secrets_manager;
+use crate::utils::{update_check, VersionNumber};
 use crate::{
     configuration::{self, ConfigGroup, Configuration, Groups, HostSettings, Hosts},
     enums::EditMode,
@@ -32,6 +33,7 @@ pub struct ConfigManagerModel {
     hostConfigurationChanged: qt_signal!(),
     showChartsChanged: qt_signal!(),
     showChartThresholdLinesChanged: qt_signal!(),
+    updateCheckChanged: qt_signal!(),
 
     //
     // Common
@@ -43,10 +45,13 @@ pub struct ConfigManagerModel {
     showChartThresholdLines: qt_property!(bool; READ showChartThresholdLines WRITE setShowChartThresholdLines NOTIFY showChartThresholdLinesChanged),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
     mainViewSplitRatio: qt_property!(f64; READ getMainViewSplitRatio WRITE setMainViewSplitRatio),
+    latestReleaseVersion: qt_property!(QString; READ getLatestReleaseVersion NOTIFY updateCheckChanged),
+    updateAvailable: qt_property!(bool; READ isUpdateAvailable NOTIFY updateCheckChanged),
     isSandboxed: qt_method!(fn(&self) -> bool),
     isDevBuild: qt_method!(fn(&self) -> bool),
     getVersion: qt_method!(fn(&self) -> QString),
     getCurrentWorkDir: qt_method!(fn(&self) -> QString),
+    startUpdateCheck: qt_method!(fn(&mut self)),
 
     //
     // Preferences
@@ -144,6 +149,7 @@ pub struct ConfigManagerModel {
     module_metadatas: Vec<Metadata>,
     module_factory: ModuleFactory,
     config_backend: Option<Box<dyn ConfigBackend>>,
+    latest_release_version: QString,
 }
 
 #[allow(non_snake_case)]
@@ -680,6 +686,42 @@ impl ConfigManagerModel {
 
     fn getVersion(&self) -> QString {
         QString::from(env!("CARGO_PKG_VERSION"))
+    }
+
+    fn getLatestReleaseVersion(&self) -> QString {
+        self.latest_release_version.clone()
+    }
+
+    fn isUpdateAvailable(&self) -> bool {
+        let latest = self.latest_release_version.to_string();
+        if latest.is_empty() {
+            return false;
+        }
+        VersionNumber::from_string(&latest) > VersionNumber::from_string(env!("CARGO_PKG_VERSION"))
+    }
+
+    fn startUpdateCheck(&mut self) {
+        let (cached, fresh) = update_check::load_cache();
+        if let Some(version) = cached {
+            self.latest_release_version = QString::from(version);
+            self.updateCheckChanged();
+        }
+        if fresh {
+            return;
+        }
+
+        let self_ptr = QPointer::from(&*self);
+        let finish = qmetaobject::queued_callback(move |version: Option<String>| {
+            if let Some(version) = version {
+                if let Some(self_pinned) = self_ptr.as_pinned() {
+                    self_pinned.borrow_mut().latest_release_version = QString::from(version);
+                    self_pinned.borrow().updateCheckChanged();
+                }
+            }
+        });
+        std::thread::spawn(move || {
+            finish(update_check::fetch_and_store());
+        });
     }
 
     fn getCurrentWorkDir(&self) -> QString {
