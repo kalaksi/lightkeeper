@@ -33,7 +33,7 @@ use crate::{
     configuration,
 };
 
-const DATA_POINT_BUFFER_SIZE: usize = 4;
+const DATA_POINT_BUFFER_SIZE: usize = 2;
 
 
 /// Manages the host states.
