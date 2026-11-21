@@ -54,7 +54,11 @@ fn rsync_remote_spec_trailing_slash_by_direction() {
         ssh.remote_spec("[2001:db8::1]", "/tmp/a:b", false).unwrap(),
         "alice@[2001:db8::1]:/tmp/a:b"
     );
-    assert!(ssh.remote_spec("::1", "/var/tmp", true).is_err());
+    assert_eq!(ssh.remote_spec("::1", "/var/tmp", true).unwrap(), "alice@[::1]:/var/tmp/");
+    assert_eq!(
+        ssh.remote_spec("2001:db8::1", "/tmp/file", false).unwrap(),
+        "alice@[2001:db8::1]:/tmp/file"
+    );
     assert!(RsyncSsh::new(&HashMap::new()).remote_spec("10.0.0.1", "/var/tmp/", true).is_err());
 }
 
@@ -62,12 +66,14 @@ fn rsync_remote_spec_trailing_slash_by_direction() {
 fn desktop_rsync_rejects_malicious_plan() {
     let _xdg_config = crate::redirect_xdg_config_home();
     let profile = CoreConnectionProfile::default();
-    for address in ["-oProxyCommand=touch /tmp/pwned", "/home/user/.bashrc", "host:", "::1", "a b", ""] {
+    for address in ["-oProxyCommand=touch /tmp/pwned", "/home/user/.bashrc", "host:", "a b", ""] {
         let plan = FileTransferPlan { address: address.to_string(), ..upload_plan() };
         assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_err());
     }
-    let plan = FileTransferPlan { address: String::from("[::1]"), ..upload_plan() };
-    assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_ok());
+    for address in ["[::1]", "::1", "2001:db8::1"] {
+        let plan = FileTransferPlan { address: address.to_string(), ..upload_plan() };
+        assert!(build_desktop_rsync_command(&profile, &plan, "/local/file").is_ok());
+    }
 
     let mut plan = upload_plan();
     plan.ssh.username = String::from("--rsh=touch /tmp/pwned");

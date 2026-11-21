@@ -66,9 +66,15 @@ impl MonitoringModule for Ping {
             let mut command = ShellCommand::new();
 
             if host.platform.os == platform_info::OperatingSystem::Linux {
-                command.arguments(vec![
-                    "ping", "-c", self.count.to_string().as_str(), "-W", self.timeout.to_string().as_str(), host.ip_address.to_string().as_str()
-                ]);
+                let count = self.count.to_string();
+                let timeout = self.timeout.to_string();
+                let address = host.ip_address.to_string();
+                if host.ip_address.is_ipv6() {
+                    command.arguments(vec!["ping", "-6", "-c", &count, "-W", &timeout, &address]);
+                }
+                else {
+                    command.arguments(vec!["ping", "-c", &count, "-W", &timeout, &address]);
+                }
             }
             else {
                 return Err(LkError::unsupported_platform());

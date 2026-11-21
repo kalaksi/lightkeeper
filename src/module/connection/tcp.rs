@@ -88,8 +88,11 @@ impl ConnectionModule for Tcp {
             return Ok(ResponseMessage::new_error("Invalid address"));
         }
 
-        let (address, port) = message.split_once(':').unwrap_or_else(|| (message, "443"));
-        let full_address = format!("{}:{}", address, port);
+        let (address, port) = crate::utils::host_address::split_host_port(message, "443");
+        let full_address = crate::utils::host_address::format_host_port(
+            address,
+            port.parse().unwrap_or(443),
+        );
 
         let mut socket_addresses = match full_address.to_socket_addrs() {
             Ok(addresses) => addresses,

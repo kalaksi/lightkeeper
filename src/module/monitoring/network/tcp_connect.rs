@@ -46,7 +46,7 @@ impl MonitoringModule for TcpConnect {
     }
 
     fn get_connector_message(&self, host: Host, _parent_result: DataPoint) -> Result<String, crate::error::LkError> {
-        Ok(format!("{}:{}", host.ip_address, self.port))
+        Ok(crate::utils::host_address::format_ip_port(host.ip_address, self.port))
     }
 
     fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {

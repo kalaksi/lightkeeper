@@ -39,12 +39,65 @@ rtt min/avg/max/mdev = 0.123/0.134/0.145/0.011 ms"#, 0)
 }
 
 #[test]
+fn test_ping_ipv6() {
+    let mut host_settings = configuration::HostSettings::default();
+    host_settings.address = "::1".to_string();
+    host_settings.effective.monitors.insert(
+        network::Ping::get_metadata().module_spec.id.clone(),
+        configuration::MonitorConfig {
+            version: "0.0.1".to_string(),
+            ..Default::default()
+        }
+    );
+    host_settings.effective.connectors.insert(
+        StubLocalCommand::get_metadata().module_spec.id.clone(),
+        configuration::ConnectorConfig::default()
+    );
+
+    let hosts_config = configuration::Hosts {
+        hosts: BTreeMap::from([(TEST_HOST_ID.to_string(), host_settings)]),
+        predefined_platforms: BTreeMap::from([(TEST_HOST_ID.to_string(), PlatformInfo::linux(Flavor::Debian, "12.0"))]),
+        ..Default::default()
+    };
+
+    let module_factory = ModuleFactory::new_with(
+        vec![(StubLocalCommand::get_metadata(), |_settings: &HashMap<String, String>| {
+            StubLocalCommand::new(r#"'ping' '-6' '-c' '2' '-W' '10' '::1'"#,
+r#"PING ::1 (::1) 56 data bytes
+64 bytes from ::1: icmp_seq=1 time=0.050 ms
+64 bytes from ::1: icmp_seq=2 time=0.060 ms
+
+--- ::1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1000ms
+rtt min/avg/max/mdev = 0.050/0.055/0.060/0.005 ms"#, 0)
+        })],
+        vec![(network::Ping::get_metadata(), network::Ping::new_monitoring_module)],
+        vec![]
+    );
+
+    let mut harness = MonitorTestHarness::new(hosts_config, module_factory);
+    harness.refresh_monitors();
+
+    harness.verify_next_datapoint(&network::Ping::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.value, "0.055");
+        assert_eq!(datapoint.criticality, Criticality::Normal);
+    });
+}
+
+#[test]
 fn test_routes() {
     let new_stub_ssh = |_settings: &HashMap<String, String>| {
-        StubSsh2::new("ip route",
+        let mut ssh = StubSsh2::default();
+        ssh.add_response("ip route",
 r#"default via 192.168.1.1 dev eth0 proto static
 10.0.0.0/8 dev eth1 proto kernel scope link src 10.0.0.1
-192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.100"#, 0)
+192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.100"#, 0);
+        ssh.add_response("ip -6 route",
+r#"::1 dev lo proto kernel metric 256 pref medium
+2001:db8::/64 dev eth0 proto kernel metric 256 pref medium
+default via fe80::1 dev eth0 proto static metric 1024 pref medium"#, 0);
+        Box::new(ssh) as connection::Connector
     };
 
     let mut harness = MonitorTestHarness::new_monitor_tester(
@@ -57,11 +110,15 @@ r#"default via 192.168.1.1 dev eth0 proto static
 
     harness.verify_next_datapoint(&network::Routes::get_metadata().module_spec.id, |datapoint| {
         let datapoint = datapoint.expect("Should have datapoint");
-        assert_eq!(datapoint.multivalue.len(), 3);
+        assert_eq!(datapoint.multivalue.len(), 6);
         assert_eq!(datapoint.multivalue[0].label, "default via 192.168.1.1");
         assert_eq!(datapoint.multivalue[0].value, "eth0");
         assert_eq!(datapoint.multivalue[1].label, "10.0.0.0/8");
         assert_eq!(datapoint.multivalue[1].value, "eth1");
+        assert_eq!(datapoint.multivalue[3].label, "::1");
+        assert_eq!(datapoint.multivalue[3].value, "lo");
+        assert_eq!(datapoint.multivalue[4].label, "2001:db8::/64");
+        assert_eq!(datapoint.multivalue[5].label, "default via fe80::1");
     });
 }
 
@@ -159,6 +216,46 @@ fn test_tcp_connect() {
         (network::TcpConnect::get_metadata(), network::TcpConnect::new_monitoring_module),
     );
 
+    harness.refresh_monitors();
+
+    harness.verify_next_datapoint(&network::TcpConnect::get_metadata().module_spec.id, |datapoint| {
+        let datapoint = datapoint.expect("Should have datapoint");
+        assert_eq!(datapoint.value, "open");
+        assert_eq!(datapoint.criticality, Criticality::Normal);
+    });
+}
+
+#[test]
+fn test_tcp_connect_ipv6() {
+    let mut host_settings = configuration::HostSettings::default();
+    host_settings.address = "2001:db8::1".to_string();
+    host_settings.effective.monitors.insert(
+        network::TcpConnect::get_metadata().module_spec.id.clone(),
+        configuration::MonitorConfig {
+            version: "0.0.1".to_string(),
+            ..Default::default()
+        }
+    );
+    host_settings.effective.connectors.insert(
+        StubTcp::get_metadata().module_spec.id.clone(),
+        configuration::ConnectorConfig::default()
+    );
+
+    let hosts_config = configuration::Hosts {
+        hosts: BTreeMap::from([(TEST_HOST_ID.to_string(), host_settings)]),
+        predefined_platforms: BTreeMap::from([(TEST_HOST_ID.to_string(), PlatformInfo::linux(Flavor::Debian, "12.0"))]),
+        ..Default::default()
+    };
+
+    let module_factory = ModuleFactory::new_with(
+        vec![(StubTcp::get_metadata(), |_settings: &HashMap<String, String>| {
+            StubTcp::new("[2001:db8::1]:22", "")
+        })],
+        vec![(network::TcpConnect::get_metadata(), network::TcpConnect::new_monitoring_module)],
+        vec![]
+    );
+
+    let mut harness = MonitorTestHarness::new(hosts_config, module_factory);
     harness.refresh_monitors();
 
     harness.verify_next_datapoint(&network::TcpConnect::get_metadata().module_spec.id, |datapoint| {

@@ -18,7 +18,7 @@ pub mod secrets_manager;
 #[cfg(feature = "core")]
 pub mod file_secret_store;
 mod host;
-pub use host::HostSetting;
+pub use host::{Host, HostSetting};
 pub mod utils;
 pub mod enums;
 // Made public for integration tests
@@ -38,9 +38,6 @@ use host_manager::HostManager;
 use monitor_manager::MonitorManager;
 use connection_manager::ConnectionManager;
 use command_handler::CommandHandler;
-use host::Host;
-
-
 
 #[derive(PartialEq)]
 pub enum ExitReason {
