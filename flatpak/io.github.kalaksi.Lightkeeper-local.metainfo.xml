@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>io.github.kalaksi.Lightkeeper-local</id>
-  <name>LightkeeperRM</name>
+  <name>Lightkeeper</name>
   <summary>Linux server management tool</summary>
   <metadata_license>CC-BY-SA-4.0</metadata_license>
   <project_license>AGPL-3.0-or-later</project_license>
@@ -10,7 +10,7 @@
   </developer>
   <description>
     <p>
-      LightkeeperRM is a standalone and customizable server management and monitoring tool that works directly over SSH.
+      Lightkeeper is a standalone and customizable server management and monitoring tool that works directly over SSH.
     </p>
   </description>
   <url type="homepage">https://github.com/kalaksi/lightkeeper</url>
@@ -18,8 +18,8 @@
   <url type="vcs-browser">https://github.com/kalaksi/lightkeeper</url>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/LightkeeperRM-overview.png</image>
-      <caption>Overview of LightkeeperRM.</caption>
+      <image>https://raw.githubusercontent.com/kalaksi/lightkeeper/master/doc/images/lightkeeper-overview.png</image>
+      <caption>Overview of Lightkeeper</caption>
     </screenshot>
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper-local.desktop</launchable>

@@ -1,10 +1,10 @@
-# LightkeeperRM
+# Lightkeeper
 
-LightkeeperRM is a customizable server management and monitoring tool that works over SSH.
+Lightkeeper is a customizable server management and monitoring tool that works over SSH.
 It gives a clear view of host resources and simplifies upgrades, monitoring, debugging, and configuration.
 
 - **Agentless** - Uses standard Linux commands over SSH. No daemons or agents on the monitored host. Commands are easy to audit via debug log and host logs.
-- **Keyboard-driven** - Extensive hotkeys. Press Ctrl-T for a terminal tab when you need the shell.
+- **Keyboard shortcuts** - Extensive keyboard shortcuts. Press Ctrl-T for a terminal tab when you need the shell.
 - **Modular** - Customizable and extendable for different workflows.
 
 # Table of contents
@@ -30,6 +30,7 @@ It gives a clear view of host resources and simplifies upgrades, monitoring, deb
    - [Liboping](#liboping)
 
 ## Features
+- Optional remote core: run the backend on another host so monitoring can continue while the GUI is closed.
 - Monitor status changes periodically and get alert notifications.
 - Monitor certificate validity and expiration.
 - Status summary in host table for quick status view.
@@ -49,7 +50,7 @@ Lightkeeper is meant for power users who want that workflow without installing a
 <table>
   <tr>
     <td width="50%" align="center" valign="top">
-      <img src="doc/images/lightkeeper-overview.png" alt="Overview of LightkeeperRM's GUI" /><br />
+      <img src="doc/images/lightkeeper-overview.png" alt="Overview of Lightkeeper's GUI" /><br />
       <em>Overview</em>
     </td>
     <td width="50%" align="center" valign="top">

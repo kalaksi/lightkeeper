@@ -52,9 +52,10 @@ Requires:       rsync
 Recommends:     qt6-qtwebengine
 
 %description
-LightkeeperRM (Remote Management) is a customizable server management and
-monitoring tool. It works as a drop-in replacement for maintaining servers
-over SSH. Agentless: no additional daemons or agents needed on target hosts.
+Lightkeeper is a customizable server management and monitoring tool that works
+over SSH. It gives a clear view of host resources and simplifies upgrades,
+monitoring, debugging, and configuration. Agentless: uses standard Linux
+commands on the monitored host with no extra daemons.
 
 %prep
 %autosetup -n %{name}-%{version}
