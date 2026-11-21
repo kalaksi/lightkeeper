@@ -23,9 +23,11 @@ pub struct Args {
     #[clap(long, default_value = "")]
     pub socket_path: String,
     /// Optional path to the secrets wrapping key (file backend only).
-    /// Defaults to $LIGHTKEEPER_SECRETS_KEY_FILE, then `<config-dir>/secrets.key`. The key is base64 of 32 bytes.
-    /// To keep the key encrypted at rest, use systemd `LoadCredentialEncrypted=` and point this to
-    /// `$CREDENTIALS_DIRECTORY/<name>`.
+    /// Defaults to $LIGHTKEEPER_SECRETS_KEY_FILE, then `<config-dir>/secrets.key`.
+    /// Passphrase-protected keys are unlocked from the Lightkeeper desktop app after connect.
+    /// Losing the passphrase loses access to stored secrets.
+    /// For unattended hosts, leave the key unprotected (empty passphrase) or use systemd
+    /// `LoadCredentialEncrypted=` and point this to `$CREDENTIALS_DIRECTORY/<name>`.
     #[clap(long)]
     pub secrets_key_file: Option<PathBuf>,
 }

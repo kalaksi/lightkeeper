@@ -10,7 +10,7 @@ services:
     # environment:
     #   RUST_LOG: debug
     volumes:
-      # Lightkeeper configuration, SSH keys, known_hosts, and secrets.key (wrapping key).
+      # Lightkeeper configuration, SSH keys, known_hosts, and possible secrets.key (for secret store).
       - ./config:/config
       # When using a container, set "Socket path" in Lightkeeper's core connection dialog to
       # the absolute host path, e.g. /example/lightkeeper-core/data/core.sock.

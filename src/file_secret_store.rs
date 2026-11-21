@@ -220,10 +220,8 @@ impl FileSecretStore {
     /// Opens a store under `data_dir` with the wrapping key under `config_dir` by default.
     /// An explicit key file (argument or environment) overrides the default key path.
     pub fn open(data_dir: PathBuf, config_dir: PathBuf, key_file_override: Option<PathBuf>) -> Result<Self, LkError> {
-        fs::create_dir_all(&data_dir)
-            .map_err(|error| LkError::other(format!("Failed to create data directory {}: {}", data_dir.display(), error)))?;
-        fs::create_dir_all(&config_dir)
-            .map_err(|error| LkError::other(format!("Failed to create config directory {}: {}", config_dir.display(), error)))?;
+        ensure_private_dir(&data_dir)?;
+        ensure_private_dir(&config_dir)?;
 
         let store_path = data_dir.join(STORE_FILE_NAME);
         let explicit_key_path =
@@ -299,7 +297,7 @@ impl FileSecretStore {
         else {
             return Err(self.unavailable_error(&state));
         };
-        write_store_file(&self.store_path, key, &entries)
+        write_secrets_file(&self.store_path, key, &entries)
     }
 
     fn unavailable_error(&self, state: &KeyState) -> LkError {
@@ -379,11 +377,10 @@ impl FileSecretStore {
             )
         };
         if let Some(parent) = self.key_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|error| LkError::other(format!("Failed to create key directory {}: {}", parent.display(), error)))?;
+            ensure_private_dir(parent)?;
         }
         atomic_write(&self.key_path, &key_file_contents)?;
-        write_store_file(&self.store_path, &new_key, &Entries::default())?;
+        write_secrets_file(&self.store_path, &new_key, &Entries::default())?;
         log::warn!("Generated secret store key at {}", self.key_path.display());
         *state = KeyState::Unlocked {
             key: new_key,
@@ -537,7 +534,7 @@ impl SecretStore for FileSecretStore {
         let protected_raw = serde_json::to_vec_pretty(&protected)
             .map_err(|error| LkError::other_p("Failed to serialize protected secret key", error))?;
         // A crash between these writes is recovered in `read_entries` by promoting the pending store.
-        write_store_file(&self.pending_store_path, &new_key, &entries)?;
+        write_secrets_file(&self.pending_store_path, &new_key, &entries)?;
         atomic_write(&self.key_path, &protected_raw)?;
         *state = KeyState::Unlocked { key: new_key, protected: true };
         fs::rename(&self.pending_store_path, &self.store_path)
@@ -605,7 +602,7 @@ fn read_store_file(path: &Path, key: &SecretKey) -> Result<Entries, LkError> {
     serde_json::from_slice(&plaintext).map_err(|error| LkError::other_p("Invalid decrypted secret store payload", error))
 }
 
-fn write_store_file(path: &Path, key: &SecretKey, entries: &Entries) -> Result<(), LkError> {
+fn write_secrets_file(path: &Path, key: &SecretKey, entries: &Entries) -> Result<(), LkError> {
     let plaintext =
         Zeroizing::new(serde_json::to_vec(entries).map_err(|error| LkError::other_p("Failed to serialize secret store", error))?);
     let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
@@ -620,6 +617,13 @@ fn write_store_file(path: &Path, key: &SecretKey, entries: &Entries) -> Result<(
     };
     let raw = serde_json::to_vec(&envelope).map_err(|error| LkError::other_p("Failed to serialize encrypted secret store", error))?;
     atomic_write(path, &raw)
+}
+
+fn ensure_private_dir(path: &Path) -> Result<(), LkError> {
+    fs::create_dir_all(path)
+        .map_err(|error| LkError::other(format!("Failed to create directory {}: {}", path.display(), error)))?;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700))
+        .map_err(|error| LkError::other(format!("Failed to set permissions on {}: {}", path.display(), error)))
 }
 
 fn read_key_file(path: &Path) -> Result<KeyFile, LkError> {
