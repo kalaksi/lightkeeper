@@ -250,15 +250,14 @@ fn remote_core_execute_command() {
         assert!(invocation_id > 0, "expected invocation id");
 
         let display = recv_host_until(&ui_rx, TEST_HOST, |d| {
-            d.host_state
-                .command_results
-                .get(&custom_id)
-                .is_some_and(|result| {
-                    result.progress == 100 && result.message.contains("stub-line-from-fake-ssh")
-                })
+            d.new_command_result.as_ref().is_some_and(|(_, result)| {
+                result.command_id == custom_id
+                    && result.progress == 100
+                    && result.message.contains("stub-line-from-fake-ssh")
+            })
         });
 
-        let result = display.host_state.command_results.get(&custom_id).unwrap();
+        let (_, result) = display.new_command_result.as_ref().unwrap();
         assert!(result.message.contains("stub-line-from-fake-ssh"));
 
         backend.stop();
@@ -358,10 +357,9 @@ fn remote_core_write_cache_and_upload() {
         backend.download_editable_file(TEST_HOST, &edit_id, remote_path).unwrap();
 
         recv_host_until(&ui_rx, TEST_HOST, |d| {
-            d.host_state
-                .command_results
-                .get(&edit_id)
-                .is_some_and(|result| result.progress == 100)
+            d.new_command_result.as_ref().is_some_and(|(_, result)| {
+                result.command_id == edit_id && result.progress == 100
+            })
         });
 
         backend.write_cached_file(TEST_HOST, remote_path, b"new-bytes".to_vec()).unwrap();

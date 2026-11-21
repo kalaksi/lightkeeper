@@ -827,7 +827,7 @@ impl CommandHandler {
     fn process_download_for_internal_editor(command: &Command, state_update_sender: mpsc::Sender<StateUpdateMessage>, response: RequestResponse) {
         let message_result = &response.responses[0];
 
-        let command_result = match message_result {
+        let mut command_result = match message_result {
             Ok(response_message) => {
                 let (_, contents) = file_handler::read_file(&response_message.message).unwrap();
 
@@ -842,6 +842,7 @@ impl CommandHandler {
                 CommandResult::new_critical_error(error_message)
             }
         };
+        command_result.command_id = command.get_module_spec().id;
 
         state_update_sender.send(StateUpdateMessage::Command {
             host_name: response.host.name,
@@ -863,7 +864,7 @@ impl CommandHandler {
     ) {
         let message_result = &response.responses[0];
 
-        let command_result = match message_result {
+        let mut command_result = match message_result {
             Ok(_) => {
                 if remove_file {
                     file_handler::remove_file(local_file_path).unwrap();
@@ -892,6 +893,7 @@ impl CommandHandler {
                 CommandResult::new_critical_error(error_message)
             }
         };
+        command_result.command_id = command.get_module_spec().id;
 
         state_update_sender.send(StateUpdateMessage::Command {
             host_name: response.host.name,

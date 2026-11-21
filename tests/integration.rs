@@ -283,7 +283,7 @@ impl MonitorTestHarness {
             match update.unwrap() {
                 UIUpdate::Host(display_data) => {
                     // First UI update should be empty.
-                    assert!(display_data.host_state.command_results.is_empty());
+                    assert!(display_data.new_command_result.is_none());
                     assert!(display_data.host_state.command_invocations.is_empty());
                     self.first_ui_update.replace(false);
                 },
@@ -438,21 +438,8 @@ impl CommandTestHarness {
     where
         F: FnOnce(&CommandResult),
     {
-        let display_data = self.host_manager.borrow().get_display_data();
-        let host_display = display_data.hosts.get(TEST_HOST_ID);
-        
-        assert!(host_display.is_some(), "Host should exist in display data");
-        
-        let host_state = &host_display.unwrap().host_state;
-        
-        assert!(
-            host_state.command_results.contains_key(command_id),
-            "{} command data should be in host state",
-            command_id
-        );
-        
-        let command_data = host_state.command_results.get(command_id).unwrap();
-        verify_fn(command_data);
+        let result = self.recv_command_result_until(command_id, |result| result.progress == 100);
+        verify_fn(&result);
     }
 
     fn verify_next_ui_update<F>(&self, verify_fn: F)
@@ -465,8 +452,8 @@ impl CommandTestHarness {
             assert!(update.is_ok());
             match update.unwrap() {
                 UIUpdate::Host(display_data) => {
-                    // When executing commands, they receive initial UI update with no command results yet.
-                    assert!(display_data.host_state.command_results.is_empty());
+                    // Pending command/monitor registration has no result payload yet.
+                    assert!(display_data.new_command_result.is_none());
                     self.first_ui_update.replace(false);
                 },
                 _ => unreachable!(),
@@ -488,10 +475,52 @@ impl CommandTestHarness {
         F: FnOnce(&CommandResult),
     {
         self.verify_next_ui_update(|display_data| {
-            let command_result = display_data.host_state.command_results.get(command_id);
-            assert!(command_result.is_some(), "Command result should exist for {}", command_id);
-            verify_fn(command_result.unwrap());
+            let command_result = Self::expect_new_command_result(display_data, command_id);
+            verify_fn(command_result);
         });
+    }
+
+    fn expect_new_command_result<'a>(display_data: &'a HostDisplayData, command_id: &str) -> &'a CommandResult {
+        let (_, command_result) = display_data.new_command_result.as_ref()
+            .unwrap_or_else(|| panic!("Command result should exist for {}", command_id));
+        assert_eq!(
+            command_result.command_id, command_id,
+            "Unexpected command_id in new_command_result"
+        );
+        command_result
+    }
+
+    /// Receives host UI updates until `pred` matches a `new_command_result` for `command_id`.
+    fn recv_command_result_until<P>(&self, command_id: &str, mut pred: P) -> CommandResult
+    where
+        P: FnMut(&CommandResult) -> bool,
+    {
+        loop {
+            if *self.first_ui_update.borrow() {
+                let update = self.ui_update_receiver.recv_timeout(Duration::from_secs(1));
+                assert!(update.is_ok());
+                match update.unwrap() {
+                    UIUpdate::Host(display_data) => {
+                        assert!(display_data.new_command_result.is_none());
+                        self.first_ui_update.replace(false);
+                    },
+                    _ => unreachable!(),
+                }
+            }
+
+            let update = self.ui_update_receiver.recv_timeout(Duration::from_secs(5));
+            assert!(update.is_ok(), "Timed out waiting for command result {}", command_id);
+            match update.unwrap() {
+                UIUpdate::Host(display_data) => {
+                    if let Some((_, command_result)) = display_data.new_command_result.as_ref() {
+                        if command_result.command_id == command_id && pred(command_result) {
+                            return command_result.clone();
+                        }
+                    }
+                },
+                _ => {},
+            }
+        }
     }
 
     fn verify_next_error<F>(&self, command_id: &str, verify_fn: F)

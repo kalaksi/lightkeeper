@@ -735,29 +735,28 @@ ERROR: failed to solve: failed to fetch"#, 1)
 
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
-        let result = &display_data.host_state.command_results[&module_id];
+        let result = CommandTestHarness::expect_new_command_result(display_data, &module_id);
         assert!(result.progress < 100);
     });
 
     // Check additional partial updates (message is ~86 chars, so we get multiple partials)
     harness.verify_next_ui_update(|display_data| {
-        let result = &display_data.host_state.command_results[&module_id];
+        let result = CommandTestHarness::expect_new_command_result(display_data, &module_id);
         assert!(result.progress < 100);
     });
 
     harness.verify_next_ui_update(|display_data| {
-        let result = &display_data.host_state.command_results[&module_id];
+        let result = CommandTestHarness::expect_new_command_result(display_data, &module_id);
         assert!(result.progress < 100);
     });
 
     harness.verify_next_ui_update(|display_data| {
-        let result = &display_data.host_state.command_results[&module_id];
+        let result = CommandTestHarness::expect_new_command_result(display_data, &module_id);
         assert!(result.progress < 100);
     });
 
     harness.verify_next_ui_update(|display_data| {
-        let result = &display_data.host_state.command_results[&module_id];
+        let result = CommandTestHarness::expect_new_command_result(display_data, &module_id);
         assert_eq!(result.progress, 100);
         assert_eq!(result.criticality, Criticality::Error);
         assert!(result.message.contains("ERROR") || result.message.contains("failed") || result.message.contains("Building"));

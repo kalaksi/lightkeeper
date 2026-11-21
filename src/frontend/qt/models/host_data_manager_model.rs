@@ -492,11 +492,10 @@ impl HostDataManagerModel {
 
     // TODO: proper data model in QML?
     fn getHostDataJson(&self, host_id: QString) -> QString {
-        // Doesn't include monitor and command datas.
+        // Doesn't include monitor data.
         if let Some(display_data) = self.display_data.hosts.get(&host_id.to_string()) {
             let mut stripped = display_data.host_state.clone();
             stripped.monitor_data.clear();
-            stripped.command_results.clear();
             QString::from(serde_json::to_string(&stripped).unwrap())
         }
         else {

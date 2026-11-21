@@ -7,6 +7,8 @@ use std::collections::{BTreeMap, HashMap};
 
 use lightkeeper::configuration;
 use lightkeeper::enums::Criticality;
+use lightkeeper::module::command::CommandModule;
+use lightkeeper::module::command::internal::CustomCommand;
 use lightkeeper::module::connection::Connector;
 use lightkeeper::module::platform_info::*;
 use lightkeeper::module::*;
@@ -30,6 +32,14 @@ fn harness_for_custom_command(
         description: String::new(),
         command: command_text.to_string(),
     });
+    // So ConnectionManager creates the ssh connector (it only walks effective.commands/monitors).
+    host_settings.effective.commands.insert(
+        MODULE_ID.to_string(),
+        configuration::CommandConfig {
+            version: "0.0.1".to_string(),
+            ..Default::default()
+        },
+    );
     host_settings.effective.connectors.insert(
         StubSsh2::get_metadata().module_spec.id.clone(),
         configuration::ConnectorConfig::default(),
@@ -44,11 +54,11 @@ fn harness_for_custom_command(
         ..Default::default()
     };
 
-    // CustomCommand is registered as an internal command in CommandHandler::configure.
+    // CustomCommand is also registered as an internal command in CommandHandler::configure.
     let module_factory = ModuleFactory::new_with(
         vec![(StubSsh2::get_metadata(), new_stub_ssh)],
         vec![],
-        vec![],
+        vec![(CustomCommand::get_metadata(), CustomCommand::new_command_module)],
     );
     CommandTestHarness::new(hosts_config, module_factory)
 }
@@ -104,30 +114,12 @@ fn test_custom_command_partial_streaming() {
 
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
-        let result = &display_data.host_state.command_results[MODULE_ID];
+        let result = CommandTestHarness::expect_new_command_result(display_data, MODULE_ID);
         assert!(result.progress < 100);
         assert!(!result.message.is_empty());
     });
 
-    loop {
-        harness.verify_next_ui_update(|display_data| {
-            let result = &display_data.host_state.command_results[MODULE_ID];
-            if result.progress == 100 {
-                assert_eq!(result.criticality, Criticality::Normal);
-            }
-            else {
-                assert!(result.progress < 100);
-            }
-        });
-
-        let display_data = harness.host_manager.borrow().get_display_data();
-        let host_display = display_data.hosts.get(TEST_HOST_ID).unwrap();
-        let result = &host_display.host_state.command_results[MODULE_ID];
-        if result.progress == 100 {
-            assert_eq!(result.criticality, Criticality::Normal);
-            assert!(result.message.contains("line three"));
-            break;
-        }
-    }
+    let result = harness.recv_command_result_until(MODULE_ID, |result| result.progress == 100);
+    assert_eq!(result.criticality, Criticality::Normal);
+    assert!(result.message.contains("line three"));
 }

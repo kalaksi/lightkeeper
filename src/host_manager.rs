@@ -380,7 +380,7 @@ impl HostManager {
                         invocation_id,
                         host_name,
                         display_options,
-                        module_spec,
+                        module_spec: _,
                         command_result,
                         errors,
                     } => {
@@ -413,8 +413,6 @@ impl HostManager {
                                 else {
                                     host_state.command_invocations.remove(&invocation_id);
                                 }
-                                host_state.command_results.insert(module_spec.id, command_result.clone());
-                                // Also add to a list of new command results.
                                 new_command_results = Some((invocation_id, command_result));
                             }
                         }
@@ -687,8 +685,6 @@ pub struct HostState {
     pub is_initialized: bool,
     /// Monitor ID as key.
     pub monitor_data: HashMap<String, MonitoringData>,
-    /// Command ID as key.
-    pub command_results: HashMap<String, CommandResult>,
     /// Invocations in progress. Keeps track of monitor progress. Empty when all is done.
     pub monitor_invocations: HashMap<u64, InvocationDetails>,
     /// Invocations in progress. Keeps track of command progress. Empty when all is done.
@@ -703,7 +699,6 @@ impl HostState {
             just_initialized: false,
             is_initialized: false,
             monitor_data: HashMap::new(),
-            command_results: HashMap::new(),
             monitor_invocations: HashMap::new(),
             command_invocations: HashMap::new(),
         }

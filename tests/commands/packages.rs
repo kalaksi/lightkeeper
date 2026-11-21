@@ -49,16 +49,16 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
 
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
-        assert!(display_data.host_state.command_results[&module_id].progress < 100);
-        assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package list");
+        let result = CommandTestHarness::expect_new_command_result(display_data, &module_id);
+        assert!(result.progress < 100);
+        assert_eq!(result.message, "Reading package list");
     });
 
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
-        assert!(display_data.host_state.command_results[&module_id].progress < 100);
-        assert_eq!(display_data.host_state.command_results[&module_id].message, "Reading package lists... Done\nBuilding d");
+        let result = CommandTestHarness::expect_new_command_result(display_data, &module_id);
+        assert!(result.progress < 100);
+        assert_eq!(result.message, "Reading package lists... Done\nBuilding d");
     });
 }
 
@@ -82,26 +82,12 @@ fn test_update_all_error() {
     // UpdateAll command uses FollowOutput, so error responses also get split into partials
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
+        CommandTestHarness::expect_new_command_result(display_data, &module_id);
     });
 
-    loop {
-        harness.verify_next_ui_update(|display_data| {
-            let result = &display_data.host_state.command_results[&module_id];
-            if result.progress == 100 {
-                assert_eq!(result.criticality, Criticality::Error);
-            }
-        });
-
-        let display_data = harness.host_manager.borrow().get_display_data();
-        let host_display = display_data.hosts.get(crate::TEST_HOST_ID).unwrap();
-        let result = &host_display.host_state.command_results[&module_id];
-        if result.progress == 100 {
-            assert_eq!(result.criticality, Criticality::Error);
-            assert!(result.message.contains("Permission denied") || result.message.contains("Unable to acquire"));
-            break;
-        }
-    }
+    let result = harness.recv_command_result_until(&module_id, |result| result.progress == 100);
+    assert_eq!(result.criticality, Criticality::Error);
+    assert!(result.message.contains("Permission denied") || result.message.contains("Unable to acquire"));
 }
 
 #[test]
@@ -136,30 +122,12 @@ Processing triggers for man-db (2.10.2-1) ..."#, 0)
 
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
-        let result = &display_data.host_state.command_results[&module_id];
+        let result = CommandTestHarness::expect_new_command_result(display_data, &module_id);
         assert!(result.progress < 100);
     });
 
-    // Wait for multiple partial responses (message is long, so we get many partials)
-    loop {
-        harness.verify_next_ui_update(|display_data| {
-            let result = &display_data.host_state.command_results[&module_id];
-            if result.progress == 100 {
-                assert_eq!(result.criticality, Criticality::Normal);
-            } else {
-                assert!(result.progress < 100);
-            }
-        });
-
-        // Check if we got the final response
-        let display_data = harness.host_manager.borrow().get_display_data();
-        let host_display = display_data.hosts.get(crate::TEST_HOST_ID).unwrap();
-        let result = &host_display.host_state.command_results[&module_id];
-        if result.progress == 100 {
-            break;
-        }
-    }
+    let result = harness.recv_command_result_until(&module_id, |result| result.progress == 100);
+    assert_eq!(result.criticality, Criticality::Normal);
 }
 
 #[test]
@@ -182,27 +150,12 @@ fn test_update_error() {
     // Update command uses FollowOutput, so error responses also get split into partials
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
+        CommandTestHarness::expect_new_command_result(display_data, &module_id);
     });
 
-    // Wait for all partial responses to complete
-    loop {
-        harness.verify_next_ui_update(|display_data| {
-            let result = &display_data.host_state.command_results[&module_id];
-            if result.progress == 100 {
-                assert_eq!(result.criticality, Criticality::Error);
-            }
-        });
-
-        let display_data = harness.host_manager.borrow().get_display_data();
-        let host_display = display_data.hosts.get(crate::TEST_HOST_ID).unwrap();
-        let result = &host_display.host_state.command_results[&module_id];
-        if result.progress == 100 {
-            assert_eq!(result.criticality, Criticality::Error);
-            assert!(result.message.contains("Unable to locate package") || result.message.contains("nonexistent-package"));
-            break;
-        }
-    }
+    let result = harness.recv_command_result_until(&module_id, |result| result.progress == 100);
+    assert_eq!(result.criticality, Criticality::Error);
+    assert!(result.message.contains("Unable to locate package") || result.message.contains("nonexistent-package"));
 }
 
 #[test]
@@ -275,11 +228,9 @@ Reading package lists... Done"#, 0)
     // Refresh command uses FollowOutput, so it will receive partial responses
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
+        CommandTestHarness::expect_new_command_result(display_data, &module_id);
     });
 
-    std::thread::sleep(std::time::Duration::from_millis(2000));
-    
     harness.verify_command_result(&module_id, |result| {
         assert_eq!(result.progress, 100);
         assert_eq!(result.criticality, Criticality::Normal);
@@ -306,25 +257,11 @@ fn test_refresh_error() {
     // Refresh command uses FollowOutput, so error responses also get split into partials
     harness.verify_next_ui_update(|display_data| {
         assert_eq!(display_data.host_state.command_invocations.len(), 1);
-        assert_eq!(display_data.host_state.command_results.len(), 1);
+        CommandTestHarness::expect_new_command_result(display_data, &module_id);
     });
 
-    loop {
-        harness.verify_next_ui_update(|display_data| {
-            let result = &display_data.host_state.command_results[&module_id];
-            if result.progress == 100 {
-                assert_eq!(result.criticality, Criticality::Error);
-            }
-        });
-
-        let display_data = harness.host_manager.borrow().get_display_data();
-        let host_display = display_data.hosts.get(crate::TEST_HOST_ID).unwrap();
-        let result = &host_display.host_state.command_results[&module_id];
-        if result.progress == 100 {
-            assert_eq!(result.criticality, Criticality::Error);
-            break;
-        }
-    }
+    let result = harness.recv_command_result_until(&module_id, |result| result.progress == 100);
+    assert_eq!(result.criticality, Criticality::Error);
 }
 
 #[test]
