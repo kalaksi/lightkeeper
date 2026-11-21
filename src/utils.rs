@@ -11,6 +11,8 @@ pub use version_number::VersionNumber;
 
 pub mod string_validation;
 
+pub mod host_address;
+
 pub mod shell_command;
 pub use shell_command::{sh_single_quoted, ShellCommand};
 

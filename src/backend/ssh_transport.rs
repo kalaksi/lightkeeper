@@ -272,7 +272,7 @@ fn connect_remote_core_tcp_and_handshake(profile: &CoreConnectionProfile, cancel
         return Err(SshAuthError::other("Invalid SSH username"));
     }
 
-    let addresses = format!("{}:{}", profile.host, port)
+    let addresses = crate::utils::host_address::format_host_port(&profile.host, port)
         .to_socket_addrs()
         .map_err(|error| SshAuthError::other(format!("Failed to resolve {}: {}", profile.host, error)))?;
     let mut last_error = None;

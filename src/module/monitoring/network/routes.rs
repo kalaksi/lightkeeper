@@ -49,49 +49,66 @@ impl MonitoringModule for Routes {
         Some(ModuleSpecification::connector("ssh", "0.0.1"))
     }
 
-    fn get_connector_message(&self, host: Host, _result: DataPoint) -> Result<String, LkError> {
+    fn get_connector_messages(&self, host: Host, _result: DataPoint) -> Result<Vec<String>, LkError> {
         // BusyBox ip does not accept "route ls"; plain "route" works on both BusyBox and iproute2.
         // RHEL-family often lacks /sbin on non-root PATH, so use the absolute path there.
         // Elsewhere prefer bare "ip" so NixOS (no /sbin/ip) and similar still work.
-        if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
+        let ip = if host.platform.is_same_or_greater(platform_info::Flavor::CentOS, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::RedHat, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::AlmaLinux, "7") ||
            host.platform.is_same_or_greater(platform_info::Flavor::Rocky, "7") {
-            Ok(String::from("/sbin/ip route"))
+            "/sbin/ip"
         }
         else if host.platform.os == platform_info::OperatingSystem::Linux {
-            Ok(String::from("ip route"))
+            "ip"
         }
         else {
-            Err(LkError::unsupported_platform())
-        }
+            return Err(LkError::unsupported_platform());
+        };
+
+        Ok(vec![format!("{} route", ip), format!("{} -6 route", ip)])
     }
 
-    fn process_response(&self, _host: Host, response: ResponseMessage, _result: DataPoint) -> Result<DataPoint, String> {
-        if response.is_command_not_found() {
-            return Ok(DataPoint::not_available("ip not available"));
-        }
-        if response.is_error() {
-            return Err(response.message);
-        }
-
+    fn process_responses(&self, _host: Host, responses: Vec<ResponseMessage>, _result: DataPoint) -> Result<DataPoint, String> {
         let mut result = DataPoint::empty();
+        let mut saw_success = false;
+        let mut last_error = None;
 
-        let lines = response.message.lines();
-        for line in lines {
-            // Get substring before word "proto".
-            let route = line.split("proto").next().unwrap_or_default().trim().to_string();
-            let mut parts = route.split("dev");
-            let subnet = parts.next().unwrap_or_default().trim().to_string();
-            let interface = parts.next().unwrap_or_default().trim().to_string();
-
-            if subnet.is_empty() && interface.is_empty() {
-                return Err(format!("Couldn't parse route: {}", line));
+        for response in responses {
+            if response.is_command_not_found() {
+                continue;
+            }
+            if response.is_error() {
+                last_error = Some(response.message);
+                continue;
             }
 
-            let data_point = DataPoint::labeled_value(subnet, interface);
-            result.multivalue.push(data_point);
+            saw_success = true;
+            for line in response.message.lines() {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                // Get substring before word "proto".
+                let route = line.split("proto").next().unwrap_or_default().trim().to_string();
+                let mut parts = route.split("dev");
+                let subnet = parts.next().unwrap_or_default().trim().to_string();
+                let interface = parts.next().unwrap_or_default().trim().to_string();
+
+                if subnet.is_empty() && interface.is_empty() {
+                    return Err(format!("Couldn't parse route: {}", line));
+                }
+
+                result.multivalue.push(DataPoint::labeled_value(subnet, interface));
+            }
         }
+
+        if !saw_success {
+            if let Some(message) = last_error {
+                return Err(message);
+            }
+            return Ok(DataPoint::not_available("ip not available"));
+        }
+
         Ok(result)
     }
 }

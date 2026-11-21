@@ -388,18 +388,20 @@ impl ConnectionModule for Ssh2 {
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
         let stream = Self::connect_tcp(&self_address, self_port, connection_timeout)?;
 
-        log::info!("Connected to {}:{}", self_address, self_port);
+        log::info!("Connected to {}", crate::utils::host_address::format_host_port(&self_address, self_port));
         session_data.session = ssh2::Session::new().expect("Unable to initialize SSH sessions.");
         session_data.session.set_tcp_stream(stream);
         session_data.session.handshake()?;
 
         if let Some((key, key_type)) = session_data.session.host_key() {
             let key_string = Self::get_host_key_id(key_type, key)?;
+            // OpenSSH uses bare host for port 22 and `[host]:port` otherwise (including IPv6).
+            let host = hostname.strip_prefix('[').and_then(|host| host.strip_suffix(']')).unwrap_or(hostname);
             let known_hosts_name = if self_port == 22 {
-                hostname.to_string()
+                host.to_string()
             }
             else {
-                format!("[{}]:{}", hostname, self_port)
+                format!("[{}]:{}", host, self_port)
             };
 
             if key_string == key_id {
@@ -480,7 +482,7 @@ impl Ssh2 {
 
         let connection_timeout = std::time::Duration::from_secs(self.connection_timeout as u64);
         let stream = Self::connect_tcp(address, port, connection_timeout)?;
-        log::info!("Connected to {}:{}", address, port);
+        log::info!("Connected to {}", crate::utils::host_address::format_host_port(address, port));
 
         session_data.session = ssh2::Session::new().expect("Unable to initialize SSH sessions.");
         session_data.session.set_tcp_stream(stream);
@@ -545,7 +547,7 @@ impl Ssh2 {
     }
 
     fn connect_tcp(address: &str, port: u16, timeout: Duration) -> Result<TcpStream, LkError> {
-        let socket_addresses = format!("{}:{}", address, port).to_socket_addrs()?;
+        let socket_addresses = crate::utils::host_address::format_host_port(address, port).to_socket_addrs()?;
         let mut last_error = None;
 
         for socket_address in socket_addresses {

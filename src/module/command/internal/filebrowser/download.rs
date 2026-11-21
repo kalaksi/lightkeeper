@@ -132,12 +132,9 @@ impl RsyncSsh {
         if !is_ssh_username(&self.username) {
             return Err(LkError::other("Invalid or empty SSH username"));
         }
-        // Bracketed IPv6 is valid in `user@[::1]:path`; bare IPv6 is not (becomes daemon `::`).
-        let address_ok =
-            is_hostname(address) || is_ipv4_host(address) || is_bracketed_ipv6_host(address);
-        if !address_ok {
-            return Err(LkError::other("Invalid host address or username"));
-        }
+        // Bare IPv6 is bracketed here; unbracketed would be parsed as an rsync daemon URL.
+        let address = crate::utils::host_address::bracketed_host(address)
+            .ok_or_else(|| LkError::other("Invalid host address or username"))?;
         if !is_rsync_remote_path(remote_path) {
             return Err(LkError::other("Invalid remote path"));
         }

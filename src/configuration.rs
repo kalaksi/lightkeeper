@@ -378,7 +378,10 @@ impl HostSettings {
     }
 
     pub fn is_default_address(address: &String) -> bool {
-        address.is_empty() || address == "0.0.0.0"
+        address.is_empty()
+            || address == "0.0.0.0"
+            || address == "::"
+            || address == "[::]"
     }
 }
 

@@ -95,7 +95,7 @@ TableView {
                 OptionalText {
                     anchors.verticalCenter: parent.verticalCenter
                     placeholder: "IP address unknown"
-                    text: value == "0.0.0.0" ? "" : value
+                    text: value == "0.0.0.0" || value == "::" ? "" : value
                 }
             }
         }

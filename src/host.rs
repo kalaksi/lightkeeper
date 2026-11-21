@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-use std::{net::IpAddr, net::Ipv4Addr, net::ToSocketAddrs, str::FromStr};
+use std::{net::IpAddr, net::Ipv4Addr, net::ToSocketAddrs};
 
 use serde::{Deserialize, Serialize};
 
@@ -28,16 +28,21 @@ impl Host {
             return Err(LkError::new(ErrorKind::InvalidConfig, "Invalid host name"));
         }
 
+        // Normalize unset/unspecified to IPv4 0.0.0.0 (config sentinel).
+        let parsed_ip = match utils::host_address::parse_ip_literal(ip_address) {
+            Some(address) if !address.is_unspecified() => address,
+            Some(_) => IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            None if ip_address.is_empty() => IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            None => {
+                log::error!("Failed to parse IP address {}", ip_address);
+                IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+            }
+        };
+
         let new = Host {
             name: name.to_string(),
             fqdn: fqdn.to_string(),
-            ip_address: match Ipv4Addr::from_str(ip_address) {
-                Ok(address) => IpAddr::V4(address),
-                Err(error) => {
-                    log::error!("Failed to parse IP address {}: {}", ip_address, error);
-                    IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))
-                }
-            },
+            ip_address: parsed_ip,
             platform: PlatformInfo::new(),
             settings: settings.to_vec(),
             is_root: false,
@@ -50,7 +55,7 @@ impl Host {
         Host {
             name: name.to_string(),
             fqdn: String::default(),
-            ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            ip_address: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             platform: PlatformInfo::default(),
             settings: settings.to_vec(),
             is_root: false,
@@ -64,13 +69,15 @@ impl Host {
                 return Err(format!("Host {} does not have FQDN or IP address defined.", self.name));
             }
             else {
-                // Resolve FQDN and get the first IP address.
-                let mut addresses = match format!("{}:0", self.fqdn).to_socket_addrs() {
-                    Ok(addresses) => addresses,
+                // Prefer AAAA when present so dual-stack FQDNs get usable IPv6.
+                let addresses = match format!("{}:0", self.fqdn).to_socket_addrs() {
+                    Ok(addresses) => addresses.collect::<Vec<_>>(),
                     Err(error) => return Err(format!("Failed to resolve {}: {}", self.fqdn, error)),
                 };
 
-                if let Some(address) = addresses.next() {
+                let address = addresses.iter().find(|address| address.is_ipv6())
+                    .or_else(|| addresses.first());
+                if let Some(address) = address {
                     self.ip_address = address.ip();
                 }
                 else {
@@ -103,7 +110,7 @@ impl Default for Host {
         Host {
             name: String::default(),
             fqdn: String::default(),
-            ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            ip_address: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             platform: PlatformInfo::default(),
             settings: Vec::default(),
             is_root: false,

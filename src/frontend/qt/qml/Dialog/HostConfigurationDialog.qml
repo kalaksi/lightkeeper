@@ -64,7 +64,11 @@ LightkeeperDialog {
         }
 
         if (Utils.isIpv4OrIpv6Address(hostAddressField.text)) {
-            newSettings.address = hostAddressField.text
+            let address = hostAddressField.text.trim()
+            if (address.startsWith("[") && address.endsWith("]")) {
+                address = address.slice(1, -1)
+            }
+            newSettings.address = address
         }
         else {
             newSettings.fqdn = hostAddressField.text
