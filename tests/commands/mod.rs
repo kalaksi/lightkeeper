@@ -1,3 +1,4 @@
+pub mod custom_command;
 pub mod docker;
 pub mod filebrowser;
 pub mod packages;

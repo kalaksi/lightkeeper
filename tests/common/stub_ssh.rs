@@ -111,7 +111,11 @@ impl ConnectionModule for StubSsh2 {
             return Ok(ResponseMessage::new_partial(partial_message.to_string()))
         }
         else {
-            Ok(ResponseMessage::new(strip_newline(&response.message), response.return_code))
+            // Match real SSH receive_partial eof: put the final chunk in message_increment.
+            Ok(ResponseMessage::new_partial_complete(
+                strip_newline(&response.message),
+                response.return_code,
+            ))
         }
     }
 
@@ -129,7 +133,7 @@ impl ConnectionModule for StubSsh2 {
             let response = partial_response.message.to_string();
             let return_code = partial_response.return_code;
             partial_responses.remove(&invocation_id);
-            return Ok(ResponseMessage::new(strip_newline(&response), return_code));
+            return Ok(ResponseMessage::new_partial_complete(strip_newline(&response), return_code));
         }
     }
 
