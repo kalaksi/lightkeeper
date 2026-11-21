@@ -19,7 +19,6 @@ RowLayout {
     property string settingKey: ""
     // Current config value: placeholder, plaintext or empty.
     property string saveValue: ""
-    property string warningText: ""
     // Set when the user has typed or deleted. Parent stores `text` on save only if modified.
     property bool modified: false
     property alias text: field.text
@@ -64,26 +63,6 @@ RowLayout {
 
         Layout.preferredWidth: field.implicitHeight
         Layout.alignment: Qt.AlignVCenter
-    }
-
-    ImageButton {
-        id: infoButton
-        imageSource: "qrc:/main/images/alert/info"
-        size: field.implicitHeight * 0.8
-        color: root.warningText !== "" ? Theme.criticalityColor("warning") : "transparent"
-        onClicked: infoTip.visible ? infoTip.close() : infoTip.open()
-
-        Layout.preferredWidth: field.implicitHeight
-        Layout.alignment: Qt.AlignVCenter
-
-        ToolTip {
-            id: infoTip
-            parent: infoButton
-            delay: 0
-            timeout: -1
-            text: "Secrets use the backend configured in Preferences."
-                + (root.warningText !== "" ? "\n" + root.warningText : "")
-        }
     }
 
     function placeholder() {

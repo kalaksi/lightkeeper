@@ -67,9 +67,6 @@ pub struct ConfigManagerModel {
     setCoreConnection: qt_method!(fn(&self, profile: QVariantMap)),
     storeCoreSecret: qt_method!(fn(&self, setting_key: QString, secret_value: QString) -> QVariantMap),
     removeCoreSecret: qt_method!(fn(&self, setting_key: QString)),
-    secretsBackendWarning: qt_method!(fn(&self, config_value: QString) -> QString),
-    coreSecretsBackendWarning: qt_method!(fn(&self, config_value: QString) -> QString),
-
     //
     // Host configuration
     //
@@ -603,47 +600,6 @@ impl ConfigManagerModel {
                 },
             ),
         )
-    }
-
-    fn secretsBackendWarning(&self, config_value: QString) -> QString {
-        QString::from(Self::secrets_backend_mismatch_warning(
-            &config_value.to_string(),
-            self.effective_secrets_backend(),
-        ))
-    }
-
-    fn coreSecretsBackendWarning(&self, config_value: QString) -> QString {
-        QString::from(Self::secrets_backend_mismatch_warning(
-            &config_value.to_string(),
-            self.effective_core_secrets_backend(),
-        ))
-    }
-
-    /// Empty when the config value already matches the active write backend (or is unset).
-    fn secrets_backend_label(backend: &str) -> String {
-        match backend {
-            secrets_manager::KEYRING_BACKEND => String::from("Desktop keyring"),
-            secrets_manager::SECRETSFILE_BACKEND => String::from("Lightkeeper"),
-            secrets_manager::PLAINTEXT_BACKEND => String::from("plaintext"),
-            other => other.to_string(),
-        }
-    }
-
-    fn secrets_backend_mismatch_warning(config_value: &str, effective_backend: &str) -> String {
-        if config_value.is_empty() {
-            return String::new();
-        }
-        let stored = secrets_manager::detect_secret_backend(config_value);
-        if stored == effective_backend {
-            String::new()
-        }
-        else {
-            format!(
-                "Currently stored with {}. New save will use {}.",
-                Self::secrets_backend_label(stored),
-                Self::secrets_backend_label(effective_backend)
-            )
-        }
     }
 
     fn removeCoreSecret(&self, setting_key: QString) {

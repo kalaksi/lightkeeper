@@ -147,7 +147,6 @@ Item {
                             visible: methodCombo.currentValue === "password"
                             settingKey: "password"
                             saveValue: passwordField._initialValue
-                            warningText: LK.config.secretsBackendWarning(passwordField._initialValue)
 
                             Layout.fillWidth: true
                         }
@@ -169,7 +168,6 @@ Item {
                             visible: methodCombo.currentValue === "key"
                             settingKey: "private_key_passphrase"
                             saveValue: passphraseField._initialValue
-                            warningText: LK.config.secretsBackendWarning(passphraseField._initialValue)
 
                             Layout.fillWidth: true
                         }

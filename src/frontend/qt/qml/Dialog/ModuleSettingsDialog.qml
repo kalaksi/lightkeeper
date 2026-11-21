@@ -230,7 +230,6 @@ LightkeeperDialog {
                                 saveValue: toggleSwitch.checked || root._hostScoped
                                     ? settingColumn._secretSaveValue
                                     : ""
-                                warningText: LK.config.secretsBackendWarning(settingColumn._secretSaveValue)
 
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter

@@ -392,7 +392,6 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     settingKey: "password"
                     saveValue: root._passwordSaveValue
-                    warningText: LK.config.coreSecretsBackendWarning(root._passwordSaveValue)
                 }
 
                 Label {
@@ -423,7 +422,6 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     settingKey: "private_key_passphrase"
                     saveValue: root._passphraseSaveValue
-                    warningText: LK.config.coreSecretsBackendWarning(root._passphraseSaveValue)
                 }
 
                 Label {
