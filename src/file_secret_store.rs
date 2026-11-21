@@ -563,7 +563,7 @@ impl SecretStore for FileSecretStore {
         atomic_write(&self.key_path, Zeroizing::new(BASE64.encode(key.as_slice())).as_bytes())?;
         *state = KeyState::Unlocked { key, protected: false };
         log::warn!(
-            "Removed passphrase from secret key {}; the key is now stored unencrypted",
+            "Removed passphrase from secret key {}",
             self.key_path.display()
         );
         Ok(())

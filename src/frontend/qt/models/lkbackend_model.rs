@@ -357,7 +357,13 @@ impl LkBackend {
         let mut command_backend = RemoteCommandBackend::new(client.clone());
         command_backend.set_preferences(self.config.borrow().main_config_ref().preferences.clone());
         self.command.borrow_mut().set_backend(Box::new(command_backend));
-        self.metrics.borrow_mut().stop();
+        if let Some(mut metrics_manager) = self.metrics.borrow_mut().metrics_manager.take() {
+            thread::spawn(move || {
+                if let Err(error) = metrics_manager.stop() {
+                    ::log::error!("Error stopping metrics server: {}", error);
+                }
+            });
+        }
         self.metrics.borrow_mut().set_remote_client(Some(client));
         self.sync_models_from_config();
     }
@@ -982,13 +988,11 @@ impl LkBackend {
             }
         }
 
-        self.command.borrow_mut().stop();
         if !self.using_remote {
-            if let Some(core) = &self.core {
-                let mut core = core.borrow_mut();
-                core.host_manager.borrow_mut().stop();
-                core.connection_manager.stop();
-            }
+            self.detach_local_producers();
+        }
+        else {
+            self.command.borrow_mut().stop();
         }
         self.metrics.borrow_mut().stop();
     }

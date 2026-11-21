@@ -44,7 +44,7 @@ pub struct MetricsManagerModel {
     //
     // Private properties
     //
-    metrics_manager: Option<metrics::MetricsManager>,
+    pub(crate) metrics_manager: Option<metrics::MetricsManager>,
     remote_client: Option<Arc<RemoteCoreClient>>,
     hosts_config: configuration::Hosts,
     display_options: configuration::DisplayOptions,
@@ -68,7 +68,7 @@ impl MetricsManagerModel {
 
     pub fn stop(&mut self) {
         self.pending_alert_queries.clear();
-        if let Some(metrics_manager) = self.metrics_manager.as_mut() {
+        if let Some(mut metrics_manager) = self.metrics_manager.take() {
             // TODO: notify UI?
             if let Err(error) = metrics_manager.stop() {
                 ::log::error!("Error stopping metrics server: {}", error);

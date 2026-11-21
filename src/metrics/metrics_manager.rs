@@ -31,6 +31,8 @@ use crate::module::monitoring::DataPoint;
 
 /// In milliseconds.
 const SERVICE_EXIT_WAIT_TIME: u64 = 5000;
+/// Extra wait after SIGTERM before SIGKILL (flatpak-spawn needs time to forward TERM).
+const SERVICE_TERM_WAIT_TIME: u64 = 2000;
 const LMSERVER_VERSION: &str = "v0.4.6";
 
 pub struct MetricsManager {
@@ -116,8 +118,10 @@ impl MetricsManager {
             // Logs are printed to stderr by default. With flatpak, access is further restricted.
             let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
             let mut process_handle = if is_flatpak {
+                // --watch-bus: portal kills lmserver if flatpak-spawn disappears (e.g. SIGKILL).
                 Command::new("flatpak-spawn")
                     .arg("--no-network")
+                    .arg("--watch-bus")
                     .arg(lmserver_path)
                     .arg("-d")
                     .arg(data_dir)
@@ -200,7 +204,7 @@ impl MetricsManager {
 
         // Socket gone or stale (e.g. peer closed lmserver). Clear child handle and spawn again.
         if let Some(mut process_handle) = self.process_handle.take() {
-            let _ = process_handle.kill();
+            Self::terminate_child(&mut process_handle);
             let _ = process_handle.wait();
         }
         if let Some(log_thread) = self.log_thread.take() {
@@ -316,26 +320,34 @@ impl MetricsManager {
 
         if let Some(mut process_handle) = self.process_handle.take() {
             if !stop_success {
-                match process_handle.kill() {
-                    Ok(_) => stop_success = true,
-                    Err(error) => log::error!("Failed to kill process: {}", error),
-                }
+                Self::terminate_child(&mut process_handle);
             }
 
             let mut waited = 0;
+            let mut sent_term = false;
             loop {
                 if let Ok(Some(_)) = process_handle.try_wait() {
                     stop_success = true;
                     break;
                 }
 
-                if waited >= SERVICE_EXIT_WAIT_TIME {
-                    log::warn!("Forcing metrics server to stop.");
-                    match process_handle.kill() {
-                        Ok(_) => stop_success = true,
-                        Err(error) => log::error!("Failed to kill process: {}", error),
-                    }
+                if waited >= SERVICE_EXIT_WAIT_TIME && !sent_term {
+                    // SIGTERM so flatpak-spawn can forward to lmserver (SIGKILL cannot).
+                    log::warn!("Metrics server still running, sending SIGTERM.");
+                    Self::terminate_child(&mut process_handle);
+                    sent_term = true;
+                    waited = 0;
+                    continue;
+                }
 
+                if sent_term && waited >= SERVICE_TERM_WAIT_TIME {
+                    // SIGKILL is not forwarded by flatpak-spawn. With --watch-bus, killing the
+                    // wrapper drops its bus connection so the portal can tear down lmserver.
+                    log::warn!("Forcing metrics server to stop.");
+                    if let Err(error) = process_handle.kill() {
+                        log::error!("Failed to kill process: {}", error);
+                    }
+                    stop_success = true;
                     break;
                 }
 
@@ -366,6 +378,16 @@ impl MetricsManager {
         }
 
         Ok(())
+    }
+
+    /// Prefer SIGTERM over Child::kill() (SIGKILL): flatpak-spawn only forwards catchable signals.
+    fn terminate_child(child: &mut process::Child) {
+        let pid = child.id() as libc::pid_t;
+        if pid > 0 {
+            unsafe {
+                libc::kill(pid, libc::SIGTERM);
+            }
+        }
     }
 
     pub fn insert_metrics(&mut self, host_id: &str, monitor_id: &str, metrics: &[super::Metric]) -> Result<u64, LkError> {
