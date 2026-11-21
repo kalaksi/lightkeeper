@@ -44,7 +44,7 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
-    <release version="0.53.1" date="2026-11-21">
+    <release version="0.53.2" date="2026-11-21">
       <description>
         <ul>
           <li>Change license from GPL to AGPL</li>

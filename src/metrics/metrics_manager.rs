@@ -330,7 +330,7 @@ impl MetricsManager {
                 Self::terminate_child(&mut process_handle);
                 exited = Self::wait_for_child_exit(&mut process_handle, SERVICE_TERM_WAIT_TIME);
                 if !exited {
-                    log::error!("Metrics server did not exit after SIGTERM; may still be running.");
+                    log::error!("Metrics server did not exit after SIGTERM.");
                 }
             }
             exited

@@ -1,6 +1,6 @@
 [package]
 name = "lightkeeper"
-version = "0.53.1"
+version = "0.53.2"
 edition = "2021"
 rust-version = "1.88"
 license = "AGPL-3.0-or-later"
