@@ -4,6 +4,10 @@ hosts:
     # Alternatively:
     # fqdn: localhost
 
+    # Allow passwordless sudo for commands that need higher privileges.
+    settings:
+      - use_sudo
+
     # Groups are defined in groups.yml
     groups:
       - defaults

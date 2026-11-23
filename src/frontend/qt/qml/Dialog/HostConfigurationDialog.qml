@@ -168,11 +168,11 @@ LightkeeperDialog {
 
                 TextField {
                     id: hostIdField
+                    enabled: root.hostId === "" || root.hostId === "new-host-id"
                     Layout.fillWidth: true
                     placeholderText: "Unique name for host..."
                     placeholderTextColor: Theme.textColorDark
                     text: root.hostId === "new-host-id" ? "" : root.hostId
-                    readOnly: root.hostId !== "" && root.hostId !== "new-host-id"
                     validator: RegularExpressionValidator {
                         regularExpression: /[a-zA-Z\d\-\.]+/
                     }
