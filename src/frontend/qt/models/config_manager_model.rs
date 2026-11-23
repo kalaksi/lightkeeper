@@ -1504,6 +1504,9 @@ impl ConfigManagerModel {
         let command_settings = serde_json::from_str::<HashMap<String, Vec<ModuleSetting>>>(&command_settings_json.to_string()).unwrap();
 
         let group = self.groups_config.groups.get_mut(&group_id).unwrap();
+        let previous_connectors: Vec<String> = group.connectors.keys().cloned().collect();
+        let previous_monitors: Vec<String> = group.monitors.keys().cloned().collect();
+        let previous_commands: Vec<String> = group.commands.keys().cloned().collect();
 
         group.connectors.clear();
         for (module_id, settings) in connector_settings {
@@ -1533,6 +1536,32 @@ impl ConfigManagerModel {
                 .collect::<BTreeMap<String, String>>();
 
             group.commands.entry(module_id).or_insert(Default::default()).settings = settings;
+        }
+
+        // Intentionally removed modules should not be re-offered by ConfigHelper on next launch.
+        let removed_connectors: Vec<String> = previous_connectors.into_iter()
+            .filter(|id| !group.connectors.contains_key(id))
+            .collect();
+        let removed_monitors: Vec<String> = previous_monitors.into_iter()
+            .filter(|id| !group.monitors.contains_key(id))
+            .collect();
+        let removed_commands: Vec<String> = previous_commands.into_iter()
+            .filter(|id| !group.commands.contains_key(id))
+            .collect();
+        for module_id in removed_connectors {
+            if !group.config_helper.ignored_connectors.contains(&module_id) {
+                group.config_helper.ignored_connectors.push(module_id);
+            }
+        }
+        for module_id in removed_monitors {
+            if !group.config_helper.ignored_monitors.contains(&module_id) {
+                group.config_helper.ignored_monitors.push(module_id);
+            }
+        }
+        for module_id in removed_commands {
+            if !group.config_helper.ignored_commands.contains(&module_id) {
+                group.config_helper.ignored_commands.push(module_id);
+            }
         }
     }
 
@@ -1582,9 +1611,21 @@ impl ConfigManagerModel {
     fn ignoreFromConfigHelper(&mut self, group_name: QString, commands: QStringList, monitors: QStringList, connectors: QStringList) {
         let group_name = group_name.to_string();
         if let Some(group_settings) = self.groups_config.groups.get_mut(&group_name) {
-            group_settings.config_helper.ignored_commands = commands.into_iter().map(ToString::to_string).collect();
-            group_settings.config_helper.ignored_monitors = monitors.into_iter().map(ToString::to_string).collect();
-            group_settings.config_helper.ignored_connectors = connectors.into_iter().map(ToString::to_string).collect();
+            for module_id in commands.into_iter().map(|id| id.to_string()) {
+                if !group_settings.config_helper.ignored_commands.contains(&module_id) {
+                    group_settings.config_helper.ignored_commands.push(module_id);
+                }
+            }
+            for module_id in monitors.into_iter().map(|id| id.to_string()) {
+                if !group_settings.config_helper.ignored_monitors.contains(&module_id) {
+                    group_settings.config_helper.ignored_monitors.push(module_id);
+                }
+            }
+            for module_id in connectors.into_iter().map(|id| id.to_string()) {
+                if !group_settings.config_helper.ignored_connectors.contains(&module_id) {
+                    group_settings.config_helper.ignored_connectors.push(module_id);
+                }
+            }
         }
     }
 
