@@ -392,6 +392,7 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     settingKey: "password"
                     saveValue: root._passwordSaveValue
+                    useCoreSecretsBackend: true
                 }
 
                 Label {
@@ -422,6 +423,7 @@ LightkeeperDialog {
                     Layout.fillWidth: true
                     settingKey: "private_key_passphrase"
                     saveValue: root._passphraseSaveValue
+                    useCoreSecretsBackend: true
                 }
 
                 Label {

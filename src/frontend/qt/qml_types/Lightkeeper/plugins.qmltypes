@@ -273,6 +273,26 @@ Module {
             name: "removeCoreSecret"
             Parameter { name: "setting_key"; type: "string" }
         }
+        Method {
+            name: "secretsFieldInfo"
+            Parameter { name: "config_value"; type: "string" }
+            type: "string"
+        }
+        Method {
+            name: "coreSecretsFieldInfo"
+            Parameter { name: "config_value"; type: "string" }
+            type: "string"
+        }
+        Method {
+            name: "secretsBackendWarning"
+            Parameter { name: "config_value"; type: "string" }
+            type: "string"
+        }
+        Method {
+            name: "coreSecretsBackendWarning"
+            Parameter { name: "config_value"; type: "string" }
+            type: "string"
+        }
         Method { name: "addHost"; Parameter { name: "host_name"; type: "string" } }
         Method { name: "removeHost"; Parameter { name: "host_name"; type: "string" } }
         Method {
