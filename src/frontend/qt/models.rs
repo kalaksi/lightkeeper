@@ -41,4 +41,7 @@ pub use file_chooser_model::FileChooserModel;
 pub mod metrics_manager_model;
 pub use metrics_manager_model::MetricsManagerModel;
 
+pub mod news_manager_model;
+pub use news_manager_model::NewsManagerModel;
+
 pub mod qmetatypes;

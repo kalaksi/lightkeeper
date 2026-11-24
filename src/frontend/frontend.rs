@@ -28,6 +28,8 @@ pub enum UIUpdate {
         hosts_secs_left: u64,
         certs_secs_left: u64,
     },
+    /// Status-bar news feed items were refreshed.
+    NewsUpdated,
     CoreConnectionChanged(),
     FatalError(),
     Stop(),

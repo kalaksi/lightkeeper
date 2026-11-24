@@ -21,6 +21,25 @@ preferences:
   secrets_backend: "keyring"
   show_charts: true
 
+# Status-bar news feed (RSS/Atom). Configure from the status bar news menu.
+news:
+  enabled: true
+  # Seconds between polls. 0 disables automatic polling (manual refresh still works).
+  refresh_interval: 3600
+  feeds:
+    - name: "CERT/CC Vulnerability Notes"
+      url: "https://www.kb.cert.org/vuls/atomfeed/"
+      enabled: true
+    - name: "Debian Security"
+      url: "https://www.debian.org/security/dsa.rdf"
+      enabled: true
+    - name: "Fedora Security Announce"
+      url: "https://lists.fedoraproject.org/archives/list/security-announce@lists.fedoraproject.org/feed.rss"
+      enabled: false
+    - name: "Red Hat Security Announce"
+      url: "https://listman.redhat.com/archives/rhsa-announce.mbox/rss"
+      enabled: false
+
 # Control category order, command buttons orders, colors. Defaults should be good.
 # NOTE: Currently, you shouldn't manually edit display_options at all.
 display_options:

@@ -47,6 +47,8 @@ pub struct Configuration {
     pub preferences: Preferences,
     #[serde(default)]
     pub display_options: DisplayOptions,
+    #[serde(default)]
+    pub news: NewsConfig,
     // Obsolete field:
     #[serde(default, skip_serializing_if = "Configuration::always")]
     pub cache_settings: Option<serde_yaml::Value>,
@@ -55,6 +57,44 @@ pub struct Configuration {
     /// Configuration errors. Will be shown to the user in the UI.
     #[serde(skip)]
     pub config_errors: Vec<String>,
+}
+
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct NewsFeed {
+    pub name: String,
+    pub url: String,
+    #[serde(default = "DisplayOptions::default_to_true")]
+    pub enabled: bool,
+}
+
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct NewsConfig {
+    /// When false, polling and status-bar news are off.
+    #[serde(default = "DisplayOptions::default_to_true")]
+    pub enabled: bool,
+    /// Seconds between feed polls. 0 disables polling (manual refresh still works).
+    #[serde(default = "NewsConfig::default_refresh_interval")]
+    pub refresh_interval: u64,
+    #[serde(default = "NewsConfig::default_feeds")]
+    pub feeds: Vec<NewsFeed>,
+}
+
+impl NewsConfig {
+    pub fn default_refresh_interval() -> u64 {
+        Self::default().refresh_interval
+    }
+
+    pub fn default_feeds() -> Vec<NewsFeed> {
+        Self::default().feeds
+    }
+}
+
+impl Default for NewsConfig {
+    fn default() -> Self {
+        get_default_main_config().news
+    }
 }
 
 impl Default for Preferences {
@@ -1006,6 +1046,7 @@ impl Configuration {
 
                 let config_without_display_options = Configuration {
                     preferences: config.preferences.clone(),
+                    news: config.news.clone(),
                     cache_settings: config.cache_settings.clone(),
                     display_options: actual_display_options,
                     schema_version: config.schema_version.clone(),

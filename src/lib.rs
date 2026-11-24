@@ -24,6 +24,7 @@ pub mod enums;
 // Made public for integration tests
 pub mod frontend;
 pub mod metrics;
+pub mod news;
 pub mod file_handler;
 pub mod remote_core;
 pub mod backend;
@@ -236,6 +237,11 @@ pub fn run(
         None
     };
 
+    let news_manager = Some(news::NewsManager::new(
+        main_config.news.clone(),
+        frontend.new_update_sender(),
+    ));
+
     // Observer has to be added before the frontend takes its initial display data in start(). Otherwise, initial
     // data points processed in between are lost and initial status summary icons are randomly not shown.
     let update_sender = frontend.new_update_sender();
@@ -248,6 +254,7 @@ pub fn run(
             core,
             secret_store,
             metrics_manager,
+            news_manager,
             false,
             skip_core_auto_connect,
         ))

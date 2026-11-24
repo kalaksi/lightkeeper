@@ -259,6 +259,12 @@ Module {
         Method { name: "getCertificateMonitors"; type: "QStringList" }
         Method { name: "addCertificateMonitor"; Parameter { name: "address"; type: "string" } }
         Method { name: "removeCertificateMonitor"; Parameter { name: "address"; type: "string" } }
+        Method { name: "getNewsConfigJson"; type: "string" }
+        Method {
+            name: "setNewsConfigJson"
+            type: "bool"
+            Parameter { name: "config_json"; type: "string" }
+        }
         Method { name: "getSavedCoreAddresses"; type: "QStringList" }
         Method { name: "addSavedCoreAddress"; Parameter { name: "address"; type: "string" } }
         Method { name: "getCoreConnection"; type: "QVariantMap" }
@@ -595,6 +601,18 @@ Module {
     }
 
     Component {
+        name: "NewsManagerModel"
+        prototype: "QObject"
+
+        Property { name: "latestTitle"; type: "string"; isReadonly: true; }
+
+        Method { name: "getItemsJson"; type: "string" }
+        Method { name: "refreshNow" }
+
+        Signal { name: "newsChanged" }
+    }
+
+    Component {
         name: "MetricsManagerModel"
         prototype: "QObject"
 
@@ -646,9 +664,11 @@ Module {
         Property { name: "hosts"; type: "HostDataManagerModel"; isReadonly: true; }
         Property { name: "config"; type: "ConfigManagerModel"; isReadonly: true; }
         Property { name: "metrics"; type: "MetricsManagerModel"; isReadonly: true; }
+        Property { name: "news"; type: "NewsManagerModel"; isReadonly: true; }
 
         Method { name: "receiveUpdates" }
         Method { name: "reload" }
+        Method { name: "applyNewsConfig" }
         Method {
             name: "acknowledgeMonitorEntry"
             Parameter { name: "host_id"; type: "string" }

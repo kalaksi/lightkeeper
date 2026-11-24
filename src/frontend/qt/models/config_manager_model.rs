@@ -66,6 +66,9 @@ pub struct ConfigManagerModel {
     addCertificateMonitor: qt_method!(fn(&self, address: QString)),
     removeCertificateMonitor: qt_method!(fn(&self, address: QString)),
 
+    getNewsConfigJson: qt_method!(fn(&self) -> QString),
+    setNewsConfigJson: qt_method!(fn(&mut self, config_json: QString) -> bool),
+
     getSavedCoreAddresses: qt_method!(fn(&self) -> QStringList),
     addSavedCoreAddress: qt_method!(fn(&self, address: QString)),
     getCoreConnection: qt_method!(fn(&self) -> QVariantMap),
@@ -229,21 +232,25 @@ impl ConfigManagerModel {
         Ok((self.main_config.clone(), hosts_config, reset_hosts))
     }
 
-    /// Preferences for launching desktop programs always come from the local config, so that a remote core
-    /// can't make the desktop run arbitrary commands.
+    /// Desktop-only settings always come from the local config: launch prefs (so a remote core can't
+    /// make the desktop run arbitrary commands) and status-bar news (not a core feature).
     fn with_local_desktop_preferences(&self, mut main_config: Configuration) -> Configuration {
-        let preferences = &mut main_config.preferences;
         match Configuration::read(&self.config_dir) {
             Ok((local_config, _, _)) => {
-                preferences.text_editor = local_config.preferences.text_editor;
-                preferences.terminal = local_config.preferences.terminal;
-                preferences.terminal_args = local_config.preferences.terminal_args;
-                preferences.secrets_backend = Self::sanitize_local_secrets_backend(
-                    &local_config.preferences.secrets_backend,
-                );
+                {
+                    let preferences = &mut main_config.preferences;
+                    preferences.text_editor = local_config.preferences.text_editor;
+                    preferences.terminal = local_config.preferences.terminal;
+                    preferences.terminal_args = local_config.preferences.terminal_args;
+                    preferences.secrets_backend = Self::sanitize_local_secrets_backend(
+                        &local_config.preferences.secrets_backend,
+                    );
+                }
+                main_config.news = local_config.news;
             }
             Err(error) => {
                 ::log::error!("Failed to read local configuration, using internal editor and terminal: {}", error);
+                let preferences = &mut main_config.preferences;
                 preferences.text_editor = configuration::INTERNAL.to_string();
                 preferences.terminal = configuration::INTERNAL.to_string();
                 preferences.terminal_args = Vec::new();
@@ -521,6 +528,23 @@ impl ConfigManagerModel {
         {
             self.error(QString::from(error.to_string()));
         }
+    }
+
+    fn getNewsConfigJson(&self) -> QString {
+        QString::from(serde_json::to_string(&self.main_config.news).unwrap_or_else(|_| String::from("{}")))
+    }
+
+    fn setNewsConfigJson(&mut self, config_json: QString) -> bool {
+        let Ok(config) = serde_json::from_str::<configuration::NewsConfig>(&config_json.to_string()) else {
+            return false;
+        };
+        self.main_config.news = config;
+        // News is a desktop UI feature; always persist to the local main config file.
+        if let Err(error) = Configuration::write_main_config(&self.config_dir, &self.main_config) {
+            self.error(QString::from(format!("Failed to write news configuration: {}", error)));
+            return false;
+        }
+        true
     }
 
     fn getSavedCoreAddresses(&self) -> QStringList {

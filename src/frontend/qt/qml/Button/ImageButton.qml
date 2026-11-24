@@ -57,9 +57,11 @@ Item {
         Row {
             anchors.centerIn: parent
             spacing: Theme.spacingNormal
+            height: Math.max(buttonImage.height, buttonText.visible ? buttonText.implicitHeight : 0)
 
             OverlayImage {
                 id: buttonImage
+                anchors.verticalCenter: parent.verticalCenter
                 source: root.imageSource
                 width: root.getIconWidth()
                 height: root.getIconHeight()
@@ -68,6 +70,7 @@ Item {
 
             NormalText {
                 id: buttonText
+                anchors.verticalCenter: parent.verticalCenter
                 visible: root.text !== ""
                 text: root.text
             }
@@ -112,9 +115,11 @@ Item {
         Row {
             anchors.centerIn: parent
             spacing: Theme.spacingNormal
+            height: Math.max(roundButtonImage.height, roundButtonText.visible ? roundButtonText.implicitHeight : 0)
 
             OverlayImage {
                 id: roundButtonImage
+                anchors.verticalCenter: parent.verticalCenter
                 source: root.imageSource
                 color: root.color
                 width: root.getIconWidth()
@@ -123,6 +128,7 @@ Item {
 
             NormalText {
                 id: roundButtonText
+                anchors.verticalCenter: parent.verticalCenter
                 visible: root.text !== ""
                 text: root.text
             }

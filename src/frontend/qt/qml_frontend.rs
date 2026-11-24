@@ -16,6 +16,7 @@ use super::resources;
 use super::resources_qml;
 use crate::frontend::hot_reload;
 use crate::metrics::MetricsManager;
+use crate::news::NewsManager;
 use crate::{
     backend::{CommandBackend, ConfigBackend},
     configuration,
@@ -77,6 +78,7 @@ impl QmlFrontend {
         core: Rc<RefCell<CoreComponents>>,
         secret_store: Arc<dyn SecretStore>,
         metrics_manager: Option<MetricsManager>,
+        news_manager: Option<NewsManager>,
         skip_connection_processing: bool,
         skip_core_auto_connect: bool,
     ) -> ExitReason {
@@ -94,6 +96,7 @@ impl QmlFrontend {
             HostDataManagerModel::new(display_data, self.main_config.clone(), self.hosts_config.clone()),
             CommandHandlerModel::new(command_backend, self.main_config.clone()),
             MetricsManagerModel::new(metrics_manager, self.hosts_config.clone(), self.main_config.display_options.clone()),
+            NewsManagerModel::new(news_manager),
             ConfigManagerModel::new(
                 self.config_dir.clone(),
                 self.main_config.clone(),

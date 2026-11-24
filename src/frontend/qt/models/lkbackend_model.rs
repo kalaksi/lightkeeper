@@ -29,7 +29,8 @@ use super::{
     CommandHandlerModel,
     ConfigManagerModel,
     HostDataManagerModel,
-    MetricsManagerModel
+    MetricsManagerModel,
+    NewsManagerModel,
 };
 
 
@@ -43,6 +44,7 @@ pub struct LkBackend {
     pub hosts: qt_property!(RefCell<HostDataManagerModel>; CONST),
     pub config: qt_property!(RefCell<ConfigManagerModel>; CONST),
     pub metrics: qt_property!(RefCell<MetricsManagerModel>; CONST),
+    pub news: qt_property!(RefCell<NewsManagerModel>; CONST),
 
     //
     // Slots
@@ -50,6 +52,7 @@ pub struct LkBackend {
 
     receiveUpdates: qt_method!(fn(&self)),
     reload: qt_method!(fn(&mut self)),
+    applyNewsConfig: qt_method!(fn(&mut self)),
     acknowledgeMonitorEntry: qt_method!(fn(&mut self, host_id: QString, monitor_id: QString, entry_id: QString, acknowledged: bool) -> bool),
     stop: qt_method!(fn(&mut self)),
 
@@ -128,6 +131,7 @@ impl LkBackend {
         host_data_model: HostDataManagerModel,
         command_model: CommandHandlerModel,
         metrics_model: MetricsManagerModel,
+        news_model: NewsManagerModel,
         config_model: ConfigManagerModel,
         skip_connection_processing: bool,
         skip_core_auto_connect: bool,
@@ -139,6 +143,7 @@ impl LkBackend {
             command: RefCell::new(command_model),
             config: RefCell::new(config_model),
             metrics: RefCell::new(metrics_model),
+            news: RefCell::new(news_model),
             update_sender_prototype: Some(update_sender_prototype),
             update_receiver: Some(update_receiver),
             update_receiver_thread: None,
@@ -240,6 +245,13 @@ impl LkBackend {
             }
         });
 
+        let self_ptr = QPointer::from(&*self);
+        let process_news_update = qmetaobject::queued_callback(move |(): ()| {
+            if let Some(self_pinned) = self_ptr.as_pinned() {
+                self_pinned.borrow().news.borrow_mut().notify_updated();
+            }
+        });
+
         let thread = std::thread::spawn(move || {
             loop {
                 match update_receiver.recv() {
@@ -283,6 +295,7 @@ impl LkBackend {
                                 process_timers((hosts_secs_left, certs_secs_left))
                             }
                             UIUpdate::Chart(metrics) => process_chart_update(metrics),
+                            UIUpdate::NewsUpdated => process_news_update(()),
                             UIUpdate::CommandResult(invocation_id, command_result) => {
                                 process_command_result((invocation_id, command_result))
                             }
@@ -327,6 +340,11 @@ impl LkBackend {
         }
     }
 
+    fn applyNewsConfig(&mut self) {
+        let news = self.config.borrow().main_config_ref().news.clone();
+        self.news.borrow().replace_config_from_main(news);
+    }
+
     fn sync_models_from_config(&mut self) {
         let main_config = self.config.borrow().main_config_ref().clone();
         let hosts_config = self.config.borrow().hosts_config().clone();
@@ -335,6 +353,7 @@ impl LkBackend {
         self.hosts.borrow_mut().set_configuration_preferences(main_config.preferences.clone());
         self.metrics.borrow_mut().set_hosts_config(hosts_config);
         self.metrics.borrow_mut().set_display_options(main_config.display_options);
+        self.news.borrow().replace_config_from_main(main_config.news);
     }
 
     fn install_remote_backends(
@@ -897,6 +916,7 @@ impl LkBackend {
                     self.hosts.borrow_mut().set_configuration_preferences(main_config.preferences.clone());
                     self.metrics.borrow_mut().set_hosts_config(hosts_config);
                     self.metrics.borrow_mut().set_display_options(main_config.display_options);
+                    self.news.borrow().replace_config_from_main(main_config.news);
                     remote_reset_hosts
                 }
                 else {
@@ -961,6 +981,7 @@ impl LkBackend {
         }
         self.metrics.borrow_mut().set_hosts_config(hosts_config.clone());
         self.metrics.borrow_mut().set_display_options(main_config.display_options.clone());
+        self.news.borrow().replace_config_from_main(main_config.news.clone());
         self.applied_config = (main_config, hosts_config);
         reset_hosts
     }
@@ -987,5 +1008,6 @@ impl LkBackend {
             self.command.borrow_mut().stop();
         }
         self.metrics.borrow_mut().stop();
+        self.news.borrow_mut().stop();
     }
 }

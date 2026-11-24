@@ -102,7 +102,8 @@ impl RemoteSession {
                 frontend::UIUpdate::Stop() => return,
                 frontend::UIUpdate::CoreConnectionChanged()
                 | frontend::UIUpdate::CommandResult(..)
-                | frontend::UIUpdate::ReplaceHosts(_) => continue,
+                | frontend::UIUpdate::ReplaceHosts(_)
+                | frontend::UIUpdate::NewsUpdated => continue,
             };
 
             if !Self::queue_update(&outbox, message) {
