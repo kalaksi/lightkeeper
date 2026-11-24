@@ -22,6 +22,8 @@ RowLayout {
     property string saveValue: ""
     // Core-connection SSH secrets use the local desktop store even with remote core.
     property bool useCoreSecretsBackend: false
+    // Shadows Item.enabled so the info button stays clickable when the field is disabled.
+    property bool enabled: true
     // Set when the user has typed or deleted. Parent stores `text` on save only if modified.
     property bool modified: false
     property alias text: field.text
