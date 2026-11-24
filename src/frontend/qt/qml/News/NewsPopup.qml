@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 
 import Lightkeeper 1.0
 
@@ -54,6 +55,13 @@ Popup {
         borderBottom: 1
         borderLeft: 1
         borderRight: 1
+        layer.enabled: true
+        layer.effect: DropShadow {
+            color: "#60000000"
+            radius: 12
+            horizontalOffset: 0
+            verticalOffset: 3
+        }
     }
 
     contentItem: ColumnLayout {
