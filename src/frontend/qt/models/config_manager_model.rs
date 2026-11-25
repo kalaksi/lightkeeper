@@ -1612,28 +1612,28 @@ impl ConfigManagerModel {
         }
 
         // Intentionally removed modules should not be re-offered by ConfigHelper on next launch.
-        let removed_connectors: Vec<String> = previous_connectors.into_iter()
-            .filter(|id| !group.connectors.contains_key(id))
-            .collect();
-        let removed_monitors: Vec<String> = previous_monitors.into_iter()
-            .filter(|id| !group.monitors.contains_key(id))
-            .collect();
-        let removed_commands: Vec<String> = previous_commands.into_iter()
-            .filter(|id| !group.commands.contains_key(id))
-            .collect();
-        for module_id in removed_connectors {
-            if !group.config_helper.ignored_connectors.contains(&module_id) {
-                group.config_helper.ignored_connectors.push(module_id);
+        // Only default-group modules are offered, so only those need ignoring.
+        if let Some(defaults) = configuration::get_default_config_groups().groups.get(&group_id) {
+            for module_id in previous_connectors.into_iter().filter(|id| !group.connectors.contains_key(id)) {
+                if defaults.connectors.contains_key(&module_id)
+                    && !group.config_helper.ignored_connectors.contains(&module_id)
+                {
+                    group.config_helper.ignored_connectors.push(module_id);
+                }
             }
-        }
-        for module_id in removed_monitors {
-            if !group.config_helper.ignored_monitors.contains(&module_id) {
-                group.config_helper.ignored_monitors.push(module_id);
+            for module_id in previous_monitors.into_iter().filter(|id| !group.monitors.contains_key(id)) {
+                if defaults.monitors.contains_key(&module_id)
+                    && !group.config_helper.ignored_monitors.contains(&module_id)
+                {
+                    group.config_helper.ignored_monitors.push(module_id);
+                }
             }
-        }
-        for module_id in removed_commands {
-            if !group.config_helper.ignored_commands.contains(&module_id) {
-                group.config_helper.ignored_commands.push(module_id);
+            for module_id in previous_commands.into_iter().filter(|id| !group.commands.contains_key(id)) {
+                if defaults.commands.contains_key(&module_id)
+                    && !group.config_helper.ignored_commands.contains(&module_id)
+                {
+                    group.config_helper.ignored_commands.push(module_id);
+                }
             }
         }
     }
