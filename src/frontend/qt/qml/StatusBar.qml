@@ -23,11 +23,6 @@ ToolBar {
     required property int hostCount
     property string remoteCoreStatus: ""
     property bool _newsPopupOpenOnPress: false
-    // Keep news from overlapping side labels; use the wider side as reserve on both ends.
-    readonly property real _newsMaxWidth: {
-        let sideWidth = Math.max(leftSide.implicitWidth, rightSide.implicitWidth)
-        return Math.max(80, root.width - sideWidth * 2 - Theme.spacingLoose * 4)
-    }
     padding: 0
     leftPadding: 0
     rightPadding: 0
@@ -41,7 +36,6 @@ ToolBar {
         borderTop: 1
     }
 
-    // Single content child so ToolBar does not stack the row and news overlay separately.
     Item {
         id: barContent
         width: parent.width
@@ -67,9 +61,76 @@ ToolBar {
                 }
             }
 
+            // News is centered in the stretch slot; long titles elide up to the slot width.
             Item {
+                id: centerFill
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+
+                Item {
+                    id: newsControl
+                    anchors.centerIn: parent
+                    width: newsIcon.width
+                        + (newsTitle.visible ? Theme.spacingNormal + newsTitle.width : 0)
+                    height: Math.max(newsIcon.height, newsTitle.implicitHeight)
+
+                    OverlayImage {
+                        id: newsIcon
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
+                        source: "qrc:/main/images/button/rss"
+                        color: Theme.iconColor
+                    }
+
+                    // Unelided twin for natural width; elide+width on the same Text collapses to 0.
+                    NormalText {
+                        id: newsTitleMeasure
+                        visible: false
+                        text: newsTitle.text
+                    }
+
+                    NormalText {
+                        id: newsTitle
+                        anchors.left: newsIcon.right
+                        anchors.leftMargin: Theme.spacingNormal
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: text.length > 0
+                        width: Math.min(
+                            newsTitleMeasure.implicitWidth,
+                            Math.max(0, centerFill.width - newsIcon.width - Theme.spacingNormal)
+                        )
+                        text: LK.news.latestTitle
+                        color: Theme.textColorDark
+                        elide: Text.ElideRight
+
+                        onTextChanged: (text) => {
+                            if (text.length === 0) {
+                                newsPulse.stop()
+                                newsTitle.color = Theme.textColorDark
+                                newsIcon.color = Theme.iconColor
+                                return
+                            }
+                            newsPulse.restart()
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        // Capture before CloseOnPressOutside dismisses the popup on this same click.
+                        onPressed: root._newsPopupOpenOnPress = newsPopup.visible
+                        onClicked: {
+                            if (root._newsPopupOpenOnPress) {
+                                newsPopup.close()
+                                return
+                            }
+                            newsPopup.items = Parse.TryParseJson(LK.news.getItemsJson()) || []
+                            newsPopup.open()
+                        }
+                    }
+                }
             }
 
             RowLayout {
@@ -93,67 +154,6 @@ ToolBar {
                     rightPadding: Theme.spacingLoose * 2
                     text: root.jobsLeft + " jobs left"
                     color: Theme.textColorDark
-                }
-            }
-        }
-
-        // Centered on the full bar so remote-core text on the left does not shift it.
-        Item {
-            id: newsControl
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            width: newsTitle.visible
-                ? newsIcon.width + Theme.spacingNormal + newsTitle.width
-                : newsIcon.width
-            height: Math.max(newsIcon.height, newsTitle.visible ? newsTitle.implicitHeight : 0)
-            z: 1
-
-            OverlayImage {
-                id: newsIcon
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                width: 16
-                height: 16
-                source: "qrc:/main/images/button/rss"
-                color: Theme.iconColor
-            }
-
-            NormalText {
-                id: newsTitle
-                anchors.left: newsIcon.right
-                anchors.leftMargin: Theme.spacingNormal
-                anchors.verticalCenter: parent.verticalCenter
-                visible: text.length > 0
-                width: visible
-                    ? Math.min(implicitWidth, root._newsMaxWidth - newsIcon.width - Theme.spacingNormal)
-                    : 0
-                text: LK.news.latestTitle
-                color: Theme.textColorDark
-                elide: Text.ElideRight
-
-                onTextChanged: {
-                    if (text.length === 0) {
-                        newsPulse.stop()
-                        newsTitle.color = Theme.textColorDark
-                        newsIcon.color = Theme.iconColor
-                        return
-                    }
-                    newsPulse.restart()
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                // Capture before CloseOnPressOutside dismisses the popup on this same click.
-                onPressed: root._newsPopupOpenOnPress = newsPopup.visible
-                onClicked: {
-                    if (root._newsPopupOpenOnPress) {
-                        newsPopup.close()
-                        return
-                    }
-                    newsPopup.items = Parse.TryParseJson(LK.news.getItemsJson()) || []
-                    newsPopup.open()
                 }
             }
         }
@@ -198,9 +198,10 @@ ToolBar {
 
     NewsPopup {
         id: newsPopup
-
-        // Reposition after first layout; avoid tracking height changes (that animated top-to-bottom).
-        onOpened: Qt.callLater(root.repositionNewsPopup)
+        // Popup positions with x/y relative to parent (no anchors).
+        parent: newsControl
+        x: (parent.width - width) / 2
+        y: -height - 4
 
         onConfigureRequested: {
             newsPopup.close()
@@ -213,12 +214,5 @@ ToolBar {
     NewsConfigDialog {
         id: newsConfigDialog
         anchors.centerIn: Overlay.overlay
-    }
-
-    function repositionNewsPopup() {
-        let newsPos = newsControl.mapToItem(root, 0, 0)
-        let preferredX = newsPos.x + (newsControl.width - newsPopup.width) / 2
-        newsPopup.x = Math.max(0, Math.min(preferredX, root.width - newsPopup.width))
-        newsPopup.y = -newsPopup.height - 4
     }
 }

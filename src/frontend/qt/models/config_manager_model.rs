@@ -255,6 +255,8 @@ impl ConfigManagerModel {
                 preferences.terminal = configuration::INTERNAL.to_string();
                 preferences.terminal_args = Vec::new();
                 preferences.secrets_backend = configuration::Preferences::default_secrets_backend();
+                // News is desktop-only; never keep a remote core's news settings.
+                main_config.news = configuration::NewsConfig::default();
             }
         }
         main_config

@@ -1928,11 +1928,14 @@ impl ConfigBackend for RemoteConfigBackend {
         main_config.preferences.terminal = configuration::INTERNAL.to_string();
         main_config.preferences.terminal_args = Vec::new();
 
-        // secrets_backend is desktop-only (remote core always uses secretsfile). Omit the field so it is not
-        // written to the core config and older cores without the field still accept the write.
+        // Desktop-only fields: omit so they are not written to the core config and older cores
+        // without those fields still accept the write. Remote core always uses secretsfile.
         let mut main_value = serde_yaml::to_value(&main_config)?;
         if let Some(preferences) = main_value.get_mut("preferences").and_then(|value| value.as_mapping_mut()) {
             preferences.remove(serde_yaml::Value::from("secrets_backend"));
+        }
+        if let Some(mapping) = main_value.as_mapping_mut() {
+            mapping.remove(serde_yaml::Value::from("news"));
         }
         let main_yml = serde_yaml::to_string(&main_value)?;
         let hosts_yml = serde_yaml::to_string(&hosts)?;

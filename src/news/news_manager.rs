@@ -68,10 +68,24 @@ impl NewsManager {
 
     pub fn set_config(&self, config: NewsConfig) {
         let enabled = config.enabled;
-        if let Ok(mut guard) = self.config.lock() {
-            *guard = config;
+        let changed = match self.config.lock() {
+            Ok(mut guard) => {
+                if *guard == config {
+                    false
+                }
+                else {
+                    *guard = config;
+                    true
+                }
+            }
+            Err(_) => true,
+        };
+        if !changed {
+            return;
         }
         if enabled {
+            // Keep showing any already-fetched items while the refresh runs.
+            let _ = self.update_sender.send(UIUpdate::NewsUpdated);
             self.refresh_now();
         }
         else {
@@ -181,7 +195,12 @@ impl NewsManager {
         let mut merged: HashMap<String, NewsItem> = HashMap::new();
         let mut any_success = false;
 
-        let agent = ureq::Agent::new_with_defaults();
+        // ureq defaults leave most timeouts as None; a hung feed would block the poller forever.
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .timeout_global(Some(Duration::from_secs(30)))
+            .timeout_connect(Some(Duration::from_secs(10)))
+            .build()
+            .into();
         for feed in enabled_feeds {
             match agent.get(&feed.url).call() {
                 Ok(mut response) => {

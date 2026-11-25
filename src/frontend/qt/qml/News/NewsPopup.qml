@@ -56,11 +56,12 @@ Popup {
         borderLeft: 1
         borderRight: 1
         layer.enabled: true
+        // Cast upward so the bottom edge sits flush with the status bar (same z feel).
         layer.effect: DropShadow {
             color: "#60000000"
             radius: 12
             horizontalOffset: 0
-            verticalOffset: 3
+            verticalOffset: -3
         }
     }
 
