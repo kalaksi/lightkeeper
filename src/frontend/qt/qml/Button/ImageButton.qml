@@ -25,7 +25,6 @@ Item {
     property bool roundButton: false
     property bool flatButton: false
     property bool hoverEnabled: true
-    property bool enabled: true
     property bool checkable: false
     property bool checked: false
     property real size: 0.8 * parent.height
