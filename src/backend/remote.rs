@@ -1934,6 +1934,9 @@ impl ConfigBackend for RemoteConfigBackend {
         if let Some(preferences) = main_value.get_mut("preferences").and_then(|value| value.as_mapping_mut()) {
             preferences.remove(serde_yaml::Value::from("secrets_backend"));
         }
+        if let Some(display_options) = main_value.get_mut("display_options").and_then(|value| value.as_mapping_mut()) {
+            display_options.remove(serde_yaml::Value::from("auto_expand_categories"));
+        }
         if let Some(mapping) = main_value.as_mapping_mut() {
             mapping.remove(serde_yaml::Value::from("news"));
         }

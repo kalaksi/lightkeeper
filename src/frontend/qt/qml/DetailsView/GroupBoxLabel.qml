@@ -19,6 +19,8 @@ Rectangle {
     property real refreshProgress: 100
     property bool showRefreshButton: false
     property bool showConfigButton: false
+    property bool showAutoExpandButton: false
+    property bool autoExpandEnabled: false
     property string accentColor: "#20ffffff"
 
     implicitWidth: label.implicitWidth
@@ -33,6 +35,7 @@ Rectangle {
 
     signal refreshClicked()
     signal configClicked()
+    signal autoExpandToggled()
 
 
     Trapezoid {
@@ -41,6 +44,26 @@ Rectangle {
         height: root.height
         width: 50
         color: root.accentColor
+    }
+
+    Row {
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.spacingTight
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Theme.spacingNormal
+
+        ImageButton {
+            visible: root.showAutoExpandButton
+            size: 0.8 * root.height
+            imageRelativeWidth: 0.8
+            imageRelativeHeight: 0.8
+            imageSource: "qrc:/main/images/button/expand"
+            flatButton: true
+            checked: root.autoExpandEnabled
+            hoverColor: Theme.highlightColorLight
+            tooltip: "Auto height"
+            onClicked: root.autoExpandToggled()
+        }
     }
 
     Row {

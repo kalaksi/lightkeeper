@@ -27,6 +27,7 @@ Item {
     property bool hoverEnabled: true
     property bool enabled: true
     property bool checkable: false
+    property bool checked: false
     property real size: 0.8 * parent.height
     /// Optional soft hover overlay color. Null/empty keeps the default style hover.
     property var hoverColor: null
@@ -49,6 +50,7 @@ Item {
         focusPolicy: Qt.NoFocus
         hoverEnabled: root.hoverEnabled
         checkable: root.checkable
+        checked: root.checked
 
         ToolTip.visible: root.tooltip !== "" && hovered
         ToolTip.delay: Theme.tooltipDelay
@@ -107,6 +109,7 @@ Item {
         focusPolicy: Qt.NoFocus
         hoverEnabled: root.hoverEnabled
         checkable: root.checkable
+        checked: root.checked
 
         ToolTip.visible: root.tooltip !== "" && hovered
         ToolTip.delay: Theme.tooltipDelay

@@ -136,13 +136,18 @@ Item {
                     // Link between invocation and command button has to be stored and handled on higher level and not in
                     // e.g. CommandButton or CommandButtonRow since those are not persistent.
                     property var _invocationIdToButton: {}
+                    property bool _contentOverflows: false
+                    property bool _tall: groupBox.autoExpandEnabled && groupBox._contentOverflows
+                    readonly property int _cellHeight: root.columnMinimumHeight
+                    readonly property int _tallHeight: 2 * groupBox._cellHeight + root.columnSpacing
 
                     Layout.minimumWidth: root.columnMinimumWidth
                     Layout.maximumWidth: root.columnMaximumWidth
                     Layout.preferredWidth: root.columnMinimumWidth +
                                             (rootScrollView.availableWidth % root.columnMinimumWidth / grid.columns) - root.columnSpacing
-                    Layout.minimumHeight: root.columnMinimumHeight
-                    Layout.maximumHeight: root.columnMaximumHeight
+                    Layout.minimumHeight: groupBox._tall ? groupBox._tallHeight : groupBox._cellHeight
+                    Layout.maximumHeight: groupBox._tall ? groupBox._tallHeight : groupBox._cellHeight
+                    Layout.rowSpan: groupBox._tall ? 2 : 1
                     Layout.alignment: Qt.AlignTop
 
                     onRefreshClicked: {
@@ -156,6 +161,20 @@ Item {
 
                     Component.onCompleted: {
                         groupBox._invocationIdToButton = {}
+                        groupBox.updateContentOverflow()
+                    }
+
+                    function updateContentOverflow() {
+                        let needed = propertyTable.topMargin + propertyTable.bottomMargin
+                        let rows = propertyTable.model.rowCount()
+                        for (let row = 0; row < rows; row++) {
+                            needed += propertyTable.model.getRowHeight(row)
+                        }
+                        if (categoryCommands.visible) {
+                            needed += categoryCommands.height + Theme.spacingLoose
+                        }
+                        let available = groupBox._cellHeight - groupBox.label.height
+                        groupBox._contentOverflows = needed > available
                     }
 
                     Connections {
@@ -169,6 +188,7 @@ Item {
                                 if (monitoringDataQv !== undefined) {
                                     propertyTable.model.update(monitoringDataQv)
                                 }
+                                groupBox.updateContentOverflow()
                             }
                         }
 
@@ -254,8 +274,23 @@ Item {
                             Layout.fillHeight: true
                             Layout.fillWidth: true
 
+                            onMonitoring_datasChanged: groupBox.updateContentOverflow()
+                            onCommand_datasChanged: groupBox.updateContentOverflow()
+
                             onButtonClicked: function(buttonId, commandId, params) {
                                 LK.command.execute(buttonId, root.hostId, commandId, params)
+                            }
+                        }
+
+                        Connections {
+                            target: categoryCommands
+
+                            function onVisibleChanged() {
+                                groupBox.updateContentOverflow()
+                            }
+
+                            function onHeightChanged() {
+                                groupBox.updateContentOverflow()
                             }
                         }
                     }

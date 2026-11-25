@@ -22,6 +22,7 @@ CategoryGroupBox {
     property string _categoryName: "host"
     property int refreshProgress: 100
     property bool blocked: refreshProgress < 100
+    showAutoExpandButton: false
 
     Connections {
         target: LK.hosts

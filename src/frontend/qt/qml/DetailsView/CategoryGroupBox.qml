@@ -19,6 +19,11 @@ GroupBox {
     property string hostId: ""
     property alias refreshProgress: groupBoxLabel.refreshProgress
     property bool isBlocked: refreshProgress < 100
+    property bool showAutoExpandButton: true
+    property bool autoExpandEnabled: {
+        let _ = LK.config.autoExpandCategories
+        return LK.config.isAutoExpandCategory(root.categoryName)
+    }
 
     leftPadding: Theme.spacingTight
     rightPadding: Theme.spacingTight
@@ -39,8 +44,11 @@ GroupBox {
 
         showRefreshButton: true
         showConfigButton: true
+        showAutoExpandButton: root.showAutoExpandButton
+        autoExpandEnabled: root.autoExpandEnabled
         onRefreshClicked: root.refreshClicked()
         onConfigClicked: root.configClicked()
+        onAutoExpandToggled: LK.config.setAutoExpandCategory(root.categoryName, !root.autoExpandEnabled)
     }
 
     signal refreshClicked()

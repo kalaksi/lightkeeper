@@ -28,7 +28,7 @@ use crate::utils::ShellCommand;
     settings={
         compose_file_name => "Name of the podman-compose file. Default: docker-compose.yml",
         working_dir => "This is only needed with older podman-compose versions that don't include working_dir label on the container,
- so this can be used instead. Should be the parent directory of project directories. Multiple directory paths should be separated with a comma.",
+ so this can be used instead. Should be the parent directory of project directories. Currently, a single directory is supported.",
         local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
         as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
     }

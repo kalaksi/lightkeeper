@@ -33,6 +33,7 @@ pub struct ConfigManagerModel {
     hostConfigurationChanged: qt_signal!(),
     showChartsChanged: qt_signal!(),
     showChartThresholdLinesChanged: qt_signal!(),
+    autoExpandCategoriesChanged: qt_signal!(),
     updateCheckChanged: qt_signal!(),
 
     //
@@ -45,6 +46,9 @@ pub struct ConfigManagerModel {
     showChartThresholdLines: qt_property!(bool; READ showChartThresholdLines WRITE setShowChartThresholdLines NOTIFY showChartThresholdLinesChanged),
     showInfoNotifications: qt_property!(bool; READ showInfoNotifications),
     mainViewSplitRatio: qt_property!(f64; READ getMainViewSplitRatio WRITE setMainViewSplitRatio),
+    autoExpandCategories: qt_property!(QStringList; READ getAutoExpandCategories NOTIFY autoExpandCategoriesChanged),
+    isAutoExpandCategory: qt_method!(fn(&self, category: QString) -> bool),
+    setAutoExpandCategory: qt_method!(fn(&mut self, category: QString, enabled: bool)),
     latestReleaseVersion: qt_property!(QString; READ getLatestReleaseVersion NOTIFY updateCheckChanged),
     updateAvailable: qt_property!(bool; READ isUpdateAvailable NOTIFY updateCheckChanged),
     isSandboxed: qt_method!(fn(&self) -> bool),
@@ -194,6 +198,7 @@ impl ConfigManagerModel {
         (main_config, hosts_config, groups_config): (Configuration, Hosts, Groups),
     ) {
         let previous_show_charts = self.main_config.preferences.show_charts;
+        let previous_auto_expand = self.main_config.display_options.auto_expand_categories.clone();
         self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config;
         self.groups_config = groups_config;
@@ -201,6 +206,9 @@ impl ConfigManagerModel {
         self.apply_preference_restrictions();
         if self.main_config.preferences.show_charts != previous_show_charts {
             self.showChartsChanged();
+        }
+        if self.main_config.display_options.auto_expand_categories != previous_auto_expand {
+            self.autoExpandCategoriesChanged();
         }
     }
 
@@ -222,6 +230,7 @@ impl ConfigManagerModel {
         let reset_hosts = config_backend.apply_config()?;
         let (main_config, hosts_config, groups_config) = config_backend.get_config()?;
         let previous_show_charts = self.main_config.preferences.show_charts;
+        let previous_auto_expand = self.main_config.display_options.auto_expand_categories.clone();
         self.main_config = self.with_local_desktop_preferences(main_config);
         self.hosts_config = hosts_config.clone();
         self.groups_config = groups_config;
@@ -229,11 +238,14 @@ impl ConfigManagerModel {
         if self.main_config.preferences.show_charts != previous_show_charts {
             self.showChartsChanged();
         }
+        if self.main_config.display_options.auto_expand_categories != previous_auto_expand {
+            self.autoExpandCategoriesChanged();
+        }
         Ok((self.main_config.clone(), hosts_config, reset_hosts))
     }
 
     /// Desktop-only settings always come from the local config: launch prefs (so a remote core can't
-    /// make the desktop run arbitrary commands) and status-bar news (not a core feature).
+    /// make the desktop run arbitrary commands), status-bar news, and GUI display tweaks.
     fn with_local_desktop_preferences(&self, mut main_config: Configuration) -> Configuration {
         match Configuration::read(&self.config_dir) {
             Ok((local_config, _, _)) => {
@@ -246,6 +258,8 @@ impl ConfigManagerModel {
                         &local_config.preferences.secrets_backend,
                     );
                 }
+                main_config.display_options.auto_expand_categories =
+                    local_config.display_options.auto_expand_categories;
                 main_config.news = local_config.news;
             }
             Err(error) => {
@@ -255,6 +269,7 @@ impl ConfigManagerModel {
                 preferences.terminal = configuration::INTERNAL.to_string();
                 preferences.terminal_args = Vec::new();
                 preferences.secrets_backend = configuration::Preferences::default_secrets_backend();
+                main_config.display_options.auto_expand_categories = Vec::new();
                 // News is desktop-only; never keep a remote core's news settings.
                 main_config.news = configuration::NewsConfig::default();
             }
@@ -340,6 +355,8 @@ impl ConfigManagerModel {
             }
             local_config.preferences.terminal = self.main_config.preferences.terminal.clone();
             local_config.preferences.terminal_args = self.main_config.preferences.terminal_args.clone();
+            local_config.display_options.auto_expand_categories =
+                self.main_config.display_options.auto_expand_categories.clone();
             Configuration::write_main_config(&self.config_dir, &local_config)
         });
         if let Err(error) = result {
@@ -769,6 +786,36 @@ impl ConfigManagerModel {
         {
             self.error(QString::from(error.to_string()));
         }
+    }
+
+    fn getAutoExpandCategories(&self) -> QStringList {
+        QStringList::from_iter(self.main_config.display_options.auto_expand_categories.clone())
+    }
+
+    fn isAutoExpandCategory(&self, category: QString) -> bool {
+        let category = category.to_string();
+        self.main_config.display_options.auto_expand_categories.iter().any(|name| name == &category)
+    }
+
+    fn setAutoExpandCategory(&mut self, category: QString, enabled: bool) {
+        let category = category.to_string();
+        let categories = &mut self.main_config.display_options.auto_expand_categories;
+        let currently_enabled = categories.iter().any(|name| name == &category);
+
+        if enabled == currently_enabled {
+            return;
+        }
+
+        if enabled {
+            categories.push(category);
+            categories.sort();
+        }
+        else {
+            categories.retain(|name| name != &category);
+        }
+
+        self.autoExpandCategoriesChanged();
+        self.write_local_desktop_preferences();
     }
 
     fn showInfoNotifications(&self) -> bool {

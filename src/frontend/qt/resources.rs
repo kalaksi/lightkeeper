@@ -56,6 +56,7 @@ pub fn init_resources() {
             "images/breeze/dark/list-add.svg" as "images/button/add",
             "images/breeze/dark/list-remove.svg" as "images/button/remove",
             "images/breeze/dark/configure.svg" as "images/button/configure",
+            "images/breeze/dark/expand.svg" as "images/button/expand",
             "images/breeze/dark/rss.svg" as "images/button/rss",
             "images/breeze/dark/link.svg" as "images/button/link",
             "images/breeze/dark/entry-edit.svg" as "images/button/entry-edit",

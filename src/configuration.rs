@@ -309,6 +309,10 @@ pub struct DisplayOptions {
     pub show_charts: bool,
     #[serde(default = "DisplayOptions::default_main_view_split_ratio")]
     pub main_view_split_ratio: f64,
+    /// Desktop GUI only: categories that auto-expand to two grid rows when content overflows.
+    /// Kept in the local main config; not written to a remote core.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub auto_expand_categories: Vec<String>,
 }
 
 impl Default for DisplayOptions {
@@ -1043,6 +1047,7 @@ impl Configuration {
                 // Exceptions. Allow some to be configurable.
                 actual_display_options.show_status_bar = config.display_options.show_status_bar;
                 actual_display_options.main_view_split_ratio = config.display_options.main_view_split_ratio;
+                actual_display_options.auto_expand_categories = config.display_options.auto_expand_categories.clone();
 
                 let config_without_display_options = Configuration {
                     preferences: config.preferences.clone(),
@@ -1306,6 +1311,7 @@ impl Configuration {
         let mut display_options = get_default_main_config().display_options;
         display_options.show_status_bar = main_config.display_options.show_status_bar;
         display_options.main_view_split_ratio = main_config.display_options.main_view_split_ratio;
+        display_options.auto_expand_categories = main_config.display_options.auto_expand_categories.clone();
         main_config.display_options = display_options;
     }
 
