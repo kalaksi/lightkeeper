@@ -30,14 +30,17 @@ news:
     - name: "CERT/CC Vulnerability Notes"
       url: "https://www.kb.cert.org/vuls/atomfeed/"
       enabled: true
+    - name: "CERT-EU Security Advisories"
+      url: "https://cert.europa.eu/publications/security-advisories-rss"
+      enabled: true
     - name: "Debian Security"
       url: "https://www.debian.org/security/dsa.rdf"
-      enabled: true
+      enabled: false
     - name: "Fedora Security Announce"
-      url: "https://lists.fedoraproject.org/archives/list/security-announce@lists.fedoraproject.org/feed.rss"
+      url: "https://bodhi.fedoraproject.org/rss/updates/?type=security"
       enabled: false
     - name: "Red Hat Security Announce"
-      url: "https://listman.redhat.com/archives/rhsa-announce.mbox/rss"
+      url: "https://access.redhat.com/security/data/metrics/rhsa.rss"
       enabled: false
 
 # Control category order, command buttons orders, colors. Defaults should be good.

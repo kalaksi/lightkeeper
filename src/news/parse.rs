@@ -201,6 +201,16 @@ fn parse_datetime(value: &str) -> Option<DateTime<Utc>> {
     if let Ok(parsed) = DateTime::parse_from_rfc2822(trimmed) {
         return Some(parsed.with_timezone(&Utc));
     }
+    // CERT-EU and similar use CET/CEST; chrono's RFC 2822 parser rejects named zones.
+    // Try CEST before CET (CET is a suffix of CEST).
+    for (name, offset) in [("CEST", "+0200"), ("CET", "+0100")] {
+        if let Some(prefix) = trimmed.strip_suffix(name) {
+            let with_offset = format!("{}{}", prefix, offset);
+            if let Ok(parsed) = DateTime::parse_from_rfc2822(with_offset.trim()) {
+                return Some(parsed.with_timezone(&Utc));
+            }
+        }
+    }
     // RDF dc:date often uses date-only or partial ISO.
     if let Ok(parsed) = chrono::NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
         return parsed.and_hms_opt(0, 0, 0).map(|naive| naive.and_utc());

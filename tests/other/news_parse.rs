@@ -24,6 +24,28 @@ fn parses_rss_item() {
 }
 
 #[test]
+fn parses_pubdate_with_cet_timezone() {
+    let body = r#"<?xml version="1.0"?>
+        <rss><channel>
+        <item>
+          <title>2026-022: Critical vulnerabilities in Nginx</title>
+          <link>https://example.invalid/022</link>
+          <pubDate>Wed, 18 Nov 2026 18:30:42 CET</pubDate>
+        </item>
+        <item>
+          <title>2026-018: Critical Vulnerabilities in PHP</title>
+          <link>https://example.invalid/018</link>
+          <pubDate>Fri, 23 Oct 2026 16:36:26 CEST</pubDate>
+        </item>
+        </channel></rss>"#;
+    let items = parse_feed(body, "CERT-EU");
+    assert_eq!(items.len(), 2);
+    assert!(items[0].published.is_some());
+    assert!(items[1].published.is_some());
+    assert!(items[0].published.unwrap() > items[1].published.unwrap());
+}
+
+#[test]
 fn parses_atom_entry() {
     let body = r#"<?xml version="1.0"?>
         <feed>

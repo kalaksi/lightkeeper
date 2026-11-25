@@ -20,7 +20,7 @@ LightkeeperDialog {
     id: root
     title: "News feeds"
     implicitWidth: 720
-    implicitHeight: 460
+    implicitHeight: 500
     standardButtons: Dialog.Ok | Dialog.Cancel
     property int nameFieldWidth: 220
     property int buttonSize: 32
@@ -142,6 +142,7 @@ LightkeeperDialog {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
+                boundsBehavior: Flickable.StopAtBounds
                 spacing: Theme.spacingNormal
                 model: ListModel { id: feedModel }
 
