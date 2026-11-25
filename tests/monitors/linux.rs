@@ -155,11 +155,11 @@ openssl/stable,stable 3.5.9-1~deb13u1 amd64 [upgradable from: 3.5.7-1~deb13u3]"#
         assert_eq!(datapoint.multivalue[0].criticality, Criticality::Normal);
         assert_eq!(datapoint.multivalue[1].label, "docker-ce");
         assert_eq!(datapoint.multivalue[2].label, "zlib1g");
-        assert_eq!(datapoint.multivalue[2].criticality, Criticality::Normal);
+        assert_eq!(datapoint.multivalue[2].criticality, Criticality::Warning);
         assert!(datapoint.multivalue[2].tags.contains(&String::from("Security")));
         assert_eq!(datapoint.multivalue[3].label, "openssl");
         assert!(!datapoint.multivalue[3].tags.contains(&String::from("Security")));
-        assert_eq!(datapoint.criticality, Criticality::Normal);
+        assert_eq!(datapoint.criticality, Criticality::Warning);
     });
 }
 

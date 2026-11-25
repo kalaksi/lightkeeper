@@ -145,6 +145,7 @@ impl MonitoringModule for Package {
                 data_point.description = old_version;
                 data_point.command_params = vec![package];
                 if archives.contains("-security") {
+                    data_point.criticality = Criticality::Warning;
                     data_point.tags.push(String::from("Security"));
                 }
                 result.multivalue.push(data_point);
