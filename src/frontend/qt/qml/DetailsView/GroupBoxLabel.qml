@@ -57,9 +57,10 @@ Rectangle {
             size: 0.8 * root.height
             imageRelativeWidth: 0.8
             imageRelativeHeight: 0.8
-            imageSource: "qrc:/main/images/button/expand"
+            imageSource: root.autoExpandEnabled
+                ? "qrc:/main/images/button/expand-all"
+                : "qrc:/main/images/button/expand"
             flatButton: true
-            checked: root.autoExpandEnabled
             hoverColor: Theme.highlightColorLight
             tooltip: "Auto height"
             onClicked: root.autoExpandToggled()
