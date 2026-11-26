@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use ssh2;
 
@@ -91,7 +91,9 @@ impl Write for CoreClientStream {
 
 const REMOTE_READ_TIMEOUT: Duration = Duration::from_millis(100);
 const REMOTE_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
-const REMOTE_COMMAND_TIMEOUT: Duration = Duration::from_secs(30);
+const REMOTE_COMMAND_TIMEOUT: Duration = Duration::from_secs(20);
+/// While auto-refresh timers run, the core pushes Timers at least every 5s. Longer silence means a dead link.
+const REMOTE_STALE_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PendingRpcKind {
@@ -822,6 +824,9 @@ impl RemoteCoreClient {
             // Read timeouts can interrupt a frame, so partial frames are buffered to keep framing in sync.
             let mut buffer = Vec::new();
             let mut chunk = [0_u8; 64 * 1024];
+            let mut last_activity_at = Instant::now();
+            // Set once Timers show a positive countdown (auto-refresh is running).
+            let mut expect_keepalive = false;
             loop {
                 match stop_receiver.try_recv() {
                     Ok(()) | Err(mpsc::TryRecvError::Disconnected) => return,
@@ -842,7 +847,10 @@ impl RemoteCoreClient {
                         let result = read_message::<ServerMessage, _>(&mut &buffer[..4 + length]);
                         buffer.drain(..4 + length);
                         match result {
-                            Ok(message) => message,
+                            Ok(message) => {
+                                last_activity_at = Instant::now();
+                                message
+                            }
                             Err(error) => {
                                 disconnect(&format!("Receive failed: {}", error), true);
                                 return;
@@ -854,6 +862,7 @@ impl RemoteCoreClient {
                             Ok(0) => disconnect("Receive failed: Connection closed", false),
                             Ok(count) => {
                                 buffer.extend_from_slice(&chunk[..count]);
+                                last_activity_at = Instant::now();
                                 continue;
                             }
                             Err(error)
@@ -862,6 +871,13 @@ impl RemoteCoreClient {
                                     io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
                                 ) =>
                             {
+                                if expect_keepalive && last_activity_at.elapsed() >= REMOTE_STALE_TIMEOUT {
+                                    disconnect(
+                                        "Receive failed: Remote core connection timed out (no data)",
+                                        false,
+                                    );
+                                    return;
+                                }
                                 continue;
                             }
                             Err(error) => disconnect(&format!("Receive failed: {}", error), false),
@@ -917,6 +933,8 @@ impl RemoteCoreClient {
                         }
                     }
                     ServerMessage::Timers { hosts_secs_left, certs_secs_left } => {
+                        // Positive countdown means the timer loop is alive; (0, 0) is due or disabled.
+                        expect_keepalive = hosts_secs_left > 0 || certs_secs_left > 0;
                         if frontend_update_sender
                             .send(frontend::UIUpdate::Timers { hosts_secs_left, certs_secs_left })
                             .is_err()
@@ -1079,6 +1097,10 @@ impl RemoteCoreClient {
         kind: PendingRpcKind,
         build_message: impl FnOnce(u64) -> ClientMessage,
     ) -> Result<PendingRpcReply, LkError> {
+        if self.stopping.load(Ordering::SeqCst) || !self.is_connected() {
+            return Err(LkError::new(ErrorKind::ConnectionFailed, "Not connected to remote core"));
+        }
+
         let request_id = self.next_request_id();
         let (sender, receiver) = mpsc::channel();
         let mut map = self.pending_rpc.lock().map_err(LkError::from)?;
@@ -1088,13 +1110,9 @@ impl RemoteCoreClient {
         let message = build_message(request_id);
         if let Err(error) = self.send_nowait(&message) {
             if let Ok(mut map) = self.pending_rpc.lock() {
-                if let Some(pending) = map.remove(&request_id) {
-                    let _ = pending.sender.send(PendingRpcReply::Error {
-                        code: RemoteErrorCode::Internal,
-                        message: error.clone(),
-                    });
-                }
+                let _ = map.remove(&request_id);
             }
+            self.fail_connection(format!("Remote core write failed: {}", error));
             return Err(LkError::new(ErrorKind::ConnectionFailed, error));
         }
 
@@ -1108,13 +1126,59 @@ impl RemoteCoreClient {
                     Err(LkError::other("Unexpected response from remote core"))
                 }
             }
-            Err(recv_error) => {
+            Err(_) => {
                 if let Ok(mut map) = self.pending_rpc.lock() {
                     let _ = map.remove(&request_id);
                 }
-                Err(LkError::new(ErrorKind::ConnectionFailed, recv_error.to_string()))
+                let message = String::from("Remote core connection timed out");
+                self.fail_connection(message.clone());
+                Err(LkError::new(ErrorKind::ConnectionFailed, message))
             }
         }
+    }
+
+    /// Marks the session failed and tears down I/O without blocking the caller on SSH close.
+    fn fail_connection(&self, message: impl Into<String>) {
+        let message = message.into();
+        ::log::error!("{}", message);
+
+        self.stopping.store(true, Ordering::SeqCst);
+        fail_all_pending_rpcs(&self.pending_rpc, RemoteErrorCode::Internal, &message);
+
+        let (stop_sender_opt, thread_opt, transport_opt, update_sender) = {
+            let mut conn = self.connection.lock().unwrap();
+            // Drop the writer without sending Disconnect - a dead tunnel can hang on write.
+            let _ = conn.writer.take();
+            (
+                conn.stop_sender.take(),
+                conn.response_thread.take(),
+                conn.transport.take(),
+                conn.frontend_update_sender.clone(),
+            )
+        };
+
+        if let Some(stop_sender) = stop_sender_opt {
+            let _ = stop_sender.send(());
+        }
+
+        self.set_connection_failed(&message);
+        if let Some(sender) = update_sender {
+            let _ = sender.send(frontend::UIUpdate::CoreConnectionChanged());
+        }
+
+        if thread_opt.is_none() && transport_opt.is_none() {
+            return;
+        }
+        thread::spawn(move || {
+            if let Some(response_thread) = thread_opt {
+                if let Err(error) = response_thread.join() {
+                    ::log::error!("Response thread failed: {:?}", error);
+                }
+            }
+            if let Some(mut transport) = transport_opt {
+                transport.stop();
+            }
+        });
     }
 
     pub fn stop_connection(&self) {
