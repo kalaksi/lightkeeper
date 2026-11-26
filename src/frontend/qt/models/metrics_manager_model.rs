@@ -19,6 +19,8 @@ use crate::{
     module::monitoring::DataPoint,
 };
 
+const CHART_LOOKBACK_SECONDS: i64 = 7 * 24 * 60 * 60;
+
 
 #[allow(non_snake_case)]
 #[derive(QObject, Default)]
@@ -191,13 +193,12 @@ impl MetricsManagerModel {
     }
 
     fn refreshCharts(&mut self, host_id: QString, monitor_id: QString, start_time_sec: i64, end_time_sec: i64) -> u64 {
+        let host_id = host_id.to_string();
+        let monitor_id = monitor_id.to_string();
+        let fetch_start_sec = start_time_sec.saturating_sub(CHART_LOOKBACK_SECONDS).max(0);
+
         if let Some(remote_client) = &self.remote_client {
-            return match remote_client.get_metrics(
-                &host_id.to_string(),
-                &monitor_id.to_string(),
-                start_time_sec,
-                end_time_sec,
-            ) {
+            return match remote_client.get_metrics(&host_id, &monitor_id, fetch_start_sec, end_time_sec) {
                 Ok(invocation_id) => invocation_id,
                 Err(error) => {
                     ::log::error!("Error refreshing charts: {}", error);
@@ -207,22 +208,14 @@ impl MetricsManagerModel {
         }
 
         if let Some(metrics_manager) = self.metrics_manager.as_mut() {
-            let invocation_result = metrics_manager.get_metrics(
-                &host_id.to_string(),
-                &monitor_id.to_string(),
-                start_time_sec,
-                end_time_sec,
-            );
-
-            match invocation_result {
+            match metrics_manager.get_metrics(&host_id, &monitor_id, fetch_start_sec, end_time_sec) {
                 Ok(invocation_id) => invocation_id,
                 Err(error) => {
                     ::log::error!("Error refreshing charts: {}", error);
                     0
                 }
             }
-        }
-        else {
+        } else {
             0
         }
     }

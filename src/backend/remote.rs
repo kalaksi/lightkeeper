@@ -872,10 +872,7 @@ impl RemoteCoreClient {
                                 ) =>
                             {
                                 if expect_keepalive && last_activity_at.elapsed() >= REMOTE_STALE_TIMEOUT {
-                                    disconnect(
-                                        "Receive failed: Remote core connection timed out (no data)",
-                                        false,
-                                    );
+                                    disconnect("Receive failed: Remote core connection timed out (no data)", false);
                                     return;
                                 }
                                 continue;

@@ -11,6 +11,7 @@ import QtQuick.Layouts
 import Lightkeeper 1.0
 
 import ".."
+import "../Button"
 import "../Misc"
 import "../js/TextTransform.js" as TextTransform
 import "../StyleOverride"
@@ -31,11 +32,10 @@ Item {
     property int _periodSeconds: 7 * 24 * 60 * 60
     property int _chartStartTimeSec: 0
     property int _chartEndTimeSec: 0
-    // Extra lookback so charts can continue the line toward samples just
-    // outside the selected period.
-    property int _chartLookbackSeconds: 7 * 24 * 60 * 60
+    // 0 = live window ending at now; higher = that many periods back.
+    property int _periodOffset: 0
     readonly property string _chartRangeText: {
-        if (root._chartStartTimeSec <= 0 || root._chartEndTimeSec <= 0) {
+        if (root._chartEndTimeSec <= 0) {
             return ""
         }
         // Prefer Locale.toString over Qt.formatDateTime(..., Locale.ShortFormat):
@@ -45,6 +45,8 @@ Item {
         let end = locale.toString(new Date(root._chartEndTimeSec * 1000), Locale.ShortFormat)
         return start + " - " + end
     }
+    readonly property bool _canGoPrevious: root._chartStartTimeSec > 0
+    readonly property bool _canGoNext: root._periodOffset > 0
 
     signal refreshRequested()
 
@@ -83,14 +85,39 @@ Item {
             borderBottom: 1
         }
 
-        Text {
+        Row {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            text: root._chartRangeText
+            spacing: Theme.spacingTight
             visible: root._chartRangeText !== ""
-            color: Theme.textColor
-            font.pointSize: Theme.fontSize
             z: 1
+
+            ImageButton {
+                anchors.verticalCenter: parent.verticalCenter
+                size: 22
+                flatButton: true
+                imageSource: "qrc:/main/images/button/go-previous"
+                enabled: root._canGoPrevious
+                tooltip: "Previous period"
+                onClicked: root.shiftChartRange(-1)
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: root._chartRangeText
+                color: Theme.textColor
+                font.pointSize: Theme.fontSize
+            }
+
+            ImageButton {
+                anchors.verticalCenter: parent.verticalCenter
+                size: 22
+                flatButton: true
+                imageSource: "qrc:/main/images/button/go-next"
+                enabled: root._canGoNext
+                tooltip: "Next period"
+                onClicked: root.shiftChartRange(1)
+            }
         }
 
         RowLayout {
@@ -228,11 +255,10 @@ Item {
                                     target: root
 
                                     function onRefreshRequested() {
-                                        let startTimeSec = Math.max(0, root._chartStartTimeSec - root._chartLookbackSeconds)
                                         chart.invocationId = LK.metrics.refreshCharts(
                                             root.hostId,
                                             chart.monitoringData.monitor_id,
-                                            startTimeSec,
+                                            root._chartStartTimeSec,
                                             root._chartEndTimeSec)
                                     }
                                 }
@@ -356,10 +382,33 @@ Item {
         }
     }
 
-    function refreshContent() {
-        let endSec = Math.floor(Date.now() / 1000)
+    function applyChartRange() {
+        let nowSec = Math.floor(Date.now() / 1000)
+        let endSec = nowSec - root._periodOffset * root._periodSeconds
+        let startSec = endSec - root._periodSeconds
+        if (startSec < 0) {
+            startSec = 0
+            endSec = Math.min(root._periodSeconds, nowSec)
+            root._periodOffset = Math.max(0, Math.floor((nowSec - endSec) / root._periodSeconds))
+        }
         root._chartEndTimeSec = endSec
-        root._chartStartTimeSec = endSec - root._periodSeconds
+        root._chartStartTimeSec = startSec
+    }
+
+    function shiftChartRange(direction) {
+        // direction: -1 older, +1 newer
+        let newOffset = root._periodOffset - direction
+        if (newOffset < 0) {
+            return
+        }
+        root._periodOffset = newOffset
+        root.applyChartRange()
+        root.refreshRequested()
+    }
+
+    function refreshContent() {
+        root._periodOffset = 0
+        root.applyChartRange()
         console.log("Refreshing charts for host: " + root.hostId)
         root.rebuildMonitors()
         root.refreshRequested()
