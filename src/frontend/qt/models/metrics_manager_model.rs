@@ -139,7 +139,12 @@ impl MetricsManagerModel {
             return;
         }
 
-        let chart_data = serde_json::to_string(&response.metrics).unwrap();
+        let mut metrics = response.metrics;
+        metrics::chart_decimate::decimate_chart_metrics(
+            &mut metrics,
+            metrics::chart_decimate::CHART_MAX_POINTS_PER_SERIES,
+        );
+        let chart_data = serde_json::to_string(&metrics).unwrap();
         self.dataReceived(response.request_id.into(), chart_data.into());
     }
 

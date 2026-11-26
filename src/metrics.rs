@@ -10,6 +10,9 @@ pub mod metric;
 #[cfg(any(feature = "gui", feature = "core"))]
 pub use metric::*;
 
+#[cfg(feature = "gui")]
+pub mod chart_decimate;
+
 #[cfg(any(feature = "gui", feature = "core"))]
 pub mod metrics_manager;
 #[cfg(any(feature = "gui", feature = "core"))]
