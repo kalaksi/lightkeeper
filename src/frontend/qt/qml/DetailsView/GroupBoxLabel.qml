@@ -62,7 +62,7 @@ Rectangle {
                 : "qrc:/main/images/button/expand"
             flatButton: true
             hoverColor: Theme.highlightColorLight
-            tooltip: "Auto height"
+            tooltip: "Auto-expand"
             onClicked: root.autoExpandToggled()
         }
     }

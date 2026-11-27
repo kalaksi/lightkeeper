@@ -174,7 +174,7 @@ Item {
                             needed += categoryCommands.height + Theme.spacingLoose
                         }
                         let available = groupBox._cellHeight - groupBox.label.height
-                        groupBox._contentOverflows = needed > available
+                        groupBox._contentOverflows = needed > available + 66
                     }
 
                     Connections {
