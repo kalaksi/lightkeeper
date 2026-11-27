@@ -22,6 +22,8 @@ It gives a clear view of host resources and simplifies upgrades, monitoring, deb
 - [Server OS support](#server-os-support)
 - [Configuration](#configuration)
    - [Configuration files](#configuration-files)
+- [Remote core](#remote-core)
+   - [Using remote core](#using-remote-core)
 - [Debug logging](#debug-logging)
 - [Testing](#testing)
 - [License](#license)
@@ -167,6 +169,29 @@ Example configuration files `config.example.yml`, `hosts.example.yml` and `group
 When running without flatpak, the default configuration directory is usually `~/.config/lightkeeper`.
 With flatpak, it's the usual app specific directory `~/.var/app/io.github.kalaksi.Lightkeeper/config`.
 You can use a custom configuration directory with the `-c`/`--config-dir` option.
+
+# Remote core
+By default, in the local mode, the monitoring backend runs in the desktop app.
+You can instead run `lightkeeper-core` on another host (typically a jump host or always-on server that can reach your monitored hosts) and use the desktop app only as the UI.
+
+Monitoring, alerts, and charts keep running on the core host while the GUI is closed.
+Managed hosts stay agentless and `lightkeeper-core` reaches them over SSH the same way local mode does.
+
+`lightkeeper-core` listens on a Unix socket, not a network port. The desktop connects to that socket over SSH.
+
+## Using remote core
+Open the Lightkeeper Core dialog from the toolbar, enter SSH settings for the core host, and use Check to probe it.
+If the binary is missing, Install can place `lightkeeper-core` as a systemd user service under that account (`~/.local/bin` and a user unit).
+Then Connect. You can also enable automatic connect on startup.
+
+Alternatively, run the published container image. An example compose file is in
+[packaging/lightkeeper-core/docker-compose.yml](packaging/lightkeeper-core/docker-compose.yml).
+With a container, set Socket path in the dialog to the absolute host path of `core.sock`.
+
+Release binaries for `lightkeeper-core` are attached to
+[GitHub Releases](https://github.com/kalaksi/lightkeeper/releases).
+
+**NOTE: Configuration and secrets for managed hosts live on the core host.**
 
 # Debug logging
 Log levels are controlled with environment variable `RUST_LOG`, so use `RUST_LOG=debug`.
