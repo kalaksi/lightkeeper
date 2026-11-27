@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Show listening TCP and UDP sockets.",
     uses_sudo=true,
+    access="read",
 )]
 pub struct SocketListen;
 

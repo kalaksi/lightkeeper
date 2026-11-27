@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Builds, (re)creates and starts containers for a service.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct Up {
 }

@@ -20,6 +20,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Pulls a Docker image from a registry.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct Pull;
 

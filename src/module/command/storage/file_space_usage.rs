@@ -22,7 +22,8 @@ use lightkeeper_module::command_module;
     settings={
       line_count => "Number of lines to show. Default: 50.",
       one_file_system => "only show files on the same file system. Default: false."
-    }
+    },
+    access="read",
 )]
 pub struct FileSpaceUsage {
     pub line_count: u32,

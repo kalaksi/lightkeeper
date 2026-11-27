@@ -24,6 +24,7 @@ use lightkeeper_module::command_module;
     name="docker-image-remote-tags",
     version="0.0.1",
     description="Shows available remote tags for a Docker image. Supports Docker Registry API v2.",
+    access="read",
 )]
 pub struct RemoteTags {
     page_size: u64,

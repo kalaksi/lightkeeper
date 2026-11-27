@@ -15,6 +15,7 @@ use lightkeeper_module::command_module;
     name="podman-compose-edit",
     version="0.0.1",
     description="Launches an editor for editing a compose-file.",
+    access="write",
 )]
 pub struct Edit {
 }

@@ -31,7 +31,8 @@ use crate::utils::ShellCommand;
  so this can be used instead. Should be the parent directory of project directories. Currently, a single directory is supported.",
         local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
         as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
-    }
+    },
+    access="read",
 )]
 pub struct Compose {
     pub compose_file_name: String,

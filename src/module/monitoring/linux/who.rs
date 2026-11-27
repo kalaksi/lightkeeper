@@ -20,6 +20,7 @@ use crate::module::monitoring::*;
     name="who",
     version="0.0.1",
     description="Gets list of logged in users. Useful if there's a chance someone else is operating the server at the same time.",
+    access="read",
 )]
 pub struct Who;
 

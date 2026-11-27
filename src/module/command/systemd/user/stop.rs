@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="systemd-user-service-stop",
     version="0.0.1",
     description="Stops a SystemD user service.",
+    access="write",
 )]
 pub struct Stop;
 

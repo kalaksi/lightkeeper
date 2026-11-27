@@ -21,6 +21,7 @@ use lightkeeper_module::command_module;
     name="systemd-user-service-logs",
     version="0.0.1",
     description="Shows journald logs of a SystemD user service.",
+    access="read",
 )]
 pub struct Logs;
 

@@ -25,7 +25,8 @@ use crate::module::monitoring::*;
         warning_threshold => "Warning threshold in percent. Default: 70",
         error_threshold => "Error threshold in percent. Default: 80",
         critical_threshold => "Critical threshold in percent. Default: 90",
-    }
+    },
+    access="read",
 )]
 pub struct Ram {
     threshold_critical: f32,

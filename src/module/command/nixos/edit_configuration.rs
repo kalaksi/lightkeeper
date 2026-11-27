@@ -15,6 +15,7 @@ use lightkeeper_module::command_module;
     name="nixos-edit-configuration",
     version="0.0.1",
     description="Launches an editor for editing configuration.nix.",
+    access="write",
 )]
 pub struct EditConfiguration;
 

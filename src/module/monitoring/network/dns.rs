@@ -23,7 +23,8 @@ use crate::module::monitoring::*;
     version="0.0.1",
     description="Provides information about DNS settings.",
     settings={
-    }
+    },
+    access="read",
 )]
 pub struct Dns {
 }

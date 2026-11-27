@@ -20,7 +20,8 @@ use lightkeeper_module::command_module;
     description="Refreshes an LVM logical volume.",
     uses_sudo=true,
     settings={
-    }
+    },
+    access="write",
 )]
 pub struct LVRefresh {
 }

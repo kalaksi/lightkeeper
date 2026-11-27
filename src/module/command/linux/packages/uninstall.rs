@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Uninstalls system packages.",
     uses_sudo=true,
+    access="delete",
 )]
 pub struct Uninstall {
     pub purge: bool

@@ -20,7 +20,8 @@ use crate::module::monitoring::*;
     settings={
         threshold_warning => "Warning if certificate age is less than this many days. Default: 21",
         threshold_error => "Error if certificate age is less than this many days. Default: 14"
-    }
+    },
+    access="read",
 )]
 pub struct CertMonitor {
     threshold_warning: u16,

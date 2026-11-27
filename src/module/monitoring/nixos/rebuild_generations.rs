@@ -24,7 +24,8 @@ use crate::utils::ShellCommand;
     description="Provides information about configuration generations.",
     uses_sudo=true,
     settings={
-    }
+    },
+    access="read",
 )]
 pub struct RebuildGenerations {
 }

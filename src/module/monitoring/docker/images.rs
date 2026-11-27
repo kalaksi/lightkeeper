@@ -30,7 +30,8 @@ use crate::utils::ShellCommand;
         age_error_threshold => "Error threshold in days. Default: 365",
         age_critical_threshold => "Critical threshold in days. Default: 730",
         local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
-    }
+    },
+    access="read",
 )]
 pub struct Images {
     age_warning_threshold: i64,

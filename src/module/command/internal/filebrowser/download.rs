@@ -23,6 +23,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Download remote files with rsync.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct FileBrowserDownload {
     ssh: RsyncSsh,

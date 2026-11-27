@@ -17,6 +17,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Stops docker-compose projects or services.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct Stop {
 }

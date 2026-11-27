@@ -23,7 +23,8 @@ use crate::module::monitoring::*;
     description="Provides information about network interfaces.",
     settings={
         ignored_interfaces => "Comma-separated list of interface names or name prefixes to ignore. Default: empty."
-    }
+    },
+    access="read",
 )]
 pub struct Interface {
     ignored_interfaces: Vec<String>,

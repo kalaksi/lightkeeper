@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     name="_custom-command",
     version="0.0.1",
     description="Internal module for user-defined custom commands.",
+    access="write",
 )]
 pub struct CustomCommand;
 

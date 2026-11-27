@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="systemd-user-service-unmask",
     version="0.0.1",
     description="Unmasks a SystemD user service.",
+    access="write",
 )]
 pub struct Unmask;
 

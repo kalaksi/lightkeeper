@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="systemd-user-service-mask",
     version="0.0.1",
     description="Masks a SystemD user service.",
+    access="write",
 )]
 pub struct Mask;
 

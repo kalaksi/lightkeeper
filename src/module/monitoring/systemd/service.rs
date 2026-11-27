@@ -23,7 +23,8 @@ use crate::module::monitoring::systemd::units;
     settings={
       included_services => "Comma-separated list of services to include. Default: empty (which means all).",
       excluded_services => "Comma-separated list of services to exclude. Default: empty"
-    }
+    },
+    access="read",
 )]
 pub struct Service {
     included_services: Vec<String>,

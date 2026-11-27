@@ -17,6 +17,7 @@ use crate::module::monitoring::*;
     name="_internal-platform-info-ssh",
     version="0.0.1",
     description="Internal module to provide platform information with SSH.",
+    access="read",
 )]
 pub struct PlatformInfoSsh {
 }

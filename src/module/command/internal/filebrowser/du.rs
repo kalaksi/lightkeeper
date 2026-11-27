@@ -19,6 +19,7 @@ use serde_json::json;
     version="0.0.1",
     description="Calculate disk usage for files and directories.",
     uses_sudo=true,
+    access="read",
 )]
 pub struct FileBrowserDu {
 }

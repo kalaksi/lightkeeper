@@ -18,6 +18,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Remove files on the remote host.",
     uses_sudo=true,
+    access="delete",
 )]
 pub struct FileBrowserRm {
 }

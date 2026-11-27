@@ -22,6 +22,7 @@ use crate::utils::ShellCommand;
     version="0.0.1",
     description="Provides information about LVM volume groups.",
     uses_sudo=true,
+    access="read",
 )]
 pub struct VolumeGroup {
 }

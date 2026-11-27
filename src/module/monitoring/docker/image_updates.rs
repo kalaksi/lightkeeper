@@ -26,6 +26,7 @@ use crate::module::monitoring::*;
     parent_module_name="docker-images",
     parent_module_version="0.0.1",
     description= "Checks if there are updates available for Docker image tags.",
+    access="read",
 )]
 pub struct ImageUpdates {
 }

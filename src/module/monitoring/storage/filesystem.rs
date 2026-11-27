@@ -25,7 +25,8 @@ use crate::module::monitoring::*;
         warning_threshold => "Warning threshold in percent. Default: 80",
         error_threshold => "Error threshold in percent. Default: 90",
         critical_threshold => "Critical threshold in percent. Default: 95",
-    }
+    },
+    access="read",
 )]
 pub struct Filesystem {
     ignored_filesystems: Vec<String>,

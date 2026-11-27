@@ -19,6 +19,7 @@ use serde_json::{json, Value};
     version="0.0.1",
     description="List files and directories.",
     uses_sudo=true,
+    access="read",
 )]
 pub struct FileBrowserLs {
 }

@@ -21,6 +21,7 @@ use crate::module::monitoring::*;
     name="uptime",
     version="0.0.1",
     description="Gets host uptime in days.",
+    access="read",
 )]
 pub struct Uptime;
 

@@ -19,6 +19,7 @@ use regex::Regex;
     version="0.0.1",
     description="Roll back to a specified NixOS generation.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct RebuildRollback {
     regex_path_count: Regex,

@@ -39,7 +39,8 @@ fn child_sort_key(point: &DataPoint) -> (u8, String) {
         included_proxies => "Comma-separated list of proxy name prefixes to include. Default: empty (all).",
         excluded_proxies => "Comma-separated list of proxy name prefixes to exclude. Default: empty",
         include_servers => "Include individual server rows in addition to FRONTEND/BACKEND rows. Default: true",
-    }
+    },
+    access="read",
 )]
 pub struct Haproxy {
     socket_file: String,

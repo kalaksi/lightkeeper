@@ -24,7 +24,8 @@ use crate::utils::ShellCommand;
     uses_sudo=true,
     settings={
       ignore_compose_managed => "Ignore containers that are managed by docker-compose. Default: true."
-    }
+    },
+    access="read",
 )]
 pub struct Containers {
     // Ignore containers that are managed by docker-compose.

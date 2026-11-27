@@ -19,6 +19,7 @@ use syn;
 //         parameter2_key => "parameter2_description"
 //     }
 // )]
+// Monitors and commands also require: access="read" | access="write" | access="delete"
 struct ModuleArgs {
     name: String,
     version: String,
@@ -28,6 +29,7 @@ struct ModuleArgs {
     settings: HashMap<String, String>,
     secrets: HashMap<String, String>,
     uses_sudo: Option<bool>,
+    access: Option<String>,
 }
 
 impl syn::parse::Parse for ModuleArgs {
@@ -40,6 +42,7 @@ impl syn::parse::Parse for ModuleArgs {
         let mut settings = HashMap::new();
         let mut secrets = HashMap::new();
         let mut uses_sudo = None;
+        let mut access = None;
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
@@ -62,6 +65,17 @@ impl syn::parse::Parse for ModuleArgs {
                 }
                 "uses_sudo" => {
                     uses_sudo = Some(input.parse::<syn::LitBool>()?.value);
+                }
+                "access" => {
+                    let value = input.parse::<syn::LitStr>()?;
+                    let access_value = value.value();
+                    if access_value != "read" && access_value != "write" && access_value != "delete" {
+                        return Err(syn::Error::new(
+                            value.span(),
+                            "access must be \"read\", \"write\", or \"delete\"",
+                        ));
+                    }
+                    access = Some(access_value);
                 }
                 "settings" => {
                     let content;
@@ -107,10 +121,27 @@ impl syn::parse::Parse for ModuleArgs {
             settings: settings,
             secrets: secrets,
             uses_sudo: uses_sudo,
+            access: access,
         })
     }
 }
 
+macro_rules! module_access_tokens {
+    ($access:expr) => {{
+        match $access.as_deref() {
+            Some("read") => quote! { Some(crate::module::ModuleAccess::Read) },
+            Some("write") => quote! { Some(crate::module::ModuleAccess::Write) },
+            Some("delete") => quote! { Some(crate::module::ModuleAccess::Delete) },
+            Some(_) => unreachable!("access validated during parse"),
+            None => {
+                return quote! {
+                    compile_error!("access is required and must be \"read\", \"write\", or \"delete\"");
+                }
+                .into();
+            }
+        }
+    }};
+}
 
 #[proc_macro_attribute]
 pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -119,6 +150,7 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let module_version = args_parsed.version;
     let module_description = args_parsed.description;
     let uses_sudo = args_parsed.uses_sudo.unwrap_or(false);
+    let access = module_access_tokens!(args_parsed.access);
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -147,6 +179,7 @@ pub fn monitoring_module(args: TokenStream, input: TokenStream) -> TokenStream {
                         parent_module: None,
                         is_stateless: true,
                         uses_sudo: #uses_sudo,
+                        access: #access,
                     }
                 }
 
@@ -181,6 +214,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
     let parent_module_name = args_parsed.parent_module_name;
     let parent_module_version = args_parsed.parent_module_version;
     let uses_sudo = args_parsed.uses_sudo.unwrap_or(false);
+    let access = module_access_tokens!(args_parsed.access);
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -209,6 +243,7 @@ pub fn monitoring_extension_module(args: TokenStream, input: TokenStream) -> Tok
                         parent_module: Some(ModuleSpecification::monitor(#parent_module_name, #parent_module_version)),
                         is_stateless: true,
                         uses_sudo: #uses_sudo,
+                        access: #access,
                     }
                 }
 
@@ -240,6 +275,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
     let module_version = args_parsed.version;
     let module_description = args_parsed.description;
     let uses_sudo = args_parsed.uses_sudo.unwrap_or(false);
+    let access = module_access_tokens!(args_parsed.access);
     let settings = args_parsed.settings.iter().map(|(key, value)| {
         quote! {
             (#key.to_string(), #value.to_string())
@@ -266,6 +302,7 @@ pub fn command_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     parent_module: None,
                     is_stateless: true,
                     uses_sudo: #uses_sudo,
+                    access: #access,
                 }
             }
 
@@ -328,6 +365,7 @@ pub fn connection_module(args: TokenStream, input: TokenStream) -> TokenStream {
                     parent_module: None,
                     is_stateless: false,
                     uses_sudo: #uses_sudo,
+                    access: None,
                 }
             }
 
@@ -391,6 +429,7 @@ pub fn stateless_connection_module(args: TokenStream, input: TokenStream) -> Tok
                         parent_module: None,
                         is_stateless: true,
                         uses_sudo: #uses_sudo,
+                        access: None,
                     }
                 }
 

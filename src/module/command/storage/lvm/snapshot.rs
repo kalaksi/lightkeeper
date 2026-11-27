@@ -24,7 +24,8 @@ use lightkeeper_module::command_module;
     uses_sudo=true,
     settings={
       snapshot_suffix => "The suffix to append to the snapshot name. Defaults to '_snapshot_$TIME'."
-    }
+    },
+    access="write",
 )]
 pub struct Snapshot {
     pub snapshot_suffix: String,

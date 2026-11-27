@@ -21,6 +21,7 @@ use crate::utils::{ShellCommand, string_manipulation};
     version="0.0.1",
     description="Lists system packages that have an update available.",
     uses_sudo=true,
+    access="read",
 )]
 pub struct Package;
 

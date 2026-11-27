@@ -22,7 +22,8 @@ use crate::module::monitoring::*;
     description="Provides information about average load (using uptime-command).",
     settings={
         value_max => "Maximum value for the load average. Affects charts. Default: 0 (dynamic)",
-    }
+    },
+    access="read",
 )]
 pub struct Load {
     value_max: f64,

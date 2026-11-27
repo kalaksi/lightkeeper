@@ -22,6 +22,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Builds local docker-compose service images.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct Build {
     regex_step: Regex,

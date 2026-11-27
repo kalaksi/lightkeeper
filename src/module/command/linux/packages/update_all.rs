@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Updates all system packages.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct UpdateAll {
     regex_install_counts: Regex,

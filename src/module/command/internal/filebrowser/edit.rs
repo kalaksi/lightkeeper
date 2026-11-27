@@ -15,6 +15,7 @@ use lightkeeper_module::command_module;
     name="_internal-filebrowser-edit",
     version="0.0.1",
     description="Edit a remote file.",
+    access="write",
 )]
 pub struct FileBrowserEdit {
 }

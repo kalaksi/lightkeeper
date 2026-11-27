@@ -22,7 +22,8 @@ use lightkeeper_module::command_module;
     uses_sudo=true,
     settings={
         as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
-    }
+    },
+    access="delete",
 )]
 pub struct Remove {
     as_root: bool,

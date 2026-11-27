@@ -32,7 +32,8 @@ use crate::utils::ShellCommand;
         age_critical_threshold => "Critical threshold in days. Default: 730",
         local_image_prefix => "Image name prefix indicating that image was built locally. Default: localhost",
         as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
-    }
+    },
+    access="read",
 )]
 pub struct Images {
     age_warning_threshold: i64,

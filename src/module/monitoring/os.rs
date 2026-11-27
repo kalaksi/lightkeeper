@@ -18,7 +18,8 @@ use crate::module::monitoring::*;
 #[monitoring_module(
     name="os",
     version="0.0.1",
-    description="Provides basic information about the operating system."
+    description="Provides basic information about the operating system.",
+    access="read",
 )]
 pub struct Os;
 

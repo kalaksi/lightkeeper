@@ -17,7 +17,8 @@ use crate::module::monitoring::*;
     description="Tests connecting to a specified port via TCP.",
     settings={
         port => "Port to connect to. Default: 22.",
-    }
+    },
+    access="read",
 )]
 pub struct TcpConnect {
     port: u16,

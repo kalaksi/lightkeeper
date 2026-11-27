@@ -21,6 +21,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Shows logs from journalctl.",
     uses_sudo=true,
+    access="read",
 )]
 pub struct Logs;
 

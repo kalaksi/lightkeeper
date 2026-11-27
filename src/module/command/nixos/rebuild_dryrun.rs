@@ -19,6 +19,7 @@ use regex::Regex;
     version="0.0.1",
     description="Runs 'nixos-rebuild dry-run' and shows output",
     uses_sudo=true,
+    access="read",
 )]
 pub struct RebuildDryrun {
     regex_build_count: Regex,

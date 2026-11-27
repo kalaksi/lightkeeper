@@ -24,7 +24,8 @@ use crate::utils::ShellCommand;
     settings={
       ignore_compose_managed => "Ignore containers that are managed by podman-compose. Default: true.",
       as_root => "Run podman with sudo as root. Default: true. If false, run as the SSH user (rootless)."
-    }
+    },
+    access="read",
 )]
 pub struct Containers {
     // Ignore containers that are managed by podman-compose.

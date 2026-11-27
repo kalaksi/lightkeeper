@@ -19,7 +19,8 @@ use crate::module::monitoring::*;
     settings={
         count => "Amount of echo requests to send. Default: 2.",
         timeout => "Timeout in seconds. Default: 10."
-    }
+    },
+    access="read",
 )]
 pub struct Ping {
     #[cfg_attr(feature = "flatpak", allow(dead_code))]

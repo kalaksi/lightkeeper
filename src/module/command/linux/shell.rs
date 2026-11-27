@@ -20,7 +20,8 @@ use lightkeeper_module::command_module;
     uses_sudo=true,
     settings={
         as_root => "Switch to root user after login. Default: false.",
-    }
+    },
+    access="write",
 )]
 pub struct Shell {
     pub as_root: bool,

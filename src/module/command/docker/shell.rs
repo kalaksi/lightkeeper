@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Opens a shell inside a Docker container.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct Shell;
 

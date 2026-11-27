@@ -21,7 +21,8 @@ use crate::module::monitoring::*;
     version="0.0.1",
     description="Provides routing table information.",
     settings={
-    }
+    },
+    access="read",
 )]
 pub struct Routes {
 }

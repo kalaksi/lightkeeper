@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     name="systemd-user-service-start",
     version="0.0.1",
     description="Starts a SystemD user service.",
+    access="write",
 )]
 pub struct Start;
 

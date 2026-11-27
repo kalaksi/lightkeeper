@@ -20,7 +20,8 @@ use lightkeeper_module::command_module;
     uses_sudo=true,
     settings={
         delete_older_than => "Delete generations of profiles older than the specified number of days. Default: 7.",
-    }
+    },
+    access="write",
 )]
 pub struct CollectGarbage {
     delete_older_than: u32,

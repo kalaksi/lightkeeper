@@ -7,7 +7,7 @@ pub mod module_factory;
 pub use module_factory::ModuleFactory;
 
 pub mod metadata;
-pub use metadata::Metadata;
+pub use metadata::{Metadata, ModuleAccess};
 
 pub mod module;
 pub use module::Module;

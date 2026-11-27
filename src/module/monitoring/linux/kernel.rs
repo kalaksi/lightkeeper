@@ -20,6 +20,7 @@ use crate::module::monitoring::*;
     name="kernel",
     version="0.0.1",
     description="Provides kernel version and architecture information.",
+    access="read",
 )]
 pub struct Kernel;
 

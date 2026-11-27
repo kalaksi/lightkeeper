@@ -32,7 +32,8 @@ const TB_BYTES: u64 = 1000 * GB_BYTES;
     description="Gets information about cryptsetup (i.e. encrypted) devices.",
     settings={
         only_crypttab => "Only read /etc/crypttab instead. This allos finer control of presented devices.",
-    }
+    },
+    access="read",
 )]
 pub struct Cryptsetup {
     only_crypttab: bool,

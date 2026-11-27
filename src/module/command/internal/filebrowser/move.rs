@@ -19,6 +19,7 @@ use lightkeeper_module::command_module;
     version="0.0.1",
     description="Move files or directories on the remote host.",
     uses_sudo=true,
+    access="write",
 )]
 pub struct FileBrowserMove {
 }

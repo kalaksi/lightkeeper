@@ -19,6 +19,7 @@ use crate::module::command::internal::filebrowser::ls::{linux_ls_connector_messa
     name="storage-filebrowser",
     version="0.0.1",
     description="Open file browser at a mount point.",
+    access="write",
 )]
 pub struct FileBrowser {
 }

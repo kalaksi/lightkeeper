@@ -26,7 +26,8 @@ use crate::utils::ShellCommand;
     settings={
         snapshot_warning_threshold => "Snapshot utilization warning threshold in percent. Default: 80",
         snapshot_error_threshold => "Snapshot utilization error threshold in percent. Default: 90",
-    }
+    },
+    access="read",
 )]
 pub struct LogicalVolume {
     threshold_warning: f32,
