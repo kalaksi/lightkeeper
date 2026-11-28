@@ -418,11 +418,13 @@ Item {
 
     function activate() {
         root.enableShortcuts = true
-        // Keep any already-drawn charts visible; refresh on the next tick.
+        // Series were dropped on deactivate; refetch on the next tick.
         Qt.callLater(root.refreshContent)
     }
 
     function deactivate() {
         root.enableShortcuts = false
+        // Free Chart.js canvases while the tab shell stays open. activate() refetches.
+        root._monitorsByCategory = ({})
     }
 }
