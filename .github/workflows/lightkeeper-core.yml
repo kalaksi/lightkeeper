@@ -72,6 +72,7 @@ jobs:
           STAGE="lightkeeper-core-${VERSION}-${{ matrix.arch }}-linux"
           mkdir -p "${STAGE}"
           cp target/release/lightkeeper-core "${STAGE}/"
+          strip --strip-unneeded "${STAGE}/lightkeeper-core"
           cp packaging/lightkeeper-core/lightkeeper-core.service "${STAGE}/"
           cat > "${STAGE}/README.txt" <<EOF
           lightkeeper-core ${VERSION} (${{ matrix.arch }})
