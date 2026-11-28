@@ -44,6 +44,19 @@
   </screenshots>
   <launchable type="desktop-id">io.github.kalaksi.Lightkeeper.desktop</launchable>
   <releases>
+    <release version="0.54.0" date="2026-11-28">
+      <description>
+        <ul>
+          <li>Add RSS/Atom news feed to status bar</li>
+          <li>Add update checker</li>
+          <li>Check security update status for apt and dnf packages</li>
+          <li>Implement auto-expand of groupboxes</li>
+          <li>Improve support for IPv6</li>
+          <li>Add secrets backend info-button</li>
+          <li>Fix removed modules from config group getting offered again on start</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.53.3" date="2026-11-21">
       <description>
         <ul>

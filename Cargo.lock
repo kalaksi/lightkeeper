@@ -1360,7 +1360,7 @@ dependencies = [
 
 [[package]]
 name = "lightkeeper"
-version = "0.53.3"
+version = "0.54.0"
 dependencies = [
  "argon2",
  "base64",
